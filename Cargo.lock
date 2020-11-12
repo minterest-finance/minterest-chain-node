@@ -3230,13 +3230,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "node-template"
+name = "node-minterest"
 version = "2.0.0"
 dependencies = [
  "frame-benchmarking",
  "frame-benchmarking-cli",
  "jsonrpc-core",
- "node-template-runtime",
+ "node-minterest-runtime",
  "pallet-transaction-payment-rpc",
  "sc-basic-authorship",
  "sc-cli",
@@ -3265,7 +3265,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "node-template-runtime"
+name = "node-minterest-runtime"
 version = "2.0.0"
 dependencies = [
  "frame-benchmarking",

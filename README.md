@@ -1,10 +1,9 @@
-# Substrate Node Template
+# Minterest chain node
 
-A new FRAME-based Substrate node, ready for hacking :rocket:
 
 ## Local Development
 
-Follow these steps to prepare a local Substrate development environment :hammer_and_wrench:
+
 
 ### Simple Setup
 
