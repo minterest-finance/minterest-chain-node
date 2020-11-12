@@ -6809,6 +6809,7 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "num-traits",
  "pallet-balances",
  "parity-scale-codec",
  "serde",
