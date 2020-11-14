@@ -9,8 +9,12 @@ use frame_support::{
     dispatch::DispatchResult,
 };
 use frame_system::{self as system, ensure_signed};
+
+#[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+
 use sp_runtime::traits::{Zero};
+use sp_std::prelude::Vec;
 use num_traits::ops::checked::{CheckedAdd};
 
 #[cfg(test)]

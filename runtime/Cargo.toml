@@ -25,6 +25,7 @@ serde = { features = ['derive'], optional = true, version = '1.0.101' }
 
 # local dependencies
 token = { path = "../pallets/token", default-features = false }
+m-tokens = { path = "../pallets/m-tokens", default-features = false }
 
 # Substrate dependencies
 frame-benchmarking = { default-features = false, optional = true, version = '2.0.0' }
@@ -53,6 +54,8 @@ sp-std = { default-features = false, version = '2.0.0' }
 sp-transaction-pool = { default-features = false, version = '2.0.0' }
 sp-version = { default-features = false, version = '2.0.0' }
 
+# ORML dependencies
+
 [features]
 default = ['std']
 runtime-benchmarks = [
@@ -68,10 +71,12 @@ runtime-benchmarks = [
 std = [
     'codec/std',
     'serde',
+
     'frame-executive/std',
     'frame-support/std',
     'frame-system/std',
     'frame-system-rpc-runtime-api/std',
+
     'pallet-aura/std',
     'pallet-balances/std',
     'pallet-grandpa/std',
@@ -80,6 +85,7 @@ std = [
     'pallet-timestamp/std',
     'pallet-transaction-payment/std',
     'pallet-transaction-payment-rpc-runtime-api/std',
+
     'sp-api/std',
     'sp-block-builder/std',
     'sp-consensus-aura/std',
@@ -91,5 +97,7 @@ std = [
     'sp-std/std',
     'sp-transaction-pool/std',
     'sp-version/std',
+
     'token/std',
+    'm-tokens/std',
 ]

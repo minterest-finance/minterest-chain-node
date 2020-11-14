@@ -263,6 +263,10 @@ impl token::Trait for Runtime {
 	type Event = Event;
 }
 
+impl m_tokens::Trait for Runtime {
+	type Event = Event;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -279,7 +283,8 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		// Minterest pallets
-		Token: token::{Module, Call, Storage, Config, Event<T>},
+		Token: token::{Module, Call, Storage, Event<T>},
+		MTokens: m_tokens::{Module, Storage, Call, Event,},
 	}
 );
 
