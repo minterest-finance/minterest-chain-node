@@ -23,6 +23,10 @@ use sp_version::RuntimeVersion;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 
+pub use minterest_primitives::{
+	Amount, CurrencyId,
+};
+
 // A few exports that help ease life for downstream crates.
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -267,6 +271,16 @@ impl m_tokens::Trait for Runtime {
 	type Event = Event;
 }
 
+impl orml_tokens::Trait for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = Amount;
+	type CurrencyId = CurrencyId;
+	type OnReceived = ();
+	type WeightInfo = ();
+}
+
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -282,6 +296,8 @@ construct_runtime!(
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
+		//ORML palletts
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>}, //FIXME understand and add Config<T>
 		// Minterest pallets
 		Token: token::{Module, Call, Storage, Event<T>},
 		MTokens: m_tokens::{Module, Storage, Call, Event,},

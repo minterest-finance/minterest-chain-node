@@ -26,6 +26,7 @@ serde = { features = ['derive'], optional = true, version = '1.0.101' }
 # local dependencies
 token = { path = "../pallets/token", default-features = false }
 m-tokens = { path = "../pallets/m-tokens", default-features = false }
+minterest-primitives = { path = "../primitives", default-features = false }
 
 # Substrate dependencies
 frame-benchmarking = { default-features = false, optional = true, version = '2.0.0' }
@@ -55,6 +56,12 @@ sp-transaction-pool = { default-features = false, version = '2.0.0' }
 sp-version = { default-features = false, version = '2.0.0' }
 
 # ORML dependencies
+orml-benchmarking = { path = "../orml/benchmarking", default-features = false }
+orml-currencies = { path = "../orml/currencies", default-features = false }
+orml-oracle = { path = "../orml/oracle", default-features = false }
+orml-oracle-rpc-runtime-api = { path = "../orml/oracle/rpc/runtime-api", default-features = false }
+orml-tokens = { path = "../orml/tokens", default-features = false }
+orml-traits = { path = "../orml/traits", default-features = false }
 
 [features]
 default = ['std']
@@ -100,4 +107,5 @@ std = [
 
     'token/std',
     'm-tokens/std',
+    'minterest-primitives/std',
 ]

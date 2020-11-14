@@ -5,8 +5,8 @@ use frame_support::{
 };
 use frame_system::{self as system};
 
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
+// #[cfg(feature = "std")]
+// use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 mod tests;
