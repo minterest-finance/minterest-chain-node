@@ -41,8 +41,9 @@ pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
 
 pub fn development_config() -> Result<ChainSpec, String> {
 	let mut properties = Map::new();
-	properties.insert("tokenSymbol".into(), "TEST".into());
-	properties.insert("tokenDecimals".into(), 15.into());
+	properties.insert("tokenSymbol".into(), "MINT".into());
+	properties.insert("tokenDecimals".into(), 18.into());
+
 	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
 	Ok(ChainSpec::from_genesis(
@@ -82,6 +83,10 @@ pub fn development_config() -> Result<ChainSpec, String> {
 }
 
 pub fn local_testnet_config() -> Result<ChainSpec, String> {
+	let mut properties = Map::new();
+	properties.insert("tokenSymbol".into(), "MINT".into());
+	properties.insert("tokenDecimals".into(), 18.into());
+
 	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
 	Ok(ChainSpec::from_genesis(
@@ -123,7 +128,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		// Protocol ID
 		None,
 		// Properties
-		None,
+		Some(properties),
 		// Extensions
 		None,
 	))
