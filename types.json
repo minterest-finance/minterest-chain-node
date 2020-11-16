@@ -1,13 +1,20 @@
 {
-  "CurrencyId": {
-    "_enum": [
-      "Native",
-      "DOT",
-      "KSM",
-      "BTC"
-    ]
+  "CUSTOM_TYPES": {
+    "Address": "AccountId",
+    "LookupSource": "AccountId",
+    "CurrencyId": {
+      "_enum": [
+        "MINT",
+        "MDOT",
+        "MKSM",
+        "MBTC",
+        "METH"
+      ]
+    },
+    "CurrencyIdOf": "CurrencyId",
+    "Amount": "i128",
+    "AmountOf": "Amount",
+    "TokenId": "u32"
   },
-  "CurrencyIdOf": "CurrencyId",
-  "Amount": "i128",
-  "AmountOf": "Amount"
+  "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
 }
