@@ -2974,6 +2974,7 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "minterest-primitives",
  "parity-scale-codec",
  "serde",
  "sp-core",

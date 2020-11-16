@@ -22,6 +22,7 @@ use pallet_grandpa::fg_primitives;
 use sp_version::RuntimeVersion;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
+use orml_currencies::BasicCurrencyAdapter;
 
 pub use minterest_primitives::{
 	Amount, CurrencyId,
@@ -280,6 +281,18 @@ impl orml_tokens::Trait for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
+}
+
+impl orml_currencies::Trait for Runtime {
+	type Event = Event;
+	type MultiCurrency = Tokens;
+	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type WeightInfo = ();
+}
+
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -297,10 +310,11 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		//ORML palletts
-		Tokens: orml_tokens::{Module, Storage, Call, Event<T>}, //FIXME understand and add Config<T>
+		Tokens: orml_tokens::{Module, Storage, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Module, Call, Event<T>},
 		// Minterest pallets
 		Token: token::{Module, Call, Storage, Event<T>},
-		MTokens: m_tokens::{Module, Storage, Call, Event,},
+		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 	}
 );
 

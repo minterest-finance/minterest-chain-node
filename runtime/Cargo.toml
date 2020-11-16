@@ -105,6 +105,9 @@ std = [
     'sp-transaction-pool/std',
     'sp-version/std',
 
+    'orml-currencies/std',
+    'orml-tokens/std',
+
     'token/std',
     'm-tokens/std',
     'minterest-primitives/std',
