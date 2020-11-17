@@ -5,6 +5,7 @@
     "CurrencyId": {
       "_enum": [
         "MINT",
+        "DOT",
         "MDOT",
         "MKSM",
         "MBTC",

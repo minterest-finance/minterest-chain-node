@@ -240,6 +240,8 @@ impl token::Trait for Runtime {
 
 impl m_tokens::Trait for Runtime {
 	type Event = Event;
+	type Currency = Currencies;
+	type MultiCurrency = Tokens;
 }
 
 impl orml_tokens::Trait for Runtime {

@@ -17,8 +17,9 @@ sp-std = { version = "2.0.0", default-features = false }
 frame-support = { version = "2.0.0", default-features = false }
 frame-system = { version = "2.0.0", default-features = false }
 
-#orml-traits = { path = "../../orml/traits", default-features = false }
-#orml-utilities = { path = "../../orml/utilities", default-features = false }
+orml-traits = { path = "../../orml/traits", default-features = false }
+orml-utilities = { path = "../../orml/utilities", default-features = false }
+orml-tokens = { path = "../../orml/tokens", default-features = false }
 
 #module-traits = { path = "../traits", default-features = false }
 minterest-primitives = { path = "../../primitives", default-features = false }
@@ -36,7 +37,7 @@ std = [
     "sp-std/std",
     "frame-support/std",
     "frame-system/std",
-#    "orml-traits/std",
+    "orml-traits/std",
 #    "module-traits/std",
     "minterest-primitives/std",
 ]
