@@ -240,8 +240,9 @@ impl token::Trait for Runtime {
 
 impl m_tokens::Trait for Runtime {
 	type Event = Event;
-	type Currency = Currencies;
-	type MultiCurrency = Tokens;
+	type Currency = Tokens;
+	type MultiCurrency = Currencies;
+	type WrappedCurrencyIds = WrappedCurrencyIds;
 }
 
 impl orml_tokens::Trait for Runtime {
@@ -255,6 +256,14 @@ impl orml_tokens::Trait for Runtime {
 
 parameter_types! {
 	pub const GetMinterestCurrencyId: CurrencyId = CurrencyId::MINT;
+	pub WrappedCurrencyIds: Vec<CurrencyId> = vec![
+		CurrencyId::MINT,
+		CurrencyId::DOT,
+		CurrencyId::MDOT,
+		CurrencyId::MKSM,
+		CurrencyId::MBTC,
+		CurrencyId::METH,
+	];
 }
 
 pub type MinterestToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
