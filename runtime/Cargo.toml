@@ -24,7 +24,6 @@ hex-literal = { optional = true, version = '0.3.1' }
 serde = { features = ['derive'], optional = true, version = '1.0.101' }
 
 # local dependencies
-token = { path = "../pallets/token", default-features = false }
 m-tokens = { path = "../pallets/m-tokens", default-features = false }
 minterest-primitives = { path = "../primitives", default-features = false }
 
@@ -108,7 +107,6 @@ std = [
     'orml-currencies/std',
     'orml-tokens/std',
 
-    'token/std',
     'm-tokens/std',
     'minterest-primitives/std',
 ]

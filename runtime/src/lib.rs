@@ -234,10 +234,6 @@ impl pallet_sudo::Trait for Runtime {
 	type Call = Call;
 }
 
-impl token::Trait for Runtime {
-	type Event = Event;
-}
-
 impl m_tokens::Trait for Runtime {
 	type Event = Event;
 	type Currency = Tokens;
@@ -295,7 +291,6 @@ construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		// Minterest pallets
-		Token: token::{Module, Call, Storage, Event<T>},
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 	}
 );

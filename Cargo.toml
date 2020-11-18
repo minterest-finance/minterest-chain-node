@@ -6,7 +6,6 @@ members = [
     'node',
     'runtime',
 
-    'pallets/token',
     'pallets/m-tokens',
 
     'primitives',
