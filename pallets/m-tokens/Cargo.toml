@@ -21,7 +21,6 @@ orml-traits = { path = "../../orml/traits", default-features = false }
 orml-utilities = { path = "../../orml/utilities", default-features = false }
 orml-tokens = { path = "../../orml/tokens", default-features = false }
 
-#module-traits = { path = "../traits", default-features = false }
 minterest-primitives = { path = "../../primitives", default-features = false }
 
 [dev-dependencies]
@@ -38,6 +37,5 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "orml-traits/std",
-#    "module-traits/std",
     "minterest-primitives/std",
 ]
