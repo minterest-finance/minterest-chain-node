@@ -11,7 +11,10 @@ use sp_runtime::{
     traits::{StaticLookup},
 };
 
+
+#[cfg(test)]
 mod mock;
+#[cfg(test)]
 mod tests;
 
 pub trait Trait: system::Trait {
@@ -61,7 +64,7 @@ decl_module! {
                 let spender = T::Lookup::lookup(spender)?;
 
                 let allowance = Self::allowance((currency_id, sender.clone(), spender.clone()));
-                let updated_allowance = allowance.checked_add(value).ok_or("overflow in calculating allowance")?;
+                let updated_allowance = allowance.checked_add(value).ok_or("Overflow in calculating allowance.")?;
                 <Allowance<T>>::insert((currency_id, sender.clone(), spender.clone()), updated_allowance);
 
                 Self::deposit_event(RawEvent::Approval(currency_id, sender.clone(), spender.clone(), value));

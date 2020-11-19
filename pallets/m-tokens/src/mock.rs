@@ -1,8 +1,6 @@
-//! Mocks for the m-tokens module.
+/// Mocks for the m-tokens module.
 
-#![cfg(test)]
-
-use frame_support::{impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types};
+use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 use orml_currencies::Currency;
@@ -12,10 +10,6 @@ use super::*;
 
 impl_outer_origin! {
 	pub enum Origin for Runtime {}
-}
-
-ord_parameter_types! {
-	pub const One: AccountId = 1;
 }
 
 mod m_tokens {
@@ -101,17 +95,40 @@ impl Trait for Runtime {
     type MultiCurrency = orml_currencies::Module<Runtime>;
 }
 
-pub type WrappedTokens = Module<Runtime>;
+pub const ALICE: AccountId = 1;
+pub const BOB: AccountId = 2;
+pub type MTokens = Module<Runtime>;
 
-#[derive(Default)]
-pub struct ExtBuilder;
+pub struct ExtBuilder{
+    endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+}
 
+impl Default for ExtBuilder {
+    fn default() -> Self {
+        Self {
+            endowed_accounts: vec![],
+        }
+    }
+}
+
+pub const ONE_MILL: Balance = 1_000_000;
 impl ExtBuilder {
+    pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
+        self.endowed_accounts = endowed_accounts;
+        self
+    }
+
     pub fn build(self) -> sp_io::TestExternalities {
-        let t = frame_system::GenesisConfig::default()
+        let mut t = frame_system::GenesisConfig::default()
             .build_storage::<Runtime>()
-            .unwrap()
-            .into();
+            .unwrap();
+
+        //FIXME
+        // orml_tokens::GenesisConfig::<Runtime> {
+        //     endowed_accounts: self.endowed_accounts,
+        // }
+        // .assimilate_storage(&mut t)
+        // .unwrap();
 
         let mut ext = sp_io::TestExternalities::new(t);
         ext.execute_with(|| System::set_block_number(1));
