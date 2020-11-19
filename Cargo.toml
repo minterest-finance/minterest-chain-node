@@ -7,6 +7,7 @@ members = [
     'runtime',
 
     'pallets/m-tokens',
+    'pallets/minterest-protocol',
 
     'primitives',
 

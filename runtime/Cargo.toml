@@ -25,6 +25,7 @@ serde = { features = ['derive'], optional = true, version = '1.0.101' }
 
 # local dependencies
 m-tokens = { path = "../pallets/m-tokens", default-features = false }
+minterest-protocol = { path = "../pallets/minterest-protocol", default-features = false }
 minterest-primitives = { path = "../primitives", default-features = false }
 
 # Substrate dependencies
@@ -108,5 +109,6 @@ std = [
     'orml-tokens/std',
 
     'm-tokens/std',
+    'minterest-protocol/std',
     'minterest-primitives/std',
 ]

@@ -2975,6 +2975,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "minterest-primitives",
+ "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "orml-utilities",
@@ -3116,6 +3117,20 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-runtime",
+]
+
+[[package]]
+name = "minterest-protocol"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "minterest-primitives",
+ "orml-traits",
+ "orml-utilities",
+ "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -3334,6 +3349,7 @@ dependencies = [
  "hex-literal 0.3.1",
  "m-tokens",
  "minterest-primitives",
+ "minterest-protocol",
  "orml-benchmarking",
  "orml-currencies",
  "orml-oracle",

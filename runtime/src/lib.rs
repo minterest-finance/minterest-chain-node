@@ -73,8 +73,8 @@ pub mod opaque {
 }
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("node-template"),
-	impl_name: create_runtime_str!("node-template"),
+	spec_name: create_runtime_str!("node-minterest"),
+	impl_name: create_runtime_str!("node-minterest"),
 	authoring_version: 1,
 	spec_version: 1,
 	impl_version: 1,
@@ -236,8 +236,12 @@ impl pallet_sudo::Trait for Runtime {
 
 impl m_tokens::Trait for Runtime {
 	type Event = Event;
-	type Currency = Tokens;
 	type MultiCurrency = Currencies;
+}
+
+impl minterest_protocol::Trait for Runtime {
+	type Event = Event;
+	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type WrappedCurrencyIds = WrappedCurrencyIds;
 }
 
@@ -288,10 +292,11 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		//ORML palletts
-		Tokens: orml_tokens::{Module, Storage, Event<T>, Config<T>},
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		// Minterest pallets
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
+		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event},
 	}
 );
 

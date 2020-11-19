@@ -4,21 +4,19 @@ use frame_support::{
     decl_event, decl_storage, decl_module, decl_error, ensure,
 };
 use frame_system::{self as system, ensure_signed};
-use orml_traits::{MultiReservableCurrency, MultiCurrency};
+use orml_traits::{MultiCurrency};
 use orml_utilities::with_transaction_result;
 use minterest_primitives::{Balance, CurrencyId};
 use sp_runtime::{
     traits::{StaticLookup},
 };
 
-#[cfg(test)]
+mod mock;
 mod tests;
 
 pub trait Trait: system::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-
-    type Currency: MultiReservableCurrency<Self::AccountId>;
 
     /// The `MultiCurrency` implementation for wrapped.
     type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
