@@ -39,16 +39,26 @@ fn transfer_from_not_enough_allowance() {
 }
 
 #[test]
-fn transfer_from_work() {
+fn transfer_from_fails_if_balance_too_low() {
     ExtBuilder::default()
-        .balances(vec![
-            (ALICE, CurrencyId::MINT, ONE_MILL),
-            (ALICE, CurrencyId::MDOT, ONE_MILL)
-        ])
         .build()
         .execute_with(|| {
             assert_ok!(MTokens::approve(Origin::signed(ALICE), BOB, CurrencyId::MDOT, 100));
-            //TODO положить на баланс алисы монеты для газа
+            assert_noop!(
+                MTokens::transfer_from(Origin::signed(ALICE), ALICE, BOB, CurrencyId::MDOT, 50),
+                orml_tokens::Error::<Runtime>::BalanceTooLow
+            );
+        });
+}
+
+#[test]
+fn transfer_from_work() {
+    ExtBuilder::default()
+        .one_million_mint_and_mdot_for_alice()
+        .build()
+        .execute_with(|| {
+            assert_ok!(MTokens::approve(Origin::signed(ALICE), BOB, CurrencyId::MDOT, 100));
+            // TODO пополнить баланс алисы для оплаты за транзакцию.
             // assert_ok!(MTokens::transfer_from(Origin::signed(ALICE), ALICE, BOB, CurrencyId::MDOT, 50));
         });
 }

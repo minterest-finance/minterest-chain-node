@@ -118,6 +118,13 @@ impl ExtBuilder {
         self
     }
 
+    pub fn one_million_mint_and_mdot_for_alice(self) -> Self {
+        self.balances(vec![
+            (ALICE, CurrencyId::MINT, ONE_MILL),
+            (ALICE, CurrencyId::MDOT, ONE_MILL),
+        ])
+    }
+
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default()
             .build_storage::<Runtime>()
