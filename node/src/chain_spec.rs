@@ -2,12 +2,15 @@ use sp_core::{Pair, Public, sr25519};
 use node_minterest_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
 	SudoConfig, SystemConfig, WASM_BINARY, Signature, TokensConfig, CurrencyId,
+	// BaseLiquidityPoolsConfig,
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{Verify, IdentifyAccount};
 use sc_service::ChainType;
 use serde_json::map::Map;
+use minterest_primitives::{Balance};
+// use std::collections::HashMap;
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -142,6 +145,10 @@ fn testnet_genesis(
 	endowed_accounts: Vec<AccountId>,
 	_enable_println: bool,
 ) -> GenesisConfig {
+	// let asset_names = vec![String::from("DOT"), String::from("DAI"), String::from("KSM")];
+	// let values = vec![0,0,0];
+	// let pools: HashMap<CurrencyId, Balance> = asset_names.into_iter().zip(values.into_iter()).collect();
+
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
 			// Add Wasm runtime to storage.
@@ -172,5 +179,6 @@ fn testnet_genesis(
 				})
 				.collect(),
 		}),
+		// base_liquidity_pools: Some(BaseLiquidityPoolsConfig { pools }),
 	}
 }

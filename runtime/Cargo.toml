@@ -27,6 +27,7 @@ serde = { features = ['derive'], optional = true, version = '1.0.101' }
 m-tokens = { path = "../pallets/m-tokens", default-features = false }
 minterest-protocol = { path = "../pallets/minterest-protocol", default-features = false }
 minterest-primitives = { path = "../primitives", default-features = false }
+base-liquidity-pools = { path = "../pallets/liquidity-pool/base", default-features = false }
 
 # Substrate dependencies
 frame-benchmarking = { default-features = false, optional = true, version = '2.0.0' }
@@ -111,4 +112,5 @@ std = [
     'm-tokens/std',
     'minterest-protocol/std',
     'minterest-primitives/std',
+    'base-liquidity-pools/std',
 ]

@@ -28,7 +28,7 @@ use orml_currencies::BasicCurrencyAdapter;
 
 pub use minterest_primitives::{
 	Amount, CurrencyId, BlockNumber, Signature, AccountId, AccountIndex, Balance, Index,
-	Hash, DigestItem,
+	Hash, DigestItem, UnderlineAssets,
 };
 
 // A few exports that help ease life for downstream crates.
@@ -276,6 +276,11 @@ impl orml_currencies::Trait for Runtime {
 	type WeightInfo = ();
 }
 
+
+impl base_liquidity_pools::Trait for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+}
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -297,6 +302,8 @@ construct_runtime!(
 		// Minterest pallets
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event},
+		// LiquidityPools
+		BaseLiquidityPools: base_liquidity_pools::{Module, Storage, Call, Event<T>},
 	}
 );
 

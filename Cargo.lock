@@ -307,6 +307,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "base-liquidity-pools"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "minterest-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "orml-utilities",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "base58"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3117,6 +3137,7 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -3307,6 +3328,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-benchmarking-cli",
  "jsonrpc-core",
+ "minterest-primitives",
  "node-minterest-runtime",
  "pallet-transaction-payment-rpc",
  "sc-basic-authorship",
@@ -3340,6 +3362,7 @@ dependencies = [
 name = "node-minterest-runtime"
 version = "2.0.0"
 dependencies = [
+ "base-liquidity-pools",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
