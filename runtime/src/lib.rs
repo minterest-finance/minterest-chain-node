@@ -28,7 +28,7 @@ use orml_currencies::BasicCurrencyAdapter;
 
 pub use minterest_primitives::{
 	Amount, CurrencyId, BlockNumber, Signature, AccountId, AccountIndex, Balance, Index,
-	Hash, DigestItem, UnderlineAssets,
+	Hash, DigestItem,
 };
 
 // A few exports that help ease life for downstream crates.

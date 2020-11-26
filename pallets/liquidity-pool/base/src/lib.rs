@@ -1,23 +1,15 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, ensure,
-    // storage::IterableStorageMap,
-    // StorageMap,
-    traits::{Currency, EnsureOrigin, Get, ReservableCurrency},
-    weights::{DispatchClass, Weight},
 };
 
 use frame_system::ensure_signed;
 use orml_traits::MultiCurrency;
 use orml_utilities::with_transaction_result;
 use minterest_primitives::{Balance, CurrencyId};
-use sp_runtime::{
-    traits::{AccountIdConversion, One},
-    DispatchResult, ModuleId, RuntimeDebug,
-};
-use sp_std::{prelude::*, result};
+use sp_runtime::DispatchResult;
+use sp_std::{prelude::*};
 
 
 pub const DEFAULT_BALANCE: Balance = 0;
@@ -108,7 +100,7 @@ decl_module! {
                 ensure!(Self::pool_exists(&currency_id), Error::<T>::PoolNotFound);
 
                 let who = ensure_signed(origin)?;
-                Self::do_withdraw_liquidity(&currency_id, &amount);
+                let _ = Self::do_withdraw_liquidity(&currency_id, &amount);
                 Self::deposit_event(RawEvent::LiquidityWithdraw(currency_id, amount, who));
                 Ok(())
 		   })?;
