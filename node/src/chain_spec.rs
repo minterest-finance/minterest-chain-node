@@ -9,7 +9,6 @@ use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{Verify, IdentifyAccount};
 use sc_service::ChainType;
 use serde_json::map::Map;
-use minterest_primitives::{Balance};
 // use std::collections::HashMap;
 
 // The URL for the telemetry server.

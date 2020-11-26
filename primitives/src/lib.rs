@@ -5,7 +5,6 @@ use sp_runtime::{
     RuntimeDebug, MultiSignature, generic,
     traits::{Verify, IdentifyAccount},
 };
-use sp_std::prelude::Vec;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -49,13 +48,13 @@ pub enum CurrencyId {
     MBTC = 4,
     METH = 5,
 }
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum UnderlineAssets {
-    DOT,
-    DAI,
-    KSM,
-}
+// #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+// #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+// pub enum UnderlineAssets {
+//     DOT,
+//     DAI,
+//     KSM,
+// }
 // #[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, PartialOrd, Ord)]
 // #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 // pub struct Pool {
