@@ -5,4 +5,20 @@ panic = 'unwind'
 members = [
     'node',
     'runtime',
+
+    'pallets/m-tokens',
+    'pallets/minterest-protocol',
+
+    'primitives',
+
+    "orml/auction",
+    "orml/authority",
+    "orml/benchmarking",
+    "orml/currencies",
+    "orml/gradually-update",
+    "orml/oracle",
+    "orml/tokens",
+    "orml/traits",
+    "orml/utilities",
+    "orml/vesting",
 ]

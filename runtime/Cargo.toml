@@ -24,6 +24,9 @@ hex-literal = { optional = true, version = '0.3.1' }
 serde = { features = ['derive'], optional = true, version = '1.0.101' }
 
 # local dependencies
+m-tokens = { path = "../pallets/m-tokens", default-features = false }
+minterest-protocol = { path = "../pallets/minterest-protocol", default-features = false }
+minterest-primitives = { path = "../primitives", default-features = false }
 
 # Substrate dependencies
 frame-benchmarking = { default-features = false, optional = true, version = '2.0.0' }
@@ -52,6 +55,14 @@ sp-std = { default-features = false, version = '2.0.0' }
 sp-transaction-pool = { default-features = false, version = '2.0.0' }
 sp-version = { default-features = false, version = '2.0.0' }
 
+# ORML dependencies
+orml-benchmarking = { path = "../orml/benchmarking", default-features = false }
+orml-currencies = { path = "../orml/currencies", default-features = false }
+orml-oracle = { path = "../orml/oracle", default-features = false }
+orml-oracle-rpc-runtime-api = { path = "../orml/oracle/rpc/runtime-api", default-features = false }
+orml-tokens = { path = "../orml/tokens", default-features = false }
+orml-traits = { path = "../orml/traits", default-features = false }
+
 [features]
 default = ['std']
 runtime-benchmarks = [
@@ -67,10 +78,12 @@ runtime-benchmarks = [
 std = [
     'codec/std',
     'serde',
+
     'frame-executive/std',
     'frame-support/std',
     'frame-system/std',
     'frame-system-rpc-runtime-api/std',
+
     'pallet-aura/std',
     'pallet-balances/std',
     'pallet-grandpa/std',
@@ -79,6 +92,7 @@ std = [
     'pallet-timestamp/std',
     'pallet-transaction-payment/std',
     'pallet-transaction-payment-rpc-runtime-api/std',
+
     'sp-api/std',
     'sp-block-builder/std',
     'sp-consensus-aura/std',
@@ -90,4 +104,11 @@ std = [
     'sp-std/std',
     'sp-transaction-pool/std',
     'sp-version/std',
+
+    'orml-currencies/std',
+    'orml-tokens/std',
+
+    'm-tokens/std',
+    'minterest-protocol/std',
+    'minterest-primitives/std',
 ]
