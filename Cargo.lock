@@ -3147,9 +3147,11 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "m-tokens",
  "minterest-primitives",
  "orml-traits",
  "orml-utilities",
+ "pallet-traits",
  "parity-scale-codec",
  "sp-runtime",
  "sp-std",
