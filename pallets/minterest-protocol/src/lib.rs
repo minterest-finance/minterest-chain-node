@@ -13,6 +13,8 @@ use pallet_traits::{LiquidityPools};
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod mock;
 
 pub trait Trait: m_tokens::Trait {
     /// The overarching event type.

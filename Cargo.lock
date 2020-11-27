@@ -3149,10 +3149,13 @@ dependencies = [
  "frame-system",
  "m-tokens",
  "minterest-primitives",
+ "orml-currencies",
+ "orml-tokens",
  "orml-traits",
  "orml-utilities",
  "pallet-traits",
  "parity-scale-codec",
+ "sp-core",
  "sp-runtime",
  "sp-std",
 ]

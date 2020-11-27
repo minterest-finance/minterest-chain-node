@@ -44,7 +44,17 @@ decl_storage! {
 
 decl_error! {
     pub enum Error for Module<T: Trait> {
+        /// Overflow in calculating allowance
+        OverflowAllowance,
 
+        /// Allowance does not exist
+        AllowanceDoesNotExist,
+
+        /// Not enough allowance
+        NotEnoughAllowance,
+
+        /// Underflow in calculating allowance
+        UnderflowAllowance,
     }
 }
 
@@ -64,7 +74,8 @@ decl_module! {
                 let spender = T::Lookup::lookup(spender)?;
 
                 let allowance = Self::allowance((currency_id, sender.clone(), spender.clone()));
-                let updated_allowance = allowance.checked_add(value).ok_or("Overflow in calculating allowance.")?;
+                let updated_allowance = allowance.checked_add(value)
+                    .ok_or(Error::<T>::OverflowAllowance)?;
                 <Allowance<T>>::insert((currency_id, sender.clone(), spender.clone()), updated_allowance);
 
                 Self::deposit_event(RawEvent::Approval(currency_id, sender.clone(), spender.clone(), value));
@@ -80,11 +91,18 @@ decl_module! {
             #[compact] value: Balance
         ) {
             with_transaction_result(|| {
-                ensure!(<Allowance<T>>::contains_key((currency_id, from.clone(), to.clone())), "Allowance does not exist.");
+                ensure!(
+                    <Allowance<T>>::contains_key((currency_id, from.clone(), to.clone())),
+                    Error::<T>::AllowanceDoesNotExist
+                 );
                 let allowance = Self::allowance((currency_id, from.clone(), to.clone()));
-                ensure!(allowance >= value, "Not enough allowance.");
+                ensure!(
+                    allowance >= value,
+                    Error::<T>::NotEnoughAllowance
+                );
 
-                let updated_allowance = allowance.checked_sub(value).ok_or("Underflow in calculating allowance.")?;
+                let updated_allowance = allowance.checked_sub(value)
+                .ok_or(Error::<T>::UnderflowAllowance)?;
                 T::MultiCurrency::transfer(currency_id, &from, &to, value)?;
                 <Allowance<T>>::insert((currency_id, from.clone(), to.clone()), updated_allowance);
 
