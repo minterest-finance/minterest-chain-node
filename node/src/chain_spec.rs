@@ -9,10 +9,11 @@ use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{Verify, IdentifyAccount};
 use sc_service::ChainType;
 use serde_json::map::Map;
-// use std::collections::HashMap;
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
+
+const INITIAL_BALANCE: u128 = 10_000_000_000_000_000_000;
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
@@ -43,7 +44,7 @@ pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
 
 pub fn development_config() -> Result<ChainSpec, String> {
 	let mut properties = Map::new();
-	properties.insert("tokenSymbol".into(), "MINT".into());
+	properties.insert("tokenSymbol".into(), "UNIT".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
 	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
@@ -86,7 +87,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 
 pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	let mut properties = Map::new();
-	properties.insert("tokenSymbol".into(), "MINT".into());
+	properties.insert("tokenSymbol".into(), "UNIT".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
 	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
@@ -173,40 +174,20 @@ fn testnet_genesis(
 				.iter()
 				.flat_map(|x| {
 					vec![
-						(x.clone(), CurrencyId::DOT, 10u128.pow(19)), // FIXME rewrite via initial_balance
-						(x.clone(), CurrencyId::ETH, 10u128.pow(19)), // FIXME rewrite via initial_balance
-						(x.clone(), CurrencyId::METH, 10u128.pow(19)), // FIXME rewrite via initial_balance
-						(x.clone(), CurrencyId::MDOT, 10u128.pow(19)), // FIXME rewrite via initial_balance
+						(x.clone(), CurrencyId::DOT, INITIAL_BALANCE),
+						(x.clone(), CurrencyId::ETH, INITIAL_BALANCE),
+						(x.clone(), CurrencyId::METH, INITIAL_BALANCE),
+						(x.clone(), CurrencyId::MDOT, INITIAL_BALANCE),
 					]
 				})
 				.collect(),
 		}),
 		liquidity_pools: Some(LiquidityPoolsConfig {
 			pools: vec![
-				(
-					CurrencyId::MINT,
-					0,
-					),
-				(
-					CurrencyId::DOT,
-					20,
-					),
-				(
-					CurrencyId::MDOT,
-					0,
-					),
-				(
-					CurrencyId::MBTC,
-					0,
-					),
-				(
-					CurrencyId::METH,
-					0,
-					),
-				(
-					CurrencyId::MKSM,
-					0,
-					)
+				(CurrencyId::ETH, 0),
+				(CurrencyId::DOT, 0),
+				(CurrencyId::KSM, 0),
+				(CurrencyId::BTC, 0),
 			]
 		}),
 	}

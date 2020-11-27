@@ -51,8 +51,7 @@ decl_module! {
 impl<T: Trait> LiquidityPools for Module<T> {
 
     fn add_liquidity(currency_id: &CurrencyId, amount: &Balance) -> DispatchResult {
-        Self::do_increase_liquidity(currency_id, amount)?;
-        Ok(())
+        Self::do_increase_liquidity(currency_id, amount)
     }
 
     fn withdraw_liquidity(currency_id: &CurrencyId, amount: &Balance) -> DispatchResult {

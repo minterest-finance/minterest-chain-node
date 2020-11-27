@@ -5,7 +5,6 @@ use mock::*;
 
 use frame_support::{
     assert_ok, assert_noop,
-    dispatch::{DispatchError},
 };
 
 #[test]
@@ -33,7 +32,7 @@ fn transfer_from_not_enough_allowance() {
         assert_ok!(MTokens::approve(Origin::signed(ALICE), BOB, CurrencyId::MDOT, 100));
         assert_noop!(
             MTokens::transfer_from(Origin::signed(ALICE), ALICE, BOB, CurrencyId::MDOT, 101),
-            DispatchError::Other("Not enough allowance.")
+            Error::<Runtime>::NotEnoughAllowance
         );
     });
 }
