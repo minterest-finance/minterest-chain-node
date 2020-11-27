@@ -277,7 +277,7 @@ impl orml_currencies::Trait for Runtime {
 }
 
 
-impl base_liquidity_pools::Trait for Runtime {
+impl liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 }
@@ -303,7 +303,7 @@ construct_runtime!(
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event},
 		// LiquidityPools
-		BaseLiquidityPools: base_liquidity_pools::{Module, Storage, Call, Event<T>},
+		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event, Config},
 	}
 );
 

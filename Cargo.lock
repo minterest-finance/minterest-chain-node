@@ -307,26 +307,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "base-liquidity-pools"
-version = "0.1.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "minterest-primitives",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "orml-utilities",
- "pallet-balances",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "base58"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2929,6 +2909,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "liquidity-pools"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "minterest-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "orml-utilities",
+ "pallet-balances",
+ "pallet-traits",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3362,7 +3363,6 @@ dependencies = [
 name = "node-minterest-runtime"
 version = "2.0.0"
 dependencies = [
- "base-liquidity-pools",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
@@ -3370,6 +3370,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "hex-literal 0.3.1",
+ "liquidity-pools",
  "m-tokens",
  "minterest-primitives",
  "minterest-protocol",
@@ -3385,6 +3386,7 @@ dependencies = [
  "pallet-randomness-collective-flip",
  "pallet-sudo",
  "pallet-timestamp",
+ "pallet-traits",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
@@ -3913,6 +3915,20 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-timestamp",
+]
+
+[[package]]
+name = "pallet-traits"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "minterest-primitives",
+ "orml-traits",
+ "orml-utilities",
+ "parity-scale-codec",
+ "sp-arithmetic",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
