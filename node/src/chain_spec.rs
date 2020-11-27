@@ -2,7 +2,7 @@ use sp_core::{Pair, Public, sr25519};
 use node_minterest_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
 	SudoConfig, SystemConfig, WASM_BINARY, Signature, TokensConfig, CurrencyId,
-	// BaseLiquidityPoolsConfig,
+	LiquidityPoolsConfig,
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_finality_grandpa::AuthorityId as GrandpaId;
@@ -178,6 +178,33 @@ fn testnet_genesis(
 				})
 				.collect(),
 		}),
-		// base_liquidity_pools: Some(BaseLiquidityPoolsConfig { pools }),
+		liquidity_pools: Some(LiquidityPoolsConfig {
+			pools: vec![
+				(
+					CurrencyId::MINT,
+					0,
+					),
+				(
+					CurrencyId::DOT,
+					20,
+					),
+				(
+					CurrencyId::MDOT,
+					0,
+					),
+				(
+					CurrencyId::MBTC,
+					0,
+					),
+				(
+					CurrencyId::METH,
+					0,
+					),
+				(
+					CurrencyId::MKSM,
+					0,
+					)
+			]
+		}),
 	}
 }
