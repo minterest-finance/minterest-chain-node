@@ -6,6 +6,9 @@
       "_enum": [
         "MINT",
         "DOT",
+        "KSM",
+        "BTC",
+        "ETH",
         "MDOT",
         "MKSM",
         "MBTC",

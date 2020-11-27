@@ -42,11 +42,14 @@ pub type Amount = i128;
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
     MINT = 0,
-    DOT = 1,
-    MDOT = 2,
-    MKSM = 3,
-    MBTC = 4,
-    METH = 5,
+    DOT,
+    KSM,
+    BTC,
+    ETH,
+    MDOT,
+    MKSM,
+    MBTC,
+    METH,
 }
 // #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 // #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]

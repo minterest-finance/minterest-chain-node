@@ -173,7 +173,10 @@ fn testnet_genesis(
 				.iter()
 				.flat_map(|x| {
 					vec![
-						(x.clone(), CurrencyId::MDOT, 10u128.pow(16)), // FIXME rewrite via initial_balance
+						(x.clone(), CurrencyId::DOT, 10u128.pow(19)), // FIXME rewrite via initial_balance
+						(x.clone(), CurrencyId::ETH, 10u128.pow(19)), // FIXME rewrite via initial_balance
+						(x.clone(), CurrencyId::METH, 10u128.pow(19)), // FIXME rewrite via initial_balance
+						(x.clone(), CurrencyId::MDOT, 10u128.pow(19)), // FIXME rewrite via initial_balance
 					]
 				})
 				.collect(),
