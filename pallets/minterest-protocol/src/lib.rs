@@ -36,7 +36,7 @@ decl_event!(
 	pub enum Event<T> where
 	    <T as system::Trait>::AccountId,
     {
-	    /// Underlying  assets added to poll and wrapped tokens minted: \[who, wrapped_currency_id, liquidity_amount, wrapped_amount\]
+	    /// Underlying assets added to pool and wrapped tokens minted: \[who, wrapped_currency_id, liquidity_amount, wrapped_amount\]
 		Minted(AccountId, CurrencyId, Balance, Balance),
 
 		/// Underlying assets and wrapped tokens redeemed: \[who, wrapped_currency_id, liquidity_amount, wrapped_amount\]
@@ -52,6 +52,9 @@ decl_error! {
 		/// Insufficient funds in the user account
 		NotEnoughUnderlyingAssets,
 
+		/// Insufficient funds in the user account
+		NotEnoughWrappedTokens,
+
 		/// Number overflow in calculation.
 		NumOverflow,
 	}
@@ -64,7 +67,7 @@ decl_module! {
 
 		const UnderlyingAssetId: Vec<CurrencyId> = T::UnderlyingAssetId::get();
 
-		/// Mint wrapped tokens.
+		/// Add Underlying Assets to pool and mint wrapped tokens.
         #[weight = 10_000]
         fn mint(
             origin,
@@ -79,15 +82,17 @@ decl_module! {
             })?;
         }
 
-        /// Burn wrapped tokens.
+        /// Withdraw underlying assets from pool and burn wrapped tokens.
         #[weight = 10_000]
-        fn burn(origin,
-            currency_id: CurrencyId,
-            #[compact] amount: Balance
+        fn burn(
+            origin,
+            underlying_asset_id: CurrencyId,
+            #[compact] liquidity_amount: Balance
         ) {
             with_transaction_result(|| {
                 let who = ensure_signed(origin)?;
-                T::MultiCurrency::withdraw(currency_id, &who, amount)?;
+                let wrapped_amount = Self::do_withdraw(&who, underlying_asset_id, liquidity_amount)?;
+                Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, liquidity_amount, wrapped_amount));
                 Ok(())
             })?;
         }
@@ -112,26 +117,51 @@ impl<T: Trait> Module<T> {
             Error::<T>::NotEnoughUnderlyingAssets
         );
 
-        T::MultiCurrency::withdraw(underlying_asset_id, &who, liquidity_amount)?;
-
         let price: u128 = Self::get_price()?;
 
         // wrapped_amount = liquidity_amount * price
         let wrapped_value = price.checked_mul(liquidity_amount).ok_or(Error::<T>::NumOverflow)?;
 
-        let currency_id = match underlying_asset_id {
-            CurrencyId::DOT => CurrencyId::MDOT,
-            CurrencyId::KSM => CurrencyId::MKSM,
-            CurrencyId::BTC => CurrencyId::MBTC,
-            CurrencyId::ETH => CurrencyId::METH,
-            _ => unreachable!(),
-        };
+        let currency_id = Self::get_currency_id_by_underlying_asset_id(&underlying_asset_id)?;
+
+        T::MultiCurrency::withdraw(underlying_asset_id, &who, liquidity_amount)?;
 
         T::LiqudityPools::add_liquidity(&underlying_asset_id, &liquidity_amount)?;
 
-        T::MultiCurrency::deposit(currency_id, &who, liquidity_amount)?;
+        T::MultiCurrency::deposit(currency_id, &who, wrapped_value)?;
 
         Ok(wrapped_value)
+    }
+
+    fn do_withdraw(
+        who: &T::AccountId,
+        underlying_asset_id: CurrencyId,
+        liquidity_amount: Balance,
+    ) -> BalanceResult {
+        ensure!(
+			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
+			Error::<T>::NotValidUnderlyingAssetId
+		);
+
+        let price: u128 = Self::get_price()?;
+
+        // wrapped_amount = liquidity_amount * price
+        let required_wrapped_value = price.checked_mul(liquidity_amount).ok_or(Error::<T>::NumOverflow)?;
+
+        let currency_id = Self::get_currency_id_by_underlying_asset_id(&underlying_asset_id)?;
+
+        ensure!(
+            required_wrapped_value <= T::MultiCurrency::free_balance(currency_id, &who),
+            Error::<T>::NotEnoughWrappedTokens
+        );
+
+        T::MultiCurrency::withdraw(currency_id, &who, required_wrapped_value)?;
+
+        T::LiqudityPools::withdraw_liquidity(&underlying_asset_id, &liquidity_amount)?;
+
+        T::MultiCurrency::deposit(underlying_asset_id, &who, liquidity_amount)?;
+
+        Ok(required_wrapped_value)
     }
 }
 
@@ -141,5 +171,17 @@ impl<T: Trait> Module<T> {
     fn get_price() -> result::Result<u128, DispatchError> {
         let price: u128 = 1;
         Ok(price)
+    }
+
+    fn get_currency_id_by_underlying_asset_id(
+        asset_id: &CurrencyId
+    ) -> result::Result<CurrencyId, DispatchError> {
+        match asset_id {
+            CurrencyId::DOT => Ok(CurrencyId::MDOT),
+            CurrencyId::KSM => Ok(CurrencyId::MKSM),
+            CurrencyId::BTC => Ok(CurrencyId::MBTC),
+            CurrencyId::ETH => Ok(CurrencyId::METH),
+            _ => unreachable!(),
+        }
     }
 }
