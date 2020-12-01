@@ -13,6 +13,11 @@ use pallet_traits::LiquidityPools;
 
 pub const DEFAULT_BALANCE: Balance = 0;
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 pub trait Trait: frame_system::Trait {
     type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
