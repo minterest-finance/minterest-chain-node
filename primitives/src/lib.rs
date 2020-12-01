@@ -51,19 +51,5 @@ pub enum CurrencyId {
     MBTC,
     METH,
 }
-// #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
-// #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-// pub enum UnderlineAssets {
-//     DOT,
-//     DAI,
-//     KSM,
-// }
-// #[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, PartialOrd, Ord)]
-// #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-// pub struct Pool {
-//     pub id: UnderlineAssets,
-//     // pub symbol: Vec<u8>,
-//     pub balance: Balance,
-// }
 
 
