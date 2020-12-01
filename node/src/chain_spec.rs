@@ -145,9 +145,6 @@ fn testnet_genesis(
 	endowed_accounts: Vec<AccountId>,
 	_enable_println: bool,
 ) -> GenesisConfig {
-	// let asset_names = vec![String::from("DOT"), String::from("DAI"), String::from("KSM")];
-	// let values = vec![0,0,0];
-	// let pools: HashMap<CurrencyId, Balance> = asset_names.into_iter().zip(values.into_iter()).collect();
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
