@@ -58,6 +58,6 @@ fn transfer_from_work() {
         .execute_with(|| {
             assert_ok!(MTokens::approve(Origin::signed(ALICE), BOB, CurrencyId::MDOT, 100));
             // TODO пополнить баланс алисы для оплаты за транзакцию.
-            // assert_ok!(MTokens::transfer_from(Origin::signed(ALICE), ALICE, BOB, CurrencyId::MDOT, 50));
+            assert_ok!(MTokens::transfer_from(Origin::signed(ALICE), ALICE, BOB, CurrencyId::MDOT, 50));
         });
 }
