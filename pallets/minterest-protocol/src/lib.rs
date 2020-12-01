@@ -55,6 +55,12 @@ decl_error! {
 		/// Insufficient funds in the user account
 		NotEnoughWrappedTokens,
 
+		/// Insufficient liquidity in pool for minting.
+		InsufficientLiquidityInPool,
+
+		/// Insufficient amount of collateral locked in protocol.
+		InsufficientLockedCollateral,
+
 		/// Number overflow in calculation.
 		NumOverflow,
 	}
@@ -126,7 +132,8 @@ impl<T: Trait> Module<T> {
 
         T::MultiCurrency::withdraw(underlying_asset_id, &who, liquidity_amount)?;
 
-        T::LiqudityPools::add_liquidity(&underlying_asset_id, &liquidity_amount)?;
+        T::LiqudityPools::add_liquidity(&underlying_asset_id, &liquidity_amount)
+            .map_err(|_| Error::<T>::InsufficientLiquidityInPool)?;
 
         T::MultiCurrency::deposit(currency_id, &who, wrapped_value)?;
 
@@ -157,7 +164,8 @@ impl<T: Trait> Module<T> {
 
         T::MultiCurrency::withdraw(currency_id, &who, required_wrapped_value)?;
 
-        T::LiqudityPools::withdraw_liquidity(&underlying_asset_id, &liquidity_amount)?;
+        T::LiqudityPools::withdraw_liquidity(&underlying_asset_id, &liquidity_amount)
+            .map_err(|_| Error::<T>::InsufficientLockedCollateral)?;
 
         T::MultiCurrency::deposit(underlying_asset_id, &who, liquidity_amount)?;
 
@@ -175,13 +183,13 @@ impl<T: Trait> Module<T> {
 
     fn get_currency_id_by_underlying_asset_id(
         asset_id: &CurrencyId
-    ) -> result::Result<CurrencyId, DispatchError> {
+    ) -> result::Result<CurrencyId, Error<T>> {
         match asset_id {
             CurrencyId::DOT => Ok(CurrencyId::MDOT),
             CurrencyId::KSM => Ok(CurrencyId::MKSM),
             CurrencyId::BTC => Ok(CurrencyId::MBTC),
             CurrencyId::ETH => Ok(CurrencyId::METH),
-            _ => unreachable!(),
+            _ => Err(Error::<T>::NotValidUnderlyingAssetId),
         }
     }
 }
