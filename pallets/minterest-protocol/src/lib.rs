@@ -123,10 +123,8 @@ impl<T: Trait> Module<T> {
             Error::<T>::NotEnoughUnderlyingAssets
         );
 
-        let price: u128 = Self::get_price()?;
-
-        // wrapped_amount = liquidity_amount * price
-        let wrapped_value = price.checked_mul(liquidity_amount).ok_or(Error::<T>::NumOverflow)?;
+        // wrapped_amount = liquidity_amount
+        let wrapped_value = liquidity_amount;
 
         let currency_id = Self::get_currency_id_by_underlying_asset_id(&underlying_asset_id)?;
 
@@ -150,10 +148,8 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
-        let price: u128 = Self::get_price()?;
-
-        // wrapped_amount = liquidity_amount * price
-        let required_wrapped_value = price.checked_mul(liquidity_amount).ok_or(Error::<T>::NumOverflow)?;
+        // wrapped_amount = liquidity_amount
+        let required_wrapped_value = liquidity_amount;
 
         let currency_id = Self::get_currency_id_by_underlying_asset_id(&underlying_asset_id)?;
 
@@ -175,12 +171,6 @@ impl<T: Trait> Module<T> {
 
 // Private methods
 impl<T: Trait> Module<T> {
-    // TODO implement the logic for getting the exchange price underlying assets to wrapped tokens
-    fn get_price() -> result::Result<u128, DispatchError> {
-        let price: u128 = 1;
-        Ok(price)
-    }
-
     fn get_currency_id_by_underlying_asset_id(
         asset_id: &CurrencyId
     ) -> result::Result<CurrencyId, Error<T>> {
