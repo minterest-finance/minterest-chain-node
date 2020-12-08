@@ -52,9 +52,6 @@ decl_error! {
 
 		/// Insufficient funds in the user account
 		NotEnoughWrappedTokens,
-
-		/// Number overflow in calculation.
-		NumOverflow,
 	}
 }
 
@@ -117,7 +114,7 @@ impl<T: Trait> Module<T> {
 
         <MTokens<T>>::withdraw(underlying_asset_id, &who, amount)?;
 
-        <LiquidityPools<T>>::update_state_on_deposit(underlying_asset_id, amount)
+        <LiquidityPools<T>>::update_state_on_deposit(amount, underlying_asset_id)
             .map_err(|_| Error::<T>::NotEnoughLiquidityAvailable)?;
 
         <MTokens<T>>::deposit(currency_id, &who, amount)?;
@@ -136,7 +133,7 @@ impl<T: Trait> Module<T> {
 		);
 
         ensure!(
-            amount <= <LiquidityPools<T>>::get_reserve_available_liquidity(underlying_asset_id)?,
+            amount <= <LiquidityPools<T>>::get_reserve_available_liquidity(underlying_asset_id),
             Error::<T>::NotEnoughLiquidityAvailable
         );
 
@@ -149,7 +146,7 @@ impl<T: Trait> Module<T> {
 
         <MTokens<T>>::withdraw(currency_id, &who, amount)?;
 
-        <LiquidityPools<T>>::update_state_on_redeem(underlying_asset_id, amount)
+        <LiquidityPools<T>>::update_state_on_redeem(amount, underlying_asset_id)
             .map_err(|_| Error::<T>::NotEnoughLiquidityAvailable)?;
 
         <MTokens<T>>::deposit(underlying_asset_id, &who, amount)?;

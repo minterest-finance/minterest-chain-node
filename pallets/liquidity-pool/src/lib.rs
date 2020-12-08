@@ -4,11 +4,9 @@ use codec::{Decode, Encode};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
 };
-
-use orml_traits::MultiCurrency;
 use minterest_primitives::{Balance, CurrencyId};
 use sp_runtime::{DispatchResult, Permill, RuntimeDebug};
-use sp_std::prelude::*;
+use sp_std::{prelude::*};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -19,8 +17,8 @@ pub const ZERO_VALUE: Balance = 0;
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct Reserve {
-    total_balance: Balance,
-    current_liquidity_rate: Permill,
+    pub total_balance: Balance,
+    pub current_liquidity_rate: Permill,
 }
 
 #[cfg(test)]
@@ -53,7 +51,7 @@ decl_error! {
 
 decl_storage! {
      trait Store for Module<T: Trait> as LiquidityPoolsStorage {
-        pub Reserves get(fn reserves) config(): map hasher(blake2_128_concat) CurrencyId => Reserve;
+        pub Reserves get(fn reserves) config(): map hasher(twox_64_concat) CurrencyId => Reserve;
 	}
 }
 
@@ -65,13 +63,11 @@ impl<T: Trait> Module<T> {
 
         pub fn update_state_on_deposit(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
             Self::update_reserve_interest_rate(amount, ZERO_VALUE, currency_id)?;
-
             Ok(())
         }
 
         pub fn update_state_on_redeem(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
             Self::update_reserve_interest_rate(ZERO_VALUE, amount, currency_id)?;
-
             Ok(())
         }
 
@@ -101,5 +97,9 @@ impl<T: Trait> Module<T> {
             Reserves::mutate(currency_id, |r| r.current_liquidity_rate = new_rate);
 
             Ok(())
+        }
+
+        pub fn get_reserve_available_liquidity(reserve_id: CurrencyId) -> Balance {
+            Self::reserves(&reserve_id).total_balance
         }
 }

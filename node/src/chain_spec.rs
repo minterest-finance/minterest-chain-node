@@ -1,15 +1,16 @@
 use sp_core::{Pair, Public, sr25519};
 use node_minterest_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
-	SudoConfig, SystemConfig, WASM_BINARY, Signature, TokensConfig, CurrencyId,
+	SudoConfig, SystemConfig, WASM_BINARY, Signature, TokensConfig, CurrencyId, Balance,
 	LiquidityPoolsConfig,
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_finality_grandpa::AuthorityId as GrandpaId;
-use sp_runtime::traits::{Verify, IdentifyAccount};
+use sp_runtime::traits::{Verify, IdentifyAccount, Zero};
 use sc_service::ChainType;
 use serde_json::map::Map;
 use sp_runtime::Permill;
+use liquidity_pools::Reserve;
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -181,16 +182,35 @@ fn testnet_genesis(
 				.collect(),
 		}),
 		liquidity_pools: Some(LiquidityPoolsConfig {
-			pools: vec![
-				// (CurrencyId::ETH, 0),
-				// (CurrencyId::DOT, 0),
-				// (CurrencyId::KSM, 0),
-				// (CurrencyId::BTC, 0),
-				(CurrencyId:ETH, (0, Permill::one())),
-				(CurrencyId:DOT, (0, Permill::one())),
-				(CurrencyId:KSM, (0, Permill::one())),
-				(CurrencyId:BTC, (0, Permill::one())),
-
+			reserves: vec![
+				(
+					CurrencyId::ETH,
+					Reserve{
+						total_balance: Balance::zero(),
+						current_liquidity_rate: Permill::one()
+					},
+				),
+				(
+					CurrencyId::DOT,
+					Reserve{
+						total_balance: Balance::zero(),
+						current_liquidity_rate: Permill::one()
+					},
+				),
+				(
+					CurrencyId::KSM,
+					Reserve{
+						total_balance: Balance::zero(),
+						current_liquidity_rate: Permill::one()
+					},
+				),
+				(
+					CurrencyId::BTC,
+					Reserve{
+						total_balance: Balance::zero(),
+						current_liquidity_rate: Permill::one()
+					},
+				),
 			]
 		}),
 	}
