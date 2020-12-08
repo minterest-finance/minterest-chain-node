@@ -1,14 +1,27 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::{Decode, Encode};
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, ensure,
+    decl_error, decl_event, decl_module, decl_storage,
 };
 
+use orml_traits::MultiCurrency;
 use minterest_primitives::{Balance, CurrencyId};
-use sp_runtime::{DispatchResult, DispatchError};
-use sp_std::{prelude::*, result};
+use sp_runtime::{DispatchResult, Permill, RuntimeDebug};
+use sp_std::prelude::*;
 
-pub const DEFAULT_BALANCE: Balance = 0;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
+
+pub const ZERO_VALUE: Balance = 0;
+
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct Reserve {
+    total_balance: Balance,
+    current_liquidity_rate: Permill,
+}
 
 #[cfg(test)]
 mod mock;
@@ -31,16 +44,16 @@ decl_error! {
 
     /// Liquidity amount overflows maximum.
     /// Only happened when the liquidity currency went wrong and liquidity amount overflows the integer type.
-        LiquidityOverflow,
+        ReserveOverflow,
 
 	/// Pool not found.
-		PoolNotFound,
+		ReserveNotFound,
 	}
 }
 
 decl_storage! {
      trait Store for Module<T: Trait> as LiquidityPoolsStorage {
-        pub Pools get(fn pools) config(): map hasher(blake2_128_concat) CurrencyId => Balance;
+        pub Reserves get(fn reserves) config(): map hasher(blake2_128_concat) CurrencyId => Reserve;
 	}
 }
 
@@ -48,52 +61,45 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
 }
 
-type BalanceResult = result::Result<Balance, DispatchError>;
-
 impl<T: Trait> Module<T> {
-    pub fn add_liquidity(currency_id: &CurrencyId, amount: &Balance) -> DispatchResult {
-        Self::do_increase_liquidity(currency_id, amount)
-    }
 
-    pub fn withdraw_liquidity(currency_id: &CurrencyId, amount: &Balance) -> DispatchResult {
-        Self::do_withdraw_liquidity(currency_id, amount)
-    }
+        pub fn update_state_on_deposit(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
+            Self::update_reserve_interest_rate(amount, ZERO_VALUE, currency_id)?;
 
-    fn do_increase_liquidity(currency_id: &CurrencyId, amount: &Balance ) -> DispatchResult {
-        ensure!(Self::pool_exists(&currency_id), Error::<T>::PoolNotFound);
+            Ok(())
+        }
 
-        let pool_balance = <Pools>::get(*currency_id);
-        let new_balance =  pool_balance.checked_add(*amount).ok_or(Error::<T>::LiquidityOverflow)?;
+        pub fn update_state_on_redeem(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
+            Self::update_reserve_interest_rate(ZERO_VALUE, amount, currency_id)?;
 
-        <Pools>::insert(&currency_id, new_balance);
-        Ok(())
-    }
+            Ok(())
+        }
 
-    fn do_withdraw_liquidity(currency_id: &CurrencyId, amount: &Balance ) -> DispatchResult {
-        ensure!(Self::pool_exists(&currency_id), Error::<T>::PoolNotFound);
+        fn update_reserve_interest_rate(liquidity_added: Balance, liquidity_taken: Balance, currency_id: CurrencyId) -> DispatchResult {
+            let reserve = Self::reserves(currency_id);
 
-        let pool_balance = <Pools>::get(*currency_id);
-        let new_balance = pool_balance.checked_sub(*amount).ok_or(Error::<T>::NotEnoughBalance)?;
+            let current_reserve_balance = reserve.total_balance;
 
-        <Pools>::insert(&currency_id, new_balance);
-        Ok(())
-    }
+            let new_reserve_balance: Balance;
 
-    /// Check if pool exists
-    fn pool_exists(currency_id: &CurrencyId) -> bool {
-        <Pools>::contains_key(&currency_id)
-    }
+            if liquidity_added != ZERO_VALUE {
+                new_reserve_balance = current_reserve_balance.checked_add(liquidity_added).ok_or("Overflow balance")?;
+            } else {
+                new_reserve_balance = current_reserve_balance.checked_sub(liquidity_taken).ok_or("Not enough balance")?;
+            }
 
-    pub fn get_reserve_available_liquidity(_currency_id: CurrencyId) -> BalanceResult {
-        let balance: Balance = 0;
-        Ok(balance)
-    }
+            Reserves::mutate(currency_id, |r| r.total_balance = new_reserve_balance );
 
-    pub fn update_state_on_deposit(_reserve_id: CurrencyId, _amount: Balance) -> DispatchResult {
-        Ok(())
-    }
+            Self::calculate_interest_rate(new_reserve_balance, currency_id)?;
 
-    pub fn update_state_on_redeem(_reserve_id: CurrencyId, _amount: Balance) -> DispatchResult {
-        Ok(())
-    }
+            Ok(())
+        }
+
+        fn calculate_interest_rate(_current_reserve_balance: Balance, currency_id: CurrencyId) -> DispatchResult {
+            // TODO: some another logic here......
+            let new_rate = Permill::one();
+            Reserves::mutate(currency_id, |r| r.current_liquidity_rate = new_rate);
+
+            Ok(())
+        }
 }
