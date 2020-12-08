@@ -242,7 +242,6 @@ impl m_tokens::Trait for Runtime {
 impl minterest_protocol::Trait for Runtime {
 	type Event = Event;
 	type UnderlyingAssetId = UnderlyingAssetId;
-	type LiqudityPools = LiquidityPools;
 }
 
 impl orml_tokens::Trait for Runtime {
@@ -276,7 +275,6 @@ impl orml_currencies::Trait for Runtime {
 
 impl liquidity_pools::Trait for Runtime {
 	type Event = Event;
-	type MultiCurrency = Currencies;
 }
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(

@@ -4,12 +4,9 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, ensure,
 };
 
-use orml_traits::MultiCurrency;
 use minterest_primitives::{Balance, CurrencyId};
-use sp_runtime::DispatchResult;
-use sp_std::prelude::*;
-use pallet_traits::LiquidityPools;
-
+use sp_runtime::{DispatchResult, DispatchError};
+use sp_std::{prelude::*, result};
 
 pub const DEFAULT_BALANCE: Balance = 0;
 
@@ -20,8 +17,6 @@ mod tests;
 
 pub trait Trait: frame_system::Trait {
     type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
-
-    type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 }
 
 decl_event! (
@@ -53,18 +48,16 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
 }
 
-impl<T: Trait> LiquidityPools for Module<T> {
+type BalanceResult = result::Result<Balance, DispatchError>;
 
-    fn add_liquidity(currency_id: &CurrencyId, amount: &Balance) -> DispatchResult {
+impl<T: Trait> Module<T> {
+    pub fn add_liquidity(currency_id: &CurrencyId, amount: &Balance) -> DispatchResult {
         Self::do_increase_liquidity(currency_id, amount)
     }
 
-    fn withdraw_liquidity(currency_id: &CurrencyId, amount: &Balance) -> DispatchResult {
+    pub fn withdraw_liquidity(currency_id: &CurrencyId, amount: &Balance) -> DispatchResult {
         Self::do_withdraw_liquidity(currency_id, amount)
     }
-}
-
-impl<T: Trait> Module<T> {
 
     fn do_increase_liquidity(currency_id: &CurrencyId, amount: &Balance ) -> DispatchResult {
         ensure!(Self::pool_exists(&currency_id), Error::<T>::PoolNotFound);
@@ -89,5 +82,18 @@ impl<T: Trait> Module<T> {
     /// Check if pool exists
     fn pool_exists(currency_id: &CurrencyId) -> bool {
         <Pools>::contains_key(&currency_id)
+    }
+
+    pub fn get_reserve_available_liquidity(_currency_id: CurrencyId) -> BalanceResult {
+        let balance: Balance = 0;
+        Ok(balance)
+    }
+
+    pub fn update_state_on_deposit(_reserve_id: CurrencyId, _amount: Balance) -> DispatchResult {
+        Ok(())
+    }
+
+    pub fn update_state_on_redeem(_reserve_id: CurrencyId, _amount: Balance) -> DispatchResult {
+        Ok(())
     }
 }

@@ -10,7 +10,7 @@ use minterest_primitives::{Balance, CurrencyId};
 use sp_runtime::{
     traits::{StaticLookup},
 };
-
+use frame_support::dispatch::DispatchResult;
 
 #[cfg(test)]
 mod mock;
@@ -114,4 +114,26 @@ decl_module! {
     }
 }
 
-impl<T: Trait> Module<T> {}
+impl<T: Trait> Module<T> {
+    pub fn free_balance(currency_id: CurrencyId, who: &T::AccountId) -> Balance {
+        T::MultiCurrency::free_balance(currency_id, &who)
+    }
+
+    pub fn deposit(
+        currency_id: CurrencyId,
+        who: &T::AccountId,
+        amount: Balance
+    ) -> DispatchResult {
+        T::MultiCurrency::deposit(currency_id, &who, amount)?;
+        Ok(())
+    }
+
+    pub fn withdraw(
+        currency_id: CurrencyId,
+        who: &T::AccountId,
+        amount: Balance
+    ) -> DispatchResult {
+        T::MultiCurrency::withdraw(currency_id, &who, amount)?;
+        Ok(())
+    }
+}

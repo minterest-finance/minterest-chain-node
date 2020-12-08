@@ -14,12 +14,11 @@ frame-support = { default-features = false, version = '2.0.0' }
 frame-system = { default-features = false, version = '2.0.0' }
 sp-std = { version = "2.0.0", default-features = false }
 
-orml-traits = { path = "../../orml/traits", default-features = false }
 orml-utilities = { path = "../../orml/utilities", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 m-tokens = { path = "../m-tokens", default-features = false }
-pallet-traits = { path = "../traits", default-features = false }
+liquidity-pools = { path = "../liquidity-pool", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = "2.0.0", default-features = false }
@@ -34,8 +33,6 @@ std = [
     "sp-runtime/std",
     'frame-support/std',
     'frame-system/std',
-    "orml-traits/std",
     "minterest-primitives/std",
     "m-tokens/std",
-    "pallet-traits/std",
 ]

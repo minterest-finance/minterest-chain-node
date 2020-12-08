@@ -4,28 +4,26 @@ use frame_support::{decl_event, decl_module, decl_storage, decl_error, ensure,
     traits::{Get},
 };
 use frame_system::{self as system, ensure_signed};
-use orml_traits::{MultiCurrency};
 use orml_utilities::with_transaction_result;
 use minterest_primitives::{Balance, CurrencyId};
-use sp_runtime::DispatchError;
+use sp_runtime::{DispatchResult};
 use sp_std::{result, prelude::Vec};
-use pallet_traits::{LiquidityPools};
 
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod mock;
 
-pub trait Trait: m_tokens::Trait {
+pub trait Trait: m_tokens::Trait + liquidity_pools::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     /// Wrapped currency IDs.
     type UnderlyingAssetId: Get<Vec<CurrencyId>>;
-
-    /// The Liquidity pools
-    type LiqudityPools: LiquidityPools;
 }
+
+type MTokens<T> = m_tokens::Module<T>;
+type LiquidityPools<T> = liquidity_pools::Module<T>;
 
 decl_storage! {
 	trait Store for Module<T: Trait> as MinterestProtocol {
@@ -36,11 +34,11 @@ decl_event!(
 	pub enum Event<T> where
 	    <T as system::Trait>::AccountId,
     {
-	    /// Underlying assets added to pool and wrapped tokens minted: \[who, wrapped_currency_id, liquidity_amount, wrapped_amount\]
-		Minted(AccountId, CurrencyId, Balance, Balance),
+	    /// Underlying assets added to pool and wrapped tokens minted: \[who, wrapped_currency_id, liquidity_amount\]
+		Deposited(AccountId, CurrencyId, Balance),
 
-		/// Underlying assets and wrapped tokens redeemed: \[who, wrapped_currency_id, liquidity_amount, wrapped_amount\]
-		Redeemed(AccountId, CurrencyId, Balance, Balance),
+		/// Underlying assets and wrapped tokens redeemed: \[who, wrapped_currency_id, liquidity_amount\]
+		Redeemed(AccountId, CurrencyId, Balance),
 	}
 );
 
@@ -49,17 +47,11 @@ decl_error! {
         /// The currency is not enabled in wrapped protocol.
 		NotValidUnderlyingAssetId,
 
-		/// Insufficient funds in the user account
-		NotEnoughUnderlyingAssets,
+		/// There is not enough liquidity available to redeem
+		NotEnoughLiquidityAvailable,
 
 		/// Insufficient funds in the user account
 		NotEnoughWrappedTokens,
-
-		/// Insufficient liquidity in pool for minting.
-		InsufficientLiquidityInPool,
-
-		/// Insufficient amount of collateral locked in protocol.
-		InsufficientLockedCollateral,
 
 		/// Number overflow in calculation.
 		NumOverflow,
@@ -75,97 +67,94 @@ decl_module! {
 
 		/// Add Underlying Assets to pool and mint wrapped tokens.
         #[weight = 10_000]
-        fn mint(
+        fn deposit_underlying(
             origin,
             underlying_asset_id: CurrencyId,
             #[compact] liquidity_amount: Balance
         ) {
             with_transaction_result(|| {
                 let who = ensure_signed(origin)?;
-                let wrapped_amount = Self::do_mint(&who, underlying_asset_id, liquidity_amount)?;
-                Self::deposit_event(RawEvent::Minted(who, underlying_asset_id, liquidity_amount, wrapped_amount));
+                Self::do_deposit(&who, underlying_asset_id, liquidity_amount)?;
+                Self::deposit_event(RawEvent::Deposited(who, underlying_asset_id, liquidity_amount));
                 Ok(())
             })?;
         }
 
         /// Withdraw underlying assets from pool and burn wrapped tokens.
         #[weight = 10_000]
-        fn burn(
+        fn redeem_underlying(
             origin,
             underlying_asset_id: CurrencyId,
             #[compact] liquidity_amount: Balance
         ) {
             with_transaction_result(|| {
                 let who = ensure_signed(origin)?;
-                let wrapped_amount = Self::do_withdraw(&who, underlying_asset_id, liquidity_amount)?;
-                Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, liquidity_amount, wrapped_amount));
+                Self::do_redeem(&who, underlying_asset_id, liquidity_amount)?;
+                Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, liquidity_amount));
                 Ok(())
             })?;
         }
 	}
 }
 
-type BalanceResult = result::Result<Balance, DispatchError>;
-
 // Dispatchable calls implementation
 impl<T: Trait> Module<T> {
-    fn do_mint(
+    fn do_deposit(
         who: &T::AccountId,
         underlying_asset_id: CurrencyId,
-        liquidity_amount: Balance,
-    ) -> BalanceResult {
+        amount: Balance,
+    ) -> DispatchResult {
         ensure!(
 			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
         ensure!(
-            liquidity_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
-            Error::<T>::NotEnoughUnderlyingAssets
+            amount <= <MTokens<T>>::free_balance(underlying_asset_id, &who),
+            Error::<T>::NotEnoughLiquidityAvailable
         );
 
-        // wrapped_amount = liquidity_amount
-        let wrapped_value = liquidity_amount;
-
         let currency_id = Self::get_currency_id_by_underlying_asset_id(&underlying_asset_id)?;
 
-        T::MultiCurrency::withdraw(underlying_asset_id, &who, liquidity_amount)?;
+        <MTokens<T>>::withdraw(underlying_asset_id, &who, amount)?;
 
-        T::LiqudityPools::add_liquidity(&underlying_asset_id, &liquidity_amount)
-            .map_err(|_| Error::<T>::InsufficientLiquidityInPool)?;
+        <LiquidityPools<T>>::update_state_on_deposit(underlying_asset_id, amount)
+            .map_err(|_| Error::<T>::NotEnoughLiquidityAvailable)?;
 
-        T::MultiCurrency::deposit(currency_id, &who, wrapped_value)?;
+        <MTokens<T>>::deposit(currency_id, &who, amount)?;
 
-        Ok(wrapped_value)
+        Ok(())
     }
 
-    fn do_withdraw(
+    fn do_redeem(
         who: &T::AccountId,
         underlying_asset_id: CurrencyId,
-        liquidity_amount: Balance,
-    ) -> BalanceResult {
+        amount: Balance,
+    ) -> DispatchResult {
         ensure!(
 			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
-        // wrapped_amount = liquidity_amount
-        let required_wrapped_value = liquidity_amount;
+        ensure!(
+            amount <= <LiquidityPools<T>>::get_reserve_available_liquidity(underlying_asset_id)?,
+            Error::<T>::NotEnoughLiquidityAvailable
+        );
 
         let currency_id = Self::get_currency_id_by_underlying_asset_id(&underlying_asset_id)?;
 
         ensure!(
-            required_wrapped_value <= T::MultiCurrency::free_balance(currency_id, &who),
+            amount <= <MTokens<T>>::free_balance(currency_id, &who),
             Error::<T>::NotEnoughWrappedTokens
         );
 
-        T::MultiCurrency::withdraw(currency_id, &who, required_wrapped_value)?;
+        <MTokens<T>>::withdraw(currency_id, &who, amount)?;
 
-        T::LiqudityPools::withdraw_liquidity(&underlying_asset_id, &liquidity_amount)
-            .map_err(|_| Error::<T>::InsufficientLockedCollateral)?;
+        <LiquidityPools<T>>::update_state_on_redeem(underlying_asset_id, amount)
+            .map_err(|_| Error::<T>::NotEnoughLiquidityAvailable)?;
 
-        T::MultiCurrency::deposit(underlying_asset_id, &who, liquidity_amount)?;
+        <MTokens<T>>::deposit(underlying_asset_id, &who, amount)?;
 
-        Ok(required_wrapped_value)
+        Ok(())
     }
 }
 
