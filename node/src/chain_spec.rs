@@ -9,6 +9,7 @@ use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{Verify, IdentifyAccount};
 use sc_service::ChainType;
 use serde_json::map::Map;
+use sp_runtime::Permill;
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -181,10 +182,15 @@ fn testnet_genesis(
 		}),
 		liquidity_pools: Some(LiquidityPoolsConfig {
 			pools: vec![
-				(CurrencyId::ETH, 0),
-				(CurrencyId::DOT, 0),
-				(CurrencyId::KSM, 0),
-				(CurrencyId::BTC, 0),
+				// (CurrencyId::ETH, 0),
+				// (CurrencyId::DOT, 0),
+				// (CurrencyId::KSM, 0),
+				// (CurrencyId::BTC, 0),
+				(CurrencyId:ETH, (0, Permill::one())),
+				(CurrencyId:DOT, (0, Permill::one())),
+				(CurrencyId:KSM, (0, Permill::one())),
+				(CurrencyId:BTC, (0, Permill::one())),
+
 			]
 		}),
 	}

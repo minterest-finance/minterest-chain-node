@@ -9,7 +9,6 @@ use orml_utilities::with_transaction_result;
 use minterest_primitives::{Balance, CurrencyId};
 use sp_runtime::DispatchError;
 use sp_std::{result, prelude::Vec};
-use pallet_traits::{LiquidityPools};
 
 #[cfg(test)]
 mod tests;
@@ -22,9 +21,6 @@ pub trait Trait: m_tokens::Trait {
 
     /// Wrapped currency IDs.
     type UnderlyingAssetId: Get<Vec<CurrencyId>>;
-
-    /// The Liquidity pools
-    type LiqudityPools: LiquidityPools;
 }
 
 decl_storage! {
