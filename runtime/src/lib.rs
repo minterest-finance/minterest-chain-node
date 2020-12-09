@@ -241,8 +241,7 @@ impl m_tokens::Trait for Runtime {
 
 impl minterest_protocol::Trait for Runtime {
 	type Event = Event;
-	type MultiCurrency = orml_currencies::Module<Runtime>;
-	type WrappedCurrencyIds = WrappedCurrencyIds;
+	type UnderlyingAssetId = UnderlyingAssetId;
 }
 
 impl orml_tokens::Trait for Runtime {
@@ -256,13 +255,11 @@ impl orml_tokens::Trait for Runtime {
 
 parameter_types! {
 	pub const GetMinterestCurrencyId: CurrencyId = CurrencyId::MINT;
-	pub WrappedCurrencyIds: Vec<CurrencyId> = vec![
-		CurrencyId::MINT,
+	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
 		CurrencyId::DOT,
-		CurrencyId::MDOT,
-		CurrencyId::MKSM,
-		CurrencyId::MBTC,
-		CurrencyId::METH,
+		CurrencyId::KSM,
+		CurrencyId::BTC,
+		CurrencyId::ETH,
 	];
 }
 
@@ -276,6 +273,9 @@ impl orml_currencies::Trait for Runtime {
 	type WeightInfo = ();
 }
 
+impl liquidity_pools::Trait for Runtime {
+	type Event = Event;
+}
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -296,7 +296,9 @@ construct_runtime!(
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		// Minterest pallets
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
-		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event},
+		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
+		// LiquidityPools
+		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event, Config},
 	}
 );
 
