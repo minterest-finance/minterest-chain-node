@@ -5,7 +5,6 @@ use sp_core::H256;
 use sp_runtime::{
 testing::Header, Perbill, traits::{IdentityLookup},
 };
-use orml_currencies::Currency;
 pub use minterest_primitives::{Balance, CurrencyId};
 
 use super::*;
@@ -23,7 +22,7 @@ impl_outer_origin! {
 impl_outer_event! {
     pub enum TestEvent for Runtime {
         frame_system<T>,
-        orml_currencies<T>, orml_tokens<T>,
+        orml_tokens<T>,
         liquidity_pools,
     }
 }
@@ -94,20 +93,8 @@ parameter_types! {
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MINT;
 }
 
-type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
-
-impl orml_currencies::Trait for Runtime {
-    type Event = TestEvent;
-    // type MultiCurrency = Tokens;
-    type MultiCurrency = orml_tokens::Module<Runtime>;
-    type NativeCurrency = NativeCurrency;
-    type GetNativeCurrencyId = GetNativeCurrencyId;
-    type WeightInfo = ();
-}
-
 impl Trait for Runtime {
     type Event = TestEvent;
-    type MultiCurrency = orml_currencies::Module<Runtime>;
 }
 
 pub type LiquidityPool = Module<Runtime>;
@@ -127,11 +114,34 @@ impl ExtBuilder {
             .unwrap();
 
         liquidity_pool::GenesisConfig {
-            pools: vec![
-                (CurrencyId::ETH, 0),
-                (CurrencyId::DOT, 0),
-                (CurrencyId::KSM, 0),
-                (CurrencyId::BTC, 0),],
+            reserves: vec![(
+                               CurrencyId::ETH,
+                               Reserve{
+                                   total_balance: Balance::zero(),
+                                   current_liquidity_rate: Permill::one()
+                               },
+                           ),
+                           (
+                               CurrencyId::DOT,
+                               Reserve{
+                                   total_balance: Balance::zero(),
+                                   current_liquidity_rate: Permill::one()
+                               },
+                           ),
+                           (
+                               CurrencyId::KSM,
+                               Reserve{
+                                   total_balance: Balance::zero(),
+                                   current_liquidity_rate: Permill::one()
+                               },
+                           ),
+                           (
+                               CurrencyId::BTC,
+                               Reserve{
+                                   total_balance: Balance::zero(),
+                                   current_liquidity_rate: Permill::one()
+                               },
+                           ),],
         }
         .assimilate_storage(&mut t)
         .unwrap();
