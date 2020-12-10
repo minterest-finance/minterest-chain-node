@@ -5,15 +5,18 @@ use mock::*;
 
 use frame_support::{assert_noop, assert_ok};
 
+
+
 #[test]
-fn add_liquidity_should_work() {
+fn update_state_on_deposit_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(LiquidityPool::add_liquidity(&CurrencyId::ETH, &100));
-        assert_ok!(LiquidityPool::add_liquidity(&CurrencyId::DOT, &100));
-        assert_ok!(LiquidityPool::add_liquidity(&CurrencyId::KSM, &100));
-        assert_ok!(LiquidityPool::add_liquidity(&CurrencyId::BTC, &100));
+        assert_ok!(LiquidityPool::update_state_on_deposit(100, CurrencyId::ETH));
+        assert_ok!(LiquidityPool::update_state_on_deposit(100, CurrencyId::DOT));
+        assert_ok!(LiquidityPool::update_state_on_deposit(100, CurrencyId::KSM));
+        assert_ok!(LiquidityPool::update_state_on_deposit(100, CurrencyId::BTC));
     });
 }
+
 
 #[test]
 fn pool_should_exists() {
@@ -27,7 +30,7 @@ fn pool_should_exists() {
 fn pool_not_found() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            LiquidityPool::add_liquidity(&CurrencyId::MBTC, &100),
+            LiquidityPool::update_state_on_deposit(100, CurrencyId::MBTC),
             liquidity_pool::Error::<Runtime>::PoolNotFound
         );
     });
@@ -36,10 +39,21 @@ fn pool_not_found() {
 #[test]
 fn not_enough_balance() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(LiquidityPool::add_liquidity(&CurrencyId::DOT, &100));
+        assert_ok!(LiquidityPool::update_state_on_deposit(100, CurrencyId::DOT));
         assert_noop!(
-            LiquidityPool::withdraw_liquidity(&CurrencyId::DOT, &101),
+            LiquidityPool::update_state_on_redeem(101, CurrencyId::DOT),
             liquidity_pool::Error::<Runtime>::NotEnoughBalance
+        );
+    });
+}
+
+#[test]
+fn balance_overflowed() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(LiquidityPool::update_state_on_deposit(100, CurrencyId::DOT));
+        assert_noop!(
+            LiquidityPool::update_state_on_deposit(Balance::max_value(), CurrencyId::DOT),
+            liquidity_pool::Error::<Runtime>::BalanceOverflowed
         );
     });
 }
@@ -47,13 +61,13 @@ fn not_enough_balance() {
 #[test]
 fn add_and_without_liquidity() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(LiquidityPool::add_liquidity(&CurrencyId::ETH, &100));
-        assert_ok!(LiquidityPool::add_liquidity(&CurrencyId::DOT, &100));
-        assert_ok!(LiquidityPool::add_liquidity(&CurrencyId::KSM, &100));
-        assert_ok!(LiquidityPool::add_liquidity(&CurrencyId::BTC, &100));
-        assert_ok!(LiquidityPool::withdraw_liquidity(&CurrencyId::ETH, &50));
-        assert_ok!(LiquidityPool::withdraw_liquidity(&CurrencyId::DOT, &50));
-        assert_ok!(LiquidityPool::withdraw_liquidity(&CurrencyId::KSM, &50));
-        assert_ok!(LiquidityPool::withdraw_liquidity(&CurrencyId::BTC, &50));
+        assert_ok!(LiquidityPool::update_state_on_deposit(100, CurrencyId::ETH));
+        assert_ok!(LiquidityPool::update_state_on_deposit(100, CurrencyId::DOT));
+        assert_ok!(LiquidityPool::update_state_on_deposit(100, CurrencyId::KSM));
+        assert_ok!(LiquidityPool::update_state_on_deposit(100, CurrencyId::BTC));
+        assert_ok!(LiquidityPool::update_state_on_redeem(100, CurrencyId::ETH));
+        assert_ok!(LiquidityPool::update_state_on_redeem(100, CurrencyId::DOT));
+        assert_ok!(LiquidityPool::update_state_on_redeem(100, CurrencyId::KSM));
+        assert_ok!(LiquidityPool::update_state_on_redeem(100, CurrencyId::BTC));
     });
 }
