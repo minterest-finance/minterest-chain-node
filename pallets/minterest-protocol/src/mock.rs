@@ -1,10 +1,14 @@
 //! Mocks for the minterest-protocol module.
 
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types};
-use sp_runtime::{traits::IdentityLookup, testing::Header, Perbill, DispatchResult};
+use sp_runtime::{
+    traits::{IdentityLookup, Zero},
+    testing::Header, Perbill, Permill,
+};
 use orml_currencies::Currency;
 use sp_core::H256;
 use minterest_primitives::{Balance, CurrencyId};
+use liquidity_pools::Reserve;
 
 use super::*;
 
@@ -20,18 +24,25 @@ impl_outer_event! {
 	pub enum TestEvent for Runtime {
 		frame_system<T>,
 		orml_tokens<T>, orml_currencies<T>,
-		m_tokens<T>, minterest_protocol<T>,
+		m_tokens<T>, liquidity_pools,
+		minterest_protocol<T>,
 	}
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Runtime;
+
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const MaximumBlockWeight: u32 = 1024;
 	pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const AvailableBlockRatio: Perbill = Perbill::one();
-    pub UnderlyingAssetId: Vec<CurrencyId> = vec![CurrencyId::DOT];
+    pub UnderlyingAssetId: Vec<CurrencyId> = vec![
+		CurrencyId::DOT,
+		CurrencyId::KSM,
+		CurrencyId::BTC,
+		CurrencyId::ETH,
+	];
 }
 
 pub type AccountId = u32;
@@ -90,27 +101,104 @@ impl orml_currencies::Trait for Runtime {
     type WeightInfo = ();
 }
 
-pub struct MockLiquidityPools;
-
-impl LiquidityPools for MockLiquidityPools {
-    fn add_liquidity(currency_id: &CurrencyId, amount: &Balance) -> DispatchResult {
-        Ok(()) // TODO
-    }
-
-    fn withdraw_liquidity(currency_id: &CurrencyId, amount: &Balance) -> DispatchResult {
-        Ok(()) // TODO
-    }
-}
-
 impl m_tokens::Trait for Runtime {
     type Event = TestEvent;
     type MultiCurrency = orml_tokens::Module<Runtime>;
 }
 
-pub type TestMTokens = m_tokens::Module<Runtime>;
+impl liquidity_pools::Trait for Runtime {
+    type Event = TestEvent;
+}
 
 impl Trait for Runtime {
     type Event = TestEvent;
     type UnderlyingAssetId = UnderlyingAssetId;
-    type LiqudityPools = MockLiquidityPools;
+}
+
+pub const ALICE: AccountId = 1;
+pub const BOB: AccountId = 2;
+pub const ONE_MILL: Balance = 1_000_000;
+pub const ONE_HUNDRED: Balance = 100;
+pub type MinterestProtocol = Module<Runtime>;
+pub type TestMTokens = m_tokens::Module<Runtime>;
+pub type TestPools = liquidity_pools::Module<Runtime>;
+
+pub struct ExtBuilder{
+    endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+    reserves: Vec<(CurrencyId, Reserve)>,
+}
+
+impl Default for ExtBuilder {
+    fn default() -> Self {
+        Self {
+            endowed_accounts: vec![],
+            reserves: vec![]
+        }
+    }
+}
+
+impl ExtBuilder {
+    pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
+        self.endowed_accounts = endowed_accounts;
+        self
+    }
+
+    pub fn create_reserves(mut self) -> Self {
+        self.reserves = vec![
+            (
+                CurrencyId::ETH,
+                Reserve{
+                    total_balance: Balance::zero(),
+                    current_liquidity_rate: Permill::one()
+                },
+            ),
+            (
+                CurrencyId::DOT,
+                Reserve{
+                    total_balance: Balance::zero(),
+                    current_liquidity_rate: Permill::one()
+                },
+            ),
+            (
+                CurrencyId::KSM,
+                Reserve{
+                    total_balance: Balance::zero(),
+                    current_liquidity_rate: Permill::one()
+                },
+            ),
+            (
+                CurrencyId::BTC,
+                Reserve{
+                    total_balance: Balance::zero(),
+                    current_liquidity_rate: Permill::one()
+                },
+            ),
+        ];
+        self
+    }
+
+    pub fn one_million_mint_and_one_hundred_dots_for_alice_and_bob(self) -> Self {
+        self.balances(vec![
+            (ALICE, CurrencyId::MINT, ONE_MILL),
+            (ALICE, CurrencyId::DOT, ONE_HUNDRED),
+            (BOB, CurrencyId::MINT, ONE_MILL),
+            (BOB, CurrencyId::DOT, ONE_HUNDRED),
+        ])
+    }
+
+    pub fn build(self) -> sp_io::TestExternalities {
+        let mut storage = frame_system::GenesisConfig::default()
+            .build_storage::<Runtime>()
+            .unwrap();
+
+        orml_tokens::GenesisConfig::<Runtime> {
+            endowed_accounts: self.endowed_accounts,
+        }
+            .assimilate_storage(&mut storage)
+            .unwrap();
+
+        let mut ext = sp_io::TestExternalities::new(storage);
+        ext.execute_with(|| System::set_block_number(1));
+        ext
+    }
 }

@@ -102,7 +102,8 @@ decl_module! {
                 );
 
                 let updated_allowance = allowance.checked_sub(value)
-                .ok_or(Error::<T>::UnderflowAllowance)?;
+                    .ok_or(Error::<T>::UnderflowAllowance)?;
+
                 T::MultiCurrency::transfer(currency_id, &from, &to, value)?;
                 <Allowance<T>>::insert((currency_id, from.clone(), to.clone()), updated_allowance);
 

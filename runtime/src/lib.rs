@@ -46,7 +46,7 @@ pub use frame_support::{
 	},
 };
 
-pub use constants::time::*;
+pub use constants::{time::*, currency::*};
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats

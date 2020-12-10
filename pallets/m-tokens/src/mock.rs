@@ -34,6 +34,7 @@ parameter_types! {
 }
 
 type AccountId = u32;
+
 impl frame_system::Trait for Runtime {
     type Origin = Origin;
     type Call = ();
@@ -88,7 +89,6 @@ impl orml_currencies::Trait for Runtime {
     type WeightInfo = ();
 }
 
-
 impl Trait for Runtime {
     type Event = TestEvent;
     type MultiCurrency = orml_currencies::Module<Runtime>;
@@ -97,6 +97,7 @@ impl Trait for Runtime {
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
 pub type MTokens = Module<Runtime>;
+pub const ONE_MILL: Balance = 1_000_000;
 
 pub struct ExtBuilder{
     endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -110,7 +111,6 @@ impl Default for ExtBuilder {
     }
 }
 
-pub const ONE_MILL: Balance = 1_000_000;
 impl ExtBuilder {
     pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
         self.endowed_accounts = endowed_accounts;
@@ -125,18 +125,17 @@ impl ExtBuilder {
     }
 
     pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default()
+        let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Runtime>()
             .unwrap();
 
-        //FIXME
-        // orml_tokens::GenesisConfig::<Runtime> {
-        //     endowed_accounts: self.endowed_accounts,
-        // }
-        // .assimilate_storage(&mut t)
-        // .unwrap();
+        orml_tokens::GenesisConfig::<Runtime> {
+            endowed_accounts: self.endowed_accounts,
+        }
+        .assimilate_storage(&mut storage)
+        .unwrap();
 
-        let mut ext = sp_io::TestExternalities::new(t);
+        let mut ext = sp_io::TestExternalities::new(storage);
         ext.execute_with(|| System::set_block_number(1));
         ext
     }
