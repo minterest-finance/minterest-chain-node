@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 use codec::{Decode, Encode};
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
+    decl_error, decl_event, decl_module, decl_storage, ensure,
 };
 use minterest_primitives::{Balance, CurrencyId};
 use sp_runtime::{
@@ -33,7 +33,14 @@ decl_event! (
 );
 
 decl_error! {
-    pub enum Error for Module<T: Trait> {}
+    pub enum Error for Module<T: Trait> {
+
+    PoolNotFound,
+
+    NotEnoughBalance,
+
+    BalanceOverflowed,
+    }
 }
 
 decl_storage! {
@@ -65,14 +72,16 @@ impl<T: Trait> Module<T> {
     }
 
     fn update_reserve_interest_rate(liquidity_added: Balance, liquidity_taken: Balance, currency_id: CurrencyId) -> DispatchResult {
+        ensure!( Self::pool_exists(&currency_id), Error::<T>::PoolNotFound);
+
         let current_reserve_balance = Self::reserves(currency_id).total_balance;
 
         let new_reserve_balance: Balance;
 
         if liquidity_added != Balance::zero() {
-            new_reserve_balance = current_reserve_balance.checked_add(liquidity_added).ok_or("Overflow balance")?;
+            new_reserve_balance = current_reserve_balance.checked_add(liquidity_added).ok_or(Error::<T>::BalanceOverflowed)?;
         } else {
-            new_reserve_balance = current_reserve_balance.checked_sub(liquidity_taken).ok_or("Not enough balance")?;
+            new_reserve_balance = current_reserve_balance.checked_sub(liquidity_taken).ok_or(Error::<T>::NotEnoughBalance)?;
         }
 
         Reserves::mutate(currency_id, |r| r.total_balance = new_reserve_balance );
@@ -80,6 +89,10 @@ impl<T: Trait> Module<T> {
         Self::calculate_interest_rate(new_reserve_balance, currency_id)?;
 
         Ok(())
+    }
+
+    fn pool_exists(currency_id: &CurrencyId) -> bool {
+        Reserves::contains_key(currency_id)
     }
 
     fn calculate_interest_rate(_current_reserve_balance: Balance, currency_id: CurrencyId) -> DispatchResult {
