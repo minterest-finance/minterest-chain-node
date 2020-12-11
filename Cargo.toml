@@ -5,7 +5,7 @@ panic = 'unwind'
 members = [
     'node',
     'runtime',
-
+    'pallets/liquidity-pools',
     'pallets/m-tokens',
     'pallets/minterest-protocol',
 

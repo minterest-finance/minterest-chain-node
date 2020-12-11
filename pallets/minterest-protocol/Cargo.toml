@@ -18,13 +18,14 @@ orml-utilities = { path = "../../orml/utilities", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 m-tokens = { path = "../m-tokens", default-features = false }
-liquidity-pools = { path = "../liquidity-pool", default-features = false }
+liquidity-pools = { path = "../liquidity-pools", default-features = false }
 
 [dev-dependencies]
-sp-core = { version = "2.0.0", default-features = false }
-orml-tokens = { path = "../../orml/tokens"}
-orml-currencies = { path = "../../orml/currencies"}
-sp-io = { version = "2.0.0", default-features = false }
+sp-core = { version = "2.0.0" }
+orml-tokens = { path = "../../orml/tokens" }
+orml-currencies = { path = "../../orml/currencies" }
+sp-io = { version = "2.0.0" }
+liquidity-pools = { path = "../liquidity-pools" }
 
 [features]
 default = ['std']

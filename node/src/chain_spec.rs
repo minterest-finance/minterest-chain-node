@@ -16,7 +16,7 @@ use liquidity_pools::Reserve;
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
-const INITIAL_BALANCE: u128 = 1_000_000 * DOLLARS;
+const INITIAL_BALANCE: u128 = 10 * DOLLARS;
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;

@@ -9,18 +9,14 @@ use frame_support::{
 
 #[test]
 fn deposit_underlying_should_work() {
-    ExtBuilder::default()
-        .one_million_mint_and_one_hundred_dots_for_alice_and_bob()
-        .create_reserves()
-        .build()
-        .execute_with(|| {
+        new_test_ext().execute_with(|| {
             assert_noop!(
                 MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::ETH, 10),
-                Error::<Runtime>::NotEnoughLiquidityAvailable
+                Error::<Test>::NotEnoughLiquidityAvailable
             );
             assert_noop!(
                 MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::MDOT, 10),
-                Error::<Runtime>::NotValidUnderlyingAssetId
+                Error::<Test>::NotValidUnderlyingAssetId
             );
 
             assert_ok!(MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::DOT, 60));
@@ -30,11 +26,11 @@ fn deposit_underlying_should_work() {
 
             assert_noop!(
                 MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::DOT, 50),
-                Error::<Runtime>::NotEnoughLiquidityAvailable
+                Error::<Test>::NotEnoughLiquidityAvailable
             );
             assert_noop!(
                 MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::MDOT, 100),
-                Error::<Runtime>::NotValidUnderlyingAssetId
+                Error::<Test>::NotValidUnderlyingAssetId
             );
 
             assert_ok!(MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::DOT, 30));
@@ -46,11 +42,7 @@ fn deposit_underlying_should_work() {
 
 #[test]
 fn redeem_underlying_should_work() {
-    ExtBuilder::default()
-        .one_million_mint_and_one_hundred_dots_for_alice_and_bob()
-        .create_reserves()
-        .build()
-        .execute_with(|| {
+        new_test_ext().execute_with(|| {
             assert_ok!(MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::DOT, 60));
             assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 60);
             assert_eq!(TestMTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
@@ -58,7 +50,7 @@ fn redeem_underlying_should_work() {
 
             assert_noop!(
                 MinterestProtocol::redeem_underlying(Origin::signed(ALICE), CurrencyId::DOT, 100),
-                Error::<Runtime>::NotEnoughLiquidityAvailable
+                Error::<Test>::NotEnoughLiquidityAvailable
             );
 
             assert_ok!(MinterestProtocol::redeem_underlying(Origin::signed(ALICE), CurrencyId::DOT, 30));
@@ -70,11 +62,7 @@ fn redeem_underlying_should_work() {
 
 #[test]
 fn getting_assets_from_reserve_by_different_users_should_work() {
-    ExtBuilder::default()
-        .one_million_mint_and_one_hundred_dots_for_alice_and_bob()
-        .create_reserves()
-        .build()
-        .execute_with(|| {
+        new_test_ext().execute_with(|| {
             assert_ok!(MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::DOT, 60));
             assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 60);
             assert_eq!(TestMTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
@@ -82,7 +70,7 @@ fn getting_assets_from_reserve_by_different_users_should_work() {
 
             assert_noop!(
                 MinterestProtocol::redeem_underlying(Origin::signed(BOB), CurrencyId::DOT, 30),
-                Error::<Runtime>::NotEnoughWrappedTokens
+                Error::<Test>::NotEnoughWrappedTokens
             );
 
             assert_ok!(MinterestProtocol::deposit_underlying(Origin::signed(BOB), CurrencyId::DOT, 7));

@@ -7,9 +7,8 @@ testing::Header, Perbill, traits::{IdentityLookup},
 };
 pub use minterest_primitives::{Balance, CurrencyId};
 
+use crate::GenesisConfig;
 use super::*;
-
-pub use crate as liquidity_pool;
 
 mod liquidity_pools {
     pub use crate::Event;
@@ -97,7 +96,7 @@ impl Trait for Runtime {
     type Event = TestEvent;
 }
 
-pub type LiquidityPool = Module<Runtime>;
+pub type LiquidityPools = Module<Runtime>;
 
 pub struct ExtBuilder {}
 
@@ -113,35 +112,37 @@ impl ExtBuilder {
             .build_storage::<Runtime>()
             .unwrap();
 
-        liquidity_pool::GenesisConfig {
-            reserves: vec![(
-                               CurrencyId::ETH,
-                               Reserve{
-                                   total_balance: Balance::zero(),
-                                   current_liquidity_rate: Permill::one()
-                               },
-                           ),
-                           (
-                               CurrencyId::DOT,
-                               Reserve{
-                                   total_balance: Balance::zero(),
-                                   current_liquidity_rate: Permill::one()
-                               },
-                           ),
-                           (
-                               CurrencyId::KSM,
-                               Reserve{
-                                   total_balance: Balance::zero(),
-                                   current_liquidity_rate: Permill::one()
-                               },
-                           ),
-                           (
-                               CurrencyId::BTC,
-                               Reserve{
-                                   total_balance: Balance::zero(),
-                                   current_liquidity_rate: Permill::one()
-                               },
-                           ),],
+        GenesisConfig {
+            reserves: vec![
+                (
+                   CurrencyId::ETH,
+                   Reserve{
+                       total_balance: Balance::zero(),
+                       current_liquidity_rate: Permill::one()
+                   },
+                ),
+                (
+                   CurrencyId::DOT,
+                   Reserve{
+                       total_balance: Balance::zero(),
+                       current_liquidity_rate: Permill::one()
+                   },
+                ),
+                (
+                   CurrencyId::KSM,
+                   Reserve{
+                       total_balance: Balance::zero(),
+                       current_liquidity_rate: Permill::one()
+                   },
+                ),
+                (
+                   CurrencyId::BTC,
+                   Reserve{
+                       total_balance: Balance::zero(),
+                       current_liquidity_rate: Permill::one()
+                   },
+                ),
+            ],
         }
         .assimilate_storage(&mut t)
         .unwrap();
