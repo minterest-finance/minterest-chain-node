@@ -53,12 +53,37 @@ Build all native code:
 make build
 ```
 
+### Embedded Docs
+
+Once the project has been built, the following command can be used to explore all parameters and
+subcommands:
+
+```sh
+./target/release/node-template -h
+```
+
 ## Run
 
-You can start a development chain with:
+The `make run` command will launch the single-node development chain with persistent state. After the project has been built, there are other ways to launch the node.
+
+### Single-Node Development Chain
+
+This command will start the single-node development chain with persistent state:
 
 ```bash
-make run
+./target/release/node-template --dev
+```
+
+This command will launch a temporary node and its state will be discarded after you terminate the process:
+
+```bash
+./target/release/node-template --dev --tmp
+```
+
+Start the development chain with detailed logging:
+
+```bash
+RUST_LOG=debug RUST_BACKTRACE=1 ./target/release/node-template -lruntime=debug --dev
 ```
 
 ## Development
@@ -86,5 +111,3 @@ Update ORML
 ```bash
 make update
 ```
-
-__Note:__ All build command from Makefile are designed for local development purpose and hence have `SKIP_WASM_BUILD` enabled to speed up build time and use `--execution native` to only run use native execution mode.

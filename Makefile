@@ -23,7 +23,7 @@ test:
 
 .PHONY: run
 run:
-	SKIP_WASM_BUILD=1 cargo run -- --dev -lruntime=debug
+	WASM_BUILD_TOOLCHAIN=nightly-2020-10-05 cargo run -- --dev -lruntime=debug
 
 .PHONY: check-tests
 check-tests:
