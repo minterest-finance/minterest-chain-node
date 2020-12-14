@@ -78,7 +78,7 @@ decl_module! {
                     .ok_or(Error::<T>::OverflowAllowance)?;
                 <Allowance<T>>::insert((currency_id, sender.clone(), spender.clone()), updated_allowance);
 
-                Self::deposit_event(RawEvent::Approval(currency_id, sender.clone(), spender.clone(), value));
+                Self::deposit_event(RawEvent::Approval(currency_id, sender, spender, value));
                 Ok(())
             })?
         }
