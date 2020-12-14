@@ -1,41 +1,53 @@
 //! Mocks for the minterest-protocol module.
 
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types};
-use sp_runtime::{traits::IdentityLookup, testing::Header, Perbill, DispatchResult};
+use sp_runtime::{
+    traits::{IdentityLookup, Zero},
+    testing::Header, Perbill, Permill,
+};
 use orml_currencies::Currency;
 use sp_core::H256;
 use minterest_primitives::{Balance, CurrencyId};
+use liquidity_pools::{Reserve};
 
 use super::*;
-
-impl_outer_origin! {
-	pub enum Origin for Runtime {}
-}
 
 mod minterest_protocol {
     pub use crate::Event;
 }
 
 impl_outer_event! {
-	pub enum TestEvent for Runtime {
+	pub enum Event for Test {
 		frame_system<T>,
-		orml_tokens<T>, orml_currencies<T>,
-		m_tokens<T>, minterest_protocol<T>,
+		orml_tokens<T>,
+		orml_currencies<T>,
+		m_tokens<T>,
+		liquidity_pools,
+		minterest_protocol<T>,
 	}
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Runtime;
+impl_outer_origin! {
+    pub enum Origin for Test where system = frame_system {}
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct Test;
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const MaximumBlockWeight: u32 = 1024;
 	pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const AvailableBlockRatio: Perbill = Perbill::one();
-    pub UnderlyingAssetId: Vec<CurrencyId> = vec![CurrencyId::DOT];
+    pub UnderlyingAssetId: Vec<CurrencyId> = vec![
+		CurrencyId::DOT,
+		CurrencyId::KSM,
+		CurrencyId::BTC,
+		CurrencyId::ETH,
+	];
 }
 
 pub type AccountId = u32;
-impl frame_system::Trait for Runtime {
+impl frame_system::Trait for Test {
     type Origin = Origin;
     type Call = ();
     type Index = u64;
@@ -45,7 +57,7 @@ impl frame_system::Trait for Runtime {
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = TestEvent;
+    type Event = Event;
     type BlockHashCount = BlockHashCount;
     type MaximumExtrinsicWeight = MaximumBlockWeight;
     type MaximumBlockWeight = MaximumBlockWeight;
@@ -63,12 +75,12 @@ impl frame_system::Trait for Runtime {
     type SystemWeightInfo = ();
 }
 
-pub type System = frame_system::Module<Runtime>;
+parameter_types! {
+		pub const ExistentialDeposit: u64 = 1;
+	}
 
-type Amount = i128;
-
-impl orml_tokens::Trait for Runtime {
-    type Event = TestEvent;
+impl orml_tokens::Trait for Test {
+    type Event = Event;
     type Balance = Balance;
     type Amount = Amount;
     type CurrencyId = CurrencyId;
@@ -80,37 +92,84 @@ parameter_types! {
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MINT;
 }
 
-type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
+type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
 
-impl orml_currencies::Trait for Runtime {
-    type Event = TestEvent;
-    type MultiCurrency = orml_tokens::Module<Runtime>;
+impl orml_currencies::Trait for Test {
+    type Event = Event;
+    type MultiCurrency = orml_tokens::Module<Test>;
     type NativeCurrency = NativeCurrency;
     type GetNativeCurrencyId = GetNativeCurrencyId;
     type WeightInfo = ();
 }
 
-pub struct MockLiquidityPools;
-
-impl LiquidityPools for MockLiquidityPools {
-    fn add_liquidity(currency_id: &CurrencyId, amount: &Balance) -> DispatchResult {
-        Ok(()) // TODO
-    }
-
-    fn withdraw_liquidity(currency_id: &CurrencyId, amount: &Balance) -> DispatchResult {
-        Ok(()) // TODO
-    }
+impl m_tokens::Trait for Test {
+    type Event = Event;
+    type MultiCurrency = orml_tokens::Module<Test>;
 }
 
-impl m_tokens::Trait for Runtime {
-    type Event = TestEvent;
-    type MultiCurrency = orml_tokens::Module<Runtime>;
+impl liquidity_pools::Trait for Test {
+    type Event = Event;
 }
 
-pub type TestMTokens = m_tokens::Module<Runtime>;
-
-impl Trait for Runtime {
-    type Event = TestEvent;
+impl Trait for Test {
+    type Event = Event;
     type UnderlyingAssetId = UnderlyingAssetId;
-    type LiqudityPools = MockLiquidityPools;
+}
+
+type Amount = i128;
+
+pub const ALICE: AccountId = 1;
+pub const BOB: AccountId = 2;
+pub const ONE_MILL: Balance = 1_000_000;
+pub const ONE_HUNDRED: Balance = 100;
+pub type MinterestProtocol = Module<Test>;
+pub type TestMTokens = m_tokens::Module<Test>;
+pub type TestPools = liquidity_pools::Module<Test>;
+
+pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
+    let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+    orml_tokens::GenesisConfig::<Test>{
+        endowed_accounts: vec![
+            (ALICE, CurrencyId::MINT, ONE_MILL),
+            (ALICE, CurrencyId::DOT, ONE_HUNDRED),
+            (BOB, CurrencyId::MINT, ONE_MILL),
+            (BOB, CurrencyId::DOT, ONE_HUNDRED),
+        ],
+    }.assimilate_storage(&mut t).unwrap();
+
+    liquidity_pools::GenesisConfig {
+        reserves: vec![
+            (
+               CurrencyId::ETH,
+               Reserve{
+                   total_balance: Balance::zero(),
+                   current_liquidity_rate: Permill::one()
+               },
+            ),
+            (
+               CurrencyId::DOT,
+               Reserve{
+                   total_balance: Balance::zero(),
+                   current_liquidity_rate: Permill::one()
+               },
+            ),
+            (
+               CurrencyId::KSM,
+               Reserve{
+                   total_balance: Balance::zero(),
+                   current_liquidity_rate: Permill::one()
+               },
+            ),
+            (
+               CurrencyId::BTC,
+               Reserve{
+                   total_balance: Balance::zero(),
+                   current_liquidity_rate: Permill::one()
+               },
+            ),
+        ],
+    }.assimilate_storage(&mut t).unwrap();
+
+    t.into()
 }

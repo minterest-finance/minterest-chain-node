@@ -25,6 +25,7 @@ minterest-primitives = { path = "../../primitives", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = "2.0.0", default-features = false }
+orml-tokens = { path = "../../orml/tokens"}
 orml-currencies = { path = "../../orml/currencies"}
 
 [features]

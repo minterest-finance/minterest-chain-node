@@ -39,6 +39,7 @@ decl_event!(
 
 		/// Underlying assets and wrapped tokens redeemed: \[who, wrapped_currency_id, liquidity_amount\]
 		Redeemed(AccountId, CurrencyId, Balance),
+
 	}
 );
 
@@ -52,6 +53,9 @@ decl_error! {
 
 		/// Insufficient funds in the user account
 		NotEnoughWrappedTokens,
+
+		/// PoolNotFound or NotEnoughBalance or BalanceOverflowed
+		InternalReserveError,
 	}
 }
 
@@ -115,7 +119,7 @@ impl<T: Trait> Module<T> {
         <MTokens<T>>::withdraw(underlying_asset_id, &who, amount)?;
 
         <LiquidityPools<T>>::update_state_on_deposit(amount, underlying_asset_id)
-            .map_err(|_| Error::<T>::NotEnoughLiquidityAvailable)?;
+            .map_err(|_| Error::<T>::InternalReserveError)?;
 
         <MTokens<T>>::deposit(currency_id, &who, amount)?;
 
@@ -147,7 +151,7 @@ impl<T: Trait> Module<T> {
         <MTokens<T>>::withdraw(currency_id, &who, amount)?;
 
         <LiquidityPools<T>>::update_state_on_redeem(amount, underlying_asset_id)
-            .map_err(|_| Error::<T>::NotEnoughLiquidityAvailable)?;
+            .map_err(|_| Error::<T>::InternalReserveError)?;
 
         <MTokens<T>>::deposit(underlying_asset_id, &who, amount)?;
 

@@ -2,7 +2,7 @@ use sp_core::{Pair, Public, sr25519};
 use node_minterest_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
 	SudoConfig, SystemConfig, WASM_BINARY, Signature, TokensConfig, CurrencyId, Balance,
-	LiquidityPoolsConfig,
+	LiquidityPoolsConfig, DOLLARS,
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_finality_grandpa::AuthorityId as GrandpaId;
@@ -16,7 +16,7 @@ use liquidity_pools::Reserve;
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
-const INITIAL_BALANCE: u128 = 10_000_000_000_000_000_000;
+const INITIAL_BALANCE: u128 = 10 * DOLLARS;
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
