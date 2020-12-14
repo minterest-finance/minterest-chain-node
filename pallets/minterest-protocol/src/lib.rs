@@ -68,7 +68,7 @@ decl_module! {
 
 		/// Add Underlying Assets to pool and mint wrapped tokens.
         #[weight = 10_000]
-        fn deposit_underlying(
+        pub fn deposit_underlying(
             origin,
             underlying_asset_id: CurrencyId,
             #[compact] liquidity_amount: Balance
@@ -83,7 +83,7 @@ decl_module! {
 
         /// Withdraw underlying assets from pool and burn wrapped tokens.
         #[weight = 10_000]
-        fn redeem_underlying(
+        pub fn redeem_underlying(
             origin,
             underlying_asset_id: CurrencyId,
             #[compact] liquidity_amount: Balance
