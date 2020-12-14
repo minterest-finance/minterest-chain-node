@@ -2135,6 +2135,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f65877bf7d44897a473350b1046277941cee20b263397e90869c50b6e766088b"
 
 [[package]]
+name = "integration-tests"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "liquidity-pools",
+ "m-tokens",
+ "minterest-primitives",
+ "minterest-protocol",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-utilities",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "intervalier"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3374,6 +3394,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "hex-literal 0.3.1",
+ "integration-tests",
  "liquidity-pools",
  "m-tokens",
  "minterest-primitives",
