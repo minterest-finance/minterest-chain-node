@@ -4,7 +4,7 @@ use codec::{Decode, Encode};
 use sp_runtime::{
 	generic,
 	traits::{IdentifyAccount, Verify},
-	MultiSignature, RuntimeDebug,
+	FixedU128, MultiSignature, RuntimeDebug,
 };
 
 #[cfg(feature = "std")]

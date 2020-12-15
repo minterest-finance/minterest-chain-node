@@ -5,8 +5,6 @@ use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 use minterest_primitives::{Balance, CurrencyId};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
 use sp_runtime::{traits::Zero, DispatchResult, Permill, RuntimeDebug};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]

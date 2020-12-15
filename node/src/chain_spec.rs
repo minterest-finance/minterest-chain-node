@@ -1,3 +1,4 @@
+use liquidity_pools::Reserve;
 use node_minterest_runtime::{
 	AccountId, AuraConfig, Balance, BalancesConfig, CurrencyId, GenesisConfig, GrandpaConfig, LiquidityPoolsConfig,
 	Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
@@ -5,12 +6,8 @@ use node_minterest_runtime::{
 use sc_service::ChainType;
 use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{sr25519, Pair, Public};
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
-use sp_finality_grandpa::AuthorityId as GrandpaId;
-use sp_runtime::traits::{IdentifyAccount, Verify, Zero};
 use sp_runtime::traits::{IdentifyAccount, Verify, Zero};
 use sp_runtime::Permill;
 
