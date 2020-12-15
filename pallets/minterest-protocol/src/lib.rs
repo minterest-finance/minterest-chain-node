@@ -5,7 +5,7 @@ use frame_system::{self as system, ensure_signed};
 use minterest_primitives::{Balance, CurrencyId};
 use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
-use sp_runtime::DispatchResult;
+use sp_runtime::{DispatchResult, FixedPointNumber};
 use sp_std::{prelude::Vec, result};
 
 #[cfg(test)]
@@ -13,7 +13,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait: m_tokens::Trait + liquidity_pools::Trait {
+pub trait Trait: m_tokens::Trait + liquidity_pools::Trait + controller::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -26,6 +26,7 @@ pub trait Trait: m_tokens::Trait + liquidity_pools::Trait {
 
 type MTokens<T> = m_tokens::Module<T>;
 type LiquidityPools<T> = liquidity_pools::Module<T>;
+type Controller<T> = controller::Module<T>;
 
 decl_storage! {
 	trait Store for Module<T: Trait> as MinterestProtocol {
@@ -64,6 +65,9 @@ decl_error! {
 
 		/// PoolNotFound or NotEnoughBalance or BalanceOverflowed
 		InternalReserveError,
+
+		/// Number overflow in calculation.
+		NumOverflow,
 	}
 }
 
@@ -148,14 +152,21 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
-		let currency_id = Self::get_currency_id_by_underlying_asset_id(&underlying_asset_id)?;
+		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
+
+		let liquidity_rate = <Controller<T>>::calculate_liquidity_rate(underlying_asset_id)?;
+
+		// wrapped = underlying / liquidity_rate
+		let wrapped_amount = amount
+			.checked_div(liquidity_rate.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
 
 		<MTokens<T>>::withdraw(underlying_asset_id, &who, amount)?;
 
 		<LiquidityPools<T>>::update_state_on_deposit(amount, underlying_asset_id)
 			.map_err(|_| Error::<T>::InternalReserveError)?;
 
-		<MTokens<T>>::deposit(currency_id, &who, amount)?;
+		<MTokens<T>>::deposit(wrapped_id, &who, wrapped_amount)?;
 
 		Ok(())
 	}
@@ -171,14 +182,21 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
-		let currency_id = Self::get_currency_id_by_underlying_asset_id(&underlying_asset_id)?;
+		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
+
+		let liquidity_rate = <Controller<T>>::calculate_liquidity_rate(underlying_asset_id)?;
+
+		// wrapped = underlying / liquidity_rate
+		let wrapped_amount = amount
+			.checked_div(liquidity_rate.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
 
 		ensure!(
-			amount <= <MTokens<T>>::free_balance(currency_id, &who),
+			wrapped_amount <= <MTokens<T>>::free_balance(wrapped_id, &who),
 			Error::<T>::NotEnoughWrappedTokens
 		);
 
-		<MTokens<T>>::withdraw(currency_id, &who, amount)?;
+		<MTokens<T>>::withdraw(wrapped_id, &who, wrapped_amount)?;
 
 		<LiquidityPools<T>>::update_state_on_redeem(amount, underlying_asset_id)
 			.map_err(|_| Error::<T>::InternalReserveError)?;
@@ -199,7 +217,7 @@ impl<T: Trait> Module<T> {
 
 // Private methods
 impl<T: Trait> Module<T> {
-	fn get_currency_id_by_underlying_asset_id(asset_id: &CurrencyId) -> result::Result<CurrencyId, Error<T>> {
+	fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> result::Result<CurrencyId, Error<T>> {
 		match asset_id {
 			CurrencyId::DOT => Ok(CurrencyId::MDOT),
 			CurrencyId::KSM => Ok(CurrencyId::MKSM),

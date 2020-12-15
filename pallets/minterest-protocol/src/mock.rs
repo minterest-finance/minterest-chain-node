@@ -25,6 +25,7 @@ impl_outer_event! {
 		m_tokens<T>,
 		liquidity_pools,
 		minterest_protocol<T>,
+		controller,
 	}
 }
 
@@ -112,9 +113,34 @@ impl liquidity_pools::Trait for Test {
 	type Event = Event;
 }
 
+impl controller::Trait for Test {
+	type Event = Event;
+	type MultiCurrency = orml_currencies::Module<Test>;
+}
+
 impl Trait for Test {
 	type Event = Event;
 	type UnderlyingAssetId = UnderlyingAssetId;
+	type Borrowing = MockBorrowing;
+}
+
+pub struct MockBorrowing;
+impl Borrowing<AccountId> for MockBorrowing {
+	fn update_state_on_borrow(
+		_underlying_asset_id: CurrencyId,
+		_amount_borrowed: Balance,
+		_who: &AccountId,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn update_state_on_repay(
+		_underlying_asset_id: CurrencyId,
+		_amount_borrowed: Balance,
+		_who: &AccountId,
+	) -> DispatchResult {
+		Ok(())
+	}
 }
 
 type Amount = i128;

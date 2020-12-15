@@ -277,7 +277,6 @@ impl liquidity_pools::Trait for Runtime {
 
 impl controller::Trait for Runtime {
 	type Event = Event;
-
 	type MultiCurrency = Currencies;
 }
 

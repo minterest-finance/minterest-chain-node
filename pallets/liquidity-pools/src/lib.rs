@@ -51,13 +51,13 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 	pub fn update_state_on_deposit(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
-		Self::update_reserve_interest_rate(amount, Balance::zero(), currency_id)?;
+		Self::update_reserve_and_interest_rate(amount, Balance::zero(), currency_id)?;
 
 		Ok(())
 	}
 
 	pub fn update_state_on_redeem(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
-		Self::update_reserve_interest_rate(Balance::zero(), amount, currency_id)?;
+		Self::update_reserve_and_interest_rate(Balance::zero(), amount, currency_id)?;
 
 		Ok(())
 	}
@@ -66,7 +66,7 @@ impl<T: Trait> Module<T> {
 		Self::reserves(currency_id).total_balance
 	}
 
-	fn update_reserve_interest_rate(
+	fn update_reserve_and_interest_rate(
 		liquidity_added: Balance,
 		liquidity_taken: Balance,
 		underlying_asset_id: CurrencyId,
@@ -106,18 +106,20 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 	fn update_state_on_borrow(
-		_underlying_asset_id: CurrencyId,
-		_amount_borrowed: Balance,
+		underlying_asset_id: CurrencyId,
+		amount_borrowed: Balance,
 		_who: &T::AccountId,
 	) -> DispatchResult {
+		Self::update_reserve_and_interest_rate(Balance::zero(), amount_borrowed, underlying_asset_id)?;
 		Ok(())
 	}
 
 	fn update_state_on_repay(
-		_underlying_asset_id: CurrencyId,
-		_amount_borrowed: Balance,
+		underlying_asset_id: CurrencyId,
+		amount_borrowed: Balance,
 		_who: &T::AccountId,
 	) -> DispatchResult {
+		Self::update_reserve_and_interest_rate(amount_borrowed, Balance::zero(), underlying_asset_id)?;
 		Ok(())
 	}
 }

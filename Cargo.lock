@@ -3180,6 +3180,7 @@ dependencies = [
 name = "minterest-protocol"
 version = "0.1.0"
 dependencies = [
+ "controller",
  "frame-support",
  "frame-system",
  "liquidity-pools",
