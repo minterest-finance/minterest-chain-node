@@ -2,8 +2,9 @@
 
 use codec::{Decode, Encode};
 use sp_runtime::{
-    RuntimeDebug, MultiSignature, generic,
-    traits::{Verify, IdentifyAccount},
+	generic,
+	traits::{IdentifyAccount, Verify},
+	MultiSignature, RuntimeDebug,
 };
 
 #[cfg(feature = "std")]
@@ -41,15 +42,13 @@ pub type Amount = i128;
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
-    MINT = 0,
-    DOT,
-    KSM,
-    BTC,
-    ETH,
-    MDOT,
-    MKSM,
-    MBTC,
-    METH,
+	MINT = 0,
+	DOT,
+	KSM,
+	BTC,
+	ETH,
+	MDOT,
+	MKSM,
+	MBTC,
+	METH,
 }
-
-
