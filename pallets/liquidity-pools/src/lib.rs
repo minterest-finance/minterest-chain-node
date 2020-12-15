@@ -3,6 +3,7 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 use minterest_primitives::{Balance, CurrencyId};
+use pallet_traits::Borrowing;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{traits::Zero, DispatchResult, Permill, RuntimeDebug};
@@ -100,5 +101,23 @@ impl<T: Trait> Module<T> {
 
 	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
 		Reserves::contains_key(underlying_asset_id)
+	}
+}
+
+impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
+	fn update_state_on_borrow(
+		_underlying_asset_id: CurrencyId,
+		_amount_borrowed: Balance,
+		_who: &T::AccountId,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn update_state_on_repay(
+		_underlying_asset_id: CurrencyId,
+		_amount_borrowed: Balance,
+		_who: &T::AccountId,
+	) -> DispatchResult {
+		Ok(())
 	}
 }

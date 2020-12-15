@@ -239,6 +239,7 @@ impl m_tokens::Trait for Runtime {
 impl minterest_protocol::Trait for Runtime {
 	type Event = Event;
 	type UnderlyingAssetId = UnderlyingAssetId;
+	type Borrowing = liquidity_pools::Module<Runtime>;
 }
 
 impl orml_tokens::Trait for Runtime {

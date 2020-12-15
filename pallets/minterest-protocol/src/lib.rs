@@ -4,6 +4,7 @@ use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, t
 use frame_system::{self as system, ensure_signed};
 use minterest_primitives::{Balance, CurrencyId};
 use orml_utilities::with_transaction_result;
+use pallet_traits::Borrowing;
 use sp_runtime::DispatchResult;
 use sp_std::{prelude::Vec, result};
 
@@ -18,6 +19,9 @@ pub trait Trait: m_tokens::Trait + liquidity_pools::Trait {
 
 	/// Wrapped currency IDs.
 	type UnderlyingAssetId: Get<Vec<CurrencyId>>;
+
+	/// Basic borrowing functions
+	type Borrowing: Borrowing<Self::AccountId>;
 }
 
 type MTokens<T> = m_tokens::Module<T>;
@@ -37,6 +41,12 @@ decl_event!(
 
 		/// Underlying assets and wrapped tokens redeemed: \[who, wrapped_currency_id, liquidity_amount\]
 		Redeemed(AccountId, CurrencyId, Balance),
+
+		/// Borrowed a specific amount of the reserve currency: \[who, underlying_asset_id, the_amount_to_be_deposited\]
+		Borrowed(AccountId, CurrencyId, Balance),
+
+		/// Repaid a borrow on the specific reserve, for the specified amount: \[who, underlying_asset_id, the_amount_repaid\]
+		Repaid(AccountId, CurrencyId, Balance),
 
 	}
 );
@@ -93,6 +103,36 @@ decl_module! {
 				Ok(())
 			})?;
 		}
+
+		/// Borrowing a specific amount of the reserve currency, provided that the borrower already deposited enough collateral.
+		#[weight = 10_000]
+		pub fn borrow(
+			origin,
+			underlying_asset_id: CurrencyId,
+			#[compact] amount: Balance
+		) {
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_borrow(&who, underlying_asset_id, amount)?;
+				Self::deposit_event(RawEvent::Borrowed(who, underlying_asset_id, amount));
+				Ok(())
+			})?;
+		}
+
+		/// Repays a borrow on the specific reserve, for the specified amount.
+		#[weight = 10_000]
+		pub fn repay(
+			origin,
+			underlying_asset_id: CurrencyId,
+			#[compact] amount: Balance
+		) {
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_repay(&who, underlying_asset_id, amount)?;
+				Self::deposit_event(RawEvent::Repaid(who, underlying_asset_id, amount));
+				Ok(())
+			})?;
+		}
 	}
 }
 
@@ -145,6 +185,14 @@ impl<T: Trait> Module<T> {
 
 		<MTokens<T>>::deposit(underlying_asset_id, &who, amount)?;
 
+		Ok(())
+	}
+
+	fn do_borrow(_who: &T::AccountId, _underlying_asset_id: CurrencyId, _amount: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn do_repay(_who: &T::AccountId, _underlying_asset_id: CurrencyId, _amount: Balance) -> DispatchResult {
 		Ok(())
 	}
 }
