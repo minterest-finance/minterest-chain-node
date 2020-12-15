@@ -5,6 +5,8 @@ use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 use minterest_primitives::{Balance, CurrencyId};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use sp_runtime::{traits::Zero, DispatchResult, Permill, RuntimeDebug};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -68,11 +70,11 @@ impl<T: Trait> Module<T> {
 	fn update_reserve_interest_rate(
 		liquidity_added: Balance,
 		liquidity_taken: Balance,
-		currency_id: CurrencyId,
+		underlying_asset_id: CurrencyId,
 	) -> DispatchResult {
-		ensure!(Self::pool_exists(&currency_id), Error::<T>::PoolNotFound);
+		ensure!(Self::pool_exists(&underlying_asset_id), Error::<T>::PoolNotFound);
 
-		let current_reserve_balance = Self::reserves(currency_id).total_balance;
+		let current_reserve_balance = Self::reserves(underlying_asset_id).total_balance;
 
 		let new_reserve_balance: Balance;
 
@@ -86,21 +88,19 @@ impl<T: Trait> Module<T> {
 				.ok_or(Error::<T>::NotEnoughBalance)?;
 		}
 
-		Reserves::mutate(currency_id, |r| r.total_balance = new_reserve_balance);
-
-		Self::calculate_interest_rate(new_reserve_balance, currency_id)?;
+		Reserves::mutate(underlying_asset_id, |r| r.total_balance = new_reserve_balance);
 
 		Ok(())
 	}
 
-	fn pool_exists(currency_id: &CurrencyId) -> bool {
-		Reserves::contains_key(currency_id)
+	pub fn set_current_liquidity_rate(underlying_asset_id: CurrencyId, _rate: Permill) -> DispatchResult {
+		Reserves::mutate(underlying_asset_id, |r| {
+			r.current_liquidity_rate = Permill::from_percent(44)
+		});
+		Ok(())
 	}
 
-	fn calculate_interest_rate(_current_reserve_balance: Balance, currency_id: CurrencyId) -> DispatchResult {
-		// TODO: some another logic here......
-		Reserves::mutate(currency_id, |r| r.current_liquidity_rate = Permill::one());
-
-		Ok(())
+	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
+		Reserves::contains_key(underlying_asset_id)
 	}
 }

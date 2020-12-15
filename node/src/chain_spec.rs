@@ -1,4 +1,3 @@
-use liquidity_pools::Reserve;
 use node_minterest_runtime::{
 	AccountId, AuraConfig, Balance, BalancesConfig, CurrencyId, GenesisConfig, GrandpaConfig, LiquidityPoolsConfig,
 	Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
@@ -6,8 +5,12 @@ use node_minterest_runtime::{
 use sc_service::ChainType;
 use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_core::{sr25519, Pair, Public};
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
+use sp_finality_grandpa::AuthorityId as GrandpaId;
+use sp_runtime::traits::{IdentifyAccount, Verify, Zero};
 use sp_runtime::traits::{IdentifyAccount, Verify, Zero};
 use sp_runtime::Permill;
 
@@ -46,7 +49,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 	properties.insert("tokenSymbol".into(), "UNIT".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
-	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
+	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
 	Ok(ChainSpec::from_genesis(
 		// Name
@@ -89,7 +92,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	properties.insert("tokenSymbol".into(), "UNIT".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
-	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
+	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
 	Ok(ChainSpec::from_genesis(
 		// Name

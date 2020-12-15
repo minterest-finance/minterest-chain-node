@@ -39,6 +39,9 @@ pub type DigestItem = generic::DigestItem<Hash>;
 /// Signed version of Balance
 pub type Amount = i128;
 
+/// Exchange Rate
+pub type Rate = FixedU128;
+
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
