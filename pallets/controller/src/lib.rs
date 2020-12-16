@@ -4,7 +4,7 @@ use frame_support::{decl_error, decl_event, decl_module, decl_storage};
 use frame_system::{self as system};
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
-use sp_runtime::{DispatchError, DispatchResult};
+use sp_runtime::{DispatchError, DispatchResult, FixedPointNumber};
 
 use sp_std::result;
 
@@ -60,7 +60,7 @@ impl<T: Trait> Module<T> {
 
 		// Self::caclulate_exchange_rate(total_cash, total_supply)?;
 
-		Ok(Rate::from_inner(1))
+		Ok(Rate::saturating_from_rational(8, 10))
 	}
 
 	pub fn calculate_user_global_data(_who: T::AccountId) -> DispatchResult {
