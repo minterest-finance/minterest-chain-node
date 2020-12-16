@@ -46,7 +46,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 	properties.insert("tokenSymbol".into(), "UNIT".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
-	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
 	Ok(ChainSpec::from_genesis(
 		// Name
@@ -89,7 +89,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	properties.insert("tokenSymbol".into(), "UNIT".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
-	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
 	Ok(ChainSpec::from_genesis(
 		// Name

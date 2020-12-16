@@ -57,13 +57,13 @@ decl_error! {
 		/// The currency is not enabled in wrapped protocol.
 		NotValidUnderlyingAssetId,
 
-		/// There is not enough liquidity available to redeem
+		/// There is not enough liquidity available in the reserve.
 		NotEnoughLiquidityAvailable,
 
-		/// Insufficient funds in the user account
+		/// Insufficient funds in the user account.
 		NotEnoughWrappedTokens,
 
-		/// PoolNotFound or NotEnoughBalance or BalanceOverflowed
+		/// PoolNotFound or NotEnoughBalance or BalanceOverflowed.
 		InternalReserveError,
 
 		/// Number overflow in calculation.
@@ -206,7 +206,30 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn do_borrow(_who: &T::AccountId, _underlying_asset_id: CurrencyId, _amount: Balance) -> DispatchResult {
+	fn do_borrow(who: &T::AccountId, underlying_asset_id: CurrencyId, amount: Balance) -> DispatchResult {
+		ensure!(
+			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
+			Error::<T>::NotValidUnderlyingAssetId
+		);
+
+		ensure!(
+			amount <= <LiquidityPools<T>>::get_reserve_available_liquidity(underlying_asset_id),
+			Error::<T>::NotEnoughLiquidityAvailable
+		);
+
+		//TODO rewrite after implementing the function in the controller.
+		// This function should return current information about the user and his balances.
+		<Controller<T>>::calculate_user_global_data(who.clone())?;
+
+		//TODO rewrite after implementing the function in the controller.
+		// This function should return the amount of collateral needed in dollars.
+		<Controller<T>>::calculate_total_available_collateral(amount, underlying_asset_id)?;
+
+		<LiquidityPools<T>>::update_state_on_borrow(underlying_asset_id, amount, who)
+			.map_err(|_| Error::<T>::InternalReserveError)?;
+
+		<MTokens<T>>::deposit(underlying_asset_id, who, amount)?;
+
 		Ok(())
 	}
 
