@@ -64,10 +64,14 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn calculate_user_global_data(_who: T::AccountId) -> DispatchResult {
+		//FIXME
+		let _price_from_oracle = 1;
 		Ok(())
 	}
 
 	pub fn calculate_total_available_collateral(_amount: Balance, _underlying_asset_id: CurrencyId) -> DispatchResult {
+		//FIXME
+		let _price_from_oracle = 1;
 		Ok(())
 	}
 

@@ -154,11 +154,11 @@ impl<T: Trait> Module<T> {
 
 		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
-		let liquidity_rate = <Controller<T>>::calculate_liquidity_rate(underlying_asset_id)?;
+		let exchange_rate = <Controller<T>>::get_exchange_rate(underlying_asset_id)?;
 
 		// wrapped = underlying / liquidity_rate
 		let wrapped_amount = amount
-			.checked_div(liquidity_rate.into_inner())
+			.checked_div(exchange_rate.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		<MTokens<T>>::withdraw(underlying_asset_id, &who, amount)?;
@@ -184,11 +184,11 @@ impl<T: Trait> Module<T> {
 
 		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
-		let liquidity_rate = <Controller<T>>::calculate_liquidity_rate(underlying_asset_id)?;
+		let exchange_rate = <Controller<T>>::get_exchange_rate(underlying_asset_id)?;
 
 		// wrapped = underlying / liquidity_rate
 		let wrapped_amount = amount
-			.checked_div(liquidity_rate.into_inner())
+			.checked_div(exchange_rate.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		ensure!(
