@@ -60,7 +60,7 @@ impl<T: Trait> Module<T> {
 
 		// Self::caclulate_exchange_rate(total_cash, total_supply)?;
 
-		Ok(Rate::saturating_from_rational(8, 10))
+		Ok(Rate::saturating_from_rational(8, 10)) // 80%
 	}
 
 	pub fn calculate_user_global_data(_who: T::AccountId) -> DispatchResult {

@@ -2,9 +2,10 @@
 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{self as system, ensure_signed};
-use minterest_primitives::{Balance, CurrencyId};
+use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
+use sp_runtime::traits::CheckedDiv;
 use sp_runtime::{DispatchResult, FixedPointNumber};
 use sp_std::{prelude::Vec, result};
 
@@ -157,8 +158,9 @@ impl<T: Trait> Module<T> {
 		let exchange_rate = <Controller<T>>::get_exchange_rate(underlying_asset_id)?;
 
 		// wrapped = underlying / liquidity_rate
-		let wrapped_amount = amount
-			.checked_div(exchange_rate.into_inner())
+		let wrapped_amount = Rate::from_inner(amount)
+			.checked_div(&exchange_rate)
+			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		<MTokens<T>>::withdraw(underlying_asset_id, &who, amount)?;
@@ -187,8 +189,9 @@ impl<T: Trait> Module<T> {
 		let exchange_rate = <Controller<T>>::get_exchange_rate(underlying_asset_id)?;
 
 		// wrapped = underlying / liquidity_rate
-		let wrapped_amount = amount
-			.checked_div(exchange_rate.into_inner())
+		let wrapped_amount = Rate::from_inner(amount)
+			.checked_div(&exchange_rate)
+			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		ensure!(
