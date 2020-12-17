@@ -714,6 +714,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 
 [[package]]
+name = "controller"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "liquidity-pools",
+ "m-tokens",
+ "minterest-primitives",
+ "orml-traits",
+ "parity-scale-codec",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "core-foundation"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3163,6 +3180,7 @@ dependencies = [
 name = "minterest-protocol"
 version = "0.1.0"
 dependencies = [
+ "controller",
  "frame-support",
  "frame-system",
  "liquidity-pools",
@@ -3171,6 +3189,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-utilities",
+ "pallet-traits",
  "parity-scale-codec",
  "sp-core",
  "sp-io",
@@ -3387,6 +3406,7 @@ dependencies = [
 name = "node-minterest-runtime"
 version = "2.0.0"
 dependencies = [
+ "controller",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",

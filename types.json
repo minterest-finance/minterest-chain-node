@@ -17,11 +17,12 @@
     },
     "Reserve": {
       "total_balance": "Balance",
-      "current_liquidity_rate": "Permill"
+      "current_liquidity_rate": "Perbill"
     },
     "CurrencyIdOf": "CurrencyId",
     "Amount": "i128",
-    "AmountOf": "Amount"
+    "AmountOf": "Amount",
+    "Rate": "FixedU128"
   },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
 }

@@ -3,6 +3,7 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 use minterest_primitives::{Balance, CurrencyId};
+use pallet_traits::Borrowing;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{traits::Zero, DispatchResult, Permill, RuntimeDebug};
@@ -50,13 +51,13 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 	pub fn update_state_on_deposit(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
-		Self::update_reserve_interest_rate(amount, Balance::zero(), currency_id)?;
+		Self::update_reserve_and_interest_rate(amount, Balance::zero(), currency_id)?;
 
 		Ok(())
 	}
 
 	pub fn update_state_on_redeem(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
-		Self::update_reserve_interest_rate(Balance::zero(), amount, currency_id)?;
+		Self::update_reserve_and_interest_rate(Balance::zero(), amount, currency_id)?;
 
 		Ok(())
 	}
@@ -65,14 +66,14 @@ impl<T: Trait> Module<T> {
 		Self::reserves(currency_id).total_balance
 	}
 
-	fn update_reserve_interest_rate(
+	fn update_reserve_and_interest_rate(
 		liquidity_added: Balance,
 		liquidity_taken: Balance,
-		currency_id: CurrencyId,
+		underlying_asset_id: CurrencyId,
 	) -> DispatchResult {
-		ensure!(Self::pool_exists(&currency_id), Error::<T>::PoolNotFound);
+		ensure!(Self::pool_exists(&underlying_asset_id), Error::<T>::PoolNotFound);
 
-		let current_reserve_balance = Self::reserves(currency_id).total_balance;
+		let current_reserve_balance = Self::reserves(underlying_asset_id).total_balance;
 
 		let new_reserve_balance: Balance;
 
@@ -86,21 +87,39 @@ impl<T: Trait> Module<T> {
 				.ok_or(Error::<T>::NotEnoughBalance)?;
 		}
 
-		Reserves::mutate(currency_id, |r| r.total_balance = new_reserve_balance);
-
-		Self::calculate_interest_rate(new_reserve_balance, currency_id)?;
+		Reserves::mutate(underlying_asset_id, |r| r.total_balance = new_reserve_balance);
 
 		Ok(())
 	}
 
-	fn pool_exists(currency_id: &CurrencyId) -> bool {
-		Reserves::contains_key(currency_id)
+	pub fn set_current_liquidity_rate(underlying_asset_id: CurrencyId, _rate: Permill) -> DispatchResult {
+		Reserves::mutate(underlying_asset_id, |r| {
+			r.current_liquidity_rate = Permill::from_percent(44)
+		});
+		Ok(())
 	}
 
-	fn calculate_interest_rate(_current_reserve_balance: Balance, currency_id: CurrencyId) -> DispatchResult {
-		// TODO: some another logic here......
-		Reserves::mutate(currency_id, |r| r.current_liquidity_rate = Permill::one());
+	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
+		Reserves::contains_key(underlying_asset_id)
+	}
+}
 
+impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
+	fn update_state_on_borrow(
+		underlying_asset_id: CurrencyId,
+		amount_borrowed: Balance,
+		_who: &T::AccountId,
+	) -> DispatchResult {
+		Self::update_reserve_and_interest_rate(Balance::zero(), amount_borrowed, underlying_asset_id)?;
+		Ok(())
+	}
+
+	fn update_state_on_repay(
+		underlying_asset_id: CurrencyId,
+		amount_borrowed: Balance,
+		_who: &T::AccountId,
+	) -> DispatchResult {
+		Self::update_reserve_and_interest_rate(amount_borrowed, Balance::zero(), underlying_asset_id)?;
 		Ok(())
 	}
 }
