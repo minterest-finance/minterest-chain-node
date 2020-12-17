@@ -3,7 +3,7 @@
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 pub use minterest_primitives::{Balance, CurrencyId};
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
+use sp_runtime::{testing::Header, traits::IdentityLookup, FixedU128, Perbill};
 
 use super::*;
 use crate::GenesisConfig;
@@ -110,37 +110,42 @@ impl ExtBuilder {
 			.build_storage::<Runtime>()
 			.unwrap();
 
-		GenesisConfig {
+		GenesisConfig::<Runtime> {
 			reserves: vec![
 				(
 					CurrencyId::ETH,
 					Reserve {
 						total_balance: Balance::zero(),
-						current_liquidity_rate: Permill::one(),
+						current_interest_rate: FixedU128::from_inner(0),
+						total_borrowed: Balance::zero(),
 					},
 				),
 				(
 					CurrencyId::DOT,
 					Reserve {
 						total_balance: Balance::zero(),
-						current_liquidity_rate: Permill::one(),
+						current_interest_rate: FixedU128::from_inner(0),
+						total_borrowed: Balance::zero(),
 					},
 				),
 				(
 					CurrencyId::KSM,
 					Reserve {
 						total_balance: Balance::zero(),
-						current_liquidity_rate: Permill::one(),
+						current_interest_rate: FixedU128::from_inner(0),
+						total_borrowed: Balance::zero(),
 					},
 				),
 				(
 					CurrencyId::BTC,
 					Reserve {
 						total_balance: Balance::zero(),
-						current_liquidity_rate: Permill::one(),
+						current_interest_rate: FixedU128::from_inner(0),
+						total_borrowed: Balance::zero(),
 					},
 				),
 			],
+			reserve_user_data: vec![],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

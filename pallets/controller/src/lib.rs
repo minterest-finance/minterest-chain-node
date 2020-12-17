@@ -56,16 +56,14 @@ type RateResult = result::Result<Rate, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 
 impl<T: Trait> Module<T> {
-	pub fn get_exchange_rate(currency_id: CurrencyId) -> RateResult {
+	pub fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
 		// The total amount of cash the market has
-		let _total_cash = <LiquidityPools<T>>::get_reserve_available_liquidity(currency_id);
+		let total_cash = <LiquidityPools<T>>::get_reserve_available_liquidity(underlying_asset_id);
 
 		// Total number of tokens in circulation
-		let _total_supply = T::MultiCurrency::total_issuance(currency_id);
+		let total_supply = T::MultiCurrency::total_issuance(underlying_asset_id);
 
-		// Self::caclulate_exchange_rate(total_cash, total_supply)?;
-
-		Ok(Rate::saturating_from_rational(8, 10)) // 80%
+		Self::caclulate_exchange_rate(total_cash, total_supply)
 	}
 
 	pub fn convert_to_wrapped(underlying_asset_id: CurrencyId, underlying_amount: Balance) -> BalanceResult {
@@ -93,18 +91,6 @@ impl<T: Trait> Module<T> {
 	pub fn calculate_user_global_data(_who: T::AccountId) -> DispatchResult {
 		//FIXME
 		let _price_from_oracle = 1;
-
-impl<T: Trait> Module<T> {
-	pub fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
-		// The total amount of cash the market has
-		let total_cash = <LiquidityPools<T>>::get_reserve_available_liquidity(underlying_asset_id);
-		// Total number of tokens in circulation
-		let total_supply = T::MultiCurrency::total_issuance(underlying_asset_id);
-
-		Self::caclulate_exchange_rate(total_cash, total_supply)
-	}
-
-	pub fn calculate_user_global_data(_who: T::AccountId) -> DispatchResult {
 		Ok(())
 	}
 

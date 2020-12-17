@@ -61,24 +61,54 @@ decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
 }
 
+// Setters for LiquidityPools
 impl<T: Trait> Module<T> {
+	pub fn set_current_interest_rate(underlying_asset_id: CurrencyId, _rate: FixedU128) -> DispatchResult {
+		Reserves::mutate(underlying_asset_id, |r| {
+			r.current_interest_rate = FixedU128::from_inner(1)
+		});
+		Ok(())
+	}
+
 	pub fn update_state_on_deposit(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
-		Self::update_reserve_and_interest_rate(amount, Balance::zero(), currency_id)?;
+		Self::update_reserve_liquidity(amount, Balance::zero(), currency_id)?;
 
 		Ok(())
 	}
 
 	pub fn update_state_on_redeem(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
-		Self::update_reserve_and_interest_rate(Balance::zero(), amount, currency_id)?;
+		Self::update_reserve_liquidity(Balance::zero(), amount, currency_id)?;
 
 		Ok(())
 	}
+}
 
+// Getters for LiquidityPools
+impl<T: Trait> Module<T> {
 	pub fn get_reserve_available_liquidity(currency_id: CurrencyId) -> Balance {
 		Self::reserves(currency_id).total_balance
 	}
 
-	fn update_reserve_and_interest_rate(
+	pub fn get_reserve_total_borrowed(currency_id: CurrencyId) -> Balance {
+		Self::reserves(currency_id).total_borrowed
+	}
+
+	pub fn get_user_total_borrowed(who: &T::AccountId, currency_id: CurrencyId) -> Balance {
+		Self::reserve_user_data(who, currency_id).total_borrowed
+	}
+
+	pub fn check_user_available_collateral(who: &T::AccountId, currency_id: CurrencyId) -> bool {
+		Self::reserve_user_data(who, currency_id).collateral
+	}
+
+	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
+		Reserves::contains_key(underlying_asset_id)
+	}
+}
+
+// Private methods for LiquidityPools
+impl<T: Trait> Module<T> {
+	fn update_reserve_liquidity(
 		liquidity_added: Balance,
 		liquidity_taken: Balance,
 		underlying_asset_id: CurrencyId,
@@ -104,14 +134,7 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	pub fn set_current_interest_rate(underlying_asset_id: CurrencyId, _rate: FixedU128) -> DispatchResult {
-		Reserves::mutate(underlying_asset_id, |r| {
-			r.current_interest_rate = FixedU128::from_inner(1)
-		});
-		Ok(())
-	}
-
-	pub fn update_reserve_user_data(
+	fn update_reserve_and_user_total_borrowed(
 		underlying_asset_id: CurrencyId,
 		amount_borrowed_add: Balance,
 		amount_borrowed_reduce: Balance,
@@ -144,20 +167,17 @@ impl<T: Trait> Module<T> {
 
 		Ok(())
 	}
-
-	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
-		Reserves::contains_key(underlying_asset_id)
-	}
 }
 
+// Trait Borrowing for LiquidityPools
 impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 	fn update_state_on_borrow(
 		underlying_asset_id: CurrencyId,
 		amount_borrowed: Balance,
 		who: &T::AccountId,
 	) -> DispatchResult {
-		Self::update_reserve_and_interest_rate(Balance::zero(), amount_borrowed, underlying_asset_id)?;
-		Self::update_reserve_user_data(underlying_asset_id, amount_borrowed, Balance::zero(), who)?;
+		Self::update_reserve_liquidity(Balance::zero(), amount_borrowed, underlying_asset_id)?;
+		Self::update_reserve_and_user_total_borrowed(underlying_asset_id, amount_borrowed, Balance::zero(), who)?;
 		Ok(())
 	}
 
@@ -166,8 +186,8 @@ impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 		amount_borrowed: Balance,
 		who: &T::AccountId,
 	) -> DispatchResult {
-		Self::update_reserve_and_interest_rate(amount_borrowed, Balance::zero(), underlying_asset_id)?;
-		Self::update_reserve_user_data(underlying_asset_id, Balance::zero(), amount_borrowed, who)?;
+		Self::update_reserve_liquidity(amount_borrowed, Balance::zero(), underlying_asset_id)?;
+		Self::update_reserve_and_user_total_borrowed(underlying_asset_id, Balance::zero(), amount_borrowed, who)?;
 		Ok(())
 	}
 }
