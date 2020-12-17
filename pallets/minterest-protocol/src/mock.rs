@@ -153,6 +153,8 @@ pub type MinterestProtocol = Module<Test>;
 pub type TestMTokens = m_tokens::Module<Test>;
 pub type TestPools = liquidity_pools::Module<Test>;
 
+//TODO Add the value of the exchange rating = 80% after implementing the storage.
+
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
