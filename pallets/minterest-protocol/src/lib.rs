@@ -225,7 +225,7 @@ impl<T: Trait> Module<T> {
 		// This function should return the amount of collateral needed in dollars.
 		<Controller<T>>::calculate_total_available_collateral(amount, underlying_asset_id)?;
 
-		<LiquidityPools<T>>::update_state_on_borrow(underlying_asset_id, amount, who)
+		<LiquidityPools<T>>::update_state_on_borrow(underlying_asset_id, amount, &who)
 			.map_err(|_| Error::<T>::InternalReserveError)?;
 
 		<MTokens<T>>::deposit(underlying_asset_id, who, amount)?;

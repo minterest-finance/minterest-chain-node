@@ -9,7 +9,7 @@ use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify, Zero};
-use sp_runtime::Permill;
+use sp_runtime::FixedU128;
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -182,31 +182,36 @@ fn testnet_genesis(
 					CurrencyId::ETH,
 					Reserve {
 						total_balance: Balance::zero(),
-						current_liquidity_rate: Permill::one(),
+						current_interest_rate: FixedU128::from_inner(0),
+						total_borrowed: Balance::zero(),
 					},
 				),
 				(
 					CurrencyId::DOT,
 					Reserve {
 						total_balance: Balance::zero(),
-						current_liquidity_rate: Permill::one(),
+						current_interest_rate: FixedU128::from_inner(0),
+						total_borrowed: Balance::zero(),
 					},
 				),
 				(
 					CurrencyId::KSM,
 					Reserve {
 						total_balance: Balance::zero(),
-						current_liquidity_rate: Permill::one(),
+						current_interest_rate: FixedU128::from_inner(0),
+						total_borrowed: Balance::zero(),
 					},
 				),
 				(
 					CurrencyId::BTC,
 					Reserve {
 						total_balance: Balance::zero(),
-						current_liquidity_rate: Permill::one(),
+						current_interest_rate: FixedU128::from_inner(0),
+						total_borrowed: Balance::zero(),
 					},
 				),
 			],
+			reserve_user_data: vec![],
 		}),
 	}
 }

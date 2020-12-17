@@ -53,14 +53,11 @@ type RateResult = result::Result<Rate, DispatchError>;
 impl<T: Trait> Module<T> {
 	pub fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
 		// The total amount of cash the market has
-		let _total_cash = <LiquidityPools<T>>::get_reserve_available_liquidity(underlying_asset_id);
-
+		let total_cash = <LiquidityPools<T>>::get_reserve_available_liquidity(underlying_asset_id);
 		// Total number of tokens in circulation
-		let _total_supply = T::MultiCurrency::total_issuance(underlying_asset_id);
+		let total_supply = T::MultiCurrency::total_issuance(underlying_asset_id);
 
-		// Self::caclulate_exchange_rate(total_cash, total_supply)?;
-
-		Ok(Rate::from_inner(1))
+		Self::caclulate_exchange_rate(total_cash, total_supply)
 	}
 
 	pub fn calculate_user_global_data(_who: T::AccountId) -> DispatchResult {
@@ -75,8 +72,8 @@ impl<T: Trait> Module<T> {
 		Ok(Rate::from_inner(1))
 	}
 
-	// fn caclulate_exchange_rate(total_cash: Balance, total_supply: Balance) -> RateResult {
-	// 	let rate = total_cash.checked_div(total_supply).ok_or(Error::<T>::InvalidValues)?;
-	//     let rates = Permill::from_percent();
-	// }
+	fn caclulate_exchange_rate(total_cash: Balance, total_supply: Balance) -> RateResult {
+		let rate = total_cash.checked_div(total_supply).ok_or(Error::<T>::InvalidValues)?;
+		Ok(Rate::from_inner(rate))
+	}
 }

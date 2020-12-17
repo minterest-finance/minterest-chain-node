@@ -17,7 +17,13 @@
     },
     "Reserve": {
       "total_balance": "Balance",
-      "current_liquidity_rate": "Perbill"
+      "current_interest_rate": "FixedU128",
+      "total_borrowed": "Balance"
+    },
+    "ReserveUserData" : {
+      "total_borrowed": "Balance",
+      "collateral": "bool",
+      "timestamp": "Balance"
     },
     "CurrencyIdOf": "CurrencyId",
     "Amount": "i128",
