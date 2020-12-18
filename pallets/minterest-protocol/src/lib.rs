@@ -232,7 +232,11 @@ impl<T: Trait> Module<T> {
 			}
 			(_, 0) => <Controller<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
 				.map_err(|_| Error::<T>::NumOverflow)?,
-			_ => wrapped_amount,
+			_ => {
+				underlying_amount = <Controller<T>>::convert_from_wrapped(wrapped_id, wrapped_amount)
+					.map_err(|_| Error::<T>::NumOverflow)?;
+				wrapped_amount
+			}
 		};
 
 		ensure!(
