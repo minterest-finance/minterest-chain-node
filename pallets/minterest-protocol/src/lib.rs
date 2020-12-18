@@ -54,8 +54,11 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
-		/// The currency is not enabled in wrapped protocol.
+		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
+
+		/// The currency is not enabled in wrapped protocol.
+		NotValidWrappedTokenId,
 
 		/// There is not enough liquidity available in the reserve.
 		NotEnoughLiquidityAvailable,
@@ -96,7 +99,7 @@ decl_module! {
 			})?;
 		}
 
-		/// Sender redeems cTokens in exchange for the underlying asset.
+		/// Sender redeems mTokens in exchange for the underlying assets.
 		#[weight = 10_000]
 		pub fn redeem(
 			origin,
@@ -104,13 +107,13 @@ decl_module! {
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let (underlying_amount, wrapped_id, wrapped_amount) = Self::do_redeem(&who, underlying_asset_id, Balance::zero())?;
+				let (underlying_amount, wrapped_id, wrapped_amount) = Self::do_redeem(&who, underlying_asset_id, Balance::zero(), Balance::zero())?;
 				Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount));
 				Ok(())
 			})?;
 		}
 
-		/// Sender redeems cTokens in exchange for a specified amount of underlying asset.
+		/// Sender redeems mTokens in exchange for a specified amount of underlying assets.
 		#[weight = 10_000]
 		pub fn redeem_underlying(
 			origin,
@@ -119,7 +122,19 @@ decl_module! {
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let (_, wrapped_id, wrapped_amount) = Self::do_redeem(&who, underlying_asset_id, underlying_amount)?;
+				let (_, wrapped_id, wrapped_amount) = Self::do_redeem(&who, underlying_asset_id, underlying_amount, Balance::zero())?;
+				Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount));
+				Ok(())
+			})?;
+		}
+
+		/// Sender redeems a specified amount of mTokens in exchange for the underlying assets.
+		#[weight = 10_000]
+		pub fn redeem_wrapped(origin, wrapped_id: CurrencyId, #[compact] wrapped_amount: Balance) {
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				let underlying_asset_id = Self::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
+				let (underlying_amount, wrapped_id, _) = Self::do_redeem(&who, underlying_asset_id, Balance::zero(), wrapped_amount)?;
 				Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount));
 				Ok(())
 			})?;
@@ -188,7 +203,12 @@ impl<T: Trait> Module<T> {
 		Ok((underlying_amount, wrapped_id, wrapped_amount))
 	}
 
-	fn do_redeem(who: &T::AccountId, underlying_asset_id: CurrencyId, mut underlying_amount: Balance) -> TokensResult {
+	fn do_redeem(
+		who: &T::AccountId,
+		underlying_asset_id: CurrencyId,
+		mut underlying_amount: Balance,
+		wrapped_amount: Balance,
+	) -> TokensResult {
 		ensure!(
 			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
@@ -203,15 +223,16 @@ impl<T: Trait> Module<T> {
 
 		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
-		let wrapped_amount = match underlying_amount {
-			0 => {
+		let wrapped_amount = match (underlying_amount, wrapped_amount) {
+			(0, 0) => {
 				let total_wrapped_amount = <MTokens<T>>::free_balance(wrapped_id, &who);
 				underlying_amount = <Controller<T>>::convert_from_wrapped(wrapped_id, total_wrapped_amount)
 					.map_err(|_| Error::<T>::NumOverflow)?;
 				total_wrapped_amount
 			}
-			_ => <Controller<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
+			(_, 0) => <Controller<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
 				.map_err(|_| Error::<T>::NumOverflow)?,
+			_ => wrapped_amount,
 		};
 
 		ensure!(
@@ -293,6 +314,16 @@ impl<T: Trait> Module<T> {
 			CurrencyId::BTC => Ok(CurrencyId::MBTC),
 			CurrencyId::ETH => Ok(CurrencyId::METH),
 			_ => Err(Error::<T>::NotValidUnderlyingAssetId),
+		}
+	}
+
+	fn get_underlying_asset_id_by_wrapped_id(wrapped_id: &CurrencyId) -> result::Result<CurrencyId, Error<T>> {
+		match wrapped_id {
+			CurrencyId::MDOT => Ok(CurrencyId::DOT),
+			CurrencyId::MKSM => Ok(CurrencyId::KSM),
+			CurrencyId::MBTC => Ok(CurrencyId::BTC),
+			CurrencyId::METH => Ok(CurrencyId::ETH),
+			_ => Err(Error::<T>::NotValidWrappedTokenId),
 		}
 	}
 }

@@ -101,3 +101,5 @@ fn getting_assets_from_reserve_by_different_users_should_work() {
 		assert_eq!(TestMTokens::free_balance(CurrencyId::MDOT, &BOB), 8);
 	});
 }
+
+// TODO Implement tests for redeem and redeem_underlying functions
