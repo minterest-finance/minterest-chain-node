@@ -5,7 +5,7 @@ use frame_system::{self as system, ensure_signed};
 use minterest_primitives::{Balance, CurrencyId};
 use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
-use sp_runtime::{DispatchError, DispatchResult};
+use sp_runtime::{traits::Zero, DispatchError, DispatchResult};
 use sp_std::{prelude::Vec, result};
 
 #[cfg(test)]
@@ -60,8 +60,11 @@ decl_error! {
 		/// There is not enough liquidity available in the reserve.
 		NotEnoughLiquidityAvailable,
 
-		/// Insufficient funds in the user account.
+		/// Insufficient wrapped tokens in the user account.
 		NotEnoughWrappedTokens,
+
+		/// Insufficient underlying assets in the user account.
+		NotEnoughUnderlyingsAssets,
 
 		/// PoolNotFound or NotEnoughBalance or BalanceOverflowed.
 		InternalReserveError,
@@ -87,7 +90,7 @@ decl_module! {
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let (_, _, wrapped_id, wrapped_amount) = Self::do_deposit(&who, underlying_asset_id, underlying_amount)?;
+				let (_, wrapped_id, wrapped_amount) = Self::do_deposit(&who, underlying_asset_id, underlying_amount)?;
 				Self::deposit_event(RawEvent::Deposited(who, underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount));
 				Ok(())
 			})?;
@@ -97,12 +100,11 @@ decl_module! {
 		#[weight = 10_000]
 		pub fn redeem(
 			origin,
-			wrapped_id: CurrencyId,
-			#[compact] wrapped_amount: Balance
+			underlying_asset_id: CurrencyId,
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let (underlying_asset_id, underlying_amount, _, _) = Self::do_redeem(&who, wrapped_id, wrapped_amount, false)?;
+				let (underlying_amount, wrapped_id, wrapped_amount) = Self::do_redeem(&who, underlying_asset_id, Balance::zero())?;
 				Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount));
 				Ok(())
 			})?;
@@ -117,7 +119,7 @@ decl_module! {
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let (_, _, wrapped_id, wrapped_amount) = Self::do_redeem(&who, underlying_asset_id, underlying_amount, true)?;
+				let (_, wrapped_id, wrapped_amount) = Self::do_redeem(&who, underlying_asset_id, underlying_amount)?;
 				Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount));
 				Ok(())
 			})?;
@@ -128,12 +130,12 @@ decl_module! {
 		pub fn borrow(
 			origin,
 			underlying_asset_id: CurrencyId,
-			#[compact] amount: Balance
+			#[compact] underlying_amount: Balance
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				Self::do_borrow(&who, underlying_asset_id, amount)?;
-				Self::deposit_event(RawEvent::Borrowed(who, underlying_asset_id, amount));
+				Self::do_borrow(&who, underlying_asset_id, underlying_amount)?;
+				Self::deposit_event(RawEvent::Borrowed(who, underlying_asset_id, underlying_amount));
 				Ok(())
 			})?;
 		}
@@ -155,7 +157,7 @@ decl_module! {
 	}
 }
 
-type TokensResult = result::Result<(CurrencyId, Balance, CurrencyId, Balance), DispatchError>;
+type TokensResult = result::Result<(Balance, CurrencyId, Balance), DispatchError>;
 
 // Dispatchable calls implementation
 impl<T: Trait> Module<T> {
@@ -183,16 +185,10 @@ impl<T: Trait> Module<T> {
 
 		<MTokens<T>>::deposit(wrapped_id, &who, wrapped_amount)?;
 
-		Ok((underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount))
+		Ok((underlying_amount, wrapped_id, wrapped_amount))
 	}
 
-	/// If wrap_or_underlying = true - underlying, else - wrapped.
-	fn do_redeem(
-		who: &T::AccountId,
-		underlying_asset_id: CurrencyId,
-		underlying_amount: Balance,
-		_wrap_or_underlying: bool,
-	) -> TokensResult {
+	fn do_redeem(who: &T::AccountId, underlying_asset_id: CurrencyId, mut underlying_amount: Balance) -> TokensResult {
 		ensure!(
 			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
@@ -207,8 +203,16 @@ impl<T: Trait> Module<T> {
 
 		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
-		let wrapped_amount = <Controller<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
-			.map_err(|_| Error::<T>::NumOverflow)?;
+		let wrapped_amount = match underlying_amount {
+			0 => {
+				let total_wrapped_amount = <MTokens<T>>::free_balance(wrapped_id, &who);
+				underlying_amount = <Controller<T>>::convert_from_wrapped(wrapped_id, total_wrapped_amount)
+					.map_err(|_| Error::<T>::NumOverflow)?;
+				total_wrapped_amount
+			}
+			_ => <Controller<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
+				.map_err(|_| Error::<T>::NumOverflow)?,
+		};
 
 		ensure!(
 			wrapped_amount <= <MTokens<T>>::free_balance(wrapped_id, &who),
@@ -222,17 +226,17 @@ impl<T: Trait> Module<T> {
 
 		<MTokens<T>>::deposit(underlying_asset_id, &who, underlying_amount)?;
 
-		Ok((underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount))
+		Ok((underlying_amount, wrapped_id, wrapped_amount))
 	}
 
-	fn do_borrow(who: &T::AccountId, underlying_asset_id: CurrencyId, amount: Balance) -> DispatchResult {
+	fn do_borrow(who: &T::AccountId, underlying_asset_id: CurrencyId, underlying_amount: Balance) -> DispatchResult {
 		ensure!(
 			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
 		ensure!(
-			amount <= <LiquidityPools<T>>::get_reserve_available_liquidity(underlying_asset_id),
+			underlying_amount <= <LiquidityPools<T>>::get_reserve_available_liquidity(underlying_asset_id),
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
@@ -242,17 +246,40 @@ impl<T: Trait> Module<T> {
 
 		//TODO rewrite after implementing the function in the controller.
 		// This function should return the amount of collateral needed in dollars.
-		<Controller<T>>::calculate_total_available_collateral(amount, underlying_asset_id)?;
+		<Controller<T>>::calculate_total_available_collateral(underlying_amount, underlying_asset_id)?;
 
-		<LiquidityPools<T>>::update_state_on_borrow(underlying_asset_id, amount, who)
+		<LiquidityPools<T>>::update_state_on_borrow(underlying_asset_id, underlying_amount, who)
 			.map_err(|_| Error::<T>::InternalReserveError)?;
 
-		<MTokens<T>>::deposit(underlying_asset_id, who, amount)?;
+		<MTokens<T>>::deposit(underlying_asset_id, who, underlying_amount)?;
 
 		Ok(())
 	}
 
-	fn do_repay(_who: &T::AccountId, _underlying_asset_id: CurrencyId, _amount: Balance) -> DispatchResult {
+	fn do_repay(who: &T::AccountId, underlying_asset_id: CurrencyId, underlying_amount: Balance) -> DispatchResult {
+		ensure!(
+			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
+			Error::<T>::NotValidUnderlyingAssetId
+		);
+
+		ensure!(
+			underlying_amount <= <MTokens<T>>::free_balance(underlying_asset_id, &who),
+			Error::<T>::NotEnoughUnderlyingsAssets
+		);
+
+		//TODO rewrite after implementing the function in the controller.
+		// This function should return current information about the user and his balances.
+		<Controller<T>>::calculate_user_global_data(who.clone())?;
+
+		//TODO rewrite after implementing the function in the controller.
+		// This function should return the amount of collateral needed in dollars.
+		<Controller<T>>::calculate_total_available_collateral(underlying_amount, underlying_asset_id)?;
+
+		<LiquidityPools<T>>::update_state_on_repay(underlying_asset_id, underlying_amount, who)
+			.map_err(|_| Error::<T>::InternalReserveError)?;
+
+		<MTokens<T>>::withdraw(underlying_asset_id, who, underlying_amount)?;
+
 		Ok(())
 	}
 }
