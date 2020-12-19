@@ -12,8 +12,9 @@ use sp_runtime::{traits::Zero, DispatchResult, FixedU128, RuntimeDebug};
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct Reserve {
 	pub total_balance: Balance,
-	pub current_interest_rate: FixedU128,
+	pub current_interest_rate: FixedU128, // FIXME: how can i use it?
 	pub total_borrowed: Balance,
+	pub current_exchange_rate: FixedU128,
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -70,6 +71,11 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
+	pub fn set_current_exchange_rate(underlying_asset_id: CurrencyId, rate: FixedU128) -> DispatchResult {
+		Reserves::mutate(underlying_asset_id, |r| r.current_exchange_rate = rate);
+		Ok(())
+	}
+
 	pub fn update_state_on_deposit(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
 		Self::update_reserve_liquidity(amount, Balance::zero(), currency_id)?;
 
@@ -99,6 +105,11 @@ impl<T: Trait> Module<T> {
 
 	pub fn check_user_available_collateral(who: &T::AccountId, currency_id: CurrencyId) -> bool {
 		Self::reserve_user_data(who, currency_id).collateral
+	}
+
+	pub fn get_reserve_total_insurance(_currency_id: CurrencyId) -> Balance {
+		//FIXME
+		Balance::zero()
 	}
 
 	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
