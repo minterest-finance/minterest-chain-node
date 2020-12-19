@@ -21,11 +21,10 @@ pub struct Reserve {
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct ReserveUserData {
+pub struct ReserveUserData<BlockNumber> {
 	pub total_borrowed: Balance,
 	pub collateral: bool,
-	pub timestamp: u64,
-	pub current_liquidity_rate: Permill,
+	pub timestamp: BlockNumber,
 }
 
 #[cfg(test)]
@@ -63,7 +62,7 @@ decl_storage! {
 		pub Reserves get(fn reserves) config(): map hasher(blake2_128_concat) CurrencyId => Reserve;
 		pub ReserveUserDates get(fn reserve_user_data) config(): double_map
 			hasher(blake2_128_concat) T::AccountId,
-			hasher(blake2_128_concat) CurrencyId => ReserveUserData;
+			hasher(blake2_128_concat) CurrencyId => ReserveUserData<T::BlockNumber>;
 	}
 }
 

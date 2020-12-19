@@ -1,13 +1,22 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
+use codec::{Decode, Encode};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{self as system};
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
-use sp_runtime::{traits::CheckedDiv, DispatchError, DispatchResult, FixedPointNumber};
-
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use sp_runtime::traits::{CheckedMul, One, Zero};
+use sp_runtime::{traits::CheckedDiv, DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug};
 use sp_std::result;
+
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct ControllerData<BlockNumber> {
+	pub timestamp: BlockNumber,
+	pub borrow_rate: Rate,
+}
 
 #[cfg(test)]
 mod mock;
@@ -20,12 +29,21 @@ type LiquidityPools<T> = liquidity_pools::Module<T>;
 pub const MAX_BORROW_RATE: Rate = Rate::from_inner(1);
 pub const INSURANCE_FACTOR: Rate = Rate::from_inner(1);
 
-pub trait Trait: liquidity_pools::Trait {
+pub trait Trait: liquidity_pools::Trait + system::Trait {
 	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 
 	/// The `MultiCurrency` implementation for wrapped.
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
+
+	/// Start exchange rate
+	type InitialExchangeRate: Get<Rate>;
+
+	/// Fraction of interest currently set aside for reserves
+	type InsuranceFactor: Get<Rate>;
+
+	/// Maximum borrow rate that can ever be applied
+	type MaxBorrowRate: Get<Rate>;
 }
 
 decl_event! {
@@ -33,8 +51,8 @@ decl_event! {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as X {
-
+	trait Store for Module<T: Trait> as ControllerStorage {
+		pub ControllerDates get(fn controller_dates) config(): map hasher(blake2_128_concat) CurrencyId => ControllerData<T::BlockNumber>;
 	}
 }
 
@@ -55,11 +73,7 @@ decl_error! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-		type Error = Error<T>;
-		fn deposit_event() = default;
-
-	}
+	pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
 }
 
 type RateResult = result::Result<Rate, DispatchError>;
@@ -72,10 +86,11 @@ impl<T: Trait> Module<T> {
 			!<LiquidityPools<T>>::reserves(&underlying_asset_id).is_lock,
 			Error::<T>::OperationsLocked
 		);
+
 		//Remember the initial block number
 		// FIXME: add Timestamp pallet
-		let current_block_number: u64 = 1;
-		let accrual_block_number_previous: u64 = 0;
+		let current_block_number = <frame_system::Module<T>>::block_number();
+		let accrual_block_number_previous = Self::controller_dates(underlying_asset_id).timestamp;
 
 		//Short-circuit accumulating 0 interest
 		if current_block_number == accrual_block_number_previous {
@@ -95,7 +110,7 @@ impl<T: Trait> Module<T> {
 		)?;
 
 		ensure!(
-			current_borrow_interest_rate <= MAX_BORROW_RATE,
+			current_borrow_interest_rate <= T::MaxBorrowRate::get(),
 			Error::<T>::BorrowRateIsTooHight
 		);
 
@@ -114,10 +129,13 @@ impl<T: Trait> Module<T> {
 		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, block_delta)?;
 		let interest_accumulated =
 			Self::calculate_interest_accumulated(simple_interest_factor, current_total_borrowed_balance);
-		let new_total_borrow_balance =
+		let _new_total_borrow_balance =
 			Self::calculate_new_total_borrow(interest_accumulated, current_total_borrowed_balance);
-		let new_total_reserves =
-			Self::calculate_new_total_reserves(interest_accumulated, INSURANCE_FACTOR, current_total_insurance);
+		let _new_total_reserves = Self::calculate_new_total_reserves(
+			interest_accumulated,
+			T::InsuranceFactor::get(),
+			current_total_insurance,
+		);
 		let _new_borrow_index: Rate; // FIXME: how can i use it?
 
 		// TODO: save new values into the storage
@@ -189,7 +207,13 @@ impl<T: Trait> Module<T> {
 
 	//Used in: get_exchange_rate
 	fn calculate_exchange_rate(total_cash: Balance, total_supply: Balance) -> RateResult {
-		let rate = total_cash.checked_div(total_supply).ok_or(Error::<T>::InvalidValues)?;
+		let rate: u128;
+		if total_supply == Balance::zero() {
+			rate = T::InitialExchangeRate::get().into_inner();
+		} else {
+			rate = total_cash.checked_div(total_supply).ok_or(Error::<T>::InvalidValues)?;
+		}
+
 		Ok(Rate::from_inner(rate))
 	}
 
@@ -201,14 +225,15 @@ impl<T: Trait> Module<T> {
 		Ok(Rate::from_inner(1))
 	}
 
-	fn calculate_block_delta(_current_block_number: u64, _accrual_block_number_previous: u64) -> u64 {
-		//FIXME
-		0
+	fn calculate_block_delta(
+		current_block_number: T::BlockNumber,
+		accrual_block_number_previous: T::BlockNumber,
+	) -> T::BlockNumber {
+		accrual_block_number_previous - current_block_number
 	}
 
-	fn calculate_interest_factor(_current_borrow_interest_rate: Rate, _block_delta: u64) -> RateResult {
+	fn calculate_interest_factor(_current_borrow_interest_rate: Rate, _block_delta: T::BlockNumber) -> RateResult {
 		//FIXME
-
 		Ok(Rate::from_inner(1))
 	}
 
