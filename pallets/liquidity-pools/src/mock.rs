@@ -37,6 +37,7 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
+pub type AccountId = u32;
 impl frame_system::Trait for Runtime {
 	type BaseCallFilter = ();
 	type Origin = Origin;
@@ -104,6 +105,8 @@ impl Default for ExtBuilder {
 	}
 }
 
+pub const ALICE: AccountId = 1;
+
 impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()
@@ -118,6 +121,7 @@ impl ExtBuilder {
 						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
+						is_lock: true,
 					},
 				),
 				(
@@ -126,6 +130,7 @@ impl ExtBuilder {
 						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
+						is_lock: false,
 					},
 				),
 				(
@@ -134,6 +139,7 @@ impl ExtBuilder {
 						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
+						is_lock: true,
 					},
 				),
 				(
@@ -142,6 +148,7 @@ impl ExtBuilder {
 						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
+						is_lock: true,
 					},
 				),
 			],

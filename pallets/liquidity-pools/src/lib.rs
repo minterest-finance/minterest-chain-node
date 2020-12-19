@@ -2,6 +2,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
+use frame_system::ensure_root;
 use minterest_primitives::{Balance, CurrencyId};
 use pallet_traits::Borrowing;
 #[cfg(feature = "std")]
@@ -15,6 +16,7 @@ pub struct Reserve {
 	pub current_interest_rate: FixedU128, // FIXME: how can i use it?
 	pub total_borrowed: Balance,
 	pub current_exchange_rate: FixedU128,
+	pub is_lock: bool,
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -23,6 +25,7 @@ pub struct ReserveUserData {
 	pub total_borrowed: Balance,
 	pub collateral: bool,
 	pub timestamp: u64,
+	pub current_liquidity_rate: Permill,
 }
 
 #[cfg(test)]
@@ -35,13 +38,19 @@ pub trait Trait: frame_system::Trait {
 }
 
 decl_event!(
-	pub enum Event {}
+	pub enum Event {
+		/// Reserve locked: \[reserve_id\]
+		ReserveLocked(CurrencyId),
+
+		/// Reserve unlocked: \[reserve_id\]
+		ReserveUnLocked(CurrencyId),
+	}
 );
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
 
-	PoolNotFound,
+	ReserveNotFound,
 
 	NotEnoughBalance,
 
@@ -59,7 +68,34 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
+		pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+			type Error = Error<T>;
+			fn deposit_event() = default;
+
+			/// Locks all operations (deposit, redeem, borrow, repay)  with the reserve.
+			///
+			/// The dispatch origin of this call must be _Root_.
+			#[weight = 10_000]
+			pub fn lock_reserve_transactions(origin, reserve_id: CurrencyId) -> DispatchResult {
+				let _ = ensure_root(origin)?;
+				ensure!(Self::pool_exists(&reserve_id), Error::<T>::ReserveNotFound);
+				Reserves::mutate(reserve_id, |r| r.is_lock = true);
+				Self::deposit_event(Event::ReserveLocked(reserve_id));
+				Ok(())
+			}
+
+			/// Unlocks all operations (deposit, redeem, borrow, repay)  with the reserve.
+			///
+			/// The dispatch origin of this call must be _Root_.
+			#[weight = 10_000]
+			pub fn unlock_reserve_transactions(origin, reserve_id: CurrencyId) -> DispatchResult {
+				let _ = ensure_root(origin)?;
+				ensure!(Self::pool_exists(&reserve_id), Error::<T>::ReserveNotFound);
+				Reserves::mutate(reserve_id, |r| r.is_lock = false);
+				Self::deposit_event(Event::ReserveUnLocked(reserve_id));
+				Ok(())
+			}
+	}
 }
 
 // Setters for LiquidityPools
@@ -124,7 +160,7 @@ impl<T: Trait> Module<T> {
 		liquidity_taken: Balance,
 		underlying_asset_id: CurrencyId,
 	) -> DispatchResult {
-		ensure!(Self::pool_exists(&underlying_asset_id), Error::<T>::PoolNotFound);
+		ensure!(Self::pool_exists(&underlying_asset_id), Error::<T>::ReserveNotFound);
 
 		let current_reserve_balance = Self::reserves(underlying_asset_id).total_balance;
 

@@ -176,6 +176,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 				Reserve {
 					total_balance: Balance::zero(),
 					current_liquidity_rate: Permill::one(),
+					is_lock: true,
 				},
 			),
 			(
@@ -183,6 +184,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 				Reserve {
 					total_balance: Balance::zero(),
 					current_liquidity_rate: Permill::one(),
+					is_lock: true,
 				},
 			),
 			(
@@ -190,6 +192,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 				Reserve {
 					total_balance: Balance::zero(),
 					current_liquidity_rate: Permill::one(),
+					is_lock: true,
 				},
 			),
 			(
@@ -197,6 +200,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 				Reserve {
 					total_balance: Balance::zero(),
 					current_liquidity_rate: Permill::one(),
+					is_lock: true,
 				},
 			),
 		],

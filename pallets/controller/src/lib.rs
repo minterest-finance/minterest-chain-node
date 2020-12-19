@@ -28,17 +28,14 @@ pub trait Trait: liquidity_pools::Trait {
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 }
 
-pub struct ControllerData {
-	pub timestamp: u64,
-	pub borrow_rate: Rate,
-}
-
 decl_event! {
 	pub enum Event {}
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as ControllerStorage {}
+	trait Store for Module<T: Trait> as X {
+
+	}
 }
 
 decl_error! {
@@ -48,6 +45,9 @@ decl_error! {
 
 		/// Number overflow in calculation.
 		NumOverflow,
+
+		/// Operations with this underlying assets are locked by the administrator
+		OperationsLocked,
 
 		/// Borrow rate is absurdly high.
 		BorrowRateIsTooHight,
@@ -68,6 +68,10 @@ type BalanceResult = result::Result<Balance, DispatchError>;
 impl<T: Trait> Module<T> {
 	// Used in controller: do_deposit, do_redeem
 	pub fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult {
+		ensure!(
+			!<LiquidityPools<T>>::reserves(&underlying_asset_id).is_lock,
+			Error::<T>::OperationsLocked
+		);
 		//Remember the initial block number
 		// FIXME: add Timestamp pallet
 		let current_block_number: u64 = 1;
