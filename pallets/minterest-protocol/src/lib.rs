@@ -186,7 +186,7 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
-		<Controller<T>>::accrue_interest_rate()?;
+		<Controller<T>>::accrue_interest_rate(underlying_asset_id)?;
 
 		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
@@ -219,7 +219,7 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
-		<Controller<T>>::accrue_interest_rate()?;
+		<Controller<T>>::accrue_interest_rate(underlying_asset_id)?;
 
 		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
@@ -265,13 +265,7 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
-		//TODO rewrite after implementing the function in the controller.
-		// This function should return current information about the user and his balances.
-		<Controller<T>>::calculate_user_global_data(who.clone())?;
-
-		//TODO rewrite after implementing the function in the controller.
-		// This function should return the amount of collateral needed in dollars.
-		<Controller<T>>::calculate_total_available_collateral(underlying_amount, underlying_asset_id)?;
+		<Controller<T>>::accrue_interest_rate(underlying_asset_id)?;
 
 		<LiquidityPools<T>>::update_state_on_borrow(underlying_asset_id, underlying_amount, who)
 			.map_err(|_| Error::<T>::InternalReserveError)?;
@@ -292,13 +286,7 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotEnoughUnderlyingsAssets
 		);
 
-		//TODO rewrite after implementing the function in the controller.
-		// This function should return current information about the user and his balances.
-		<Controller<T>>::calculate_user_global_data(who.clone())?;
-
-		//TODO rewrite after implementing the function in the controller.
-		// This function should return the amount of collateral needed in dollars.
-		<Controller<T>>::calculate_total_available_collateral(underlying_amount, underlying_asset_id)?;
+		<Controller<T>>::accrue_interest_rate(underlying_asset_id)?;
 
 		<LiquidityPools<T>>::update_state_on_repay(underlying_asset_id, underlying_amount, who)
 			.map_err(|_| Error::<T>::InternalReserveError)?;
