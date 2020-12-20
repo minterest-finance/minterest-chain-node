@@ -26,10 +26,6 @@ mod tests;
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 
-// FIXME: move to runtime
-pub const MAX_BORROW_RATE: Rate = Rate::from_inner(1);
-pub const INSURANCE_FACTOR: Rate = Rate::from_inner(1);
-
 pub trait Trait: liquidity_pools::Trait + system::Trait {
 	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
@@ -40,7 +36,7 @@ pub trait Trait: liquidity_pools::Trait + system::Trait {
 	/// Start exchange rate
 	type InitialExchangeRate: Get<Rate>;
 
-	/// Fraction of interest currently set aside for reserves
+	/// Fraction of interest currently set aside for insurace.
 	type InsuranceFactor: Get<Rate>;
 
 	/// Maximum borrow rate that can ever be applied
@@ -59,9 +55,6 @@ decl_storage! {
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
-
-		InvalidValues,
-
 		/// Number overflow in calculation.
 		NumOverflow,
 
@@ -89,7 +82,6 @@ impl<T: Trait> Module<T> {
 		);
 
 		//Remember the initial block number
-		// FIXME: add Timestamp pallet
 		let current_block_number = <frame_system::Module<T>>::block_number();
 		let accrual_block_number_previous = Self::controller_dates(underlying_asset_id).timestamp;
 
@@ -119,28 +111,32 @@ impl<T: Trait> Module<T> {
 		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous);
 
 		/*
-		Calculate the interest accumulated into borrows and reserves and the new index:
+		Calculate the interest accumulated into borrows and insurance and the new index:
 			*  simpleInterestFactor = borrowRate * blockDelta
 			*  interestAccumulated = simpleInterestFactor * totalBorrows
 			*  totalBorrowsNew = interestAccumulated + totalBorrows
-			*  totalReservesNew = interestAccumulated * reserveFactor + totalReserves
+			*  totalInsuranceNew = interestAccumulated * insuranceFactor + totalInsurance
 			*  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
 		*/
 
 		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, &block_delta)?;
 		let interest_accumulated =
 			Self::calculate_interest_accumulated(simple_interest_factor, current_total_borrowed_balance)?;
-		let _new_total_borrow_balance =
+		let new_total_borrow_balance =
 			Self::calculate_new_total_borrow(interest_accumulated, current_total_borrowed_balance)?;
-		let _new_total_reserves = Self::calculate_new_total_reserves(
+		let new_total_insurance = Self::calculate_new_total_insurance(
 			interest_accumulated,
 			T::InsuranceFactor::get(),
 			current_total_insurance,
 		)?;
 		let _new_borrow_index: Rate; // FIXME: how can i use it?
 
-		// TODO: save new values into the storage
-
+		ControllerDates::<T>::mutate(underlying_asset_id, |x| x.timestamp = current_block_number);
+		<LiquidityPools<T>>::set_accrual_interest_params(
+			underlying_asset_id,
+			new_total_borrow_balance,
+			new_total_insurance,
+		)?;
 		Ok(())
 	}
 
@@ -212,7 +208,7 @@ impl<T: Trait> Module<T> {
 		if total_supply == Balance::zero() {
 			rate = T::InitialExchangeRate::get().into_inner();
 		} else {
-			rate = total_cash.checked_div(total_supply).ok_or(Error::<T>::InvalidValues)?;
+			rate = total_cash.checked_div(total_supply).ok_or(Error::<T>::NumOverflow)?;
 		}
 
 		Ok(Rate::from_inner(rate))
@@ -275,21 +271,21 @@ impl<T: Trait> Module<T> {
 		Ok(new_total_borrows)
 	}
 
-	// totalReservesNew = interestAccumulated * reserveFactor + totalReserves
-	fn calculate_new_total_reserves(
+	// totalInsuranceNew = interestAccumulated * insuranceFactor + totalInsurance
+	fn calculate_new_total_insurance(
 		interest_accumulated: Balance,
 		insurance_factor: Rate,
 		current_total_insurance: Balance,
 	) -> BalanceResult {
-		let reserve_accumulated = Rate::from_inner(interest_accumulated)
+		let insurance_accumulated = Rate::from_inner(interest_accumulated)
 			.checked_mul(&insurance_factor)
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let total_reserve_new = reserve_accumulated
+		let total_insurance_new = insurance_accumulated
 			.checked_add(current_total_insurance)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		Ok(total_reserve_new)
+		Ok(total_insurance_new)
 	}
 }

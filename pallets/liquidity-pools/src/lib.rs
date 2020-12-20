@@ -3,20 +3,21 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 use frame_system::ensure_root;
-use minterest_primitives::{Balance, CurrencyId};
+use minterest_primitives::{Balance, CurrencyId, Rate};
 use pallet_traits::Borrowing;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::{traits::Zero, DispatchResult, FixedU128, RuntimeDebug};
+use sp_runtime::{traits::Zero, DispatchResult, RuntimeDebug};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct Reserve {
 	pub total_balance: Balance,
-	pub current_interest_rate: FixedU128, // FIXME: how can i use it?
+	pub current_interest_rate: Rate, // FIXME: how can i use it?
 	pub total_borrowed: Balance,
-	pub current_exchange_rate: FixedU128,
+	pub current_exchange_rate: Rate,
 	pub is_lock: bool,
+	pub total_insurance: Balance,
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -99,14 +100,12 @@ decl_module! {
 
 // Setters for LiquidityPools
 impl<T: Trait> Module<T> {
-	pub fn set_current_interest_rate(underlying_asset_id: CurrencyId, _rate: FixedU128) -> DispatchResult {
-		Reserves::mutate(underlying_asset_id, |r| {
-			r.current_interest_rate = FixedU128::from_inner(1)
-		});
+	pub fn set_current_interest_rate(underlying_asset_id: CurrencyId, _rate: Rate) -> DispatchResult {
+		Reserves::mutate(underlying_asset_id, |r| r.current_interest_rate = Rate::from_inner(1));
 		Ok(())
 	}
 
-	pub fn set_current_exchange_rate(underlying_asset_id: CurrencyId, rate: FixedU128) -> DispatchResult {
+	pub fn set_current_exchange_rate(underlying_asset_id: CurrencyId, rate: Rate) -> DispatchResult {
 		Reserves::mutate(underlying_asset_id, |r| r.current_exchange_rate = rate);
 		Ok(())
 	}
@@ -120,6 +119,18 @@ impl<T: Trait> Module<T> {
 	pub fn update_state_on_redeem(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
 		Self::update_reserve_liquidity(Balance::zero(), amount, currency_id)?;
 
+		Ok(())
+	}
+
+	pub fn set_accrual_interest_params(
+		underlying_asset_id: CurrencyId,
+		new_total_borrow_balance: Balance,
+		new_total_insurance: Balance,
+	) -> DispatchResult {
+		Reserves::mutate(underlying_asset_id, |r| {
+			r.total_borrowed = new_total_borrow_balance;
+			r.total_insurance = new_total_insurance;
+		});
 		Ok(())
 	}
 }
