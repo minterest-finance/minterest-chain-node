@@ -7,8 +7,9 @@ use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::traits::{CheckedMul, One, Zero};
+use sp_runtime::traits::{CheckedMul, Zero};
 use sp_runtime::{traits::CheckedDiv, DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug};
+use sp_std::convert::TryInto;
 use sp_std::result;
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -126,16 +127,16 @@ impl<T: Trait> Module<T> {
 			*  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
 		*/
 
-		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, block_delta)?;
+		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, &block_delta)?;
 		let interest_accumulated =
-			Self::calculate_interest_accumulated(simple_interest_factor, current_total_borrowed_balance);
+			Self::calculate_interest_accumulated(simple_interest_factor, current_total_borrowed_balance)?;
 		let _new_total_borrow_balance =
-			Self::calculate_new_total_borrow(interest_accumulated, current_total_borrowed_balance);
+			Self::calculate_new_total_borrow(interest_accumulated, current_total_borrowed_balance)?;
 		let _new_total_reserves = Self::calculate_new_total_reserves(
 			interest_accumulated,
 			T::InsuranceFactor::get(),
 			current_total_insurance,
-		);
+		)?;
 		let _new_borrow_index: Rate; // FIXME: how can i use it?
 
 		// TODO: save new values into the storage
@@ -222,6 +223,7 @@ impl<T: Trait> Module<T> {
 		_current_total_borrowed_balance: Balance,
 		_current_total_insurance: Balance,
 	) -> RateResult {
+		// FIXME
 		Ok(Rate::from_inner(1))
 	}
 
@@ -232,30 +234,62 @@ impl<T: Trait> Module<T> {
 		accrual_block_number_previous - current_block_number
 	}
 
-	fn calculate_interest_factor(_current_borrow_interest_rate: Rate, _block_delta: T::BlockNumber) -> RateResult {
-		//FIXME
-		Ok(Rate::from_inner(1))
+	// simpleInterestFactor = borrowRate * blockDelta
+	fn calculate_interest_factor(
+		current_borrow_interest_rate: Rate,
+		block_delta: &<T as system::Trait>::BlockNumber,
+	) -> RateResult {
+		let block_delta_as_usize = TryInto::try_into(*block_delta)
+			.ok()
+			.expect("blockchain will not exceed 2^32 blocks; qed");
+
+		let interest_factor = Rate::from_inner(block_delta_as_usize as u128)
+			.checked_mul(&current_borrow_interest_rate)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		Ok(interest_factor)
 	}
 
+	// interestAccumulated = simpleInterestFactor * totalBorrows
 	fn calculate_interest_accumulated(
-		_simple_interest_factor: Rate,
-		_current_total_borrowed_balance: Balance,
-	) -> Balance {
-		//FIXME
-		Balance::one()
+		simple_interest_factor: Rate,
+		current_total_borrowed_balance: Balance,
+	) -> BalanceResult {
+		let interest_accumulated = Rate::from_inner(current_total_borrowed_balance)
+			.checked_mul(&simple_interest_factor)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		Ok(interest_accumulated)
 	}
 
-	fn calculate_new_total_borrow(_interest_accumulated: Balance, _current_total_borrowed_balance: Balance) -> Balance {
-		//FIXME
-		Balance::zero()
+	// totalBorrowsNew = interestAccumulated + totalBorrows
+	fn calculate_new_total_borrow(
+		interest_accumulated: Balance,
+		current_total_borrowed_balance: Balance,
+	) -> BalanceResult {
+		let new_total_borrows = interest_accumulated
+			.checked_add(current_total_borrowed_balance)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		Ok(new_total_borrows)
 	}
 
+	// totalReservesNew = interestAccumulated * reserveFactor + totalReserves
 	fn calculate_new_total_reserves(
-		_interest_accumulated: Balance,
-		_insurance_factor: Rate,
-		_current_total_insurance: Balance,
-	) -> Balance {
-		//FIXME
-		Balance::one()
+		interest_accumulated: Balance,
+		insurance_factor: Rate,
+		current_total_insurance: Balance,
+	) -> BalanceResult {
+		let reserve_accumulated = Rate::from_inner(interest_accumulated)
+			.checked_mul(&insurance_factor)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		let total_reserve_new = reserve_accumulated
+			.checked_add(current_total_insurance)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		Ok(total_reserve_new)
 	}
 }
