@@ -183,6 +183,7 @@ fn testnet_genesis(
 					Reserve {
 						total_balance: Balance::zero(),
 						current_liquidity_rate: Permill::one(),
+						is_lock: true,
 					},
 				),
 				(
@@ -190,6 +191,7 @@ fn testnet_genesis(
 					Reserve {
 						total_balance: Balance::zero(),
 						current_liquidity_rate: Permill::one(),
+						is_lock: true,
 					},
 				),
 				(
@@ -197,6 +199,7 @@ fn testnet_genesis(
 					Reserve {
 						total_balance: Balance::zero(),
 						current_liquidity_rate: Permill::one(),
+						is_lock: true,
 					},
 				),
 				(
@@ -204,6 +207,7 @@ fn testnet_genesis(
 					Reserve {
 						total_balance: Balance::zero(),
 						current_liquidity_rate: Permill::one(),
+						is_lock: true,
 					},
 				),
 			],

@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{decl_error, decl_event, decl_module, decl_storage};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 use frame_system::{self as system};
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
@@ -41,6 +41,9 @@ decl_error! {
 
 		/// Number overflow in calculation.
 		NumOverflow,
+
+		/// Operations with this underlying assets are locked by the administrator
+		OperationsLocked,
 	}
 }
 
@@ -102,10 +105,15 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	pub fn accrue_interest_rate() -> DispatchResult {
+	pub fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult {
 		//FIXME Applies accrued interest to total borrows and reserves.
 		// This calculates interest accrued from the last checkpointed block up to the current block
 		// and writes new checkpoint to storage.
+
+		ensure!(
+			!<LiquidityPools<T>>::reserves(&underlying_asset_id).is_lock,
+			Error::<T>::OperationsLocked
+		);
 		Ok(())
 	}
 

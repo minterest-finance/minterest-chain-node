@@ -8,6 +8,10 @@ use frame_support::{assert_noop, assert_ok};
 #[test]
 fn deposit_underlying_should_work() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LiquidityPools::<Test>::unlock_reserve_transactions(
+			Origin::root(),
+			CurrencyId::DOT
+		));
 		assert_noop!(
 			MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::ETH, 10),
 			Error::<Test>::NotEnoughLiquidityAvailable
@@ -49,6 +53,10 @@ fn deposit_underlying_should_work() {
 #[test]
 fn redeem_underlying_should_work() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LiquidityPools::<Test>::unlock_reserve_transactions(
+			Origin::root(),
+			CurrencyId::DOT
+		));
 		assert_ok!(MinterestProtocol::deposit_underlying(
 			Origin::signed(ALICE),
 			CurrencyId::DOT,
@@ -81,6 +89,10 @@ fn redeem_underlying_should_work() {
 #[test]
 fn redeem_should_work() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LiquidityPools::<Test>::unlock_reserve_transactions(
+			Origin::root(),
+			CurrencyId::DOT
+		));
 		assert_ok!(MinterestProtocol::deposit_underlying(
 			Origin::signed(ALICE),
 			CurrencyId::DOT,
@@ -112,6 +124,10 @@ fn redeem_should_work() {
 #[test]
 fn redeem_wrapped_should_work() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LiquidityPools::<Test>::unlock_reserve_transactions(
+			Origin::root(),
+			CurrencyId::DOT
+		));
 		assert_ok!(MinterestProtocol::deposit_underlying(
 			Origin::signed(ALICE),
 			CurrencyId::DOT,
@@ -144,6 +160,10 @@ fn redeem_wrapped_should_work() {
 #[test]
 fn getting_assets_from_reserve_by_different_users_should_work() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LiquidityPools::<Test>::unlock_reserve_transactions(
+			Origin::root(),
+			CurrencyId::DOT
+		));
 		assert_ok!(MinterestProtocol::deposit_underlying(
 			Origin::signed(ALICE),
 			CurrencyId::DOT,
@@ -172,6 +192,10 @@ fn getting_assets_from_reserve_by_different_users_should_work() {
 #[test]
 fn borrow_should_work() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LiquidityPools::<Test>::unlock_reserve_transactions(
+			Origin::root(),
+			CurrencyId::DOT
+		));
 		assert_ok!(MinterestProtocol::deposit_underlying(
 			Origin::signed(ALICE),
 			CurrencyId::DOT,
@@ -200,6 +224,10 @@ fn borrow_should_work() {
 #[test]
 fn repay_should_work() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LiquidityPools::<Test>::unlock_reserve_transactions(
+			Origin::root(),
+			CurrencyId::DOT
+		));
 		assert_ok!(MinterestProtocol::deposit_underlying(
 			Origin::signed(ALICE),
 			CurrencyId::DOT,
