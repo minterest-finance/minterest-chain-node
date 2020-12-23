@@ -2,13 +2,13 @@
 
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use liquidity_pools::Reserve;
-use minterest_primitives::{Balance, CurrencyId};
+use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_currencies::Currency;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{IdentityLookup, Zero},
-	Perbill, Permill,
+	Perbill,
 };
 
 use super::*;
@@ -113,9 +113,18 @@ impl liquidity_pools::Trait for Test {
 	type Event = Event;
 }
 
+parameter_types! {
+	pub const InitialExchangeRate: Rate = Rate::from_inner(1);
+	pub const MaxBorrowRate: Rate = Rate::from_inner(1);
+	pub const InsuranceFactor: Rate = Rate::from_inner(1);
+}
+
 impl controller::Trait for Test {
 	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Test>;
+	type InitialExchangeRate = InitialExchangeRate;
+	type InsuranceFactor = InsuranceFactor;
+	type MaxBorrowRate = MaxBorrowRate;
 }
 
 impl Trait for Test {
@@ -169,41 +178,54 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	.assimilate_storage(&mut t)
 	.unwrap();
 
-	liquidity_pools::GenesisConfig {
+	liquidity_pools::GenesisConfig::<Test> {
 		reserves: vec![
 			(
 				CurrencyId::ETH,
 				Reserve {
 					total_balance: Balance::zero(),
-					current_liquidity_rate: Permill::one(),
+					current_interest_rate: Rate::from_inner(0),
+					total_borrowed: Balance::zero(),
+					current_exchange_rate: Rate::from_inner(1),
 					is_lock: true,
+					total_insurance: Balance::zero(),
 				},
 			),
 			(
 				CurrencyId::DOT,
 				Reserve {
 					total_balance: Balance::zero(),
-					current_liquidity_rate: Permill::one(),
+					current_interest_rate: Rate::from_inner(0),
+					total_borrowed: Balance::zero(),
+					current_exchange_rate: Rate::from_inner(1),
 					is_lock: true,
+					total_insurance: Balance::zero(),
 				},
 			),
 			(
 				CurrencyId::KSM,
 				Reserve {
 					total_balance: Balance::zero(),
-					current_liquidity_rate: Permill::one(),
+					current_interest_rate: Rate::from_inner(0),
+					total_borrowed: Balance::zero(),
+					current_exchange_rate: Rate::from_inner(1),
 					is_lock: true,
+					total_insurance: Balance::zero(),
 				},
 			),
 			(
 				CurrencyId::BTC,
 				Reserve {
 					total_balance: Balance::zero(),
-					current_liquidity_rate: Permill::one(),
+					current_interest_rate: Rate::from_inner(0),
+					total_borrowed: Balance::zero(),
+					current_exchange_rate: Rate::from_inner(1),
 					is_lock: true,
+					total_insurance: Balance::zero(),
 				},
 			),
 		],
+		reserve_user_data: vec![],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

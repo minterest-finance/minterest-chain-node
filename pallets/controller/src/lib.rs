@@ -103,7 +103,7 @@ impl<T: Trait> Module<T> {
 		)?;
 
 		ensure!(
-			current_borrow_interest_rate <= T::MaxBorrowRate::get(),
+			current_borrow_interest_rate == T::MaxBorrowRate::get(),
 			Error::<T>::BorrowRateIsTooHight
 		);
 
@@ -119,7 +119,7 @@ impl<T: Trait> Module<T> {
 			*  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
 		*/
 
-		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, &block_delta)?;
+		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, &block_delta)?; //FIXME: function returns 0, unusual behavior
 		let interest_accumulated =
 			Self::calculate_interest_accumulated(simple_interest_factor, current_total_borrowed_balance)?;
 		let new_total_borrow_balance =
@@ -131,12 +131,14 @@ impl<T: Trait> Module<T> {
 		)?;
 		let _new_borrow_index: Rate; // FIXME: how can i use it?
 
+		// Save new params
 		ControllerDates::<T>::mutate(underlying_asset_id, |x| x.timestamp = current_block_number);
 		<LiquidityPools<T>>::set_accrual_interest_params(
 			underlying_asset_id,
 			new_total_borrow_balance,
 			new_total_insurance,
 		)?;
+
 		Ok(())
 	}
 
@@ -164,28 +166,14 @@ impl<T: Trait> Module<T> {
 		Ok(underlying_amount)
 	}
 
-	// Used in controller: do_borrow, do_repay
-	pub fn calculate_user_global_data(_who: T::AccountId) -> DispatchResult {
-		//FIXME
-		let _price_from_oracle = 1;
-		Ok(())
-	}
-
-	// Used in controller: do_borrow, do_repay
-	pub fn calculate_total_available_collateral(_amount: Balance, _underlying_asset_id: CurrencyId) -> DispatchResult {
-		//FIXME
-		let _price_from_oracle = 1;
-		Ok(())
-	}
-
 	// Not used yet
 	pub fn calculate_interest_rate(_underlying_asset_id: CurrencyId) -> RateResult {
 		//FIXME
-		Ok(Rate::from_inner(1))
+		Ok(Rate::saturating_from_rational(1, 1)) //100%
 	}
 }
 
-// Private method
+// Private methods
 impl<T: Trait> Module<T> {
 	// Used in: convert_to_wrapped
 	fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
@@ -211,7 +199,7 @@ impl<T: Trait> Module<T> {
 			rate = total_cash.checked_div(total_supply).ok_or(Error::<T>::NumOverflow)?;
 		}
 
-		Ok(Rate::from_inner(rate))
+		Ok(Rate::saturating_from_rational(1, 1))
 	}
 
 	fn calculate_borrow_interest_rate(
@@ -220,14 +208,14 @@ impl<T: Trait> Module<T> {
 		_current_total_insurance: Balance,
 	) -> RateResult {
 		// FIXME
-		Ok(Rate::from_inner(1))
+		Ok(Rate::saturating_from_rational(1, 1))
 	}
 
 	fn calculate_block_delta(
 		current_block_number: T::BlockNumber,
 		accrual_block_number_previous: T::BlockNumber,
 	) -> T::BlockNumber {
-		accrual_block_number_previous - current_block_number
+		current_block_number - accrual_block_number_previous
 	}
 
 	// simpleInterestFactor = borrowRate * blockDelta
@@ -238,10 +226,16 @@ impl<T: Trait> Module<T> {
 		let block_delta_as_usize = TryInto::try_into(*block_delta)
 			.ok()
 			.expect("blockchain will not exceed 2^32 blocks; qed");
+		let interest_factor: Rate;
 
-		let interest_factor = Rate::from_inner(block_delta_as_usize as u128)
-			.checked_mul(&current_borrow_interest_rate)
-			.ok_or(Error::<T>::NumOverflow)?;
+		// FIXME: unusual behavior, we still need interest_factor = 0. To Fix: delete conditional operator
+		if block_delta_as_usize > 0 {
+			interest_factor = Rate::from_inner(0);
+		} else {
+			interest_factor = Rate::saturating_from_rational(block_delta_as_usize as u128, 1)
+				.checked_mul(&current_borrow_interest_rate)
+				.ok_or(Error::<T>::NumOverflow)?;
+		}
 
 		Ok(interest_factor)
 	}

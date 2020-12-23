@@ -20,7 +20,7 @@ use sp_runtime::traits::{BlakeTwo256, Block as BlockT, IdentityLookup, NumberFor
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult,
+	ApplyExtrinsicResult, FixedPointNumber,
 };
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -276,9 +276,9 @@ impl liquidity_pools::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const InitialExchangeRate: Rate = Rate::from_inner(1);
-	pub const MaxBorrowRate: Rate = Rate::from_inner(1);
-	pub const InsuranceFactor: Rate = Rate::from_inner(1);
+	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const MaxBorrowRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const InsuranceFactor: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 }
 
 impl controller::Trait for Runtime {
