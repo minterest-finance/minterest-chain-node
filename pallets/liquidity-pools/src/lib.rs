@@ -157,10 +157,6 @@ impl<T: Trait> Module<T> {
 		//FIXME
 		Balance::zero()
 	}
-
-	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
-		Reserves::contains_key(underlying_asset_id)
-	}
 }
 
 // Private methods for LiquidityPools
