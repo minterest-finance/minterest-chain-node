@@ -224,6 +224,10 @@ impl<T: Trait> Module<T> {
 
 		Ok(())
 	}
+
+	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
+		Reserves::contains_key(underlying_asset_id)
+	}
 }
 
 // Trait Borrowing for LiquidityPools
