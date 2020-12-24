@@ -114,9 +114,9 @@ impl liquidity_pools::Trait for Test {
 }
 
 parameter_types! {
-	pub const InitialExchangeRate: Rate = Rate::from_inner(1);
-	pub const MaxBorrowRate: Rate = Rate::from_inner(1);
-	pub const InsuranceFactor: Rate = Rate::from_inner(1);
+	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const MaxBorrowRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const InsuranceFactor: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 }
 
 impl controller::Trait for Test {

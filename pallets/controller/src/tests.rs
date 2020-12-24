@@ -1,9 +1,7 @@
 use super::*;
 use mock::*;
 
-use frame_support::traits::schedule::DispatchTime;
-use frame_support::{assert_noop, assert_ok, error::BadOrigin};
-use sp_runtime::traits::{One, Zero};
+use frame_support::{assert_noop, assert_ok};
 
 #[test]
 fn accrue_interest_should_work() {
@@ -47,6 +45,10 @@ fn calculate_exchange_rate_should_work() {
 			Controller::calculate_exchange_rate(10, 10),
 			Ok(Rate::saturating_from_rational(1, 1))
 		);
+		assert_eq!(
+			Controller::calculate_exchange_rate(10, 0),
+			Ok(Rate::saturating_from_rational(1, 1))
+		)
 	});
 }
 
@@ -133,6 +135,36 @@ fn calculate_new_total_insurance_should_work() {
 		assert_eq!(
 			Controller::calculate_new_total_insurance(100, Rate::saturating_from_rational(0, 1), 250),
 			Ok(250)
+		);
+	});
+}
+
+#[test]
+fn get_wrapped_id_by_underlying_asset_id_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Controller::get_wrapped_id_by_underlying_asset_id(&CurrencyId::DOT));
+		assert_eq!(
+			Controller::get_wrapped_id_by_underlying_asset_id(&CurrencyId::DOT),
+			Ok(CurrencyId::MDOT)
+		);
+		assert_noop!(
+			Controller::get_wrapped_id_by_underlying_asset_id(&CurrencyId::MDOT),
+			Error::<Runtime>::NotValidUnderlyingAssetId
+		);
+	});
+}
+
+#[test]
+fn get_underlying_asset_id_by_wrapped_id_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Controller::get_underlying_asset_id_by_wrapped_id(&CurrencyId::MDOT));
+		assert_eq!(
+			Controller::get_underlying_asset_id_by_wrapped_id(&CurrencyId::MDOT),
+			Ok(CurrencyId::DOT)
+		);
+		assert_noop!(
+			Controller::get_underlying_asset_id_by_wrapped_id(&CurrencyId::DOT),
+			Error::<Runtime>::NotValidWrappedTokenId
 		);
 	});
 }

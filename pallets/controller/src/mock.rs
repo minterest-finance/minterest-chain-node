@@ -1,18 +1,17 @@
 #![cfg(test)]
 
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
-use liquidity_pools::{Reserve, ReserveUserData};
+use liquidity_pools::Reserve;
 pub use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_currencies::Currency;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{IdentityLookup, One, Zero},
-	FixedU128, Perbill,
+	traits::{IdentityLookup, Zero},
+	Perbill,
 };
 
 use super::*;
-use crate::GenesisConfig;
 
 mod controller {
 	pub use crate::Event;
@@ -54,7 +53,7 @@ impl system::Trait for Runtime {
 	type BlockNumber = BlockNumber;
 	type Hash = H256;
 	type Hashing = ::sp_runtime::traits::BlakeTwo256;
-	type AccountId = u32;
+	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = TestEvent;
@@ -135,7 +134,6 @@ impl Default for ExtBuilder {
 }
 
 pub const ALICE: AccountId = 1;
-pub const BOB: AccountId = 2;
 pub const ONE_MILL: Balance = 1_000_000;
 pub const ONE_HUNDRED: Balance = 100;
 
@@ -146,7 +144,10 @@ impl ExtBuilder {
 			.unwrap();
 
 		orml_tokens::GenesisConfig::<Runtime> {
-			endowed_accounts: vec![(ALICE, CurrencyId::MDOT, ONE_HUNDRED)],
+			endowed_accounts: vec![
+				(ALICE, CurrencyId::MDOT, ONE_HUNDRED),
+				(ALICE, CurrencyId::MINT, ONE_MILL),
+			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -156,8 +157,8 @@ impl ExtBuilder {
 				(
 					CurrencyId::ETH,
 					Reserve {
-						total_balance: ONE_HUNDRED,
-						current_interest_rate: Rate::saturating_from_rational(1, 1),
+						total_balance: Balance::zero(),
+						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						current_exchange_rate: Rate::saturating_from_rational(1, 1),
 						is_lock: true,
@@ -170,7 +171,7 @@ impl ExtBuilder {
 						total_balance: ONE_HUNDRED,
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
-						current_exchange_rate: Rate::from_inner(1),
+						current_exchange_rate: Rate::saturating_from_rational(1, 1),
 						is_lock: false,
 						total_insurance: Balance::zero(),
 					},
@@ -181,7 +182,7 @@ impl ExtBuilder {
 						total_balance: Balance::zero(),
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
-						current_exchange_rate: Rate::from_inner(1),
+						current_exchange_rate: Rate::saturating_from_rational(1, 1),
 						is_lock: true,
 						total_insurance: Balance::zero(),
 					},
@@ -192,7 +193,7 @@ impl ExtBuilder {
 						total_balance: Balance::zero(),
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
-						current_exchange_rate: Rate::from_inner(1),
+						current_exchange_rate: Rate::saturating_from_rational(1, 1),
 						is_lock: true,
 						total_insurance: Balance::zero(),
 					},

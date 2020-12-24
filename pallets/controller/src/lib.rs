@@ -9,8 +9,7 @@ use orml_traits::MultiCurrency;
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::{CheckedMul, Zero};
 use sp_runtime::{traits::CheckedDiv, DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug};
-use sp_std::convert::TryInto;
-use sp_std::result;
+use sp_std::{convert::TryInto, result};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
@@ -63,6 +62,12 @@ decl_error! {
 
 		/// Borrow rate is absurdly high.
 		BorrowRateIsTooHight,
+
+		/// The currency is not enabled in protocol.
+		NotValidUnderlyingAssetId,
+
+		/// The currency is not enabled in wrapped protocol.
+		NotValidWrappedTokenId,
 	}
 }
 
@@ -72,6 +77,7 @@ decl_module! {
 
 type RateResult = result::Result<Rate, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
+type CurrencyIdResult = result::Result<CurrencyId, DispatchError>;
 
 impl<T: Trait> Module<T> {
 	// Used in controller: do_deposit, do_redeem
@@ -156,7 +162,8 @@ impl<T: Trait> Module<T> {
 
 	// Used in controller: do_redeem
 	pub fn convert_from_wrapped(wrapped_id: CurrencyId, wrapped_amount: Balance) -> BalanceResult {
-		let exchange_rate = Self::get_exchange_rate(wrapped_id)?;
+		let underlying_asset_id = Self::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
+		let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
 
 		let underlying_amount = Rate::from_inner(wrapped_amount)
 			.checked_mul(&exchange_rate)
@@ -177,11 +184,12 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
 	// Used in: convert_to_wrapped
 	fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
+		let wrapped_asset_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 		// The total amount of cash the market has
 		let total_cash = <LiquidityPools<T>>::get_reserve_available_liquidity(underlying_asset_id);
 
 		// Total number of tokens in circulation
-		let total_supply = T::MultiCurrency::total_issuance(underlying_asset_id);
+		let total_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
 
 		let current_exchange_rate = Self::calculate_exchange_rate(total_cash, total_supply)?;
 
@@ -192,14 +200,14 @@ impl<T: Trait> Module<T> {
 
 	//Used in: get_exchange_rate
 	fn calculate_exchange_rate(total_cash: Balance, total_supply: Balance) -> RateResult {
-		let rate: u128;
+		let rate: Rate;
 		if total_supply == Balance::zero() {
-			rate = T::InitialExchangeRate::get().into_inner();
+			rate = T::InitialExchangeRate::get()
 		} else {
-			rate = total_cash.checked_div(total_supply).ok_or(Error::<T>::NumOverflow)?;
+			rate = Rate::saturating_from_rational(total_cash, total_supply);
 		}
 
-		Ok(Rate::saturating_from_rational(1, 1))
+		Ok(rate)
 	}
 
 	fn calculate_borrow_interest_rate(
@@ -281,5 +289,25 @@ impl<T: Trait> Module<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(total_insurance_new)
+	}
+
+	fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> CurrencyIdResult {
+		match asset_id {
+			CurrencyId::DOT => Ok(CurrencyId::MDOT),
+			CurrencyId::KSM => Ok(CurrencyId::MKSM),
+			CurrencyId::BTC => Ok(CurrencyId::MBTC),
+			CurrencyId::ETH => Ok(CurrencyId::METH),
+			_ => Err(Error::<T>::NotValidUnderlyingAssetId.into()),
+		}
+	}
+
+	fn get_underlying_asset_id_by_wrapped_id(wrapped_id: &CurrencyId) -> CurrencyIdResult {
+		match wrapped_id {
+			CurrencyId::MDOT => Ok(CurrencyId::DOT),
+			CurrencyId::MKSM => Ok(CurrencyId::KSM),
+			CurrencyId::MBTC => Ok(CurrencyId::BTC),
+			CurrencyId::METH => Ok(CurrencyId::ETH),
+			_ => Err(Error::<T>::NotValidWrappedTokenId.into()),
+		}
 	}
 }
