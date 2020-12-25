@@ -1,21 +1,34 @@
 use super::*;
 use mock::*;
 
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_err, assert_noop, assert_ok};
 
 #[test]
 fn accrue_interest_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
+		System::set_block_number(1);
 		assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
+		assert_noop!(
+			Controller::accrue_interest_rate(CurrencyId::ETH),
+			Error::<Runtime>::OperationsLocked
+		);
+		//FIXME: add test for: MaxBorrowRate
 	});
 }
 
 #[test]
 fn convert_to_wrapped_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::convert_to_wrapped(CurrencyId::DOT, 10));
-		assert_eq!(Controller::convert_to_wrapped(CurrencyId::DOT, 10), Ok(10));
-	});
+	ExtBuilder::default()
+		.exchange_rate_less_than_one()
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::convert_to_wrapped(CurrencyId::DOT, 10));
+			assert_eq!(Controller::convert_to_wrapped(CurrencyId::DOT, 10), Ok(10));
+			assert_err!(
+				Controller::convert_to_wrapped(CurrencyId::BTC, Balance::max_value()),
+				Error::<Runtime>::NumOverflow
+			);
+		});
 }
 
 #[test]
@@ -31,10 +44,17 @@ fn calculate_interest_rate_should_work() {
 
 #[test]
 fn convert_from_wrapped_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::convert_from_wrapped(CurrencyId::MDOT, 10));
-		assert_eq!(Controller::convert_from_wrapped(CurrencyId::MDOT, 10), Ok(10));
-	});
+	ExtBuilder::default()
+		.exchange_rate_greater_than_one()
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::convert_from_wrapped(CurrencyId::MDOT, 10));
+			assert_eq!(Controller::convert_from_wrapped(CurrencyId::MDOT, 10), Ok(10));
+			assert_err!(
+				Controller::convert_from_wrapped(CurrencyId::MBTC, Balance::max_value()),
+				Error::<Runtime>::NumOverflow
+			);
+		});
 }
 
 #[test]
@@ -81,7 +101,8 @@ fn calculate_borrow_interest_rate_should_work() {
 #[test]
 fn calculate_block_delta_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(Controller::calculate_block_delta(10, 5), 5);
+		assert_eq!(Controller::calculate_block_delta(10, 5), Ok(5));
+		assert_noop!(Controller::calculate_block_delta(5, 10), Error::<Runtime>::NumOverflow);
 	});
 }
 
@@ -113,6 +134,10 @@ fn calculate_interest_accumulated_should_work() {
 			),
 			Ok(0)
 		);
+		assert_noop!(
+			Controller::calculate_interest_accumulated(Rate::saturating_from_rational(11, 10), Balance::max_value()),
+			Error::<Runtime>::NumOverflow
+		);
 	});
 }
 
@@ -121,6 +146,10 @@ fn calculate_new_total_borrow_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(Controller::calculate_new_total_borrow(100, 100));
 		assert_eq!(Controller::calculate_new_total_borrow(0, 100), Ok(100));
+		assert_noop!(
+			Controller::calculate_new_total_borrow(1, Balance::max_value()),
+			Error::<Runtime>::NumOverflow
+		);
 	});
 }
 
@@ -135,6 +164,14 @@ fn calculate_new_total_insurance_should_work() {
 		assert_eq!(
 			Controller::calculate_new_total_insurance(100, Rate::saturating_from_rational(0, 1), 250),
 			Ok(250)
+		);
+		assert_noop!(
+			Controller::calculate_new_total_insurance(Balance::max_value(), Rate::saturating_from_rational(11, 10), 1),
+			Error::<Runtime>::NumOverflow
+		);
+		assert_noop!(
+			Controller::calculate_new_total_insurance(Balance::max_value(), Rate::saturating_from_rational(1, 1), 1),
+			Error::<Runtime>::NumOverflow
 		);
 	});
 }

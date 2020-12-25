@@ -125,11 +125,18 @@ pub type Controller = Module<Runtime>;
 pub type TestPools = liquidity_pools::Module<Runtime>;
 pub type System = frame_system::Module<Runtime>;
 
-pub struct ExtBuilder {}
+pub struct ExtBuilder {
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+}
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		Self {}
+		Self {
+			endowed_accounts: vec![
+				(ALICE, CurrencyId::MDOT, ONE_HUNDRED),
+				(ALICE, CurrencyId::MINT, ONE_MILL),
+			],
+		}
 	}
 }
 
@@ -138,16 +145,46 @@ pub const ONE_MILL: Balance = 1_000_000;
 pub const ONE_HUNDRED: Balance = 100;
 
 impl ExtBuilder {
+	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
+		self.endowed_accounts = endowed_accounts;
+		self
+	}
+
+	pub fn exchange_rate_less_than_one(self) -> Self {
+		self.balances(vec![
+			(ALICE, CurrencyId::MDOT, ONE_HUNDRED),
+			(ALICE, CurrencyId::MINT, ONE_MILL),
+			(ALICE, CurrencyId::MBTC, ONE_HUNDRED),
+		])
+	}
+
+	pub fn exchange_rate_greater_than_one(self) -> Self {
+		self.balances(vec![
+			(ALICE, CurrencyId::MDOT, ONE_HUNDRED),
+			(ALICE, CurrencyId::MINT, ONE_MILL),
+			(ALICE, CurrencyId::MBTC, 1),
+		])
+	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
 			.unwrap();
 
 		orml_tokens::GenesisConfig::<Runtime> {
-			endowed_accounts: vec![
-				(ALICE, CurrencyId::MDOT, ONE_HUNDRED),
-				(ALICE, CurrencyId::MINT, ONE_MILL),
-			],
+			endowed_accounts: self.endowed_accounts,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		GenesisConfig::<Runtime> {
+			controller_dates: vec![(
+				CurrencyId::KSM,
+				ControllerData {
+					timestamp: 10,
+					borrow_rate: Rate::saturating_from_rational(1, 1),
+				},
+			)],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -183,14 +220,14 @@ impl ExtBuilder {
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						current_exchange_rate: Rate::saturating_from_rational(1, 1),
-						is_lock: true,
+						is_lock: false,
 						total_insurance: Balance::zero(),
 					},
 				),
 				(
 					CurrencyId::BTC,
 					Reserve {
-						total_balance: Balance::zero(),
+						total_balance: 10,
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						current_exchange_rate: Rate::saturating_from_rational(1, 1),

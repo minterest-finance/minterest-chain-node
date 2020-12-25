@@ -7,9 +7,11 @@ use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::traits::{CheckedMul, Zero};
-use sp_runtime::{traits::CheckedDiv, DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug};
-use sp_std::{convert::TryInto, result};
+use sp_runtime::{
+	traits::{CheckedDiv, CheckedMul, Zero},
+	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
+};
+use sp_std::{cmp::Ordering, convert::TryInto, result};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
@@ -35,7 +37,7 @@ pub trait Trait: liquidity_pools::Trait + system::Trait {
 	/// Start exchange rate
 	type InitialExchangeRate: Get<Rate>;
 
-	/// Fraction of interest currently set aside for insurace.
+	/// Fraction of interest currently set aside for insurance.
 	type InsuranceFactor: Get<Rate>;
 
 	/// Maximum borrow rate that can ever be applied
@@ -80,7 +82,7 @@ type BalanceResult = result::Result<Balance, DispatchError>;
 type CurrencyIdResult = result::Result<CurrencyId, DispatchError>;
 
 impl<T: Trait> Module<T> {
-	// Used in controller: do_deposit, do_redeem
+	// Used in controller: do_deposit, do_redeem, do_borrow, do_repay
 	pub fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult {
 		ensure!(
 			!<LiquidityPools<T>>::reserves(&underlying_asset_id).is_lock,
@@ -109,12 +111,12 @@ impl<T: Trait> Module<T> {
 		)?;
 
 		ensure!(
-			current_borrow_interest_rate == T::MaxBorrowRate::get(),
+			current_borrow_interest_rate <= T::MaxBorrowRate::get(),
 			Error::<T>::BorrowRateIsTooHight
 		);
 
 		// Calculate the number of blocks elapsed since the last accrual
-		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous);
+		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
 
 		/*
 		Calculate the interest accumulated into borrows and insurance and the new index:
@@ -200,12 +202,10 @@ impl<T: Trait> Module<T> {
 
 	//Used in: get_exchange_rate
 	fn calculate_exchange_rate(total_cash: Balance, total_supply: Balance) -> RateResult {
-		let rate: Rate;
-		if total_supply == Balance::zero() {
-			rate = T::InitialExchangeRate::get()
-		} else {
-			rate = Rate::saturating_from_rational(total_cash, total_supply);
-		}
+		let rate = match total_supply.cmp(&Balance::zero()) {
+			Ordering::Equal => T::InitialExchangeRate::get(),
+			_ => Rate::saturating_from_rational(total_cash, total_supply),
+		};
 
 		Ok(rate)
 	}
@@ -222,8 +222,13 @@ impl<T: Trait> Module<T> {
 	fn calculate_block_delta(
 		current_block_number: T::BlockNumber,
 		accrual_block_number_previous: T::BlockNumber,
-	) -> T::BlockNumber {
-		current_block_number - accrual_block_number_previous
+	) -> result::Result<T::BlockNumber, DispatchError> {
+		ensure!(
+			current_block_number >= accrual_block_number_previous,
+			Error::<T>::NumOverflow
+		);
+
+		Ok(current_block_number - accrual_block_number_previous)
 	}
 
 	// simpleInterestFactor = borrowRate * blockDelta
@@ -234,16 +239,14 @@ impl<T: Trait> Module<T> {
 		let block_delta_as_usize = TryInto::try_into(*block_delta)
 			.ok()
 			.expect("blockchain will not exceed 2^32 blocks; qed");
-		let interest_factor: Rate;
 
 		// FIXME: unusual behavior, we still need interest_factor = 0. To Fix: delete conditional operator
-		if block_delta_as_usize > 0 {
-			interest_factor = Rate::from_inner(0);
-		} else {
-			interest_factor = Rate::saturating_from_rational(block_delta_as_usize as u128, 1)
+		let interest_factor = match block_delta_as_usize.cmp(&0) {
+			Ordering::Greater => Rate::from_inner(0),
+			_ => Rate::saturating_from_rational(block_delta_as_usize as u128, 1)
 				.checked_mul(&current_borrow_interest_rate)
-				.ok_or(Error::<T>::NumOverflow)?;
-		}
+				.ok_or(Error::<T>::NumOverflow)?,
+		};
 
 		Ok(interest_factor)
 	}

@@ -8,6 +8,7 @@ use pallet_traits::Borrowing;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{traits::Zero, DispatchResult, RuntimeDebug};
+use sp_std::cmp::Ordering;
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
@@ -153,9 +154,8 @@ impl<T: Trait> Module<T> {
 		Self::reserve_user_data(who, currency_id).collateral
 	}
 
-	pub fn get_reserve_total_insurance(_currency_id: CurrencyId) -> Balance {
-		//FIXME
-		Balance::zero()
+	pub fn get_reserve_total_insurance(currency_id: CurrencyId) -> Balance {
+		Self::reserves(currency_id).total_insurance
 	}
 }
 
@@ -170,17 +170,14 @@ impl<T: Trait> Module<T> {
 
 		let current_reserve_balance = Self::reserves(underlying_asset_id).total_balance;
 
-		let new_reserve_balance: Balance;
-
-		if liquidity_added != Balance::zero() {
-			new_reserve_balance = current_reserve_balance
+		let new_reserve_balance = match liquidity_added.cmp(&Balance::zero()) {
+			Ordering::Greater => current_reserve_balance
 				.checked_add(liquidity_added)
-				.ok_or(Error::<T>::BalanceOverflowed)?;
-		} else {
-			new_reserve_balance = current_reserve_balance
+				.ok_or(Error::<T>::BalanceOverflowed)?,
+			_ => current_reserve_balance
 				.checked_sub(liquidity_taken)
-				.ok_or(Error::<T>::NotEnoughBalance)?;
-		}
+				.ok_or(Error::<T>::NotEnoughBalance)?,
+		};
 
 		Reserves::mutate(underlying_asset_id, |r| r.total_balance = new_reserve_balance);
 
@@ -196,24 +193,24 @@ impl<T: Trait> Module<T> {
 		let current_user_borrow_balance = Self::reserve_user_data(who, underlying_asset_id).total_borrowed;
 		let current_total_borrow_balance = Self::reserves(underlying_asset_id).total_borrowed;
 
-		let new_user_borrow_balance: Balance;
-		let new_total_borrow_balance: Balance;
-
-		if amount_borrowed_add != Balance::zero() {
-			new_user_borrow_balance = current_user_borrow_balance
-				.checked_add(amount_borrowed_add)
-				.ok_or(Error::<T>::BalanceOverflowed)?;
-			new_total_borrow_balance = current_total_borrow_balance
-				.checked_add(amount_borrowed_add)
-				.ok_or(Error::<T>::BalanceOverflowed)?;
-		} else {
-			new_user_borrow_balance = current_user_borrow_balance
-				.checked_sub(amount_borrowed_reduce)
-				.ok_or(Error::<T>::NotEnoughBalance)?;
-			new_total_borrow_balance = current_total_borrow_balance
-				.checked_sub(amount_borrowed_add)
-				.ok_or(Error::<T>::NotEnoughBalance)?;
-		}
+		let (new_user_borrow_balance, new_total_borrow_balance) = match amount_borrowed_add.cmp(&Balance::zero()) {
+			Ordering::Greater => (
+				current_user_borrow_balance
+					.checked_add(amount_borrowed_add)
+					.ok_or(Error::<T>::BalanceOverflowed)?,
+				current_total_borrow_balance
+					.checked_add(amount_borrowed_add)
+					.ok_or(Error::<T>::BalanceOverflowed)?,
+			),
+			_ => (
+				current_user_borrow_balance
+					.checked_sub(amount_borrowed_reduce)
+					.ok_or(Error::<T>::NotEnoughBalance)?,
+				current_total_borrow_balance
+					.checked_sub(amount_borrowed_add)
+					.ok_or(Error::<T>::NotEnoughBalance)?,
+			),
+		};
 
 		ReserveUserDates::<T>::mutate(who, underlying_asset_id, |x| x.total_borrowed = new_user_borrow_balance);
 		Reserves::mutate(underlying_asset_id, |x| x.total_borrowed = new_total_borrow_balance);
