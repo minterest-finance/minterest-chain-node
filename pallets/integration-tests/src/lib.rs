@@ -242,7 +242,7 @@ mod tests {
 			));
 			assert_eq!(Pools::get_reserve_available_liquidity(CurrencyId::DOT), 60);
 			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 75);
 
 			assert_noop!(
 				MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::DOT, 50),
@@ -260,7 +260,7 @@ mod tests {
 			));
 			assert_eq!(Pools::get_reserve_available_liquidity(CurrencyId::DOT), 90);
 			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 10);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 90);
+			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 112);
 		});
 	}
 
@@ -275,7 +275,7 @@ mod tests {
 			));
 			assert_eq!(Pools::get_reserve_available_liquidity(CurrencyId::DOT), 60);
 			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 75);
 
 			assert_noop!(
 				MinterestProtocol::redeem_underlying(Origin::signed(ALICE), CurrencyId::DOT, 100),
@@ -294,7 +294,7 @@ mod tests {
 			));
 			assert_eq!(Pools::get_reserve_available_liquidity(CurrencyId::DOT), 30);
 			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 70);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 30);
+			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 38);
 		});
 	}
 
@@ -374,7 +374,7 @@ mod tests {
 			));
 			assert_eq!(Pools::get_reserve_available_liquidity(CurrencyId::DOT), 60);
 			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 75);
 
 			assert_noop!(
 				MinterestProtocol::redeem_underlying(Origin::signed(BOB), CurrencyId::DOT, 30),
@@ -388,7 +388,7 @@ mod tests {
 			));
 			assert_eq!(Pools::get_reserve_available_liquidity(CurrencyId::DOT), 67);
 			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &BOB), 93);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &BOB), 7);
+			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &BOB), 8);
 		});
 	}
 
