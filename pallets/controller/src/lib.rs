@@ -27,6 +27,7 @@ mod tests;
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 type MTokens<T> = m_tokens::Module<T>;
 
+
 pub trait Trait: liquidity_pools::Trait + system::Trait + m_tokens::Trait {
 	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;

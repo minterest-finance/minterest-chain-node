@@ -73,6 +73,15 @@ decl_error! {
 	}
 }
 
+decl_storage! {
+	 trait Store for Module<T: Trait> as LiquidityPoolsStorage {
+		pub Reserves get(fn reserves) config(): map hasher(blake2_128_concat) CurrencyId => Reserve;
+		pub ReserveUserDates get(fn reserve_user_data) config(): double_map
+			hasher(blake2_128_concat) T::AccountId,
+			hasher(blake2_128_concat) CurrencyId => ReserveUserData<T::BlockNumber>;
+	}
+}
+
 decl_module! {
 		pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 			type Error = Error<T>;
@@ -143,7 +152,18 @@ decl_storage! {
 	}
 }
 
+// Setters for LiquidityPools
 impl<T: Trait> Module<T> {
+	pub fn set_current_interest_rate(underlying_asset_id: CurrencyId, _rate: Rate) -> DispatchResult {
+		Reserves::mutate(underlying_asset_id, |r| r.current_interest_rate = Rate::from_inner(1));
+		Ok(())
+	}
+
+	pub fn set_current_exchange_rate(underlying_asset_id: CurrencyId, rate: Rate) -> DispatchResult {
+		Reserves::mutate(underlying_asset_id, |r| r.current_exchange_rate = rate);
+		Ok(())
+	}
+
 	pub fn update_state_on_deposit(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
 		Self::update_reserve_liquidity(amount, Balance::zero(), currency_id)?;
 
