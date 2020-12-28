@@ -101,24 +101,45 @@ impl Trait for Runtime {
 }
 
 pub type LiquidityPools = Module<Runtime>;
+pub type TestMTokens = m_tokens::Module<Runtime>;
 
-pub struct ExtBuilder {}
+pub struct ExtBuilder {
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+}
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		Self {}
+		Self {
+			endowed_accounts: vec![],
+		}
 	}
 }
 
 type Amount = i128;
 
 pub const ALICE: AccountId = 1;
+pub const ONE_HUNDRED: Balance = 100;
 
 impl ExtBuilder {
+	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
+		self.endowed_accounts = endowed_accounts;
+		self
+	}
+
+	pub fn one_hundred_dots_for_alice(self) -> Self {
+		self.balances(vec![(ALICE, CurrencyId::DOT, ONE_HUNDRED)])
+	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
 			.unwrap();
+
+		orml_tokens::GenesisConfig::<Runtime> {
+			endowed_accounts: self.endowed_accounts,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 		GenesisConfig::<Runtime> {
 			reserves: vec![

@@ -108,8 +108,8 @@ decl_module! {
 			#[weight = 10_000]
 			pub fn deposit_insurance(origin, reserve_id: CurrencyId, #[compact] amount: Balance) {
 				with_transaction_result(|| {
-					let account_id = ensure_signed(origin.clone())?;
-					ensure_root(origin.clone())?;
+					// FIXME This dispatch should only be called as an _Root_.
+					let account_id = ensure_signed(origin)?;
 					Self::do_deposit_insurance(&account_id, reserve_id, amount)?;
 					Self::deposit_event(Event::DepositedInsurance(reserve_id, amount));
 					Ok(())
@@ -122,7 +122,7 @@ decl_module! {
 			#[weight = 10_000]
 			pub fn redeem_insurance(origin, reserve_id: CurrencyId, #[compact] amount: Balance) {
 				with_transaction_result(|| {
-					ensure_root(origin.clone())?;
+					// FIXME This dispatch should only be called as an _Root_.
 					let account_id = ensure_signed(origin)?;
 					Self::do_redeem_insurance(&account_id, reserve_id, amount)?;
 					Self::deposit_event(Event::RedeemedInsurance(reserve_id, amount));

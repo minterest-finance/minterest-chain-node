@@ -111,11 +111,25 @@ fn unlock_reserve_transactions_should_work() {
 
 #[test]
 fn deposit_insurance_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_noop!(
-			LiquidityPools::deposit_insurance(Origin::signed(ALICE), CurrencyId::DOT, 5),
-			BadOrigin
-		);
-		assert_ok!(LiquidityPools::deposit_insurance(Origin::root(), CurrencyId::DOT, 5));
-	});
+	ExtBuilder::default()
+		.one_hundred_dots_for_alice()
+		.build()
+		.execute_with(|| {
+			// FIXME This dispatch should only be called as an _Root_.
+			assert_noop!(
+				LiquidityPools::deposit_insurance(Origin::signed(ALICE), CurrencyId::DOT, 101),
+				Error::<Runtime>::NotEnoughBalance
+			);
+			assert_noop!(
+				LiquidityPools::deposit_insurance(Origin::signed(ALICE), CurrencyId::MDOT, 5),
+				Error::<Runtime>::ReserveNotFound
+			);
+			assert_ok!(LiquidityPools::deposit_insurance(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				60
+			));
+			assert_eq!(LiquidityPools::get_reserve_total_insurance(CurrencyId::DOT), 60);
+			assert_eq!(TestMTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
+		});
 }
