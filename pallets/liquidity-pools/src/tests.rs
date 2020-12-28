@@ -108,3 +108,14 @@ fn unlock_reserve_transactions_should_work() {
 		);
 	});
 }
+
+#[test]
+fn deposit_insurance_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_noop!(
+			LiquidityPools::deposit_insurance(Origin::signed(ALICE), CurrencyId::DOT, 5),
+			BadOrigin
+		);
+		assert_ok!(LiquidityPools::deposit_insurance(Origin::root(), CurrencyId::DOT, 5));
+	});
+}

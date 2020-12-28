@@ -218,6 +218,7 @@ fn borrow_should_work() {
 		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 30);
 		assert_eq!(TestMTokens::free_balance(CurrencyId::DOT, &ALICE), 70);
 		assert_eq!(TestMTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+		assert_eq!(TestPools::get_reserve_total_borrowed(CurrencyId::DOT), 30);
 	});
 }
 
@@ -241,6 +242,7 @@ fn repay_should_work() {
 		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 30);
 		assert_eq!(TestMTokens::free_balance(CurrencyId::DOT, &ALICE), 70);
 		assert_eq!(TestMTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+		assert_eq!(TestPools::get_reserve_total_borrowed(CurrencyId::DOT), 30);
 
 		assert_noop!(
 			MinterestProtocol::repay(Origin::signed(ALICE), CurrencyId::MDOT, 10),
@@ -255,5 +257,6 @@ fn repay_should_work() {
 		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 50);
 		assert_eq!(TestMTokens::free_balance(CurrencyId::DOT, &ALICE), 50);
 		assert_eq!(TestMTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+		assert_eq!(TestPools::get_reserve_total_borrowed(CurrencyId::DOT), 10);
 	});
 }

@@ -121,7 +121,6 @@ parameter_types! {
 
 impl controller::Trait for Test {
 	type Event = Event;
-	type MultiCurrency = orml_currencies::Module<Test>;
 	type InitialExchangeRate = InitialExchangeRate;
 	type InsuranceFactor = InsuranceFactor;
 	type MaxBorrowRate = MaxBorrowRate;

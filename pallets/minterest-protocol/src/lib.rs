@@ -186,7 +186,7 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
-		<Controller<T>>::accrue_interest_rate(underlying_asset_id)?;
+		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalReserveError)?;
 
 		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
@@ -219,7 +219,7 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
-		<Controller<T>>::accrue_interest_rate(underlying_asset_id)?;
+		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalReserveError)?;
 
 		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
@@ -265,7 +265,7 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
-		<Controller<T>>::accrue_interest_rate(underlying_asset_id)?;
+		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalReserveError)?;
 
 		<LiquidityPools<T>>::update_state_on_borrow(underlying_asset_id, underlying_amount, who)
 			.map_err(|_| Error::<T>::InternalReserveError)?;
@@ -286,7 +286,7 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotEnoughUnderlyingsAssets
 		);
 
-		<Controller<T>>::accrue_interest_rate(underlying_asset_id)?;
+		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalReserveError)?;
 
 		<LiquidityPools<T>>::update_state_on_repay(underlying_asset_id, underlying_amount, who)
 			.map_err(|_| Error::<T>::InternalReserveError)?;

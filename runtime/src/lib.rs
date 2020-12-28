@@ -283,7 +283,6 @@ parameter_types! {
 
 impl controller::Trait for Runtime {
 	type Event = Event;
-	type MultiCurrency = Currencies;
 	type InitialExchangeRate = InitialExchangeRate;
 	type InsuranceFactor = InsuranceFactor;
 	type MaxBorrowRate = MaxBorrowRate;

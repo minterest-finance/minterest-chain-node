@@ -20,6 +20,8 @@ impl_outer_event! {
 	pub enum TestEvent for Runtime {
 		frame_system<T>,
 		liquidity_pools,
+		orml_tokens<T>,
+		m_tokens<T>,
 	}
 }
 
@@ -74,6 +76,20 @@ impl frame_system::Trait for Runtime {
 	type SystemWeightInfo = ();
 }
 
+impl m_tokens::Trait for Runtime {
+	type Event = TestEvent;
+	type MultiCurrency = orml_tokens::Module<Runtime>;
+}
+
+impl orml_tokens::Trait for Runtime {
+	type Event = TestEvent;
+	type Balance = Balance;
+	type Amount = Amount;
+	type CurrencyId = CurrencyId;
+	type OnReceived = ();
+	type WeightInfo = ();
+}
+
 pub type System = frame_system::Module<Runtime>;
 
 parameter_types! {
@@ -93,6 +109,8 @@ impl Default for ExtBuilder {
 		Self {}
 	}
 }
+
+type Amount = i128;
 
 pub const ALICE: AccountId = 1;
 

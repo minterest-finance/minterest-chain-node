@@ -172,8 +172,6 @@ fn testnet_genesis(
 					vec![
 						(x.clone(), CurrencyId::DOT, INITIAL_BALANCE),
 						(x.clone(), CurrencyId::ETH, INITIAL_BALANCE),
-						(x.clone(), CurrencyId::METH, INITIAL_BALANCE),
-						(x.clone(), CurrencyId::MDOT, INITIAL_BALANCE),
 					]
 				})
 				.collect(),
