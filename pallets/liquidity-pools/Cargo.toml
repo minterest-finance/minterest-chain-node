@@ -12,6 +12,7 @@ codec = { package = "parity-scale-codec", version = "1.3.0", default-features = 
 sp-runtime = { version = "2.0.0", default-features = false }
 sp-io = { version = "2.0.0", default-features = false }
 sp-std = { version = "2.0.0", default-features = false }
+sp-arithmetic = { version = "2.0.0", default-features = false }
 
 frame-support = { version = "2.0.0", default-features = false }
 frame-system = { version = "2.0.0", default-features = false }
@@ -34,6 +35,7 @@ std = [
     "sp-runtime/std",
     "sp-io/std",
     "sp-std/std",
+    "sp-arithmetic/std",
     "frame-support/std",
     "frame-system/std",
     "orml-utilities/std",

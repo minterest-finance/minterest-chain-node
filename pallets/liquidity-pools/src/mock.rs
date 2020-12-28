@@ -3,7 +3,7 @@
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 pub use minterest_primitives::{Balance, CurrencyId};
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
+use sp_runtime::{testing::Header, traits::IdentityLookup, FixedU128, Perbill};
 
 use super::*;
 use crate::GenesisConfig;
@@ -19,7 +19,6 @@ impl_outer_origin! {
 impl_outer_event! {
 	pub enum TestEvent for Runtime {
 		frame_system<T>,
-		orml_tokens<T>,
 		liquidity_pools,
 	}
 }
@@ -77,16 +76,6 @@ impl frame_system::Trait for Runtime {
 
 pub type System = frame_system::Module<Runtime>;
 
-type Amount = i128;
-impl orml_tokens::Trait for Runtime {
-	type Event = TestEvent;
-	type Balance = Balance;
-	type Amount = Amount;
-	type CurrencyId = CurrencyId;
-	type OnReceived = ();
-	type WeightInfo = ();
-}
-
 parameter_types! {
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MINT;
 }
@@ -113,41 +102,54 @@ impl ExtBuilder {
 			.build_storage::<Runtime>()
 			.unwrap();
 
-		GenesisConfig {
+		GenesisConfig::<Runtime> {
 			reserves: vec![
 				(
 					CurrencyId::ETH,
 					Reserve {
 						total_balance: Balance::zero(),
-						current_liquidity_rate: Permill::one(),
+						current_interest_rate: FixedU128::from_inner(0),
+						total_borrowed: Balance::zero(),
+						current_exchange_rate: FixedU128::from_inner(1),
 						is_lock: true,
+						total_insurance: Balance::zero(),
 					},
 				),
 				(
 					CurrencyId::DOT,
 					Reserve {
 						total_balance: Balance::zero(),
-						current_liquidity_rate: Permill::one(),
+						current_interest_rate: FixedU128::from_inner(0),
+						total_borrowed: Balance::zero(),
+						current_exchange_rate: FixedU128::from_inner(1),
 						is_lock: false,
+						total_insurance: Balance::zero(),
 					},
 				),
 				(
 					CurrencyId::KSM,
 					Reserve {
 						total_balance: Balance::zero(),
-						current_liquidity_rate: Permill::one(),
+						current_interest_rate: FixedU128::from_inner(0),
+						total_borrowed: Balance::zero(),
+						current_exchange_rate: FixedU128::from_inner(1),
 						is_lock: true,
+						total_insurance: Balance::zero(),
 					},
 				),
 				(
 					CurrencyId::BTC,
 					Reserve {
 						total_balance: Balance::zero(),
-						current_liquidity_rate: Permill::one(),
+						current_interest_rate: FixedU128::from_inner(0),
+						total_borrowed: Balance::zero(),
+						current_exchange_rate: FixedU128::from_inner(1),
 						is_lock: true,
+						total_insurance: Balance::zero(),
 					},
 				),
 			],
+			reserve_user_data: vec![],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

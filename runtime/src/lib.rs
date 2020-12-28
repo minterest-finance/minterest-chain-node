@@ -28,7 +28,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 pub use minterest_primitives::{
-	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DigestItem, Hash, Index, Signature,
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DigestItem, Hash, Index, Rate, Signature,
 };
 
 // A few exports that help ease life for downstream crates.
@@ -275,9 +275,18 @@ impl liquidity_pools::Trait for Runtime {
 	type Event = Event;
 }
 
+parameter_types! {
+	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const MaxBorrowRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const InsuranceFactor: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+}
+
 impl controller::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
+	type InitialExchangeRate = InitialExchangeRate;
+	type InsuranceFactor = InsuranceFactor;
+	type MaxBorrowRate = MaxBorrowRate;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -302,7 +311,7 @@ construct_runtime!(
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 		// LiquidityPools
-		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event, Config},
+		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event, Config<T>},
 		// Controller
 		Controller: controller::{Module, Storage, Call, Event},
 	}

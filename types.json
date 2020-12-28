@@ -17,12 +17,25 @@
     },
     "Reserve": {
       "total_balance": "Balance",
-      "current_liquidity_rate": "Perbill"
+      "current_interest_rate": "Rate",
+      "total_borrowed": "Balance",
+      "current_exchange_rate": "Rate",
+      "is_lock": "bool",
+      "total_insurance": "Balance"
+    },
+    "ReserveUserData" : {
+      "total_borrowed": "Balance",
+      "collateral": "bool",
+      "timestamp": "BlockNumber"
     },
     "CurrencyIdOf": "CurrencyId",
     "Amount": "i128",
     "AmountOf": "Amount",
-    "Rate": "FixedU128"
+    "Rate": "FixedU128",
+    "ControllerData": {
+      "timestamp" : "BlockNumber",
+      "borrow_rate": "Rate"
+    }
   },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
 }
