@@ -219,6 +219,21 @@ fn borrow_should_work() {
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 		assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 30);
+		assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 30);
+
+		// pool_available_liquidity (DOT) = 30
+		// Admin depositing to the insurance balance 10 DOT, and now pool_available_liquidity = 30 + 10 = 40 DOT
+		assert_ok!(TestPools::deposit_insurance(Origin::signed(ADMIN), CurrencyId::DOT, 10));
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 40);
+		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), 90);
+		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), 0);
+		assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 10);
+
+		// Bob can borrow 35 DOT.
+		assert_ok!(MinterestProtocol::borrow(Origin::signed(BOB), CurrencyId::DOT, 35));
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 5);
+		// FIXME 5 DOT's must remain on the insurance balance
+		assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 10);
 	});
 }
 
@@ -243,6 +258,7 @@ fn repay_should_work() {
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 		assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 30);
+		assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 30);
 
 		assert_noop!(
 			MinterestProtocol::repay(Origin::signed(ALICE), CurrencyId::MDOT, 10),
@@ -258,5 +274,6 @@ fn repay_should_work() {
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 50);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 		assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 10);
+		assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 10);
 	});
 }

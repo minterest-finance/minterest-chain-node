@@ -153,6 +153,7 @@ impl Borrowing<AccountId> for MockBorrowing {
 
 type Amount = i128;
 
+pub const ADMIN: AccountId = 0;
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
 pub const ONE_MILL: Balance = 1_000_000;
@@ -160,8 +161,6 @@ pub const ONE_HUNDRED: Balance = 100;
 pub type MinterestProtocol = Module<Test>;
 pub type TestPools = liquidity_pools::Module<Test>;
 pub type Currencies = orml_currencies::Module<Test>;
-
-//TODO Add the value of the exchange rating = 80% after implementing the storage.
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
@@ -172,6 +171,8 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(ALICE, CurrencyId::DOT, ONE_HUNDRED),
 			(BOB, CurrencyId::MINT, ONE_MILL),
 			(BOB, CurrencyId::DOT, ONE_HUNDRED),
+			(ADMIN, CurrencyId::MINT, ONE_MILL),
+			(ADMIN, CurrencyId::DOT, ONE_HUNDRED),
 		],
 	}
 	.assimilate_storage(&mut t)
