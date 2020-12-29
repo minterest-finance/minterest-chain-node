@@ -1,20 +1,23 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{ensure_root, ensure_signed};
 use minterest_primitives::{Balance, CurrencyId, Rate};
+use orml_traits::MultiCurrency;
 use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::{traits::Zero, DispatchResult, RuntimeDebug};
+use sp_runtime::{
+	traits::{AccountIdConversion, Zero},
+	DispatchResult, ModuleId, RuntimeDebug,
+};
 use sp_std::cmp::Ordering;
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct Pool {
-	pub total_balance: Balance,
 	pub current_interest_rate: Rate, // FIXME: how can i use it?
 	pub total_borrowed: Balance,
 	pub current_exchange_rate: Rate,
@@ -26,7 +29,7 @@ pub struct Pool {
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct PoolUserData<BlockNumber> {
 	pub total_borrowed: Balance,
-	pub is_collateral: bool,
+	pub collateral: bool,
 	pub timestamp: BlockNumber,
 }
 
@@ -35,11 +38,15 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait: frame_system::Trait + m_tokens::Trait {
+pub trait Trait: frame_system::Trait {
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
-}
 
-type MTokens<T> = m_tokens::Module<T>;
+	/// The Liquidity Pool's module id, keep all assets in Pools.
+	type ModuleId: Get<ModuleId>;
+
+	/// The `MultiCurrency` implementation.
+	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
+}
 
 decl_event!(
 	pub enum Event {
@@ -86,6 +93,9 @@ decl_module! {
 		pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 			type Error = Error<T>;
 			fn deposit_event() = default;
+
+			/// The Liquidity Pool's module id, keep all assets in Pools.
+			const ModuleId: ModuleId = T::ModuleId::get();
 
 			/// Locks all operations (deposit, redeem, borrow, repay)  with the pool.
 			///
@@ -143,30 +153,16 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {
-	pub fn update_state_on_deposit(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
-		Self::update_pool_liquidity(amount, Balance::zero(), currency_id)?;
-
-		Ok(())
-	}
-
-	pub fn update_state_on_redeem(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
-		Self::update_pool_liquidity(Balance::zero(), amount, currency_id)?;
-
-		Ok(())
-	}
-}
-
 // Admin functions
 impl<T: Trait> Module<T> {
 	fn do_deposit_insurance(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
 		ensure!(Self::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 		ensure!(
-			amount <= <MTokens<T>>::free_balance(pool_id, &who),
+			amount <= T::MultiCurrency::free_balance(pool_id, &who),
 			Error::<T>::NotEnoughBalance
 		);
 
-		<MTokens<T>>::withdraw(pool_id, &who, amount)?;
+		T::MultiCurrency::transfer(pool_id, &who, &Self::pools_account_id(), amount)?;
 
 		let new_insurance_balance = Self::pools(pool_id)
 			.total_insurance
@@ -183,7 +179,7 @@ impl<T: Trait> Module<T> {
 		let current_total_insurance = Self::pools(pool_id).total_insurance;
 		ensure!(amount <= current_total_insurance, Error::<T>::NotEnoughBalance);
 
-		<MTokens<T>>::deposit(pool_id, &who, amount)?;
+		T::MultiCurrency::transfer(pool_id, &Self::pools_account_id(), &who, amount)?;
 
 		let new_insurance_balance = current_total_insurance
 			.checked_sub(amount)
@@ -221,8 +217,13 @@ impl<T: Trait> Module<T> {
 
 // Getters for LiquidityPools
 impl<T: Trait> Module<T> {
+	pub fn pools_account_id() -> T::AccountId {
+		T::ModuleId::get().into_account()
+	}
+
 	pub fn get_pool_available_liquidity(currency_id: CurrencyId) -> Balance {
-		Self::pools(currency_id).total_balance
+		let module_account_id = Self::pools_account_id();
+		T::MultiCurrency::free_balance(currency_id, &module_account_id)
 	}
 
 	pub fn get_pool_total_borrowed(currency_id: CurrencyId) -> Balance {
@@ -238,35 +239,12 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn check_user_available_collateral(who: &T::AccountId, currency_id: CurrencyId) -> bool {
-		Self::pool_user_data(who, currency_id).is_collateral
+		Self::pool_user_data(who, currency_id).collateral
 	}
 }
 
 // Private methods for LiquidityPools
 impl<T: Trait> Module<T> {
-	fn update_pool_liquidity(
-		liquidity_added: Balance,
-		liquidity_taken: Balance,
-		underlying_asset_id: CurrencyId,
-	) -> DispatchResult {
-		ensure!(Self::pool_exists(&underlying_asset_id), Error::<T>::PoolNotFound);
-
-		let current_pool_balance = Self::pools(underlying_asset_id).total_balance;
-
-		let new_pool_balance = match liquidity_added.cmp(&Balance::zero()) {
-			Ordering::Greater => current_pool_balance
-				.checked_add(liquidity_added)
-				.ok_or(Error::<T>::BalanceOverflowed)?,
-			_ => current_pool_balance
-				.checked_sub(liquidity_taken)
-				.ok_or(Error::<T>::NotEnoughBalance)?,
-		};
-
-		Pools::mutate(underlying_asset_id, |r| r.total_balance = new_pool_balance);
-
-		Ok(())
-	}
-
 	fn update_pool_and_user_total_borrowed(
 		underlying_asset_id: CurrencyId,
 		amount_borrowed_add: Balance,
@@ -313,7 +291,6 @@ impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 		amount_borrowed: Balance,
 		who: &T::AccountId,
 	) -> DispatchResult {
-		Self::update_pool_liquidity(Balance::zero(), amount_borrowed, underlying_asset_id)?;
 		Self::update_pool_and_user_total_borrowed(underlying_asset_id, amount_borrowed, Balance::zero(), who)?;
 		Ok(())
 	}
@@ -323,7 +300,6 @@ impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 		amount_borrowed: Balance,
 		who: &T::AccountId,
 	) -> DispatchResult {
-		Self::update_pool_liquidity(amount_borrowed, Balance::zero(), underlying_asset_id)?;
 		Self::update_pool_and_user_total_borrowed(underlying_asset_id, Balance::zero(), amount_borrowed, who)?;
 		Ok(())
 	}

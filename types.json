@@ -16,7 +16,6 @@
       ]
     },
     "Pool": {
-      "total_balance": "Balance",
       "current_interest_rate": "Rate",
       "total_borrowed": "Balance",
       "current_exchange_rate": "Rate",
@@ -25,7 +24,7 @@
     },
     "PoolUserData" : {
       "total_borrowed": "Balance",
-      "is_collateral": "bool",
+      "collateral": "bool",
       "timestamp": "BlockNumber"
     },
     "CurrencyIdOf": "CurrencyId",

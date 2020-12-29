@@ -3,6 +3,7 @@
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{self as system, ensure_signed};
 use minterest_primitives::{Balance, CurrencyId};
+use orml_traits::MultiCurrency;
 use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
 use sp_runtime::{traits::Zero, DispatchError, DispatchResult};
@@ -13,7 +14,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait: m_tokens::Trait + liquidity_pools::Trait + controller::Trait {
+pub trait Trait: liquidity_pools::Trait + controller::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -24,7 +25,6 @@ pub trait Trait: m_tokens::Trait + liquidity_pools::Trait + controller::Trait {
 	type Borrowing: Borrowing<Self::AccountId>;
 }
 
-type MTokens<T> = m_tokens::Module<T>;
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 type Controller<T> = controller::Module<T>;
 
@@ -182,7 +182,7 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 		ensure!(
-			underlying_amount <= <MTokens<T>>::free_balance(underlying_asset_id, &who),
+			underlying_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
@@ -193,12 +193,14 @@ impl<T: Trait> Module<T> {
 		let wrapped_amount = <Controller<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
 			.map_err(|_| Error::<T>::NumOverflow)?;
 
-		<MTokens<T>>::withdraw(underlying_asset_id, &who, underlying_amount)?;
+		T::MultiCurrency::transfer(
+			underlying_asset_id,
+			&who,
+			&<LiquidityPools<T>>::pools_account_id(),
+			underlying_amount,
+		)?;
 
-		<LiquidityPools<T>>::update_state_on_deposit(underlying_amount, underlying_asset_id)
-			.map_err(|_| Error::<T>::InternalPoolError)?;
-
-		<MTokens<T>>::deposit(wrapped_id, &who, wrapped_amount)?;
+		T::MultiCurrency::deposit(wrapped_id, &who, wrapped_amount)?;
 
 		Ok((underlying_amount, wrapped_id, wrapped_amount))
 	}
@@ -225,7 +227,7 @@ impl<T: Trait> Module<T> {
 
 		let wrapped_amount = match (underlying_amount, wrapped_amount) {
 			(0, 0) => {
-				let total_wrapped_amount = <MTokens<T>>::free_balance(wrapped_id, &who);
+				let total_wrapped_amount = T::MultiCurrency::free_balance(wrapped_id, &who);
 				underlying_amount = <Controller<T>>::convert_from_wrapped(wrapped_id, total_wrapped_amount)
 					.map_err(|_| Error::<T>::NumOverflow)?;
 				total_wrapped_amount
@@ -240,16 +242,18 @@ impl<T: Trait> Module<T> {
 		};
 
 		ensure!(
-			wrapped_amount <= <MTokens<T>>::free_balance(wrapped_id, &who),
+			wrapped_amount <= T::MultiCurrency::free_balance(wrapped_id, &who),
 			Error::<T>::NotEnoughWrappedTokens
 		);
 
-		<MTokens<T>>::withdraw(wrapped_id, &who, wrapped_amount)?;
+		T::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount)?;
 
-		<LiquidityPools<T>>::update_state_on_redeem(underlying_amount, underlying_asset_id)
-			.map_err(|_| Error::<T>::InternalPoolError)?;
-
-		<MTokens<T>>::deposit(underlying_asset_id, &who, underlying_amount)?;
+		T::MultiCurrency::transfer(
+			underlying_asset_id,
+			&<LiquidityPools<T>>::pools_account_id(),
+			&who,
+			underlying_amount,
+		)?;
 
 		Ok((underlying_amount, wrapped_id, wrapped_amount))
 	}
@@ -270,7 +274,12 @@ impl<T: Trait> Module<T> {
 		<LiquidityPools<T>>::update_state_on_borrow(underlying_asset_id, underlying_amount, who)
 			.map_err(|_| Error::<T>::InternalPoolError)?;
 
-		<MTokens<T>>::deposit(underlying_asset_id, who, underlying_amount)?;
+		T::MultiCurrency::transfer(
+			underlying_asset_id,
+			&<LiquidityPools<T>>::pools_account_id(),
+			&who,
+			underlying_amount,
+		)?;
 
 		Ok(())
 	}
@@ -282,7 +291,7 @@ impl<T: Trait> Module<T> {
 		);
 
 		ensure!(
-			underlying_amount <= <MTokens<T>>::free_balance(underlying_asset_id, &who),
+			underlying_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
 			Error::<T>::NotEnoughUnderlyingsAssets
 		);
 
@@ -291,7 +300,12 @@ impl<T: Trait> Module<T> {
 		<LiquidityPools<T>>::update_state_on_repay(underlying_asset_id, underlying_amount, who)
 			.map_err(|_| Error::<T>::InternalPoolError)?;
 
-		<MTokens<T>>::withdraw(underlying_asset_id, who, underlying_amount)?;
+		T::MultiCurrency::transfer(
+			underlying_asset_id,
+			&who,
+			&<LiquidityPools<T>>::pools_account_id(),
+			underlying_amount,
+		)?;
 
 		Ok(())
 	}

@@ -8,7 +8,7 @@ use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{IdentityLookup, Zero},
-	Perbill,
+	ModuleId, Perbill,
 };
 
 use super::*;
@@ -22,7 +22,6 @@ impl_outer_event! {
 		frame_system<T>,
 		orml_tokens<T>,
 		orml_currencies<T>,
-		m_tokens<T>,
 		liquidity_pools,
 		minterest_protocol<T>,
 		controller,
@@ -104,13 +103,14 @@ impl orml_currencies::Trait for Test {
 	type WeightInfo = ();
 }
 
-impl m_tokens::Trait for Test {
-	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Test>;
+parameter_types! {
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
 }
 
 impl liquidity_pools::Trait for Test {
 	type Event = Event;
+	type MultiCurrency = orml_tokens::Module<Test>;
+	type ModuleId = LiquidityPoolsModuleId;
 }
 
 parameter_types! {
@@ -153,15 +153,14 @@ impl Borrowing<AccountId> for MockBorrowing {
 
 type Amount = i128;
 
+pub const ADMIN: AccountId = 0;
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
 pub const ONE_MILL: Balance = 1_000_000;
 pub const ONE_HUNDRED: Balance = 100;
 pub type MinterestProtocol = Module<Test>;
-pub type TestMTokens = m_tokens::Module<Test>;
 pub type TestPools = liquidity_pools::Module<Test>;
-
-//TODO Add the value of the exchange rating = 80% after implementing the storage.
+pub type Currencies = orml_currencies::Module<Test>;
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
@@ -172,6 +171,8 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(ALICE, CurrencyId::DOT, ONE_HUNDRED),
 			(BOB, CurrencyId::MINT, ONE_MILL),
 			(BOB, CurrencyId::DOT, ONE_HUNDRED),
+			(ADMIN, CurrencyId::MINT, ONE_MILL),
+			(ADMIN, CurrencyId::DOT, ONE_HUNDRED),
 		],
 	}
 	.assimilate_storage(&mut t)
@@ -182,7 +183,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(
 				CurrencyId::ETH,
 				Pool {
-					total_balance: Balance::zero(),
 					current_interest_rate: Rate::from_inner(0),
 					total_borrowed: Balance::zero(),
 					current_exchange_rate: Rate::from_inner(1),
@@ -193,7 +193,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(
 				CurrencyId::DOT,
 				Pool {
-					total_balance: Balance::zero(),
 					current_interest_rate: Rate::from_inner(0),
 					total_borrowed: Balance::zero(),
 					current_exchange_rate: Rate::from_inner(1),
@@ -204,7 +203,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(
 				CurrencyId::KSM,
 				Pool {
-					total_balance: Balance::zero(),
 					current_interest_rate: Rate::from_inner(0),
 					total_borrowed: Balance::zero(),
 					current_exchange_rate: Rate::from_inner(1),
@@ -215,7 +213,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(
 				CurrencyId::BTC,
 				Pool {
-					total_balance: Balance::zero(),
 					current_interest_rate: Rate::from_inner(0),
 					total_borrowed: Balance::zero(),
 					current_exchange_rate: Rate::from_inner(1),

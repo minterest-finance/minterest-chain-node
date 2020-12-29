@@ -4,6 +4,7 @@ use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{self as system};
 use minterest_primitives::{Balance, CurrencyId, Rate};
+use orml_traits::MultiCurrency;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -25,9 +26,8 @@ mod mock;
 mod tests;
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
-type MTokens<T> = m_tokens::Module<T>;
 
-pub trait Trait: liquidity_pools::Trait + system::Trait + m_tokens::Trait {
+pub trait Trait: liquidity_pools::Trait + system::Trait {
 	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 
@@ -188,7 +188,7 @@ impl<T: Trait> Module<T> {
 		let total_cash = <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id);
 
 		// Total number of tokens in circulation
-		let total_supply = <MTokens<T>>::total_issuance(wrapped_asset_id);
+		let total_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
 
 		let current_exchange_rate = Self::calculate_exchange_rate(total_cash, total_supply)?;
 

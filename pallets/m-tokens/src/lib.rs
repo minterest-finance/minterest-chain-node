@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::dispatch::DispatchResult;
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 use frame_system::{self as system, ensure_signed};
 use minterest_primitives::{Balance, CurrencyId};
@@ -111,22 +110,4 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {
-	pub fn total_issuance(currency_id: CurrencyId) -> Balance {
-		T::MultiCurrency::total_issuance(currency_id)
-	}
-
-	pub fn free_balance(currency_id: CurrencyId, who: &T::AccountId) -> Balance {
-		T::MultiCurrency::free_balance(currency_id, &who)
-	}
-
-	pub fn deposit(currency_id: CurrencyId, who: &T::AccountId, amount: Balance) -> DispatchResult {
-		T::MultiCurrency::deposit(currency_id, &who, amount)?;
-		Ok(())
-	}
-
-	pub fn withdraw(currency_id: CurrencyId, who: &T::AccountId, amount: Balance) -> DispatchResult {
-		T::MultiCurrency::withdraw(currency_id, &who, amount)?;
-		Ok(())
-	}
-}
+impl<T: Trait> Module<T> {}

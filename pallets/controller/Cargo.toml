@@ -19,9 +19,7 @@ frame-system = { version = "2.0.0", default-features = false }
 orml-traits = { path = "../../orml/traits", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
-m-tokens = { path = "../m-tokens", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
-
 
 [dev-dependencies]
 sp-core = { version = "2.0.0" }
@@ -41,5 +39,4 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "minterest-primitives/std",
-    "m-tokens/std",
 ]

@@ -7,13 +7,14 @@ mod tests {
 	use liquidity_pools::Pool;
 	use minterest_primitives::{Balance, CurrencyId, Rate};
 	use orml_currencies::Currency;
+	use orml_traits::MultiCurrency;
 	use pallet_traits::Borrowing;
 	use sp_core::H256;
 	use sp_runtime::DispatchResult;
 	use sp_runtime::{
 		testing::Header,
 		traits::{IdentityLookup, Zero},
-		Perbill,
+		ModuleId, Perbill,
 	};
 
 	use minterest_protocol::Error as MinterestProtocolError;
@@ -119,8 +120,14 @@ mod tests {
 		type MultiCurrency = orml_tokens::Module<Test>;
 	}
 
+	parameter_types! {
+		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
+	}
+
 	impl liquidity_pools::Trait for Test {
 		type Event = ();
+		type MultiCurrency = orml_tokens::Module<Test>;
+		type ModuleId = LiquidityPoolsModuleId;
 	}
 
 	impl minterest_protocol::Trait for Test {
@@ -147,8 +154,8 @@ mod tests {
 	pub const ONE_MILL: Balance = 1_000_000;
 	pub const ONE_HUNDRED: Balance = 100;
 	pub type MinterestProtocol = minterest_protocol::Module<Test>;
-	pub type MTokens = m_tokens::Module<Test>;
 	pub type Pools = liquidity_pools::Module<Test>;
+	pub type Currencies = orml_currencies::Module<Test>;
 
 	pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
@@ -169,7 +176,6 @@ mod tests {
 				(
 					CurrencyId::ETH,
 					Pool {
-						total_balance: Balance::zero(),
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						current_exchange_rate: Rate::from_inner(1),
@@ -180,7 +186,6 @@ mod tests {
 				(
 					CurrencyId::DOT,
 					Pool {
-						total_balance: Balance::zero(),
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						current_exchange_rate: Rate::from_inner(1),
@@ -191,7 +196,6 @@ mod tests {
 				(
 					CurrencyId::KSM,
 					Pool {
-						total_balance: Balance::zero(),
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						current_exchange_rate: Rate::from_inner(1),
@@ -202,7 +206,6 @@ mod tests {
 				(
 					CurrencyId::BTC,
 					Pool {
-						total_balance: Balance::zero(),
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						current_exchange_rate: Rate::from_inner(1),
@@ -240,8 +243,8 @@ mod tests {
 				60
 			));
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 60);
-			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
 			assert_noop!(
 				MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::DOT, 50),
@@ -258,8 +261,8 @@ mod tests {
 				30
 			));
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 90);
-			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 10);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 90);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 10);
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 90);
 		});
 	}
 
@@ -273,8 +276,8 @@ mod tests {
 				60
 			));
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 60);
-			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
 			assert_noop!(
 				MinterestProtocol::redeem_underlying(Origin::signed(ALICE), CurrencyId::DOT, 100),
@@ -292,8 +295,8 @@ mod tests {
 				30
 			));
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 30);
-			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 70);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 30);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 30);
 		});
 	}
 
@@ -307,8 +310,8 @@ mod tests {
 				60
 			));
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 60);
-			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
 			assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT));
 
@@ -339,8 +342,8 @@ mod tests {
 				60
 			));
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 60);
-			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
 			assert_ok!(MinterestProtocol::redeem_wrapped(
 				Origin::signed(ALICE),
@@ -348,8 +351,8 @@ mod tests {
 				35
 			));
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 25);
-			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 75);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 25);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 75);
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 25);
 
 			assert_noop!(
 				MinterestProtocol::redeem_wrapped(Origin::signed(ALICE), CurrencyId::MDOT, 60),
@@ -372,8 +375,8 @@ mod tests {
 				60
 			));
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 60);
-			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
 			assert_noop!(
 				MinterestProtocol::redeem_underlying(Origin::signed(BOB), CurrencyId::DOT, 30),
@@ -386,8 +389,8 @@ mod tests {
 				7
 			));
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 67);
-			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &BOB), 93);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &BOB), 7);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &BOB), 93);
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB), 7);
 		});
 	}
 
@@ -401,8 +404,8 @@ mod tests {
 				60
 			));
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 60);
-			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
 			assert_noop!(
 				MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::DOT, 100),
@@ -415,8 +418,8 @@ mod tests {
 
 			assert_ok!(MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::DOT, 30));
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 30);
-			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 70);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 		});
 	}
 
@@ -430,13 +433,13 @@ mod tests {
 				60
 			));
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 60);
-			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
 			assert_ok!(MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::DOT, 30));
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 30);
-			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 70);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
 			assert_noop!(
 				MinterestProtocol::repay(Origin::signed(ALICE), CurrencyId::MDOT, 10),
@@ -449,8 +452,8 @@ mod tests {
 
 			assert_ok!(MinterestProtocol::repay(Origin::signed(ALICE), CurrencyId::DOT, 20));
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 50);
-			assert_eq!(MTokens::free_balance(CurrencyId::DOT, &ALICE), 50);
-			assert_eq!(MTokens::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 50);
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 		});
 	}
 }
