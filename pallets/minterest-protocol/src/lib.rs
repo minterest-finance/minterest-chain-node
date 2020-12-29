@@ -43,10 +43,10 @@ decl_event!(
 		/// Underlying assets and wrapped tokens redeemed: \[who, underlying_asset_id, underlying_amount, wrapped_currency_id, wrapped_amount\]
 		Redeemed(AccountId, CurrencyId, Balance, CurrencyId, Balance),
 
-		/// Borrowed a specific amount of the reserve currency: \[who, underlying_asset_id, the_amount_to_be_borrowed\]
+		/// Borrowed a specific amount of the pool currency: \[who, underlying_asset_id, the_amount_to_be_borrowed\]
 		Borrowed(AccountId, CurrencyId, Balance),
 
-		/// Repaid a borrow on the specific reserve, for the specified amount: \[who, underlying_asset_id, the_amount_repaid\]
+		/// Repaid a borrow on the specific pool, for the specified amount: \[who, underlying_asset_id, the_amount_repaid\]
 		Repaid(AccountId, CurrencyId, Balance),
 
 	}
@@ -60,7 +60,7 @@ decl_error! {
 		/// The currency is not enabled in wrapped protocol.
 		NotValidWrappedTokenId,
 
-		/// There is not enough liquidity available in the reserve.
+		/// There is not enough liquidity available in the pool.
 		NotEnoughLiquidityAvailable,
 
 		/// Insufficient wrapped tokens in the user account.
@@ -70,7 +70,7 @@ decl_error! {
 		NotEnoughUnderlyingsAssets,
 
 		/// PoolNotFound or NotEnoughBalance or BalanceOverflowed.
-		InternalReserveError,
+		InternalPoolError,
 
 		/// Number overflow in calculation.
 		NumOverflow,
@@ -84,7 +84,7 @@ decl_module! {
 
 		const UnderlyingAssetId: Vec<CurrencyId> = T::UnderlyingAssetId::get();
 
-		/// Sender supplies assets into the reserve and receives mTokens in exchange.
+		/// Sender supplies assets into the pool and receives mTokens in exchange.
 		#[weight = 10_000]
 		pub fn deposit_underlying(
 			origin,
@@ -140,7 +140,7 @@ decl_module! {
 			})?;
 		}
 
-		/// Borrowing a specific amount of the reserve currency, provided that the borrower already deposited enough collateral.
+		/// Borrowing a specific amount of the pool currency, provided that the borrower already deposited enough collateral.
 		#[weight = 10_000]
 		pub fn borrow(
 			origin,
@@ -155,7 +155,7 @@ decl_module! {
 			})?;
 		}
 
-		/// Repays a borrow on the specific reserve, for the specified amount.
+		/// Repays a borrow on the specific pool, for the specified amount.
 		#[weight = 10_000]
 		pub fn repay(
 			origin,
@@ -186,7 +186,7 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
-		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalReserveError)?;
+		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalPoolError)?;
 
 		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
@@ -196,7 +196,7 @@ impl<T: Trait> Module<T> {
 		<MTokens<T>>::withdraw(underlying_asset_id, &who, underlying_amount)?;
 
 		<LiquidityPools<T>>::update_state_on_deposit(underlying_amount, underlying_asset_id)
-			.map_err(|_| Error::<T>::InternalReserveError)?;
+			.map_err(|_| Error::<T>::InternalPoolError)?;
 
 		<MTokens<T>>::deposit(wrapped_id, &who, wrapped_amount)?;
 
@@ -215,11 +215,11 @@ impl<T: Trait> Module<T> {
 		);
 
 		ensure!(
-			underlying_amount <= <LiquidityPools<T>>::get_reserve_available_liquidity(underlying_asset_id),
+			underlying_amount <= <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id),
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
-		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalReserveError)?;
+		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalPoolError)?;
 
 		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
@@ -247,7 +247,7 @@ impl<T: Trait> Module<T> {
 		<MTokens<T>>::withdraw(wrapped_id, &who, wrapped_amount)?;
 
 		<LiquidityPools<T>>::update_state_on_redeem(underlying_amount, underlying_asset_id)
-			.map_err(|_| Error::<T>::InternalReserveError)?;
+			.map_err(|_| Error::<T>::InternalPoolError)?;
 
 		<MTokens<T>>::deposit(underlying_asset_id, &who, underlying_amount)?;
 
@@ -261,14 +261,14 @@ impl<T: Trait> Module<T> {
 		);
 
 		ensure!(
-			underlying_amount <= <LiquidityPools<T>>::get_reserve_available_liquidity(underlying_asset_id),
+			underlying_amount <= <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id),
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
-		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalReserveError)?;
+		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalPoolError)?;
 
 		<LiquidityPools<T>>::update_state_on_borrow(underlying_asset_id, underlying_amount, who)
-			.map_err(|_| Error::<T>::InternalReserveError)?;
+			.map_err(|_| Error::<T>::InternalPoolError)?;
 
 		<MTokens<T>>::deposit(underlying_asset_id, who, underlying_amount)?;
 
@@ -286,10 +286,10 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotEnoughUnderlyingsAssets
 		);
 
-		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalReserveError)?;
+		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalPoolError)?;
 
 		<LiquidityPools<T>>::update_state_on_repay(underlying_asset_id, underlying_amount, who)
-			.map_err(|_| Error::<T>::InternalReserveError)?;
+			.map_err(|_| Error::<T>::InternalPoolError)?;
 
 		<MTokens<T>>::withdraw(underlying_asset_id, who, underlying_amount)?;
 
