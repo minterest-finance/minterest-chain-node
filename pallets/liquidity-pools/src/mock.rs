@@ -2,6 +2,7 @@
 
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 pub use minterest_primitives::{Balance, CurrencyId};
+use orml_currencies::Currency;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, FixedU128, Perbill};
 
@@ -20,8 +21,8 @@ impl_outer_event! {
 	pub enum TestEvent for Runtime {
 		frame_system<T>,
 		liquidity_pools,
+		orml_currencies<T>,
 		orml_tokens<T>,
-		m_tokens<T>,
 	}
 }
 
@@ -76,11 +77,6 @@ impl frame_system::Trait for Runtime {
 	type SystemWeightInfo = ();
 }
 
-impl m_tokens::Trait for Runtime {
-	type Event = TestEvent;
-	type MultiCurrency = orml_tokens::Module<Runtime>;
-}
-
 impl orml_tokens::Trait for Runtime {
 	type Event = TestEvent;
 	type Balance = Balance;
@@ -90,10 +86,23 @@ impl orml_tokens::Trait for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MINT;
+}
+
+type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
+
+impl orml_currencies::Trait for Runtime {
+	type Event = TestEvent;
+	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type NativeCurrency = NativeCurrency;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type WeightInfo = ();
+}
+
 pub type System = frame_system::Module<Runtime>;
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MINT;
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
 }
 
@@ -104,7 +113,7 @@ impl Trait for Runtime {
 }
 
 pub type LiquidityPools = Module<Runtime>;
-pub type TestMTokens = m_tokens::Module<Runtime>;
+pub type Currencies = orml_currencies::Module<Runtime>;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -149,7 +158,6 @@ impl ExtBuilder {
 				(
 					CurrencyId::ETH,
 					Pool {
-						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
 						current_exchange_rate: FixedU128::from_inner(1),
@@ -160,7 +168,6 @@ impl ExtBuilder {
 				(
 					CurrencyId::DOT,
 					Pool {
-						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
 						current_exchange_rate: FixedU128::from_inner(1),
@@ -171,7 +178,6 @@ impl ExtBuilder {
 				(
 					CurrencyId::KSM,
 					Pool {
-						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
 						current_exchange_rate: FixedU128::from_inner(1),
@@ -182,7 +188,6 @@ impl ExtBuilder {
 				(
 					CurrencyId::BTC,
 					Pool {
-						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
 						current_exchange_rate: FixedU128::from_inner(1),
