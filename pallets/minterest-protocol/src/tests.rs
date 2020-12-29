@@ -232,8 +232,10 @@ fn borrow_should_work() {
 		// Bob can borrow 35 DOT.
 		assert_ok!(MinterestProtocol::borrow(Origin::signed(BOB), CurrencyId::DOT, 35));
 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 5);
-		// FIXME 5 DOT's must remain on the insurance balance
+		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &BOB), 135);
 		assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 10);
+		assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 65);
+		assert_eq!(TestPools::get_user_total_borrowed(&BOB, CurrencyId::DOT), 35);
 	});
 }
 
