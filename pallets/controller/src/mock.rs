@@ -28,6 +28,7 @@ impl_outer_event! {
 		orml_currencies<T>,
 		liquidity_pools,
 		controller,
+		m_tokens<T>,
 	}
 }
 
@@ -105,6 +106,11 @@ impl liquidity_pools::Trait for Runtime {
 	type Event = TestEvent;
 }
 
+impl m_tokens::Trait for Runtime {
+	type Event = TestEvent;
+	type MultiCurrency = orml_tokens::Module<Runtime>;
+}
+
 parameter_types! {
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 	pub const MaxBorrowRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
@@ -113,7 +119,6 @@ parameter_types! {
 
 impl Trait for Runtime {
 	type Event = TestEvent;
-	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type InitialExchangeRate = InitialExchangeRate;
 	type InsuranceFactor = InsuranceFactor;
 	type MaxBorrowRate = MaxBorrowRate;

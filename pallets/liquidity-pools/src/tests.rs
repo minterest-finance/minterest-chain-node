@@ -108,3 +108,72 @@ fn unlock_reserve_transactions_should_work() {
 		);
 	});
 }
+
+#[test]
+fn deposit_insurance_should_work() {
+	ExtBuilder::default()
+		.one_hundred_dots_for_alice()
+		.build()
+		.execute_with(|| {
+			// FIXME This dispatch should only be called as an _Root_.
+			assert_noop!(
+				LiquidityPools::deposit_insurance(Origin::signed(ALICE), CurrencyId::DOT, 101),
+				Error::<Runtime>::NotEnoughBalance
+			);
+			assert_noop!(
+				LiquidityPools::deposit_insurance(Origin::signed(ALICE), CurrencyId::MDOT, 5),
+				Error::<Runtime>::ReserveNotFound
+			);
+
+			assert_ok!(LiquidityPools::deposit_insurance(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				60
+			));
+			assert_eq!(LiquidityPools::get_reserve_total_insurance(CurrencyId::DOT), 60);
+			assert_eq!(TestMTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
+
+			assert_ok!(LiquidityPools::deposit_insurance(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				5
+			));
+			assert_eq!(LiquidityPools::get_reserve_total_insurance(CurrencyId::DOT), 65);
+			assert_eq!(TestMTokens::free_balance(CurrencyId::DOT, &ALICE), 35);
+		});
+}
+
+#[test]
+fn redeem_insurance_should_work() {
+	ExtBuilder::default()
+		.one_hundred_dots_for_alice()
+		.build()
+		.execute_with(|| {
+			// FIXME This dispatch should only be called as an _Root_.
+			assert_noop!(
+				LiquidityPools::deposit_insurance(Origin::signed(ALICE), CurrencyId::MDOT, 5),
+				Error::<Runtime>::ReserveNotFound
+			);
+
+			assert_ok!(LiquidityPools::deposit_insurance(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				60
+			));
+			assert_eq!(LiquidityPools::get_reserve_total_insurance(CurrencyId::DOT), 60);
+			assert_eq!(TestMTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
+
+			assert_noop!(
+				LiquidityPools::redeem_insurance(Origin::signed(ALICE), CurrencyId::DOT, 61),
+				Error::<Runtime>::NotEnoughBalance
+			);
+
+			assert_ok!(LiquidityPools::redeem_insurance(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				30
+			));
+			assert_eq!(LiquidityPools::get_reserve_total_insurance(CurrencyId::DOT), 30);
+			assert_eq!(TestMTokens::free_balance(CurrencyId::DOT, &ALICE), 70);
+		});
+}

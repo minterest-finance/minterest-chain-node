@@ -112,6 +112,10 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
+	pub fn total_issuance(currency_id: CurrencyId) -> Balance {
+		T::MultiCurrency::total_issuance(currency_id)
+	}
+
 	pub fn free_balance(currency_id: CurrencyId, who: &T::AccountId) -> Balance {
 		T::MultiCurrency::free_balance(currency_id, &who)
 	}

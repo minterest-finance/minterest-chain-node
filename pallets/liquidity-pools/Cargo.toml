@@ -21,11 +21,14 @@ orml-utilities = { path = "../../orml/utilities", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
+m-tokens = { path = "../m-tokens", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = "2.0.0" }
 pallet-balances = { version = "2.0.0" }
 orml-tokens = { path = "../../orml/tokens" }
+m-tokens = { path = "../m-tokens" }
+
 
 [features]
 default = ["std"]
