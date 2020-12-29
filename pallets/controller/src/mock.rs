@@ -130,6 +130,7 @@ pub type BlockNumber = u64;
 pub type Controller = Module<Runtime>;
 pub type TestPools = liquidity_pools::Module<Runtime>;
 pub type System = frame_system::Module<Runtime>;
+pub type Currencies = orml_currencies::Module<Runtime>;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -158,6 +159,7 @@ impl ExtBuilder {
 
 	pub fn exchange_rate_less_than_one(self) -> Self {
 		self.balances(vec![
+			(ALICE, CurrencyId::DOT, ONE_HUNDRED),
 			(ALICE, CurrencyId::MDOT, ONE_HUNDRED),
 			(ALICE, CurrencyId::MINT, ONE_MILL),
 			(ALICE, CurrencyId::MBTC, ONE_HUNDRED),
@@ -166,10 +168,16 @@ impl ExtBuilder {
 
 	pub fn exchange_rate_greater_than_one(self) -> Self {
 		self.balances(vec![
+			(ALICE, CurrencyId::DOT, ONE_HUNDRED),
+			(ALICE, CurrencyId::BTC, ONE_HUNDRED),
 			(ALICE, CurrencyId::MDOT, ONE_HUNDRED),
 			(ALICE, CurrencyId::MINT, ONE_MILL),
 			(ALICE, CurrencyId::MBTC, 1),
 		])
+	}
+
+	pub fn one_hundred_dots_for_alice(self) -> Self {
+		self.balances(vec![(ALICE, CurrencyId::DOT, ONE_HUNDRED)])
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
@@ -200,7 +208,6 @@ impl ExtBuilder {
 				(
 					CurrencyId::ETH,
 					Pool {
-						total_balance: Balance::zero(),
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						current_exchange_rate: Rate::saturating_from_rational(1, 1),
@@ -211,7 +218,6 @@ impl ExtBuilder {
 				(
 					CurrencyId::DOT,
 					Pool {
-						total_balance: ONE_HUNDRED,
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						current_exchange_rate: Rate::saturating_from_rational(1, 1),
@@ -222,7 +228,6 @@ impl ExtBuilder {
 				(
 					CurrencyId::KSM,
 					Pool {
-						total_balance: Balance::zero(),
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						current_exchange_rate: Rate::saturating_from_rational(1, 1),
@@ -233,7 +238,6 @@ impl ExtBuilder {
 				(
 					CurrencyId::BTC,
 					Pool {
-						total_balance: 10,
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						current_exchange_rate: Rate::saturating_from_rational(1, 1),

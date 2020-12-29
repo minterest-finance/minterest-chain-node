@@ -2166,6 +2166,7 @@ dependencies = [
  "minterest-protocol",
  "orml-currencies",
  "orml-tokens",
+ "orml-traits",
  "orml-utilities",
  "pallet-traits",
  "parity-scale-codec",

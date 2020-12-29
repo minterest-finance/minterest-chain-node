@@ -225,7 +225,7 @@ fn borrow_should_work() {
 #[test]
 fn repay_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(LiquidityPools::<Test>::unlock_reserve_transactions(
+		assert_ok!(LiquidityPools::<Test>::unlock_pool_transactions(
 			Origin::root(),
 			CurrencyId::DOT
 		));
@@ -234,15 +234,15 @@ fn repay_should_work() {
 			CurrencyId::DOT,
 			60
 		));
-		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 60);
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
 		assert_ok!(MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::DOT, 30));
-		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 30);
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 30);
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-		assert_eq!(TestPools::get_reserve_total_borrowed(CurrencyId::DOT), 30);
+		assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 30);
 
 		assert_noop!(
 			MinterestProtocol::repay(Origin::signed(ALICE), CurrencyId::MDOT, 10),
@@ -254,9 +254,9 @@ fn repay_should_work() {
 		);
 
 		assert_ok!(MinterestProtocol::repay(Origin::signed(ALICE), CurrencyId::DOT, 20));
-		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 50);
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 50);
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 50);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-		assert_eq!(TestPools::get_reserve_total_borrowed(CurrencyId::DOT), 10);
+		assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 10);
 	});
 }

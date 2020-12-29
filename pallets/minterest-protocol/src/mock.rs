@@ -182,7 +182,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(
 				CurrencyId::ETH,
 				Pool {
-					total_balance: Balance::zero(),
 					current_interest_rate: Rate::from_inner(0),
 					total_borrowed: Balance::zero(),
 					current_exchange_rate: Rate::from_inner(1),
@@ -193,7 +192,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(
 				CurrencyId::DOT,
 				Pool {
-					total_balance: Balance::zero(),
 					current_interest_rate: Rate::from_inner(0),
 					total_borrowed: Balance::zero(),
 					current_exchange_rate: Rate::from_inner(1),
@@ -204,7 +202,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(
 				CurrencyId::KSM,
 				Pool {
-					total_balance: Balance::zero(),
 					current_interest_rate: Rate::from_inner(0),
 					total_borrowed: Balance::zero(),
 					current_exchange_rate: Rate::from_inner(1),
@@ -215,7 +212,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(
 				CurrencyId::BTC,
 				Pool {
-					total_balance: Balance::zero(),
 					current_interest_rate: Rate::from_inner(0),
 					total_borrowed: Balance::zero(),
 					current_exchange_rate: Rate::from_inner(1),
