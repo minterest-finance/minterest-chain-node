@@ -1,14 +1,14 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{ensure_root, ensure_signed};
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::{traits::Zero, DispatchResult, RuntimeDebug};
+use sp_runtime::{traits::Zero, DispatchResult, ModuleId, RuntimeDebug};
 use sp_std::cmp::Ordering;
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -37,6 +37,9 @@ mod tests;
 
 pub trait Trait: frame_system::Trait + m_tokens::Trait {
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
+
+	/// The Liquidity Pool's module id, keep all assets in Pools.
+	type ModuleId: Get<ModuleId>;
 }
 
 type MTokens<T> = m_tokens::Module<T>;
