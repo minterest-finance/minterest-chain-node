@@ -15,7 +15,7 @@
         "METH"
       ]
     },
-    "Reserve": {
+    "Pool": {
       "total_balance": "Balance",
       "current_interest_rate": "Rate",
       "total_borrowed": "Balance",
@@ -23,9 +23,9 @@
       "is_lock": "bool",
       "total_insurance": "Balance"
     },
-    "ReserveUserData" : {
+    "PoolUserData" : {
       "total_borrowed": "Balance",
-      "collateral": "bool",
+      "is_collateral": "bool",
       "timestamp": "BlockNumber"
     },
     "CurrencyIdOf": "CurrencyId",

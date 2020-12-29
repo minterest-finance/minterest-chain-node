@@ -82,7 +82,7 @@ impl<T: Trait> Module<T> {
 	// Used in controller: do_deposit, do_redeem, do_borrow, do_repay
 	pub fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult {
 		ensure!(
-			!<LiquidityPools<T>>::reserves(&underlying_asset_id).is_lock,
+			!<LiquidityPools<T>>::pools(&underlying_asset_id).is_lock,
 			Error::<T>::OperationsLocked
 		);
 
@@ -95,9 +95,9 @@ impl<T: Trait> Module<T> {
 			return Ok(());
 		}
 
-		let current_total_balance = <LiquidityPools<T>>::get_reserve_available_liquidity(underlying_asset_id);
-		let current_total_borrowed_balance = <LiquidityPools<T>>::get_reserve_total_borrowed(underlying_asset_id);
-		let current_total_insurance = <LiquidityPools<T>>::get_reserve_total_insurance(underlying_asset_id);
+		let current_total_balance = <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id);
+		let current_total_borrowed_balance = <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id);
+		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(underlying_asset_id);
 		let _current_borrow_index: Rate; // FIXME: how can i use it?
 
 		// Calculate the current borrow interest rate
@@ -185,7 +185,7 @@ impl<T: Trait> Module<T> {
 	fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
 		let wrapped_asset_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 		// The total amount of cash the market has
-		let total_cash = <LiquidityPools<T>>::get_reserve_available_liquidity(underlying_asset_id);
+		let total_cash = <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id);
 
 		// Total number of tokens in circulation
 		let total_supply = <MTokens<T>>::total_issuance(wrapped_asset_id);

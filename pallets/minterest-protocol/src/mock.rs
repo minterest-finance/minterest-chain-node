@@ -1,7 +1,7 @@
 //! Mocks for the minterest-protocol module.
 
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
-use liquidity_pools::Reserve;
+use liquidity_pools::Pool;
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_currencies::Currency;
 use sp_core::H256;
@@ -178,10 +178,10 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	.unwrap();
 
 	liquidity_pools::GenesisConfig::<Test> {
-		reserves: vec![
+		pools: vec![
 			(
 				CurrencyId::ETH,
-				Reserve {
+				Pool {
 					total_balance: Balance::zero(),
 					current_interest_rate: Rate::from_inner(0),
 					total_borrowed: Balance::zero(),
@@ -192,7 +192,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			),
 			(
 				CurrencyId::DOT,
-				Reserve {
+				Pool {
 					total_balance: Balance::zero(),
 					current_interest_rate: Rate::from_inner(0),
 					total_borrowed: Balance::zero(),
@@ -203,7 +203,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			),
 			(
 				CurrencyId::KSM,
-				Reserve {
+				Pool {
 					total_balance: Balance::zero(),
 					current_interest_rate: Rate::from_inner(0),
 					total_borrowed: Balance::zero(),
@@ -214,7 +214,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			),
 			(
 				CurrencyId::BTC,
-				Reserve {
+				Pool {
 					total_balance: Balance::zero(),
 					current_interest_rate: Rate::from_inner(0),
 					total_borrowed: Balance::zero(),
@@ -224,7 +224,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 				},
 			),
 		],
-		reserve_user_data: vec![],
+		pool_user_data: vec![],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
