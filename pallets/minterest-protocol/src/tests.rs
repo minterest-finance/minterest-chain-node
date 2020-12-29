@@ -8,7 +8,7 @@ use frame_support::{assert_noop, assert_ok};
 #[test]
 fn deposit_underlying_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(LiquidityPools::<Test>::unlock_reserve_transactions(
+		assert_ok!(LiquidityPools::<Test>::unlock_pool_transactions(
 			Origin::root(),
 			CurrencyId::DOT
 		));
@@ -26,7 +26,7 @@ fn deposit_underlying_should_work() {
 			CurrencyId::DOT,
 			60
 		));
-		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 60);
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
@@ -44,7 +44,7 @@ fn deposit_underlying_should_work() {
 			CurrencyId::DOT,
 			30
 		));
-		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 90);
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 90);
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 10);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 90);
 	});
@@ -53,7 +53,7 @@ fn deposit_underlying_should_work() {
 #[test]
 fn redeem_underlying_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(LiquidityPools::<Test>::unlock_reserve_transactions(
+		assert_ok!(LiquidityPools::<Test>::unlock_pool_transactions(
 			Origin::root(),
 			CurrencyId::DOT
 		));
@@ -62,7 +62,7 @@ fn redeem_underlying_should_work() {
 			CurrencyId::DOT,
 			60
 		));
-		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 60);
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
@@ -80,7 +80,7 @@ fn redeem_underlying_should_work() {
 			CurrencyId::DOT,
 			30
 		));
-		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 30);
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 30);
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 30);
 	});
@@ -89,7 +89,7 @@ fn redeem_underlying_should_work() {
 #[test]
 fn redeem_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(LiquidityPools::<Test>::unlock_reserve_transactions(
+		assert_ok!(LiquidityPools::<Test>::unlock_pool_transactions(
 			Origin::root(),
 			CurrencyId::DOT
 		));
@@ -98,7 +98,7 @@ fn redeem_should_work() {
 			CurrencyId::DOT,
 			60
 		));
-		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 60);
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
@@ -124,7 +124,7 @@ fn redeem_should_work() {
 #[test]
 fn redeem_wrapped_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(LiquidityPools::<Test>::unlock_reserve_transactions(
+		assert_ok!(LiquidityPools::<Test>::unlock_pool_transactions(
 			Origin::root(),
 			CurrencyId::DOT
 		));
@@ -133,7 +133,7 @@ fn redeem_wrapped_should_work() {
 			CurrencyId::DOT,
 			60
 		));
-		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 60);
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
@@ -142,7 +142,7 @@ fn redeem_wrapped_should_work() {
 			CurrencyId::MDOT,
 			35
 		));
-		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 25);
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 25);
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 75);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 25);
 
@@ -158,9 +158,9 @@ fn redeem_wrapped_should_work() {
 }
 
 #[test]
-fn getting_assets_from_reserve_by_different_users_should_work() {
+fn getting_assets_from_pool_by_different_users_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(LiquidityPools::<Test>::unlock_reserve_transactions(
+		assert_ok!(LiquidityPools::<Test>::unlock_pool_transactions(
 			Origin::root(),
 			CurrencyId::DOT
 		));
@@ -169,7 +169,7 @@ fn getting_assets_from_reserve_by_different_users_should_work() {
 			CurrencyId::DOT,
 			60
 		));
-		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 60);
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
@@ -183,7 +183,7 @@ fn getting_assets_from_reserve_by_different_users_should_work() {
 			CurrencyId::DOT,
 			7
 		));
-		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 67);
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 67);
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &BOB), 93);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB), 7);
 	});
@@ -192,7 +192,7 @@ fn getting_assets_from_reserve_by_different_users_should_work() {
 #[test]
 fn borrow_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(LiquidityPools::<Test>::unlock_reserve_transactions(
+		assert_ok!(LiquidityPools::<Test>::unlock_pool_transactions(
 			Origin::root(),
 			CurrencyId::DOT
 		));
@@ -201,7 +201,7 @@ fn borrow_should_work() {
 			CurrencyId::DOT,
 			60
 		));
-		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 60);
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
@@ -215,10 +215,10 @@ fn borrow_should_work() {
 		);
 
 		assert_ok!(MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::DOT, 30));
-		assert_eq!(TestPools::get_reserve_available_liquidity(CurrencyId::DOT), 30);
+		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 30);
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-		assert_eq!(TestPools::get_reserve_total_borrowed(CurrencyId::DOT), 30);
+		assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 30);
 	});
 }
 

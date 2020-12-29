@@ -15,14 +15,14 @@
         "METH"
       ]
     },
-    "Reserve": {
+    "Pool": {
       "current_interest_rate": "Rate",
       "total_borrowed": "Balance",
       "current_exchange_rate": "Rate",
       "is_lock": "bool",
       "total_insurance": "Balance"
     },
-    "ReserveUserData" : {
+    "PoolUserData" : {
       "total_borrowed": "Balance",
       "collateral": "bool",
       "timestamp": "BlockNumber"

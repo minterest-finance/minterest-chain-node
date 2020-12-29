@@ -193,10 +193,12 @@ impl<T: Trait> Module<T> {
 		let wrapped_amount = <Controller<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
 			.map_err(|_| Error::<T>::NumOverflow)?;
 
-		T::MultiCurrency::withdraw(underlying_asset_id, &who, underlying_amount)?;
-
-		<LiquidityPools<T>>::update_state_on_deposit(underlying_amount, underlying_asset_id)
-			.map_err(|_| Error::<T>::InternalPoolError)?;
+		T::MultiCurrency::transfer(
+			underlying_asset_id,
+			&who,
+			&<LiquidityPools<T>>::pools_account_id(),
+			underlying_amount,
+		)?;
 
 		T::MultiCurrency::deposit(wrapped_id, &who, wrapped_amount)?;
 
@@ -246,10 +248,12 @@ impl<T: Trait> Module<T> {
 
 		T::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount)?;
 
-		<LiquidityPools<T>>::update_state_on_redeem(underlying_amount, underlying_asset_id)
-			.map_err(|_| Error::<T>::InternalPoolError)?;
-
-		T::MultiCurrency::deposit(underlying_asset_id, &who, underlying_amount)?;
+		T::MultiCurrency::transfer(
+			underlying_asset_id,
+			&<LiquidityPools<T>>::pools_account_id(),
+			&who,
+			underlying_amount,
+		)?;
 
 		Ok((underlying_amount, wrapped_id, wrapped_amount))
 	}
@@ -270,7 +274,12 @@ impl<T: Trait> Module<T> {
 		<LiquidityPools<T>>::update_state_on_borrow(underlying_asset_id, underlying_amount, who)
 			.map_err(|_| Error::<T>::InternalPoolError)?;
 
-		T::MultiCurrency::deposit(underlying_asset_id, who, underlying_amount)?;
+		T::MultiCurrency::transfer(
+			underlying_asset_id,
+			&<LiquidityPools<T>>::pools_account_id(),
+			&who,
+			underlying_amount,
+		)?;
 
 		Ok(())
 	}
@@ -291,7 +300,12 @@ impl<T: Trait> Module<T> {
 		<LiquidityPools<T>>::update_state_on_repay(underlying_asset_id, underlying_amount, who)
 			.map_err(|_| Error::<T>::InternalPoolError)?;
 
-		T::MultiCurrency::withdraw(underlying_asset_id, who, underlying_amount)?;
+		T::MultiCurrency::transfer(
+			underlying_asset_id,
+			&who,
+			&<LiquidityPools<T>>::pools_account_id(),
+			underlying_amount,
+		)?;
 
 		Ok(())
 	}

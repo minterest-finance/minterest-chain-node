@@ -17,7 +17,7 @@ use sp_std::cmp::Ordering;
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct Reserve {
+pub struct Pool {
 	pub current_interest_rate: Rate, // FIXME: how can i use it?
 	pub total_borrowed: Balance,
 	pub current_exchange_rate: Rate,
@@ -27,7 +27,7 @@ pub struct Reserve {
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct ReserveUserData<BlockNumber> {
+pub struct PoolUserData<BlockNumber> {
 	pub total_borrowed: Balance,
 	pub collateral: bool,
 	pub timestamp: BlockNumber,
@@ -50,16 +50,16 @@ pub trait Trait: frame_system::Trait {
 
 decl_event!(
 	pub enum Event {
-		/// Reserve locked: \[reserve_id\]
-		ReserveLocked(CurrencyId),
+		/// Pool locked: \[pool_id\]
+		PoolLocked(CurrencyId),
 
-		/// Reserve unlocked: \[reserve_id\]
-		ReserveUnLocked(CurrencyId),
+		/// Pool unlocked: \[pool_id\]
+		PoolUnLocked(CurrencyId),
 
-		/// Insurance balance replenished: \[reserve_id, amount\]
+		/// Insurance balance replenished: \[pool_id, amount\]
 		DepositedInsurance(CurrencyId, Balance),
 
-		/// Insurance balance redeemed: \[reserve_id, amount\]
+		/// Insurance balance redeemed: \[pool_id, amount\]
 		RedeemedInsurance(CurrencyId, Balance),
 	}
 );
@@ -67,8 +67,8 @@ decl_event!(
 decl_error! {
 	pub enum Error for Module<T: Trait> {
 
-	/// Reserve not found.
-	ReserveNotFound,
+	/// Pool not found.
+	PoolNotFound,
 
 	/// Not enough balance to withdraw or repay.
 	NotEnoughBalance,
@@ -82,10 +82,10 @@ decl_error! {
 
 decl_storage! {
 	 trait Store for Module<T: Trait> as LiquidityPoolsStorage {
-		pub Reserves get(fn reserves) config(): map hasher(blake2_128_concat) CurrencyId => Reserve;
-		pub ReserveUserDates get(fn reserve_user_data) config(): double_map
+		pub Pools get(fn pools) config(): map hasher(blake2_128_concat) CurrencyId => Pool;
+		pub PoolUserDates get(fn pool_user_data) config(): double_map
 			hasher(blake2_128_concat) T::AccountId,
-			hasher(blake2_128_concat) CurrencyId => ReserveUserData<T::BlockNumber>;
+			hasher(blake2_128_concat) CurrencyId => PoolUserData<T::BlockNumber>;
 	}
 }
 
@@ -97,27 +97,27 @@ decl_module! {
 			/// The Liquidity Pool's module id, keep all assets in Pools.
 			const ModuleId: ModuleId = T::ModuleId::get();
 
-			/// Locks all operations (deposit, redeem, borrow, repay)  with the reserve.
+			/// Locks all operations (deposit, redeem, borrow, repay)  with the pool.
 			///
 			/// The dispatch origin of this call must be _Root_.
 			#[weight = 10_000]
-			pub fn lock_reserve_transactions(origin, reserve_id: CurrencyId) -> DispatchResult {
+			pub fn lock_pool_transactions(origin, pool_id: CurrencyId) -> DispatchResult {
 				ensure_root(origin)?;
-				ensure!(Self::pool_exists(&reserve_id), Error::<T>::ReserveNotFound);
-				Reserves::mutate(reserve_id, |r| r.is_lock = true);
-				Self::deposit_event(Event::ReserveLocked(reserve_id));
+				ensure!(Self::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+				Pools::mutate(pool_id, |r| r.is_lock = true);
+				Self::deposit_event(Event::PoolLocked(pool_id));
 				Ok(())
 			}
 
-			/// Unlocks all operations (deposit, redeem, borrow, repay)  with the reserve.
+			/// Unlocks all operations (deposit, redeem, borrow, repay)  with the pool.
 			///
 			/// The dispatch origin of this call must be _Root_.
 			#[weight = 10_000]
-			pub fn unlock_reserve_transactions(origin, reserve_id: CurrencyId) -> DispatchResult {
+			pub fn unlock_pool_transactions(origin, pool_id: CurrencyId) -> DispatchResult {
 				ensure_root(origin)?;
-				ensure!(Self::pool_exists(&reserve_id), Error::<T>::ReserveNotFound);
-				Reserves::mutate(reserve_id, |r| r.is_lock = false);
-				Self::deposit_event(Event::ReserveUnLocked(reserve_id));
+				ensure!(Self::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+				Pools::mutate(pool_id, |r| r.is_lock = false);
+				Self::deposit_event(Event::PoolUnLocked(pool_id));
 				Ok(())
 			}
 
@@ -125,12 +125,12 @@ decl_module! {
 			///
 			/// The dispatch origin of this call must be _Root_.
 			#[weight = 10_000]
-			pub fn deposit_insurance(origin, reserve_id: CurrencyId, #[compact] amount: Balance) {
+			pub fn deposit_insurance(origin, pool_id: CurrencyId, #[compact] amount: Balance) {
 				with_transaction_result(|| {
 					// FIXME This dispatch should only be called as an _Root_.
 					let account_id = ensure_signed(origin)?;
-					Self::do_deposit_insurance(&account_id, reserve_id, amount)?;
-					Self::deposit_event(Event::DepositedInsurance(reserve_id, amount));
+					Self::do_deposit_insurance(&account_id, pool_id, amount)?;
+					Self::deposit_event(Event::DepositedInsurance(pool_id, amount));
 					Ok(())
 				})?;
 			}
@@ -139,12 +139,12 @@ decl_module! {
 			///
 			/// The dispatch origin of this call must be _Root_.
 			#[weight = 10_000]
-			pub fn redeem_insurance(origin, reserve_id: CurrencyId, #[compact] amount: Balance) {
+			pub fn redeem_insurance(origin, pool_id: CurrencyId, #[compact] amount: Balance) {
 				with_transaction_result(|| {
 					// FIXME This dispatch should only be called as an _Root_.
 					let account_id = ensure_signed(origin)?;
-					Self::do_redeem_insurance(&account_id, reserve_id, amount)?;
-					Self::deposit_event(Event::RedeemedInsurance(reserve_id, amount));
+					Self::do_redeem_insurance(&account_id, pool_id, amount)?;
+					Self::deposit_event(Event::RedeemedInsurance(pool_id, amount));
 					Ok(())
 				})?;
 
@@ -153,53 +153,39 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {
-	pub fn update_state_on_deposit(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
-		Self::update_reserve_liquidity(amount, Balance::zero(), currency_id)?;
-
-		Ok(())
-	}
-
-	pub fn update_state_on_redeem(amount: Balance, currency_id: CurrencyId) -> DispatchResult {
-		Self::update_reserve_liquidity(Balance::zero(), amount, currency_id)?;
-
-		Ok(())
-	}
-}
-
 // Admin functions
 impl<T: Trait> Module<T> {
-	fn do_deposit_insurance(who: &T::AccountId, reserve_id: CurrencyId, amount: Balance) -> DispatchResult {
-		ensure!(Self::pool_exists(&reserve_id), Error::<T>::ReserveNotFound);
+	fn do_deposit_insurance(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
+		ensure!(Self::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 		ensure!(
-			amount <= T::MultiCurrency::free_balance(reserve_id, &who),
+			amount <= T::MultiCurrency::free_balance(pool_id, &who),
 			Error::<T>::NotEnoughBalance
 		);
 
-		T::MultiCurrency::withdraw(reserve_id, &who, amount)?;
+		T::MultiCurrency::transfer(pool_id, &who, &Self::pools_account_id(), amount)?;
 
-		let new_insurance_balance = Self::reserves(reserve_id)
+		let new_insurance_balance = Self::pools(pool_id)
 			.total_insurance
 			.checked_add(amount)
 			.ok_or(Error::<T>::BalanceOverflowed)?;
 
-		Reserves::mutate(reserve_id, |r| r.total_insurance = new_insurance_balance);
+		Pools::mutate(pool_id, |r| r.total_insurance = new_insurance_balance);
 		Ok(())
 	}
 
-	fn do_redeem_insurance(who: &T::AccountId, reserve_id: CurrencyId, amount: Balance) -> DispatchResult {
-		ensure!(Self::pool_exists(&reserve_id), Error::<T>::ReserveNotFound);
+	fn do_redeem_insurance(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
+		ensure!(Self::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 
-		let current_total_insurance = Self::reserves(reserve_id).total_insurance;
+		let current_total_insurance = Self::pools(pool_id).total_insurance;
 		ensure!(amount <= current_total_insurance, Error::<T>::NotEnoughBalance);
 
-		T::MultiCurrency::deposit(reserve_id, &who, amount)?;
+		T::MultiCurrency::transfer(pool_id, &Self::pools_account_id(), &who, amount)?;
 
 		let new_insurance_balance = current_total_insurance
 			.checked_sub(amount)
 			.ok_or(Error::<T>::NotEnoughBalance)?;
 
-		Reserves::mutate(reserve_id, |r| r.total_insurance = new_insurance_balance);
+		Pools::mutate(pool_id, |r| r.total_insurance = new_insurance_balance);
 		Ok(())
 	}
 }
@@ -207,12 +193,12 @@ impl<T: Trait> Module<T> {
 // Setters for LiquidityPools
 impl<T: Trait> Module<T> {
 	pub fn set_current_interest_rate(underlying_asset_id: CurrencyId, _rate: Rate) -> DispatchResult {
-		Reserves::mutate(underlying_asset_id, |r| r.current_interest_rate = Rate::from_inner(1));
+		Pools::mutate(underlying_asset_id, |r| r.current_interest_rate = Rate::from_inner(1));
 		Ok(())
 	}
 
 	pub fn set_current_exchange_rate(underlying_asset_id: CurrencyId, rate: Rate) -> DispatchResult {
-		Reserves::mutate(underlying_asset_id, |r| r.current_exchange_rate = rate);
+		Pools::mutate(underlying_asset_id, |r| r.current_exchange_rate = rate);
 		Ok(())
 	}
 
@@ -221,7 +207,7 @@ impl<T: Trait> Module<T> {
 		new_total_borrow_balance: Balance,
 		new_total_insurance: Balance,
 	) -> DispatchResult {
-		Reserves::mutate(underlying_asset_id, |r| {
+		Pools::mutate(underlying_asset_id, |r| {
 			r.total_borrowed = new_total_borrow_balance;
 			r.total_insurance = new_total_insurance;
 		});
@@ -231,65 +217,42 @@ impl<T: Trait> Module<T> {
 
 // Getters for LiquidityPools
 impl<T: Trait> Module<T> {
-	fn account_id() -> T::AccountId {
+	pub fn pools_account_id() -> T::AccountId {
 		T::ModuleId::get().into_account()
 	}
 
-	pub fn get_reserve_available_liquidity(currency_id: CurrencyId) -> Balance {
-		let module_account_id = Self::account_id();
+	pub fn get_pool_available_liquidity(currency_id: CurrencyId) -> Balance {
+		let module_account_id = Self::pools_account_id();
 		T::MultiCurrency::free_balance(currency_id, &module_account_id)
 	}
 
-	pub fn get_reserve_total_borrowed(currency_id: CurrencyId) -> Balance {
-		Self::reserves(currency_id).total_borrowed
+	pub fn get_pool_total_borrowed(currency_id: CurrencyId) -> Balance {
+		Self::pools(currency_id).total_borrowed
 	}
 
-	pub fn get_reserve_total_insurance(currency_id: CurrencyId) -> Balance {
-		Self::reserves(currency_id).total_insurance
+	pub fn get_pool_total_insurance(currency_id: CurrencyId) -> Balance {
+		Self::pools(currency_id).total_insurance
 	}
 
 	pub fn get_user_total_borrowed(who: &T::AccountId, currency_id: CurrencyId) -> Balance {
-		Self::reserve_user_data(who, currency_id).total_borrowed
+		Self::pool_user_data(who, currency_id).total_borrowed
 	}
 
 	pub fn check_user_available_collateral(who: &T::AccountId, currency_id: CurrencyId) -> bool {
-		Self::reserve_user_data(who, currency_id).collateral
+		Self::pool_user_data(who, currency_id).collateral
 	}
 }
 
 // Private methods for LiquidityPools
 impl<T: Trait> Module<T> {
-	fn update_reserve_liquidity(
-		liquidity_added: Balance,
-		liquidity_taken: Balance,
-		underlying_asset_id: CurrencyId,
-	) -> DispatchResult {
-		ensure!(Self::pool_exists(&underlying_asset_id), Error::<T>::ReserveNotFound);
-
-		let current_reserve_balance = Self::get_reserve_available_liquidity(underlying_asset_id);
-
-		let new_reserve_balance = match liquidity_added.cmp(&Balance::zero()) {
-			Ordering::Greater => current_reserve_balance
-				.checked_add(liquidity_added)
-				.ok_or(Error::<T>::BalanceOverflowed)?,
-			_ => current_reserve_balance
-				.checked_sub(liquidity_taken)
-				.ok_or(Error::<T>::NotEnoughBalance)?,
-		};
-
-		Reserves::mutate(underlying_asset_id, |r| r.total_balance = new_reserve_balance);
-
-		Ok(())
-	}
-
-	fn update_reserve_and_user_total_borrowed(
+	fn update_pool_and_user_total_borrowed(
 		underlying_asset_id: CurrencyId,
 		amount_borrowed_add: Balance,
 		amount_borrowed_reduce: Balance,
 		who: &T::AccountId,
 	) -> DispatchResult {
-		let current_user_borrow_balance = Self::reserve_user_data(who, underlying_asset_id).total_borrowed;
-		let current_total_borrow_balance = Self::reserves(underlying_asset_id).total_borrowed;
+		let current_user_borrow_balance = Self::pool_user_data(who, underlying_asset_id).total_borrowed;
+		let current_total_borrow_balance = Self::pools(underlying_asset_id).total_borrowed;
 
 		let (new_user_borrow_balance, new_total_borrow_balance) = match amount_borrowed_add.cmp(&Balance::zero()) {
 			Ordering::Greater => (
@@ -310,14 +273,14 @@ impl<T: Trait> Module<T> {
 			),
 		};
 
-		ReserveUserDates::<T>::mutate(who, underlying_asset_id, |x| x.total_borrowed = new_user_borrow_balance);
-		Reserves::mutate(underlying_asset_id, |x| x.total_borrowed = new_total_borrow_balance);
+		PoolUserDates::<T>::mutate(who, underlying_asset_id, |x| x.total_borrowed = new_user_borrow_balance);
+		Pools::mutate(underlying_asset_id, |x| x.total_borrowed = new_total_borrow_balance);
 
 		Ok(())
 	}
 
 	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
-		Reserves::contains_key(underlying_asset_id)
+		Pools::contains_key(underlying_asset_id)
 	}
 }
 
@@ -328,8 +291,7 @@ impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 		amount_borrowed: Balance,
 		who: &T::AccountId,
 	) -> DispatchResult {
-		Self::update_reserve_liquidity(Balance::zero(), amount_borrowed, underlying_asset_id)?;
-		Self::update_reserve_and_user_total_borrowed(underlying_asset_id, amount_borrowed, Balance::zero(), who)?;
+		Self::update_pool_and_user_total_borrowed(underlying_asset_id, amount_borrowed, Balance::zero(), who)?;
 		Ok(())
 	}
 
@@ -338,8 +300,7 @@ impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 		amount_borrowed: Balance,
 		who: &T::AccountId,
 	) -> DispatchResult {
-		Self::update_reserve_liquidity(amount_borrowed, Balance::zero(), underlying_asset_id)?;
-		Self::update_reserve_and_user_total_borrowed(underlying_asset_id, Balance::zero(), amount_borrowed, who)?;
+		Self::update_pool_and_user_total_borrowed(underlying_asset_id, Balance::zero(), amount_borrowed, who)?;
 		Ok(())
 	}
 }
