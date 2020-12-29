@@ -1,4 +1,4 @@
-use liquidity_pools::Reserve;
+use liquidity_pools::Pool;
 use node_minterest_runtime::{
 	AccountId, AuraConfig, Balance, BalancesConfig, CurrencyId, GenesisConfig, GrandpaConfig, LiquidityPoolsConfig,
 	Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
@@ -177,10 +177,10 @@ fn testnet_genesis(
 				.collect(),
 		}),
 		liquidity_pools: Some(LiquidityPoolsConfig {
-			reserves: vec![
+			pools: vec![
 				(
 					CurrencyId::ETH,
-					Reserve {
+					Pool {
 						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
@@ -191,7 +191,7 @@ fn testnet_genesis(
 				),
 				(
 					CurrencyId::DOT,
-					Reserve {
+					Pool {
 						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
@@ -202,7 +202,7 @@ fn testnet_genesis(
 				),
 				(
 					CurrencyId::KSM,
-					Reserve {
+					Pool {
 						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
@@ -213,7 +213,7 @@ fn testnet_genesis(
 				),
 				(
 					CurrencyId::BTC,
-					Reserve {
+					Pool {
 						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
@@ -223,7 +223,7 @@ fn testnet_genesis(
 					},
 				),
 			],
-			reserve_user_data: vec![],
+			pool_user_data: vec![],
 		}),
 	}
 }

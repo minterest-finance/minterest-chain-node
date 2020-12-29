@@ -145,10 +145,10 @@ impl ExtBuilder {
 		.unwrap();
 
 		GenesisConfig::<Runtime> {
-			reserves: vec![
+			pools: vec![
 				(
 					CurrencyId::ETH,
-					Reserve {
+					Pool {
 						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
@@ -159,7 +159,7 @@ impl ExtBuilder {
 				),
 				(
 					CurrencyId::DOT,
-					Reserve {
+					Pool {
 						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
@@ -170,7 +170,7 @@ impl ExtBuilder {
 				),
 				(
 					CurrencyId::KSM,
-					Reserve {
+					Pool {
 						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
@@ -181,7 +181,7 @@ impl ExtBuilder {
 				),
 				(
 					CurrencyId::BTC,
-					Reserve {
+					Pool {
 						total_balance: Balance::zero(),
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
@@ -191,7 +191,7 @@ impl ExtBuilder {
 					},
 				),
 			],
-			reserve_user_data: vec![],
+			pool_user_data: vec![],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

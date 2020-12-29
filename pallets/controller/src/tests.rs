@@ -81,7 +81,7 @@ fn get_exchange_rate_should_work() {
 			Ok(Rate::saturating_from_rational(1, 1))
 		);
 		assert_eq!(
-			TestPools::reserves(&CurrencyId::DOT).current_exchange_rate,
+			TestPools::pools(&CurrencyId::DOT).current_exchange_rate,
 			Rate::saturating_from_rational(1, 1)
 		);
 	});
@@ -125,12 +125,12 @@ fn calculate_interest_accumulated_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(Controller::calculate_interest_accumulated(
 			Rate::saturating_from_rational(1, 1),
-			TestPools::reserves(CurrencyId::DOT).total_balance
+			TestPools::pools(CurrencyId::DOT).total_balance
 		));
 		assert_eq!(
 			Controller::calculate_interest_accumulated(
 				Rate::saturating_from_rational(0, 1),
-				TestPools::reserves(CurrencyId::DOT).total_balance
+				TestPools::pools(CurrencyId::DOT).total_balance
 			),
 			Ok(0)
 		);

@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
-use liquidity_pools::Reserve;
+use liquidity_pools::Pool;
 pub use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_currencies::Currency;
 use sp_core::H256;
@@ -196,10 +196,10 @@ impl ExtBuilder {
 		.unwrap();
 
 		liquidity_pools::GenesisConfig::<Runtime> {
-			reserves: vec![
+			pools: vec![
 				(
 					CurrencyId::ETH,
-					Reserve {
+					Pool {
 						total_balance: Balance::zero(),
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
@@ -210,7 +210,7 @@ impl ExtBuilder {
 				),
 				(
 					CurrencyId::DOT,
-					Reserve {
+					Pool {
 						total_balance: ONE_HUNDRED,
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
@@ -221,7 +221,7 @@ impl ExtBuilder {
 				),
 				(
 					CurrencyId::KSM,
-					Reserve {
+					Pool {
 						total_balance: Balance::zero(),
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
@@ -232,7 +232,7 @@ impl ExtBuilder {
 				),
 				(
 					CurrencyId::BTC,
-					Reserve {
+					Pool {
 						total_balance: 10,
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
@@ -242,7 +242,7 @@ impl ExtBuilder {
 					},
 				),
 			],
-			reserve_user_data: vec![],
+			pool_user_data: vec![],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

@@ -28,7 +28,7 @@ fn pool_not_found() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
 			LiquidityPools::update_state_on_deposit(100, CurrencyId::MBTC),
-			Error::<Runtime>::ReserveNotFound
+			Error::<Runtime>::PoolNotFound
 		);
 	});
 }
@@ -70,41 +70,38 @@ fn add_and_without_liquidity() {
 }
 
 #[test]
-fn lock_reserve_transactions_should_work() {
+fn lock_pooltransactions_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(LiquidityPools::reserves(&CurrencyId::DOT).is_lock, false);
-		assert_ok!(LiquidityPools::lock_reserve_transactions(
-			Origin::root(),
-			CurrencyId::DOT
-		));
-		assert_eq!(LiquidityPools::reserves(&CurrencyId::DOT).is_lock, true);
+		assert_eq!(LiquidityPools::pools(&CurrencyId::DOT).is_lock, false);
+		assert_ok!(LiquidityPools::lock_pool_transactions(Origin::root(), CurrencyId::DOT));
+		assert_eq!(LiquidityPools::pools(&CurrencyId::DOT).is_lock, true);
 		assert_noop!(
-			LiquidityPools::lock_reserve_transactions(Origin::signed(ALICE), CurrencyId::DOT),
+			LiquidityPools::lock_pool_transactions(Origin::signed(ALICE), CurrencyId::DOT),
 			BadOrigin
 		);
 		assert_noop!(
-			LiquidityPools::lock_reserve_transactions(Origin::root(), CurrencyId::MDOT),
-			Error::<Runtime>::ReserveNotFound
+			LiquidityPools::lock_pool_transactions(Origin::root(), CurrencyId::MDOT),
+			Error::<Runtime>::PoolNotFound
 		);
 	});
 }
 
 #[test]
-fn unlock_reserve_transactions_should_work() {
+fn unlock_pool_transactions_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(LiquidityPools::reserves(&CurrencyId::ETH).is_lock, true);
-		assert_ok!(LiquidityPools::unlock_reserve_transactions(
+		assert_eq!(LiquidityPools::pools(&CurrencyId::ETH).is_lock, true);
+		assert_ok!(LiquidityPools::unlock_pool_transactions(
 			Origin::root(),
 			CurrencyId::ETH
 		));
-		assert_eq!(LiquidityPools::reserves(&CurrencyId::ETH).is_lock, false);
+		assert_eq!(LiquidityPools::pools(&CurrencyId::ETH).is_lock, false);
 		assert_noop!(
-			LiquidityPools::lock_reserve_transactions(Origin::signed(ALICE), CurrencyId::ETH),
+			LiquidityPools::lock_pool_transactions(Origin::signed(ALICE), CurrencyId::ETH),
 			BadOrigin
 		);
 		assert_noop!(
-			LiquidityPools::lock_reserve_transactions(Origin::root(), CurrencyId::METH),
-			Error::<Runtime>::ReserveNotFound
+			LiquidityPools::lock_pool_transactions(Origin::root(), CurrencyId::METH),
+			Error::<Runtime>::PoolNotFound
 		);
 	});
 }
@@ -122,7 +119,7 @@ fn deposit_insurance_should_work() {
 			);
 			assert_noop!(
 				LiquidityPools::deposit_insurance(Origin::signed(ALICE), CurrencyId::MDOT, 5),
-				Error::<Runtime>::ReserveNotFound
+				Error::<Runtime>::PoolNotFound
 			);
 
 			assert_ok!(LiquidityPools::deposit_insurance(
@@ -130,7 +127,7 @@ fn deposit_insurance_should_work() {
 				CurrencyId::DOT,
 				60
 			));
-			assert_eq!(LiquidityPools::get_reserve_total_insurance(CurrencyId::DOT), 60);
+			assert_eq!(LiquidityPools::get_pool_total_insurance(CurrencyId::DOT), 60);
 			assert_eq!(TestMTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
 
 			assert_ok!(LiquidityPools::deposit_insurance(
@@ -138,7 +135,7 @@ fn deposit_insurance_should_work() {
 				CurrencyId::DOT,
 				5
 			));
-			assert_eq!(LiquidityPools::get_reserve_total_insurance(CurrencyId::DOT), 65);
+			assert_eq!(LiquidityPools::get_pool_total_insurance(CurrencyId::DOT), 65);
 			assert_eq!(TestMTokens::free_balance(CurrencyId::DOT, &ALICE), 35);
 		});
 }
@@ -152,7 +149,7 @@ fn redeem_insurance_should_work() {
 			// FIXME This dispatch should only be called as an _Root_.
 			assert_noop!(
 				LiquidityPools::deposit_insurance(Origin::signed(ALICE), CurrencyId::MDOT, 5),
-				Error::<Runtime>::ReserveNotFound
+				Error::<Runtime>::PoolNotFound
 			);
 
 			assert_ok!(LiquidityPools::deposit_insurance(
@@ -160,7 +157,7 @@ fn redeem_insurance_should_work() {
 				CurrencyId::DOT,
 				60
 			));
-			assert_eq!(LiquidityPools::get_reserve_total_insurance(CurrencyId::DOT), 60);
+			assert_eq!(LiquidityPools::get_pool_total_insurance(CurrencyId::DOT), 60);
 			assert_eq!(TestMTokens::free_balance(CurrencyId::DOT, &ALICE), 40);
 
 			assert_noop!(
@@ -173,7 +170,7 @@ fn redeem_insurance_should_work() {
 				CurrencyId::DOT,
 				30
 			));
-			assert_eq!(LiquidityPools::get_reserve_total_insurance(CurrencyId::DOT), 30);
+			assert_eq!(LiquidityPools::get_pool_total_insurance(CurrencyId::DOT), 30);
 			assert_eq!(TestMTokens::free_balance(CurrencyId::DOT, &ALICE), 70);
 		});
 }
