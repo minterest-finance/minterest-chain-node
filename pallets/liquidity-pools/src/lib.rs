@@ -4,6 +4,7 @@ use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{ensure_root, ensure_signed};
 use minterest_primitives::{Balance, CurrencyId, Rate};
+use orml_traits::MultiCurrency;
 use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
 #[cfg(feature = "std")]
@@ -35,14 +36,15 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait: frame_system::Trait + m_tokens::Trait {
+pub trait Trait: frame_system::Trait {
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
 	/// The Liquidity Pool's module id, keep all assets in Pools.
 	type ModuleId: Get<ModuleId>;
-}
 
-type MTokens<T> = m_tokens::Module<T>;
+	/// The `MultiCurrency` implementation.
+	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
+}
 
 decl_event!(
 	pub enum Event {
@@ -165,11 +167,11 @@ impl<T: Trait> Module<T> {
 	fn do_deposit_insurance(who: &T::AccountId, reserve_id: CurrencyId, amount: Balance) -> DispatchResult {
 		ensure!(Self::pool_exists(&reserve_id), Error::<T>::ReserveNotFound);
 		ensure!(
-			amount <= <MTokens<T>>::free_balance(reserve_id, &who),
+			amount <= T::MultiCurrency::free_balance(reserve_id, &who),
 			Error::<T>::NotEnoughBalance
 		);
 
-		<MTokens<T>>::withdraw(reserve_id, &who, amount)?;
+		T::MultiCurrency::withdraw(reserve_id, &who, amount)?;
 
 		let new_insurance_balance = Self::reserves(reserve_id)
 			.total_insurance
@@ -186,7 +188,7 @@ impl<T: Trait> Module<T> {
 		let current_total_insurance = Self::reserves(reserve_id).total_insurance;
 		ensure!(amount <= current_total_insurance, Error::<T>::NotEnoughBalance);
 
-		<MTokens<T>>::deposit(reserve_id, &who, amount)?;
+		T::MultiCurrency::deposit(reserve_id, &who, amount)?;
 
 		let new_insurance_balance = current_total_insurance
 			.checked_sub(amount)

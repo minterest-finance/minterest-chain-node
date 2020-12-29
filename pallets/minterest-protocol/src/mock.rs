@@ -8,7 +8,7 @@ use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{IdentityLookup, Zero},
-	Perbill,
+	ModuleId, Perbill,
 };
 
 use super::*;
@@ -22,7 +22,6 @@ impl_outer_event! {
 		frame_system<T>,
 		orml_tokens<T>,
 		orml_currencies<T>,
-		m_tokens<T>,
 		liquidity_pools,
 		minterest_protocol<T>,
 		controller,
@@ -104,13 +103,14 @@ impl orml_currencies::Trait for Test {
 	type WeightInfo = ();
 }
 
-impl m_tokens::Trait for Test {
-	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Test>;
+parameter_types! {
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
 }
 
 impl liquidity_pools::Trait for Test {
 	type Event = Event;
+	type MultiCurrency = orml_tokens::Module<Test>;
+	type ModuleId = LiquidityPoolsModuleId;
 }
 
 parameter_types! {
@@ -158,8 +158,8 @@ pub const BOB: AccountId = 2;
 pub const ONE_MILL: Balance = 1_000_000;
 pub const ONE_HUNDRED: Balance = 100;
 pub type MinterestProtocol = Module<Test>;
-pub type TestMTokens = m_tokens::Module<Test>;
 pub type TestPools = liquidity_pools::Module<Test>;
+pub type Currencies = orml_currencies::Module<Test>;
 
 //TODO Add the value of the exchange rating = 80% after implementing the storage.
 

@@ -278,6 +278,7 @@ impl orml_currencies::Trait for Runtime {
 
 impl liquidity_pools::Trait for Runtime {
 	type Event = Event;
+	type MultiCurrency = Currencies;
 	type ModuleId = LiquidityPoolsModuleId;
 }
 

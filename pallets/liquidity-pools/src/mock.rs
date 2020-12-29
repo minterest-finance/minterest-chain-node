@@ -94,10 +94,13 @@ pub type System = frame_system::Module<Runtime>;
 
 parameter_types! {
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MINT;
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
 }
 
 impl Trait for Runtime {
 	type Event = TestEvent;
+	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type ModuleId = LiquidityPoolsModuleId;
 }
 
 pub type LiquidityPools = Module<Runtime>;

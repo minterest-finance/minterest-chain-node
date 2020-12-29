@@ -8,7 +8,7 @@ use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{IdentityLookup, Zero},
-	Perbill,
+	ModuleId, Perbill,
 };
 
 use super::*;
@@ -28,7 +28,6 @@ impl_outer_event! {
 		orml_currencies<T>,
 		liquidity_pools,
 		controller,
-		m_tokens<T>,
 	}
 }
 
@@ -102,13 +101,15 @@ impl orml_currencies::Trait for Runtime {
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type WeightInfo = ();
 }
-impl liquidity_pools::Trait for Runtime {
-	type Event = TestEvent;
+
+parameter_types! {
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
 }
 
-impl m_tokens::Trait for Runtime {
+impl liquidity_pools::Trait for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type ModuleId = LiquidityPoolsModuleId;
 }
 
 parameter_types! {

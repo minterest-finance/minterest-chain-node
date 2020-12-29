@@ -13,7 +13,7 @@ mod tests {
 	use sp_runtime::{
 		testing::Header,
 		traits::{IdentityLookup, Zero},
-		Perbill,
+		ModuleId, Perbill,
 	};
 
 	use minterest_protocol::Error as MinterestProtocolError;
@@ -119,8 +119,14 @@ mod tests {
 		type MultiCurrency = orml_tokens::Module<Test>;
 	}
 
+	parameter_types! {
+		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
+	}
+
 	impl liquidity_pools::Trait for Test {
 		type Event = ();
+		type MultiCurrency = orml_tokens::Module<Test>;
+		type ModuleId = LiquidityPoolsModuleId;
 	}
 
 	impl minterest_protocol::Trait for Test {
