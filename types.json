@@ -16,7 +16,6 @@
       ]
     },
     "Reserve": {
-      "total_balance": "Balance",
       "current_interest_rate": "Rate",
       "total_borrowed": "Balance",
       "current_exchange_rate": "Rate",

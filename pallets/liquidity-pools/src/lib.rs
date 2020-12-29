@@ -9,13 +9,15 @@ use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::{traits::Zero, DispatchResult, ModuleId, RuntimeDebug};
+use sp_runtime::{
+	traits::{AccountIdConversion, Zero},
+	DispatchResult, ModuleId, RuntimeDebug,
+};
 use sp_std::cmp::Ordering;
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct Reserve {
-	pub total_balance: Balance,
 	pub current_interest_rate: Rate, // FIXME: how can i use it?
 	pub total_borrowed: Balance,
 	pub current_exchange_rate: Rate,
@@ -91,6 +93,9 @@ decl_module! {
 		pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 			type Error = Error<T>;
 			fn deposit_event() = default;
+
+			/// The Liquidity Pool's module id, keep all assets in Pools.
+			const ModuleId: ModuleId = T::ModuleId::get();
 
 			/// Locks all operations (deposit, redeem, borrow, repay)  with the reserve.
 			///
@@ -226,8 +231,13 @@ impl<T: Trait> Module<T> {
 
 // Getters for LiquidityPools
 impl<T: Trait> Module<T> {
+	fn account_id() -> T::AccountId {
+		T::ModuleId::get().into_account()
+	}
+
 	pub fn get_reserve_available_liquidity(currency_id: CurrencyId) -> Balance {
-		Self::reserves(currency_id).total_balance
+		let module_account_id = Self::account_id();
+		T::MultiCurrency::free_balance(currency_id, &module_account_id)
 	}
 
 	pub fn get_reserve_total_borrowed(currency_id: CurrencyId) -> Balance {
@@ -256,7 +266,7 @@ impl<T: Trait> Module<T> {
 	) -> DispatchResult {
 		ensure!(Self::pool_exists(&underlying_asset_id), Error::<T>::ReserveNotFound);
 
-		let current_reserve_balance = Self::reserves(underlying_asset_id).total_balance;
+		let current_reserve_balance = Self::get_reserve_available_liquidity(underlying_asset_id);
 
 		let new_reserve_balance = match liquidity_added.cmp(&Balance::zero()) {
 			Ordering::Greater => current_reserve_balance
