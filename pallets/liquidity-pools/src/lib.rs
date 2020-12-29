@@ -73,6 +73,15 @@ decl_error! {
 	}
 }
 
+decl_storage! {
+	 trait Store for Module<T: Trait> as LiquidityPoolsStorage {
+		pub Reserves get(fn reserves) config(): map hasher(blake2_128_concat) CurrencyId => Reserve;
+		pub ReserveUserDates get(fn reserve_user_data) config(): double_map
+			hasher(blake2_128_concat) T::AccountId,
+			hasher(blake2_128_concat) CurrencyId => ReserveUserData<T::BlockNumber>;
+	}
+}
+
 decl_module! {
 		pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 			type Error = Error<T>;
@@ -131,15 +140,6 @@ decl_module! {
 
 			}
 
-	}
-}
-
-decl_storage! {
-	 trait Store for Module<T: Trait> as LiquidityPoolsStorage {
-		pub Reserves get(fn reserves) config(): map hasher(blake2_128_concat) CurrencyId => Reserve;
-		pub ReserveUserDates get(fn reserve_user_data) config(): double_map
-			hasher(blake2_128_concat) T::AccountId,
-			hasher(blake2_128_concat) CurrencyId => ReserveUserData<T::BlockNumber>;
 	}
 }
 
