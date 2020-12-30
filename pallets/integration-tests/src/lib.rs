@@ -75,17 +75,19 @@ mod tests {
 	pub struct MockBorrowing;
 	impl Borrowing<AccountId> for MockBorrowing {
 		fn update_state_on_borrow(
+			_who: &AccountId,
 			_underlying_asset_id: CurrencyId,
 			_amount_borrowed: Balance,
-			_who: &AccountId,
+			_account_borrows: Balance,
 		) -> DispatchResult {
 			Ok(())
 		}
 
 		fn update_state_on_repay(
+			_who: &AccountId,
 			_underlying_asset_id: CurrencyId,
 			_amount_borrowed: Balance,
-			_who: &AccountId,
+			_account_borrows: Balance,
 		) -> DispatchResult {
 			Ok(())
 		}
