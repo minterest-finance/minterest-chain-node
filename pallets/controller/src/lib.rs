@@ -16,6 +16,7 @@ use sp_std::{cmp::Ordering, convert::TryInto, result};
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct ControllerData<BlockNumber> {
+	/// Block number that interest was last accrued at.
 	pub timestamp: BlockNumber,
 	pub borrow_rate: Rate,
 }

@@ -74,6 +74,9 @@ decl_error! {
 
 		/// Number overflow in calculation.
 		NumOverflow,
+
+		/// The block number in the pool is equal to the current block number.
+		PoolNotFresh
 	}
 }
 
@@ -283,11 +286,15 @@ impl<T: Trait> Module<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalPoolError)?;
 
+		// Fetch the amount the borrower owes, with accumulated interest
+		let account_borrows =
+			<Controller<T>>::borrow_balance_stored(&who, underlying_asset_id).map_err(|_| Error::<T>::NumOverflow)?;
+
+		let pool_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
+
 		// Calculate the new borrower and total borrow balances, failing on overflow:
 		// account_borrows_new = account_borrows + borrow_amount
 		// total_borrows_new = total_borrows + borrow_amount
-		let account_borrows =
-			<Controller<T>>::borrow_balance_stored(&who, underlying_asset_id).map_err(|_| Error::<T>::NumOverflow)?;
 		let account_borrow_new = account_borrows
 			.checked_add(borrow_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
@@ -302,8 +309,6 @@ impl<T: Trait> Module<T> {
 			&who,
 			borrow_amount,
 		)?;
-
-		let pool_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
 
 		// Write the previously calculated values into storage.
 		<LiquidityPools<T>>::set_pool_total_borrowed(underlying_asset_id, total_borrows_new)
@@ -337,15 +342,50 @@ impl<T: Trait> Module<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalPoolError)?;
 
-		<LiquidityPools<T>>::update_state_on_repay(underlying_asset_id, repay_amount, who)
-			.map_err(|_| Error::<T>::InternalPoolError)?;
+		// Verify pool's block number equals current block number
+		let current_block_number = <frame_system::Module<T>>::block_number();
+		let accrual_block_number_previous = <Controller<T>>::controller_dates(underlying_asset_id).timestamp;
+		ensure!(
+			current_block_number == accrual_block_number_previous,
+			Error::<T>::PoolNotFresh
+		);
 
+		// Fetch the amount the borrower owes, with accumulated interest
+		let account_borrows =
+			<Controller<T>>::borrow_balance_stored(&who, underlying_asset_id).map_err(|_| Error::<T>::NumOverflow)?;
+
+		let pool_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
+
+		// TODO implement the logic to repay all assets.
+
+		// Calculate the new borrower and total borrow balances, failing on overflow:
+		// account_borrows_new = account_borrows - repay_amount
+		// total_borrows_new = total_borrows + repay_amount
+		let account_borrow_new = account_borrows
+			.checked_sub(repay_amount)
+			.ok_or(Error::<T>::NumOverflow)?;
+		let total_borrows_new = <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id)
+			.checked_sub(repay_amount)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		// Transfer the repay_amount from the borrower's account to the protocol account.
 		T::MultiCurrency::transfer(
 			underlying_asset_id,
 			&who,
 			&<LiquidityPools<T>>::pools_account_id(),
 			repay_amount,
 		)?;
+
+		// Write the previously calculated values into storage.
+		<LiquidityPools<T>>::set_pool_total_borrowed(underlying_asset_id, total_borrows_new)
+			.map_err(|_| Error::<T>::InternalPoolError)?;
+		<LiquidityPools<T>>::set_user_total_borrowed_and_interest_index(
+			&who,
+			underlying_asset_id,
+			account_borrow_new,
+			pool_borrow_index,
+		)
+		.map_err(|_| Error::<T>::InternalPoolError)?;
 
 		Ok(())
 	}

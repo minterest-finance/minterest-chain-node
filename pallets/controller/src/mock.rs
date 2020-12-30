@@ -228,11 +228,6 @@ impl ExtBuilder {
 		)];
 		self
 	}
-	//
-	// pub fn set_pool_dots(mut self) -> Self {
-	// 	self.pool_user_data.push();
-	// 	self
-	// }
 
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()
