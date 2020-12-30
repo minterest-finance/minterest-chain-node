@@ -30,7 +30,8 @@ pub struct Pool {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct PoolUserData<BlockNumber> {
-	/// Total balance (with accrued interest), after applying the most recent balance-changing action
+	/// Total balance (with accrued interest), after applying the most
+	/// recent balance-changing action
 	pub total_borrowed: Balance,
 	/// Global borrow_index as of the most recent balance-changing action
 	pub interest_index: Rate,
@@ -207,6 +208,24 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
+	pub fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) -> DispatchResult {
+		Pools::mutate(pool_id, |pool| pool.total_borrowed = new_total_borrows);
+		Ok(())
+	}
+
+	pub fn set_user_total_borrowed_and_interest_index(
+		who: &T::AccountId,
+		pool_id: CurrencyId,
+		new_total_borrows: Balance,
+		new_interest_index: Rate,
+	) -> DispatchResult {
+		PoolUserDates::<T>::mutate(who, pool_id, |p| {
+			p.total_borrowed = new_total_borrows;
+			p.interest_index = new_interest_index;
+		});
+		Ok(())
+	}
+
 	pub fn set_accrual_interest_params(
 		underlying_asset_id: CurrencyId,
 		new_total_borrow_balance: Balance,
@@ -261,6 +280,7 @@ impl<T: Trait> Module<T> {
 
 // Private methods for LiquidityPools
 impl<T: Trait> Module<T> {
+	//TODO Do we need this function?
 	fn update_pool_and_user_total_borrowed(
 		underlying_asset_id: CurrencyId,
 		amount_borrowed_add: Balance,
@@ -302,15 +322,17 @@ impl<T: Trait> Module<T> {
 
 // Trait Borrowing for LiquidityPools
 impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
+	//TODO Do we need this function?
 	fn update_state_on_borrow(
 		underlying_asset_id: CurrencyId,
-		amount_borrowed: Balance,
+		borrow_amount: Balance,
 		who: &T::AccountId,
 	) -> DispatchResult {
-		Self::update_pool_and_user_total_borrowed(underlying_asset_id, amount_borrowed, Balance::zero(), who)?;
+		Self::update_pool_and_user_total_borrowed(underlying_asset_id, borrow_amount, Balance::zero(), who)?;
 		Ok(())
 	}
 
+	//TODO Do we need this function?
 	fn update_state_on_repay(
 		underlying_asset_id: CurrencyId,
 		amount_borrowed: Balance,
