@@ -114,15 +114,11 @@ impl liquidity_pools::Trait for Runtime {
 
 parameter_types! {
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
-	pub const MaxBorrowRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
-	pub const InsuranceFactor: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 }
 
 impl Trait for Runtime {
 	type Event = TestEvent;
 	type InitialExchangeRate = InitialExchangeRate;
-	type InsuranceFactor = InsuranceFactor;
-	type MaxBorrowRate = MaxBorrowRate;
 }
 
 pub type BlockNumber = u64;
@@ -192,13 +188,17 @@ impl ExtBuilder {
 		.unwrap();
 
 		GenesisConfig::<Runtime> {
-			controller_dates: vec![(
-				CurrencyId::KSM,
-				ControllerData {
-					timestamp: 10,
-					borrow_rate: Rate::saturating_from_rational(1, 1),
-				},
-			)],
+			controller_dates: vec![
+				(
+					CurrencyId::DOT,
+					ControllerData {
+						timestamp: 0,
+						borrow_rate: Rate::saturating_from_rational(1,1),
+						insurance_factor: Rate::saturating_from_rational(1, 1),
+						max_borrow_rate: Rate::saturating_from_rational(1,1),
+					},
+				)
+			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

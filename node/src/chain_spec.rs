@@ -1,7 +1,8 @@
 use liquidity_pools::Pool;
+use controller::ControllerData;
 use node_minterest_runtime::{
 	AccountId, AuraConfig, Balance, BalancesConfig, CurrencyId, GenesisConfig, GrandpaConfig, LiquidityPoolsConfig,
-	Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
+	ControllerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
 };
 use hex_literal::hex;
 use sc_service::ChainType;
@@ -10,10 +11,7 @@ use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
-use sp_runtime::{
-	traits::{IdentifyAccount, Verify, Zero},
-	FixedU128,
-};
+use sp_runtime::{traits::{IdentifyAccount, Verify, Zero}, FixedU128, FixedPointNumber};
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -269,5 +267,46 @@ fn testnet_genesis(
 			],
 			pool_user_data: vec![],
 		}),
+		controller: Some(ControllerConfig {
+			controller_dates: vec![
+				(
+					CurrencyId::ETH,
+					ControllerData {
+						timestamp: 1,
+						borrow_rate: FixedU128::from_inner(0),
+						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+					}
+				),
+				(
+					CurrencyId::DOT,
+					ControllerData {
+						timestamp: 1,
+						borrow_rate: FixedU128::from_inner(0),
+						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+					}
+				),
+				(
+					CurrencyId::KSM,
+					ControllerData {
+						timestamp: 1,
+						borrow_rate: FixedU128::from_inner(0),
+						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+					}
+				),
+				(
+					CurrencyId::BTC,
+					ControllerData {
+						timestamp: 1,
+						borrow_rate: FixedU128::from_inner(0),
+						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+					}
+				)
+
+			]
+		} ),
 	}
 }

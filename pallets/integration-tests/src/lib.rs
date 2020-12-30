@@ -138,15 +138,11 @@ mod tests {
 
 	parameter_types! {
 		pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
-		pub const MaxBorrowRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
-		pub const InsuranceFactor: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 	}
 
 	impl controller::Trait for Test {
 		type Event = ();
 		type InitialExchangeRate = InitialExchangeRate;
-		type InsuranceFactor = InsuranceFactor;
-		type MaxBorrowRate = MaxBorrowRate;
 	}
 
 	pub const ALICE: AccountId = 1;

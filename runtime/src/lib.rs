@@ -284,15 +284,11 @@ impl liquidity_pools::Trait for Runtime {
 
 parameter_types! {
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
-	pub const MaxBorrowRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
-	pub const InsuranceFactor: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 }
 
 impl controller::Trait for Runtime {
 	type Event = Event;
 	type InitialExchangeRate = InitialExchangeRate;
-	type InsuranceFactor = InsuranceFactor;
-	type MaxBorrowRate = MaxBorrowRate;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -319,7 +315,7 @@ construct_runtime!(
 		// LiquidityPools
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event, Config<T>},
 		// Controller
-		Controller: controller::{Module, Storage, Call, Event},
+		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 	}
 );
 

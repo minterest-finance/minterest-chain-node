@@ -1,7 +1,7 @@
 use super::*;
 use mock::*;
 
-use frame_support::{assert_err, assert_noop, assert_ok};
+use frame_support::{assert_err, assert_noop, assert_ok, error::BadOrigin};
 
 #[test]
 fn accrue_interest_should_work() {
@@ -229,6 +229,49 @@ fn get_underlying_asset_id_by_wrapped_id_should_work() {
 		assert_noop!(
 			Controller::get_underlying_asset_id_by_wrapped_id(&CurrencyId::DOT),
 			Error::<Runtime>::NotValidWrappedTokenId
+		);
+	});
+}
+
+#[test]
+fn set_insurance_factor_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Controller::set_insurance_factor(
+			Origin::root(),
+			CurrencyId::DOT,
+			20,
+			10
+		));
+		assert_eq!(
+			Controller::controller_dates(CurrencyId::DOT).insurance_factor,
+			Rate::saturating_from_rational(20, 10)
+		);
+		assert_noop!(
+			Controller::set_insurance_factor(Origin::root(), CurrencyId::DOT, 20, 0),
+			Error::<Runtime>::NumOverflow
+		);
+		assert_noop!(
+			Controller::set_insurance_factor(Origin::signed(ALICE), CurrencyId::DOT, 20, 10),
+			BadOrigin
+		);
+	});
+}
+
+#[test]
+fn set_max_borrow_rate_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Controller::set_max_borrow_rate(Origin::root(), CurrencyId::DOT, 20, 10));
+		assert_eq!(
+			Controller::controller_dates(CurrencyId::DOT).max_borrow_rate,
+			Rate::saturating_from_rational(20, 10)
+		);
+		assert_noop!(
+			Controller::set_max_borrow_rate(Origin::root(), CurrencyId::DOT, 20, 0),
+			Error::<Runtime>::NumOverflow
+		);
+		assert_noop!(
+			Controller::set_max_borrow_rate(Origin::signed(ALICE), CurrencyId::DOT, 20, 10),
+			BadOrigin
 		);
 	});
 }

@@ -3376,6 +3376,7 @@ dependencies = [
 name = "node-minterest"
 version = "2.0.0"
 dependencies = [
+ "controller",
  "frame-benchmarking",
  "frame-benchmarking-cli",
  "hex-literal 0.3.1",

@@ -2,7 +2,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
-use frame_system::{self as system};
+use frame_system::{self as system, ensure_root};
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
 #[cfg(feature = "std")]
@@ -18,6 +18,8 @@ use sp_std::{cmp::Ordering, convert::TryInto, result};
 pub struct ControllerData<BlockNumber> {
 	pub timestamp: BlockNumber,
 	pub borrow_rate: Rate,
+	pub insurance_factor: Rate,
+	pub max_borrow_rate: Rate,
 }
 
 #[cfg(test)]
@@ -33,16 +35,12 @@ pub trait Trait: liquidity_pools::Trait + system::Trait {
 
 	/// Start exchange rate
 	type InitialExchangeRate: Get<Rate>;
-
-	/// Fraction of interest currently set aside for insurance.
-	type InsuranceFactor: Get<Rate>;
-
-	/// Maximum borrow rate that can ever be applied
-	type MaxBorrowRate: Get<Rate>;
 }
 
 decl_event! {
-	pub enum Event {}
+	pub enum Event {
+		InsuranceFactorChanged,
+	}
 }
 
 decl_storage! {
@@ -71,7 +69,30 @@ decl_error! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
+	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+		type Error = Error<T>;
+		fn deposit_event() = default;
+
+		#[weight = 10_000]
+		pub fn set_insurance_factor(origin, pool_id: CurrencyId, new_amount_n: u128, new_amount_d: u128) -> DispatchResult {
+			ensure_root(origin)?;
+			ensure!(new_amount_d > 0, Error::<T>::NumOverflow);
+			let new_insurance_factor = Rate::saturating_from_rational(new_amount_n, new_amount_d);
+			ControllerDates::<T>::mutate(pool_id, |r| r.insurance_factor = new_insurance_factor);
+			Self::deposit_event(Event::InsuranceFactorChanged);
+			Ok(())
+		}
+
+		#[weight = 10_000]
+		pub fn set_max_borrow_rate(origin, pool_id: CurrencyId, new_amount_n: u128, new_amount_d: u128) -> DispatchResult {
+			ensure_root(origin)?;
+			ensure!(new_amount_d > 0, Error::<T>::NumOverflow);
+			let new_max_borow_rate = Rate::saturating_from_rational(new_amount_n, new_amount_d);
+			ControllerDates::<T>::mutate(pool_id, |r| r.max_borrow_rate = new_max_borow_rate);
+			Self::deposit_event(Event::InsuranceFactorChanged);
+			Ok(())
+		}
+	}
 }
 
 type RateResult = result::Result<Rate, DispatchError>;
@@ -107,8 +128,11 @@ impl<T: Trait> Module<T> {
 			current_total_insurance,
 		)?;
 
+		let max_borrow_rate = ControllerDates::<T>::get(underlying_asset_id).max_borrow_rate;
+		let insurance_factor = ControllerDates::<T>::get(underlying_asset_id).insurance_factor;
+
 		ensure!(
-			current_borrow_interest_rate <= T::MaxBorrowRate::get(),
+			current_borrow_interest_rate <= max_borrow_rate,
 			Error::<T>::BorrowRateIsTooHight
 		);
 
@@ -129,11 +153,8 @@ impl<T: Trait> Module<T> {
 			Self::calculate_interest_accumulated(simple_interest_factor, current_total_borrowed_balance)?;
 		let new_total_borrow_balance =
 			Self::calculate_new_total_borrow(interest_accumulated, current_total_borrowed_balance)?;
-		let new_total_insurance = Self::calculate_new_total_insurance(
-			interest_accumulated,
-			T::InsuranceFactor::get(),
-			current_total_insurance,
-		)?;
+		let new_total_insurance =
+			Self::calculate_new_total_insurance(interest_accumulated, insurance_factor, current_total_insurance)?;
 		let _new_borrow_index: Rate; // FIXME: how can i use it?
 
 		// Save new params
