@@ -20,6 +20,8 @@ use sp_std::cmp::Ordering;
 pub struct Pool {
 	pub current_interest_rate: Rate, // FIXME: how can i use it?
 	pub total_borrowed: Balance,
+	/// Accumulator of the total earned interest rate since the opening of the pool
+	pub borrow_index: Balance,
 	pub current_exchange_rate: Rate,
 	pub is_lock: bool,
 	pub total_insurance: Balance,
@@ -28,7 +30,10 @@ pub struct Pool {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct PoolUserData<BlockNumber> {
+	/// Total balance (with accrued interest), after applying the most recent balance-changing action
 	pub total_borrowed: Balance,
+	/// Global borrow_index as of the most recent balance-changing action
+	pub interest_index: Balance,
 	pub collateral: bool,
 	pub timestamp: BlockNumber,
 }
@@ -217,6 +222,7 @@ impl<T: Trait> Module<T> {
 
 // Getters for LiquidityPools
 impl<T: Trait> Module<T> {
+	/// Module account id
 	pub fn pools_account_id() -> T::AccountId {
 		T::ModuleId::get().into_account()
 	}
@@ -232,6 +238,16 @@ impl<T: Trait> Module<T> {
 
 	pub fn get_pool_total_insurance(currency_id: CurrencyId) -> Balance {
 		Self::pools(currency_id).total_insurance
+	}
+
+	/// Accumulator of the total earned interest rate since the opening of the pool
+	pub fn get_pool_borrow_index(pool_id: CurrencyId) -> Balance {
+		Self::pools(pool_id).borrow_index
+	}
+
+	/// Global borrow_index as of the most recent balance-changing action
+	pub fn get_user_borrow_index(who: &T::AccountId, currency_id: CurrencyId) -> Balance {
+		Self::pool_user_data(who, currency_id).interest_index
 	}
 
 	pub fn get_user_total_borrowed(who: &T::AccountId, currency_id: CurrencyId) -> Balance {

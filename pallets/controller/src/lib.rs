@@ -177,6 +177,35 @@ impl<T: Trait> Module<T> {
 		//FIXME
 		Ok(Rate::saturating_from_rational(1, 1)) //100%
 	}
+
+	/// Return the borrow balance of account based on stored data.
+	///
+	/// - `who`: the address whose balance should be calculated.
+	/// - `currency_id`: id of the currency, the balance of borrowing of which we calculate.
+	pub fn borrow_balance_stored_internal(who: T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
+		let user_borrow_balance = <LiquidityPools<T>>::get_user_total_borrowed(&who, underlying_asset_id);
+
+		// If borrow_balance = 0 then borrow_index is likely also 0.
+		// Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
+		if user_borrow_balance == 0 {
+			return Ok(Balance::zero());
+		};
+
+		let pool_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
+		let user_borrow_index = <LiquidityPools<T>>::get_user_borrow_index(&who, underlying_asset_id);
+
+		// Calculate new borrow balance using the borrow index:
+		// recent_borrow_balance = user_borrow_balance * pool_borrow_index / user_borrow_index
+		let principal_times_index = user_borrow_balance
+			.checked_mul(pool_borrow_index)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		let result = principal_times_index
+			.checked_div(user_borrow_index)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		Ok(result)
+	}
 }
 
 // Private methods
