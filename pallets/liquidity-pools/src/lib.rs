@@ -21,7 +21,7 @@ pub struct Pool {
 	pub current_interest_rate: Rate, // FIXME: how can i use it?
 	pub total_borrowed: Balance,
 	/// Accumulator of the total earned interest rate since the opening of the pool
-	pub borrow_index: Balance,
+	pub borrow_index: Rate,
 	pub current_exchange_rate: Rate,
 	pub is_lock: bool,
 	pub total_insurance: Balance,
@@ -33,7 +33,7 @@ pub struct PoolUserData<BlockNumber> {
 	/// Total balance (with accrued interest), after applying the most recent balance-changing action
 	pub total_borrowed: Balance,
 	/// Global borrow_index as of the most recent balance-changing action
-	pub interest_index: Balance,
+	pub interest_index: Rate,
 	pub collateral: bool,
 	pub timestamp: BlockNumber,
 }
@@ -241,12 +241,12 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Accumulator of the total earned interest rate since the opening of the pool
-	pub fn get_pool_borrow_index(pool_id: CurrencyId) -> Balance {
+	pub fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate {
 		Self::pools(pool_id).borrow_index
 	}
 
 	/// Global borrow_index as of the most recent balance-changing action
-	pub fn get_user_borrow_index(who: &T::AccountId, currency_id: CurrencyId) -> Balance {
+	pub fn get_user_borrow_index(who: &T::AccountId, currency_id: CurrencyId) -> Rate {
 		Self::pool_user_data(who, currency_id).interest_index
 	}
 

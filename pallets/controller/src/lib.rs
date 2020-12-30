@@ -182,7 +182,7 @@ impl<T: Trait> Module<T> {
 	///
 	/// - `who`: the address whose balance should be calculated.
 	/// - `currency_id`: id of the currency, the balance of borrowing of which we calculate.
-	pub fn borrow_balance_stored_internal(who: T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
+	pub fn borrow_balance_stored(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
 		let user_borrow_balance = <LiquidityPools<T>>::get_user_total_borrowed(&who, underlying_asset_id);
 
 		// If borrow_balance = 0 then borrow_index is likely also 0.
@@ -196,12 +196,14 @@ impl<T: Trait> Module<T> {
 
 		// Calculate new borrow balance using the borrow index:
 		// recent_borrow_balance = user_borrow_balance * pool_borrow_index / user_borrow_index
-		let principal_times_index = user_borrow_balance
-			.checked_mul(pool_borrow_index)
+		let principal_times_index = Rate::from_inner(user_borrow_balance)
+			.checked_mul(&pool_borrow_index)
+			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let result = principal_times_index
-			.checked_div(user_borrow_index)
+		let result = Rate::from_inner(principal_times_index)
+			.checked_div(&user_borrow_index)
+			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(result)
