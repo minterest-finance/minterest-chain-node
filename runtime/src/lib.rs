@@ -318,7 +318,7 @@ construct_runtime!(
 		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		Accounts: accounts::{Module, Storage, Call, Event},
+		Accounts: accounts::{Module, Storage, Call, Event<T>},
 	}
 );
 
