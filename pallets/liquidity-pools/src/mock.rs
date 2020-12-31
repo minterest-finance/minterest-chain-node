@@ -4,10 +4,11 @@ use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 pub use minterest_primitives::{Balance, CurrencyId};
 use orml_currencies::Currency;
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, FixedU128, Perbill};
+use sp_runtime::{testing::Header, traits::IdentityLookup, traits::Zero, FixedU128, Perbill};
 
 use super::*;
 use crate::GenesisConfig;
+use sp_arithmetic::FixedPointNumber;
 
 mod liquidity_pools {
 	pub use crate::Event;
@@ -160,6 +161,7 @@ impl ExtBuilder {
 					Pool {
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
+						borrow_index: Rate::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),
 						is_lock: true,
 						total_insurance: Balance::zero(),
@@ -170,28 +172,9 @@ impl ExtBuilder {
 					Pool {
 						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
+						borrow_index: Rate::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),
 						is_lock: false,
-						total_insurance: Balance::zero(),
-					},
-				),
-				(
-					CurrencyId::KSM,
-					Pool {
-						current_interest_rate: FixedU128::from_inner(0),
-						total_borrowed: Balance::zero(),
-						current_exchange_rate: FixedU128::from_inner(1),
-						is_lock: true,
-						total_insurance: Balance::zero(),
-					},
-				),
-				(
-					CurrencyId::BTC,
-					Pool {
-						current_interest_rate: FixedU128::from_inner(0),
-						total_borrowed: Balance::zero(),
-						current_exchange_rate: FixedU128::from_inner(1),
-						is_lock: true,
 						total_insurance: Balance::zero(),
 					},
 				),

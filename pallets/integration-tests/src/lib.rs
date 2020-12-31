@@ -10,12 +10,12 @@ mod tests {
 	use orml_traits::MultiCurrency;
 	use pallet_traits::Borrowing;
 	use sp_core::H256;
-	use sp_runtime::DispatchResult;
 	use sp_runtime::{
 		testing::Header,
 		traits::{IdentityLookup, Zero},
 		ModuleId, Perbill,
 	};
+	use sp_runtime::{DispatchResult, FixedPointNumber};
 
 	use minterest_protocol::Error as MinterestProtocolError;
 
@@ -75,17 +75,19 @@ mod tests {
 	pub struct MockBorrowing;
 	impl Borrowing<AccountId> for MockBorrowing {
 		fn update_state_on_borrow(
+			_who: &AccountId,
 			_underlying_asset_id: CurrencyId,
 			_amount_borrowed: Balance,
-			_who: &AccountId,
+			_account_borrows: Balance,
 		) -> DispatchResult {
 			Ok(())
 		}
 
 		fn update_state_on_repay(
+			_who: &AccountId,
 			_underlying_asset_id: CurrencyId,
 			_amount_borrowed: Balance,
-			_who: &AccountId,
+			_account_borrows: Balance,
 		) -> DispatchResult {
 			Ok(())
 		}
@@ -174,6 +176,7 @@ mod tests {
 					Pool {
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
+						borrow_index: Rate::saturating_from_rational(1, 1),
 						current_exchange_rate: Rate::from_inner(1),
 						is_lock: true,
 						total_insurance: Balance::zero(),
@@ -184,6 +187,7 @@ mod tests {
 					Pool {
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
+						borrow_index: Rate::saturating_from_rational(1, 1),
 						current_exchange_rate: Rate::from_inner(1),
 						is_lock: true,
 						total_insurance: Balance::zero(),
@@ -194,6 +198,7 @@ mod tests {
 					Pool {
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
+						borrow_index: Rate::saturating_from_rational(1, 1),
 						current_exchange_rate: Rate::from_inner(1),
 						is_lock: true,
 						total_insurance: Balance::zero(),
@@ -204,6 +209,7 @@ mod tests {
 					Pool {
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
+						borrow_index: Rate::saturating_from_rational(1, 1),
 						current_exchange_rate: Rate::from_inner(1),
 						is_lock: true,
 						total_insurance: Balance::zero(),

@@ -18,12 +18,14 @@
     "Pool": {
       "current_interest_rate": "Rate",
       "total_borrowed": "Balance",
+      "borrow_index": "Rate",
       "current_exchange_rate": "Rate",
       "is_lock": "bool",
       "total_insurance": "Balance"
     },
     "PoolUserData" : {
       "total_borrowed": "Balance",
+      "interest_index": "Rate",
       "collateral": "bool",
       "timestamp": "BlockNumber"
     },

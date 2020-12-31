@@ -16,6 +16,7 @@ use sp_std::{cmp::Ordering, convert::TryInto, result};
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct ControllerData<BlockNumber> {
+	/// Block number that interest was last accrued at.
 	pub timestamp: BlockNumber,
 	pub borrow_rate: Rate,
 	pub insurance_factor: Rate,
@@ -197,6 +198,37 @@ impl<T: Trait> Module<T> {
 	pub fn calculate_interest_rate(_underlying_asset_id: CurrencyId) -> RateResult {
 		//FIXME
 		Ok(Rate::saturating_from_rational(1, 1)) //100%
+	}
+
+	/// Return the borrow balance of account based on stored data.
+	///
+	/// - `who`: the address whose balance should be calculated.
+	/// - `currency_id`: id of the currency, the balance of borrowing of which we calculate.
+	pub fn borrow_balance_stored(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
+		let user_borrow_balance = <LiquidityPools<T>>::get_user_total_borrowed(&who, underlying_asset_id);
+
+		// If borrow_balance = 0 then borrow_index is likely also 0.
+		// Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
+		if user_borrow_balance == 0 {
+			return Ok(Balance::zero());
+		};
+
+		let pool_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
+		let user_borrow_index = <LiquidityPools<T>>::get_user_borrow_index(&who, underlying_asset_id);
+
+		// Calculate new borrow balance using the borrow index:
+		// recent_borrow_balance = user_borrow_balance * pool_borrow_index / user_borrow_index
+		let principal_times_index = Rate::from_inner(user_borrow_balance)
+			.checked_mul(&pool_borrow_index)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		let result = Rate::from_inner(principal_times_index)
+			.checked_div(&user_borrow_index)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		Ok(result)
 	}
 }
 
