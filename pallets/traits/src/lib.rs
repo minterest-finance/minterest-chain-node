@@ -7,15 +7,17 @@ use sp_runtime::DispatchResult;
 pub trait Borrowing<AccountId> {
 	/// Updates the state of the core as a consequence of a borrow action.
 	fn update_state_on_borrow(
+		who: &AccountId,
 		underlying_asset_id: CurrencyId,
 		amount_borrowed: Balance,
-		who: &AccountId,
+		account_borrows: Balance,
 	) -> DispatchResult;
 
 	/// updates the state of the core as a consequence of a repay action.
 	fn update_state_on_repay(
-		underlying_asset_id: CurrencyId,
-		amount_borrowed: Balance,
 		who: &AccountId,
+		underlying_asset_id: CurrencyId,
+		repay_amount: Balance,
+		account_borrows: Balance,
 	) -> DispatchResult;
 }

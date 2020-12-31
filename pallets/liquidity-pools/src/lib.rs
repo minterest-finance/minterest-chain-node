@@ -9,17 +9,15 @@ use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::{
-	traits::{AccountIdConversion, Zero},
-	DispatchResult, ModuleId, RuntimeDebug,
-};
-use sp_std::cmp::Ordering;
+use sp_runtime::{traits::AccountIdConversion, DispatchResult, ModuleId, RuntimeDebug};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct Pool {
 	pub current_interest_rate: Rate, // FIXME: how can i use it?
 	pub total_borrowed: Balance,
+	/// Accumulator of the total earned interest rate since the opening of the pool
+	pub borrow_index: Rate,
 	pub current_exchange_rate: Rate,
 	pub is_lock: bool,
 	pub total_insurance: Balance,
@@ -28,9 +26,13 @@ pub struct Pool {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct PoolUserData<BlockNumber> {
+	/// Total balance (with accrued interest), after applying the most
+	/// recent balance-changing action
 	pub total_borrowed: Balance,
+	/// Global borrow_index as of the most recent balance-changing action
+	pub interest_index: Rate,
 	pub collateral: bool,
-	pub timestamp: BlockNumber,
+	pub timestamp: BlockNumber, // FIXME: how can i use it?
 }
 
 #[cfg(test)]
@@ -77,6 +79,9 @@ decl_error! {
 	///
 	/// Only happened when the balance went wrong and balance overflows the integer type.
 	BalanceOverflowed,
+
+	/// Number overflow in calculation.
+	NumOverflow,
 	}
 }
 
@@ -202,6 +207,29 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
+	pub fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) -> DispatchResult {
+		Pools::mutate(pool_id, |pool| pool.total_borrowed = new_total_borrows);
+		Ok(())
+	}
+
+	pub fn set_pool_borrow_index(pool_id: CurrencyId, new_borrow_index: Rate) -> DispatchResult {
+		Pools::mutate(pool_id, |pool| pool.borrow_index = new_borrow_index);
+		Ok(())
+	}
+
+	pub fn set_user_total_borrowed_and_interest_index(
+		who: &T::AccountId,
+		pool_id: CurrencyId,
+		new_total_borrows: Balance,
+		new_interest_index: Rate,
+	) -> DispatchResult {
+		PoolUserDates::<T>::mutate(who, pool_id, |p| {
+			p.total_borrowed = new_total_borrows;
+			p.interest_index = new_interest_index;
+		});
+		Ok(())
+	}
+
 	pub fn set_accrual_interest_params(
 		underlying_asset_id: CurrencyId,
 		new_total_borrow_balance: Balance,
@@ -217,6 +245,7 @@ impl<T: Trait> Module<T> {
 
 // Getters for LiquidityPools
 impl<T: Trait> Module<T> {
+	/// Module account id
 	pub fn pools_account_id() -> T::AccountId {
 		T::ModuleId::get().into_account()
 	}
@@ -234,6 +263,16 @@ impl<T: Trait> Module<T> {
 		Self::pools(currency_id).total_insurance
 	}
 
+	/// Accumulator of the total earned interest rate since the opening of the pool
+	pub fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate {
+		Self::pools(pool_id).borrow_index
+	}
+
+	/// Global borrow_index as of the most recent balance-changing action
+	pub fn get_user_borrow_index(who: &T::AccountId, currency_id: CurrencyId) -> Rate {
+		Self::pool_user_data(who, currency_id).interest_index
+	}
+
 	pub fn get_user_total_borrowed(who: &T::AccountId, currency_id: CurrencyId) -> Balance {
 		Self::pool_user_data(who, currency_id).total_borrowed
 	}
@@ -245,40 +284,6 @@ impl<T: Trait> Module<T> {
 
 // Private methods for LiquidityPools
 impl<T: Trait> Module<T> {
-	fn update_pool_and_user_total_borrowed(
-		underlying_asset_id: CurrencyId,
-		amount_borrowed_add: Balance,
-		amount_borrowed_reduce: Balance,
-		who: &T::AccountId,
-	) -> DispatchResult {
-		let current_user_borrow_balance = Self::pool_user_data(who, underlying_asset_id).total_borrowed;
-		let current_total_borrow_balance = Self::pools(underlying_asset_id).total_borrowed;
-
-		let (new_user_borrow_balance, new_total_borrow_balance) = match amount_borrowed_add.cmp(&Balance::zero()) {
-			Ordering::Greater => (
-				current_user_borrow_balance
-					.checked_add(amount_borrowed_add)
-					.ok_or(Error::<T>::BalanceOverflowed)?,
-				current_total_borrow_balance
-					.checked_add(amount_borrowed_add)
-					.ok_or(Error::<T>::BalanceOverflowed)?,
-			),
-			_ => (
-				current_user_borrow_balance
-					.checked_sub(amount_borrowed_reduce)
-					.ok_or(Error::<T>::NotEnoughBalance)?,
-				current_total_borrow_balance
-					.checked_sub(amount_borrowed_reduce)
-					.ok_or(Error::<T>::NotEnoughBalance)?,
-			),
-		};
-
-		PoolUserDates::<T>::mutate(who, underlying_asset_id, |x| x.total_borrowed = new_user_borrow_balance);
-		Pools::mutate(underlying_asset_id, |x| x.total_borrowed = new_total_borrow_balance);
-
-		Ok(())
-	}
-
 	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
 		Pools::contains_key(underlying_asset_id)
 	}
@@ -287,20 +292,60 @@ impl<T: Trait> Module<T> {
 // Trait Borrowing for LiquidityPools
 impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 	fn update_state_on_borrow(
-		underlying_asset_id: CurrencyId,
-		amount_borrowed: Balance,
 		who: &T::AccountId,
+		underlying_asset_id: CurrencyId,
+		borrow_amount: Balance,
+		account_borrows: Balance,
 	) -> DispatchResult {
-		Self::update_pool_and_user_total_borrowed(underlying_asset_id, amount_borrowed, Balance::zero(), who)?;
+		let pool_borrow_index = Self::get_pool_borrow_index(underlying_asset_id);
+
+		// Calculate the new borrower and total borrow balances, failing on overflow:
+		// account_borrows_new = account_borrows + borrow_amount
+		// total_borrows_new = total_borrows + borrow_amount
+		let account_borrow_new = account_borrows
+			.checked_add(borrow_amount)
+			.ok_or(Error::<T>::NumOverflow)?;
+		let total_borrows_new = Self::get_pool_total_borrowed(underlying_asset_id)
+			.checked_add(borrow_amount)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		// Write the previously calculated values into storage.
+		Self::set_pool_total_borrowed(underlying_asset_id, total_borrows_new)?;
+		Self::set_user_total_borrowed_and_interest_index(
+			&who,
+			underlying_asset_id,
+			account_borrow_new,
+			pool_borrow_index,
+		)?;
 		Ok(())
 	}
 
 	fn update_state_on_repay(
-		underlying_asset_id: CurrencyId,
-		amount_borrowed: Balance,
 		who: &T::AccountId,
+		underlying_asset_id: CurrencyId,
+		repay_amount: Balance,
+		account_borrows: Balance,
 	) -> DispatchResult {
-		Self::update_pool_and_user_total_borrowed(underlying_asset_id, Balance::zero(), amount_borrowed, who)?;
+		let pool_borrow_index = Self::get_pool_borrow_index(underlying_asset_id);
+
+		// Calculate the new borrower and total borrow balances, failing on overflow:
+		// account_borrows_new = account_borrows - repay_amount
+		// total_borrows_new = total_borrows + repay_amount
+		let account_borrow_new = account_borrows
+			.checked_sub(repay_amount)
+			.ok_or(Error::<T>::NumOverflow)?;
+		let total_borrows_new = Self::get_pool_total_borrowed(underlying_asset_id)
+			.checked_sub(repay_amount)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		// Write the previously calculated values into storage.
+		Self::set_pool_total_borrowed(underlying_asset_id, total_borrows_new)?;
+		Self::set_user_total_borrowed_and_interest_index(
+			&who,
+			underlying_asset_id,
+			account_borrow_new,
+			pool_borrow_index,
+		)?;
 		Ok(())
 	}
 }

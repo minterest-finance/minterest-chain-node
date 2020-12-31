@@ -9,7 +9,7 @@ fn accrue_interest_should_work() {
 		System::set_block_number(1);
 		assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
 		assert_noop!(
-			Controller::accrue_interest_rate(CurrencyId::ETH),
+			Controller::accrue_interest_rate(CurrencyId::BTC),
 			Error::<Runtime>::OperationsLocked
 		);
 		//FIXME: add test for: MaxBorrowRate
@@ -231,4 +231,27 @@ fn get_underlying_asset_id_by_wrapped_id_should_work() {
 			Error::<Runtime>::NotValidWrappedTokenId
 		);
 	});
+}
+
+#[test]
+fn borrow_balance_stored_with_zero_balance_should_work() {
+	ExtBuilder::default()
+		.set_alice_interest_index()
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				Controller::borrow_balance_stored(&ALICE, CurrencyId::DOT),
+				Ok(Balance::zero())
+			);
+		});
+}
+
+#[test]
+fn borrow_balance_stored_should_work() {
+	ExtBuilder::default()
+		.set_alice_total_borrowed_and_interest_index()
+		.build()
+		.execute_with(|| {
+			assert_eq!(Controller::borrow_balance_stored(&ALICE, CurrencyId::DOT), Ok(50));
+		});
 }

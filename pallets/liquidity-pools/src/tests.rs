@@ -4,6 +4,7 @@ use super::*;
 use mock::*;
 
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
+use sp_arithmetic::FixedPointNumber;
 
 #[test]
 fn pool_should_exists() {
@@ -134,72 +135,38 @@ fn redeem_insurance_should_work() {
 }
 
 #[test]
-fn update_pool_and_user_total_borrowed_should_work() {
-	ExtBuilder::default()
-		.one_hundred_dots_for_alice()
-		.build()
-		.execute_with(|| {
-			assert_ok!(LiquidityPools::update_pool_and_user_total_borrowed(
-				CurrencyId::DOT,
-				60,
-				Balance::zero(),
-				&ALICE
-			));
-			assert_eq!(LiquidityPools::get_pool_total_borrowed(CurrencyId::DOT), 60);
-			assert_eq!(LiquidityPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 60);
-
-			assert_ok!(LiquidityPools::update_pool_and_user_total_borrowed(
-				CurrencyId::DOT,
-				30,
-				Balance::zero(),
-				&ALICE
-			));
-			assert_eq!(LiquidityPools::get_pool_total_borrowed(CurrencyId::DOT), 90);
-			assert_eq!(LiquidityPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 90);
-
-			assert_noop!(
-				LiquidityPools::update_pool_and_user_total_borrowed(
-					CurrencyId::DOT,
-					Balance::max_value(),
-					Balance::zero(),
-					&ALICE
-				),
-				Error::<Runtime>::BalanceOverflowed
-			);
-
-			assert_ok!(LiquidityPools::update_pool_and_user_total_borrowed(
-				CurrencyId::DOT,
-				Balance::zero(),
-				70,
-				&ALICE
-			));
-			assert_eq!(LiquidityPools::get_pool_total_borrowed(CurrencyId::DOT), 20);
-			assert_eq!(LiquidityPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 20);
-
-			assert_noop!(
-				LiquidityPools::update_pool_and_user_total_borrowed(CurrencyId::DOT, Balance::zero(), 100, &ALICE),
-				Error::<Runtime>::NotEnoughBalance
-			);
-		});
-}
-
-#[test]
 fn update_state_on_borrow_should_work() {
 	ExtBuilder::default()
 		.one_hundred_dots_for_alice()
 		.build()
 		.execute_with(|| {
-			assert_ok!(LiquidityPools::update_state_on_borrow(CurrencyId::DOT, 60, &ALICE));
+			assert_eq!(
+				LiquidityPools::get_user_borrow_index(&ALICE, CurrencyId::DOT),
+				Rate::from_inner(0)
+			);
+			assert_ok!(LiquidityPools::update_state_on_borrow(&ALICE, CurrencyId::DOT, 60, 0));
 			assert_eq!(LiquidityPools::get_pool_total_borrowed(CurrencyId::DOT), 60);
 			assert_eq!(LiquidityPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 60);
+			assert_eq!(
+				LiquidityPools::get_user_borrow_index(&ALICE, CurrencyId::DOT),
+				Rate::saturating_from_rational(1, 1)
+			);
 
-			assert_ok!(LiquidityPools::update_state_on_borrow(CurrencyId::DOT, 30, &ALICE));
+			assert_ok!(LiquidityPools::set_pool_borrow_index(
+				CurrencyId::DOT,
+				Rate::saturating_from_rational(1, 5)
+			));
+			assert_ok!(LiquidityPools::update_state_on_borrow(&ALICE, CurrencyId::DOT, 30, 60));
 			assert_eq!(LiquidityPools::get_pool_total_borrowed(CurrencyId::DOT), 90);
 			assert_eq!(LiquidityPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 90);
+			assert_eq!(
+				LiquidityPools::get_user_borrow_index(&ALICE, CurrencyId::DOT),
+				Rate::saturating_from_rational(1, 5)
+			);
 
 			assert_noop!(
-				LiquidityPools::update_state_on_borrow(CurrencyId::DOT, Balance::max_value(), &ALICE),
-				Error::<Runtime>::BalanceOverflowed
+				LiquidityPools::update_state_on_borrow(&ALICE, CurrencyId::DOT, Balance::max_value(), 90),
+				Error::<Runtime>::NumOverflow
 			);
 		});
 }
@@ -210,21 +177,29 @@ fn update_state_on_repay_should_work() {
 		.one_hundred_dots_for_alice()
 		.build()
 		.execute_with(|| {
-			assert_ok!(LiquidityPools::update_state_on_borrow(CurrencyId::DOT, 60, &ALICE));
+			assert_eq!(
+				LiquidityPools::get_user_borrow_index(&ALICE, CurrencyId::DOT),
+				Rate::from_inner(0)
+			);
+			assert_ok!(LiquidityPools::update_state_on_borrow(&ALICE, CurrencyId::DOT, 60, 0));
 			assert_eq!(LiquidityPools::get_pool_total_borrowed(CurrencyId::DOT), 60);
 			assert_eq!(LiquidityPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 60);
+			assert_eq!(
+				LiquidityPools::get_user_borrow_index(&ALICE, CurrencyId::DOT),
+				Rate::saturating_from_rational(1, 1)
+			);
 
-			assert_ok!(LiquidityPools::update_state_on_repay(CurrencyId::DOT, 30, &ALICE));
+			assert_ok!(LiquidityPools::update_state_on_repay(&ALICE, CurrencyId::DOT, 30, 60));
 			assert_eq!(LiquidityPools::get_pool_total_borrowed(CurrencyId::DOT), 30);
 			assert_eq!(LiquidityPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 30);
 
-			assert_ok!(LiquidityPools::update_state_on_repay(CurrencyId::DOT, 10, &ALICE));
+			assert_ok!(LiquidityPools::update_state_on_repay(&ALICE, CurrencyId::DOT, 10, 30));
 			assert_eq!(LiquidityPools::get_pool_total_borrowed(CurrencyId::DOT), 20);
 			assert_eq!(LiquidityPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 20);
 
 			assert_noop!(
-				LiquidityPools::update_state_on_repay(CurrencyId::DOT, 100, &ALICE),
-				Error::<Runtime>::NotEnoughBalance
+				LiquidityPools::update_state_on_repay(&ALICE, CurrencyId::DOT, 100, 20),
+				Error::<Runtime>::NumOverflow
 			);
 		});
 }

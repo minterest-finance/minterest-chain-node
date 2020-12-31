@@ -7,6 +7,7 @@ use orml_traits::MultiCurrency;
 use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
 use sp_runtime::{traits::Zero, DispatchError, DispatchResult};
+use sp_std::cmp::Ordering;
 use sp_std::{prelude::Vec, result};
 
 #[cfg(test)]
@@ -74,6 +75,12 @@ decl_error! {
 
 		/// Number overflow in calculation.
 		NumOverflow,
+
+		/// The block number in the pool is equal to the current block number.
+		PoolNotFresh,
+
+		/// An internal failure occurred in the execution of the Accrue Interest function.
+		AccrueInterestFailed,
 	}
 }
 
@@ -141,31 +148,51 @@ decl_module! {
 		}
 
 		/// Borrowing a specific amount of the pool currency, provided that the borrower already deposited enough collateral.
+		///
+		/// - `underlying_asset_id`: the currency ID of the underlying asset to borrow.
+		/// - `underlying_amount`: the amount of the underlying asset to borrow.
 		#[weight = 10_000]
 		pub fn borrow(
 			origin,
 			underlying_asset_id: CurrencyId,
-			#[compact] underlying_amount: Balance
+			#[compact] borrow_amount: Balance
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				Self::do_borrow(&who, underlying_asset_id, underlying_amount)?;
-				Self::deposit_event(RawEvent::Borrowed(who, underlying_asset_id, underlying_amount));
+				Self::do_borrow(&who, underlying_asset_id, borrow_amount)?;
+				Self::deposit_event(RawEvent::Borrowed(who, underlying_asset_id, borrow_amount));
 				Ok(())
 			})?;
 		}
 
 		/// Repays a borrow on the specific pool, for the specified amount.
+		///
+		/// - `underlying_asset_id`: the currency ID of the underlying asset to repay.
+		/// - `underlying_amount`: the amount of the underlying asset to repay.
 		#[weight = 10_000]
 		pub fn repay(
 			origin,
 			underlying_asset_id: CurrencyId,
-			#[compact] amount: Balance
+			#[compact] repay_amount: Balance
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				Self::do_repay(&who, underlying_asset_id, amount)?;
-				Self::deposit_event(RawEvent::Repaid(who, underlying_asset_id, amount));
+				Self::do_repay(&who, underlying_asset_id, repay_amount)?;
+				Self::deposit_event(RawEvent::Repaid(who, underlying_asset_id, repay_amount));
+				Ok(())
+			})?;
+		}
+
+		/// Repays a borrow on the specific pool, for the all amount.
+		///
+		/// - `underlying_asset_id`: the currency ID of the underlying asset to repay.
+		/// - `underlying_amount`: the amount of the underlying asset to repay.
+		#[weight = 10_000]
+		pub fn repay_all(origin, underlying_asset_id: CurrencyId) {
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				let repay_amount = Self::do_repay(&who, underlying_asset_id, Balance::zero())?;
+				Self::deposit_event(RawEvent::Repaid(who, underlying_asset_id, repay_amount));
 				Ok(())
 			})?;
 		}
@@ -173,6 +200,7 @@ decl_module! {
 }
 
 type TokensResult = result::Result<(Balance, CurrencyId, Balance), DispatchError>;
+type BalanceResult = result::Result<Balance, DispatchError>;
 
 // Dispatchable calls implementation
 impl<T: Trait> Module<T> {
@@ -258,56 +286,90 @@ impl<T: Trait> Module<T> {
 		Ok((underlying_amount, wrapped_id, wrapped_amount))
 	}
 
-	fn do_borrow(who: &T::AccountId, underlying_asset_id: CurrencyId, underlying_amount: Balance) -> DispatchResult {
+	/// Users borrow assets from the protocol to their own address
+	///
+	/// - `who`: the address of the user who borrows.
+	/// - `underlying_asset_id`: the currency ID of the underlying asset to borrow.
+	/// - `underlying_amount`: the amount of the underlying asset to borrow.
+	fn do_borrow(who: &T::AccountId, underlying_asset_id: CurrencyId, borrow_amount: Balance) -> DispatchResult {
 		ensure!(
 			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
+		// Raise an error if protocol has insufficient underlying cash
 		ensure!(
-			underlying_amount <= <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id),
+			borrow_amount <= <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id),
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
-		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalPoolError)?;
+		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
-		<LiquidityPools<T>>::update_state_on_borrow(underlying_asset_id, underlying_amount, who)
+		// Fetch the amount the borrower owes, with accumulated interest
+		let account_borrows =
+			<Controller<T>>::borrow_balance_stored(&who, underlying_asset_id).map_err(|_| Error::<T>::NumOverflow)?;
+
+		<LiquidityPools<T>>::update_state_on_borrow(&who, underlying_asset_id, borrow_amount, account_borrows)
 			.map_err(|_| Error::<T>::InternalPoolError)?;
 
+		// Transfer the borrow_amount from the protocol account to the borrower's account.
 		T::MultiCurrency::transfer(
 			underlying_asset_id,
 			&<LiquidityPools<T>>::pools_account_id(),
 			&who,
-			underlying_amount,
+			borrow_amount,
 		)?;
 
 		Ok(())
 	}
 
-	fn do_repay(who: &T::AccountId, underlying_asset_id: CurrencyId, underlying_amount: Balance) -> DispatchResult {
+	/// Sender repays their own borrow
+	///
+	/// - `who`: the account paying off the borrow.
+	/// - `underlying_asset_id`: the currency ID of the underlying asset to repay.
+	/// - `underlying_amount`: the amount of the underlying asset to repay.
+	fn do_repay(who: &T::AccountId, underlying_asset_id: CurrencyId, mut repay_amount: Balance) -> BalanceResult {
 		ensure!(
 			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
 		ensure!(
-			underlying_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
+			repay_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
 			Error::<T>::NotEnoughUnderlyingsAssets
 		);
 
-		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalPoolError)?;
+		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
-		<LiquidityPools<T>>::update_state_on_repay(underlying_asset_id, underlying_amount, who)
+		// Verify pool's block number equals current block number
+		let current_block_number = <frame_system::Module<T>>::block_number();
+		let accrual_block_number_previous = <Controller<T>>::controller_dates(underlying_asset_id).timestamp;
+		ensure!(
+			current_block_number == accrual_block_number_previous,
+			Error::<T>::PoolNotFresh
+		);
+
+		// Fetch the amount the borrower owes, with accumulated interest
+		let account_borrows =
+			<Controller<T>>::borrow_balance_stored(&who, underlying_asset_id).map_err(|_| Error::<T>::NumOverflow)?;
+
+		repay_amount = match repay_amount.cmp(&Balance::zero()) {
+			Ordering::Equal => account_borrows,
+			_ => repay_amount,
+		};
+
+		<LiquidityPools<T>>::update_state_on_repay(&who, underlying_asset_id, repay_amount, account_borrows)
 			.map_err(|_| Error::<T>::InternalPoolError)?;
 
+		// Transfer the repay_amount from the borrower's account to the protocol account.
 		T::MultiCurrency::transfer(
 			underlying_asset_id,
 			&who,
 			&<LiquidityPools<T>>::pools_account_id(),
-			underlying_amount,
+			repay_amount,
 		)?;
 
-		Ok(())
+		Ok(repay_amount)
 	}
 }
 

@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
-use liquidity_pools::Pool;
+use liquidity_pools::{Pool, PoolUserData};
 pub use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_currencies::Currency;
 use sp_core::H256;
@@ -134,6 +134,8 @@ pub type Currencies = orml_currencies::Module<Runtime>;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+	pools: Vec<(CurrencyId, Pool)>,
+	pool_user_data: Vec<(AccountId, CurrencyId, PoolUserData<BlockNumber>)>,
 }
 
 impl Default for ExtBuilder {
@@ -143,6 +145,31 @@ impl Default for ExtBuilder {
 				(ALICE, CurrencyId::MDOT, ONE_HUNDRED),
 				(ALICE, CurrencyId::MINT, ONE_MILL),
 			],
+			pools: vec![
+				(
+					CurrencyId::DOT,
+					Pool {
+						current_interest_rate: Rate::from_inner(0),
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::saturating_from_rational(1, 1),
+						current_exchange_rate: Rate::saturating_from_rational(1, 1),
+						is_lock: false,
+						total_insurance: Balance::zero(),
+					},
+				),
+				(
+					CurrencyId::BTC,
+					Pool {
+						current_interest_rate: Rate::from_inner(0),
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::saturating_from_rational(1, 1),
+						current_exchange_rate: Rate::saturating_from_rational(1, 1),
+						is_lock: true,
+						total_insurance: Balance::zero(),
+					},
+				),
+			],
+			pool_user_data: vec![],
 		}
 	}
 }
@@ -152,32 +179,54 @@ pub const ONE_MILL: Balance = 1_000_000;
 pub const ONE_HUNDRED: Balance = 100;
 
 impl ExtBuilder {
-	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
-		self.endowed_accounts = endowed_accounts;
+	pub fn exchange_rate_less_than_one(mut self) -> Self {
+		self.endowed_accounts.extend_from_slice(&[
+			(ALICE, CurrencyId::DOT, ONE_HUNDRED),
+			(ALICE, CurrencyId::MBTC, ONE_HUNDRED),
+		]);
 		self
 	}
 
-	pub fn exchange_rate_less_than_one(self) -> Self {
-		self.balances(vec![
-			(ALICE, CurrencyId::DOT, ONE_HUNDRED),
-			(ALICE, CurrencyId::MDOT, ONE_HUNDRED),
-			(ALICE, CurrencyId::MINT, ONE_MILL),
-			(ALICE, CurrencyId::MBTC, ONE_HUNDRED),
-		])
-	}
-
-	pub fn exchange_rate_greater_than_one(self) -> Self {
-		self.balances(vec![
+	pub fn exchange_rate_greater_than_one(mut self) -> Self {
+		self.endowed_accounts.extend_from_slice(&[
 			(ALICE, CurrencyId::DOT, ONE_HUNDRED),
 			(ALICE, CurrencyId::BTC, ONE_HUNDRED),
-			(ALICE, CurrencyId::MDOT, ONE_HUNDRED),
-			(ALICE, CurrencyId::MINT, ONE_MILL),
 			(ALICE, CurrencyId::MBTC, 1),
-		])
+		]);
+		self
 	}
 
-	pub fn one_hundred_dots_for_alice(self) -> Self {
-		self.balances(vec![(ALICE, CurrencyId::DOT, ONE_HUNDRED)])
+	pub fn one_hundred_dots_for_alice(mut self) -> Self {
+		self.endowed_accounts.push((ALICE, CurrencyId::DOT, ONE_HUNDRED));
+		self
+	}
+
+	pub fn set_alice_total_borrowed_and_interest_index(mut self) -> Self {
+		self.pool_user_data = vec![(
+			ALICE,
+			CurrencyId::DOT,
+			PoolUserData {
+				total_borrowed: 100,
+				interest_index: Rate::saturating_from_rational(2, 1),
+				collateral: true,
+				timestamp: 2,
+			},
+		)];
+		self
+	}
+
+	pub fn set_alice_interest_index(mut self) -> Self {
+		self.pool_user_data = vec![(
+			ALICE,
+			CurrencyId::DOT,
+			PoolUserData {
+				total_borrowed: Balance::zero(),
+				interest_index: Rate::saturating_from_rational(2, 1),
+				collateral: true,
+				timestamp: 2,
+			},
+		)];
+		self
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
@@ -204,49 +253,8 @@ impl ExtBuilder {
 		.unwrap();
 
 		liquidity_pools::GenesisConfig::<Runtime> {
-			pools: vec![
-				(
-					CurrencyId::ETH,
-					Pool {
-						current_interest_rate: Rate::from_inner(0),
-						total_borrowed: Balance::zero(),
-						current_exchange_rate: Rate::saturating_from_rational(1, 1),
-						is_lock: true,
-						total_insurance: Balance::zero(),
-					},
-				),
-				(
-					CurrencyId::DOT,
-					Pool {
-						current_interest_rate: Rate::from_inner(0),
-						total_borrowed: Balance::zero(),
-						current_exchange_rate: Rate::saturating_from_rational(1, 1),
-						is_lock: false,
-						total_insurance: Balance::zero(),
-					},
-				),
-				(
-					CurrencyId::KSM,
-					Pool {
-						current_interest_rate: Rate::from_inner(0),
-						total_borrowed: Balance::zero(),
-						current_exchange_rate: Rate::saturating_from_rational(1, 1),
-						is_lock: false,
-						total_insurance: Balance::zero(),
-					},
-				),
-				(
-					CurrencyId::BTC,
-					Pool {
-						current_interest_rate: Rate::from_inner(0),
-						total_borrowed: Balance::zero(),
-						current_exchange_rate: Rate::saturating_from_rational(1, 1),
-						is_lock: true,
-						total_insurance: Balance::zero(),
-					},
-				),
-			],
-			pool_user_data: vec![],
+			pools: self.pools,
+			pool_user_data: self.pool_user_data,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
