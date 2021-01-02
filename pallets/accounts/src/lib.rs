@@ -11,8 +11,8 @@ mod tests;
 /// A maximum number of members. When membership reaches this number, no new members may join.
 pub const MAX_MEMBERS: u32 = 16;
 
-pub trait Trait: frame_system::Trait {
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+pub trait Trait: system::Trait {
+	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
 decl_storage! {
@@ -48,7 +48,6 @@ decl_error! {
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
-
 		fn deposit_event() = default;
 
 		/// Adds a new account to the allow-list.
