@@ -38,3 +38,24 @@ fn cant_exceed_max_members() {
 		);
 	})
 }
+
+#[test]
+fn remove_member_should_work() {
+	ExternalityBuilder::build().execute_with(|| {
+		assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
+		assert_ok!(TestAccounts::remove_member(Origin::root(), ALICE));
+
+		// check correct event emission
+		let expected_event = TestEvent::accounts(RawEvent::AccountRemoved(ALICE));
+
+		assert_eq!(System::events()[1].event, expected_event,);
+
+		// check storage changes
+		assert!(!<AllowedAccounts<Test>>::contains_key(ALICE));
+
+		assert_noop!(
+			TestAccounts::remove_member(Origin::root(), BOB),
+			Error::<Test>::NotMember
+		);
+	})
+}
