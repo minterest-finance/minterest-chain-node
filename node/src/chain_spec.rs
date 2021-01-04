@@ -1,22 +1,28 @@
+use controller::ControllerData;
+use hex_literal::hex;
 use liquidity_pools::Pool;
 use node_minterest_runtime::{
-	AccountId, AuraConfig, Balance, BalancesConfig, CurrencyId, GenesisConfig, GrandpaConfig, LiquidityPoolsConfig,
-	Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
+	AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig, GrandpaConfig,
+	LiquidityPoolsConfig, Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
 };
 use sc_service::ChainType;
+use sc_telemetry::TelemetryEndpoints;
 use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify, Zero},
-	FixedU128,
+	FixedPointNumber, FixedU128,
 };
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 const INITIAL_BALANCE: u128 = 10 * DOLLARS;
+
+// The URL for the telemetry server.
+const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
@@ -39,8 +45,8 @@ where
 }
 
 /// Generate an Aura authority key.
-pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
-	(get_from_seed::<AuraId>(s), get_from_seed::<GrandpaId>(s))
+pub fn authority_keys_from_seed(seed: &str) -> (AuraId, GrandpaId) {
+	(get_from_seed::<AuraId>(seed), get_from_seed::<GrandpaId>(seed))
 }
 
 pub fn development_config() -> Result<ChainSpec, String> {
@@ -137,6 +143,52 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	))
 }
 
+pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
+	let mut properties = Map::new();
+	properties.insert("tokenSymbol".into(), "UNIT".into());
+	properties.insert("tokenDecimals".into(), 18.into());
+
+	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
+
+	Ok(ChainSpec::from_genesis(
+		"Minterest Turbo",
+		"turbo-latest",
+		ChainType::Live,
+		move || {
+			testnet_genesis(
+				wasm_binary,
+				// Initial PoA authorities
+				vec![authority_keys_from_seed("Alice")],
+				// Sudo account
+				// 5ER9G3d2V4EEq8VjEbjkGbMdgprvtCntTYu9itCRJNHTkWYX
+				hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
+				// Pre-funded accounts
+				vec![
+					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
+					get_account_id_from_seed::<sr25519::Public>("Alice"),
+					get_account_id_from_seed::<sr25519::Public>("Bob"),
+					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+				],
+				true,
+			)
+		},
+		// Bootnodes
+		vec![],
+		// Telemetry
+		Some(
+			TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
+				.expect("Staging telemetry url is valid; qed"),
+		),
+		// Protocol ID
+		Some("turbo-latest"),
+		// Properties
+		Some(properties),
+		// Extensions
+		Default::default(),
+	))
+}
+
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
 	wasm_binary: &[u8],
@@ -224,6 +276,46 @@ fn testnet_genesis(
 				),
 			],
 			pool_user_data: vec![],
+		}),
+		controller: Some(ControllerConfig {
+			controller_dates: vec![
+				(
+					CurrencyId::ETH,
+					ControllerData {
+						timestamp: 1,
+						borrow_rate: FixedU128::from_inner(0),
+						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+					},
+				),
+				(
+					CurrencyId::DOT,
+					ControllerData {
+						timestamp: 1,
+						borrow_rate: FixedU128::from_inner(0),
+						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+					},
+				),
+				(
+					CurrencyId::KSM,
+					ControllerData {
+						timestamp: 1,
+						borrow_rate: FixedU128::from_inner(0),
+						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+					},
+				),
+				(
+					CurrencyId::BTC,
+					ControllerData {
+						timestamp: 1,
+						borrow_rate: FixedU128::from_inner(0),
+						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+					},
+				),
+			],
 		}),
 	}
 }
