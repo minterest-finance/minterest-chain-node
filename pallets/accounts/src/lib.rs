@@ -1,8 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::traits::Get;
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure};
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure, IterableStorageMap,
+};
 use frame_system::{self as system, ensure_root, ensure_signed};
+use sp_std::collections::btree_set::BTreeSet;
 
 #[cfg(test)]
 mod mock;
@@ -109,4 +112,13 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {}
+impl<T: Trait> Module<T> {
+	/// Checks whether the caller is a member of the allow-list.
+	pub fn is_admin_internal(caller: &T::AccountId) -> bool {
+		let members = <AllowedAccounts<T> as IterableStorageMap<T::AccountId, ()>>::iter()
+			.map(|(acct, _)| acct)
+			.collect::<BTreeSet<_>>();
+
+		members.contains(&caller)
+	}
+}

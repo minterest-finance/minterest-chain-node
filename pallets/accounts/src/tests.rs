@@ -93,3 +93,13 @@ fn is_admin_should_work() {
 		assert_noop!(TestAccounts::is_admin(Origin::signed(BOB)), Error::<Test>::NotAMember);
 	});
 }
+
+#[test]
+fn is_admin_internal_should_work() {
+	ExternalityBuilder::build().execute_with(|| {
+		assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
+
+		assert!(TestAccounts::is_admin_internal(&ALICE));
+		assert!(!TestAccounts::is_admin_internal(&BOB));
+	});
+}
