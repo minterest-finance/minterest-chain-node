@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use frame_support::traits::Get;
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure};
 use frame_system::{self as system, ensure_root, ensure_signed};
 
@@ -8,11 +9,11 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-/// A maximum number of members. When membership reaches this number, no new members may join.
-pub const MAX_MEMBERS: u32 = 16;
-
 pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+	/// A maximum number of members. When membership reaches this number, no new members may join.
+	type MaxMembers: Get<u32>;
 }
 
 decl_storage! {
@@ -67,7 +68,7 @@ decl_module! {
 			ensure_root(origin)?;
 
 			let member_count = MemberCount::get();
-			ensure!(member_count < MAX_MEMBERS, Error::<T>::MembershipLimitReached);
+			ensure!(member_count < T::MaxMembers::get(), Error::<T>::MembershipLimitReached);
 
 			ensure!(!AllowedAccounts::<T>::contains_key(&new_account), Error::<T>::AlreadyMember);
 

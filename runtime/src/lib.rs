@@ -47,7 +47,7 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
-pub use constants::{currency::*, time::*};
+pub use constants::{currency::*, time::*, *};
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -283,7 +283,7 @@ impl liquidity_pools::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const InitialExchangeRate: Rate = INITIAL_EXCHANGE_RATE;
 }
 
 impl controller::Trait for Runtime {
@@ -291,8 +291,13 @@ impl controller::Trait for Runtime {
 	type InitialExchangeRate = InitialExchangeRate;
 }
 
+parameter_types! {
+	pub const MaxMembers: u32 = MAX_MEMBERS;
+}
+
 impl accounts::Trait for Runtime {
 	type Event = Event;
+	type MaxMembers = MaxMembers;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

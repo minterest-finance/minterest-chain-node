@@ -60,20 +60,19 @@ impl frame_system::Trait for Test {
 	type SystemWeightInfo = ();
 }
 
+parameter_types! {
+	pub const MaxMembers: u32 = 16;
+}
+
 impl Trait for Test {
 	type Event = TestEvent;
+	type MaxMembers = MaxMembers;
 }
 
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
 pub type TestAccounts = Module<Test>;
 pub type System = frame_system::Module<Test>;
-
-// pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-// 	let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-//
-// 	t.into()
-// }
 
 pub struct ExternalityBuilder;
 

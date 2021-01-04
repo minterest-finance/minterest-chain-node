@@ -1,5 +1,7 @@
 //! A set of constant values used in runtime.
 
+use minterest_primitives::Rate;
+
 /// Money matters.
 pub mod currency {
 	use minterest_primitives::Balance;
@@ -21,3 +23,9 @@ pub mod time {
 	pub const HOURS: BlockNumber = MINUTES * 60;
 	pub const DAYS: BlockNumber = HOURS * 24;
 }
+
+/// A maximum number of admins. When membership reaches this number, no new members may join.
+pub const MAX_MEMBERS: u32 = 16;
+
+/// Initial exchange rate: 100%
+pub const INITIAL_EXCHANGE_RATE: Rate = Rate::from_inner(1_000_000_000_000_000_000);
