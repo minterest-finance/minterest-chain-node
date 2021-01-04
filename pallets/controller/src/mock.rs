@@ -114,11 +114,13 @@ impl liquidity_pools::Trait for Runtime {
 
 parameter_types! {
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const BlocksPerYear: u128 = 5256000;
 }
 
 impl Trait for Runtime {
 	type Event = TestEvent;
 	type InitialExchangeRate = InitialExchangeRate;
+	type BlocksPerYear = BlocksPerYear;
 }
 
 pub type BlockNumber = u64;
@@ -240,10 +242,14 @@ impl ExtBuilder {
 			controller_dates: vec![(
 				CurrencyId::DOT,
 				ControllerData {
-					timestamp: 0,
-					borrow_rate: Rate::saturating_from_rational(1, 1),
-					insurance_factor: Rate::saturating_from_rational(1, 1),
-					max_borrow_rate: Rate::saturating_from_rational(1, 1),
+					timestamp: 1,
+					borrow_rate: Rate::from_inner(0),
+					insurance_factor: Rate::saturating_from_rational(1, 10),
+					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+					kink: Rate::saturating_from_rational(8, 10),
+					base_rate_per_block: Rate::from_inner(0),
+					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
+					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 				},
 			)],
 		}

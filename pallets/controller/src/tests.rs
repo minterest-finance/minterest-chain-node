@@ -78,14 +78,14 @@ fn convert_from_wrapped_should_work() {
 #[test]
 fn calculate_exchange_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::calculate_exchange_rate(10, 10));
+		assert_ok!(Controller::calculate_exchange_rate(102, 100, 2, 20));
 		assert_eq!(
-			Controller::calculate_exchange_rate(10, 10),
-			Ok(Rate::saturating_from_rational(1, 1))
+			Controller::calculate_exchange_rate(102, 100, 2, 20),
+			Ok(Rate::saturating_from_rational(12, 10))
 		);
 		assert_eq!(
-			Controller::calculate_exchange_rate(10, 0),
-			Ok(Rate::saturating_from_rational(1, 1))
+			Controller::calculate_exchange_rate(102, 100, 2, 20),
+			Ok(Rate::saturating_from_rational(12, 10))
 		)
 	});
 }
@@ -117,10 +117,18 @@ fn get_exchange_rate_should_work() {
 #[test]
 fn calculate_borrow_interest_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::calculate_borrow_interest_rate(100, 10, 10));
+		assert_ok!(Controller::calculate_borrow_interest_rate(CurrencyId::DOT, 102, 20, 2));
+
+		// utilization rate less than kink
 		assert_eq!(
-			Controller::calculate_borrow_interest_rate(100, 10, 10),
-			Ok(Rate::saturating_from_rational(1, 1))
+			Controller::calculate_borrow_interest_rate(CurrencyId::DOT, 37, 70, 7),
+			Ok(Rate::saturating_from_rational(63u128, 10_000_000_000u128))
+		);
+
+		// utilization rate larger or equal than kink
+		assert_eq!(
+			Controller::calculate_borrow_interest_rate(CurrencyId::DOT, 28, 80, 8),
+			Ok(Rate::saturating_from_rational(12800000072u128, 10_000_000_000u128))
 		);
 	});
 }
@@ -142,7 +150,7 @@ fn calculate_interest_factor_should_work() {
 		));
 		assert_eq!(
 			Controller::calculate_interest_factor(Rate::saturating_from_rational(1, 10), &10),
-			Ok(Rate::from_inner(0))
+			Ok(Rate::from_inner(1_000_000_000_000_000_000))
 		);
 	});
 }
@@ -160,6 +168,13 @@ fn calculate_interest_accumulated_should_work() {
 				TestPools::get_pool_available_liquidity(CurrencyId::DOT)
 			),
 			Ok(0)
+		);
+		assert_eq!(
+			Controller::calculate_interest_accumulated(
+				Rate::saturating_from_rational(3, 100), // eq 0.03 == 3%
+				200
+			),
+			Ok(6)
 		);
 		assert_noop!(
 			Controller::calculate_interest_accumulated(Rate::saturating_from_rational(11, 10), Balance::max_value()),
@@ -295,6 +310,40 @@ fn set_max_borrow_rate_should_work() {
 		assert_noop!(
 			Controller::set_max_borrow_rate(Origin::signed(ALICE), CurrencyId::DOT, 20, 10),
 			BadOrigin
+		);
+	});
+}
+
+#[test]
+fn calculate_utilisation_rate_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Controller::calculate_utilisation_rate(100, 0, 2));
+		assert_eq!(Controller::calculate_utilisation_rate(0, 0, 0), Ok(Rate::from_inner(0)));
+		assert_eq!(
+			Controller::calculate_utilisation_rate(22, 80, 2),
+			Ok(Rate::saturating_from_rational(8, 10))
+		);
+
+		assert_noop!(
+			Controller::calculate_utilisation_rate(Balance::max_value(), 80, 2),
+			Error::<Runtime>::NumOverflow
+		);
+	});
+}
+
+#[test]
+fn calculate_new_borrow_index_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Controller::calculate_new_borrow_index(
+			Rate::saturating_from_rational(63u128, 10_000_000_000u128),
+			Rate::saturating_from_rational(1, 1)
+		));
+		assert_eq!(
+			Controller::calculate_new_borrow_index(
+				Rate::saturating_from_rational(63u128, 10_000_000_000u128),
+				Rate::saturating_from_rational(1, 1)
+			),
+			Ok(Rate::from_inner(1_000_000_006_300_000_000))
 		);
 	});
 }

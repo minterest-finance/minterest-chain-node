@@ -284,11 +284,13 @@ impl liquidity_pools::Trait for Runtime {
 
 parameter_types! {
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
 }
 
 impl controller::Trait for Runtime {
 	type Event = Event;
 	type InitialExchangeRate = InitialExchangeRate;
+	type BlocksPerYear = BlocksPerYear;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

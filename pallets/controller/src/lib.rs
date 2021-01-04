@@ -8,7 +8,7 @@ use orml_traits::MultiCurrency;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
-	traits::{CheckedDiv, CheckedMul, Zero},
+	traits::{CheckedAdd, CheckedDiv, CheckedMul, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, convert::TryInto, result};
@@ -21,6 +21,10 @@ pub struct ControllerData<BlockNumber> {
 	pub borrow_rate: Rate,
 	pub insurance_factor: Rate,
 	pub max_borrow_rate: Rate,
+	pub kink: Rate,
+	pub base_rate_per_block: Rate,
+	pub multiplier_per_block: Rate,
+	pub jump_multiplier_per_block: Rate,
 }
 
 #[cfg(test)]
@@ -36,11 +40,25 @@ pub trait Trait: liquidity_pools::Trait + system::Trait {
 
 	/// Start exchange rate
 	type InitialExchangeRate: Get<Rate>;
+
+	// The approximate number of blocks per year
+	type BlocksPerYear: Get<u128>;
 }
 
 decl_event! {
 	pub enum Event {
+
+		/// InsuranceFactor has been successfully changed
 		InsuranceFactorChanged,
+
+		/// JumpMultiplierPerBlock has been successfully changed
+		JumpMultiplierPerBlockHasChanged,
+
+		/// BaseRatePerBlock has been successfully changed
+		BaseRatePerBlockHasChanged,
+
+		/// MultiplierPerBlock has been successfully changed
+		MultiplierPerBlockHasChanged,
 	}
 }
 
@@ -93,6 +111,54 @@ decl_module! {
 			Self::deposit_event(Event::InsuranceFactorChanged);
 			Ok(())
 		}
+
+		/// Set BaseRatePerBlock from BaseRatePerYear
+		#[weight = 10_000]
+		pub fn set_base_rate_per_block(origin, pool_id: CurrencyId, base_rate_per_year_n: u128, base_rate_per_year_d: u128) -> DispatchResult {
+			ensure_root(origin)?;
+
+			let new_base_rate_per_year = Rate::saturating_from_rational(base_rate_per_year_n, base_rate_per_year_d);
+
+			let new_base_rate_per_block = new_base_rate_per_year
+				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
+				.ok_or(Error::<T>::NumOverflow)?;
+
+			ControllerDates::<T>::mutate(pool_id, |r| r.base_rate_per_block = new_base_rate_per_block);
+			Self::deposit_event(Event::BaseRatePerBlockHasChanged);
+			Ok(())
+		}
+
+		/// Set MultiplierPerBlock from MultiplierPerYear
+		#[weight = 10_000]
+		pub fn set_multiplier_rate_per_block(origin, pool_id: CurrencyId, multiplier_rate_per_year_n: u128, multiplier_rate_per_year_d: u128) -> DispatchResult {
+			ensure_root(origin)?;
+
+			let new_multiplier_per_year = Rate::saturating_from_rational(multiplier_rate_per_year_n, multiplier_rate_per_year_d);
+
+			let new_multiplier_per_block = new_multiplier_per_year
+				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
+				.ok_or(Error::<T>::NumOverflow)?;
+
+			ControllerDates::<T>::mutate(pool_id, |r| r.multiplier_per_block = new_multiplier_per_block);
+			Self::deposit_event(Event::MultiplierPerBlockHasChanged);
+			Ok(())
+		}
+
+		/// Set JumpMultiplierPerBlock from JumpMultiplierPerYear
+		#[weight = 10_000]
+		pub fn set_jump_multiplier_rate_per_block(origin, pool_id: CurrencyId, jump_multiplier_rate_per_year_n: u128, jump_multiplier_rate_per_year_d: u128) -> DispatchResult {
+			ensure_root(origin)?;
+
+			let new_jump_multiplier_per_year = Rate::saturating_from_rational(jump_multiplier_rate_per_year_n, jump_multiplier_rate_per_year_d);
+
+			let new_jump_multiplier_per_block = new_jump_multiplier_per_year
+				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
+				.ok_or(Error::<T>::NumOverflow)?;
+
+			ControllerDates::<T>::mutate(pool_id, |r| r.jump_multiplier_per_block = new_jump_multiplier_per_block);
+			Self::deposit_event(Event::JumpMultiplierPerBlockHasChanged);
+			Ok(())
+		}
 	}
 }
 
@@ -120,10 +186,11 @@ impl<T: Trait> Module<T> {
 		let current_total_balance = <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id);
 		let current_total_borrowed_balance = <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id);
 		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(underlying_asset_id);
-		let _current_borrow_index: Rate; // FIXME: how can i use it?
+		let current_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
 
 		// Calculate the current borrow interest rate
 		let current_borrow_interest_rate = Self::calculate_borrow_interest_rate(
+			underlying_asset_id,
 			current_total_balance,
 			current_total_borrowed_balance,
 			current_total_insurance,
@@ -149,22 +216,24 @@ impl<T: Trait> Module<T> {
 			*  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
 		*/
 
-		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, &block_delta)?; //FIXME: function returns 0, unusual behavior
+		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, &block_delta)?;
 		let interest_accumulated =
 			Self::calculate_interest_accumulated(simple_interest_factor, current_total_borrowed_balance)?;
 		let new_total_borrow_balance =
 			Self::calculate_new_total_borrow(interest_accumulated, current_total_borrowed_balance)?;
 		let new_total_insurance =
 			Self::calculate_new_total_insurance(interest_accumulated, insurance_factor, current_total_insurance)?;
-		let _new_borrow_index: Rate; // FIXME: how can i use it?
+		let new_borrow_index = Self::calculate_new_borrow_index(simple_interest_factor, current_borrow_index)?;
 
 		// Save new params
 		ControllerDates::<T>::mutate(underlying_asset_id, |x| x.timestamp = current_block_number);
+		ControllerDates::<T>::mutate(underlying_asset_id, |x| x.borrow_rate = current_borrow_interest_rate);
 		<LiquidityPools<T>>::set_accrual_interest_params(
 			underlying_asset_id,
 			new_total_borrow_balance,
 			new_total_insurance,
 		)?;
+		<LiquidityPools<T>>::set_pool_borrow_index(underlying_asset_id, new_borrow_index)?;
 
 		Ok(())
 	}
@@ -243,7 +312,12 @@ impl<T: Trait> Module<T> {
 		// Total number of tokens in circulation
 		let total_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
 
-		let current_exchange_rate = Self::calculate_exchange_rate(total_cash, total_supply)?;
+		let total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(underlying_asset_id);
+
+		let total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id);
+
+		let current_exchange_rate =
+			Self::calculate_exchange_rate(total_cash, total_supply, total_insurance, total_borrowed)?;
 
 		<LiquidityPools<T>>::set_current_exchange_rate(underlying_asset_id, current_exchange_rate)?;
 
@@ -251,22 +325,88 @@ impl<T: Trait> Module<T> {
 	}
 
 	//Used in: get_exchange_rate
-	fn calculate_exchange_rate(total_cash: Balance, total_supply: Balance) -> RateResult {
+	fn calculate_exchange_rate(
+		total_cash: Balance,
+		total_supply: Balance,
+		total_insurance: Balance,
+		total_borrowed: Balance,
+	) -> RateResult {
 		let rate = match total_supply.cmp(&Balance::zero()) {
 			Ordering::Equal => T::InitialExchangeRate::get(),
-			_ => Rate::saturating_from_rational(total_cash, total_supply),
+			_ => {
+				let cash_plus_borrows = total_cash.checked_add(total_borrowed).ok_or(Error::<T>::NumOverflow)?;
+
+				let cash_plus_borrows_minus_insurance = cash_plus_borrows
+					.checked_sub(total_insurance)
+					.ok_or(Error::<T>::NumOverflow)?;
+
+				Rate::saturating_from_rational(cash_plus_borrows_minus_insurance, total_supply)
+			}
 		};
 
 		Ok(rate)
 	}
 
 	fn calculate_borrow_interest_rate(
-		_current_total_balance: Balance,
-		_current_total_borrowed_balance: Balance,
-		_current_total_insurance: Balance,
+		underlying_asset_id: CurrencyId,
+		current_total_balance: Balance,
+		current_total_borrowed_balance: Balance,
+		current_total_insurance: Balance,
 	) -> RateResult {
-		// FIXME
-		Ok(Rate::saturating_from_rational(1, 1))
+		let utilization_rate = Self::calculate_utilisation_rate(
+			current_total_balance,
+			current_total_borrowed_balance,
+			current_total_insurance,
+		)?;
+
+		let kink = Self::controller_dates(underlying_asset_id).kink;
+		let multiplier_per_block = Self::controller_dates(underlying_asset_id).multiplier_per_block;
+		let base_rate_per_block = Self::controller_dates(underlying_asset_id).base_rate_per_block;
+		let jump_multiplier_per_block = Self::controller_dates(underlying_asset_id).jump_multiplier_per_block;
+
+		let borrow_interest_rate = match utilization_rate.cmp(&kink) {
+			Ordering::Less => (utilization_rate
+				.checked_mul(&multiplier_per_block)
+				.ok_or(Error::<T>::NumOverflow)?)
+			.checked_add(&base_rate_per_block)
+			.ok_or(Error::<T>::NumOverflow)?,
+			_ => {
+				let normal_rate = (kink.checked_mul(&multiplier_per_block).ok_or(Error::<T>::NumOverflow)?)
+					.checked_add(&base_rate_per_block)
+					.ok_or(Error::<T>::NumOverflow)?;
+				let excess_util = utilization_rate.checked_mul(&kink).ok_or(Error::<T>::NumOverflow)?;
+
+				(excess_util
+					.checked_mul(&jump_multiplier_per_block)
+					.ok_or(Error::<T>::NumOverflow)?)
+				.checked_add(&normal_rate)
+				.ok_or(Error::<T>::NumOverflow)?
+			}
+		};
+
+		Ok(borrow_interest_rate)
+	}
+
+	// Calculates the utilization rate of the market:
+	// borrows / (cash + borrows - reserves)
+	fn calculate_utilisation_rate(
+		current_total_balance: Balance,
+		current_total_borrowed_balance: Balance,
+		current_total_insurance: Balance,
+	) -> RateResult {
+		if current_total_borrowed_balance == 0 {
+			return Ok(Rate::from_inner(0));
+		}
+
+		let total_balance_total_borrowed_sum = current_total_balance
+			.checked_add(current_total_borrowed_balance)
+			.ok_or(Error::<T>::NumOverflow)?;
+		let denominator = total_balance_total_borrowed_sum
+			.checked_sub(current_total_insurance)
+			.ok_or(Error::<T>::NumOverflow)?;
+		let utilization_rate = Rate::saturating_from_rational(current_total_borrowed_balance, denominator);
+
+		Ok(utilization_rate)
 	}
 
 	fn calculate_block_delta(
@@ -290,13 +430,9 @@ impl<T: Trait> Module<T> {
 			.ok()
 			.expect("blockchain will not exceed 2^32 blocks; qed");
 
-		// FIXME: unusual behavior, we still need interest_factor = 0. To Fix: delete conditional operator
-		let interest_factor = match block_delta_as_usize.cmp(&0) {
-			Ordering::Greater => Rate::from_inner(0),
-			_ => Rate::saturating_from_rational(block_delta_as_usize as u128, 1)
-				.checked_mul(&current_borrow_interest_rate)
-				.ok_or(Error::<T>::NumOverflow)?,
-		};
+		let interest_factor = Rate::saturating_from_rational(block_delta_as_usize as u128, 1)
+			.checked_mul(&current_borrow_interest_rate)
+			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(interest_factor)
 	}
@@ -306,7 +442,7 @@ impl<T: Trait> Module<T> {
 		simple_interest_factor: Rate,
 		current_total_borrowed_balance: Balance,
 	) -> BalanceResult {
-		let interest_accumulated = Rate::from_inner(current_total_borrowed_balance)
+		let interest_accumulated = Rate::from_inner(current_total_borrowed_balance) // FIXME: check value, perhabs will needed change fromm_inner ->to saturating_from_rational
 			.checked_mul(&simple_interest_factor)
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
@@ -342,6 +478,17 @@ impl<T: Trait> Module<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(total_insurance_new)
+	}
+
+	// borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
+	fn calculate_new_borrow_index(simple_interest_factor: Rate, current_borrow_index: Rate) -> RateResult {
+		let accumulated = simple_interest_factor
+			.checked_mul(&current_borrow_index)
+			.ok_or(Error::<T>::NumOverflow)?;
+		let new_borrow_index = accumulated
+			.checked_add(&current_borrow_index)
+			.ok_or(Error::<T>::NumOverflow)?;
+		Ok(new_borrow_index)
 	}
 
 	fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> CurrencyIdResult {
