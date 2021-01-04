@@ -43,15 +43,38 @@ fn cant_exceed_max_members() {
 fn remove_member_should_work() {
 	ExternalityBuilder::build().execute_with(|| {
 		assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
-		assert_ok!(TestAccounts::remove_member(Origin::root(), ALICE));
+		assert_ok!(TestAccounts::add_member(Origin::root(), BOB));
 
-		// check correct event emission
-		let expected_event = TestEvent::accounts(RawEvent::AccountRemoved(ALICE));
+		assert_ok!(TestAccounts::remove_member(Origin::root(), BOB));
+		assert_noop!(
+			TestAccounts::remove_member(Origin::root(), ALICE),
+			Error::<Test>::MustBeAtLeastOneMember
+		);
 
-		assert_eq!(System::events()[1].event, expected_event,);
+		// Test that the expected events were emitted
+		let our_events = System::events()
+			.into_iter()
+			.map(|r| r.event)
+			.filter_map(|e| {
+				if let TestEvent::accounts(inner) = e {
+					Some(inner)
+				} else {
+					None
+				}
+			})
+			.collect::<Vec<_>>();
+
+		let expected_events = vec![
+			RawEvent::AccountAdded(1),
+			RawEvent::AccountAdded(2),
+			RawEvent::AccountRemoved(2),
+		];
+
+		assert_eq!(our_events, expected_events);
 
 		// check storage changes
-		assert!(!<AllowedAccounts<Test>>::contains_key(ALICE));
+		assert!(<AllowedAccounts<Test>>::contains_key(ALICE));
+		assert!(!<AllowedAccounts<Test>>::contains_key(BOB));
 
 		assert_noop!(
 			TestAccounts::remove_member(Origin::root(), BOB),

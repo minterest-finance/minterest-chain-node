@@ -38,10 +38,15 @@ decl_error! {
 	pub enum Error for Module<T: Trait> {
 		/// The account cannot be added to the allowed list because it has already been added.
 		AlreadyMember,
+
 		/// The account cannot be removed from the allowed list because it is not a member
 		NotMember,
+
 		/// Cannot add another member because the limit is already reached.
 		MembershipLimitReached,
+
+		/// Cannot remove a member because ay least one member must remain.
+		MustBeAtLeastOneMember,
 	}
 }
 
@@ -76,6 +81,9 @@ decl_module! {
 			ensure_root(origin)?;
 
 			ensure!(AllowedAccounts::<T>::contains_key(&account_to_remove), Error::<T>::NotMember);
+
+			let member_count = MemberCount::get();
+			ensure!(member_count > 1, Error::<T>::MustBeAtLeastOneMember);
 
 			AllowedAccounts::<T>::remove(&account_to_remove);
 			MemberCount::mutate(|v| *v -= 1);
