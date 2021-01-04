@@ -78,7 +78,18 @@ fn remove_member_should_work() {
 
 		assert_noop!(
 			TestAccounts::remove_member(Origin::root(), BOB),
-			Error::<Test>::NotMember
+			Error::<Test>::NotAMember
 		);
 	})
+}
+
+#[test]
+fn is_admin_should_work() {
+	ExternalityBuilder::build().execute_with(|| {
+		assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
+
+		assert_ok!(TestAccounts::is_admin(Origin::signed(ALICE)));
+
+		assert_noop!(TestAccounts::is_admin(Origin::signed(BOB)), Error::<Test>::NotAMember);
+	});
 }
