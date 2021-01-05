@@ -1,7 +1,7 @@
 use super::*;
 use mock::*;
 
-use frame_support::{assert_err, assert_noop, assert_ok};
+use frame_support::{assert_err, assert_noop, assert_ok, error::BadOrigin};
 
 #[test]
 fn accrue_interest_should_work() {
