@@ -233,7 +233,6 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Determine what the account liquidity would be if the given amounts were redeemed/borrowed.
-	///
 	pub fn get_hypothetical_account_liquidity(
 		account: &T::AccountId,
 		m_token_id: CurrencyId,
