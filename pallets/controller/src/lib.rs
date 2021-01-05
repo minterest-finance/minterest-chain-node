@@ -98,6 +98,7 @@ decl_module! {
 
 type RateResult = result::Result<Rate, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
+type LiquidityResult = result::Result<(Balance, Balance), DispatchError>;
 type CurrencyIdResult = result::Result<CurrencyId, DispatchError>;
 
 impl<T: Trait> Module<T> {
@@ -229,6 +230,21 @@ impl<T: Trait> Module<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(result)
+	}
+
+	/// Determine what the account liquidity would be if the given amounts were redeemed/borrowed.
+	///
+	pub fn get_hypothetical_account_liquidity(
+		account: &T::AccountId,
+		m_token_id: CurrencyId,
+		redeem_amount: Balance,
+		borrow_amount: Balance,
+	) -> LiquidityResult {
+		let _account = account;
+		let _m_token_id = m_token_id;
+		let _redeem_amount = redeem_amount;
+		let _borrow_amount = borrow_amount;
+		Ok((Balance::zero(), Balance::zero()))
 	}
 }
 
