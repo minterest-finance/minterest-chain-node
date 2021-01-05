@@ -734,6 +734,7 @@ dependencies = [
  "frame-system",
  "liquidity-pools",
  "minterest-primitives",
+ "oracle",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -2177,6 +2178,7 @@ dependencies = [
  "m-tokens",
  "minterest-primitives",
  "minterest-protocol",
+ "oracle",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -3206,6 +3208,7 @@ dependencies = [
  "frame-system",
  "liquidity-pools",
  "minterest-primitives",
+ "oracle",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -3620,7 +3623,10 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "minterest-primitives",
  "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]

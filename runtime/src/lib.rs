@@ -284,11 +284,18 @@ impl liquidity_pools::Trait for Runtime {
 
 parameter_types! {
 	pub const InitialExchangeRate: Rate = INITIAL_EXCHANGE_RATE;
+	pub MTokensId: Vec<CurrencyId> = vec![
+		CurrencyId::MDOT,
+		CurrencyId::MKSM,
+		CurrencyId::MBTC,
+		CurrencyId::METH,
+	];
 }
 
 impl controller::Trait for Runtime {
 	type Event = Event;
 	type InitialExchangeRate = InitialExchangeRate;
+	type MTokensId = MTokensId;
 }
 
 parameter_types! {

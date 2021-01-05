@@ -140,11 +140,22 @@ mod tests {
 
 	parameter_types! {
 		pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+		pub MTokensId: Vec<CurrencyId> = vec![
+			CurrencyId::MDOT,
+			CurrencyId::MKSM,
+			CurrencyId::MBTC,
+			CurrencyId::METH,
+		];
 	}
 
 	impl controller::Trait for Test {
 		type Event = ();
 		type InitialExchangeRate = InitialExchangeRate;
+		type MTokensId = MTokensId;
+	}
+
+	impl oracle::Trait for Test {
+		type Event = ();
 	}
 
 	pub const ALICE: AccountId = 1;

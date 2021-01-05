@@ -286,6 +286,7 @@ fn testnet_genesis(
 						borrow_rate: FixedU128::from_inner(0),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 					},
 				),
 				(
@@ -295,6 +296,7 @@ fn testnet_genesis(
 						borrow_rate: FixedU128::from_inner(0),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 					},
 				),
 				(
@@ -304,6 +306,7 @@ fn testnet_genesis(
 						borrow_rate: FixedU128::from_inner(0),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 					},
 				),
 				(
@@ -313,6 +316,7 @@ fn testnet_genesis(
 						borrow_rate: FixedU128::from_inner(0),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 					},
 				),
 			],

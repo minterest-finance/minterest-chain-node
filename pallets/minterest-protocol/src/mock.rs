@@ -25,6 +25,7 @@ impl_outer_event! {
 		liquidity_pools,
 		minterest_protocol<T>,
 		controller,
+		oracle,
 	}
 }
 
@@ -115,11 +116,22 @@ impl liquidity_pools::Trait for Test {
 
 parameter_types! {
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub MTokensId: Vec<CurrencyId> = vec![
+		CurrencyId::MDOT,
+		CurrencyId::MKSM,
+		CurrencyId::MBTC,
+		CurrencyId::METH,
+	];
 }
 
 impl controller::Trait for Test {
 	type Event = Event;
 	type InitialExchangeRate = InitialExchangeRate;
+	type MTokensId = MTokensId;
+}
+
+impl oracle::Trait for Test {
+	type Event = Event;
 }
 
 impl Trait for Test {

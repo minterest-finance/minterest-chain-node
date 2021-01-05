@@ -28,6 +28,7 @@ impl_outer_event! {
 		orml_currencies<T>,
 		liquidity_pools,
 		controller,
+		oracle,
 	}
 }
 
@@ -112,13 +113,24 @@ impl liquidity_pools::Trait for Runtime {
 	type ModuleId = LiquidityPoolsModuleId;
 }
 
+impl oracle::Trait for Runtime {
+	type Event = TestEvent;
+}
+
 parameter_types! {
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub MTokensId: Vec<CurrencyId> = vec![
+			CurrencyId::MDOT,
+			CurrencyId::MKSM,
+			CurrencyId::MBTC,
+			CurrencyId::METH,
+		];
 }
 
 impl Trait for Runtime {
 	type Event = TestEvent;
 	type InitialExchangeRate = InitialExchangeRate;
+	type MTokensId = MTokensId;
 }
 
 pub type BlockNumber = u64;
@@ -244,6 +256,7 @@ impl ExtBuilder {
 					borrow_rate: Rate::saturating_from_rational(1, 1),
 					insurance_factor: Rate::saturating_from_rational(1, 1),
 					max_borrow_rate: Rate::saturating_from_rational(1, 1),
+					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 				},
 			)],
 		}

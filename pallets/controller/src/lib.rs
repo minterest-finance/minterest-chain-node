@@ -21,6 +21,8 @@ pub struct ControllerData<BlockNumber> {
 	pub borrow_rate: Rate,
 	pub insurance_factor: Rate,
 	pub max_borrow_rate: Rate,
+	/// Determines how much a user can borrow.
+	pub collateral_factor: Rate,
 }
 
 #[cfg(test)]
@@ -29,13 +31,17 @@ mod mock;
 mod tests;
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
+type Oracle<T> = oracle::Module<T>;
 
-pub trait Trait: liquidity_pools::Trait + system::Trait {
+pub trait Trait: liquidity_pools::Trait + system::Trait + oracle::Trait {
 	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 
 	/// Start exchange rate
 	type InitialExchangeRate: Get<Rate>;
+
+	/// Wrapped currency IDs.
+	type MTokensId: Get<Vec<CurrencyId>>;
 }
 
 decl_event! {
@@ -66,6 +72,9 @@ decl_error! {
 
 		/// The currency is not enabled in wrapped protocol.
 		NotValidWrappedTokenId,
+
+		/// An internal Oracle error has occurred.
+		OraclePriceError,
 	}
 }
 
@@ -233,17 +242,79 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Determine what the account liquidity would be if the given amounts were redeemed/borrowed.
+	///
+	/// - `account`: The account to determine liquidity.
+	/// - `underlying_asset_id`: The pool to hypothetically redeem/borrow.
+	/// - `redeem_amount`: The number of tokens to hypothetically redeem.
+	/// - `borrow_amount`: The amount of underlying to hypothetically borrow.
+	/// Returns (hypothetical account liquidity in excess of collateral requirements,
+	/// 		 hypothetical account shortfall below collateral requirements).
 	pub fn get_hypothetical_account_liquidity(
 		account: &T::AccountId,
-		m_token_id: CurrencyId,
+		underlying_asset_id: CurrencyId,
 		redeem_amount: Balance,
 		borrow_amount: Balance,
 	) -> LiquidityResult {
-		let _account = account;
-		let _m_token_id = m_token_id;
-		let _redeem_amount = redeem_amount;
-		let _borrow_amount = borrow_amount;
-		Ok((Balance::zero(), Balance::zero()))
+		let m_tokens_ids = T::MTokensId::get();
+
+		let mut sum_collateral = Balance::zero();
+		let mut sum_borrow_plus_effects = Balance::zero();
+
+		// For each tokens the account is in
+		for asset in m_tokens_ids.into_iter() {
+			let m_token_balance = T::MultiCurrency::free_balance(asset, account);
+			if m_token_balance == Balance::zero() {
+				continue;
+			}
+
+			// Read the balances and exchange rate from the cToken
+			let borrow_balance = Self::borrow_balance_stored(account, underlying_asset_id)?;
+			let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
+			let collateral_factor = Self::get_collateral_factor(underlying_asset_id);
+
+			// Get the normalized price of the asset.
+			let oracle_price =
+				<Oracle<T>>::get_underlying_price(underlying_asset_id).map_err(|_| Error::<T>::OraclePriceError)?;
+
+			// Pre-compute a conversion factor from tokens -> dollars (normalized price value)
+			let tokens_to_denom = collateral_factor
+				.checked_mul(&exchange_rate)
+				.ok_or(Error::<T>::NumOverflow)?
+				.checked_mul(&oracle_price)
+				.ok_or(Error::<T>::NumOverflow)?;
+
+			// sum_collateral += tokens_to_denom * m_token_balance
+			sum_collateral =
+				Self::mul_price_and_balance_add_to_prev_value(sum_collateral, m_token_balance, tokens_to_denom)?;
+
+			// sum_borrow_plus_effects += oracle_price * borrow_balance
+			sum_borrow_plus_effects =
+				Self::mul_price_and_balance_add_to_prev_value(sum_borrow_plus_effects, borrow_balance, oracle_price)?;
+
+			// Calculate effects of interacting with Underlying Asset Modify
+			if underlying_asset_id == asset {
+				// redeem effect
+				// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
+				sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
+					sum_borrow_plus_effects,
+					redeem_amount,
+					tokens_to_denom,
+				)?;
+
+				// borrow effect
+				// sum_borrow_plus_effects += oracle_price * borrow_amount
+				sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
+					sum_borrow_plus_effects,
+					borrow_amount,
+					oracle_price,
+				)?;
+			}
+		}
+
+		return match sum_collateral.cmp(&sum_borrow_plus_effects) {
+			Ordering::Greater => Ok((sum_collateral - sum_borrow_plus_effects, 0)),
+			_ => Ok((0, sum_collateral - sum_borrow_plus_effects)),
+		};
 	}
 }
 
@@ -359,6 +430,23 @@ impl<T: Trait> Module<T> {
 		Ok(total_insurance_new)
 	}
 
+	/// Returning: value += balance_scalar * rate_scalar
+	fn mul_price_and_balance_add_to_prev_value(
+		value: Balance,
+		balance_scalar: Balance,
+		rate_scalar: Rate,
+	) -> BalanceResult {
+		let result = value
+			.checked_add(
+				Rate::from_inner(balance_scalar)
+					.checked_mul(&rate_scalar)
+					.map(|x| x.into_inner())
+					.ok_or(Error::<T>::NumOverflow)?,
+			)
+			.ok_or(Error::<T>::NumOverflow)?;
+		Ok(result)
+	}
+
 	fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> CurrencyIdResult {
 		match asset_id {
 			CurrencyId::DOT => Ok(CurrencyId::MDOT),
@@ -377,5 +465,13 @@ impl<T: Trait> Module<T> {
 			CurrencyId::METH => Ok(CurrencyId::ETH),
 			_ => Err(Error::<T>::NotValidWrappedTokenId.into()),
 		}
+	}
+}
+
+// Getters for LiquidityPools
+impl<T: Trait> Module<T> {
+	/// Determines how much a user can borrow.
+	fn get_collateral_factor(pool_id: CurrencyId) -> Rate {
+		Self::controller_dates(pool_id).collateral_factor
 	}
 }
