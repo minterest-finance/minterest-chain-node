@@ -442,7 +442,7 @@ impl<T: Trait> Module<T> {
 		simple_interest_factor: Rate,
 		current_total_borrowed_balance: Balance,
 	) -> BalanceResult {
-		let interest_accumulated = Rate::from_inner(current_total_borrowed_balance) // FIXME: check value, perhabs will needed change fromm_inner ->to saturating_from_rational
+		let interest_accumulated = Rate::from_inner(current_total_borrowed_balance)
 			.checked_mul(&simple_interest_factor)
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;

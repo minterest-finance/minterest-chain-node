@@ -140,11 +140,13 @@ mod tests {
 
 	parameter_types! {
 		pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+		pub const BlocksPerYear: u128 = 5256000;
 	}
 
 	impl controller::Trait for Test {
 		type Event = ();
 		type InitialExchangeRate = InitialExchangeRate;
+		type BlocksPerYear = BlocksPerYear;
 	}
 
 	pub const ALICE: AccountId = 1;
