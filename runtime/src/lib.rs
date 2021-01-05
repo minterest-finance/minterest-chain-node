@@ -47,7 +47,7 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
-pub use constants::{currency::*, time::*};
+pub use constants::{currency::*, time::*, *};
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -283,7 +283,7 @@ impl liquidity_pools::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const InitialExchangeRate: Rate = INITIAL_EXCHANGE_RATE;
 	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
 }
 
@@ -293,8 +293,13 @@ impl controller::Trait for Runtime {
 	type BlocksPerYear = BlocksPerYear;
 }
 
+parameter_types! {
+	pub const MaxMembers: u32 = MAX_MEMBERS;
+}
+
 impl accounts::Trait for Runtime {
 	type Event = Event;
+	type MaxMembers = MaxMembers;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -318,9 +323,7 @@ construct_runtime!(
 		// Minterest pallets
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
-		// LiquidityPools
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event, Config<T>},
-		// Controller
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		Accounts: accounts::{Module, Storage, Call, Event<T>},
 	}
