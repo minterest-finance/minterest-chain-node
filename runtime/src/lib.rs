@@ -300,6 +300,10 @@ impl accounts::Trait for Runtime {
 	type MaxMembers = MaxMembers;
 }
 
+impl oracle::Trait for Runtime {
+	type Event = Event;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -324,6 +328,7 @@ construct_runtime!(
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		Accounts: accounts::{Module, Storage, Call, Event<T>},
+		Oracle: oracle::{Module, Storage, Call, Event},
 	}
 );
 

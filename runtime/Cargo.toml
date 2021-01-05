@@ -32,6 +32,7 @@ pallet-traits = { path = "../pallets/traits", default-features = false }
 integration-tests = { path = "../pallets/integration-tests", default-features = false }
 controller = { path = "../pallets/controller", default-features = false }
 accounts = { path = "../pallets/accounts", default-features = false }
+oracle = { path = "../pallets/oracle", default-features = false }
 
 # Substrate dependencies
 frame-benchmarking = { default-features = false, optional = true, version = '2.0.0' }
@@ -121,4 +122,5 @@ std = [
     'integration-tests/std',
     'controller/std',
     'accounts/std',
+    'oracle/std',
 ]

@@ -3444,6 +3444,7 @@ dependencies = [
  "m-tokens",
  "minterest-primitives",
  "minterest-protocol",
+ "oracle",
  "orml-benchmarking",
  "orml-currencies",
  "orml-oracle",
@@ -3612,6 +3613,15 @@ name = "openssl-probe"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77af24da69f9d9341038eba93a073b1fdaaa1b788221b00a69bce9e762cb32de"
+
+[[package]]
+name = "oracle"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+]
 
 [[package]]
 name = "orml-auction"
