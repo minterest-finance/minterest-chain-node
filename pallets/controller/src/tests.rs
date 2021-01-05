@@ -298,3 +298,21 @@ fn set_max_borrow_rate_should_work() {
 		);
 	});
 }
+
+#[test]
+fn mul_price_and_balance_add_to_prev_value_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_eq!(
+			Controller::mul_price_and_balance_add_to_prev_value(20, 20, Rate::saturating_from_rational(9, 10)),
+			Ok(38)
+		);
+		assert_eq!(
+			Controller::mul_price_and_balance_add_to_prev_value(
+				120_000,
+				85_000,
+				Rate::saturating_from_rational(87, 100)
+			),
+			Ok(193950)
+		);
+	});
+}
