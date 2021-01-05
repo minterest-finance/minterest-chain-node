@@ -1,4 +1,4 @@
-//! Tests for the minterest-protocol module.
+//! Tests for the minterest-protocol pallet.
 
 use super::*;
 use mock::*;
