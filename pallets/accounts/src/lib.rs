@@ -38,7 +38,7 @@ decl_event!(
 		AccountRemoved(AccountId),
 
 		/// The caller is a member: \[who\]
-		IsAMember(AccountId),
+		IsAnAdmin(AccountId),
 	}
 );
 
@@ -48,7 +48,7 @@ decl_error! {
 		AlreadyMember,
 
 		/// The account cannot be removed from the allowed list because it is not a member.
-		NotAMember,
+		NotAnAdmin,
 
 		/// Cannot add another member because the limit is already reached.
 		MembershipLimitReached,
@@ -88,7 +88,7 @@ decl_module! {
 		fn remove_member(origin, account_to_remove: T::AccountId) -> DispatchResult {
 			ensure_root(origin)?;
 
-			ensure!(AllowedAccounts::<T>::contains_key(&account_to_remove), Error::<T>::NotAMember);
+			ensure!(AllowedAccounts::<T>::contains_key(&account_to_remove), Error::<T>::NotAnAdmin);
 
 			let member_count = MemberCount::get();
 			ensure!(member_count > 1, Error::<T>::MustBeAtLeastOneMember);
@@ -104,8 +104,8 @@ decl_module! {
 		#[weight = 0]
 		fn is_admin(origin) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
-			ensure!(AllowedAccounts::<T>::contains_key(&caller), Error::<T>::NotAMember);
-			Self::deposit_event(RawEvent::IsAMember(caller));
+			ensure!(AllowedAccounts::<T>::contains_key(&caller), Error::<T>::NotAnAdmin);
+			Self::deposit_event(RawEvent::IsAnAdmin(caller));
 			Ok(())
 		}
 
