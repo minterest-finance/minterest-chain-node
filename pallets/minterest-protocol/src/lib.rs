@@ -81,6 +81,12 @@ decl_error! {
 
 		/// An internal failure occurred in the execution of the Accrue Interest function.
 		AccrueInterestFailed,
+
+		/// Borrow was blocked due to Controller rejection.
+		BorrowControllerRejection,
+
+		/// Repay was blocked due to Controller rejection.
+		RepayBorrowControllerRejection,
 	}
 }
 
@@ -305,6 +311,10 @@ impl<T: Trait> Module<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
+		// Fail if borrow not allowed
+		<Controller<T>>::borrow_allowed(underlying_asset_id, &who, borrow_amount)
+			.map_err(|_| Error::<T>::BorrowControllerRejection)?;
+
 		// Fetch the amount the borrower owes, with accumulated interest
 		let account_borrows =
 			<Controller<T>>::borrow_balance_stored(&who, underlying_asset_id).map_err(|_| Error::<T>::NumOverflow)?;
@@ -340,6 +350,10 @@ impl<T: Trait> Module<T> {
 		);
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
+
+		// Fail if repayBorrow not allowed
+		<Controller<T>>::repay_borrow_allowed(underlying_asset_id, &who, repay_amount)
+			.map_err(|_| Error::<T>::RepayBorrowControllerRejection)?;
 
 		// Verify pool's block number equals current block number
 		let current_block_number = <frame_system::Module<T>>::block_number();
