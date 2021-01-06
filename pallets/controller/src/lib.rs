@@ -11,7 +11,7 @@ use sp_runtime::{
 	traits::{CheckedDiv, CheckedMul, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
 };
-use sp_std::{cmp::Ordering, convert::TryInto, result};
+use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
@@ -357,7 +357,7 @@ impl<T: Trait> Module<T> {
 
 		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, underlying_asset_id, 0, borrow_amount)?;
 
-		ensure!(!(shortfall > 0), Error::<T>::InsufficientLiquidity);
+		ensure!(shortfall > 0, Error::<T>::InsufficientLiquidity);
 
 		Ok(())
 	}
