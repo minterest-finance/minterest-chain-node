@@ -1,5 +1,6 @@
 //! Mocks for the minterest-protocol module.
 
+use controller::ControllerData;
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use liquidity_pools::Pool;
 use minterest_primitives::{Balance, CurrencyId, Rate};
@@ -171,6 +172,7 @@ pub const ONE_HUNDRED: Balance = 100;
 pub type MinterestProtocol = Module<Test>;
 pub type TestPools = liquidity_pools::Module<Test>;
 pub type Currencies = orml_currencies::Module<Test>;
+pub type System = frame_system::Module<Test>;
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
@@ -240,5 +242,53 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	.assimilate_storage(&mut t)
 	.unwrap();
 
-	t.into()
+	controller::GenesisConfig::<Test> {
+		controller_dates: vec![
+			(
+				CurrencyId::ETH,
+				ControllerData {
+					timestamp: 0,
+					borrow_rate: Rate::from_inner(0),
+					insurance_factor: Rate::saturating_from_rational(1, 10),
+					max_borrow_rate: Rate::saturating_from_rational(1, 1),
+					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+				},
+			),
+			(
+				CurrencyId::DOT,
+				ControllerData {
+					timestamp: 0,
+					borrow_rate: Rate::from_inner(0),
+					insurance_factor: Rate::saturating_from_rational(1, 10),
+					max_borrow_rate: Rate::saturating_from_rational(1, 1),
+					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+				},
+			),
+			(
+				CurrencyId::KSM,
+				ControllerData {
+					timestamp: 0,
+					borrow_rate: Rate::from_inner(0),
+					insurance_factor: Rate::saturating_from_rational(1, 10),
+					max_borrow_rate: Rate::saturating_from_rational(1, 1),
+					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+				},
+			),
+			(
+				CurrencyId::BTC,
+				ControllerData {
+					timestamp: 0,
+					borrow_rate: Rate::from_inner(0),
+					insurance_factor: Rate::saturating_from_rational(1, 10),
+					max_borrow_rate: Rate::saturating_from_rational(1, 1),
+					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+				},
+			),
+		],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+	let mut ext: sp_io::TestExternalities = t.into();
+	ext.execute_with(|| System::set_block_number(1));
+	ext
 }

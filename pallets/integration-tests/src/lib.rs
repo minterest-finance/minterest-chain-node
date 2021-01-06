@@ -17,6 +17,7 @@ mod tests {
 	};
 	use sp_runtime::{DispatchResult, FixedPointNumber};
 
+	use controller::ControllerData;
 	use minterest_protocol::Error as MinterestProtocolError;
 
 	impl_outer_origin! {
@@ -158,6 +159,7 @@ mod tests {
 		type Event = ();
 	}
 
+	pub const ADMIN: AccountId = 0;
 	pub const ALICE: AccountId = 1;
 	pub const BOB: AccountId = 2;
 	pub const ONE_MILL: Balance = 1_000_000;
@@ -165,6 +167,7 @@ mod tests {
 	pub type MinterestProtocol = minterest_protocol::Module<Test>;
 	pub type Pools = liquidity_pools::Module<Test>;
 	pub type Currencies = orml_currencies::Module<Test>;
+	pub type System = frame_system::Module<Test>;
 
 	pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
@@ -175,6 +178,8 @@ mod tests {
 				(ALICE, CurrencyId::DOT, ONE_HUNDRED),
 				(BOB, CurrencyId::MINT, ONE_MILL),
 				(BOB, CurrencyId::DOT, ONE_HUNDRED),
+				(ADMIN, CurrencyId::MINT, ONE_MILL),
+				(ADMIN, CurrencyId::DOT, ONE_HUNDRED),
 			],
 		}
 		.assimilate_storage(&mut t)
@@ -232,7 +237,56 @@ mod tests {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		t.into()
+		controller::GenesisConfig::<Test> {
+			controller_dates: vec![
+				(
+					CurrencyId::ETH,
+					ControllerData {
+						timestamp: 0,
+						borrow_rate: Rate::from_inner(0),
+						insurance_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(1, 1),
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+					},
+				),
+				(
+					CurrencyId::DOT,
+					ControllerData {
+						timestamp: 0,
+						borrow_rate: Rate::from_inner(0),
+						insurance_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(1, 1),
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+					},
+				),
+				(
+					CurrencyId::KSM,
+					ControllerData {
+						timestamp: 0,
+						borrow_rate: Rate::from_inner(0),
+						insurance_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(1, 1),
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+					},
+				),
+				(
+					CurrencyId::BTC,
+					ControllerData {
+						timestamp: 0,
+						borrow_rate: Rate::from_inner(0),
+						insurance_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(1, 1),
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+					},
+				),
+			],
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		let mut ext: sp_io::TestExternalities = t.into();
+		ext.execute_with(|| System::set_block_number(1));
+		ext.into()
 	}
 	/* ----------------------------------------------------------------------------------------- */
 
@@ -433,6 +487,24 @@ mod tests {
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 30);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(Pools::get_pool_total_borrowed(CurrencyId::DOT), 30);
+			assert_eq!(Pools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 30);
+
+			// pool_available_liquidity (DOT) = 30
+			// Admin depositing to the insurance 10 DOT, now pool_available_liquidity = 30 + 10 = 40 DOT
+			assert_ok!(Pools::deposit_insurance(Origin::signed(ADMIN), CurrencyId::DOT, 10));
+			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 40);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), 90);
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), 0);
+			assert_eq!(Pools::get_pool_total_insurance(CurrencyId::DOT), 10);
+
+			// Bob can borrow 35 DOT.
+			assert_ok!(MinterestProtocol::borrow(Origin::signed(BOB), CurrencyId::DOT, 35));
+			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 5);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &BOB), 135);
+			assert_eq!(Pools::get_pool_total_insurance(CurrencyId::DOT), 10);
+			assert_eq!(Pools::get_pool_total_borrowed(CurrencyId::DOT), 65);
+			assert_eq!(Pools::get_user_total_borrowed(&BOB, CurrencyId::DOT), 35);
 		});
 	}
 
@@ -453,6 +525,8 @@ mod tests {
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 30);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(Pools::get_pool_total_borrowed(CurrencyId::DOT), 30);
+			assert_eq!(Pools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 30);
 
 			assert_noop!(
 				MinterestProtocol::repay(Origin::signed(ALICE), CurrencyId::MDOT, 10),
@@ -467,6 +541,8 @@ mod tests {
 			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 50);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 50);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
+			assert_eq!(Pools::get_pool_total_borrowed(CurrencyId::DOT), 10);
+			assert_eq!(Pools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 10);
 		});
 	}
 }
