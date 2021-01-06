@@ -331,6 +331,27 @@ impl<T: Trait> Module<T> {
 		};
 	}
 
+	/// Checks if the account should be allowed to redeem tokens in the given pool.
+	///
+	/// - `underlying_asset_id` - The CurrencyId to verify the redeem against.
+	/// - `redeemer` -  The account which would redeem the tokens.
+	/// - `redeem_amount` - The number of mTokens to exchange for the underlying asset in the market.
+	/// Return Ok if the borrow is allowed, otherwise a semi-opaque error code.
+	pub fn redeem_allowed(
+		underlying_asset_id: CurrencyId,
+		redeemer: &T::AccountId,
+		redeem_amount: Balance,
+	) -> DispatchResult {
+		//FIXME: add account_membership checking
+
+		let (_, shortfall) =
+			Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset_id, redeem_amount, 0)?;
+
+		ensure!(!(shortfall > 0), Error::<T>::InsufficientLiquidity);
+
+		Ok(())
+	}
+
 	/// Checks if the account should be allowed to borrow the underlying asset of the given pool.
 	///
 	/// - `underlying_asset_id` - The CurrencyId to verify the borrow against.
@@ -343,8 +364,6 @@ impl<T: Trait> Module<T> {
 		borrow_amount: Balance,
 	) -> DispatchResult {
 		//FIXME: add pause checking
-
-		//FIXME: add Listed checking
 
 		//FIXME: add account_membership checking
 

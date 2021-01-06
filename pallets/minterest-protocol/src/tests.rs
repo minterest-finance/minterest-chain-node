@@ -237,7 +237,7 @@ fn borrow_should_work() {
 		assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 65);
 		assert_eq!(TestPools::get_user_total_borrowed(&BOB, CurrencyId::DOT), 35);
 
-		//TODO Complete the test with setting the block numberю
+		//TODO Complete the test with setting the block number.
 		System::set_block_number(100);
 	});
 }

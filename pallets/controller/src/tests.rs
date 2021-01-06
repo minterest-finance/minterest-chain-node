@@ -399,6 +399,13 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 }
 
 #[test]
+fn redeem_allowed_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		//TODO write tests after the function implementation.
+	});
+}
+
+#[test]
 fn borrow_allowed_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		//TODO write tests after the function implementation.

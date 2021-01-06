@@ -82,6 +82,9 @@ decl_error! {
 		/// An internal failure occurred in the execution of the Accrue Interest function.
 		AccrueInterestFailed,
 
+		/// Redeem was blocked due to Controller rejection.
+		RedeemControllerRejection,
+
 		/// Borrow was blocked due to Controller rejection.
 		BorrowControllerRejection,
 
@@ -279,6 +282,10 @@ impl<T: Trait> Module<T> {
 			wrapped_amount <= T::MultiCurrency::free_balance(wrapped_id, &who),
 			Error::<T>::NotEnoughWrappedTokens
 		);
+
+		// Fail if redeem not allowed
+		<Controller<T>>::redeem_allowed(underlying_asset_id, &who, wrapped_amount)
+			.map_err(|_| Error::<T>::RedeemControllerRejection)?;
 
 		T::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount)?;
 
