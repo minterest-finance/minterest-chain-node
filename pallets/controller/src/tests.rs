@@ -5,15 +5,18 @@ use frame_support::{assert_err, assert_noop, assert_ok, error::BadOrigin};
 
 #[test]
 fn accrue_interest_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		System::set_block_number(1);
-		assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
-		assert_noop!(
-			Controller::accrue_interest_rate(CurrencyId::BTC),
-			Error::<Runtime>::OperationsLocked
-		);
-		//FIXME: add test for: MaxBorrowRate
-	});
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			System::set_block_number(1);
+			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
+			assert_noop!(
+				Controller::accrue_interest_rate(CurrencyId::BTC),
+				Error::<Runtime>::OperationsLocked
+			);
+			//FIXME: add test for: MaxBorrowRate
+		});
 }
 
 #[test]
@@ -249,6 +252,7 @@ fn borrow_balance_stored_with_zero_balance_should_work() {
 #[test]
 fn borrow_balance_stored_should_work() {
 	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
 		.set_alice_total_borrowed_and_interest_index()
 		.build()
 		.execute_with(|| {
@@ -315,4 +319,81 @@ fn mul_price_and_balance_add_to_prev_value_should_work() {
 			Ok(193950)
 		);
 	});
+}
+
+#[test]
+fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// if m_tokens_balance == 0 then return Ok(0, 0)
+		assert_eq!(
+			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 5, 0),
+			Ok((0, 0))
+		);
+	});
+}
+
+#[test]
+fn get_hypothetical_account_liquidity_one_currency_from_redeem_should_work() {
+	ExtBuilder::default().alice_deposit_60_dots().build().execute_with(|| {
+		// Checking the function when called from redeem.
+		assert_eq!(
+			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 5, 0),
+			Ok((99, 0))
+		);
+		assert_eq!(
+			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 60, 0),
+			Ok((0, 0))
+		);
+		assert_eq!(
+			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 200, 0),
+			Ok((0, 252))
+		);
+	});
+}
+
+#[test]
+fn get_hypothetical_account_liquidity_two_currencies_from_redeem_should_work() {
+	ExtBuilder::default()
+		.alice_deposit_60_dots()
+		.alice_deposit_20_eth()
+		.build()
+		.execute_with(|| {
+			// Checking the function when called from redeem.
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 15, 0),
+				Ok((117, 0))
+			);
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 80, 0),
+				Ok((0, 0))
+			);
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 100, 0),
+				Ok((0, 36))
+			);
+		});
+}
+
+#[test]
+fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
+	ExtBuilder::default()
+		.alice_deposit_20_eth()
+		.alice_deposit_60_dots()
+		.alice_borrow_30_dot()
+		.build()
+		.execute_with(|| {
+			// Checking the function when called from borrow.
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 30),
+				Ok((54, 0))
+			);
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 50),
+				Ok((14, 0))
+			);
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 100),
+				Ok((0, 86))
+			);
+		});
 }

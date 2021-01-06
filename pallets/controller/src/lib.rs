@@ -75,6 +75,9 @@ decl_error! {
 
 		/// An internal Oracle error has occurred.
 		OraclePriceError,
+
+		/// There is not enough liquidity available in the pool.
+		InsufficientLiquidity
 	}
 }
 
@@ -262,19 +265,20 @@ impl<T: Trait> Module<T> {
 
 		// For each tokens the account is in
 		for asset in m_tokens_ids.into_iter() {
+			let underlying_asset = Self::get_underlying_asset_id_by_wrapped_id(&asset)?;
 			let m_token_balance = T::MultiCurrency::free_balance(asset, account);
 			if m_token_balance == Balance::zero() {
 				continue;
 			}
 
 			// Read the balances and exchange rate from the cToken
-			let borrow_balance = Self::borrow_balance_stored(account, underlying_asset_id)?;
-			let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
-			let collateral_factor = Self::get_collateral_factor(underlying_asset_id);
+			let borrow_balance = Self::borrow_balance_stored(account, underlying_asset)?;
+			let exchange_rate = Self::get_exchange_rate(underlying_asset)?;
+			let collateral_factor = Self::get_collateral_factor(underlying_asset);
 
 			// Get the normalized price of the asset.
 			let oracle_price =
-				<Oracle<T>>::get_underlying_price(underlying_asset_id).map_err(|_| Error::<T>::OraclePriceError)?;
+				<Oracle<T>>::get_underlying_price(underlying_asset).map_err(|_| Error::<T>::OraclePriceError)?;
 
 			// Pre-compute a conversion factor from tokens -> dollars (normalized price value)
 			let tokens_to_denom = collateral_factor
@@ -292,7 +296,7 @@ impl<T: Trait> Module<T> {
 				Self::mul_price_and_balance_add_to_prev_value(sum_borrow_plus_effects, borrow_balance, oracle_price)?;
 
 			// Calculate effects of interacting with Underlying Asset Modify
-			if underlying_asset_id == asset {
+			if underlying_asset_id == underlying_asset {
 				// redeem effect
 				// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
 				sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
@@ -312,8 +316,18 @@ impl<T: Trait> Module<T> {
 		}
 
 		return match sum_collateral.cmp(&sum_borrow_plus_effects) {
-			Ordering::Greater => Ok((sum_collateral - sum_borrow_plus_effects, 0)),
-			_ => Ok((0, sum_collateral - sum_borrow_plus_effects)),
+			Ordering::Greater => Ok((
+				sum_collateral
+					.checked_sub(sum_borrow_plus_effects)
+					.ok_or(Error::<T>::InsufficientLiquidity)?,
+				0,
+			)),
+			_ => Ok((
+				0,
+				sum_borrow_plus_effects
+					.checked_sub(sum_collateral)
+					.ok_or(Error::<T>::InsufficientLiquidity)?,
+			)),
 		};
 	}
 }
