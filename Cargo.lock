@@ -2173,6 +2173,7 @@ checksum = "f65877bf7d44897a473350b1046277941cee20b263397e90869c50b6e766088b"
 name = "integration-tests"
 version = "0.1.0"
 dependencies = [
+ "accounts",
  "controller",
  "frame-support",
  "frame-system",
@@ -3205,6 +3206,7 @@ dependencies = [
 name = "minterest-protocol"
 version = "0.1.0"
 dependencies = [
+ "accounts",
  "controller",
  "frame-support",
  "frame-system",

@@ -296,7 +296,7 @@ impl<T: Trait> Module<T> {
 	// Used in controller: do_deposit, do_redeem, do_borrow, do_repay
 	pub fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult {
 		ensure!(
-			Self::controller_dates(&underlying_asset_id).is_lock,
+			!Self::controller_dates(&underlying_asset_id).is_lock,
 			Error::<T>::OperationsLocked
 		);
 

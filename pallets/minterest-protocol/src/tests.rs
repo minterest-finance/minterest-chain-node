@@ -8,8 +8,9 @@ use frame_support::{assert_noop, assert_ok};
 #[test]
 fn deposit_underlying_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(LiquidityPools::<Test>::unlock_pool_transactions(
-			Origin::root(),
+		assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
+		assert_ok!(TestController::unlock_pool_transactions(
+			Origin::signed(ALICE),
 			CurrencyId::DOT
 		));
 		assert_noop!(
@@ -53,8 +54,9 @@ fn deposit_underlying_should_work() {
 #[test]
 fn redeem_underlying_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(LiquidityPools::<Test>::unlock_pool_transactions(
-			Origin::root(),
+		assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
+		assert_ok!(TestController::unlock_pool_transactions(
+			Origin::signed(ADMIN),
 			CurrencyId::DOT
 		));
 		assert_ok!(MinterestProtocol::deposit_underlying(
@@ -89,8 +91,9 @@ fn redeem_underlying_should_work() {
 #[test]
 fn redeem_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(LiquidityPools::<Test>::unlock_pool_transactions(
-			Origin::root(),
+		assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
+		assert_ok!(TestController::unlock_pool_transactions(
+			Origin::signed(ADMIN),
 			CurrencyId::DOT
 		));
 		assert_ok!(MinterestProtocol::deposit_underlying(
@@ -124,8 +127,9 @@ fn redeem_should_work() {
 #[test]
 fn redeem_wrapped_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(LiquidityPools::<Test>::unlock_pool_transactions(
-			Origin::root(),
+		assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
+		assert_ok!(TestController::unlock_pool_transactions(
+			Origin::signed(ADMIN),
 			CurrencyId::DOT
 		));
 		assert_ok!(MinterestProtocol::deposit_underlying(
@@ -160,8 +164,9 @@ fn redeem_wrapped_should_work() {
 #[test]
 fn getting_assets_from_pool_by_different_users_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(LiquidityPools::<Test>::unlock_pool_transactions(
-			Origin::root(),
+		assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
+		assert_ok!(TestController::unlock_pool_transactions(
+			Origin::signed(ALICE),
 			CurrencyId::DOT
 		));
 		assert_ok!(MinterestProtocol::deposit_underlying(
@@ -192,7 +197,11 @@ fn getting_assets_from_pool_by_different_users_should_work() {
 #[test]
 fn borrow_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(TestPools::unlock_pool_transactions(Origin::root(), CurrencyId::DOT));
+		assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
+		assert_ok!(TestController::unlock_pool_transactions(
+			Origin::signed(ADMIN),
+			CurrencyId::DOT
+		));
 		assert_ok!(MinterestProtocol::deposit_underlying(
 			Origin::signed(ALICE),
 			CurrencyId::DOT,
@@ -220,7 +229,11 @@ fn borrow_should_work() {
 
 		// pool_available_liquidity (DOT) = 30
 		// Admin depositing to the insurance 10 DOT, now pool_available_liquidity = 30 + 10 = 40 DOT
-		assert_ok!(TestPools::deposit_insurance(Origin::signed(ADMIN), CurrencyId::DOT, 10));
+		assert_ok!(TestController::deposit_insurance(
+			Origin::signed(ADMIN),
+			CurrencyId::DOT,
+			10
+		));
 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 40);
 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), 90);
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), 0);
@@ -245,7 +258,11 @@ fn borrow_should_work() {
 #[test]
 fn repay_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(TestPools::unlock_pool_transactions(Origin::root(), CurrencyId::DOT));
+		assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
+		assert_ok!(TestController::unlock_pool_transactions(
+			Origin::signed(ADMIN),
+			CurrencyId::DOT
+		));
 		assert_ok!(MinterestProtocol::deposit_underlying(
 			Origin::signed(ALICE),
 			CurrencyId::DOT,

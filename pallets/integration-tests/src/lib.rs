@@ -161,13 +161,25 @@ mod tests {
 		type Event = ();
 	}
 
+	parameter_types! {
+		pub const MaxMembers: u32 = MAX_MEMBERS;
+	}
+
+	impl accounts::Trait for Test {
+		type Event = ();
+		type MaxMembers = MaxMembers;
+	}
+
 	pub const ADMIN: AccountId = 0;
 	pub const ALICE: AccountId = 1;
 	pub const BOB: AccountId = 2;
 	pub const ONE_MILL: Balance = 1_000_000;
 	pub const ONE_HUNDRED: Balance = 100;
+	pub const MAX_MEMBERS: u32 = 16;
 	pub type MinterestProtocol = minterest_protocol::Module<Test>;
-	pub type Pools = liquidity_pools::Module<Test>;
+	pub type TestPools = liquidity_pools::Module<Test>;
+	pub type TestController = controller::Module<Test>;
+	pub type TestAccounts = accounts::Module<Test>;
 	pub type Currencies = orml_currencies::Module<Test>;
 	pub type System = frame_system::Module<Test>;
 
@@ -196,7 +208,6 @@ mod tests {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
 						current_exchange_rate: Rate::from_inner(1),
-						is_lock: true,
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -207,7 +218,6 @@ mod tests {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
 						current_exchange_rate: Rate::from_inner(1),
-						is_lock: true,
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -218,7 +228,6 @@ mod tests {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
 						current_exchange_rate: Rate::from_inner(1),
-						is_lock: true,
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -229,7 +238,6 @@ mod tests {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
 						current_exchange_rate: Rate::from_inner(1),
-						is_lock: true,
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -253,6 +261,7 @@ mod tests {
 						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						is_lock: true,
 					},
 				),
 				(
@@ -267,6 +276,7 @@ mod tests {
 						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						is_lock: true,
 					},
 				),
 				(
@@ -281,6 +291,7 @@ mod tests {
 						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						is_lock: true,
 					},
 				),
 				(
@@ -295,6 +306,7 @@ mod tests {
 						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						is_lock: true,
 					},
 				),
 			],
@@ -312,7 +324,11 @@ mod tests {
 	#[test]
 	fn deposit_underlying_should_work() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(Pools::unlock_pool_transactions(Origin::root(), CurrencyId::DOT));
+			assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
+			assert_ok!(TestController::unlock_pool_transactions(
+				Origin::signed(ALICE),
+				CurrencyId::DOT
+			));
 			assert_noop!(
 				MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::ETH, 10),
 				MinterestProtocolError::<Test>::NotEnoughLiquidityAvailable
@@ -327,7 +343,7 @@ mod tests {
 				CurrencyId::DOT,
 				60
 			));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 60);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
@@ -345,7 +361,7 @@ mod tests {
 				CurrencyId::DOT,
 				30
 			));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 90);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 90);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 10);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 90);
 		});
@@ -354,13 +370,17 @@ mod tests {
 	#[test]
 	fn redeem_underlying_should_work() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(Pools::unlock_pool_transactions(Origin::root(), CurrencyId::DOT));
+			assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
+			assert_ok!(TestController::unlock_pool_transactions(
+				Origin::signed(ADMIN),
+				CurrencyId::DOT
+			));
 			assert_ok!(MinterestProtocol::deposit_underlying(
 				Origin::signed(ALICE),
 				CurrencyId::DOT,
 				60
 			));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 60);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
@@ -379,7 +399,7 @@ mod tests {
 				CurrencyId::DOT,
 				30
 			));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 30);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 30);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 30);
 		});
@@ -388,13 +408,17 @@ mod tests {
 	#[test]
 	fn redeem_should_work() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(Pools::unlock_pool_transactions(Origin::root(), CurrencyId::DOT));
+			assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
+			assert_ok!(TestController::unlock_pool_transactions(
+				Origin::signed(ADMIN),
+				CurrencyId::DOT
+			));
 			assert_ok!(MinterestProtocol::deposit_underlying(
 				Origin::signed(ALICE),
 				CurrencyId::DOT,
 				60
 			));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 60);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
@@ -420,13 +444,17 @@ mod tests {
 	#[test]
 	fn redeem_wrapped_should_work() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(Pools::unlock_pool_transactions(Origin::root(), CurrencyId::DOT));
+			assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
+			assert_ok!(TestController::unlock_pool_transactions(
+				Origin::signed(ADMIN),
+				CurrencyId::DOT
+			));
 			assert_ok!(MinterestProtocol::deposit_underlying(
 				Origin::signed(ALICE),
 				CurrencyId::DOT,
 				60
 			));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 60);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
@@ -435,7 +463,7 @@ mod tests {
 				CurrencyId::MDOT,
 				35
 			));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 25);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 25);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 75);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 25);
 
@@ -453,13 +481,17 @@ mod tests {
 	#[test]
 	fn getting_assets_from_pool_by_different_users_should_work() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(Pools::unlock_pool_transactions(Origin::root(), CurrencyId::DOT));
+			assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
+			assert_ok!(TestController::unlock_pool_transactions(
+				Origin::signed(ALICE),
+				CurrencyId::DOT
+			));
 			assert_ok!(MinterestProtocol::deposit_underlying(
 				Origin::signed(ALICE),
 				CurrencyId::DOT,
 				60
 			));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 60);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
@@ -473,7 +505,7 @@ mod tests {
 				CurrencyId::DOT,
 				7
 			));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 67);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 67);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &BOB), 93);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB), 7);
 		});
@@ -482,13 +514,17 @@ mod tests {
 	#[test]
 	fn borrow_should_work() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(Pools::unlock_pool_transactions(Origin::root(), CurrencyId::DOT));
+			assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
+			assert_ok!(TestController::unlock_pool_transactions(
+				Origin::signed(ADMIN),
+				CurrencyId::DOT
+			));
 			assert_ok!(MinterestProtocol::deposit_underlying(
 				Origin::signed(ALICE),
 				CurrencyId::DOT,
 				60
 			));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 60);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
@@ -502,49 +538,57 @@ mod tests {
 			);
 
 			assert_ok!(MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::DOT, 30));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 30);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 30);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-			assert_eq!(Pools::get_pool_total_borrowed(CurrencyId::DOT), 30);
-			assert_eq!(Pools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 30);
+			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 30);
+			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 30);
 
 			// pool_available_liquidity (DOT) = 30
 			// Admin depositing to the insurance 10 DOT, now pool_available_liquidity = 30 + 10 = 40 DOT
-			assert_ok!(Pools::deposit_insurance(Origin::signed(ADMIN), CurrencyId::DOT, 10));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 40);
+			assert_ok!(TestController::deposit_insurance(
+				Origin::signed(ADMIN),
+				CurrencyId::DOT,
+				10
+			));
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 40);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), 90);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), 0);
-			assert_eq!(Pools::get_pool_total_insurance(CurrencyId::DOT), 10);
+			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 10);
 
 			// Bob can borrow 35 DOT.
 			assert_ok!(MinterestProtocol::borrow(Origin::signed(BOB), CurrencyId::DOT, 35));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 5);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 5);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &BOB), 135);
-			assert_eq!(Pools::get_pool_total_insurance(CurrencyId::DOT), 10);
-			assert_eq!(Pools::get_pool_total_borrowed(CurrencyId::DOT), 65);
-			assert_eq!(Pools::get_user_total_borrowed(&BOB, CurrencyId::DOT), 35);
+			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 10);
+			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 65);
+			assert_eq!(TestPools::get_user_total_borrowed(&BOB, CurrencyId::DOT), 35);
 		});
 	}
 
 	#[test]
 	fn repay_should_work() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(Pools::unlock_pool_transactions(Origin::root(), CurrencyId::DOT));
+			assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
+			assert_ok!(TestController::unlock_pool_transactions(
+				Origin::signed(ADMIN),
+				CurrencyId::DOT
+			));
 			assert_ok!(MinterestProtocol::deposit_underlying(
 				Origin::signed(ALICE),
 				CurrencyId::DOT,
 				60
 			));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 60);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
 
 			assert_ok!(MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::DOT, 30));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 30);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 30);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-			assert_eq!(Pools::get_pool_total_borrowed(CurrencyId::DOT), 30);
-			assert_eq!(Pools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 30);
+			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 30);
+			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 30);
 
 			assert_noop!(
 				MinterestProtocol::repay(Origin::signed(ALICE), CurrencyId::MDOT, 10),
@@ -556,11 +600,11 @@ mod tests {
 			);
 
 			assert_ok!(MinterestProtocol::repay(Origin::signed(ALICE), CurrencyId::DOT, 20));
-			assert_eq!(Pools::get_pool_available_liquidity(CurrencyId::DOT), 50);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 50);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 50);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-			assert_eq!(Pools::get_pool_total_borrowed(CurrencyId::DOT), 10);
-			assert_eq!(Pools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 10);
+			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 10);
+			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 10);
 		});
 	}
 }

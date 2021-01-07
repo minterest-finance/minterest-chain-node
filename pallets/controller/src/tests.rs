@@ -11,6 +11,13 @@ fn accrue_interest_should_work() {
 		.build()
 		.execute_with(|| {
 			System::set_block_number(1);
+
+			assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
+			assert_ok!(Controller::unlock_pool_transactions(
+				Origin::signed(ALICE),
+				CurrencyId::DOT
+			));
+
 			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
 			assert_eq!(Controller::controller_dates(CurrencyId::DOT).timestamp, 1);
 
@@ -39,6 +46,12 @@ fn accrue_interest_should_not_work() {
 		.build()
 		.execute_with(|| {
 			System::set_block_number(1);
+			assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
+			assert_ok!(Controller::unlock_pool_transactions(
+				Origin::signed(ALICE),
+				CurrencyId::DOT
+			));
+
 			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
 			assert_eq!(Controller::controller_dates(CurrencyId::DOT).timestamp, 1);
 
@@ -49,11 +62,9 @@ fn accrue_interest_should_not_work() {
 			);
 
 			assert_noop!(
-				Controller::set_max_borrow_rate(Origin::signed(ALICE), CurrencyId::DOT, 2, 1),
+				Controller::set_max_borrow_rate(Origin::signed(BOB), CurrencyId::DOT, 2, 1),
 				Error::<Runtime>::RequireAdmin
 			);
-
-			assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
 
 			assert_ok!(Controller::set_max_borrow_rate(
 				Origin::signed(ALICE),

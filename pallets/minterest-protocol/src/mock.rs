@@ -27,6 +27,7 @@ impl_outer_event! {
 		minterest_protocol<T>,
 		controller,
 		oracle,
+		accounts<T>,
 	}
 }
 
@@ -138,6 +139,15 @@ impl oracle::Trait for Test {
 	type Event = Event;
 }
 
+parameter_types! {
+	pub const MaxMembers: u32 = MAX_MEMBERS;
+}
+
+impl accounts::Trait for Test {
+	type Event = Event;
+	type MaxMembers = MaxMembers;
+}
+
 impl Trait for Test {
 	type Event = Event;
 	type Borrowing = MockBorrowing;
@@ -171,8 +181,11 @@ pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
 pub const ONE_MILL: Balance = 1_000_000;
 pub const ONE_HUNDRED: Balance = 100;
+pub const MAX_MEMBERS: u32 = 16;
 pub type MinterestProtocol = Module<Test>;
 pub type TestPools = liquidity_pools::Module<Test>;
+pub type TestController = controller::Module<Test>;
+pub type TestAccounts = accounts::Module<Test>;
 pub type Currencies = orml_currencies::Module<Test>;
 pub type System = frame_system::Module<Test>;
 
