@@ -42,6 +42,12 @@ parameter_types! {
 	pub const MaximumBlockWeight: u32 = 1024;
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
+		CurrencyId::DOT,
+		CurrencyId::KSM,
+		CurrencyId::BTC,
+		CurrencyId::ETH,
+	];
 }
 
 pub type AccountId = u32;
@@ -114,11 +120,14 @@ impl liquidity_pools::Trait for Runtime {
 
 parameter_types! {
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const BlocksPerYear: u128 = 5256000u128;
 }
 
 impl Trait for Runtime {
 	type Event = TestEvent;
 	type InitialExchangeRate = InitialExchangeRate;
+	type BlocksPerYear = BlocksPerYear;
+	type UnderlyingAssetId = UnderlyingAssetId;
 }
 
 pub type BlockNumber = u64;
@@ -173,6 +182,7 @@ impl Default for ExtBuilder {
 pub const ALICE: AccountId = 1;
 pub const ONE_MILL: Balance = 1_000_000;
 pub const ONE_HUNDRED: Balance = 100;
+pub const BLOCKS_PER_YEAR: u128 = 5256000u128;
 
 impl ExtBuilder {
 	pub fn exchange_rate_less_than_one(mut self) -> Self {
@@ -189,6 +199,60 @@ impl ExtBuilder {
 			(ALICE, CurrencyId::BTC, ONE_HUNDRED),
 			(ALICE, CurrencyId::MBTC, 1),
 		]);
+		self
+	}
+
+	pub fn _borrow_interest_rate_too_hight(mut self) -> Self {
+		self.endowed_accounts
+			.extend_from_slice(&[(TestPools::pools_account_id(), CurrencyId::DOT, 19)]);
+
+		self.pools = vec![(
+			CurrencyId::DOT,
+			Pool {
+				current_interest_rate: Rate::from_inner(0),
+				total_borrowed: 81,
+				borrow_index: Rate::saturating_from_rational(1, 1),
+				current_exchange_rate: Rate::from_inner(1),
+				is_lock: false,
+				total_insurance: Balance::zero(),
+			},
+		)];
+
+		self
+	}
+
+	pub fn borrow_interest_rate_equal_7_200_000_000(mut self) -> Self {
+		self.endowed_accounts.extend_from_slice(&[(
+			TestPools::pools_account_id(),
+			CurrencyId::DOT,
+			20_000_000_000_000_000_000,
+		)]);
+
+		self.pools = vec![
+			(
+				CurrencyId::DOT,
+				Pool {
+					current_interest_rate: Rate::from_inner(0),
+					total_borrowed: 80_000_000_000_000_000_000,
+					borrow_index: Rate::saturating_from_rational(1, 1),
+					current_exchange_rate: Rate::from_inner(1),
+					is_lock: false,
+					total_insurance: Balance::zero(),
+				},
+			),
+			(
+				CurrencyId::BTC,
+				Pool {
+					current_interest_rate: Rate::from_inner(0),
+					total_borrowed: Balance::zero(),
+					borrow_index: Rate::saturating_from_rational(1, 1),
+					current_exchange_rate: Rate::saturating_from_rational(1, 1),
+					is_lock: true,
+					total_insurance: Balance::zero(),
+				},
+			),
+		];
+
 		self
 	}
 
@@ -241,9 +305,13 @@ impl ExtBuilder {
 				CurrencyId::DOT,
 				ControllerData {
 					timestamp: 0,
-					borrow_rate: Rate::saturating_from_rational(1, 1),
-					insurance_factor: Rate::saturating_from_rational(1, 1),
-					max_borrow_rate: Rate::saturating_from_rational(1, 1),
+					borrow_rate: Rate::from_inner(0),
+					insurance_factor: Rate::saturating_from_rational(1, 10),
+					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+					kink: Rate::saturating_from_rational(8, 10),
+					base_rate_per_block: Rate::from_inner(0),
+					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
+					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 				},
 			)],
 		}
