@@ -462,6 +462,10 @@ impl<T: Trait> Module<T> {
 			let oracle_price =
 				<Oracle<T>>::get_underlying_price(underlying_asset).map_err(|_| Error::<T>::OraclePriceError)?;
 
+			if oracle_price == Price::zero() {
+				return Ok((Balance::zero(), Balance::zero()));
+			}
+
 			// Pre-compute a conversion factor from tokens -> dollars (normalized price value)
 			let tokens_to_denom = collateral_factor
 				.checked_mul(&exchange_rate)
