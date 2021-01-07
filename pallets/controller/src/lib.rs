@@ -431,7 +431,8 @@ impl<T: Trait> Module<T> {
 	///
 	/// - `underlying_asset_id` - The CurrencyId to verify the redeem against.
 	/// - `redeemer` -  The account which would redeem the tokens.
-	/// - `redeem_amount` - The number of mTokens to exchange for the underlying asset in the market.
+	/// - `redeem_amount` - The number of mTokens to exchange for the underlying asset in the
+	/// market.
 	/// Return Ok if the borrow is allowed, otherwise a semi-opaque error code.
 	pub fn redeem_allowed(
 		underlying_asset_id: CurrencyId,
