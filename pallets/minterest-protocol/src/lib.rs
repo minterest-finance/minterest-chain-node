@@ -19,9 +19,6 @@ pub trait Trait: liquidity_pools::Trait + controller::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
-	/// Wrapped currency IDs.
-	type UnderlyingAssetId: Get<Vec<CurrencyId>>;
-
 	/// Basic borrowing functions
 	type Borrowing: Borrowing<Self::AccountId>;
 }

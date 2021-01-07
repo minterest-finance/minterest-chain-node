@@ -243,7 +243,6 @@ impl m_tokens::Trait for Runtime {
 
 impl minterest_protocol::Trait for Runtime {
 	type Event = Event;
-	type UnderlyingAssetId = UnderlyingAssetId;
 	type Borrowing = liquidity_pools::Module<Runtime>;
 }
 
@@ -291,6 +290,7 @@ impl controller::Trait for Runtime {
 	type Event = Event;
 	type InitialExchangeRate = InitialExchangeRate;
 	type BlocksPerYear = BlocksPerYear;
+	type UnderlyingAssetId = UnderlyingAssetId;
 }
 
 parameter_types! {

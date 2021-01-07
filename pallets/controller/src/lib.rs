@@ -11,7 +11,7 @@ use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
 };
-use sp_std::{cmp::Ordering, convert::TryInto, result};
+use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
@@ -41,8 +41,11 @@ pub trait Trait: liquidity_pools::Trait + system::Trait {
 	/// Start exchange rate
 	type InitialExchangeRate: Get<Rate>;
 
-	// The approximate number of blocks per year
+	/// The approximate number of blocks per year
 	type BlocksPerYear: Get<u128>;
+
+	/// Wrapped currency IDs.
+	type UnderlyingAssetId: Get<Vec<CurrencyId>>;
 }
 
 decl_event! {
@@ -95,8 +98,15 @@ decl_module! {
 		#[weight = 10_000]
 		pub fn set_insurance_factor(origin, pool_id: CurrencyId, new_amount_n: u128, new_amount_d: u128) -> DispatchResult {
 			ensure_root(origin)?;
+			ensure!(
+				T::UnderlyingAssetId::get().contains(&pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
 			ensure!(new_amount_d > 0, Error::<T>::NumOverflow);
+
+
 			let new_insurance_factor = Rate::saturating_from_rational(new_amount_n, new_amount_d);
+
 			ControllerDates::<T>::mutate(pool_id, |r| r.insurance_factor = new_insurance_factor);
 			Self::deposit_event(Event::InsuranceFactorChanged);
 			Ok(())
@@ -105,8 +115,14 @@ decl_module! {
 		#[weight = 10_000]
 		pub fn set_max_borrow_rate(origin, pool_id: CurrencyId, new_amount_n: u128, new_amount_d: u128) -> DispatchResult {
 			ensure_root(origin)?;
+			ensure!(
+				T::UnderlyingAssetId::get().contains(&pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
 			ensure!(new_amount_d > 0, Error::<T>::NumOverflow);
+
 			let new_max_borow_rate = Rate::saturating_from_rational(new_amount_n, new_amount_d);
+
 			ControllerDates::<T>::mutate(pool_id, |r| r.max_borrow_rate = new_max_borow_rate);
 			Self::deposit_event(Event::InsuranceFactorChanged);
 			Ok(())
@@ -116,9 +132,13 @@ decl_module! {
 		#[weight = 10_000]
 		pub fn set_base_rate_per_block(origin, pool_id: CurrencyId, base_rate_per_year_n: u128, base_rate_per_year_d: u128) -> DispatchResult {
 			ensure_root(origin)?;
+			ensure!(
+				T::UnderlyingAssetId::get().contains(&pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+			ensure!(base_rate_per_year_d > 0, Error::<T>::NumOverflow);
 
 			let new_base_rate_per_year = Rate::saturating_from_rational(base_rate_per_year_n, base_rate_per_year_d);
-
 			let new_base_rate_per_block = new_base_rate_per_year
 				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
 				.ok_or(Error::<T>::NumOverflow)?;
@@ -130,11 +150,15 @@ decl_module! {
 
 		/// Set MultiplierPerBlock from MultiplierPerYear
 		#[weight = 10_000]
-		pub fn set_multiplier_rate_per_block(origin, pool_id: CurrencyId, multiplier_rate_per_year_n: u128, multiplier_rate_per_year_d: u128) -> DispatchResult {
+		pub fn set_multiplier_per_block(origin, pool_id: CurrencyId, multiplier_rate_per_year_n: u128, multiplier_rate_per_year_d: u128) -> DispatchResult {
 			ensure_root(origin)?;
+			ensure!(
+				T::UnderlyingAssetId::get().contains(&pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+			ensure!(multiplier_rate_per_year_d > 0, Error::<T>::NumOverflow);
 
 			let new_multiplier_per_year = Rate::saturating_from_rational(multiplier_rate_per_year_n, multiplier_rate_per_year_d);
-
 			let new_multiplier_per_block = new_multiplier_per_year
 				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
 				.ok_or(Error::<T>::NumOverflow)?;
@@ -146,11 +170,16 @@ decl_module! {
 
 		/// Set JumpMultiplierPerBlock from JumpMultiplierPerYear
 		#[weight = 10_000]
-		pub fn set_jump_multiplier_rate_per_block(origin, pool_id: CurrencyId, jump_multiplier_rate_per_year_n: u128, jump_multiplier_rate_per_year_d: u128) -> DispatchResult {
+		pub fn set_jump_multiplier_per_block(origin, pool_id: CurrencyId, jump_multiplier_rate_per_year_n: u128, jump_multiplier_rate_per_year_d: u128) -> DispatchResult {
 			ensure_root(origin)?;
+			ensure!(
+				T::UnderlyingAssetId::get().contains(&pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+			ensure!(jump_multiplier_rate_per_year_d > 0, Error::<T>::NumOverflow);
+
 
 			let new_jump_multiplier_per_year = Rate::saturating_from_rational(jump_multiplier_rate_per_year_n, jump_multiplier_rate_per_year_d);
-
 			let new_jump_multiplier_per_block = new_jump_multiplier_per_year
 				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
 				.ok_or(Error::<T>::NumOverflow)?;
@@ -368,7 +397,7 @@ impl<T: Trait> Module<T> {
 		current_total_borrowed_balance: Balance,
 		current_total_insurance: Balance,
 	) -> RateResult {
-		let utilization_rate = Self::calculate_utilisation_rate(
+		let utilization_rate = Self::calculate_utilization_rate(
 			current_total_balance,
 			current_total_borrowed_balance,
 			current_total_insurance,
@@ -377,26 +406,26 @@ impl<T: Trait> Module<T> {
 		let kink = Self::controller_dates(underlying_asset_id).kink;
 		let multiplier_per_block = Self::controller_dates(underlying_asset_id).multiplier_per_block;
 		let base_rate_per_block = Self::controller_dates(underlying_asset_id).base_rate_per_block;
-		let jump_multiplier_per_block = Self::controller_dates(underlying_asset_id).jump_multiplier_per_block;
 
 		let borrow_interest_rate = match utilization_rate.cmp(&kink) {
-			Ordering::Less => (utilization_rate
-				.checked_mul(&multiplier_per_block)
-				.ok_or(Error::<T>::NumOverflow)?)
-			.checked_add(&base_rate_per_block)
-			.ok_or(Error::<T>::NumOverflow)?,
-			_ => {
+			Ordering::Greater => {
+				let jump_multiplier_per_block = Self::controller_dates(underlying_asset_id).jump_multiplier_per_block;
 				let normal_rate = (kink.checked_mul(&multiplier_per_block).ok_or(Error::<T>::NumOverflow)?)
 					.checked_add(&base_rate_per_block)
 					.ok_or(Error::<T>::NumOverflow)?;
 				let excess_util = utilization_rate.checked_mul(&kink).ok_or(Error::<T>::NumOverflow)?;
 
-				(excess_util
+				excess_util
 					.checked_mul(&jump_multiplier_per_block)
-					.ok_or(Error::<T>::NumOverflow)?)
-				.checked_add(&normal_rate)
-				.ok_or(Error::<T>::NumOverflow)?
+					.ok_or(Error::<T>::NumOverflow)?
+					.checked_add(&normal_rate)
+					.ok_or(Error::<T>::NumOverflow)?
 			}
+			_ => utilization_rate
+				.checked_mul(&multiplier_per_block)
+				.ok_or(Error::<T>::NumOverflow)?
+				.checked_add(&base_rate_per_block)
+				.ok_or(Error::<T>::NumOverflow)?,
 		};
 
 		Ok(borrow_interest_rate)
@@ -404,7 +433,7 @@ impl<T: Trait> Module<T> {
 
 	// Calculates the utilization rate of the market:
 	// borrows / (cash + borrows - reserves)
-	fn calculate_utilisation_rate(
+	fn calculate_utilization_rate(
 		current_total_balance: Balance,
 		current_total_borrowed_balance: Balance,
 		current_total_insurance: Balance,

@@ -122,11 +122,11 @@ impl controller::Trait for Test {
 	type Event = Event;
 	type InitialExchangeRate = InitialExchangeRate;
 	type BlocksPerYear = BlocksPerYear;
+	type UnderlyingAssetId = UnderlyingAssetId;
 }
 
 impl Trait for Test {
 	type Event = Event;
-	type UnderlyingAssetId = UnderlyingAssetId;
 	type Borrowing = MockBorrowing;
 }
 

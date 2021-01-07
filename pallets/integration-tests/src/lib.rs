@@ -134,7 +134,6 @@ mod tests {
 
 	impl minterest_protocol::Trait for Test {
 		type Event = ();
-		type UnderlyingAssetId = UnderlyingAssetId;
 		type Borrowing = MockBorrowing;
 	}
 
@@ -147,6 +146,7 @@ mod tests {
 		type Event = ();
 		type InitialExchangeRate = InitialExchangeRate;
 		type BlocksPerYear = BlocksPerYear;
+		type UnderlyingAssetId = UnderlyingAssetId;
 	}
 
 	pub const ALICE: AccountId = 1;
