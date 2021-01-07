@@ -134,17 +134,19 @@ mod tests {
 
 	impl minterest_protocol::Trait for Test {
 		type Event = ();
-		type UnderlyingAssetId = UnderlyingAssetId;
 		type Borrowing = MockBorrowing;
 	}
 
 	parameter_types! {
 		pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+		pub const BlocksPerYear: u128 = 5256000;
 	}
 
 	impl controller::Trait for Test {
 		type Event = ();
 		type InitialExchangeRate = InitialExchangeRate;
+		type BlocksPerYear = BlocksPerYear;
+		type UnderlyingAssetId = UnderlyingAssetId;
 	}
 
 	pub const ALICE: AccountId = 1;
