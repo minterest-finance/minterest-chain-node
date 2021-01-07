@@ -158,7 +158,6 @@ pub type Controller = Module<Runtime>;
 pub type TestPools = liquidity_pools::Module<Runtime>;
 pub type System = frame_system::Module<Runtime>;
 pub type Currencies = orml_currencies::Module<Runtime>;
-pub type TestAccounts = accounts::Module<Runtime>;
 pub const MAX_MEMBERS: u32 = 16;
 
 pub struct ExtBuilder {
@@ -365,6 +364,16 @@ impl ExtBuilder {
 					total_insurance: Balance::zero(),
 				},
 			),
+			(
+				CurrencyId::KSM,
+				Pool {
+					current_interest_rate: Rate::from_inner(0),
+					total_borrowed: Balance::zero(),
+					borrow_index: Rate::saturating_from_rational(1, 1),
+					current_exchange_rate: Rate::saturating_from_rational(1, 1),
+					total_insurance: Balance::zero(),
+				},
+			),
 		];
 		self
 	}
@@ -447,10 +456,10 @@ impl ExtBuilder {
 				(
 					CurrencyId::KSM,
 					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
+						deposit_paused: true,
+						redeem_paused: true,
+						borrow_paused: true,
+						repay_paused: true,
 					},
 				),
 				(
@@ -475,7 +484,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		accounts::GenesisConfig::<Runtime> {
-			accounts: vec![(ALICE, ())],
+			allowed_accounts: vec![(ALICE, ())],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
