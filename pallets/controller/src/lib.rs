@@ -811,7 +811,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-// Getters for LiquidityPools
+// Getters for Controller Data
 impl<T: Trait> Module<T> {
 	/// Determines how much a user can borrow.
 	fn get_collateral_factor(pool_id: CurrencyId) -> Rate {

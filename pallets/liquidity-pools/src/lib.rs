@@ -55,12 +55,6 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
-
-	/// Pool not found.
-	PoolNotFound,
-
-
-
 	/// Number overflow in calculation.
 	NumOverflow,
 	}
@@ -178,10 +172,7 @@ impl<T: Trait> Module<T> {
 	pub fn check_user_available_collateral(who: &T::AccountId, currency_id: CurrencyId) -> bool {
 		Self::pool_user_data(who, currency_id).collateral
 	}
-}
 
-// Private methods for LiquidityPools
-impl<T: Trait> Module<T> {
 	pub fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
 		Pools::contains_key(underlying_asset_id)
 	}
