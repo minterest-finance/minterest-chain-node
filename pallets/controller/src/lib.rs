@@ -529,7 +529,7 @@ impl<T: Trait> Module<T> {
 		Ok(result)
 	}
 
-	fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> CurrencyIdResult {
+	pub fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> CurrencyIdResult {
 		match asset_id {
 			CurrencyId::DOT => Ok(CurrencyId::MDOT),
 			CurrencyId::KSM => Ok(CurrencyId::MKSM),
@@ -539,7 +539,7 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	fn get_underlying_asset_id_by_wrapped_id(wrapped_id: &CurrencyId) -> CurrencyIdResult {
+	pub fn get_underlying_asset_id_by_wrapped_id(wrapped_id: &CurrencyId) -> CurrencyIdResult {
 		match wrapped_id {
 			CurrencyId::MDOT => Ok(CurrencyId::DOT),
 			CurrencyId::MKSM => Ok(CurrencyId::KSM),

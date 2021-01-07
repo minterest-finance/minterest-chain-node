@@ -149,7 +149,7 @@ decl_module! {
 		pub fn redeem_wrapped(origin, wrapped_id: CurrencyId, #[compact] wrapped_amount: Balance) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let underlying_asset_id = Self::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
+				let underlying_asset_id = <Controller<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id).map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
 				let (underlying_amount, wrapped_id, _) = Self::do_redeem(&who, underlying_asset_id, Balance::zero(), wrapped_amount)?;
 				Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount));
 				Ok(())
@@ -225,7 +225,8 @@ impl<T: Trait> Module<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalPoolError)?;
 
-		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
+		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)
+			.map_err(|_| Error::<T>::NotValidUnderlyingAssetId)?;
 
 		let wrapped_amount = <Controller<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
 			.map_err(|_| Error::<T>::NumOverflow)?;
@@ -260,7 +261,7 @@ impl<T: Trait> Module<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::InternalPoolError)?;
 
-		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
+		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
 		let wrapped_amount = match (underlying_amount, wrapped_amount) {
 			(0, 0) => {
@@ -391,28 +392,5 @@ impl<T: Trait> Module<T> {
 		)?;
 
 		Ok(repay_amount)
-	}
-}
-
-// Private methods
-impl<T: Trait> Module<T> {
-	fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> result::Result<CurrencyId, Error<T>> {
-		match asset_id {
-			CurrencyId::DOT => Ok(CurrencyId::MDOT),
-			CurrencyId::KSM => Ok(CurrencyId::MKSM),
-			CurrencyId::BTC => Ok(CurrencyId::MBTC),
-			CurrencyId::ETH => Ok(CurrencyId::METH),
-			_ => Err(Error::<T>::NotValidUnderlyingAssetId),
-		}
-	}
-
-	fn get_underlying_asset_id_by_wrapped_id(wrapped_id: &CurrencyId) -> result::Result<CurrencyId, Error<T>> {
-		match wrapped_id {
-			CurrencyId::MDOT => Ok(CurrencyId::DOT),
-			CurrencyId::MKSM => Ok(CurrencyId::KSM),
-			CurrencyId::MBTC => Ok(CurrencyId::BTC),
-			CurrencyId::METH => Ok(CurrencyId::ETH),
-			_ => Err(Error::<T>::NotValidWrappedTokenId),
-		}
 	}
 }
