@@ -35,7 +35,7 @@ type PriceResult = result::Result<Price, DispatchError>;
 
 impl<T: Trait> Module<T> {
 	pub fn get_underlying_price(_underlying_asset_id: CurrencyId) -> PriceResult {
-		let price_nine_dollars = 2_00u128 * 1_000_000_000_000_000_0;
+		let price_nine_dollars = 2_00u128 * 10_000_000_000_000_000;
 		Ok(Price::from_inner(price_nine_dollars)) // Price = 2.00 USD
 	}
 }

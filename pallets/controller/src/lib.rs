@@ -347,7 +347,7 @@ impl<T: Trait> Module<T> {
 	/// - `redeem_amount`: The number of tokens to hypothetically redeem.
 	/// - `borrow_amount`: The amount of underlying to hypothetically borrow.
 	/// Returns (hypothetical account liquidity in excess of collateral requirements,
-	/// 		 hypothetical account shortfall below collateral requirements).
+	///          hypothetical account shortfall below collateral requirements).
 	pub fn get_hypothetical_account_liquidity(
 		account: &T::AccountId,
 		underlying_asset_id: CurrencyId,
@@ -411,7 +411,7 @@ impl<T: Trait> Module<T> {
 			}
 		}
 
-		return match sum_collateral.cmp(&sum_borrow_plus_effects) {
+		match sum_collateral.cmp(&sum_borrow_plus_effects) {
 			Ordering::Greater => Ok((
 				sum_collateral
 					.checked_sub(sum_borrow_plus_effects)
@@ -424,7 +424,7 @@ impl<T: Trait> Module<T> {
 					.checked_sub(sum_collateral)
 					.ok_or(Error::<T>::InsufficientLiquidity)?,
 			)),
-		};
+		}
 	}
 
 	/// Checks if the account should be allowed to redeem tokens in the given pool.
