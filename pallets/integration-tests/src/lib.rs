@@ -17,7 +17,7 @@ mod tests {
 	};
 	use sp_runtime::{DispatchResult, FixedPointNumber};
 
-	use controller::ControllerData;
+	use controller::{ControllerData, PauseKeeper};
 	use minterest_protocol::Error as MinterestProtocolError;
 
 	impl_outer_origin! {
@@ -261,7 +261,6 @@ mod tests {
 						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-						is_lock: true,
 					},
 				),
 				(
@@ -276,7 +275,6 @@ mod tests {
 						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-						is_lock: true,
 					},
 				),
 				(
@@ -291,7 +289,6 @@ mod tests {
 						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-						is_lock: true,
 					},
 				),
 				(
@@ -306,7 +303,44 @@ mod tests {
 						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-						is_lock: true,
+					},
+				),
+			],
+			pause_keepers: vec![
+				(
+					CurrencyId::ETH,
+					PauseKeeper {
+						deposit_paused: false,
+						redeem_paused: false,
+						borrow_paused: false,
+						repay_paused: false,
+					},
+				),
+				(
+					CurrencyId::DOT,
+					PauseKeeper {
+						deposit_paused: false,
+						redeem_paused: false,
+						borrow_paused: false,
+						repay_paused: false,
+					},
+				),
+				(
+					CurrencyId::KSM,
+					PauseKeeper {
+						deposit_paused: false,
+						redeem_paused: false,
+						borrow_paused: false,
+						repay_paused: false,
+					},
+				),
+				(
+					CurrencyId::BTC,
+					PauseKeeper {
+						deposit_paused: false,
+						redeem_paused: false,
+						borrow_paused: false,
+						repay_paused: false,
 					},
 				),
 			],

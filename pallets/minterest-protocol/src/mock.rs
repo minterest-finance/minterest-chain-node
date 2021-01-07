@@ -12,7 +12,7 @@ use sp_runtime::{
 };
 
 use super::*;
-use controller::ControllerData;
+use controller::{ControllerData, PauseKeeper};
 
 mod minterest_protocol {
 	pub use crate::Event;
@@ -313,6 +313,44 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 					is_lock: true,
+				},
+			),
+		],
+		pause_keepers: vec![
+			(
+				CurrencyId::ETH,
+				PauseKeeper {
+					deposit_paused: false,
+					redeem_paused: false,
+					borrow_paused: false,
+					repay_paused: false,
+				},
+			),
+			(
+				CurrencyId::DOT,
+				PauseKeeper {
+					deposit_paused: false,
+					redeem_paused: false,
+					borrow_paused: false,
+					repay_paused: false,
+				},
+			),
+			(
+				CurrencyId::KSM,
+				PauseKeeper {
+					deposit_paused: false,
+					redeem_paused: false,
+					borrow_paused: false,
+					repay_paused: false,
+				},
+			),
+			(
+				CurrencyId::BTC,
+				PauseKeeper {
+					deposit_paused: false,
+					redeem_paused: false,
+					borrow_paused: false,
+					repay_paused: false,
 				},
 			),
 		],

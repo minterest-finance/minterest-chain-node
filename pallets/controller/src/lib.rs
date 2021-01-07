@@ -3,7 +3,7 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{self as system, ensure_signed};
-use minterest_primitives::{Balance, CurrencyId, Price, Rate};
+use minterest_primitives::{Balance, CurrencyId, Operation, Price, Rate};
 use orml_traits::MultiCurrency;
 use orml_utilities::with_transaction_result;
 #[cfg(feature = "std")]
@@ -28,7 +28,16 @@ pub struct ControllerData<BlockNumber> {
 	pub jump_multiplier_per_block: Rate,
 	/// Determines how much a user can borrow.
 	pub collateral_factor: Rate,
-	pub is_lock: bool,
+}
+
+/// The Administrator can pause certain actions as a safety mechanism.
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct PauseKeeper {
+	pub deposit_paused: bool,
+	pub redeem_paused: bool,
+	pub borrow_paused: bool,
+	pub repay_paused: bool,
 }
 
 #[cfg(test)]
@@ -71,11 +80,11 @@ decl_event! {
 		/// MultiplierPerBlock has been successfully changed
 		MultiplierPerBlockHasChanged,
 
-		/// Pool locked: \[pool_id\]
-		PoolLocked(CurrencyId),
+		/// The operation is paused: \[pool_id, operation\]
+		OperationIsPaused(CurrencyId, Operation),
 
-		/// Pool unlocked: \[pool_id\]
-		PoolUnLocked(CurrencyId),
+		/// The operation is unpaused: \[pool_id, operation\]
+		OperationIsUnPaused(CurrencyId, Operation),
 
 		/// Insurance balance replenished: \[pool_id, amount\]
 		DepositedInsurance(CurrencyId, Balance),
@@ -88,6 +97,7 @@ decl_event! {
 decl_storage! {
 	trait Store for Module<T: Trait> as ControllerStorage {
 		pub ControllerDates get(fn controller_dates) config(): map hasher(blake2_128_concat) CurrencyId => ControllerData<T::BlockNumber>;
+		pub PauseKeepers get(fn pause_keepers) config(): map hasher(blake2_128_concat) CurrencyId => PauseKeeper;
 	}
 }
 
@@ -111,7 +121,7 @@ decl_error! {
 		/// Oracle unavailable or price equal 0ю
 		OraclePriceError,
 
-		/// Insufficient available liquidityю
+		/// Insufficient available liquidity.
 		InsufficientLiquidity,
 
 		/// Pool not found.
@@ -127,6 +137,9 @@ decl_error! {
 		///
 		/// Only happened when the balance went wrong and balance overflows the integer type.
 		BalanceOverflowed,
+
+		/// Operation (deposit, redeem, borrow, repay) is paused.
+		OperationPaused,
 	}
 }
 
@@ -136,29 +149,39 @@ decl_module! {
 		type Error = Error<T>;
 		fn deposit_event() = default;
 
-		/// Locks all operations (deposit, redeem, borrow, repay)  with the pool.
+		/// Pause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
 		/// The dispatch origin of this call must be Administrator.
 		#[weight = 0]
-		pub fn lock_pool_transactions(origin, pool_id: CurrencyId) -> DispatchResult {
+		pub fn pause_specific_operation(origin, pool_id: CurrencyId, operation: Operation) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
-			ControllerDates::<T>::mutate(pool_id, |r| r.is_lock = true);
-			Self::deposit_event(Event::PoolLocked(pool_id));
+			match operation {
+				Operation::Deposit => PauseKeepers::mutate(pool_id, |pool| pool.deposit_paused = true),
+				Operation::Redeem => PauseKeepers::mutate(pool_id, |pool| pool.redeem_paused = true),
+				Operation::Borrow => PauseKeepers::mutate(pool_id, |pool| pool.borrow_paused = true),
+				Operation::Repay => PauseKeepers::mutate(pool_id, |pool| pool.repay_paused = true),
+			};
+			Self::deposit_event(Event::OperationIsPaused(pool_id, operation));
 			Ok(())
 		}
 
-		/// Unlocks all operations (deposit, redeem, borrow, repay)  with the pool.
+		/// Unpause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
 		/// The dispatch origin of this call must be Administrator.
 		#[weight = 0]
-		pub fn unlock_pool_transactions(origin, pool_id: CurrencyId) -> DispatchResult {
+		pub fn unpause_specific_operation(origin, pool_id: CurrencyId, operation: Operation) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
-			ControllerDates::<T>::mutate(pool_id, |r| r.is_lock = false);
-			Self::deposit_event(Event::PoolUnLocked(pool_id));
+			match operation {
+				Operation::Deposit => PauseKeepers::mutate(pool_id, |pool| pool.deposit_paused = false),
+				Operation::Redeem => PauseKeepers::mutate(pool_id, |pool| pool.redeem_paused = false),
+				Operation::Borrow => PauseKeepers::mutate(pool_id, |pool| pool.borrow_paused = false),
+				Operation::Repay => PauseKeepers::mutate(pool_id, |pool| pool.repay_paused = false),
+			};
+			Self::deposit_event(Event::OperationIsUnPaused(pool_id, operation));
 			Ok(())
 		}
 
@@ -295,11 +318,6 @@ type CurrencyIdResult = result::Result<CurrencyId, DispatchError>;
 impl<T: Trait> Module<T> {
 	// Used in controller: do_deposit, do_redeem, do_borrow, do_repay
 	pub fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult {
-		ensure!(
-			!Self::controller_dates(&underlying_asset_id).is_lock,
-			Error::<T>::OperationsLocked
-		);
-
 		//Remember the initial block number
 		let current_block_number = <frame_system::Module<T>>::block_number();
 		let accrual_block_number_previous = Self::controller_dates(underlying_asset_id).timestamp;
@@ -517,6 +535,25 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
+	/// Checks if the account should be allowed to deposit tokens in the given pool.
+	///
+	/// - `underlying_asset_id` - The CurrencyId to verify the redeem against.
+	/// - `depositor` -  The account which would deposit the tokens.
+	/// - `deposit_amount` - The amount of underlying being supplied to the pool in exchange for
+	/// tokens.
+	/// Return Ok if the deposit is allowed, otherwise a semi-opaque error code.
+	pub fn deposit_allowed(
+		underlying_asset_id: CurrencyId,
+		_depositor: &T::AccountId,
+		_deposit_amount: Balance,
+	) -> DispatchResult {
+		ensure!(
+			!Self::pause_keepers(underlying_asset_id).deposit_paused,
+			Error::<T>::OperationPaused
+		);
+		Ok(())
+	}
+
 	/// Checks if the account should be allowed to redeem tokens in the given pool.
 	///
 	/// - `underlying_asset_id` - The CurrencyId to verify the redeem against.
@@ -529,7 +566,10 @@ impl<T: Trait> Module<T> {
 		redeemer: &T::AccountId,
 		redeem_amount: Balance,
 	) -> DispatchResult {
-		//FIXME: add account_membership checking
+		ensure!(
+			!Self::pause_keepers(underlying_asset_id).redeem_paused,
+			Error::<T>::OperationPaused
+		);
 
 		let (_, shortfall) =
 			Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset_id, redeem_amount, 0)?;
@@ -550,9 +590,10 @@ impl<T: Trait> Module<T> {
 		who: &T::AccountId,
 		borrow_amount: Balance,
 	) -> DispatchResult {
-		//FIXME: add pause checking
-
-		//FIXME: add account_membership checking
+		ensure!(
+			!Self::pause_keepers(underlying_asset_id).borrow_paused,
+			Error::<T>::OperationPaused
+		);
 
 		let oracle_price =
 			<Oracle<T>>::get_underlying_price(underlying_asset_id).map_err(|_| Error::<T>::OraclePriceError)?;
@@ -579,7 +620,10 @@ impl<T: Trait> Module<T> {
 		_who: &T::AccountId,
 		_repay_amount: Balance,
 	) -> DispatchResult {
-		//FIXME: add Listed checking
+		ensure!(
+			!Self::pause_keepers(underlying_asset_id).repay_paused,
+			Error::<T>::OperationPaused
+		);
 
 		let _borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
 
