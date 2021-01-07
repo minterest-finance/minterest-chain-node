@@ -22,14 +22,13 @@ pub struct Pool {
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct PoolUserData<BlockNumber> {
+pub struct PoolUserData {
 	/// Total balance (with accrued interest), after applying the most
 	/// recent balance-changing action
 	pub total_borrowed: Balance,
 	/// Global borrow_index as of the most recent balance-changing action
 	pub interest_index: Rate,
 	pub collateral: bool,
-	pub timestamp: BlockNumber, // FIXME: how can i use it?
 }
 
 #[cfg(test)]
@@ -72,7 +71,7 @@ decl_storage! {
 		pub Pools get(fn pools) config(): map hasher(blake2_128_concat) CurrencyId => Pool;
 		pub PoolUserDates get(fn pool_user_data) config(): double_map
 			hasher(blake2_128_concat) T::AccountId,
-			hasher(blake2_128_concat) CurrencyId => PoolUserData<T::BlockNumber>;
+			hasher(blake2_128_concat) CurrencyId => PoolUserData;
 	}
 }
 

@@ -26,7 +26,6 @@
       "total_borrowed": "Balance",
       "interest_index": "Rate",
       "collateral": "bool",
-      "timestamp": "BlockNumber"
     },
     "CurrencyIdOf": "CurrencyId",
     "Amount": "i128",

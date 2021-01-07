@@ -164,7 +164,7 @@ pub const MAX_MEMBERS: u32 = 16;
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
-	pool_user_data: Vec<(AccountId, CurrencyId, PoolUserData<BlockNumber>)>,
+	pool_user_data: Vec<(AccountId, CurrencyId, PoolUserData)>,
 }
 
 impl Default for ExtBuilder {
@@ -312,7 +312,6 @@ impl ExtBuilder {
 				total_borrowed: 30,
 				interest_index: Rate::saturating_from_rational(2, 1),
 				collateral: true,
-				timestamp: 2,
 			},
 		));
 		self
@@ -326,7 +325,6 @@ impl ExtBuilder {
 				total_borrowed: 100,
 				interest_index: Rate::saturating_from_rational(2, 1),
 				collateral: true,
-				timestamp: 2,
 			},
 		)];
 		self
@@ -340,7 +338,6 @@ impl ExtBuilder {
 				total_borrowed: Balance::zero(),
 				interest_index: Rate::saturating_from_rational(2, 1),
 				collateral: true,
-				timestamp: 2,
 			},
 		)];
 		self
