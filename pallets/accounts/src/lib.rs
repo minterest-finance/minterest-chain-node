@@ -21,7 +21,7 @@ pub trait Trait: system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Accounts {
-		AllowedAccounts get(fn accounts): map hasher(blake2_128_concat) T::AccountId => ();
+		AllowedAccounts get(fn allowed_accounts) config(): map hasher(blake2_128_concat) T::AccountId => ();
 		MemberCount: u32;
 	}
 }

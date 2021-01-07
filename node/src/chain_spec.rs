@@ -2,8 +2,8 @@ use controller::{ControllerData, PauseKeeper};
 use hex_literal::hex;
 use liquidity_pools::Pool;
 use node_minterest_runtime::{
-	AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig, GrandpaConfig,
-	LiquidityPoolsConfig, Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
+	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig,
+	GrandpaConfig, LiquidityPoolsConfig, Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
 };
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
@@ -370,6 +370,9 @@ fn testnet_genesis(
 					},
 				),
 			],
+		}),
+		accounts: Some(AccountsConfig {
+			allowed_accounts: vec![(get_account_id_from_seed::<sr25519::Public>("Alice"), ())],
 		}),
 	}
 }
