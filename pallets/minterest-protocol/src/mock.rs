@@ -1,6 +1,5 @@
 //! Mocks for the minterest-protocol module.
 
-use controller::ControllerData;
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use liquidity_pools::Pool;
 use minterest_primitives::{Balance, CurrencyId, Rate};
@@ -41,12 +40,6 @@ parameter_types! {
 	pub const MaximumBlockWeight: u32 = 1024;
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
-	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
-		CurrencyId::DOT,
-		CurrencyId::KSM,
-		CurrencyId::BTC,
-		CurrencyId::ETH,
-	];
 }
 
 pub type AccountId = u32;
@@ -117,17 +110,26 @@ impl liquidity_pools::Trait for Test {
 
 parameter_types! {
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const BlocksPerYear: u128 = 5256000;
 	pub MTokensId: Vec<CurrencyId> = vec![
 		CurrencyId::MDOT,
 		CurrencyId::MKSM,
 		CurrencyId::MBTC,
 		CurrencyId::METH,
 	];
+	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
+		CurrencyId::DOT,
+		CurrencyId::KSM,
+		CurrencyId::BTC,
+		CurrencyId::ETH,
+	];
 }
 
 impl controller::Trait for Test {
 	type Event = Event;
 	type InitialExchangeRate = InitialExchangeRate;
+	type BlocksPerYear = BlocksPerYear;
+	type UnderlyingAssetId = UnderlyingAssetId;
 	type MTokensId = MTokensId;
 }
 
@@ -137,7 +139,6 @@ impl oracle::Trait for Test {
 
 impl Trait for Test {
 	type Event = Event;
-	type UnderlyingAssetId = UnderlyingAssetId;
 	type Borrowing = MockBorrowing;
 }
 

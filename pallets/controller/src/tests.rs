@@ -7,15 +7,54 @@ use frame_support::{assert_err, assert_noop, assert_ok, error::BadOrigin};
 fn accrue_interest_should_work() {
 	ExtBuilder::default()
 		.set_btc_and_dot_pool_mock()
+		.borrow_interest_rate_equal_7_200_000_000()
 		.build()
 		.execute_with(|| {
 			System::set_block_number(1);
 			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
+			assert_eq!(Controller::controller_dates(CurrencyId::DOT).timestamp, 1);
+
 			assert_noop!(
 				Controller::accrue_interest_rate(CurrencyId::BTC),
 				Error::<Runtime>::OperationsLocked
 			);
-			//FIXME: add test for: MaxBorrowRate
+
+			assert_eq!(TestPools::pools(CurrencyId::DOT).total_insurance, 57_600_000_000);
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).borrow_rate,
+				Rate::saturating_from_rational(72u128, 10_000_000_000u128)
+			);
+
+			assert_eq!(
+				TestPools::pools(CurrencyId::DOT).total_borrowed,
+				80_000_000_576_000_000_000
+			);
+			assert_eq!(
+				TestPools::pools(CurrencyId::DOT).borrow_index,
+				Rate::from_inner(1_000_000_007_200_000_000)
+			);
+		});
+}
+
+#[test]
+fn accrue_interest_should_not_work() {
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.borrow_interest_rate_equal_7_200_000_000()
+		.build()
+		.execute_with(|| {
+			System::set_block_number(1);
+			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
+			assert_eq!(Controller::controller_dates(CurrencyId::DOT).timestamp, 1);
+
+			System::set_block_number(20);
+			assert_noop!(
+				Controller::accrue_interest_rate(CurrencyId::DOT),
+				Error::<Runtime>::BorrowRateIsTooHight
+			);
+
+			assert_ok!(Controller::set_max_borrow_rate(Origin::root(), CurrencyId::DOT, 2, 1));
+			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
 		});
 }
 
@@ -81,13 +120,13 @@ fn convert_from_wrapped_should_work() {
 #[test]
 fn calculate_exchange_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::calculate_exchange_rate(10, 10));
+		assert_ok!(Controller::calculate_exchange_rate(102, 100, 2, 20));
 		assert_eq!(
-			Controller::calculate_exchange_rate(10, 10),
-			Ok(Rate::saturating_from_rational(1, 1))
+			Controller::calculate_exchange_rate(102, 100, 2, 20),
+			Ok(Rate::saturating_from_rational(12, 10))
 		);
 		assert_eq!(
-			Controller::calculate_exchange_rate(10, 0),
+			Controller::calculate_exchange_rate(102, 0, 2, 0),
 			Ok(Rate::saturating_from_rational(1, 1))
 		)
 	});
@@ -120,10 +159,18 @@ fn get_exchange_rate_should_work() {
 #[test]
 fn calculate_borrow_interest_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::calculate_borrow_interest_rate(100, 10, 10));
+		assert_ok!(Controller::calculate_borrow_interest_rate(CurrencyId::DOT, 102, 20, 2));
+
+		// utilization rate less than kink
 		assert_eq!(
-			Controller::calculate_borrow_interest_rate(100, 10, 10),
-			Ok(Rate::saturating_from_rational(1, 1))
+			Controller::calculate_borrow_interest_rate(CurrencyId::DOT, 37, 70, 7),
+			Ok(Rate::saturating_from_rational(63u128, 10_000_000_000u128))
+		);
+
+		// utilization rate larger or equal than kink
+		assert_eq!(
+			Controller::calculate_borrow_interest_rate(CurrencyId::DOT, 18, 90, 8),
+			Ok(Rate::saturating_from_rational(14400000072u128, 10_000_000_000u128))
 		);
 	});
 }
@@ -145,7 +192,7 @@ fn calculate_interest_factor_should_work() {
 		));
 		assert_eq!(
 			Controller::calculate_interest_factor(Rate::saturating_from_rational(1, 10), &10),
-			Ok(Rate::from_inner(0))
+			Ok(Rate::from_inner(1_000_000_000_000_000_000))
 		);
 	});
 }
@@ -163,6 +210,13 @@ fn calculate_interest_accumulated_should_work() {
 				TestPools::get_pool_available_liquidity(CurrencyId::DOT)
 			),
 			Ok(0)
+		);
+		assert_eq!(
+			Controller::calculate_interest_accumulated(
+				Rate::saturating_from_rational(3, 100), // eq 0.03 == 3%
+				200
+			),
+			Ok(6)
 		);
 		assert_noop!(
 			Controller::calculate_interest_accumulated(Rate::saturating_from_rational(11, 10), Balance::max_value()),
@@ -261,44 +315,35 @@ fn borrow_balance_stored_should_work() {
 }
 
 #[test]
-fn set_insurance_factor_should_work() {
+fn calculate_utilization_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::set_insurance_factor(
-			Origin::root(),
-			CurrencyId::DOT,
-			20,
-			10
-		));
+		assert_ok!(Controller::calculate_utilization_rate(100, 0, 2));
+		assert_eq!(Controller::calculate_utilization_rate(0, 0, 0), Ok(Rate::from_inner(0)));
 		assert_eq!(
-			Controller::controller_dates(CurrencyId::DOT).insurance_factor,
-			Rate::saturating_from_rational(20, 10)
+			Controller::calculate_utilization_rate(22, 80, 2),
+			Ok(Rate::saturating_from_rational(8, 10))
 		);
+
 		assert_noop!(
-			Controller::set_insurance_factor(Origin::root(), CurrencyId::DOT, 20, 0),
+			Controller::calculate_utilization_rate(Balance::max_value(), 80, 2),
 			Error::<Runtime>::NumOverflow
-		);
-		assert_noop!(
-			Controller::set_insurance_factor(Origin::signed(ALICE), CurrencyId::DOT, 20, 10),
-			BadOrigin
 		);
 	});
 }
 
 #[test]
-fn set_max_borrow_rate_should_work() {
+fn calculate_new_borrow_index_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::set_max_borrow_rate(Origin::root(), CurrencyId::DOT, 20, 10));
+		assert_ok!(Controller::calculate_new_borrow_index(
+			Rate::saturating_from_rational(63u128, 10_000_000_000u128),
+			Rate::saturating_from_rational(1, 1)
+		));
 		assert_eq!(
-			Controller::controller_dates(CurrencyId::DOT).max_borrow_rate,
-			Rate::saturating_from_rational(20, 10)
-		);
-		assert_noop!(
-			Controller::set_max_borrow_rate(Origin::root(), CurrencyId::DOT, 20, 0),
-			Error::<Runtime>::NumOverflow
-		);
-		assert_noop!(
-			Controller::set_max_borrow_rate(Origin::signed(ALICE), CurrencyId::DOT, 20, 10),
-			BadOrigin
+			Controller::calculate_new_borrow_index(
+				Rate::saturating_from_rational(63u128, 10_000_000_000u128),
+				Rate::saturating_from_rational(1, 1)
+			),
+			Ok(Rate::from_inner(1_000_000_006_300_000_000))
 		);
 	});
 }
@@ -416,5 +461,144 @@ fn borrow_allowed_should_work() {
 fn repay_allowed_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		//TODO write tests after the function implementation.
+	});
+}
+
+/* ----------------------------------------------------------------------------------------- */
+
+// Admin functions
+
+#[test]
+fn set_insurance_factor_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Controller::set_insurance_factor(
+			Origin::root(),
+			CurrencyId::DOT,
+			20,
+			10
+		));
+		assert_eq!(
+			Controller::controller_dates(CurrencyId::DOT).insurance_factor,
+			Rate::saturating_from_rational(20, 10)
+		);
+		assert_noop!(
+			Controller::set_insurance_factor(Origin::root(), CurrencyId::DOT, 20, 0),
+			Error::<Runtime>::NumOverflow
+		);
+		assert_noop!(
+			Controller::set_insurance_factor(Origin::signed(ALICE), CurrencyId::DOT, 20, 10),
+			BadOrigin
+		);
+		assert_noop!(
+			Controller::set_insurance_factor(Origin::root(), CurrencyId::MDOT, 20, 10),
+			Error::<Runtime>::NotValidUnderlyingAssetId
+		);
+	});
+}
+
+#[test]
+fn set_max_borrow_rate_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Controller::set_max_borrow_rate(Origin::root(), CurrencyId::DOT, 20, 10));
+		assert_eq!(
+			Controller::controller_dates(CurrencyId::DOT).max_borrow_rate,
+			Rate::saturating_from_rational(20, 10)
+		);
+		assert_noop!(
+			Controller::set_max_borrow_rate(Origin::root(), CurrencyId::DOT, 20, 0),
+			Error::<Runtime>::NumOverflow
+		);
+		assert_noop!(
+			Controller::set_max_borrow_rate(Origin::signed(ALICE), CurrencyId::DOT, 20, 10),
+			BadOrigin
+		);
+		assert_noop!(
+			Controller::set_max_borrow_rate(Origin::root(), CurrencyId::MDOT, 20, 10),
+			Error::<Runtime>::NotValidUnderlyingAssetId
+		);
+	});
+}
+
+#[test]
+fn set_base_rate_per_block_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Controller::set_base_rate_per_block(
+			Origin::root(),
+			CurrencyId::DOT,
+			20,
+			10
+		));
+		assert_eq!(
+			Controller::controller_dates(CurrencyId::DOT).base_rate_per_block,
+			Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
+		);
+		assert_noop!(
+			Controller::set_base_rate_per_block(Origin::root(), CurrencyId::DOT, 20, 0),
+			Error::<Runtime>::NumOverflow
+		);
+		assert_noop!(
+			Controller::set_base_rate_per_block(Origin::signed(ALICE), CurrencyId::DOT, 20, 10),
+			BadOrigin
+		);
+		assert_noop!(
+			Controller::set_base_rate_per_block(Origin::root(), CurrencyId::MDOT, 20, 10),
+			Error::<Runtime>::NotValidUnderlyingAssetId
+		);
+	});
+}
+
+#[test]
+fn set_multiplier_per_block_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Controller::set_multiplier_per_block(
+			Origin::root(),
+			CurrencyId::DOT,
+			20,
+			10
+		));
+		assert_eq!(
+			Controller::controller_dates(CurrencyId::DOT).multiplier_per_block,
+			Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
+		);
+		assert_noop!(
+			Controller::set_multiplier_per_block(Origin::root(), CurrencyId::DOT, 20, 0),
+			Error::<Runtime>::NumOverflow
+		);
+		assert_noop!(
+			Controller::set_multiplier_per_block(Origin::signed(ALICE), CurrencyId::DOT, 20, 10),
+			BadOrigin
+		);
+		assert_noop!(
+			Controller::set_multiplier_per_block(Origin::root(), CurrencyId::MDOT, 20, 10),
+			Error::<Runtime>::NotValidUnderlyingAssetId
+		);
+	});
+}
+
+#[test]
+fn set_jump_multiplier_per_block_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Controller::set_jump_multiplier_per_block(
+			Origin::root(),
+			CurrencyId::DOT,
+			20,
+			10
+		));
+		assert_eq!(
+			Controller::controller_dates(CurrencyId::DOT).jump_multiplier_per_block,
+			Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
+		);
+		assert_noop!(
+			Controller::set_jump_multiplier_per_block(Origin::root(), CurrencyId::DOT, 20, 0),
+			Error::<Runtime>::NumOverflow
+		);
+		assert_noop!(
+			Controller::set_jump_multiplier_per_block(Origin::signed(ALICE), CurrencyId::DOT, 20, 10),
+			BadOrigin
+		);
+		assert_noop!(
+			Controller::set_jump_multiplier_per_block(Origin::root(), CurrencyId::MDOT, 20, 10),
+			Error::<Runtime>::NotValidUnderlyingAssetId
+		);
 	});
 }

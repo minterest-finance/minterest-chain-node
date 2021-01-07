@@ -34,8 +34,15 @@
     "AmountOf": "Amount",
     "Rate": "FixedU128",
     "ControllerData": {
-      "timestamp" : "BlockNumber",
-      "borrow_rate": "Rate"
+      "timestamp": "BlockNumber",
+      "borrow_rate": "Rate",
+      "insurance_factor": "Rate",
+      "max_borrow_rate":  "Rate",
+      "kink": "Rate",
+      "base_rate_per_block": "Rate",
+      "multiplier_per_block": "Rate",
+      "jump_multiplier_per_block": "Rate"
+
     }
   },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
