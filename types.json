@@ -20,7 +20,6 @@
       "total_borrowed": "Balance",
       "borrow_index": "Rate",
       "current_exchange_rate": "Rate",
-      "is_lock": "bool",
       "total_insurance": "Balance"
     },
     "PoolUserData" : {
@@ -42,8 +41,8 @@
       "base_rate_per_block": "Rate",
       "multiplier_per_block": "Rate",
       "jump_multiplier_per_block": "Rate",
-      "collateral_factor": "Rate"
-
+      "collateral_factor": "Rate",
+      "is_lock": "bool"
     }
   },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"

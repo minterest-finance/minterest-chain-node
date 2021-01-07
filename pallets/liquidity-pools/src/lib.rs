@@ -1,11 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
-use frame_system::{ensure_root, ensure_signed};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get};
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
-use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -19,7 +17,6 @@ pub struct Pool {
 	/// Accumulator of the total earned interest rate since the opening of the pool
 	pub borrow_index: Rate,
 	pub current_exchange_rate: Rate,
-	pub is_lock: bool,
 	pub total_insurance: Balance,
 }
 
@@ -52,18 +49,6 @@ pub trait Trait: frame_system::Trait {
 
 decl_event!(
 	pub enum Event {
-		/// Pool locked: \[pool_id\]
-		PoolLocked(CurrencyId),
-
-		/// Pool unlocked: \[pool_id\]
-		PoolUnLocked(CurrencyId),
-
-		/// Insurance balance replenished: \[pool_id, amount\]
-		DepositedInsurance(CurrencyId, Balance),
-
-		/// Insurance balance redeemed: \[pool_id, amount\]
-		RedeemedInsurance(CurrencyId, Balance),
-
 		/// Pool total balance: \[pool_id, amount\]
 		PoolTotalBalance(CurrencyId, Balance),
 	}
@@ -75,13 +60,7 @@ decl_error! {
 	/// Pool not found.
 	PoolNotFound,
 
-	/// Not enough balance to withdraw or repay.
-	NotEnoughBalance,
 
-	/// Balance overflows maximum.
-	///
-	/// Only happened when the balance went wrong and balance overflows the integer type.
-	BalanceOverflowed,
 
 	/// Number overflow in calculation.
 	NumOverflow,
@@ -107,95 +86,6 @@ decl_module! {
 
 			/// The Liquidity Pool's account id, keep all assets in Pools.
 			const PoolAccountId: T::AccountId = T::ModuleId::get().into_account();
-
-			/// Locks all operations (deposit, redeem, borrow, repay)  with the pool.
-			///
-			/// The dispatch origin of this call must be _Root_.
-			#[weight = 0]
-			pub fn lock_pool_transactions(origin, pool_id: CurrencyId) -> DispatchResult {
-				ensure_root(origin)?;
-				ensure!(Self::pool_exists(&pool_id), Error::<T>::PoolNotFound);
-				Pools::mutate(pool_id, |r| r.is_lock = true);
-				Self::deposit_event(Event::PoolLocked(pool_id));
-				Ok(())
-			}
-
-			/// Unlocks all operations (deposit, redeem, borrow, repay)  with the pool.
-			///
-			/// The dispatch origin of this call must be _Root_.
-			#[weight = 0]
-			pub fn unlock_pool_transactions(origin, pool_id: CurrencyId) -> DispatchResult {
-				ensure_root(origin)?;
-				ensure!(Self::pool_exists(&pool_id), Error::<T>::PoolNotFound);
-				Pools::mutate(pool_id, |r| r.is_lock = false);
-				Self::deposit_event(Event::PoolUnLocked(pool_id));
-				Ok(())
-			}
-
-			/// Replenishes the insurance balance.
-			///
-			/// The dispatch origin of this call must be _Root_.
-			#[weight = 0]
-			pub fn deposit_insurance(origin, pool_id: CurrencyId, #[compact] amount: Balance) {
-				with_transaction_result(|| {
-					// FIXME This dispatch should only be called as an _Root_.
-					let account_id = ensure_signed(origin)?;
-					Self::do_deposit_insurance(&account_id, pool_id, amount)?;
-					Self::deposit_event(Event::DepositedInsurance(pool_id, amount));
-					Ok(())
-				})?;
-			}
-
-			/// Removes the insurance balance.
-			///
-			/// The dispatch origin of this call must be _Root_.
-			#[weight = 0]
-			pub fn redeem_insurance(origin, pool_id: CurrencyId, #[compact] amount: Balance) {
-				with_transaction_result(|| {
-					// FIXME This dispatch should only be called as an _Root_.
-					let account_id = ensure_signed(origin)?;
-					Self::do_redeem_insurance(&account_id, pool_id, amount)?;
-					Self::deposit_event(Event::RedeemedInsurance(pool_id, amount));
-					Ok(())
-				})?;
-			}
-	}
-}
-
-// Admin functions
-impl<T: Trait> Module<T> {
-	fn do_deposit_insurance(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
-		ensure!(Self::pool_exists(&pool_id), Error::<T>::PoolNotFound);
-		ensure!(
-			amount <= T::MultiCurrency::free_balance(pool_id, &who),
-			Error::<T>::NotEnoughBalance
-		);
-
-		T::MultiCurrency::transfer(pool_id, &who, &Self::pools_account_id(), amount)?;
-
-		let new_insurance_balance = Self::pools(pool_id)
-			.total_insurance
-			.checked_add(amount)
-			.ok_or(Error::<T>::BalanceOverflowed)?;
-
-		Pools::mutate(pool_id, |r| r.total_insurance = new_insurance_balance);
-		Ok(())
-	}
-
-	fn do_redeem_insurance(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
-		ensure!(Self::pool_exists(&pool_id), Error::<T>::PoolNotFound);
-
-		let current_total_insurance = Self::pools(pool_id).total_insurance;
-		ensure!(amount <= current_total_insurance, Error::<T>::NotEnoughBalance);
-
-		T::MultiCurrency::transfer(pool_id, &Self::pools_account_id(), &who, amount)?;
-
-		let new_insurance_balance = current_total_insurance
-			.checked_sub(amount)
-			.ok_or(Error::<T>::NotEnoughBalance)?;
-
-		Pools::mutate(pool_id, |r| r.total_insurance = new_insurance_balance);
-		Ok(())
 	}
 }
 
@@ -218,6 +108,11 @@ impl<T: Trait> Module<T> {
 
 	pub fn set_pool_borrow_index(pool_id: CurrencyId, new_borrow_index: Rate) -> DispatchResult {
 		Pools::mutate(pool_id, |pool| pool.borrow_index = new_borrow_index);
+		Ok(())
+	}
+
+	pub fn set_pool_total_insurance(pool_id: CurrencyId, new_total_insurance: Balance) -> DispatchResult {
+		Pools::mutate(pool_id, |r| r.total_insurance = new_total_insurance);
 		Ok(())
 	}
 
@@ -288,7 +183,7 @@ impl<T: Trait> Module<T> {
 
 // Private methods for LiquidityPools
 impl<T: Trait> Module<T> {
-	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
+	pub fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
 		Pools::contains_key(underlying_asset_id)
 	}
 }

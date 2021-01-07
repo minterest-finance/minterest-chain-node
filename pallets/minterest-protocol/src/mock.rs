@@ -201,7 +201,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
 					current_exchange_rate: Rate::from_inner(1),
-					is_lock: true,
 					total_insurance: Balance::zero(),
 				},
 			),
@@ -212,7 +211,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
 					current_exchange_rate: Rate::from_inner(1),
-					is_lock: true,
 					total_insurance: Balance::zero(),
 				},
 			),
@@ -223,7 +221,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
 					current_exchange_rate: Rate::from_inner(1),
-					is_lock: true,
 					total_insurance: Balance::zero(),
 				},
 			),
@@ -234,7 +231,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
 					current_exchange_rate: Rate::from_inner(1),
-					is_lock: true,
 					total_insurance: Balance::zero(),
 				},
 			),
@@ -258,6 +254,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+					is_lock: true,
 				},
 			),
 			(
@@ -272,6 +269,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+					is_lock: true,
 				},
 			),
 			(
@@ -286,6 +284,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+					is_lock: true,
 				},
 			),
 			(
@@ -300,6 +299,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+					is_lock: true,
 				},
 			),
 		],

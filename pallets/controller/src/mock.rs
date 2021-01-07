@@ -29,6 +29,7 @@ impl_outer_event! {
 		liquidity_pools,
 		controller,
 		oracle,
+		accounts<T>,
 	}
 }
 
@@ -118,6 +119,15 @@ impl oracle::Trait for Runtime {
 }
 
 parameter_types! {
+	pub const MaxMembers: u32 = MAX_MEMBERS;
+}
+
+impl accounts::Trait for Runtime {
+	type Event = TestEvent;
+	type MaxMembers = MaxMembers;
+}
+
+parameter_types! {
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 	pub const BlocksPerYear: u128 = 5256000u128;
 	pub MTokensId: Vec<CurrencyId> = vec![
@@ -148,6 +158,8 @@ pub type Controller = Module<Runtime>;
 pub type TestPools = liquidity_pools::Module<Runtime>;
 pub type System = frame_system::Module<Runtime>;
 pub type Currencies = orml_currencies::Module<Runtime>;
+pub type TestAccounts = accounts::Module<Runtime>;
+pub const MAX_MEMBERS: u32 = 16;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -166,6 +178,7 @@ impl Default for ExtBuilder {
 }
 
 pub const ALICE: AccountId = 1;
+pub const BOB: AccountId = 2;
 pub const ONE_HUNDRED: Balance = 100;
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
 
@@ -198,7 +211,6 @@ impl ExtBuilder {
 				total_borrowed: 81,
 				borrow_index: Rate::saturating_from_rational(1, 1),
 				current_exchange_rate: Rate::from_inner(1),
-				is_lock: false,
 				total_insurance: Balance::zero(),
 			},
 		)];
@@ -221,7 +233,6 @@ impl ExtBuilder {
 					total_borrowed: 80_000_000_000_000_000_000,
 					borrow_index: Rate::saturating_from_rational(1, 1),
 					current_exchange_rate: Rate::from_inner(1),
-					is_lock: false,
 					total_insurance: Balance::zero(),
 				},
 			),
@@ -232,7 +243,6 @@ impl ExtBuilder {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
 					current_exchange_rate: Rate::saturating_from_rational(1, 1),
-					is_lock: true,
 					total_insurance: Balance::zero(),
 				},
 			),
@@ -259,7 +269,6 @@ impl ExtBuilder {
 				total_borrowed: Balance::zero(),
 				borrow_index: Rate::saturating_from_rational(1, 1),
 				current_exchange_rate: Rate::saturating_from_rational(8, 10),
-				is_lock: false,
 				total_insurance: 5,
 			},
 		));
@@ -279,7 +288,6 @@ impl ExtBuilder {
 				total_borrowed: Balance::zero(),
 				borrow_index: Rate::saturating_from_rational(1, 1),
 				current_exchange_rate: Rate::saturating_from_rational(8, 10),
-				is_lock: false,
 				total_insurance: 5,
 			},
 		));
@@ -294,7 +302,6 @@ impl ExtBuilder {
 				total_borrowed: 30,
 				borrow_index: Rate::saturating_from_rational(1, 1),
 				current_exchange_rate: Rate::saturating_from_rational(8, 10),
-				is_lock: false,
 				total_insurance: 5,
 			},
 		));
@@ -348,7 +355,6 @@ impl ExtBuilder {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
 					current_exchange_rate: Rate::saturating_from_rational(1, 1),
-					is_lock: false,
 					total_insurance: Balance::zero(),
 				},
 			),
@@ -359,7 +365,6 @@ impl ExtBuilder {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
 					current_exchange_rate: Rate::saturating_from_rational(1, 1),
-					is_lock: true,
 					total_insurance: Balance::zero(),
 				},
 			),
@@ -392,6 +397,7 @@ impl ExtBuilder {
 						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						is_lock: true,
 					},
 				),
 				(
@@ -406,6 +412,22 @@ impl ExtBuilder {
 						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						is_lock: true,
+					},
+				),
+				(
+					CurrencyId::BTC,
+					ControllerData {
+						timestamp: 0,
+						borrow_rate: Rate::from_inner(0),
+						insurance_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+						kink: Rate::saturating_from_rational(8, 10),
+						base_rate_per_block: Rate::from_inner(0),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
+						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						is_lock: true,
 					},
 				),
 			],

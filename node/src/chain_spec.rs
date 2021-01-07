@@ -237,7 +237,6 @@ fn testnet_genesis(
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),
-						is_lock: true,
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -248,7 +247,6 @@ fn testnet_genesis(
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),
-						is_lock: true,
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -259,7 +257,6 @@ fn testnet_genesis(
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),
-						is_lock: true,
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -270,7 +267,6 @@ fn testnet_genesis(
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),
-						is_lock: true,
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -291,6 +287,7 @@ fn testnet_genesis(
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000),
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(2, 1),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						is_lock: true,
 					},
 				),
 				(
@@ -305,6 +302,7 @@ fn testnet_genesis(
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000),
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(2, 1),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						is_lock: true,
 					},
 				),
 				(
@@ -319,6 +317,7 @@ fn testnet_genesis(
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000),
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(2, 1),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						is_lock: true,
 					},
 				),
 				(
@@ -333,6 +332,7 @@ fn testnet_genesis(
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000),
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(2, 1),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						is_lock: true,
 					},
 				),
 			],

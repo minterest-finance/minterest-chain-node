@@ -2,9 +2,10 @@
 
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
-use frame_system::{self as system, ensure_root};
+use frame_system::{self as system, ensure_signed};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::MultiCurrency;
+use orml_utilities::with_transaction_result;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -27,6 +28,7 @@ pub struct ControllerData<BlockNumber> {
 	pub jump_multiplier_per_block: Rate,
 	/// Determines how much a user can borrow.
 	pub collateral_factor: Rate,
+	pub is_lock: bool,
 }
 
 #[cfg(test)]
@@ -36,8 +38,9 @@ mod tests;
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 type Oracle<T> = oracle::Module<T>;
+type Accounts<T> = accounts::Module<T>;
 
-pub trait Trait: liquidity_pools::Trait + system::Trait + oracle::Trait {
+pub trait Trait: liquidity_pools::Trait + system::Trait + oracle::Trait + accounts::Trait {
 	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 
@@ -67,6 +70,18 @@ decl_event! {
 
 		/// MultiplierPerBlock has been successfully changed
 		MultiplierPerBlockHasChanged,
+
+		/// Pool locked: \[pool_id\]
+		PoolLocked(CurrencyId),
+
+		/// Pool unlocked: \[pool_id\]
+		PoolUnLocked(CurrencyId),
+
+		/// Insurance balance replenished: \[pool_id, amount\]
+		DepositedInsurance(CurrencyId, Balance),
+
+		/// Insurance balance redeemed: \[pool_id, amount\]
+		RedeemedInsurance(CurrencyId, Balance),
 	}
 }
 
@@ -93,26 +108,96 @@ decl_error! {
 		/// The currency is not enabled in wrapped protocol.
 		NotValidWrappedTokenId,
 
-		/// Oracle unavailable or price equal 0
+		/// Oracle unavailable or price equal 0ю
 		OraclePriceError,
 
-		/// Insufficient available liquidity
+		/// Insufficient available liquidityю
 		InsufficientLiquidity,
+
+		/// Pool not found.
+		PoolNotFound,
+
+		/// The dispatch origin of this call must be Administrator.
+		RequireAdmin,
+
+		/// Not enough balance to withdraw or repay.
+		NotEnoughBalance,
+
+		/// Balance overflows maximum.
+		///
+		/// Only happened when the balance went wrong and balance overflows the integer type.
+		BalanceOverflowed,
 	}
 }
 
+// Admin functions
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 		fn deposit_event() = default;
 
-		#[weight = 10_000]
+		/// Locks all operations (deposit, redeem, borrow, repay)  with the pool.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[weight = 0]
+		pub fn lock_pool_transactions(origin, pool_id: CurrencyId) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ControllerDates::<T>::mutate(pool_id, |r| r.is_lock = true);
+			Self::deposit_event(Event::PoolLocked(pool_id));
+			Ok(())
+		}
+
+		/// Unlocks all operations (deposit, redeem, borrow, repay)  with the pool.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[weight = 0]
+		pub fn unlock_pool_transactions(origin, pool_id: CurrencyId) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ControllerDates::<T>::mutate(pool_id, |r| r.is_lock = false);
+			Self::deposit_event(Event::PoolUnLocked(pool_id));
+			Ok(())
+		}
+
+		/// Replenishes the insurance balance.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[weight = 0]
+		pub fn deposit_insurance(origin, pool_id: CurrencyId, #[compact] amount: Balance) {
+			with_transaction_result(|| {
+				let sender = ensure_signed(origin)?;
+				ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+				Self::do_deposit_insurance(&sender, pool_id, amount)?;
+				Self::deposit_event(Event::DepositedInsurance(pool_id, amount));
+				Ok(())
+			})?;
+		}
+
+		/// Redeem the insurance balance.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[weight = 0]
+		pub fn redeem_insurance(origin, pool_id: CurrencyId, #[compact] amount: Balance) {
+			with_transaction_result(|| {
+				let sender = ensure_signed(origin)?;
+				ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+				Self::do_redeem_insurance(&sender, pool_id, amount)?;
+				Self::deposit_event(Event::RedeemedInsurance(pool_id, amount));
+				Ok(())
+			})?;
+		}
+
+		/// Set insurance factor.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[weight = 0]
 		pub fn set_insurance_factor(origin, pool_id: CurrencyId, new_amount_n: u128, new_amount_d: u128) -> DispatchResult {
-			ensure_root(origin)?;
-			ensure!(
-				T::UnderlyingAssetId::get().contains(&pool_id),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 			ensure!(new_amount_d > 0, Error::<T>::NumOverflow);
 
 			let new_insurance_factor = Rate::saturating_from_rational(new_amount_n, new_amount_d);
@@ -122,13 +207,14 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = 10_000]
+		/// Set Maximum borrow rate.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[weight = 0]
 		pub fn set_max_borrow_rate(origin, pool_id: CurrencyId, new_amount_n: u128, new_amount_d: u128) -> DispatchResult {
-			ensure_root(origin)?;
-			ensure!(
-				T::UnderlyingAssetId::get().contains(&pool_id),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 			ensure!(new_amount_d > 0, Error::<T>::NumOverflow);
 
 			let new_max_borow_rate = Rate::saturating_from_rational(new_amount_n, new_amount_d);
@@ -138,14 +224,14 @@ decl_module! {
 			Ok(())
 		}
 
-		/// Set BaseRatePerBlock from BaseRatePerYear
-		#[weight = 10_000]
+		/// Set BaseRatePerBlock from BaseRatePerYear.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[weight = 0]
 		pub fn set_base_rate_per_block(origin, pool_id: CurrencyId, base_rate_per_year_n: u128, base_rate_per_year_d: u128) -> DispatchResult {
-			ensure_root(origin)?;
-			ensure!(
-				T::UnderlyingAssetId::get().contains(&pool_id),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 			ensure!(base_rate_per_year_d > 0, Error::<T>::NumOverflow);
 
 			let new_base_rate_per_year = Rate::saturating_from_rational(base_rate_per_year_n, base_rate_per_year_d);
@@ -158,14 +244,14 @@ decl_module! {
 			Ok(())
 		}
 
-		/// Set MultiplierPerBlock from MultiplierPerYear
-		#[weight = 10_000]
+		/// Set MultiplierPerBlock from MultiplierPerYear.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[weight = 0]
 		pub fn set_multiplier_per_block(origin, pool_id: CurrencyId, multiplier_rate_per_year_n: u128, multiplier_rate_per_year_d: u128) -> DispatchResult {
-			ensure_root(origin)?;
-			ensure!(
-				T::UnderlyingAssetId::get().contains(&pool_id),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 			ensure!(multiplier_rate_per_year_d > 0, Error::<T>::NumOverflow);
 
 			let new_multiplier_per_year = Rate::saturating_from_rational(multiplier_rate_per_year_n, multiplier_rate_per_year_d);
@@ -178,14 +264,14 @@ decl_module! {
 			Ok(())
 		}
 
-		/// Set JumpMultiplierPerBlock from JumpMultiplierPerYear
-		#[weight = 10_000]
+		/// Set JumpMultiplierPerBlock from JumpMultiplierPerYear.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[weight = 0]
 		pub fn set_jump_multiplier_per_block(origin, pool_id: CurrencyId, jump_multiplier_rate_per_year_n: u128, jump_multiplier_rate_per_year_d: u128) -> DispatchResult {
-			ensure_root(origin)?;
-			ensure!(
-				T::UnderlyingAssetId::get().contains(&pool_id),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 			ensure!(jump_multiplier_rate_per_year_d > 0, Error::<T>::NumOverflow);
 
 
@@ -210,7 +296,7 @@ impl<T: Trait> Module<T> {
 	// Used in controller: do_deposit, do_redeem, do_borrow, do_repay
 	pub fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult {
 		ensure!(
-			!<LiquidityPools<T>>::pools(&underlying_asset_id).is_lock,
+			Self::controller_dates(&underlying_asset_id).is_lock,
 			Error::<T>::OperationsLocked
 		);
 
@@ -730,5 +816,43 @@ impl<T: Trait> Module<T> {
 	/// Determines how much a user can borrow.
 	fn get_collateral_factor(pool_id: CurrencyId) -> Rate {
 		Self::controller_dates(pool_id).collateral_factor
+	}
+}
+
+// Admin functions
+impl<T: Trait> Module<T> {
+	fn do_deposit_insurance(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
+		ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+		ensure!(
+			amount <= T::MultiCurrency::free_balance(pool_id, &who),
+			Error::<T>::NotEnoughBalance
+		);
+
+		T::MultiCurrency::transfer(pool_id, &who, &<LiquidityPools<T>>::pools_account_id(), amount)?;
+
+		let new_insurance_balance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id)
+			.checked_add(amount)
+			.ok_or(Error::<T>::BalanceOverflowed)?;
+
+		<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_insurance_balance)?;
+
+		Ok(())
+	}
+
+	fn do_redeem_insurance(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
+		ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+
+		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
+		ensure!(amount <= current_total_insurance, Error::<T>::NotEnoughBalance);
+
+		T::MultiCurrency::transfer(pool_id, &<LiquidityPools<T>>::pools_account_id(), &who, amount)?;
+
+		let new_insurance_balance = current_total_insurance
+			.checked_sub(amount)
+			.ok_or(Error::<T>::NotEnoughBalance)?;
+
+		<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_insurance_balance)?;
+
+		Ok(())
 	}
 }
