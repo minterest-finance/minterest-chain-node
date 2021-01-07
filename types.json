@@ -41,7 +41,8 @@
       "kink": "Rate",
       "base_rate_per_block": "Rate",
       "multiplier_per_block": "Rate",
-      "jump_multiplier_per_block": "Rate"
+      "jump_multiplier_per_block": "Rate",
+      "collateral_factor": "Rate"
 
     }
   },

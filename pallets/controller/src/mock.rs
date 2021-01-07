@@ -167,6 +167,7 @@ impl Default for ExtBuilder {
 
 pub const ALICE: AccountId = 1;
 pub const ONE_HUNDRED: Balance = 100;
+pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
 
 impl ExtBuilder {
 	pub fn exchange_rate_less_than_one(mut self) -> Self {

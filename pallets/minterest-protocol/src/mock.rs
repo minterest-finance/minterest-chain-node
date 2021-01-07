@@ -12,6 +12,7 @@ use sp_runtime::{
 };
 
 use super::*;
+use controller::ControllerData;
 
 mod minterest_protocol {
 	pub use crate::Event;
@@ -251,7 +252,11 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					timestamp: 0,
 					borrow_rate: Rate::from_inner(0),
 					insurance_factor: Rate::saturating_from_rational(1, 10),
-					max_borrow_rate: Rate::saturating_from_rational(1, 1),
+					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+					kink: Rate::saturating_from_rational(8, 10),
+					base_rate_per_block: Rate::from_inner(0),
+					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
+					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 				},
 			),
@@ -261,7 +266,11 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					timestamp: 0,
 					borrow_rate: Rate::from_inner(0),
 					insurance_factor: Rate::saturating_from_rational(1, 10),
-					max_borrow_rate: Rate::saturating_from_rational(1, 1),
+					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+					kink: Rate::saturating_from_rational(8, 10),
+					base_rate_per_block: Rate::from_inner(0),
+					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
+					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 				},
 			),
@@ -271,7 +280,11 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					timestamp: 0,
 					borrow_rate: Rate::from_inner(0),
 					insurance_factor: Rate::saturating_from_rational(1, 10),
-					max_borrow_rate: Rate::saturating_from_rational(1, 1),
+					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+					kink: Rate::saturating_from_rational(8, 10),
+					base_rate_per_block: Rate::from_inner(0),
+					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
+					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 				},
 			),
@@ -281,7 +294,11 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					timestamp: 0,
 					borrow_rate: Rate::from_inner(0),
 					insurance_factor: Rate::saturating_from_rational(1, 10),
-					max_borrow_rate: Rate::saturating_from_rational(1, 1),
+					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+					kink: Rate::saturating_from_rational(8, 10),
+					base_rate_per_block: Rate::from_inner(0),
+					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
+					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 				},
 			),
