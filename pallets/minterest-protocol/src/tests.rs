@@ -210,19 +210,11 @@ fn borrow_should_work() {
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), 0);
 		assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 10);
 
-		//TODO There is some protocol error here.
-		// Bob should not be able to borrow until he has made a deposit.
-
-		// Bob can borrow 35 DOT.
-		assert_ok!(MinterestProtocol::borrow(Origin::signed(BOB), CurrencyId::DOT, 35));
-		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 5);
-		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &BOB), 135);
-		assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 10);
-		assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 65);
-		assert_eq!(TestPools::get_user_total_borrowed(&BOB, CurrencyId::DOT), 35);
-
-		//TODO Complete the test with setting the block number.
-		System::set_block_number(100);
+		// Bob can't borrow 35 DOT.
+		assert_noop!(
+			MinterestProtocol::borrow(Origin::signed(BOB), CurrencyId::DOT, 35),
+			Error::<Test>::BorrowControllerRejection
+		);
 	});
 }
 

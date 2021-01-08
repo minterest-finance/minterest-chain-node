@@ -4,7 +4,7 @@
 mod tests {
 	use frame_support::{assert_noop, assert_ok, impl_outer_origin, parameter_types};
 	use frame_system::{self as system};
-	use liquidity_pools::Pool;
+	use liquidity_pools::{Pool, PoolUserData};
 	use minterest_primitives::{Balance, CurrencyId, Rate};
 	use orml_currencies::Currency;
 	use orml_traits::MultiCurrency;
@@ -242,7 +242,44 @@ mod tests {
 					},
 				),
 			],
-			pool_user_data: vec![],
+			pool_user_data: vec![
+				(
+					ALICE,
+					CurrencyId::DOT,
+					PoolUserData {
+						total_borrowed: 0,
+						interest_index: Rate::saturating_from_rational(1, 1),
+						collateral: true,
+					},
+				),
+				(
+					ALICE,
+					CurrencyId::ETH,
+					PoolUserData {
+						total_borrowed: 0,
+						interest_index: Rate::saturating_from_rational(1, 1),
+						collateral: true,
+					},
+				),
+				(
+					ALICE,
+					CurrencyId::KSM,
+					PoolUserData {
+						total_borrowed: 0,
+						interest_index: Rate::saturating_from_rational(1, 1),
+						collateral: true,
+					},
+				),
+				(
+					ALICE,
+					CurrencyId::BTC,
+					PoolUserData {
+						total_borrowed: 0,
+						interest_index: Rate::saturating_from_rational(1, 1),
+						collateral: true,
+					},
+				),
+			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -567,13 +604,11 @@ mod tests {
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), 0);
 			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 10);
 
-			// Bob can borrow 35 DOT.
-			assert_ok!(MinterestProtocol::borrow(Origin::signed(BOB), CurrencyId::DOT, 35));
-			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 5);
-			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &BOB), 135);
-			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 10);
-			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 65);
-			assert_eq!(TestPools::get_user_total_borrowed(&BOB, CurrencyId::DOT), 35);
+			// Bob can't borrow 35 DOT.
+			assert_noop!(
+				MinterestProtocol::borrow(Origin::signed(BOB), CurrencyId::DOT, 35),
+				MinterestProtocolError::<Test>::BorrowControllerRejection
+			);
 		});
 	}
 

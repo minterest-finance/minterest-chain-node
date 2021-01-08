@@ -1,7 +1,7 @@
 //! Mocks for the minterest-protocol module.
 
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
-use liquidity_pools::Pool;
+use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_currencies::Currency;
 use sp_core::H256;
@@ -248,7 +248,44 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 				},
 			),
 		],
-		pool_user_data: vec![],
+		pool_user_data: vec![
+			(
+				ALICE,
+				CurrencyId::DOT,
+				PoolUserData {
+					total_borrowed: 0,
+					interest_index: Rate::saturating_from_rational(1, 1),
+					collateral: true,
+				},
+			),
+			(
+				ALICE,
+				CurrencyId::ETH,
+				PoolUserData {
+					total_borrowed: 0,
+					interest_index: Rate::saturating_from_rational(1, 1),
+					collateral: true,
+				},
+			),
+			(
+				ALICE,
+				CurrencyId::KSM,
+				PoolUserData {
+					total_borrowed: 0,
+					interest_index: Rate::saturating_from_rational(1, 1),
+					collateral: true,
+				},
+			),
+			(
+				ALICE,
+				CurrencyId::BTC,
+				PoolUserData {
+					total_borrowed: 0,
+					interest_index: Rate::saturating_from_rational(1, 1),
+					collateral: true,
+				},
+			),
+		],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

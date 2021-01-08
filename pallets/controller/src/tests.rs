@@ -377,10 +377,9 @@ fn mul_price_and_balance_add_to_prev_value_should_work() {
 #[test]
 fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		// if m_tokens_balance == 0 then return Ok(0, 0)
-		assert_eq!(
+		assert_noop!(
 			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 5, 0),
-			Ok((0, 0))
+			Error::<Runtime>::InsufficientLiquidity
 		);
 	});
 }

@@ -523,6 +523,11 @@ impl<T: Trait> Module<T> {
 			}
 		}
 
+		ensure!(
+			!((sum_collateral == sum_borrow_plus_effects) && (sum_collateral == 0)),
+			Error::<T>::InsufficientLiquidity
+		);
+
 		match sum_collateral.cmp(&sum_borrow_plus_effects) {
 			Ordering::Greater => Ok((
 				sum_collateral
