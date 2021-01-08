@@ -63,6 +63,9 @@ decl_event!(
 
 		/// Insurance balance redeemed: \[pool_id, amount\]
 		RedeemedInsurance(CurrencyId, Balance),
+
+		/// Pool total balance: \[pool_id, amount\]
+		PoolTotalBalance(CurrencyId, Balance),
 	}
 );
 
@@ -102,10 +105,13 @@ decl_module! {
 			/// The Liquidity Pool's module id, keep all assets in Pools.
 			const ModuleId: ModuleId = T::ModuleId::get();
 
+			/// The Liquidity Pool's account id, keep all assets in Pools.
+			const PoolAccountId: T::AccountId = T::ModuleId::get().into_account();
+
 			/// Locks all operations (deposit, redeem, borrow, repay)  with the pool.
 			///
 			/// The dispatch origin of this call must be _Root_.
-			#[weight = 10_000]
+			#[weight = 0]
 			pub fn lock_pool_transactions(origin, pool_id: CurrencyId) -> DispatchResult {
 				ensure_root(origin)?;
 				ensure!(Self::pool_exists(&pool_id), Error::<T>::PoolNotFound);
@@ -117,7 +123,7 @@ decl_module! {
 			/// Unlocks all operations (deposit, redeem, borrow, repay)  with the pool.
 			///
 			/// The dispatch origin of this call must be _Root_.
-			#[weight = 10_000]
+			#[weight = 0]
 			pub fn unlock_pool_transactions(origin, pool_id: CurrencyId) -> DispatchResult {
 				ensure_root(origin)?;
 				ensure!(Self::pool_exists(&pool_id), Error::<T>::PoolNotFound);
@@ -129,7 +135,7 @@ decl_module! {
 			/// Replenishes the insurance balance.
 			///
 			/// The dispatch origin of this call must be _Root_.
-			#[weight = 10_000]
+			#[weight = 0]
 			pub fn deposit_insurance(origin, pool_id: CurrencyId, #[compact] amount: Balance) {
 				with_transaction_result(|| {
 					// FIXME This dispatch should only be called as an _Root_.
@@ -143,7 +149,7 @@ decl_module! {
 			/// Removes the insurance balance.
 			///
 			/// The dispatch origin of this call must be _Root_.
-			#[weight = 10_000]
+			#[weight = 0]
 			pub fn redeem_insurance(origin, pool_id: CurrencyId, #[compact] amount: Balance) {
 				with_transaction_result(|| {
 					// FIXME This dispatch should only be called as an _Root_.
@@ -152,9 +158,7 @@ decl_module! {
 					Self::deposit_event(Event::RedeemedInsurance(pool_id, amount));
 					Ok(())
 				})?;
-
 			}
-
 	}
 }
 

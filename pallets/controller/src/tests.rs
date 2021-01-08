@@ -6,6 +6,7 @@ use frame_support::{assert_err, assert_noop, assert_ok, error::BadOrigin};
 #[test]
 fn accrue_interest_should_work() {
 	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
 		.borrow_interest_rate_equal_7_200_000_000()
 		.build()
 		.execute_with(|| {
@@ -38,6 +39,7 @@ fn accrue_interest_should_work() {
 #[test]
 fn accrue_interest_should_not_work() {
 	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
 		.borrow_interest_rate_equal_7_200_000_000()
 		.build()
 		.execute_with(|| {
@@ -304,6 +306,7 @@ fn borrow_balance_stored_with_zero_balance_should_work() {
 #[test]
 fn borrow_balance_stored_should_work() {
 	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
 		.set_alice_total_borrowed_and_interest_index()
 		.build()
 		.execute_with(|| {
@@ -312,7 +315,7 @@ fn borrow_balance_stored_should_work() {
 }
 
 #[test]
-fn calculate_utilisation_rate_should_work() {
+fn calculate_utilization_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(Controller::calculate_utilization_rate(100, 0, 2));
 		assert_eq!(Controller::calculate_utilization_rate(0, 0, 0), Ok(Rate::from_inner(0)));
@@ -342,6 +345,122 @@ fn calculate_new_borrow_index_should_work() {
 			),
 			Ok(Rate::from_inner(1_000_000_006_300_000_000))
 		);
+	});
+}
+
+#[test]
+fn mul_price_and_balance_add_to_prev_value_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_eq!(
+			Controller::mul_price_and_balance_add_to_prev_value(20, 20, Rate::saturating_from_rational(9, 10)),
+			Ok(38)
+		);
+		assert_eq!(
+			Controller::mul_price_and_balance_add_to_prev_value(
+				120_000,
+				85_000,
+				Rate::saturating_from_rational(87, 100)
+			),
+			Ok(193950)
+		);
+	});
+}
+
+#[test]
+fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// if m_tokens_balance == 0 then return Ok(0, 0)
+		assert_eq!(
+			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 5, 0),
+			Ok((0, 0))
+		);
+	});
+}
+
+#[test]
+fn get_hypothetical_account_liquidity_one_currency_from_redeem_should_work() {
+	ExtBuilder::default().alice_deposit_60_dots().build().execute_with(|| {
+		// Checking the function when called from redeem.
+		assert_eq!(
+			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 5, 0),
+			Ok((90, 0))
+		);
+		assert_eq!(
+			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 60, 0),
+			Ok((0, 0))
+		);
+		assert_eq!(
+			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 200, 0),
+			Ok((0, 231))
+		);
+	});
+}
+
+#[test]
+fn get_hypothetical_account_liquidity_two_currencies_from_redeem_should_work() {
+	ExtBuilder::default()
+		.alice_deposit_60_dots()
+		.alice_deposit_20_eth()
+		.build()
+		.execute_with(|| {
+			// Checking the function when called from redeem.
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 15, 0),
+				Ok((105, 0))
+			);
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 80, 0),
+				Ok((17, 0))
+			);
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 100, 0),
+				Ok((0, 10))
+			);
+		});
+}
+
+#[test]
+fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
+	ExtBuilder::default()
+		.alice_deposit_20_eth()
+		.alice_deposit_60_dots()
+		.alice_borrow_30_dot()
+		.build()
+		.execute_with(|| {
+			// Checking the function when called from borrow.
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 30),
+				Ok((89, 0))
+			);
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 50),
+				Ok((49, 0))
+			);
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 100),
+				Ok((0, 51))
+			);
+		});
+}
+
+#[test]
+fn redeem_allowed_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		//TODO write tests after the function implementation.
+	});
+}
+
+#[test]
+fn borrow_allowed_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		//TODO write tests after the function implementation.
+	});
+}
+
+#[test]
+fn repay_allowed_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		//TODO write tests after the function implementation.
 	});
 }
 

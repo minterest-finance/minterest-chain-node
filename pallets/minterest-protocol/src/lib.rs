@@ -78,6 +78,15 @@ decl_error! {
 
 		/// An internal failure occurred in the execution of the Accrue Interest function.
 		AccrueInterestFailed,
+
+		/// Redeem was blocked due to Controller rejection.
+		RedeemControllerRejection,
+
+		/// Borrow was blocked due to Controller rejection.
+		BorrowControllerRejection,
+
+		/// Repay was blocked due to Controller rejection.
+		RepayBorrowControllerRejection,
 	}
 }
 
@@ -137,7 +146,7 @@ decl_module! {
 		pub fn redeem_wrapped(origin, wrapped_id: CurrencyId, #[compact] wrapped_amount: Balance) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let underlying_asset_id = Self::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
+				let underlying_asset_id = <Controller<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id).map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
 				let (underlying_amount, wrapped_id, _) = Self::do_redeem(&who, underlying_asset_id, Balance::zero(), wrapped_amount)?;
 				Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount));
 				Ok(())
@@ -213,7 +222,8 @@ impl<T: Trait> Module<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
-		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
+		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)
+			.map_err(|_| Error::<T>::NotValidUnderlyingAssetId)?;
 
 		let wrapped_amount = <Controller<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
 			.map_err(|_| Error::<T>::NumOverflow)?;
@@ -248,7 +258,7 @@ impl<T: Trait> Module<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
-		let wrapped_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
+		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
 		let wrapped_amount = match (underlying_amount, wrapped_amount) {
 			(0, 0) => {
@@ -270,6 +280,10 @@ impl<T: Trait> Module<T> {
 			wrapped_amount <= T::MultiCurrency::free_balance(wrapped_id, &who),
 			Error::<T>::NotEnoughWrappedTokens
 		);
+
+		// Fail if redeem not allowed
+		<Controller<T>>::redeem_allowed(underlying_asset_id, &who, wrapped_amount)
+			.map_err(|_| Error::<T>::RedeemControllerRejection)?;
 
 		T::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount)?;
 
@@ -301,6 +315,10 @@ impl<T: Trait> Module<T> {
 		);
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
+
+		// Fail if borrow not allowed
+		<Controller<T>>::borrow_allowed(underlying_asset_id, &who, borrow_amount)
+			.map_err(|_| Error::<T>::BorrowControllerRejection)?;
 
 		// Fetch the amount the borrower owes, with accumulated interest
 		let account_borrows =
@@ -338,6 +356,10 @@ impl<T: Trait> Module<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
+		// Fail if repayBorrow not allowed
+		<Controller<T>>::repay_borrow_allowed(underlying_asset_id, &who, repay_amount)
+			.map_err(|_| Error::<T>::RepayBorrowControllerRejection)?;
+
 		// Verify pool's block number equals current block number
 		let current_block_number = <frame_system::Module<T>>::block_number();
 		let accrual_block_number_previous = <Controller<T>>::controller_dates(underlying_asset_id).timestamp;
@@ -367,28 +389,5 @@ impl<T: Trait> Module<T> {
 		)?;
 
 		Ok(repay_amount)
-	}
-}
-
-// Private methods
-impl<T: Trait> Module<T> {
-	fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> result::Result<CurrencyId, Error<T>> {
-		match asset_id {
-			CurrencyId::DOT => Ok(CurrencyId::MDOT),
-			CurrencyId::KSM => Ok(CurrencyId::MKSM),
-			CurrencyId::BTC => Ok(CurrencyId::MBTC),
-			CurrencyId::ETH => Ok(CurrencyId::METH),
-			_ => Err(Error::<T>::NotValidUnderlyingAssetId),
-		}
-	}
-
-	fn get_underlying_asset_id_by_wrapped_id(wrapped_id: &CurrencyId) -> result::Result<CurrencyId, Error<T>> {
-		match wrapped_id {
-			CurrencyId::MDOT => Ok(CurrencyId::DOT),
-			CurrencyId::MKSM => Ok(CurrencyId::KSM),
-			CurrencyId::MBTC => Ok(CurrencyId::BTC),
-			CurrencyId::METH => Ok(CurrencyId::ETH),
-			_ => Err(Error::<T>::NotValidWrappedTokenId),
-		}
 	}
 }
