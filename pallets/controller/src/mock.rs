@@ -347,16 +347,27 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn set_alice_interest_index_and_collateral(mut self) -> Self {
-		self.pool_user_data = vec![(
-			ALICE,
-			CurrencyId::DOT,
-			PoolUserData {
-				total_borrowed: Balance::zero(),
-				interest_index: Rate::saturating_from_rational(1, 1),
-				collateral: true,
-			},
-		)];
+	pub fn set_alice_and_bob_interest_index_and_collateral(mut self) -> Self {
+		self.pool_user_data = vec![
+			(
+				ALICE,
+				CurrencyId::DOT,
+				PoolUserData {
+					total_borrowed: Balance::zero(),
+					interest_index: Rate::saturating_from_rational(1, 1),
+					collateral: true,
+				},
+			),
+			(
+				BOB,
+				CurrencyId::BTC,
+				PoolUserData {
+					total_borrowed: Balance::zero(),
+					interest_index: Rate::saturating_from_rational(1, 1),
+					collateral: false,
+				},
+			),
+		];
 		self
 	}
 

@@ -10,7 +10,7 @@ use orml_utilities::with_transaction_result;
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, Zero},
-	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
+	DispatchError, DispatchResult, FixedPointNumber, FixedU128, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
 
@@ -464,24 +464,26 @@ impl<T: Trait> Module<T> {
 		for asset in m_tokens_ids.into_iter() {
 			let underlying_asset = Self::get_underlying_asset_id_by_wrapped_id(&asset)?;
 
+			let mut tokens_to_denom: FixedU128 = Default::default();
+
+			// Read the balances and exchange rate from the cToken
+			let borrow_balance = Self::borrow_balance_stored(account, underlying_asset)?;
+			let exchange_rate = Self::get_exchange_rate(underlying_asset)?;
+			let collateral_factor = Self::get_collateral_factor(underlying_asset);
+
+			// Get the normalized price of the asset.
+			let oracle_price =
+				<Oracle<T>>::get_underlying_price(underlying_asset).map_err(|_| Error::<T>::OraclePriceError)?;
+
+			if oracle_price == Price::zero() {
+				return Ok((Balance::zero(), Balance::zero()));
+			}
+
 			if <LiquidityPools<T>>::check_user_available_collateral(&account, underlying_asset) {
 				let m_token_balance = T::MultiCurrency::free_balance(asset, account);
 
-				// Read the balances and exchange rate from the cToken
-				let borrow_balance = Self::borrow_balance_stored(account, underlying_asset)?;
-				let exchange_rate = Self::get_exchange_rate(underlying_asset)?;
-				let collateral_factor = Self::get_collateral_factor(underlying_asset);
-
-				// Get the normalized price of the asset.
-				let oracle_price =
-					<Oracle<T>>::get_underlying_price(underlying_asset).map_err(|_| Error::<T>::OraclePriceError)?;
-
-				if oracle_price == Price::zero() {
-					return Ok((Balance::zero(), Balance::zero()));
-				}
-
 				// Pre-compute a conversion factor from tokens -> dollars (normalized price value)
-				let tokens_to_denom = collateral_factor
+				tokens_to_denom = collateral_factor
 					.checked_mul(&exchange_rate)
 					.ok_or(Error::<T>::NumOverflow)?
 					.checked_mul(&oracle_price)
@@ -502,26 +504,26 @@ impl<T: Trait> Module<T> {
 						oracle_price,
 					)?;
 				}
-				// Calculate effects of interacting with Underlying Asset Modify
-				if underlying_to_borrow == underlying_asset {
-					// redeem effect
-					if redeem_amount > 0 {
-						// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
-						sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
-							sum_borrow_plus_effects,
-							redeem_amount,
-							tokens_to_denom,
-						)?;
-					};
-					// borrow effect
-					if borrow_amount > 0 {
-						// sum_borrow_plus_effects += oracle_price * borrow_amount
-						sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
-							sum_borrow_plus_effects,
-							borrow_amount,
-							oracle_price,
-						)?;
-					}
+			}
+			// Calculate effects of interacting with Underlying Asset Modify
+			if underlying_to_borrow == underlying_asset {
+				// redeem effect
+				if redeem_amount > 0 {
+					// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
+					sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
+						sum_borrow_plus_effects,
+						redeem_amount,
+						tokens_to_denom,
+					)?;
+				};
+				// borrow effect
+				if borrow_amount > 0 {
+					// sum_borrow_plus_effects += oracle_price * borrow_amount
+					sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
+						sum_borrow_plus_effects,
+						borrow_amount,
+						oracle_price,
+					)?;
 				}
 			}
 		}

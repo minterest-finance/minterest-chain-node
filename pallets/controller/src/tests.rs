@@ -301,7 +301,7 @@ fn get_underlying_asset_id_by_wrapped_id_should_work() {
 #[test]
 fn borrow_balance_stored_with_zero_balance_should_work() {
 	ExtBuilder::default()
-		.set_alice_interest_index_and_collateral()
+		.set_alice_and_bob_interest_index_and_collateral()
 		.build()
 		.execute_with(|| {
 			assert_eq!(
@@ -377,7 +377,7 @@ fn mul_price_and_balance_add_to_prev_value_should_work() {
 #[test]
 fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work() {
 	ExtBuilder::default()
-		.set_alice_interest_index_and_collateral()
+		.set_alice_and_bob_interest_index_and_collateral()
 		.build()
 		.execute_with(|| {
 			// Checking the function when called from redeem.
@@ -390,6 +390,11 @@ fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work(
 			// The function should return the shortfall to a large zero.
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 10),
+				Ok((0, 20))
+			);
+
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&BOB, CurrencyId::BTC, 0, 10),
 				Ok((0, 20))
 			);
 		});
