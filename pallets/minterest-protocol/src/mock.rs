@@ -12,6 +12,7 @@ use sp_runtime::{
 };
 
 use super::*;
+use controller::ControllerData;
 
 mod minterest_protocol {
 	pub use crate::Event;
@@ -25,6 +26,7 @@ impl_outer_event! {
 		liquidity_pools,
 		minterest_protocol<T>,
 		controller,
+		oracle,
 	}
 }
 
@@ -39,12 +41,6 @@ parameter_types! {
 	pub const MaximumBlockWeight: u32 = 1024;
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
-	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
-		CurrencyId::DOT,
-		CurrencyId::KSM,
-		CurrencyId::BTC,
-		CurrencyId::ETH,
-	];
 }
 
 pub type AccountId = u32;
@@ -116,6 +112,18 @@ impl liquidity_pools::Trait for Test {
 parameter_types! {
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 	pub const BlocksPerYear: u128 = 5256000;
+	pub MTokensId: Vec<CurrencyId> = vec![
+		CurrencyId::MDOT,
+		CurrencyId::MKSM,
+		CurrencyId::MBTC,
+		CurrencyId::METH,
+	];
+	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
+		CurrencyId::DOT,
+		CurrencyId::KSM,
+		CurrencyId::BTC,
+		CurrencyId::ETH,
+	];
 }
 
 impl controller::Trait for Test {
@@ -123,6 +131,11 @@ impl controller::Trait for Test {
 	type InitialExchangeRate = InitialExchangeRate;
 	type BlocksPerYear = BlocksPerYear;
 	type UnderlyingAssetId = UnderlyingAssetId;
+	type MTokensId = MTokensId;
+}
+
+impl oracle::Trait for Test {
+	type Event = Event;
 }
 
 impl Trait for Test {
@@ -161,6 +174,7 @@ pub const ONE_HUNDRED: Balance = 100;
 pub type MinterestProtocol = Module<Test>;
 pub type TestPools = liquidity_pools::Module<Test>;
 pub type Currencies = orml_currencies::Module<Test>;
+pub type System = frame_system::Module<Test>;
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
@@ -230,5 +244,69 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	.assimilate_storage(&mut t)
 	.unwrap();
 
-	t.into()
+	controller::GenesisConfig::<Test> {
+		controller_dates: vec![
+			(
+				CurrencyId::ETH,
+				ControllerData {
+					timestamp: 0,
+					borrow_rate: Rate::from_inner(0),
+					insurance_factor: Rate::saturating_from_rational(1, 10),
+					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+					kink: Rate::saturating_from_rational(8, 10),
+					base_rate_per_block: Rate::from_inner(0),
+					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
+					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
+					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+				},
+			),
+			(
+				CurrencyId::DOT,
+				ControllerData {
+					timestamp: 0,
+					borrow_rate: Rate::from_inner(0),
+					insurance_factor: Rate::saturating_from_rational(1, 10),
+					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+					kink: Rate::saturating_from_rational(8, 10),
+					base_rate_per_block: Rate::from_inner(0),
+					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
+					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
+					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+				},
+			),
+			(
+				CurrencyId::KSM,
+				ControllerData {
+					timestamp: 0,
+					borrow_rate: Rate::from_inner(0),
+					insurance_factor: Rate::saturating_from_rational(1, 10),
+					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+					kink: Rate::saturating_from_rational(8, 10),
+					base_rate_per_block: Rate::from_inner(0),
+					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
+					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
+					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+				},
+			),
+			(
+				CurrencyId::BTC,
+				ControllerData {
+					timestamp: 0,
+					borrow_rate: Rate::from_inner(0),
+					insurance_factor: Rate::saturating_from_rational(1, 10),
+					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+					kink: Rate::saturating_from_rational(8, 10),
+					base_rate_per_block: Rate::from_inner(0),
+					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
+					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
+					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+				},
+			),
+		],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+	let mut ext: sp_io::TestExternalities = t.into();
+	ext.execute_with(|| System::set_block_number(1));
+	ext
 }

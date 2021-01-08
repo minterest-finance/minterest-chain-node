@@ -28,6 +28,7 @@ impl_outer_event! {
 		orml_currencies<T>,
 		liquidity_pools,
 		controller,
+		oracle,
 	}
 }
 
@@ -42,12 +43,6 @@ parameter_types! {
 	pub const MaximumBlockWeight: u32 = 1024;
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
-	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
-		CurrencyId::DOT,
-		CurrencyId::KSM,
-		CurrencyId::BTC,
-		CurrencyId::ETH,
-	];
 }
 
 pub type AccountId = u32;
@@ -118,14 +113,31 @@ impl liquidity_pools::Trait for Runtime {
 	type ModuleId = LiquidityPoolsModuleId;
 }
 
+impl oracle::Trait for Runtime {
+	type Event = TestEvent;
+}
+
 parameter_types! {
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 	pub const BlocksPerYear: u128 = 5256000u128;
+	pub MTokensId: Vec<CurrencyId> = vec![
+			CurrencyId::MDOT,
+			CurrencyId::MKSM,
+			CurrencyId::MBTC,
+			CurrencyId::METH,
+		];
+	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
+		CurrencyId::DOT,
+		CurrencyId::KSM,
+		CurrencyId::BTC,
+		CurrencyId::ETH,
+	];
 }
 
 impl Trait for Runtime {
 	type Event = TestEvent;
 	type InitialExchangeRate = InitialExchangeRate;
+	type MTokensId = MTokensId;
 	type BlocksPerYear = BlocksPerYear;
 	type UnderlyingAssetId = UnderlyingAssetId;
 }
@@ -146,43 +158,16 @@ pub struct ExtBuilder {
 impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
-			endowed_accounts: vec![
-				(ALICE, CurrencyId::MDOT, ONE_HUNDRED),
-				(ALICE, CurrencyId::MINT, ONE_MILL),
-			],
-			pools: vec![
-				(
-					CurrencyId::DOT,
-					Pool {
-						current_interest_rate: Rate::from_inner(0),
-						total_borrowed: Balance::zero(),
-						borrow_index: Rate::saturating_from_rational(1, 1),
-						current_exchange_rate: Rate::saturating_from_rational(1, 1),
-						is_lock: false,
-						total_insurance: Balance::zero(),
-					},
-				),
-				(
-					CurrencyId::BTC,
-					Pool {
-						current_interest_rate: Rate::from_inner(0),
-						total_borrowed: Balance::zero(),
-						borrow_index: Rate::saturating_from_rational(1, 1),
-						current_exchange_rate: Rate::saturating_from_rational(1, 1),
-						is_lock: true,
-						total_insurance: Balance::zero(),
-					},
-				),
-			],
+			endowed_accounts: vec![],
+			pools: vec![],
 			pool_user_data: vec![],
 		}
 	}
 }
 
 pub const ALICE: AccountId = 1;
-pub const ONE_MILL: Balance = 1_000_000;
 pub const ONE_HUNDRED: Balance = 100;
-pub const BLOCKS_PER_YEAR: u128 = 5256000u128;
+pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
 
 impl ExtBuilder {
 	pub fn exchange_rate_less_than_one(mut self) -> Self {
@@ -261,6 +246,71 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn alice_deposit_60_dots(mut self) -> Self {
+		self.endowed_accounts.extend_from_slice(&[
+			(ALICE, CurrencyId::DOT, 40),
+			(ALICE, CurrencyId::MDOT, 60),
+			(TestPools::pools_account_id(), CurrencyId::DOT, 60),
+		]);
+		self.pools.push((
+			CurrencyId::DOT,
+			Pool {
+				current_interest_rate: Rate::from_inner(0),
+				total_borrowed: Balance::zero(),
+				borrow_index: Rate::saturating_from_rational(1, 1),
+				current_exchange_rate: Rate::saturating_from_rational(8, 10),
+				is_lock: false,
+				total_insurance: 5,
+			},
+		));
+		self
+	}
+
+	pub fn alice_deposit_20_eth(mut self) -> Self {
+		self.endowed_accounts.extend_from_slice(&[
+			(ALICE, CurrencyId::ETH, 80),
+			(ALICE, CurrencyId::METH, 20),
+			(TestPools::pools_account_id(), CurrencyId::ETH, 20),
+		]);
+		self.pools.push((
+			CurrencyId::ETH,
+			Pool {
+				current_interest_rate: Rate::from_inner(0),
+				total_borrowed: Balance::zero(),
+				borrow_index: Rate::saturating_from_rational(1, 1),
+				current_exchange_rate: Rate::saturating_from_rational(8, 10),
+				is_lock: false,
+				total_insurance: 5,
+			},
+		));
+		self
+	}
+
+	pub fn alice_borrow_30_dot(mut self) -> Self {
+		self.pools.push((
+			CurrencyId::DOT,
+			Pool {
+				current_interest_rate: Rate::from_inner(0),
+				total_borrowed: 30,
+				borrow_index: Rate::saturating_from_rational(1, 1),
+				current_exchange_rate: Rate::saturating_from_rational(8, 10),
+				is_lock: false,
+				total_insurance: 5,
+			},
+		));
+		self.pool_user_data.push((
+			ALICE,
+			CurrencyId::DOT,
+			PoolUserData {
+				total_borrowed: 30,
+				interest_index: Rate::saturating_from_rational(2, 1),
+				collateral: true,
+				timestamp: 2,
+			},
+		));
+		self
+	}
+
 	pub fn set_alice_total_borrowed_and_interest_index(mut self) -> Self {
 		self.pool_user_data = vec![(
 			ALICE,
@@ -289,6 +339,34 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn set_btc_and_dot_pool_mock(mut self) -> Self {
+		self.pools = vec![
+			(
+				CurrencyId::DOT,
+				Pool {
+					current_interest_rate: Rate::from_inner(0),
+					total_borrowed: Balance::zero(),
+					borrow_index: Rate::saturating_from_rational(1, 1),
+					current_exchange_rate: Rate::saturating_from_rational(1, 1),
+					is_lock: false,
+					total_insurance: Balance::zero(),
+				},
+			),
+			(
+				CurrencyId::BTC,
+				Pool {
+					current_interest_rate: Rate::from_inner(0),
+					total_borrowed: Balance::zero(),
+					borrow_index: Rate::saturating_from_rational(1, 1),
+					current_exchange_rate: Rate::saturating_from_rational(1, 1),
+					is_lock: true,
+					total_insurance: Balance::zero(),
+				},
+			),
+		];
+		self
+	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
@@ -301,19 +379,36 @@ impl ExtBuilder {
 		.unwrap();
 
 		GenesisConfig::<Runtime> {
-			controller_dates: vec![(
-				CurrencyId::DOT,
-				ControllerData {
-					timestamp: 0,
-					borrow_rate: Rate::from_inner(0),
-					insurance_factor: Rate::saturating_from_rational(1, 10),
-					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-					kink: Rate::saturating_from_rational(8, 10),
-					base_rate_per_block: Rate::from_inner(0),
-					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
-					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
-				},
-			)],
+			controller_dates: vec![
+				(
+					CurrencyId::DOT,
+					ControllerData {
+						timestamp: 0,
+						borrow_rate: Rate::from_inner(0),
+						insurance_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+						kink: Rate::saturating_from_rational(8, 10),
+						base_rate_per_block: Rate::from_inner(0),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
+						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+					},
+				),
+				(
+					CurrencyId::ETH,
+					ControllerData {
+						timestamp: 0,
+						borrow_rate: Rate::from_inner(0),
+						insurance_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+						kink: Rate::saturating_from_rational(8, 10),
+						base_rate_per_block: Rate::from_inner(0),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
+						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+					},
+				),
+			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

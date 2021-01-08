@@ -284,11 +284,18 @@ impl liquidity_pools::Trait for Runtime {
 parameter_types! {
 	pub const InitialExchangeRate: Rate = INITIAL_EXCHANGE_RATE;
 	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
+	pub MTokensId: Vec<CurrencyId> = vec![
+		CurrencyId::MDOT,
+		CurrencyId::MKSM,
+		CurrencyId::MBTC,
+		CurrencyId::METH,
+	];
 }
 
 impl controller::Trait for Runtime {
 	type Event = Event;
 	type InitialExchangeRate = InitialExchangeRate;
+	type MTokensId = MTokensId;
 	type BlocksPerYear = BlocksPerYear;
 	type UnderlyingAssetId = UnderlyingAssetId;
 }
@@ -300,6 +307,10 @@ parameter_types! {
 impl accounts::Trait for Runtime {
 	type Event = Event;
 	type MaxMembers = MaxMembers;
+}
+
+impl oracle::Trait for Runtime {
+	type Event = Event;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -326,6 +337,7 @@ construct_runtime!(
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		Accounts: accounts::{Module, Storage, Call, Event<T>},
+		Oracle: oracle::{Module, Storage, Call, Event},
 	}
 );
 
