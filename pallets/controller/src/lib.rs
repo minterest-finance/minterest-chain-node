@@ -548,7 +548,7 @@ impl<T: Trait> Module<T> {
 		_deposit_amount: Balance,
 	) -> DispatchResult {
 		ensure!(
-			!Self::pause_keepers(underlying_asset_id).deposit_paused,
+			Self::is_operation_allowed(underlying_asset_id, Operation::Deposit),
 			Error::<T>::OperationPaused
 		);
 		Ok(())
@@ -567,7 +567,7 @@ impl<T: Trait> Module<T> {
 		redeem_amount: Balance,
 	) -> DispatchResult {
 		ensure!(
-			!Self::pause_keepers(underlying_asset_id).redeem_paused,
+			Self::is_operation_allowed(underlying_asset_id, Operation::Redeem),
 			Error::<T>::OperationPaused
 		);
 
@@ -591,7 +591,7 @@ impl<T: Trait> Module<T> {
 		borrow_amount: Balance,
 	) -> DispatchResult {
 		ensure!(
-			!Self::pause_keepers(underlying_asset_id).borrow_paused,
+			Self::is_operation_allowed(underlying_asset_id, Operation::Borrow),
 			Error::<T>::OperationPaused
 		);
 
@@ -621,13 +621,25 @@ impl<T: Trait> Module<T> {
 		_repay_amount: Balance,
 	) -> DispatchResult {
 		ensure!(
-			!Self::pause_keepers(underlying_asset_id).repay_paused,
+			Self::is_operation_allowed(underlying_asset_id, Operation::Repay),
 			Error::<T>::OperationPaused
 		);
 
 		let _borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
 
 		Ok(())
+	}
+
+	/// Checks if a specific operation is allowed on a pool.
+	///
+	/// Return true - if operation is allowed, false - if operation is unallowed.
+	pub fn is_operation_allowed(pool_id: CurrencyId, operation: Operation) -> bool {
+		match operation {
+			Operation::Deposit => !Self::pause_keepers(pool_id).deposit_paused,
+			Operation::Redeem => !Self::pause_keepers(pool_id).redeem_paused,
+			Operation::Borrow => !Self::pause_keepers(pool_id).borrow_paused,
+			Operation::Repay => !Self::pause_keepers(pool_id).repay_paused,
+		}
 	}
 }
 
