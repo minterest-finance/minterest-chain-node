@@ -474,16 +474,17 @@ fn deposit_allowed_should_work() {
 fn redeem_allowed_should_work() {
 	ExtBuilder::default()
 		.set_btc_and_dot_pool_mock()
+		.alice_deposit_60_dots()
 		.build()
 		.execute_with(|| {
-			assert_ok!(Controller::redeem_allowed(CurrencyId::DOT, &BOB, 10));
+			assert_ok!(Controller::redeem_allowed(CurrencyId::DOT, &ALICE, 40));
 			assert_ok!(Controller::pause_specific_operation(
 				Origin::signed(ALICE),
 				CurrencyId::DOT,
 				Operation::Redeem
 			));
 			assert_noop!(
-				Controller::redeem_allowed(CurrencyId::DOT, &BOB, 10),
+				Controller::redeem_allowed(CurrencyId::DOT, &ALICE, 10),
 				Error::<Runtime>::OperationPaused
 			);
 			assert_ok!(Controller::unpause_specific_operation(
@@ -491,11 +492,10 @@ fn redeem_allowed_should_work() {
 				CurrencyId::DOT,
 				Operation::Redeem
 			));
-			// TODO In my opinion, an error must occur in this place
-			// assert_noop!(
-			// 	Controller::redeem_allowed(CurrencyId::DOT, &BOB, 9999999),
-			// 	Error::<Runtime>::InsufficientLiquidity
-			// );
+			assert_noop!(
+				Controller::redeem_allowed(CurrencyId::DOT, &ALICE, 999),
+				Error::<Runtime>::InsufficientLiquidity
+			);
 		});
 }
 
@@ -503,17 +503,27 @@ fn redeem_allowed_should_work() {
 fn borrow_allowed_should_work() {
 	ExtBuilder::default()
 		.set_btc_and_dot_pool_mock()
+		.alice_deposit_60_dots()
 		.build()
 		.execute_with(|| {
-			assert_ok!(Controller::borrow_allowed(CurrencyId::DOT, &BOB, 10));
+			assert_ok!(Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10));
 			assert_ok!(Controller::pause_specific_operation(
 				Origin::signed(ALICE),
 				CurrencyId::DOT,
 				Operation::Borrow
 			));
 			assert_noop!(
-				Controller::borrow_allowed(CurrencyId::DOT, &BOB, 10),
+				Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10),
 				Error::<Runtime>::OperationPaused
+			);
+			assert_ok!(Controller::unpause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Borrow
+			));
+			assert_noop!(
+				Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 999),
+				Error::<Runtime>::InsufficientLiquidity
 			);
 		});
 }
