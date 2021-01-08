@@ -258,7 +258,6 @@ fn repay_should_work() {
 #[test]
 fn repay_on_behalf_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(TestPools::unlock_pool_transactions(Origin::root(), CurrencyId::DOT));
 		assert_ok!(MinterestProtocol::deposit_underlying(
 			Origin::signed(ALICE),
 			CurrencyId::DOT,
