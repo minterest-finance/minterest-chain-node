@@ -593,9 +593,9 @@ mod tests {
 				MinterestProtocol::repay_on_behalf(Origin::signed(BOB), CurrencyId::DOT, ALICE, 120),
 				MinterestProtocolError::<Test>::NotEnoughUnderlyingsAssets
 			);
-			//FIXME: is it Ok to check internal error?
 			assert_noop!(
 				MinterestProtocol::repay_on_behalf(Origin::signed(BOB), CurrencyId::DOT, BOB, 100),
+				//FIXME: is it Ok to check internal error?
 				MinterestProtocolError::<Test>::InternalPoolError
 			);
 
