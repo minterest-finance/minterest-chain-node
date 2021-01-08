@@ -392,7 +392,8 @@ fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 10),
 				Ok((0, 20))
 			);
-			// Checking scenario: the user tries to take a borrow in a currency which is not marked as available for collateral, and he fails.
+			// Checking scenario: the user tries to take a borrow in a currency which is not
+			// pool as available for collateral, and he fails.
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&BOB, CurrencyId::BTC, 0, 10),
 				Ok((0, 20))
