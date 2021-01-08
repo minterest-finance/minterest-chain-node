@@ -106,9 +106,6 @@ decl_error! {
 		/// Number overflow in calculation.
 		NumOverflow,
 
-		/// Operations with this underlying assets are locked by the administrator
-		OperationsLocked,
-
 		/// Borrow rate is absurdly high.
 		BorrowRateIsTooHight,
 

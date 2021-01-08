@@ -452,24 +452,142 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 }
 
 #[test]
+fn deposit_allowed_should_work() {
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::deposit_allowed(CurrencyId::DOT, &BOB, 10));
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Deposit
+			));
+			assert_noop!(
+				Controller::deposit_allowed(CurrencyId::DOT, &BOB, 10),
+				Error::<Runtime>::OperationPaused
+			);
+		});
+}
+
+#[test]
 fn redeem_allowed_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		//TODO write tests after the function implementation.
-	});
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::redeem_allowed(CurrencyId::DOT, &BOB, 10));
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Redeem
+			));
+			assert_noop!(
+				Controller::redeem_allowed(CurrencyId::DOT, &BOB, 10),
+				Error::<Runtime>::OperationPaused
+			);
+			assert_ok!(Controller::unpause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Redeem
+			));
+			// TODO In my opinion, an error must occur in this place
+			// assert_noop!(
+			// 	Controller::redeem_allowed(CurrencyId::DOT, &BOB, 9999999),
+			// 	Error::<Runtime>::InsufficientLiquidity
+			// );
+		});
 }
 
 #[test]
 fn borrow_allowed_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		//TODO write tests after the function implementation.
-	});
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::borrow_allowed(CurrencyId::DOT, &BOB, 10));
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Borrow
+			));
+			assert_noop!(
+				Controller::borrow_allowed(CurrencyId::DOT, &BOB, 10),
+				Error::<Runtime>::OperationPaused
+			);
+		});
 }
 
 #[test]
 fn repay_allowed_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		//TODO write tests after the function implementation.
-	});
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::repay_borrow_allowed(CurrencyId::DOT, &BOB, 10));
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Repay
+			));
+			assert_noop!(
+				Controller::repay_borrow_allowed(CurrencyId::DOT, &BOB, 10),
+				Error::<Runtime>::OperationPaused
+			);
+		});
+}
+
+#[test]
+fn is_operation_allowed_should_work() {
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Deposit),
+				true
+			);
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Redeem),
+				true
+			);
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Borrow),
+				true
+			);
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Repay),
+				true
+			);
+
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Deposit
+			));
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Redeem
+			));
+
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Deposit),
+				false
+			);
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Redeem),
+				false
+			);
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Borrow),
+				true
+			);
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Repay),
+				true
+			);
+		});
 }
 
 /* ----------------------------------------------------------------------------------------- */
