@@ -79,6 +79,9 @@ decl_error! {
 		/// An internal failure occurred in the execution of the Accrue Interest function.
 		AccrueInterestFailed,
 
+		/// Deposit was blocked due to Controller rejection.
+		DepositControllerRejection,
+
 		/// Redeem was blocked due to Controller rejection.
 		RedeemControllerRejection,
 
@@ -221,6 +224,10 @@ impl<T: Trait> Module<T> {
 		);
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
+
+		// Fail if deposit not allowed
+		<Controller<T>>::deposit_allowed(underlying_asset_id, &who, underlying_amount)
+			.map_err(|_| Error::<T>::DepositControllerRejection)?;
 
 		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)
 			.map_err(|_| Error::<T>::NotValidUnderlyingAssetId)?;

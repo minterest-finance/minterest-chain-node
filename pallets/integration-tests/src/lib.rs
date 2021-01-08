@@ -348,6 +348,12 @@ mod tests {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
+		accounts::GenesisConfig::<Test> {
+			allowed_accounts: vec![(ALICE, ())],
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 		let mut ext: sp_io::TestExternalities = t.into();
 		ext.execute_with(|| System::set_block_number(1));
 		ext.into()
@@ -358,11 +364,6 @@ mod tests {
 	#[test]
 	fn deposit_underlying_should_work() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
-			assert_ok!(TestController::unlock_pool_transactions(
-				Origin::signed(ALICE),
-				CurrencyId::DOT
-			));
 			assert_noop!(
 				MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::ETH, 10),
 				MinterestProtocolError::<Test>::NotEnoughLiquidityAvailable
@@ -404,11 +405,6 @@ mod tests {
 	#[test]
 	fn redeem_underlying_should_work() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
-			assert_ok!(TestController::unlock_pool_transactions(
-				Origin::signed(ADMIN),
-				CurrencyId::DOT
-			));
 			assert_ok!(MinterestProtocol::deposit_underlying(
 				Origin::signed(ALICE),
 				CurrencyId::DOT,
@@ -442,11 +438,6 @@ mod tests {
 	#[test]
 	fn redeem_should_work() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
-			assert_ok!(TestController::unlock_pool_transactions(
-				Origin::signed(ADMIN),
-				CurrencyId::DOT
-			));
 			assert_ok!(MinterestProtocol::deposit_underlying(
 				Origin::signed(ALICE),
 				CurrencyId::DOT,
@@ -478,11 +469,6 @@ mod tests {
 	#[test]
 	fn redeem_wrapped_should_work() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
-			assert_ok!(TestController::unlock_pool_transactions(
-				Origin::signed(ADMIN),
-				CurrencyId::DOT
-			));
 			assert_ok!(MinterestProtocol::deposit_underlying(
 				Origin::signed(ALICE),
 				CurrencyId::DOT,
@@ -515,11 +501,6 @@ mod tests {
 	#[test]
 	fn getting_assets_from_pool_by_different_users_should_work() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
-			assert_ok!(TestController::unlock_pool_transactions(
-				Origin::signed(ALICE),
-				CurrencyId::DOT
-			));
 			assert_ok!(MinterestProtocol::deposit_underlying(
 				Origin::signed(ALICE),
 				CurrencyId::DOT,
@@ -548,11 +529,6 @@ mod tests {
 	#[test]
 	fn borrow_should_work() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
-			assert_ok!(TestController::unlock_pool_transactions(
-				Origin::signed(ADMIN),
-				CurrencyId::DOT
-			));
 			assert_ok!(MinterestProtocol::deposit_underlying(
 				Origin::signed(ALICE),
 				CurrencyId::DOT,
@@ -580,6 +556,7 @@ mod tests {
 
 			// pool_available_liquidity (DOT) = 30
 			// Admin depositing to the insurance 10 DOT, now pool_available_liquidity = 30 + 10 = 40 DOT
+			assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
 			assert_ok!(TestController::deposit_insurance(
 				Origin::signed(ADMIN),
 				CurrencyId::DOT,
@@ -603,11 +580,6 @@ mod tests {
 	#[test]
 	fn repay_should_work() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
-			assert_ok!(TestController::unlock_pool_transactions(
-				Origin::signed(ADMIN),
-				CurrencyId::DOT
-			));
 			assert_ok!(MinterestProtocol::deposit_underlying(
 				Origin::signed(ALICE),
 				CurrencyId::DOT,

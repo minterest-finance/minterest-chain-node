@@ -267,7 +267,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-					is_lock: true,
 				},
 			),
 			(
@@ -282,7 +281,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-					is_lock: true,
 				},
 			),
 			(
@@ -297,7 +295,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-					is_lock: true,
 				},
 			),
 			(
@@ -312,7 +309,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
 					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
 					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-					is_lock: true,
 				},
 			),
 		],
@@ -357,6 +353,13 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
+
+	accounts::GenesisConfig::<Test> {
+		allowed_accounts: vec![(ALICE, ())],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+
 	let mut ext: sp_io::TestExternalities = t.into();
 	ext.execute_with(|| System::set_block_number(1));
 	ext
