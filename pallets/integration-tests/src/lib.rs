@@ -279,6 +279,15 @@ mod tests {
 						collateral: true,
 					},
 				),
+				(
+					BOB,
+					CurrencyId::DOT,
+					PoolUserData {
+						total_borrowed: 0,
+						interest_index: Rate::saturating_from_rational(1, 1),
+						collateral: true,
+					},
+				),
 			],
 		}
 		.assimilate_storage(&mut t)

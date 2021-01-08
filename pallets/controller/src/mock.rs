@@ -347,7 +347,7 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn set_alice_interest_index(mut self) -> Self {
+	pub fn set_alice_interest_index_and_collateral(mut self) -> Self {
 		self.pool_user_data = vec![(
 			ALICE,
 			CurrencyId::DOT,
