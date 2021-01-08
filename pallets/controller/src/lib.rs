@@ -451,7 +451,7 @@ impl<T: Trait> Module<T> {
 	///          hypothetical account shortfall below collateral requirements).
 	pub fn get_hypothetical_account_liquidity(
 		account: &T::AccountId,
-		underlying_asset_id: CurrencyId,
+		underlying_to_borrow: CurrencyId,
 		redeem_amount: Balance,
 		borrow_amount: Balance,
 	) -> LiquidityResult {
@@ -463,6 +463,10 @@ impl<T: Trait> Module<T> {
 		// For each tokens the account is in
 		for asset in m_tokens_ids.into_iter() {
 			let underlying_asset = Self::get_underlying_asset_id_by_wrapped_id(&asset)?;
+			if !<LiquidityPools<T>>::check_user_available_collateral(&account, underlying_asset) {
+				continue;
+			}
+
 			let m_token_balance = T::MultiCurrency::free_balance(asset, account);
 			if m_token_balance == Balance::zero() {
 				continue;
@@ -497,22 +501,25 @@ impl<T: Trait> Module<T> {
 				Self::mul_price_and_balance_add_to_prev_value(sum_borrow_plus_effects, borrow_balance, oracle_price)?;
 
 			// Calculate effects of interacting with Underlying Asset Modify
-			if underlying_asset_id == underlying_asset {
+			if underlying_to_borrow == underlying_asset {
 				// redeem effect
-				// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
-				sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
-					sum_borrow_plus_effects,
-					redeem_amount,
-					tokens_to_denom,
-				)?;
-
+				if redeem_amount > 0 {
+					// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
+					sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
+						sum_borrow_plus_effects,
+						redeem_amount,
+						tokens_to_denom,
+					)?;
+				};
 				// borrow effect
-				// sum_borrow_plus_effects += oracle_price * borrow_amount
-				sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
-					sum_borrow_plus_effects,
-					borrow_amount,
-					oracle_price,
-				)?;
+				if borrow_amount > 0 {
+					// sum_borrow_plus_effects += oracle_price * borrow_amount
+					sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
+						sum_borrow_plus_effects,
+						borrow_amount,
+						oracle_price,
+					)?;
+				}
 			}
 		}
 

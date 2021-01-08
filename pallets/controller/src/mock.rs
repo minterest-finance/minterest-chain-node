@@ -268,7 +268,16 @@ impl ExtBuilder {
 				total_borrowed: Balance::zero(),
 				borrow_index: Rate::saturating_from_rational(1, 1),
 				current_exchange_rate: Rate::saturating_from_rational(8, 10),
-				total_insurance: 5,
+				total_insurance: Balance::zero(),
+			},
+		));
+		self.pool_user_data.push((
+			ALICE,
+			CurrencyId::DOT,
+			PoolUserData {
+				total_borrowed: 0,
+				interest_index: Rate::saturating_from_rational(1, 1),
+				collateral: true,
 			},
 		));
 		self
@@ -287,7 +296,16 @@ impl ExtBuilder {
 				total_borrowed: Balance::zero(),
 				borrow_index: Rate::saturating_from_rational(1, 1),
 				current_exchange_rate: Rate::saturating_from_rational(8, 10),
-				total_insurance: 5,
+				total_insurance: Balance::zero(),
+			},
+		));
+		self.pool_user_data.push((
+			ALICE,
+			CurrencyId::ETH,
+			PoolUserData {
+				total_borrowed: 0,
+				interest_index: Rate::saturating_from_rational(1, 1),
+				collateral: true,
 			},
 		));
 		self
@@ -301,7 +319,7 @@ impl ExtBuilder {
 				total_borrowed: 30,
 				borrow_index: Rate::saturating_from_rational(1, 1),
 				current_exchange_rate: Rate::saturating_from_rational(8, 10),
-				total_insurance: 5,
+				total_insurance: Balance::zero(),
 			},
 		));
 		self.pool_user_data.push((
@@ -309,7 +327,7 @@ impl ExtBuilder {
 			CurrencyId::DOT,
 			PoolUserData {
 				total_borrowed: 30,
-				interest_index: Rate::saturating_from_rational(2, 1),
+				interest_index: Rate::saturating_from_rational(1, 1),
 				collateral: true,
 			},
 		));
@@ -335,7 +353,7 @@ impl ExtBuilder {
 			CurrencyId::DOT,
 			PoolUserData {
 				total_borrowed: Balance::zero(),
-				interest_index: Rate::saturating_from_rational(2, 1),
+				interest_index: Rate::saturating_from_rational(1, 1),
 				collateral: true,
 			},
 		)];

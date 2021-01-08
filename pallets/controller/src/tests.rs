@@ -391,7 +391,7 @@ fn get_hypothetical_account_liquidity_one_currency_from_redeem_should_work() {
 		// Checking the function when called from redeem.
 		assert_eq!(
 			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 5, 0),
-			Ok((90, 0))
+			Ok((99, 0))
 		);
 		assert_eq!(
 			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 60, 0),
@@ -399,7 +399,7 @@ fn get_hypothetical_account_liquidity_one_currency_from_redeem_should_work() {
 		);
 		assert_eq!(
 			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 200, 0),
-			Ok((0, 231))
+			Ok((0, 252))
 		);
 	});
 }
@@ -414,15 +414,15 @@ fn get_hypothetical_account_liquidity_two_currencies_from_redeem_should_work() {
 			// Checking the function when called from redeem.
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 15, 0),
-				Ok((105, 0))
+				Ok((117, 0))
 			);
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 80, 0),
-				Ok((17, 0))
+				Ok((0, 0))
 			);
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 100, 0),
-				Ok((0, 10))
+				Ok((0, 36))
 			);
 		});
 }
@@ -438,15 +438,15 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 			// Checking the function when called from borrow.
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 30),
-				Ok((89, 0))
+				Ok((78, 0))
 			);
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 50),
-				Ok((49, 0))
+				Ok((38, 0))
 			);
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 100),
-				Ok((0, 51))
+				Ok((0, 62))
 			);
 		});
 }
