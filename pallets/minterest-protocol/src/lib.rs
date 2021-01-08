@@ -177,7 +177,7 @@ decl_module! {
 		/// Repays a borrow on the specific pool, for the specified amount.
 		///
 		/// - `underlying_asset_id`: the currency ID of the underlying asset to repay.
-		/// - `underlying_amount`: the amount of the underlying asset to repay.
+		/// - `repay_amount`: the amount of the underlying asset to repay.
 		#[weight = 10_000]
 		pub fn repay(
 			origin,
@@ -186,7 +186,7 @@ decl_module! {
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				Self::do_repay(&who, underlying_asset_id, repay_amount)?;
+				Self::do_repay(&who, &who, underlying_asset_id, repay_amount)?;
 				Self::deposit_event(RawEvent::Repaid(who, underlying_asset_id, repay_amount));
 				Ok(())
 			})?;
@@ -195,15 +195,29 @@ decl_module! {
 		/// Repays a borrow on the specific pool, for the all amount.
 		///
 		/// - `underlying_asset_id`: the currency ID of the underlying asset to repay.
-		/// - `underlying_amount`: the amount of the underlying asset to repay.
 		#[weight = 10_000]
 		pub fn repay_all(origin, underlying_asset_id: CurrencyId) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let repay_amount = Self::do_repay(&who, underlying_asset_id, Balance::zero())?;
+				let repay_amount = Self::do_repay(&who, &who, underlying_asset_id, Balance::zero())?;
 				Self::deposit_event(RawEvent::Repaid(who, underlying_asset_id, repay_amount));
 				Ok(())
 			})?;
+		}
+
+		/// Sender sends underlying assets to repay an account's borrow in the market
+		///
+		/// - `underlying_asset_id`: the currency ID of the underlying asset to repay.
+		/// - `borrower`: the account with the debt being payed off.
+		/// - `repay_amount`: the amount of the underlying asset to repay.
+		#[weight = 10_000]
+		pub fn repay_on_behalf(origin, underlying_asset_id: CurrencyId, borrower: T::AccountId, repay_amount: Balance) {
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				let repay_amount = Self::do_repay(&who, &borrower, underlying_asset_id, repay_amount)?;
+				Self::deposit_event(RawEvent::Repaid(who, underlying_asset_id, repay_amount));
+				Ok(())
+			})?
 		}
 	}
 }
@@ -348,9 +362,15 @@ impl<T: Trait> Module<T> {
 	/// Sender repays their own borrow
 	///
 	/// - `who`: the account paying off the borrow.
+	/// - `borrower`: the account with the debt being payed off.
 	/// - `underlying_asset_id`: the currency ID of the underlying asset to repay.
-	/// - `underlying_amount`: the amount of the underlying asset to repay.
-	fn do_repay(who: &T::AccountId, underlying_asset_id: CurrencyId, mut repay_amount: Balance) -> BalanceResult {
+	/// - `repay_amount`: the amount of the underlying asset to repay.
+	fn do_repay(
+		who: &T::AccountId,
+		borrower: &T::AccountId,
+		underlying_asset_id: CurrencyId,
+		mut repay_amount: Balance,
+	) -> BalanceResult {
 		ensure!(
 			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
@@ -376,15 +396,15 @@ impl<T: Trait> Module<T> {
 		);
 
 		// Fetch the amount the borrower owes, with accumulated interest
-		let account_borrows =
-			<Controller<T>>::borrow_balance_stored(&who, underlying_asset_id).map_err(|_| Error::<T>::NumOverflow)?;
+		let account_borrows = <Controller<T>>::borrow_balance_stored(&borrower, underlying_asset_id)
+			.map_err(|_| Error::<T>::NumOverflow)?;
 
 		repay_amount = match repay_amount.cmp(&Balance::zero()) {
 			Ordering::Equal => account_borrows,
 			_ => repay_amount,
 		};
 
-		<LiquidityPools<T>>::update_state_on_repay(&who, underlying_asset_id, repay_amount, account_borrows)
+		<LiquidityPools<T>>::update_state_on_repay(&borrower, underlying_asset_id, repay_amount, account_borrows)
 			.map_err(|_| Error::<T>::InternalPoolError)?;
 
 		// Transfer the repay_amount from the borrower's account to the protocol account.
