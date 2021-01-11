@@ -175,6 +175,9 @@ mod tests {
 	pub const BOB: AccountId = 2;
 	pub const ONE_MILL: Balance = 1_000_000;
 	pub const ONE_HUNDRED: Balance = 100;
+	pub const BALANCE_ZERO: Balance = 0;
+	pub const RATE_EQUALS_ONE: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const RATE_ZERO: Rate = Rate::from_inner(0);
 	pub const MAX_MEMBERS: u32 = 16;
 	pub type MinterestProtocol = minterest_protocol::Module<Test>;
 	pub type TestPools = liquidity_pools::Module<Test>;
@@ -207,7 +210,7 @@ mod tests {
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
-						current_exchange_rate: Rate::from_inner(1),
+						current_exchange_rate: Rate::saturating_from_rational(1, 1),
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -217,7 +220,7 @@ mod tests {
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
-						current_exchange_rate: Rate::from_inner(1),
+						current_exchange_rate: Rate::saturating_from_rational(1, 1),
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -227,7 +230,7 @@ mod tests {
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
-						current_exchange_rate: Rate::from_inner(1),
+						current_exchange_rate: Rate::saturating_from_rational(1, 1),
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -237,7 +240,7 @@ mod tests {
 						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
-						current_exchange_rate: Rate::from_inner(1),
+						current_exchange_rate: Rate::saturating_from_rational(1, 1),
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -248,7 +251,7 @@ mod tests {
 					CurrencyId::DOT,
 					PoolUserData {
 						total_borrowed: 0,
-						interest_index: Rate::saturating_from_rational(1, 1),
+						interest_index: Rate::from_inner(0),
 						collateral: true,
 					},
 				),
@@ -257,7 +260,7 @@ mod tests {
 					CurrencyId::ETH,
 					PoolUserData {
 						total_borrowed: 0,
-						interest_index: Rate::saturating_from_rational(1, 1),
+						interest_index: Rate::from_inner(0),
 						collateral: true,
 					},
 				),
@@ -266,7 +269,7 @@ mod tests {
 					CurrencyId::KSM,
 					PoolUserData {
 						total_borrowed: 0,
-						interest_index: Rate::saturating_from_rational(1, 1),
+						interest_index: Rate::from_inner(0),
 						collateral: true,
 					},
 				),
@@ -275,7 +278,7 @@ mod tests {
 					CurrencyId::BTC,
 					PoolUserData {
 						total_borrowed: 0,
-						interest_index: Rate::saturating_from_rational(1, 1),
+						interest_index: Rate::from_inner(0),
 						collateral: true,
 					},
 				),
@@ -284,7 +287,7 @@ mod tests {
 					CurrencyId::DOT,
 					PoolUserData {
 						total_borrowed: 0,
-						interest_index: Rate::saturating_from_rational(1, 1),
+						interest_index: Rate::from_inner(0),
 						collateral: true,
 					},
 				),
@@ -304,9 +307,9 @@ mod tests {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
-						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0,047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
 					},
 				),
 				(
@@ -318,9 +321,9 @@ mod tests {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
-						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0,047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
 					},
 				),
 				(
@@ -332,9 +335,9 @@ mod tests {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
-						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0,047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
 					},
 				),
 				(
@@ -346,9 +349,9 @@ mod tests {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
-						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0,047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
 					},
 				),
 			],
@@ -395,7 +398,7 @@ mod tests {
 		.unwrap();
 
 		accounts::GenesisConfig::<Test> {
-			allowed_accounts: vec![(ALICE, ())],
+			allowed_accounts: vec![(ADMIN, ())],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
