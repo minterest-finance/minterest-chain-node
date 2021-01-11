@@ -16,7 +16,7 @@ pub struct Pool {
 	pub total_borrowed: Balance,
 	/// Accumulator of the total earned interest rate since the opening of the pool
 	pub borrow_index: Rate,
-	pub current_exchange_rate: Rate,
+	pub current_exchange_rate: Rate, // FIXME: can be removed.
 	pub total_insurance: Balance,
 }
 

@@ -206,7 +206,7 @@ impl ExtBuilder {
 				current_interest_rate: Rate::from_inner(0),
 				total_borrowed,
 				borrow_index: Rate::saturating_from_rational(1, 1),
-				current_exchange_rate: Rate::saturating_from_rational(1, 1),
+				current_exchange_rate: Rate::from_inner(1),
 				total_insurance: Balance::zero(),
 			},
 		));
@@ -219,7 +219,7 @@ impl ExtBuilder {
 			Pool {
 				current_interest_rate: Rate::from_inner(0),
 				total_borrowed: Balance::zero(),
-				borrow_index: Rate::saturating_from_rational(1, 1),
+				borrow_index: Rate::saturating_from_rational(2, 1),
 				current_exchange_rate: Rate::saturating_from_rational(1, 1),
 				total_insurance: Balance::zero(),
 			},
@@ -285,9 +285,9 @@ impl ExtBuilder {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
-						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
 					},
 				),
 				(
@@ -299,9 +299,9 @@ impl ExtBuilder {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
-						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
 					},
 				),
 				(
@@ -313,9 +313,9 @@ impl ExtBuilder {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
-						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
 					},
 				),
 			],
