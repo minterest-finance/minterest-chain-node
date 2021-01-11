@@ -17,6 +17,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
+ "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -730,6 +731,7 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 name = "controller"
 version = "0.1.0"
 dependencies = [
+ "accounts",
  "frame-support",
  "frame-system",
  "liquidity-pools",
@@ -738,6 +740,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "orml-utilities",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -2171,6 +2174,7 @@ checksum = "f65877bf7d44897a473350b1046277941cee20b263397e90869c50b6e766088b"
 name = "integration-tests"
 version = "0.1.0"
 dependencies = [
+ "accounts",
  "controller",
  "frame-support",
  "frame-system",
@@ -3203,6 +3207,7 @@ dependencies = [
 name = "minterest-protocol"
 version = "0.1.0"
 dependencies = [
+ "accounts",
  "controller",
  "frame-support",
  "frame-system",

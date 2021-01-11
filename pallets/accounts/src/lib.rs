@@ -21,7 +21,7 @@ pub trait Trait: system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Accounts {
-		AllowedAccounts get(fn accounts): map hasher(blake2_128_concat) T::AccountId => ();
+		AllowedAccounts get(fn allowed_accounts) config(): map hasher(blake2_128_concat) T::AccountId => ();
 		MemberCount: u32;
 	}
 }
@@ -67,7 +67,7 @@ decl_module! {
 		///
 		/// The dispatch origin of this call must be _Root_.
 		#[weight = 0]
-		fn add_member(origin, new_account: T::AccountId) -> DispatchResult {
+		pub fn add_member(origin, new_account: T::AccountId) -> DispatchResult {
 			ensure_root(origin)?;
 
 			let member_count = MemberCount::get();
@@ -85,7 +85,7 @@ decl_module! {
 		///
 		/// The dispatch origin of this call must be _Root_.
 		#[weight = 0]
-		fn remove_member(origin, account_to_remove: T::AccountId) -> DispatchResult {
+		pub fn remove_member(origin, account_to_remove: T::AccountId) -> DispatchResult {
 			ensure_root(origin)?;
 
 			ensure!(AllowedAccounts::<T>::contains_key(&account_to_remove), Error::<T>::NotAnAdmin);

@@ -1,7 +1,7 @@
 //! Mocks for the minterest-protocol module.
 
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
-use liquidity_pools::Pool;
+use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_currencies::Currency;
 use sp_core::H256;
@@ -12,7 +12,7 @@ use sp_runtime::{
 };
 
 use super::*;
-use controller::ControllerData;
+use controller::{ControllerData, PauseKeeper};
 
 mod minterest_protocol {
 	pub use crate::Event;
@@ -27,6 +27,7 @@ impl_outer_event! {
 		minterest_protocol<T>,
 		controller,
 		oracle,
+		accounts<T>,
 	}
 }
 
@@ -138,6 +139,15 @@ impl oracle::Trait for Test {
 	type Event = Event;
 }
 
+parameter_types! {
+	pub const MaxMembers: u32 = MAX_MEMBERS;
+}
+
+impl accounts::Trait for Test {
+	type Event = Event;
+	type MaxMembers = MaxMembers;
+}
+
 impl Trait for Test {
 	type Event = Event;
 	type Borrowing = MockBorrowing;
@@ -171,8 +181,11 @@ pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
 pub const ONE_MILL: Balance = 1_000_000;
 pub const ONE_HUNDRED: Balance = 100;
+pub const MAX_MEMBERS: u32 = 16;
 pub type MinterestProtocol = Module<Test>;
 pub type TestPools = liquidity_pools::Module<Test>;
+pub type TestController = controller::Module<Test>;
+pub type TestAccounts = accounts::Module<Test>;
 pub type Currencies = orml_currencies::Module<Test>;
 pub type System = frame_system::Module<Test>;
 
@@ -201,7 +214,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
 					current_exchange_rate: Rate::from_inner(1),
-					is_lock: true,
 					total_insurance: Balance::zero(),
 				},
 			),
@@ -212,7 +224,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
 					current_exchange_rate: Rate::from_inner(1),
-					is_lock: true,
 					total_insurance: Balance::zero(),
 				},
 			),
@@ -223,7 +234,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
 					current_exchange_rate: Rate::from_inner(1),
-					is_lock: true,
 					total_insurance: Balance::zero(),
 				},
 			),
@@ -234,12 +244,57 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
 					current_exchange_rate: Rate::from_inner(1),
-					is_lock: true,
 					total_insurance: Balance::zero(),
 				},
 			),
 		],
-		pool_user_data: vec![],
+		pool_user_data: vec![
+			(
+				ALICE,
+				CurrencyId::DOT,
+				PoolUserData {
+					total_borrowed: 0,
+					interest_index: Rate::saturating_from_rational(1, 1),
+					collateral: true,
+				},
+			),
+			(
+				ALICE,
+				CurrencyId::ETH,
+				PoolUserData {
+					total_borrowed: 0,
+					interest_index: Rate::saturating_from_rational(1, 1),
+					collateral: true,
+				},
+			),
+			(
+				ALICE,
+				CurrencyId::KSM,
+				PoolUserData {
+					total_borrowed: 0,
+					interest_index: Rate::saturating_from_rational(1, 1),
+					collateral: true,
+				},
+			),
+			(
+				ALICE,
+				CurrencyId::BTC,
+				PoolUserData {
+					total_borrowed: 0,
+					interest_index: Rate::saturating_from_rational(1, 1),
+					collateral: true,
+				},
+			),
+			(
+				BOB,
+				CurrencyId::DOT,
+				PoolUserData {
+					total_borrowed: 0,
+					interest_index: Rate::saturating_from_rational(1, 1),
+					collateral: true,
+				},
+			),
+		],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
@@ -303,9 +358,54 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 				},
 			),
 		],
+		pause_keepers: vec![
+			(
+				CurrencyId::ETH,
+				PauseKeeper {
+					deposit_paused: false,
+					redeem_paused: false,
+					borrow_paused: false,
+					repay_paused: false,
+				},
+			),
+			(
+				CurrencyId::DOT,
+				PauseKeeper {
+					deposit_paused: false,
+					redeem_paused: false,
+					borrow_paused: false,
+					repay_paused: false,
+				},
+			),
+			(
+				CurrencyId::KSM,
+				PauseKeeper {
+					deposit_paused: false,
+					redeem_paused: false,
+					borrow_paused: false,
+					repay_paused: false,
+				},
+			),
+			(
+				CurrencyId::BTC,
+				PauseKeeper {
+					deposit_paused: false,
+					redeem_paused: false,
+					borrow_paused: false,
+					repay_paused: false,
+				},
+			),
+		],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
+
+	accounts::GenesisConfig::<Test> {
+		allowed_accounts: vec![(ALICE, ())],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+
 	let mut ext: sp_io::TestExternalities = t.into();
 	ext.execute_with(|| System::set_block_number(1));
 	ext

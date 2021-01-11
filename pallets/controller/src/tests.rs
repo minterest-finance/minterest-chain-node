@@ -1,7 +1,7 @@
 use super::*;
 use mock::*;
 
-use frame_support::{assert_err, assert_noop, assert_ok, error::BadOrigin};
+use frame_support::{assert_err, assert_noop, assert_ok};
 
 #[test]
 fn accrue_interest_should_work() {
@@ -11,13 +11,9 @@ fn accrue_interest_should_work() {
 		.build()
 		.execute_with(|| {
 			System::set_block_number(1);
+
 			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
 			assert_eq!(Controller::controller_dates(CurrencyId::DOT).timestamp, 1);
-
-			assert_noop!(
-				Controller::accrue_interest_rate(CurrencyId::BTC),
-				Error::<Runtime>::OperationsLocked
-			);
 
 			assert_eq!(TestPools::pools(CurrencyId::DOT).total_insurance, 57_600_000_000);
 			assert_eq!(
@@ -44,6 +40,7 @@ fn accrue_interest_should_not_work() {
 		.build()
 		.execute_with(|| {
 			System::set_block_number(1);
+
 			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
 			assert_eq!(Controller::controller_dates(CurrencyId::DOT).timestamp, 1);
 
@@ -53,7 +50,18 @@ fn accrue_interest_should_not_work() {
 				Error::<Runtime>::BorrowRateIsTooHight
 			);
 
-			assert_ok!(Controller::set_max_borrow_rate(Origin::root(), CurrencyId::DOT, 2, 1));
+			assert_noop!(
+				Controller::set_max_borrow_rate(Origin::signed(BOB), CurrencyId::DOT, 2, 1),
+				Error::<Runtime>::RequireAdmin
+			);
+
+			assert_ok!(Controller::set_max_borrow_rate(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				2,
+				1
+			));
+
 			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
 		});
 }
@@ -293,7 +301,7 @@ fn get_underlying_asset_id_by_wrapped_id_should_work() {
 #[test]
 fn borrow_balance_stored_with_zero_balance_should_work() {
 	ExtBuilder::default()
-		.set_alice_interest_index()
+		.set_alice_and_bob_interest_index_and_collateral()
 		.build()
 		.execute_with(|| {
 			assert_eq!(
@@ -368,13 +376,29 @@ fn mul_price_and_balance_add_to_prev_value_should_work() {
 
 #[test]
 fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// if m_tokens_balance == 0 then return Ok(0, 0)
-		assert_eq!(
-			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 5, 0),
-			Ok((0, 0))
-		);
-	});
+	ExtBuilder::default()
+		.set_alice_and_bob_interest_index_and_collateral()
+		.build()
+		.execute_with(|| {
+			// Checking the function when called from redeem.
+			// The function should return the shortfall to a large zero.
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 5, 0),
+				Ok((0, 9))
+			);
+			// Checking the function when called from borrow.
+			// The function should return the shortfall to a large zero.
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 10),
+				Ok((0, 20))
+			);
+			// Checking scenario: the user tries to take a borrow in a currency which is not
+			// pool as available for collateral, and he fails.
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&BOB, CurrencyId::BTC, 0, 10),
+				Ok((0, 20))
+			);
+		});
 }
 
 #[test]
@@ -383,7 +407,7 @@ fn get_hypothetical_account_liquidity_one_currency_from_redeem_should_work() {
 		// Checking the function when called from redeem.
 		assert_eq!(
 			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 5, 0),
-			Ok((90, 0))
+			Ok((99, 0))
 		);
 		assert_eq!(
 			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 60, 0),
@@ -391,7 +415,7 @@ fn get_hypothetical_account_liquidity_one_currency_from_redeem_should_work() {
 		);
 		assert_eq!(
 			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 200, 0),
-			Ok((0, 231))
+			Ok((0, 252))
 		);
 	});
 }
@@ -406,15 +430,15 @@ fn get_hypothetical_account_liquidity_two_currencies_from_redeem_should_work() {
 			// Checking the function when called from redeem.
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 15, 0),
-				Ok((105, 0))
+				Ok((117, 0))
 			);
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 80, 0),
-				Ok((17, 0))
+				Ok((0, 0))
 			);
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 100, 0),
-				Ok((0, 10))
+				Ok((0, 36))
 			);
 		});
 }
@@ -430,38 +454,166 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 			// Checking the function when called from borrow.
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 30),
-				Ok((89, 0))
+				Ok((78, 0))
 			);
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 50),
-				Ok((49, 0))
+				Ok((38, 0))
 			);
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 100),
-				Ok((0, 51))
+				Ok((0, 62))
+			);
+		});
+}
+
+#[test]
+fn deposit_allowed_should_work() {
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::deposit_allowed(CurrencyId::DOT, &BOB, 10));
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Deposit
+			));
+			assert_noop!(
+				Controller::deposit_allowed(CurrencyId::DOT, &BOB, 10),
+				Error::<Runtime>::OperationPaused
 			);
 		});
 }
 
 #[test]
 fn redeem_allowed_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		//TODO write tests after the function implementation.
-	});
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.alice_deposit_60_dots()
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::redeem_allowed(CurrencyId::DOT, &ALICE, 40));
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Redeem
+			));
+			assert_noop!(
+				Controller::redeem_allowed(CurrencyId::DOT, &ALICE, 10),
+				Error::<Runtime>::OperationPaused
+			);
+			assert_ok!(Controller::unpause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Redeem
+			));
+			assert_noop!(
+				Controller::redeem_allowed(CurrencyId::DOT, &ALICE, 999),
+				Error::<Runtime>::InsufficientLiquidity
+			);
+		});
 }
 
 #[test]
 fn borrow_allowed_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		//TODO write tests after the function implementation.
-	});
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.alice_deposit_60_dots()
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10));
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Borrow
+			));
+			assert_noop!(
+				Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10),
+				Error::<Runtime>::OperationPaused
+			);
+			assert_ok!(Controller::unpause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Borrow
+			));
+			assert_noop!(
+				Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 999),
+				Error::<Runtime>::InsufficientLiquidity
+			);
+		});
 }
 
 #[test]
 fn repay_allowed_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		//TODO write tests after the function implementation.
-	});
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::repay_borrow_allowed(CurrencyId::DOT, &BOB, 10));
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Repay
+			));
+			assert_noop!(
+				Controller::repay_borrow_allowed(CurrencyId::DOT, &BOB, 10),
+				Error::<Runtime>::OperationPaused
+			);
+		});
+}
+
+#[test]
+fn is_operation_allowed_should_work() {
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Deposit),
+				true
+			);
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Redeem),
+				true
+			);
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Borrow),
+				true
+			);
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Repay),
+				true
+			);
+
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Deposit
+			));
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Redeem
+			));
+
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Deposit),
+				false
+			);
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Redeem),
+				false
+			);
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Borrow),
+				true
+			);
+			assert_eq!(
+				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Repay),
+				true
+			);
+		});
 }
 
 /* ----------------------------------------------------------------------------------------- */
@@ -470,135 +622,340 @@ fn repay_allowed_should_work() {
 
 #[test]
 fn set_insurance_factor_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::set_insurance_factor(
-			Origin::root(),
-			CurrencyId::DOT,
-			20,
-			10
-		));
-		assert_eq!(
-			Controller::controller_dates(CurrencyId::DOT).insurance_factor,
-			Rate::saturating_from_rational(20, 10)
-		);
-		assert_noop!(
-			Controller::set_insurance_factor(Origin::root(), CurrencyId::DOT, 20, 0),
-			Error::<Runtime>::NumOverflow
-		);
-		assert_noop!(
-			Controller::set_insurance_factor(Origin::signed(ALICE), CurrencyId::DOT, 20, 10),
-			BadOrigin
-		);
-		assert_noop!(
-			Controller::set_insurance_factor(Origin::root(), CurrencyId::MDOT, 20, 10),
-			Error::<Runtime>::NotValidUnderlyingAssetId
-		);
-	});
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::set_insurance_factor(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				20,
+				10
+			));
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).insurance_factor,
+				Rate::saturating_from_rational(20, 10)
+			);
+			assert_noop!(
+				Controller::set_insurance_factor(Origin::signed(ALICE), CurrencyId::DOT, 20, 0),
+				Error::<Runtime>::NumOverflow
+			);
+			assert_noop!(
+				Controller::set_insurance_factor(Origin::signed(BOB), CurrencyId::DOT, 20, 10),
+				Error::<Runtime>::RequireAdmin
+			);
+			assert_noop!(
+				Controller::set_insurance_factor(Origin::signed(ALICE), CurrencyId::MDOT, 20, 10),
+				Error::<Runtime>::PoolNotFound
+			);
+		});
 }
 
 #[test]
 fn set_max_borrow_rate_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::set_max_borrow_rate(Origin::root(), CurrencyId::DOT, 20, 10));
-		assert_eq!(
-			Controller::controller_dates(CurrencyId::DOT).max_borrow_rate,
-			Rate::saturating_from_rational(20, 10)
-		);
-		assert_noop!(
-			Controller::set_max_borrow_rate(Origin::root(), CurrencyId::DOT, 20, 0),
-			Error::<Runtime>::NumOverflow
-		);
-		assert_noop!(
-			Controller::set_max_borrow_rate(Origin::signed(ALICE), CurrencyId::DOT, 20, 10),
-			BadOrigin
-		);
-		assert_noop!(
-			Controller::set_max_borrow_rate(Origin::root(), CurrencyId::MDOT, 20, 10),
-			Error::<Runtime>::NotValidUnderlyingAssetId
-		);
-	});
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::set_max_borrow_rate(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				20,
+				10
+			));
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).max_borrow_rate,
+				Rate::saturating_from_rational(20, 10)
+			);
+			assert_noop!(
+				Controller::set_max_borrow_rate(Origin::signed(ALICE), CurrencyId::DOT, 20, 0),
+				Error::<Runtime>::NumOverflow
+			);
+			assert_noop!(
+				Controller::set_max_borrow_rate(Origin::signed(BOB), CurrencyId::DOT, 20, 10),
+				Error::<Runtime>::RequireAdmin
+			);
+			assert_noop!(
+				Controller::set_max_borrow_rate(Origin::signed(ALICE), CurrencyId::MDOT, 20, 10),
+				Error::<Runtime>::PoolNotFound
+			);
+		});
 }
 
 #[test]
 fn set_base_rate_per_block_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::set_base_rate_per_block(
-			Origin::root(),
-			CurrencyId::DOT,
-			20,
-			10
-		));
-		assert_eq!(
-			Controller::controller_dates(CurrencyId::DOT).base_rate_per_block,
-			Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
-		);
-		assert_noop!(
-			Controller::set_base_rate_per_block(Origin::root(), CurrencyId::DOT, 20, 0),
-			Error::<Runtime>::NumOverflow
-		);
-		assert_noop!(
-			Controller::set_base_rate_per_block(Origin::signed(ALICE), CurrencyId::DOT, 20, 10),
-			BadOrigin
-		);
-		assert_noop!(
-			Controller::set_base_rate_per_block(Origin::root(), CurrencyId::MDOT, 20, 10),
-			Error::<Runtime>::NotValidUnderlyingAssetId
-		);
-	});
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::set_base_rate_per_block(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				20,
+				10
+			));
+
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).base_rate_per_block,
+				Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
+			);
+			assert_noop!(
+				Controller::set_base_rate_per_block(Origin::signed(ALICE), CurrencyId::DOT, 20, 0),
+				Error::<Runtime>::NumOverflow
+			);
+			assert_noop!(
+				Controller::set_base_rate_per_block(Origin::signed(BOB), CurrencyId::DOT, 20, 10),
+				Error::<Runtime>::RequireAdmin
+			);
+			assert_noop!(
+				Controller::set_base_rate_per_block(Origin::signed(ALICE), CurrencyId::MDOT, 20, 10),
+				Error::<Runtime>::PoolNotFound
+			);
+		});
 }
 
 #[test]
 fn set_multiplier_per_block_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::set_multiplier_per_block(
-			Origin::root(),
-			CurrencyId::DOT,
-			20,
-			10
-		));
-		assert_eq!(
-			Controller::controller_dates(CurrencyId::DOT).multiplier_per_block,
-			Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
-		);
-		assert_noop!(
-			Controller::set_multiplier_per_block(Origin::root(), CurrencyId::DOT, 20, 0),
-			Error::<Runtime>::NumOverflow
-		);
-		assert_noop!(
-			Controller::set_multiplier_per_block(Origin::signed(ALICE), CurrencyId::DOT, 20, 10),
-			BadOrigin
-		);
-		assert_noop!(
-			Controller::set_multiplier_per_block(Origin::root(), CurrencyId::MDOT, 20, 10),
-			Error::<Runtime>::NotValidUnderlyingAssetId
-		);
-	});
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::set_multiplier_per_block(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				20,
+				10
+			));
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).multiplier_per_block,
+				Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
+			);
+			assert_noop!(
+				Controller::set_multiplier_per_block(Origin::signed(ALICE), CurrencyId::DOT, 20, 0),
+				Error::<Runtime>::NumOverflow
+			);
+			assert_noop!(
+				Controller::set_multiplier_per_block(Origin::signed(BOB), CurrencyId::DOT, 20, 10),
+				Error::<Runtime>::RequireAdmin
+			);
+			assert_noop!(
+				Controller::set_multiplier_per_block(Origin::signed(ALICE), CurrencyId::MDOT, 20, 10),
+				Error::<Runtime>::PoolNotFound
+			);
+		});
 }
 
 #[test]
 fn set_jump_multiplier_per_block_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::set_jump_multiplier_per_block(
-			Origin::root(),
-			CurrencyId::DOT,
-			20,
-			10
-		));
-		assert_eq!(
-			Controller::controller_dates(CurrencyId::DOT).jump_multiplier_per_block,
-			Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
-		);
-		assert_noop!(
-			Controller::set_jump_multiplier_per_block(Origin::root(), CurrencyId::DOT, 20, 0),
-			Error::<Runtime>::NumOverflow
-		);
-		assert_noop!(
-			Controller::set_jump_multiplier_per_block(Origin::signed(ALICE), CurrencyId::DOT, 20, 10),
-			BadOrigin
-		);
-		assert_noop!(
-			Controller::set_jump_multiplier_per_block(Origin::root(), CurrencyId::MDOT, 20, 10),
-			Error::<Runtime>::NotValidUnderlyingAssetId
-		);
-	});
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::set_jump_multiplier_per_block(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				20,
+				10
+			));
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).jump_multiplier_per_block,
+				Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
+			);
+			assert_noop!(
+				Controller::set_jump_multiplier_per_block(Origin::signed(ALICE), CurrencyId::DOT, 20, 0),
+				Error::<Runtime>::NumOverflow
+			);
+			assert_noop!(
+				Controller::set_jump_multiplier_per_block(Origin::signed(BOB), CurrencyId::DOT, 20, 10),
+				Error::<Runtime>::RequireAdmin
+			);
+			assert_noop!(
+				Controller::set_jump_multiplier_per_block(Origin::signed(ALICE), CurrencyId::MDOT, 20, 10),
+				Error::<Runtime>::PoolNotFound
+			);
+		});
+}
+
+#[test]
+fn pool_not_found() {
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_noop!(
+				Controller::pause_specific_operation(Origin::signed(ALICE), CurrencyId::MBTC, Operation::Deposit),
+				Error::<Runtime>::PoolNotFound
+			);
+		});
+}
+
+#[test]
+fn pause_specific_operation_should_work() {
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).deposit_paused, false);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).redeem_paused, false);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).borrow_paused, false);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).repay_paused, false);
+
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Deposit
+			));
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Redeem
+			));
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Borrow
+			));
+			assert_ok!(Controller::pause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				Operation::Repay
+			));
+
+			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).deposit_paused, true);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).redeem_paused, true);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).borrow_paused, true);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).repay_paused, true);
+
+			assert_noop!(
+				Controller::pause_specific_operation(Origin::signed(BOB), CurrencyId::DOT, Operation::Deposit),
+				Error::<Runtime>::RequireAdmin
+			);
+			assert_noop!(
+				Controller::pause_specific_operation(Origin::signed(ALICE), CurrencyId::MDOT, Operation::Redeem),
+				Error::<Runtime>::PoolNotFound
+			);
+		});
+}
+
+#[test]
+fn unpause_specific_operation_should_work() {
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.build()
+		.execute_with(|| {
+			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).deposit_paused, true);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).redeem_paused, true);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).borrow_paused, true);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).repay_paused, true);
+
+			assert_ok!(Controller::unpause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::KSM,
+				Operation::Deposit
+			));
+			assert_ok!(Controller::unpause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::KSM,
+				Operation::Redeem
+			));
+			assert_ok!(Controller::unpause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::KSM,
+				Operation::Borrow
+			));
+			assert_ok!(Controller::unpause_specific_operation(
+				Origin::signed(ALICE),
+				CurrencyId::KSM,
+				Operation::Repay
+			));
+
+			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).deposit_paused, false);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).redeem_paused, false);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).borrow_paused, false);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).repay_paused, false);
+
+			assert_noop!(
+				Controller::unpause_specific_operation(Origin::signed(BOB), CurrencyId::DOT, Operation::Deposit),
+				Error::<Runtime>::RequireAdmin
+			);
+			assert_noop!(
+				Controller::unpause_specific_operation(Origin::signed(ALICE), CurrencyId::MDOT, Operation::Redeem),
+				Error::<Runtime>::PoolNotFound
+			);
+		});
+}
+
+#[test]
+fn deposit_insurance_should_work() {
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.one_hundred_dots_for_alice()
+		.build()
+		.execute_with(|| {
+			assert_noop!(
+				Controller::deposit_insurance(Origin::signed(BOB), CurrencyId::DOT, 101),
+				Error::<Runtime>::RequireAdmin
+			);
+
+			assert_noop!(
+				Controller::deposit_insurance(Origin::signed(ALICE), CurrencyId::DOT, 101),
+				Error::<Runtime>::NotEnoughBalance
+			);
+			assert_noop!(
+				Controller::deposit_insurance(Origin::signed(ALICE), CurrencyId::MDOT, 5),
+				Error::<Runtime>::PoolNotFound
+			);
+
+			assert_ok!(Controller::deposit_insurance(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				60
+			));
+			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 60);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
+
+			assert_ok!(Controller::deposit_insurance(Origin::signed(ALICE), CurrencyId::DOT, 5));
+			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 65);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 35);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 65);
+		});
+}
+//
+#[test]
+fn redeem_insurance_should_work() {
+	ExtBuilder::default()
+		.set_btc_and_dot_pool_mock()
+		.one_hundred_dots_for_alice()
+		.build()
+		.execute_with(|| {
+			assert_noop!(
+				Controller::deposit_insurance(Origin::signed(BOB), CurrencyId::DOT, 101),
+				Error::<Runtime>::RequireAdmin
+			);
+
+			assert_noop!(
+				Controller::deposit_insurance(Origin::signed(ALICE), CurrencyId::MDOT, 5),
+				Error::<Runtime>::PoolNotFound
+			);
+
+			assert_ok!(Controller::deposit_insurance(
+				Origin::signed(ALICE),
+				CurrencyId::DOT,
+				60
+			));
+			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 60);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
+
+			assert_noop!(
+				Controller::redeem_insurance(Origin::signed(ALICE), CurrencyId::DOT, 61),
+				Error::<Runtime>::NotEnoughBalance
+			);
+
+			assert_ok!(Controller::redeem_insurance(Origin::signed(ALICE), CurrencyId::DOT, 30));
+			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 30);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 30);
+		});
 }
