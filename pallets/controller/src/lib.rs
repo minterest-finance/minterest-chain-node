@@ -10,7 +10,7 @@ use orml_utilities::with_transaction_result;
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, Zero},
-	DispatchError, DispatchResult, FixedPointNumber, FixedU128, RuntimeDebug,
+	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
 
@@ -464,8 +464,6 @@ impl<T: Trait> Module<T> {
 		for asset in m_tokens_ids.into_iter() {
 			let underlying_asset = Self::get_underlying_asset_id_by_wrapped_id(&asset)?;
 
-			let mut tokens_to_denom: FixedU128 = Default::default();
-
 			// Read the balances and exchange rate from the cToken
 			let borrow_balance = Self::borrow_balance_stored(account, underlying_asset)?;
 			let exchange_rate = Self::get_exchange_rate(underlying_asset)?;
@@ -479,15 +477,15 @@ impl<T: Trait> Module<T> {
 				return Ok((Balance::zero(), Balance::zero()));
 			}
 
+			// Pre-compute a conversion factor from tokens -> dollars (normalized price value)
+			let tokens_to_denom = collateral_factor
+				.checked_mul(&exchange_rate)
+				.ok_or(Error::<T>::NumOverflow)?
+				.checked_mul(&oracle_price)
+				.ok_or(Error::<T>::NumOverflow)?;
+
 			if <LiquidityPools<T>>::check_user_available_collateral(&account, underlying_asset) {
 				let m_token_balance = T::MultiCurrency::free_balance(asset, account);
-
-				// Pre-compute a conversion factor from tokens -> dollars (normalized price value)
-				tokens_to_denom = collateral_factor
-					.checked_mul(&exchange_rate)
-					.ok_or(Error::<T>::NumOverflow)?
-					.checked_mul(&oracle_price)
-					.ok_or(Error::<T>::NumOverflow)?;
 
 				if m_token_balance != Balance::zero() {
 					// sum_collateral += tokens_to_denom * m_token_balance
