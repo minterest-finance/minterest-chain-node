@@ -17,18 +17,23 @@ frame-support = { version = "2.0.0", default-features = false }
 frame-system = { version = "2.0.0", default-features = false }
 
 orml-traits = { path = "../../orml/traits", default-features = false }
+orml-utilities = { path = "../../orml/utilities", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
 oracle = { path = "../oracle", default-features = false }
+accounts = { path = "../accounts", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = "2.0.0" }
+sp-io = { version = "2.0.0" }
+
 orml-tokens = { path = "../../orml/tokens" }
 orml-currencies = { path = "../../orml/currencies" }
-sp-io = { version = "2.0.0" }
+
 liquidity-pools = { path = "../liquidity-pools" }
 oracle = { path = "../oracle" }
+accounts = { path = "../accounts" }
 
 [features]
 default = ["std"]

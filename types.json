@@ -20,14 +20,12 @@
       "total_borrowed": "Balance",
       "borrow_index": "Rate",
       "current_exchange_rate": "Rate",
-      "is_lock": "bool",
       "total_insurance": "Balance"
     },
     "PoolUserData" : {
       "total_borrowed": "Balance",
       "interest_index": "Rate",
       "collateral": "bool",
-      "timestamp": "BlockNumber"
     },
     "CurrencyIdOf": "CurrencyId",
     "Amount": "i128",
@@ -42,8 +40,13 @@
       "base_rate_per_block": "Rate",
       "multiplier_per_block": "Rate",
       "jump_multiplier_per_block": "Rate",
-      "collateral_factor": "Rate"
-
+      "collateral_factor": "Rate",
+    },
+    "PauseKeeper": {
+      "deposit_paused": "bool",
+      "redeem_paused": "bool",
+      "borrow_paused": "bool",
+      "repay_paused": "bool"
     }
   },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"

@@ -114,7 +114,6 @@ impl Trait for Runtime {
 }
 
 pub type LiquidityPools = Module<Runtime>;
-pub type Currencies = orml_currencies::Module<Runtime>;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -163,7 +162,6 @@ impl ExtBuilder {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),
-						is_lock: true,
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -174,7 +172,6 @@ impl ExtBuilder {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),
-						is_lock: false,
 						total_insurance: Balance::zero(),
 					},
 				),

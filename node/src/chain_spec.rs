@@ -1,9 +1,9 @@
-use controller::ControllerData;
+use controller::{ControllerData, PauseKeeper};
 use hex_literal::hex;
 use liquidity_pools::Pool;
 use node_minterest_runtime::{
-	AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig, GrandpaConfig,
-	LiquidityPoolsConfig, Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
+	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig,
+	GrandpaConfig, LiquidityPoolsConfig, Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
 };
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
@@ -237,7 +237,6 @@ fn testnet_genesis(
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),
-						is_lock: true,
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -248,7 +247,6 @@ fn testnet_genesis(
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),
-						is_lock: true,
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -259,7 +257,6 @@ fn testnet_genesis(
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),
-						is_lock: true,
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -270,7 +267,6 @@ fn testnet_genesis(
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),
-						is_lock: true,
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -336,6 +332,47 @@ fn testnet_genesis(
 					},
 				),
 			],
+			pause_keepers: vec![
+				(
+					CurrencyId::ETH,
+					PauseKeeper {
+						deposit_paused: false,
+						redeem_paused: false,
+						borrow_paused: false,
+						repay_paused: false,
+					},
+				),
+				(
+					CurrencyId::DOT,
+					PauseKeeper {
+						deposit_paused: false,
+						redeem_paused: false,
+						borrow_paused: false,
+						repay_paused: false,
+					},
+				),
+				(
+					CurrencyId::KSM,
+					PauseKeeper {
+						deposit_paused: false,
+						redeem_paused: false,
+						borrow_paused: false,
+						repay_paused: false,
+					},
+				),
+				(
+					CurrencyId::BTC,
+					PauseKeeper {
+						deposit_paused: false,
+						redeem_paused: false,
+						borrow_paused: false,
+						repay_paused: false,
+					},
+				),
+			],
+		}),
+		accounts: Some(AccountsConfig {
+			allowed_accounts: vec![(get_account_id_from_seed::<sr25519::Public>("Alice"), ())],
 		}),
 	}
 }
