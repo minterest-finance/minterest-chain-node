@@ -247,83 +247,20 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn alice_deposit_60_dots(mut self) -> Self {
-		self.endowed_accounts.extend_from_slice(&[
-			(ALICE, CurrencyId::DOT, 40),
-			(ALICE, CurrencyId::MDOT, 60),
-			(TestPools::pools_account_id(), CurrencyId::DOT, 60),
-		]);
-		self.pools.push((
-			CurrencyId::DOT,
-			Pool {
-				current_interest_rate: Rate::from_inner(0),
-				total_borrowed: Balance::zero(),
-				borrow_index: Rate::saturating_from_rational(1, 1),
-				current_exchange_rate: Rate::saturating_from_rational(8, 10),
-				total_insurance: Balance::zero(),
-			},
-		));
-		self.pool_user_data.push((
-			ALICE,
-			CurrencyId::DOT,
-			PoolUserData {
-				total_borrowed: 0,
-				interest_index: Rate::from_inner(0),
-				collateral: true,
-			},
-		));
-		self
+	pub fn alice_deposit_60_dot(self) -> Self {
+		self.user_balance(ALICE, CurrencyId::DOT, 40)
+			.user_balance(ALICE, CurrencyId::MDOT, 60)
+			.pool_balance(CurrencyId::DOT, 60)
+			.pool_mock(CurrencyId::DOT)
+			.pool_user_data(ALICE, CurrencyId::DOT, 0, Rate::from_inner(0), true)
 	}
 
-	pub fn alice_deposit_20_eth(mut self) -> Self {
-		self.endowed_accounts.extend_from_slice(&[
-			(ALICE, CurrencyId::ETH, 80),
-			(ALICE, CurrencyId::METH, 20),
-			(TestPools::pools_account_id(), CurrencyId::ETH, 20),
-		]);
-		self.pools.push((
-			CurrencyId::ETH,
-			Pool {
-				current_interest_rate: Rate::from_inner(0),
-				total_borrowed: Balance::zero(),
-				borrow_index: Rate::saturating_from_rational(1, 1),
-				current_exchange_rate: Rate::saturating_from_rational(8, 10),
-				total_insurance: Balance::zero(),
-			},
-		));
-		self.pool_user_data.push((
-			ALICE,
-			CurrencyId::ETH,
-			PoolUserData {
-				total_borrowed: 0,
-				interest_index: Rate::saturating_from_rational(1, 1),
-				collateral: true,
-			},
-		));
-		self
-	}
-
-	pub fn alice_borrow_30_dot(mut self) -> Self {
-		self.pools.push((
-			CurrencyId::DOT,
-			Pool {
-				current_interest_rate: Rate::from_inner(0),
-				total_borrowed: 30,
-				borrow_index: Rate::saturating_from_rational(1, 1),
-				current_exchange_rate: Rate::saturating_from_rational(8, 10),
-				total_insurance: Balance::zero(),
-			},
-		));
-		self.pool_user_data.push((
-			ALICE,
-			CurrencyId::DOT,
-			PoolUserData {
-				total_borrowed: 30,
-				interest_index: Rate::saturating_from_rational(1, 1),
-				collateral: true,
-			},
-		));
-		self
+	pub fn alice_deposit_20_eth(self) -> Self {
+		self.user_balance(ALICE, CurrencyId::ETH, 80)
+			.user_balance(ALICE, CurrencyId::METH, 20)
+			.pool_balance(CurrencyId::ETH, 20)
+			.pool_mock(CurrencyId::ETH)
+			.pool_user_data(ALICE, CurrencyId::ETH, 0, Rate::from_inner(0), true)
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {

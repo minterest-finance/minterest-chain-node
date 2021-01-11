@@ -437,32 +437,22 @@ fn get_hypothetical_account_liquidity_one_currency_from_redeem_should_work() {
 #[test]
 fn get_hypothetical_account_liquidity_two_currencies_from_redeem_should_work() {
 	ExtBuilder::default()
-		// ALICE deposit 60 DOT
-		.user_balance(ALICE, CurrencyId::DOT, 40)
-		.user_balance(ALICE, CurrencyId::MDOT, 60)
-		.pool_balance(CurrencyId::DOT, 60)
-		.pool_total_borrowed(CurrencyId::DOT, 60)
-		.pool_user_data(ALICE, CurrencyId::DOT, 60, Rate::saturating_from_rational(1, 1), true)
-		// ALICE deposit 20 ETH
-		.user_balance(ALICE, CurrencyId::ETH, 80)
-		.user_balance(ALICE, CurrencyId::METH, 20)
-		.pool_balance(CurrencyId::ETH, 20)
-		.pool_total_borrowed(CurrencyId::ETH, 20)
-		.pool_user_data(ALICE, CurrencyId::ETH, 20, Rate::saturating_from_rational(1, 1), true)
+		.alice_deposit_60_dot()
+		.alice_deposit_20_eth()
 		.build()
 		.execute_with(|| {
 			// Checking the function when called from redeem.
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 15, 0),
-				Ok((74, 0))
+				Ok((117, 0))
 			);
 			assert_eq!(
-				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 36, 0),
-				Ok((0, 1))
+				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 80, 0),
+				Ok((0, 0))
 			);
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 100, 0),
-				Ok((0, 232))
+				Ok((0, 36))
 			);
 		});
 }
@@ -471,8 +461,12 @@ fn get_hypothetical_account_liquidity_two_currencies_from_redeem_should_work() {
 fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 	ExtBuilder::default()
 		.alice_deposit_20_eth()
-		.alice_deposit_60_dots()
-		.alice_borrow_30_dot()
+		// ALICE deposit 60 DOT and borrow 30 DOT
+		.user_balance(ALICE, CurrencyId::DOT, 70)
+		.user_balance(ALICE, CurrencyId::MDOT, 60)
+		.pool_balance(CurrencyId::DOT, 60)
+		.pool_total_borrowed(CurrencyId::DOT, 30)
+		.pool_user_data(ALICE, CurrencyId::DOT, 30, Rate::saturating_from_rational(1, 1), true)
 		.build()
 		.execute_with(|| {
 			// Checking the function when called from borrow.
@@ -515,7 +509,7 @@ fn deposit_allowed_should_work() {
 fn redeem_allowed_should_work() {
 	ExtBuilder::default()
 		.pool_mock(CurrencyId::DOT)
-		.alice_deposit_60_dots()
+		.alice_deposit_60_dot()
 		.build()
 		.execute_with(|| {
 			assert_ok!(Controller::redeem_allowed(CurrencyId::DOT, &ALICE, 40));
@@ -542,31 +536,27 @@ fn redeem_allowed_should_work() {
 
 #[test]
 fn borrow_allowed_should_work() {
-	ExtBuilder::default()
-		.pool_mock(CurrencyId::DOT)
-		.alice_deposit_60_dots()
-		.build()
-		.execute_with(|| {
-			assert_ok!(Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10));
-			assert_ok!(Controller::pause_specific_operation(
-				alice(),
-				CurrencyId::DOT,
-				Operation::Borrow
-			));
-			assert_noop!(
-				Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10),
-				Error::<Runtime>::OperationPaused
-			);
-			assert_ok!(Controller::unpause_specific_operation(
-				alice(),
-				CurrencyId::DOT,
-				Operation::Borrow
-			));
-			assert_noop!(
-				Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 999),
-				Error::<Runtime>::InsufficientLiquidity
-			);
-		});
+	ExtBuilder::default().alice_deposit_60_dot().build().execute_with(|| {
+		assert_ok!(Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10));
+		assert_ok!(Controller::pause_specific_operation(
+			alice(),
+			CurrencyId::DOT,
+			Operation::Borrow
+		));
+		assert_noop!(
+			Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10),
+			Error::<Runtime>::OperationPaused
+		);
+		assert_ok!(Controller::unpause_specific_operation(
+			alice(),
+			CurrencyId::DOT,
+			Operation::Borrow
+		));
+		assert_noop!(
+			Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 999),
+			Error::<Runtime>::InsufficientLiquidity
+		);
+	});
 }
 
 #[test]
