@@ -12,7 +12,7 @@ fn add_member_should_work() {
 
 		assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
 		let expected_event = TestEvent::accounts(RawEvent::AccountAdded(ALICE));
-		assert_eq!(System::events()[0].event, expected_event,);
+		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(<AllowedAccounts<Test>>::contains_key(ALICE));
 
 		assert_ok!(TestAccounts::add_member(Origin::root(), BOB));

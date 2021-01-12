@@ -71,6 +71,9 @@ decl_event! {
 		/// InsuranceFactor has been successfully changed
 		InsuranceFactorChanged,
 
+		/// Max Borrow Rate has been successfully changed
+		MaxBorrowRateChanged,
+
 		/// JumpMultiplierPerBlock has been successfully changed
 		JumpMultiplierPerBlockHasChanged,
 
@@ -127,7 +130,7 @@ decl_error! {
 		/// The dispatch origin of this call must be Administrator.
 		RequireAdmin,
 
-		/// Not enough balance to withdraw or repay.
+		/// Not enough balance to deposit or withdraw or repay.
 		NotEnoughBalance,
 
 		/// Balance overflows maximum.
@@ -240,7 +243,7 @@ decl_module! {
 			let new_max_borow_rate = Rate::saturating_from_rational(new_amount_n, new_amount_d);
 
 			ControllerDates::<T>::mutate(pool_id, |r| r.max_borrow_rate = new_max_borow_rate);
-			Self::deposit_event(Event::InsuranceFactorChanged);
+			Self::deposit_event(Event::MaxBorrowRateChanged);
 			Ok(())
 		}
 
@@ -383,6 +386,10 @@ impl<T: Trait> Module<T> {
 
 	/// Converts a specified number of underlying assets into wrapped tokens.
 	/// The calculation is based on the exchange rate.
+	///
+	/// - `underlying_asset_id`: CurrencyId of underlying assets to be converted to wrapped tokens.
+	/// - `underlying_amount`: The amount of underlying assets to be converted to wrapped tokens.
+	/// Returns `wrapped_amount = underlying_amount / exchange_rate`
 	pub fn convert_to_wrapped(underlying_asset_id: CurrencyId, underlying_amount: Balance) -> BalanceResult {
 		let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
 
@@ -396,6 +403,10 @@ impl<T: Trait> Module<T> {
 
 	/// Converts a specified number of wrapped tokens into underlying assets.
 	/// The calculation is based on the exchange rate.
+	///
+	/// - `wrapped_id`: CurrencyId of the wrapped tokens to be converted to underlying assets.
+	/// - `wrapped_amount`: The amount of wrapped tokens to be converted to underlying assets.
+	/// Returns `underlying_amount = wrapped_amount * exchange_rate`
 	pub fn convert_from_wrapped(wrapped_id: CurrencyId, wrapped_amount: Balance) -> BalanceResult {
 		let underlying_asset_id = Self::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
 		let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
@@ -747,7 +758,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Calculates the utilization rate of the pool:
-	/// total_borrows / (total_cash + total_borrows - total_insurance)
+	/// utilization_rate = total_borrows / (total_cash + total_borrows - total_insurance)
 	fn calculate_utilization_rate(
 		current_total_balance: Balance,
 		current_total_borrowed_balance: Balance,
@@ -843,7 +854,7 @@ impl<T: Trait> Module<T> {
 		Ok(total_insurance_new)
 	}
 
-	// borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
+	// new_borrow_index = simple_interest_factor * borrow_index + borrow_index
 	fn calculate_new_borrow_index(simple_interest_factor: Rate, current_borrow_index: Rate) -> RateResult {
 		let accumulated = simple_interest_factor
 			.checked_mul(&current_borrow_index)
@@ -911,7 +922,9 @@ impl<T: Trait> Module<T> {
 
 		T::MultiCurrency::transfer(pool_id, &who, &<LiquidityPools<T>>::pools_account_id(), amount)?;
 
-		let new_insurance_balance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id)
+		let current_insurance_balance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
+
+		let new_insurance_balance = current_insurance_balance
 			.checked_add(amount)
 			.ok_or(Error::<T>::BalanceOverflowed)?;
 

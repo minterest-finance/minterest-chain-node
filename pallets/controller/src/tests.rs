@@ -1,3 +1,5 @@
+//! Tests for the controller pallet.
+
 use super::*;
 use mock::*;
 
@@ -106,6 +108,9 @@ fn convert_to_wrapped_should_work() {
 		.execute_with(|| {
 			// exchange_rate = 40 / 100 = 0.4
 			assert_eq!(Controller::convert_to_wrapped(CurrencyId::DOT, 10), Ok(25));
+
+			// Overflow in calculation: wrapped_amount = max_value() / exchange_rate,
+			// when exchange_rate < 1
 			assert_err!(
 				Controller::convert_to_wrapped(CurrencyId::DOT, Balance::max_value()),
 				Error::<Runtime>::NumOverflow
@@ -123,7 +128,10 @@ fn convert_from_wrapped_should_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 40)
 		.build()
 		.execute_with(|| {
+			// underlying_amount = 10 * 0.4 = 4
 			assert_eq!(Controller::convert_from_wrapped(CurrencyId::MDOT, 10), Ok(4));
+
+			// Overflow in calculation: underlying_amount = max_value() * exchange_rate
 			assert_err!(
 				Controller::convert_from_wrapped(CurrencyId::MBTC, Balance::max_value()),
 				Error::<Runtime>::NumOverflow
@@ -131,6 +139,7 @@ fn convert_from_wrapped_should_work() {
 		});
 }
 
+//FIXME. Not used yet
 #[test]
 fn calculate_interest_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
@@ -248,7 +257,10 @@ fn calculate_borrow_interest_rate_fails_if_overflow_add_baser_rate_per_block() {
 #[test]
 fn calculate_block_delta_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
+		// block_delta = 10 - 5 = 5
 		assert_eq!(Controller::calculate_block_delta(10, 5), Ok(5));
+
+		// Overflow in calculation: 5 - 10 = -5 < 0
 		assert_noop!(Controller::calculate_block_delta(5, 10), Error::<Runtime>::NumOverflow);
 	});
 }
@@ -313,16 +325,19 @@ fn calculate_new_total_borrow_should_work() {
 #[test]
 fn calculate_new_total_insurance_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
+		// total_insurance_new = 100 * 1.2 + 250 = 370
 		assert_eq!(
 			Controller::calculate_new_total_insurance(100, Rate::saturating_from_rational(12, 10), 250),
 			Ok(370)
 		);
+		// Overflow in calculation: max_value() * 1.1
 		assert_noop!(
 			Controller::calculate_new_total_insurance(Balance::max_value(), Rate::saturating_from_rational(11, 10), 1),
 			Error::<Runtime>::NumOverflow
 		);
+		// Overflow in calculation: 100 * 1.1 + max_value()
 		assert_noop!(
-			Controller::calculate_new_total_insurance(Balance::max_value(), Rate::saturating_from_rational(1, 1), 1),
+			Controller::calculate_new_total_insurance(100, Rate::saturating_from_rational(1, 1), Balance::max_value()),
 			Error::<Runtime>::NumOverflow
 		);
 	});
@@ -331,7 +346,6 @@ fn calculate_new_total_insurance_should_work() {
 #[test]
 fn get_wrapped_id_by_underlying_asset_id_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::get_wrapped_id_by_underlying_asset_id(&CurrencyId::DOT));
 		assert_eq!(
 			Controller::get_wrapped_id_by_underlying_asset_id(&CurrencyId::DOT),
 			Ok(CurrencyId::MDOT)
@@ -346,7 +360,6 @@ fn get_wrapped_id_by_underlying_asset_id_should_work() {
 #[test]
 fn get_underlying_asset_id_by_wrapped_id_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::get_underlying_asset_id_by_wrapped_id(&CurrencyId::MDOT));
 		assert_eq!(
 			Controller::get_underlying_asset_id_by_wrapped_id(&CurrencyId::MDOT),
 			Ok(CurrencyId::DOT)
@@ -364,6 +377,7 @@ fn borrow_balance_stored_with_zero_balance_should_work() {
 		.pool_user_data(ALICE, CurrencyId::DOT, Balance::zero(), Rate::from_inner(0), true)
 		.build()
 		.execute_with(|| {
+			// If borrow_balance = 0 then borrow_index is likely also 0, return Ok(0)
 			assert_eq!(
 				Controller::borrow_balance_stored(&ALICE, CurrencyId::DOT),
 				Ok(Balance::zero())
@@ -378,6 +392,7 @@ fn borrow_balance_stored_should_work() {
 		.pool_user_data(ALICE, CurrencyId::DOT, 100, Rate::saturating_from_rational(4, 1), true)
 		.build()
 		.execute_with(|| {
+			// recent_borrow_balance = 100 * 2 / 4 = 50
 			assert_eq!(Controller::borrow_balance_stored(&ALICE, CurrencyId::DOT), Ok(50));
 		});
 }
@@ -407,10 +422,12 @@ fn borrow_balance_stored_fails_if_num_overflow() {
 #[test]
 fn calculate_utilization_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
+		// if current_total_borrowed_balance == 0 then return Ok(0)
 		assert_eq!(
 			Controller::calculate_utilization_rate(100, 0, 60),
 			Ok(Rate::from_inner(0))
 		);
+		// utilization_rate = 80 / (22 + 80 - 2) = 0.8
 		assert_eq!(
 			Controller::calculate_utilization_rate(22, 80, 2),
 			Ok(Rate::saturating_from_rational(8, 10))
@@ -422,7 +439,7 @@ fn calculate_utilization_rate_should_work() {
 			Error::<Runtime>::NumOverflow
 		);
 
-		// Overflow in calculation: total_balance_total_borrowed_sum - total_insurance
+		// Overflow in calculation: total_balance_total_borrowed_sum - total_insurance = ... - max_value()
 		assert_noop!(
 			Controller::calculate_utilization_rate(22, 80, Balance::max_value()),
 			Error::<Runtime>::NumOverflow
@@ -439,16 +456,31 @@ fn calculate_utilization_rate_should_work() {
 #[test]
 fn calculate_new_borrow_index_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::calculate_new_borrow_index(
-			Rate::saturating_from_rational(63u128, 10_000_000_000u128),
-			Rate::saturating_from_rational(1, 1)
-		));
+		// new_borrow_index = 0.0000063 * 1.28 + 1.28 = 1.280000008064
 		assert_eq!(
 			Controller::calculate_new_borrow_index(
 				Rate::saturating_from_rational(63u128, 10_000_000_000u128),
-				Rate::saturating_from_rational(1, 1)
+				Rate::saturating_from_rational(128, 100)
 			),
-			Ok(Rate::from_inner(1_000_000_006_300_000_000))
+			Ok(Rate::from_inner(1_280_000_008_064_000_000))
+		);
+
+		// Overflow in calculation: simple_interest_factor * max_value()
+		assert_noop!(
+			Controller::calculate_new_borrow_index(
+				Rate::saturating_from_rational(12, 10),
+				Rate::from_inner(u128::max_value())
+			),
+			Error::<Runtime>::NumOverflow
+		);
+
+		// Overflow in calculation: simple_interest_factor_mul_borrow_index + max_value()
+		assert_noop!(
+			Controller::calculate_new_borrow_index(
+				Rate::saturating_from_rational(1, 1),
+				Rate::from_inner(u128::max_value())
+			),
+			Error::<Runtime>::NumOverflow
 		);
 	});
 }
@@ -456,10 +488,12 @@ fn calculate_new_borrow_index_should_work() {
 #[test]
 fn mul_price_and_balance_add_to_prev_value_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
+		// 20 + 20 * 0.9 = 38
 		assert_eq!(
 			Controller::mul_price_and_balance_add_to_prev_value(20, 20, Rate::saturating_from_rational(9, 10)),
 			Ok(38)
 		);
+		// 120_000 + 85_000 * 0.87 = 193_950
 		assert_eq!(
 			Controller::mul_price_and_balance_add_to_prev_value(
 				120_000,
@@ -467,6 +501,26 @@ fn mul_price_and_balance_add_to_prev_value_should_work() {
 				Rate::saturating_from_rational(87, 100)
 			),
 			Ok(193950)
+		);
+
+		// Overflow in calculation: max_value() * 1.9
+		assert_noop!(
+			Controller::mul_price_and_balance_add_to_prev_value(
+				100,
+				Balance::max_value(),
+				Rate::saturating_from_rational(19, 10)
+			),
+			Error::<Runtime>::NumOverflow
+		);
+
+		// Overflow in calculation: max_value() + 100 * 1.9
+		assert_noop!(
+			Controller::mul_price_and_balance_add_to_prev_value(
+				Balance::max_value(),
+				100,
+				Rate::saturating_from_rational(19, 10)
+			),
+			Error::<Runtime>::NumOverflow
 		);
 	});
 }
@@ -689,19 +743,27 @@ fn set_insurance_factor_should_work() {
 		.pool_mock(CurrencyId::DOT)
 		.build()
 		.execute_with(|| {
+			// ALICE set insurance factor equal 2.0
 			assert_ok!(Controller::set_insurance_factor(alice(), CurrencyId::DOT, 20, 10));
+			let expected_event = TestEvent::controller(Event::InsuranceFactorChanged);
+			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).insurance_factor,
 				Rate::saturating_from_rational(20, 10)
 			);
+
+			// Overflow in calculation: 20 / 0
 			assert_noop!(
 				Controller::set_insurance_factor(alice(), CurrencyId::DOT, 20, 0),
 				Error::<Runtime>::NumOverflow
 			);
+
+			// The dispatch origin of this call must be Administrator.
 			assert_noop!(
 				Controller::set_insurance_factor(bob(), CurrencyId::DOT, 20, 10),
 				Error::<Runtime>::RequireAdmin
 			);
+
 			assert_noop!(
 				Controller::set_insurance_factor(alice(), CurrencyId::MDOT, 20, 10),
 				Error::<Runtime>::PoolNotFound
@@ -715,19 +777,27 @@ fn set_max_borrow_rate_should_work() {
 		.pool_mock(CurrencyId::DOT)
 		.build()
 		.execute_with(|| {
+			// ALICE set max borrow rate equal 2.0
 			assert_ok!(Controller::set_max_borrow_rate(alice(), CurrencyId::DOT, 20, 10));
+			let expected_event = TestEvent::controller(Event::MaxBorrowRateChanged);
+			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).max_borrow_rate,
 				Rate::saturating_from_rational(20, 10)
 			);
+
+			// Overflow in calculation: 20 / 0
 			assert_noop!(
 				Controller::set_max_borrow_rate(alice(), CurrencyId::DOT, 20, 0),
 				Error::<Runtime>::NumOverflow
 			);
+
+			// The dispatch origin of this call must be Administrator.
 			assert_noop!(
 				Controller::set_max_borrow_rate(bob(), CurrencyId::DOT, 20, 10),
 				Error::<Runtime>::RequireAdmin
 			);
+
 			assert_noop!(
 				Controller::set_max_borrow_rate(alice(), CurrencyId::MDOT, 20, 10),
 				Error::<Runtime>::PoolNotFound
@@ -741,20 +811,28 @@ fn set_base_rate_per_block_should_work() {
 		.pool_mock(CurrencyId::DOT)
 		.build()
 		.execute_with(|| {
+			// ALICE set Baser rate per block equal 2.0
 			assert_ok!(Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 20, 10));
+			let expected_event = TestEvent::controller(Event::BaseRatePerBlockHasChanged);
+			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).base_rate_per_block,
 				Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
 			);
+
+			// Overflow in calculation: 20 / 0
 			assert_noop!(
 				Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 20, 0),
 				Error::<Runtime>::NumOverflow
 			);
+
+			// The dispatch origin of this call must be Administrator.
 			assert_noop!(
 				Controller::set_base_rate_per_block(bob(), CurrencyId::DOT, 20, 10),
 				Error::<Runtime>::RequireAdmin
 			);
+
 			assert_noop!(
 				Controller::set_base_rate_per_block(alice(), CurrencyId::MDOT, 20, 10),
 				Error::<Runtime>::PoolNotFound
@@ -769,18 +847,25 @@ fn set_multiplier_per_block_should_work() {
 		.build()
 		.execute_with(|| {
 			assert_ok!(Controller::set_multiplier_per_block(alice(), CurrencyId::DOT, 20, 10));
+			let expected_event = TestEvent::controller(Event::MultiplierPerBlockHasChanged);
+			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).multiplier_per_block,
 				Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
 			);
+
+			// Overflow in calculation: 20 / 0
 			assert_noop!(
 				Controller::set_multiplier_per_block(alice(), CurrencyId::DOT, 20, 0),
 				Error::<Runtime>::NumOverflow
 			);
+
+			// The dispatch origin of this call must be Administrator.
 			assert_noop!(
 				Controller::set_multiplier_per_block(bob(), CurrencyId::DOT, 20, 10),
 				Error::<Runtime>::RequireAdmin
 			);
+
 			assert_noop!(
 				Controller::set_multiplier_per_block(alice(), CurrencyId::MDOT, 20, 10),
 				Error::<Runtime>::PoolNotFound
@@ -800,18 +885,25 @@ fn set_jump_multiplier_per_block_should_work() {
 				20,
 				10
 			));
+			let expected_event = TestEvent::controller(Event::JumpMultiplierPerBlockHasChanged);
+			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).jump_multiplier_per_block,
 				Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
 			);
+
+			// Overflow in calculation: 20 / 0
 			assert_noop!(
 				Controller::set_jump_multiplier_per_block(alice(), CurrencyId::DOT, 20, 0),
 				Error::<Runtime>::NumOverflow
 			);
+
+			// The dispatch origin of this call must be Administrator.
 			assert_noop!(
 				Controller::set_jump_multiplier_per_block(bob(), CurrencyId::DOT, 20, 10),
 				Error::<Runtime>::RequireAdmin
 			);
+
 			assert_noop!(
 				Controller::set_jump_multiplier_per_block(alice(), CurrencyId::MDOT, 20, 10),
 				Error::<Runtime>::PoolNotFound
@@ -848,21 +940,32 @@ fn pause_specific_operation_should_work() {
 				CurrencyId::DOT,
 				Operation::Deposit
 			));
+			let expected_event = TestEvent::controller(Event::OperationIsPaused(CurrencyId::DOT, Operation::Deposit));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
 			assert_ok!(Controller::pause_specific_operation(
 				alice(),
 				CurrencyId::DOT,
 				Operation::Redeem
 			));
+			let expected_event = TestEvent::controller(Event::OperationIsPaused(CurrencyId::DOT, Operation::Redeem));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
 			assert_ok!(Controller::pause_specific_operation(
 				alice(),
 				CurrencyId::DOT,
 				Operation::Borrow
 			));
+			let expected_event = TestEvent::controller(Event::OperationIsPaused(CurrencyId::DOT, Operation::Borrow));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
 			assert_ok!(Controller::pause_specific_operation(
 				alice(),
 				CurrencyId::DOT,
 				Operation::Repay
 			));
+			let expected_event = TestEvent::controller(Event::OperationIsPaused(CurrencyId::DOT, Operation::Repay));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).deposit_paused, true);
 			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).redeem_paused, true);
@@ -897,21 +1000,32 @@ fn unpause_specific_operation_should_work() {
 				CurrencyId::KSM,
 				Operation::Deposit
 			));
+			let expected_event = TestEvent::controller(Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Deposit));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
 			assert_ok!(Controller::unpause_specific_operation(
 				alice(),
 				CurrencyId::KSM,
 				Operation::Redeem
 			));
+			let expected_event = TestEvent::controller(Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Redeem));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
 			assert_ok!(Controller::unpause_specific_operation(
 				alice(),
 				CurrencyId::KSM,
 				Operation::Borrow
 			));
+			let expected_event = TestEvent::controller(Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Borrow));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
 			assert_ok!(Controller::unpause_specific_operation(
 				alice(),
 				CurrencyId::KSM,
 				Operation::Repay
 			));
+			let expected_event = TestEvent::controller(Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Repay));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).deposit_paused, false);
 			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).redeem_paused, false);
@@ -936,29 +1050,65 @@ fn deposit_insurance_should_work() {
 		.pool_mock(CurrencyId::DOT)
 		.build()
 		.execute_with(|| {
+			// ALICE deposit 100 DOT in pool insurance
+			assert_ok!(Controller::deposit_insurance(alice(), CurrencyId::DOT, 100));
+			let expected_event = TestEvent::controller(Event::DepositedInsurance(CurrencyId::DOT, 100));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
+			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 100);
+
+			// Bob is not added to the allow-list of admins, so this action is not available for him.
 			assert_noop!(
 				Controller::deposit_insurance(bob(), CurrencyId::DOT, 101),
 				Error::<Runtime>::RequireAdmin
 			);
+		});
+}
 
-			assert_noop!(
-				Controller::deposit_insurance(alice(), CurrencyId::DOT, 101),
-				Error::<Runtime>::NotEnoughBalance
-			);
-			assert_noop!(
-				Controller::deposit_insurance(alice(), CurrencyId::MDOT, 5),
-				Error::<Runtime>::PoolNotFound
-			);
-
-			assert_ok!(Controller::deposit_insurance(alice(), CurrencyId::DOT, 60));
+#[test]
+fn do_deposit_insurance_should_work() {
+	ExtBuilder::default()
+		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+		.user_balance(BOB, CurrencyId::BTC, ONE_HUNDRED)
+		.pool_mock(CurrencyId::DOT)
+		.pool_mock(CurrencyId::BTC)
+		.build()
+		.execute_with(|| {
+			// ALICE deposit 60 DOT in pool insurance
+			assert_ok!(Controller::do_deposit_insurance(&ALICE, CurrencyId::DOT, 60));
 			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 60);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 
-			assert_ok!(Controller::deposit_insurance(alice(), CurrencyId::DOT, 5));
+			// ALICE deposit 5 DOT in pool insurance
+			assert_ok!(Controller::do_deposit_insurance(&ALICE, CurrencyId::DOT, 5));
 			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 65);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 35);
 			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 65);
+
+			// Not enough balance to deposit insurance.
+			assert_noop!(
+				Controller::do_deposit_insurance(&ALICE, CurrencyId::DOT, 101),
+				Error::<Runtime>::NotEnoughBalance
+			);
+
+			// There is no pool 'MDOT'.
+			assert_noop!(
+				Controller::do_deposit_insurance(&ALICE, CurrencyId::MDOT, 5),
+				Error::<Runtime>::PoolNotFound
+			);
+
+			// Set BTC pool total insurance = max_value()
+			assert_ok!(TestPools::set_pool_total_insurance(
+				CurrencyId::BTC,
+				Balance::max_value()
+			));
+
+			// Overflow in calculation: total_insurance = max_value() + 50
+			assert_err!(
+				Controller::do_deposit_insurance(&BOB, CurrencyId::BTC, 50),
+				Error::<Runtime>::BalanceOverflowed
+			);
 		});
 }
 
@@ -966,32 +1116,64 @@ fn deposit_insurance_should_work() {
 fn redeem_insurance_should_work() {
 	ExtBuilder::default()
 		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-		.pool_mock(CurrencyId::DOT)
+		.pool_total_insurance(CurrencyId::DOT, 1000)
 		.build()
 		.execute_with(|| {
+			// ALICE redeem 100 DOT from pool insurance.
+			assert_ok!(Controller::redeem_insurance(alice(), CurrencyId::DOT, 125));
+			let expected_event = TestEvent::controller(Event::RedeemedInsurance(CurrencyId::DOT, 125));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
+			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 875);
+
+			// Bob is not added to the allow-list of admins, so this action is not available for him.
 			assert_noop!(
-				Controller::deposit_insurance(bob(), CurrencyId::DOT, 101),
+				Controller::redeem_insurance(bob(), CurrencyId::DOT, 101),
 				Error::<Runtime>::RequireAdmin
 			);
+		});
+}
 
+#[test]
+fn do_redeem_insurance_should_work() {
+	ExtBuilder::default()
+		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+		.pool_total_insurance(CurrencyId::DOT, 1000)
+		.build()
+		.execute_with(|| {
+			// ALICE redeem 150 DOT from pool insurance
+			assert_ok!(Controller::do_redeem_insurance(&ALICE, CurrencyId::DOT, 150));
+			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 850);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 250);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 850);
+
+			// ALICE redeem 300 DOT from pool insurance
+			assert_ok!(Controller::do_redeem_insurance(&ALICE, CurrencyId::DOT, 300));
+			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 550);
+			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 550);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 550);
+
+			// Not enough balance to redeem insurance: 550 - 600 < 0
 			assert_noop!(
-				Controller::deposit_insurance(alice(), CurrencyId::MDOT, 5),
-				Error::<Runtime>::PoolNotFound
-			);
-
-			assert_ok!(Controller::deposit_insurance(alice(), CurrencyId::DOT, 60));
-			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 60);
-			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
-			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
-
-			assert_noop!(
-				Controller::redeem_insurance(alice(), CurrencyId::DOT, 61),
+				Controller::do_redeem_insurance(&ALICE, CurrencyId::DOT, 600),
 				Error::<Runtime>::NotEnoughBalance
 			);
 
-			assert_ok!(Controller::redeem_insurance(alice(), CurrencyId::DOT, 30));
-			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 30);
-			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
-			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 30);
+			// There is no pool 'MDOT'.
+			assert_noop!(
+				Controller::do_redeem_insurance(&ALICE, CurrencyId::MDOT, 5),
+				Error::<Runtime>::PoolNotFound
+			);
+
+			// Set DOT pool total insurance = max_value()
+			assert_ok!(TestPools::set_pool_total_insurance(
+				CurrencyId::DOT,
+				Balance::max_value()
+			));
+			// Overflow in calculation: total_insurance = max_value() + 50
+			assert_err!(
+				Controller::do_deposit_insurance(&ALICE, CurrencyId::DOT, 50),
+				Error::<Runtime>::BalanceOverflowed
+			);
 		});
 }

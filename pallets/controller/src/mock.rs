@@ -213,6 +213,22 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn pool_total_insurance(mut self, pool_id: CurrencyId, total_insurance: Balance) -> Self {
+		self.endowed_accounts
+			.push((TestPools::pools_account_id(), pool_id, total_insurance));
+		self.pools.push((
+			pool_id,
+			Pool {
+				current_interest_rate: Rate::from_inner(0),
+				total_borrowed: Balance::zero(),
+				borrow_index: Rate::saturating_from_rational(1, 1),
+				current_exchange_rate: Rate::from_inner(1),
+				total_insurance,
+			},
+		));
+		self
+	}
+
 	pub fn pool_mock(mut self, pool_id: CurrencyId) -> Self {
 		self.pools.push((
 			pool_id,
