@@ -83,3 +83,23 @@ fn update_state_on_repay_should_work() {
 			);
 		});
 }
+
+#[test]
+fn enable_as_collateral_internal_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// Alice enable as collateral DOT pool
+		assert_ok!(LiquidityPools::enable_as_collateral_internal(&ALICE, CurrencyId::DOT));
+
+		assert!(<PoolUserDates<Runtime>>::get(ALICE, CurrencyId::DOT).collateral);
+	});
+}
+
+#[test]
+fn disable_collateral_internal_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// Alice disable collateral DOT pool
+		assert_ok!(LiquidityPools::disable_collateral_internal(&ALICE, CurrencyId::DOT));
+
+		assert!(!<PoolUserDates<Runtime>>::get(ALICE, CurrencyId::DOT).collateral);
+	});
+}

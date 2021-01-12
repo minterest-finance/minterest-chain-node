@@ -303,3 +303,41 @@ fn repay_on_behalf_should_work() {
 		assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 10);
 	});
 }
+
+#[test]
+fn enable_as_collateral_should_work() {
+	new_test_ext().execute_with(|| {
+		// Alice enable as collateral her DOT pool.
+		assert_ok!(MinterestProtocol::enable_as_collateral(
+			Origin::signed(ALICE),
+			CurrencyId::DOT
+		));
+		let expected_event = TestEvent::minterest_protocol(RawEvent::PoolEnabledAsCollateral(ALICE, CurrencyId::DOT));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+		assert!(TestPools::check_user_available_collateral(&ALICE, CurrencyId::DOT));
+
+		assert_noop!(
+			MinterestProtocol::enable_as_collateral(Origin::signed(ALICE), CurrencyId::MDOT),
+			Error::<Test>::PoolNotFound
+		);
+	});
+}
+
+#[test]
+fn disable_collateral_should_work() {
+	new_test_ext().execute_with(|| {
+		// Alice disable collateral her DOT pool.
+		assert_ok!(MinterestProtocol::disable_collateral(
+			Origin::signed(ALICE),
+			CurrencyId::DOT
+		));
+		let expected_event = TestEvent::minterest_protocol(RawEvent::PoolDisabledCollateral(ALICE, CurrencyId::DOT));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+		assert!(!TestPools::check_user_available_collateral(&ALICE, CurrencyId::DOT));
+
+		assert_noop!(
+			MinterestProtocol::disable_collateral(Origin::signed(ALICE), CurrencyId::MDOT),
+			Error::<Test>::PoolNotFound
+		);
+	});
+}

@@ -47,6 +47,11 @@ decl_event!(
 		/// Repaid a borrow on the specific pool, for the specified amount: \[who, underlying_asset_id, the_amount_repaid\]
 		Repaid(AccountId, CurrencyId, Balance),
 
+		/// The user allowed the assets in the pool to be used as collateral: \[who, pool_id\]
+		PoolEnabledAsCollateral(AccountId, CurrencyId),
+
+		/// The user denies use the assets in pool as collateral: \[who, pool_id\]
+		PoolDisabledCollateral(AccountId, CurrencyId),
 	}
 );
 
@@ -90,6 +95,9 @@ decl_error! {
 
 		/// Repay was blocked due to Controller rejection.
 		RepayBorrowControllerRejection,
+
+		/// Pool not found.
+		PoolNotFound,
 	}
 }
 
@@ -218,6 +226,26 @@ decl_module! {
 				Self::deposit_event(RawEvent::Repaid(who, underlying_asset_id, repay_amount));
 				Ok(())
 			})?
+		}
+
+		/// Sender allowed the assets in the pool to be used as collateral.
+		#[weight = 10_000]
+		pub fn enable_as_collateral(origin, pool_id: CurrencyId) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			<LiquidityPools<T>>::enable_as_collateral_internal(&sender, pool_id)?;
+			Self::deposit_event(RawEvent::PoolEnabledAsCollateral(sender, pool_id));
+			Ok(())
+		}
+
+		/// Sender has denies use the assets in pool as collateral.
+		#[weight = 10_000]
+		pub fn disable_collateral(origin, pool_id: CurrencyId) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			<LiquidityPools<T>>::disable_collateral_internal(&sender, pool_id)?;
+			Self::deposit_event(RawEvent::PoolDisabledCollateral(sender, pool_id));
+			Ok(())
 		}
 	}
 }

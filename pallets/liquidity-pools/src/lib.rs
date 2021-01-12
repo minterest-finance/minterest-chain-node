@@ -133,6 +133,16 @@ impl<T: Trait> Module<T> {
 		});
 		Ok(())
 	}
+
+	pub fn enable_as_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) -> DispatchResult {
+		PoolUserDates::<T>::mutate(who, pool_id, |p| p.collateral = true);
+		Ok(())
+	}
+
+	pub fn disable_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) -> DispatchResult {
+		PoolUserDates::<T>::mutate(who, pool_id, |p| p.collateral = false);
+		Ok(())
+	}
 }
 
 // Getters for LiquidityPools
