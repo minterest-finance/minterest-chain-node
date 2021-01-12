@@ -294,7 +294,7 @@ fn testnet_genesis(
 						base_rate_per_block: FixedU128::from_inner(0),
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						collateral_factor: FixedU128::saturating_from_rational(9, 10),               // 90%
 					},
 				),
 				(
@@ -308,7 +308,7 @@ fn testnet_genesis(
 						base_rate_per_block: FixedU128::from_inner(0),
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						collateral_factor: FixedU128::saturating_from_rational(9, 10),               // 90%
 					},
 				),
 				(
@@ -322,7 +322,7 @@ fn testnet_genesis(
 						base_rate_per_block: FixedU128::from_inner(0),
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						collateral_factor: FixedU128::saturating_from_rational(9, 10),               // 90%
 					},
 				),
 				(
@@ -336,11 +336,11 @@ fn testnet_genesis(
 						base_rate_per_block: FixedU128::from_inner(0),
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						collateral_factor: FixedU128::saturating_from_rational(9, 10),               // 90%
 					},
 				),
 			],
-			pause_keepers: vec![`
+			pause_keepers: vec![
 				(
 					CurrencyId::ETH,
 					PauseKeeper {

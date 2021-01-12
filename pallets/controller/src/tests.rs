@@ -213,7 +213,8 @@ fn calculate_borrow_interest_rate_should_work() {
 
 		// Utilization rate larger than kink:
 		// utilization_rate = 90000 / (18 - 8 + 90) = 0.9
-		// borrow_interest_rate = 0.9 * 0.8 * jump_multiplier_per_block + (0.8 * multiplier_per_block) + base_rate_per_block
+		// borrow_interest_rate = 0.9 * 0.8 * jump_multiplier_per_block +
+		// + (0.8 * multiplier_per_block) + base_rate_per_block
 		assert_eq!(
 			Controller::calculate_borrow_interest_rate(
 				CurrencyId::DOT,
@@ -246,7 +247,7 @@ fn calculate_borrow_interest_rate_fails_if_overflow_add_baser_rate_per_block() {
 		let controller_data = base_rate_per_block_equal_max_value();
 		<ControllerDates<Runtime>>::insert(CurrencyId::KSM, controller_data.clone());
 		// utilization_rate > kink.
-		// Overflow in calculation normal_rate: kink_mul_multiplier + base_rate_per_block = ... + max_value()
+		// Overflow in calculation: kink_mul_multiplier + base_rate_per_block = ... + max_value()
 		assert_noop!(
 			Controller::calculate_borrow_interest_rate(CurrencyId::KSM, 1, 200, 8),
 			Error::<Runtime>::NumOverflow
