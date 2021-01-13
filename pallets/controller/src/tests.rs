@@ -212,7 +212,7 @@ fn calculate_borrow_interest_rate_should_work() {
 		);
 
 		// Utilization rate larger than kink:
-		// utilization_rate = 90000 / (18 - 8 + 90) = 0.9
+		// utilization_rate = 90 / (18 - 8 + 90) = 0.9
 		// borrow_interest_rate = 0.9 * 0.8 * jump_multiplier_per_block +
 		// + (0.8 * multiplier_per_block) + base_rate_per_block
 		assert_eq!(
@@ -242,7 +242,7 @@ fn calculate_borrow_interest_rate_fails_if_overflow_kink_mul_multiplier() {
 }
 
 #[test]
-fn calculate_borrow_interest_rate_fails_if_overflow_add_baser_rate_per_block() {
+fn calculate_borrow_interest_rate_fails_if_overflow_add_base_rate_per_block() {
 	ExtBuilder::default().build().execute_with(|| {
 		let controller_data = base_rate_per_block_equal_max_value();
 		<ControllerDates<Runtime>>::insert(CurrencyId::KSM, controller_data.clone());
