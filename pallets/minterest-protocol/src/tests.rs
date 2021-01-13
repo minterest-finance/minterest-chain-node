@@ -138,6 +138,12 @@ fn redeem_underlying_should_work() {
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 
+		// Transaction with zero balance is not allowed.
+		assert_noop!(
+			TestProtocol::redeem_underlying(alice(), CurrencyId::DOT, Balance::zero()),
+			Error::<Test>::ZeroBalanceTransaction
+		);
+
 		assert_ok!(TestProtocol::redeem_underlying(
 			alice(),
 			CurrencyId::DOT,
@@ -201,6 +207,12 @@ fn redeem_wrapped_should_work() {
 		assert_noop!(
 			TestProtocol::redeem_wrapped(alice(), CurrencyId::DOT, dollars(20_u128)),
 			Error::<Test>::NotValidWrappedTokenId
+		);
+
+		// Transaction with zero balance is not allowed.
+		assert_noop!(
+			TestProtocol::redeem_wrapped(alice(), CurrencyId::MDOT, Balance::zero()),
+			Error::<Test>::ZeroBalanceTransaction
 		);
 
 		assert_ok!(TestProtocol::redeem_wrapped(
@@ -360,6 +372,12 @@ fn repay_should_work() {
 			Error::<Test>::RepayAmountToBig
 		);
 
+		// Transaction with zero balance is not allowed.
+		assert_noop!(
+			TestProtocol::repay(alice(), CurrencyId::DOT, Balance::zero()),
+			Error::<Test>::ZeroBalanceTransaction
+		);
+
 		// Alice repaid 20 DOT. Her borrow_balance = 10 DOT.
 		assert_ok!(TestProtocol::repay(alice(), CurrencyId::DOT, dollars(20_u128)));
 		let expected_event = TestEvent::minterest_protocol(RawEvent::Repaid(ALICE, CurrencyId::DOT, dollars(20_u128)));
@@ -421,6 +439,12 @@ fn repay_on_behalf_should_work() {
 		assert_noop!(
 			TestProtocol::repay_on_behalf(bob(), CurrencyId::DOT, ALICE, dollars(100_u128)),
 			Error::<Test>::RepayAmountToBig
+		);
+
+		// Transaction with zero balance is not allowed.
+		assert_noop!(
+			TestProtocol::repay_on_behalf(bob(), CurrencyId::DOT, ALICE, Balance::zero()),
+			Error::<Test>::ZeroBalanceTransaction
 		);
 
 		// Bob repaid 20 DOT for Alice.

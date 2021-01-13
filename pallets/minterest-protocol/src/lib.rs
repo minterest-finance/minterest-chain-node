@@ -145,7 +145,7 @@ decl_module! {
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let (underlying_amount, wrapped_id, wrapped_amount) = Self::do_redeem(&who, underlying_asset_id, Balance::zero(), Balance::zero())?;
+				let (underlying_amount, wrapped_id, wrapped_amount) = Self::do_redeem(&who, underlying_asset_id, Balance::zero(), Balance::zero(), true)?;
 				Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount));
 				Ok(())
 			})?;
@@ -165,7 +165,7 @@ decl_module! {
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let (_, wrapped_id, wrapped_amount) = Self::do_redeem(&who, underlying_asset_id, underlying_amount, Balance::zero())?;
+				let (_, wrapped_id, wrapped_amount) = Self::do_redeem(&who, underlying_asset_id, underlying_amount, Balance::zero(), false)?;
 				Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount));
 				Ok(())
 			})?;
@@ -182,7 +182,7 @@ decl_module! {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
 				let underlying_asset_id = <Controller<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id).map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
-				let (underlying_amount, wrapped_id, _) = Self::do_redeem(&who, underlying_asset_id, Balance::zero(), wrapped_amount)?;
+				let (underlying_amount, wrapped_id, _) = Self::do_redeem(&who, underlying_asset_id, Balance::zero(), wrapped_amount, false)?;
 				Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount));
 				Ok(())
 			})?;
@@ -219,7 +219,7 @@ decl_module! {
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				Self::do_repay(&who, &who, underlying_asset_id, repay_amount)?;
+				Self::do_repay(&who, &who, underlying_asset_id, repay_amount, false)?;
 				Self::deposit_event(RawEvent::Repaid(who, underlying_asset_id, repay_amount));
 				Ok(())
 			})?;
@@ -232,7 +232,7 @@ decl_module! {
 		pub fn repay_all(origin, underlying_asset_id: CurrencyId) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let repay_amount = Self::do_repay(&who, &who, underlying_asset_id, Balance::zero())?;
+				let repay_amount = Self::do_repay(&who, &who, underlying_asset_id, Balance::zero(), true)?;
 				Self::deposit_event(RawEvent::Repaid(who, underlying_asset_id, repay_amount));
 				Ok(())
 			})?;
@@ -247,7 +247,7 @@ decl_module! {
 		pub fn repay_on_behalf(origin, underlying_asset_id: CurrencyId, borrower: T::AccountId, repay_amount: Balance) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let repay_amount = Self::do_repay(&who, &borrower, underlying_asset_id, repay_amount)?;
+				let repay_amount = Self::do_repay(&who, &borrower, underlying_asset_id, repay_amount, false)?;
 				Self::deposit_event(RawEvent::Repaid(who, underlying_asset_id, repay_amount));
 				Ok(())
 			})?
@@ -322,6 +322,7 @@ impl<T: Trait> Module<T> {
 		underlying_asset_id: CurrencyId,
 		mut underlying_amount: Balance,
 		wrapped_amount: Balance,
+		all_assets: bool,
 	) -> TokensResult {
 		ensure!(
 			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
@@ -332,8 +333,8 @@ impl<T: Trait> Module<T> {
 
 		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
-		let wrapped_amount = match (underlying_amount, wrapped_amount) {
-			(0, 0) => {
+		let wrapped_amount = match (underlying_amount, wrapped_amount, all_assets) {
+			(0, 0, true) => {
 				let total_wrapped_amount = T::MultiCurrency::free_balance(wrapped_id, &who);
 				ensure!(
 					total_wrapped_amount != Balance::zero(),
@@ -343,9 +344,13 @@ impl<T: Trait> Module<T> {
 					.map_err(|_| Error::<T>::NumOverflow)?;
 				total_wrapped_amount
 			}
-			(_, 0) => <Controller<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
-				.map_err(|_| Error::<T>::NumOverflow)?,
+			(_, 0, false) => {
+				ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
+				<Controller<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
+					.map_err(|_| Error::<T>::NumOverflow)?
+			}
 			_ => {
+				ensure!(wrapped_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
 				underlying_amount = <Controller<T>>::convert_from_wrapped(wrapped_id, wrapped_amount)
 					.map_err(|_| Error::<T>::NumOverflow)?;
 				wrapped_amount
@@ -434,6 +439,7 @@ impl<T: Trait> Module<T> {
 		borrower: &T::AccountId,
 		underlying_asset_id: CurrencyId,
 		mut repay_amount: Balance,
+		all_assets: bool,
 	) -> BalanceResult {
 		ensure!(
 			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
@@ -444,6 +450,10 @@ impl<T: Trait> Module<T> {
 			repay_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
 			Error::<T>::NotEnoughUnderlyingsAssets
 		);
+
+		if !all_assets {
+			ensure!(repay_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
+		}
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
