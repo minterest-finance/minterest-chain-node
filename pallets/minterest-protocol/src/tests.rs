@@ -89,225 +89,380 @@ fn redeem_should_not_work() {
 }
 
 #[test]
-fn redeem_fails_if_no_balance_in_pool() {
+fn redeem_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
-		.user_balance(ALICE, CurrencyId::MDOT, ONE_HUNDRED_DOLLARS)
+		.user_balance(ALICE, CurrencyId::BTC, TEN_THOUSAND_DOLLARS)
 		.build()
 		.execute_with(|| {
-			// assert_noop!(TestProtocol::redeem());
+			// Alice deposited 10_000$ to BTC pool.
+			assert_ok!(TestProtocol::deposit_underlying(
+				alice(),
+				CurrencyId::BTC,
+				TEN_THOUSAND_DOLLARS
+			));
+
+			// Alice borrowed 100$ from BTC pool:
+			// pool_total_liquidity = 10_000 - 100 = 9_900$
+			assert_ok!(TestProtocol::borrow(alice(), CurrencyId::BTC, ONE_HUNDRED_DOLLARS));
+
+			// Alice has 10_000 MBTC. exchange_rate = 1.0
+			// Alice is trying to change all her 10_000 MBTC tokens to BTC. She can't do it because:
+			// pool_total_liquidity = 9_900 < 10_000 * 1.0 = 10_000
+			assert_noop!(
+				TestProtocol::redeem(alice(), CurrencyId::BTC),
+				Error::<Test>::NotEnoughLiquidityAvailable
+			);
 		});
 }
 
-// #[test]
-// fn redeem_underlying_should_work() {
-// 	new_test_ext().execute_with(|| {
-// 		assert_ok!(TestProtocol::deposit_underlying(alice(), CurrencyId::DOT, 60));
-// 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-//
-// 		assert_noop!(
-// 			TestProtocol::redeem_underlying(alice(), CurrencyId::DOT, 100),
-// 			Error::<Test>::NotEnoughLiquidityAvailable
-// 		);
-// 		assert_noop!(
-// 			TestProtocol::redeem_underlying(alice(), CurrencyId::MDOT, 20),
-// 			Error::<Test>::NotValidUnderlyingAssetId
-// 		);
-//
-// 		assert_ok!(TestProtocol::redeem_underlying(alice(), CurrencyId::DOT, 30));
-// 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 30);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 30);
-// 	});
-// }
-//
-// #[test]
-// fn redeem_wrapped_should_work() {
-// 	new_test_ext().execute_with(|| {
-// 		assert_ok!(TestProtocol::deposit_underlying(alice(), CurrencyId::DOT, 60));
-// 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-//
-// 		assert_ok!(TestProtocol::redeem_wrapped(alice(), CurrencyId::MDOT, 35));
-// 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 25);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 75);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 25);
-//
-// 		assert_noop!(
-// 			TestProtocol::redeem_wrapped(alice(), CurrencyId::MDOT, 60),
-// 			Error::<Test>::NotEnoughWrappedTokens
-// 		);
-// 		assert_noop!(
-// 			TestProtocol::redeem_wrapped(alice(), CurrencyId::DOT, 20),
-// 			Error::<Test>::NotValidWrappedTokenId
-// 		);
-// 	});
-// }
-//
-// #[test]
-// fn getting_assets_from_pool_by_different_users_should_work() {
-// 	new_test_ext().execute_with(|| {
-// 		assert_ok!(TestProtocol::deposit_underlying(alice(), CurrencyId::DOT, 60));
-// 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-//
-// 		assert_noop!(
-// 			TestProtocol::redeem_underlying(bob(), CurrencyId::DOT, 30),
-// 			Error::<Test>::NotEnoughWrappedTokens
-// 		);
-//
-// 		assert_ok!(TestProtocol::deposit_underlying(bob(), CurrencyId::DOT, 7));
-// 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 67);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &BOB), 93);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB), 7);
-// 	});
-// }
-//
-// #[test]
-// fn borrow_should_work() {
-// 	new_test_ext().execute_with(|| {
-// 		assert_ok!(TestProtocol::deposit_underlying(alice(), CurrencyId::DOT, 60));
-// 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-//
-// 		assert_noop!(
-// 			TestProtocol::borrow(alice(), CurrencyId::DOT, 100),
-// 			Error::<Test>::NotEnoughLiquidityAvailable
-// 		);
-// 		assert_noop!(
-// 			TestProtocol::borrow(alice(), CurrencyId::MDOT, 60),
-// 			Error::<Test>::NotValidUnderlyingAssetId
-// 		);
-//
-// 		assert_ok!(TestProtocol::borrow(alice(), CurrencyId::DOT, 30));
-// 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 30);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-// 		assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 30);
-// 		assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 30);
-//
-// 		// pool_available_liquidity (DOT) = 30
-// 		// Admin depositing to the insurance 10 DOT, now pool_available_liquidity = 30 + 10 = 40 DOT
-// 		assert_ok!(TestAccounts::add_member(Origin::root(), ADMIN));
-// 		assert_ok!(TestController::deposit_insurance(admin(), CurrencyId::DOT, 10));
-// 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 40);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), 90);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), 0);
-// 		assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 10);
-//
-// 		// Bob can't borrow 35 DOT.
-// 		assert_noop!(
-// 			TestProtocol::borrow(bob(), CurrencyId::DOT, 35),
-// 			Error::<Test>::BorrowControllerRejection
-// 		);
-// 	});
-// }
-//
-// #[test]
-// fn repay_should_work() {
-// 	new_test_ext().execute_with(|| {
-// 		assert_ok!(TestProtocol::deposit_underlying(alice(), CurrencyId::DOT, 60));
-// 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-//
-// 		assert_ok!(TestProtocol::borrow(alice(), CurrencyId::DOT, 30));
-// 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 30);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-// 		assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 30);
-// 		assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 30);
-//
-// 		assert_noop!(
-// 			TestProtocol::repay(alice(), CurrencyId::MDOT, 10),
-// 			Error::<Test>::NotValidUnderlyingAssetId
-// 		);
-// 		assert_noop!(
-// 			TestProtocol::repay(alice(), CurrencyId::DOT, 100),
-// 			Error::<Test>::NotEnoughUnderlyingsAssets
-// 		);
-//
-// 		assert_ok!(TestProtocol::repay(alice(), CurrencyId::DOT, 20));
-// 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 50);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 50);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-// 		assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 10);
-// 		assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 10);
-// 	});
-// }
-//
-// #[test]
-// fn repay_on_behalf_should_work() {
-// 	new_test_ext().execute_with(|| {
-// 		assert_ok!(TestProtocol::deposit_underlying(alice(), CurrencyId::DOT, 60));
-// 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &BOB), 100);
-//
-// 		assert_ok!(TestProtocol::borrow(alice(), CurrencyId::DOT, 30));
-// 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 30);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-// 		assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 30);
-// 		assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 30);
-//
-// 		assert_noop!(
-// 			TestProtocol::repay_on_behalf(bob(), CurrencyId::MDOT, ALICE, 10),
-// 			Error::<Test>::NotValidUnderlyingAssetId
-// 		);
-// 		assert_noop!(
-// 			TestProtocol::repay_on_behalf(bob(), CurrencyId::DOT, ALICE, 120),
-// 			Error::<Test>::NotEnoughUnderlyingsAssets
-// 		);
-// 		assert_noop!(
-// 			TestProtocol::repay_on_behalf(bob(), CurrencyId::DOT, BOB, 100),
-// 			//FIXME: is it Ok to check internal error?
-// 			Error::<Test>::InternalPoolError
-// 		);
-//
-// 		assert_ok!(TestProtocol::repay_on_behalf(bob(), CurrencyId::DOT, ALICE, 20));
-// 		assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 50);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60);
-// 		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &BOB), 80);
-// 		assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 10);
-// 		assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 10);
-// 	});
-// }
-//
-// #[test]
-// fn enable_as_collateral_should_work() {
-// 	new_test_ext().execute_with(|| {
-// 		// Alice enable as collateral her DOT pool.
-// 		assert_ok!(TestProtocol::enable_as_collateral(alice(), CurrencyId::DOT));
-// 		let expected_event = TestEvent::minterest_protocol(RawEvent::PoolEnabledAsCollateral(ALICE, CurrencyId::DOT));
-// 		assert!(System::events().iter().any(|record| record.event == expected_event));
-// 		assert!(TestPools::check_user_available_collateral(&ALICE, CurrencyId::DOT));
-//
-// 		assert_noop!(
-// 			TestProtocol::enable_as_collateral(alice(), CurrencyId::MDOT),
-// 			Error::<Test>::PoolNotFound
-// 		);
-// 	});
-// }
-//
-// #[test]
-// fn disable_collateral_should_work() {
-// 	new_test_ext().execute_with(|| {
-// 		// Alice disable collateral her DOT pool.
-// 		assert_ok!(TestProtocol::disable_collateral(alice(), CurrencyId::DOT));
-// 		let expected_event = TestEvent::minterest_protocol(RawEvent::PoolDisabledCollateral(ALICE, CurrencyId::DOT));
-// 		assert!(System::events().iter().any(|record| record.event == expected_event));
-// 		assert!(!TestPools::check_user_available_collateral(&ALICE, CurrencyId::DOT));
-//
-// 		assert_noop!(
-// 			TestProtocol::disable_collateral(alice(), CurrencyId::MDOT),
-// 			Error::<Test>::PoolNotFound
-// 		);
-// 	});
-// }
+#[test]
+fn redeem_underlying_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// Alice deposited 60 DOT to the pool.
+		assert_ok!(TestProtocol::deposit_underlying(
+			alice(),
+			CurrencyId::DOT,
+			dollars(60_u128)
+		));
+
+		// Alice can't redeem 100 DOT, because 100 DOT equal 100 * 1.0 = 100 MDOT
+		// And she has 60 MDOT on her balance.
+		assert_noop!(
+			TestProtocol::redeem_underlying(alice(), CurrencyId::DOT, dollars(100_u128)),
+			Error::<Test>::NotEnoughWrappedTokens
+		);
+
+		// MDOT is wrong CurrencyId for underlying assets.
+		assert_noop!(
+			TestProtocol::redeem_underlying(alice(), CurrencyId::MDOT, dollars(20_u128)),
+			Error::<Test>::NotValidUnderlyingAssetId
+		);
+
+		assert_ok!(TestProtocol::redeem_underlying(
+			alice(),
+			CurrencyId::DOT,
+			dollars(30_u128)
+		));
+		let expected_event = TestEvent::minterest_protocol(RawEvent::Redeemed(
+			ALICE,
+			CurrencyId::DOT,
+			dollars(30_u128),
+			CurrencyId::MDOT,
+			dollars(30_u128),
+		));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+	});
+}
+
+#[test]
+fn redeem_underlying_fails_if_low_balance_in_pool() {
+	ExtBuilder::default()
+		.user_balance(ALICE, CurrencyId::BTC, TEN_THOUSAND_DOLLARS)
+		.build()
+		.execute_with(|| {
+			// Alice deposited 10_000$ to BTC pool.
+			assert_ok!(TestProtocol::deposit_underlying(
+				alice(),
+				CurrencyId::BTC,
+				TEN_THOUSAND_DOLLARS
+			));
+
+			// Alice borrowed 100$ from BTC pool:
+			// pool_total_liquidity = 10_000 - 100 = 9_900$
+			assert_ok!(TestProtocol::borrow(alice(), CurrencyId::BTC, ONE_HUNDRED_DOLLARS));
+
+			// Alice has 10_000 MBTC. exchange_rate = 1.0
+			// Alice is trying to change all her 10_000 MBTC tokens to BTC. She can't do it because:
+			// pool_total_liquidity = 9_900 BTC < 10_000 BTC
+			assert_noop!(
+				TestProtocol::redeem_underlying(alice(), CurrencyId::BTC, TEN_THOUSAND_DOLLARS),
+				Error::<Test>::NotEnoughLiquidityAvailable
+			);
+		});
+}
+
+#[test]
+fn redeem_wrapped_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// Alice deposited 60 DOT to the pool.
+		assert_ok!(TestProtocol::deposit_underlying(
+			alice(),
+			CurrencyId::DOT,
+			dollars(60_u128)
+		));
+
+		// Alice has 60 MDOT. She can't redeem 100 MDOT.
+		assert_noop!(
+			TestProtocol::redeem_wrapped(alice(), CurrencyId::MDOT, dollars(100_u128)),
+			Error::<Test>::NotEnoughWrappedTokens
+		);
+
+		// MDOT is wrong CurrencyId for underlying assets.
+		assert_noop!(
+			TestProtocol::redeem_wrapped(alice(), CurrencyId::DOT, dollars(20_u128)),
+			Error::<Test>::NotValidWrappedTokenId
+		);
+
+		assert_ok!(TestProtocol::redeem_wrapped(
+			alice(),
+			CurrencyId::MDOT,
+			dollars(35_u128)
+		));
+		let expected_event = TestEvent::minterest_protocol(RawEvent::Redeemed(
+			ALICE,
+			CurrencyId::DOT,
+			dollars(35_u128),
+			CurrencyId::MDOT,
+			dollars(35_u128),
+		));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+	});
+}
+
+#[test]
+fn redeem_wrapped_fails_if_low_balance_in_pool() {
+	ExtBuilder::default()
+		.user_balance(ALICE, CurrencyId::BTC, TEN_THOUSAND_DOLLARS)
+		.build()
+		.execute_with(|| {
+			// Alice deposited 10_000$ to BTC pool.
+			assert_ok!(TestProtocol::deposit_underlying(
+				alice(),
+				CurrencyId::BTC,
+				TEN_THOUSAND_DOLLARS
+			));
+
+			// Alice borrowed 100$ from BTC pool:
+			// pool_total_liquidity = 10_000 - 100 = 9_900$
+			assert_ok!(TestProtocol::borrow(alice(), CurrencyId::BTC, ONE_HUNDRED_DOLLARS));
+
+			// Alice has 10_000 MBTC. exchange_rate = 1.0
+			// Alice is trying to change all her 10_000 MBTC tokens to BTC. She can't do it because:
+			// pool_total_liquidity = 9_900 BTC < 10_000 MBTC * 1.0 = 10_000 BTC
+			assert_noop!(
+				TestProtocol::redeem_wrapped(alice(), CurrencyId::MBTC, TEN_THOUSAND_DOLLARS),
+				Error::<Test>::NotEnoughLiquidityAvailable
+			);
+		});
+}
+
+#[test]
+fn borrow_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// Alice deposited 60 DOT to the pool.
+		assert_ok!(TestProtocol::deposit_underlying(
+			alice(),
+			CurrencyId::DOT,
+			dollars(60_u128)
+		));
+		// total_pool_liquidity = 10_000 (insurance) + 60 = 10_060
+		assert_eq!(
+			TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+			dollars(10_060_u128)
+		);
+
+		// Alice cannot borrow 100 DOT because she deposited 60 DOT.
+		assert_noop!(
+			TestProtocol::borrow(alice(), CurrencyId::DOT, dollars(100_u128)),
+			Error::<Test>::BorrowControllerRejection
+		);
+
+		// MDOT is wrong CurrencyId for underlying assets.
+		assert_noop!(
+			TestProtocol::borrow(alice(), CurrencyId::MDOT, dollars(60_u128)),
+			Error::<Test>::NotValidUnderlyingAssetId
+		);
+
+		// Transaction with zero balance is not allowed.
+		assert_noop!(
+			TestProtocol::borrow(alice(), CurrencyId::DOT, Balance::zero()),
+			Error::<Test>::ZeroBalanceTransaction
+		);
+
+		// Alice borrowed 30 DOT
+		assert_ok!(TestProtocol::borrow(alice(), CurrencyId::DOT, dollars(30_u128)));
+		let expected_event =
+			TestEvent::minterest_protocol(RawEvent::Borrowed(ALICE, CurrencyId::DOT, dollars(30_u128)));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+	});
+}
+
+#[test]
+fn borrow_fails_if_low_balance_in_pool() {
+	ExtBuilder::default()
+		.user_balance(ALICE, CurrencyId::BTC, TEN_THOUSAND_DOLLARS)
+		.build()
+		.execute_with(|| {
+			// Alice deposited 100$ to BTC pool.
+			assert_ok!(TestProtocol::deposit_underlying(
+				alice(),
+				CurrencyId::BTC,
+				ONE_HUNDRED_DOLLARS
+			));
+
+			// set total_pool_liquidity = 50 DOT
+			assert_ok!(Currencies::withdraw(
+				CurrencyId::BTC,
+				&TestPools::pools_account_id(),
+				dollars(50_u128)
+			));
+
+			// Alice cannot borrow 100 BTC because there is 50 BTC in the pool.
+			assert_noop!(
+				TestProtocol::borrow(alice(), CurrencyId::BTC, ONE_HUNDRED_DOLLARS),
+				Error::<Test>::NotEnoughLiquidityAvailable
+			);
+
+			// set total_pool_liquidity = 0 DOT
+			assert_ok!(Currencies::withdraw(
+				CurrencyId::BTC,
+				&TestPools::pools_account_id(),
+				dollars(50_u128)
+			));
+
+			// Alice cannot borrow 100 BTC because there is 0 BTC in the pool.
+			assert_noop!(
+				TestProtocol::borrow(alice(), CurrencyId::BTC, ONE_HUNDRED_DOLLARS),
+				Error::<Test>::NotEnoughLiquidityAvailable
+			);
+		});
+}
+
+#[test]
+fn repay_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// Alice deposited 60 DOT to the pool.
+		assert_ok!(TestProtocol::deposit_underlying(
+			alice(),
+			CurrencyId::DOT,
+			dollars(60_u128)
+		));
+		// Alice borrowed 30 DOT from the pool.
+		assert_ok!(TestProtocol::borrow(alice(), CurrencyId::DOT, dollars(30_u128)));
+		// Alice balance = 70 DOT
+		assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), dollars(70_u128));
+
+		// MDOT is wrong CurrencyId for underlying assets.
+		assert_noop!(
+			TestProtocol::repay(alice(), CurrencyId::MDOT, dollars(10_u128)),
+			Error::<Test>::NotValidUnderlyingAssetId
+		);
+
+		// Alice cannot repay 100 DOT, because she only have 70 DOT.
+		assert_noop!(
+			TestProtocol::repay(alice(), CurrencyId::DOT, dollars(100_u128)),
+			Error::<Test>::NotEnoughUnderlyingsAssets
+		);
+
+		// Alice cannot repay 70 DOT, because she only borrowed 60 DOT.
+		assert_noop!(
+			TestProtocol::repay(alice(), CurrencyId::DOT, dollars(70_u128)),
+			Error::<Test>::RepayAmountToBig
+		);
+
+		// Alice repaid 20 DOT. Her borrow_balance = 10 DOT.
+		assert_ok!(TestProtocol::repay(alice(), CurrencyId::DOT, dollars(20_u128)));
+		let expected_event = TestEvent::minterest_protocol(RawEvent::Repaid(ALICE, CurrencyId::DOT, dollars(20_u128)));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+	});
+}
+
+#[test]
+fn repay_all_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// Alice deposited 60 DOT to the pool.
+		assert_ok!(TestProtocol::deposit_underlying(
+			alice(),
+			CurrencyId::DOT,
+			dollars(60_u128)
+		));
+		// Alice borrowed 30 DOT from the pool.
+		assert_ok!(TestProtocol::borrow(alice(), CurrencyId::DOT, dollars(30_u128)));
+
+		// MDOT is wrong CurrencyId for underlying assets.
+		assert_noop!(
+			TestProtocol::repay_all(alice(), CurrencyId::MDOT),
+			Error::<Test>::NotValidUnderlyingAssetId
+		);
+
+		// Alice repaid all 30 DOT.
+		assert_ok!(TestProtocol::repay_all(alice(), CurrencyId::DOT));
+		let expected_event = TestEvent::minterest_protocol(RawEvent::Repaid(ALICE, CurrencyId::DOT, dollars(30_u128)));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+	});
+}
+
+#[test]
+fn repay_on_behalf_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// Alice deposited 60 DOT to the pool.
+		assert_ok!(TestProtocol::deposit_underlying(
+			alice(),
+			CurrencyId::DOT,
+			dollars(60_u128)
+		));
+
+		// Alice borrowed 30 DOT from the pool.
+		assert_ok!(TestProtocol::borrow(alice(), CurrencyId::DOT, dollars(30_u128)));
+
+		// MDOT is wrong CurrencyId for underlying assets.
+		assert_noop!(
+			TestProtocol::repay_on_behalf(bob(), CurrencyId::MDOT, ALICE, dollars(10_u128)),
+			Error::<Test>::NotValidUnderlyingAssetId
+		);
+
+		// Bob can't pay off the 120 DOT debt for Alice, because he has 100 DOT in his account.
+		assert_noop!(
+			TestProtocol::repay_on_behalf(bob(), CurrencyId::DOT, ALICE, dollars(120_u128)),
+			Error::<Test>::NotEnoughUnderlyingsAssets
+		);
+
+		// Bob cannot repay 100 DOT, because Alice only borrowed 60 DOT.
+		assert_noop!(
+			TestProtocol::repay_on_behalf(bob(), CurrencyId::DOT, ALICE, dollars(100_u128)),
+			Error::<Test>::RepayAmountToBig
+		);
+
+		// Bob repaid 20 DOT for Alice.
+		assert_ok!(TestProtocol::repay_on_behalf(
+			bob(),
+			CurrencyId::DOT,
+			ALICE,
+			dollars(20_u128)
+		));
+		let expected_event = TestEvent::minterest_protocol(RawEvent::Repaid(BOB, CurrencyId::DOT, dollars(20_u128)));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+	});
+}
+
+#[test]
+fn enable_as_collateral_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// Alice enable as collateral her DOT pool.
+		assert_ok!(TestProtocol::enable_as_collateral(alice(), CurrencyId::DOT));
+		let expected_event = TestEvent::minterest_protocol(RawEvent::PoolEnabledAsCollateral(ALICE, CurrencyId::DOT));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+		assert!(TestPools::check_user_available_collateral(&ALICE, CurrencyId::DOT));
+
+		assert_noop!(
+			TestProtocol::enable_as_collateral(alice(), CurrencyId::MDOT),
+			Error::<Test>::PoolNotFound
+		);
+	});
+}
+
+#[test]
+fn disable_collateral_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// Alice disable collateral her DOT pool.
+		assert_ok!(TestProtocol::disable_collateral(alice(), CurrencyId::DOT));
+		let expected_event = TestEvent::minterest_protocol(RawEvent::PoolDisabledCollateral(ALICE, CurrencyId::DOT));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+		assert!(!TestPools::check_user_available_collateral(&ALICE, CurrencyId::DOT));
+
+		assert_noop!(
+			TestProtocol::disable_collateral(alice(), CurrencyId::MDOT),
+			Error::<Test>::PoolNotFound
+		);
+	});
+}

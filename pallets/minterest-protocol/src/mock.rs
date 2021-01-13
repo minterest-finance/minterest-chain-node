@@ -176,10 +176,6 @@ impl Borrowing<AccountId> for MockBorrowing {
 
 type Amount = i128;
 
-pub const ADMIN: AccountId = 0;
-pub fn admin() -> Origin {
-	Origin::signed(ADMIN)
-}
 pub const ALICE: AccountId = 1;
 pub fn alice() -> Origin {
 	Origin::signed(ALICE)
@@ -195,21 +191,27 @@ pub const TEN_THOUSAND_DOLLARS: Balance = 10_000 * DOLLARS;
 pub const MAX_MEMBERS: u32 = 16;
 pub type TestProtocol = Module<Test>;
 pub type TestPools = liquidity_pools::Module<Test>;
-pub type TestController = controller::Module<Test>;
-pub type TestAccounts = accounts::Module<Test>;
 pub type Currencies = orml_currencies::Module<Test>;
 pub type System = frame_system::Module<Test>;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	pools: Vec<(CurrencyId, Pool)>,
 }
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
-			endowed_accounts: vec![],
-			pools: vec![],
+			endowed_accounts: vec![
+				// seed: initial DOTs. Initial MINT to pay for gas.
+				(ALICE, CurrencyId::MINT, ONE_MILL_DOLLARS),
+				(ALICE, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
+				(BOB, CurrencyId::MINT, ONE_MILL_DOLLARS),
+				(BOB, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
+				// seed: initial insurance, equal 10_000$
+				(TestPools::pools_account_id(), CurrencyId::ETH, TEN_THOUSAND_DOLLARS),
+				(TestPools::pools_account_id(), CurrencyId::DOT, TEN_THOUSAND_DOLLARS),
+				(TestPools::pools_account_id(), CurrencyId::KSM, TEN_THOUSAND_DOLLARS),
+			],
 		}
 	}
 }
@@ -219,28 +221,11 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-		self.endowed_accounts
-			.push((TestPools::pools_account_id(), currency_id, balance));
-		self
-	}
-
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 		orml_tokens::GenesisConfig::<Test> {
-			endowed_accounts: vec![
-				(ALICE, CurrencyId::MINT, ONE_MILL_DOLLARS),
-				(ALICE, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
-				(BOB, CurrencyId::MINT, ONE_MILL_DOLLARS),
-				(BOB, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
-				(ADMIN, CurrencyId::MINT, ONE_MILL_DOLLARS),
-				(ADMIN, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
-				// seed: initial insurance, equal 10_000$
-				(TestPools::pools_account_id(), CurrencyId::ETH, TEN_THOUSAND_DOLLARS),
-				(TestPools::pools_account_id(), CurrencyId::DOT, TEN_THOUSAND_DOLLARS),
-				(TestPools::pools_account_id(), CurrencyId::KSM, TEN_THOUSAND_DOLLARS),
-			],
+			endowed_accounts: self.endowed_accounts,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -318,6 +303,15 @@ impl ExtBuilder {
 				(
 					BOB,
 					CurrencyId::DOT,
+					PoolUserData {
+						total_borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						collateral: true,
+					},
+				),
+				(
+					BOB,
+					CurrencyId::BTC,
 					PoolUserData {
 						total_borrowed: 0,
 						interest_index: Rate::from_inner(0),

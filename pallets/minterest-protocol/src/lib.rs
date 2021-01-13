@@ -75,9 +75,6 @@ decl_error! {
 		/// Insufficient underlying assets in the user account.
 		NotEnoughUnderlyingsAssets,
 
-		/// PoolNotFound or NotEnoughBalance or BalanceOverflowed.
-		InternalPoolError,
-
 		/// Number overflow in calculation.
 		NumOverflow,
 
@@ -104,6 +101,9 @@ decl_error! {
 
 		/// Transaction with zero balance is not allowed.
 		ZeroBalanceTransaction,
+
+		/// User is trying repay more than he borrowed.
+		RepayAmountToBig,
 	}
 }
 
@@ -238,11 +238,11 @@ decl_module! {
 			})?;
 		}
 
-		/// Sender sends underlying assets to repay an account's borrow in the market
+		/// Transfers an asset into the protocol, reducing the target user's borrow balance.
 		///
 		/// - `underlying_asset_id`: The currency ID of the underlying asset to be repaid.
-		/// - `borrower`: The account with the debt being payed off.
-		/// - `repay_amount`: The amount of the underlying asset to be repaid.
+		/// - `borrower`: The account which borrowed the asset to be repaid.
+		/// - `repay_amount`: The amount of the underlying borrowed asset to be repaid.
 		#[weight = 10_000]
 		pub fn repay_on_behalf(origin, underlying_asset_id: CurrencyId, borrower: T::AccountId, repay_amount: Balance) {
 			with_transaction_result(|| {
@@ -285,7 +285,9 @@ impl<T: Trait> Module<T> {
 			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
+
 		ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
+
 		ensure!(
 			underlying_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
 			Error::<T>::NotEnoughLiquidityAvailable
@@ -326,11 +328,6 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
-		ensure!(
-			underlying_amount <= <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id),
-			Error::<T>::NotEnoughLiquidityAvailable
-		);
-
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
 		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
@@ -354,6 +351,11 @@ impl<T: Trait> Module<T> {
 				wrapped_amount
 			}
 		};
+
+		ensure!(
+			underlying_amount <= <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id),
+			Error::<T>::NotEnoughLiquidityAvailable
+		);
 
 		ensure!(
 			wrapped_amount <= T::MultiCurrency::free_balance(wrapped_id, &who),
@@ -387,11 +389,15 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
+		let pool_available_liquidity = <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id);
+
 		// Raise an error if protocol has insufficient underlying cash
 		ensure!(
-			borrow_amount <= <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id),
+			borrow_amount <= pool_available_liquidity,
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
+
+		ensure!(borrow_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
@@ -404,7 +410,7 @@ impl<T: Trait> Module<T> {
 			<Controller<T>>::borrow_balance_stored(&who, underlying_asset_id).map_err(|_| Error::<T>::NumOverflow)?;
 
 		<LiquidityPools<T>>::update_state_on_borrow(&who, underlying_asset_id, borrow_amount, account_borrows)
-			.map_err(|_| Error::<T>::InternalPoolError)?;
+			.map_err(|_| Error::<T>::NumOverflow)?;
 
 		// Transfer the borrow_amount from the protocol account to the borrower's account.
 		T::MultiCurrency::transfer(
@@ -463,7 +469,7 @@ impl<T: Trait> Module<T> {
 		};
 
 		<LiquidityPools<T>>::update_state_on_repay(&borrower, underlying_asset_id, repay_amount, account_borrows)
-			.map_err(|_| Error::<T>::InternalPoolError)?;
+			.map_err(|_| Error::<T>::RepayAmountToBig)?;
 
 		// Transfer the repay_amount from the borrower's account to the protocol account.
 		T::MultiCurrency::transfer(
