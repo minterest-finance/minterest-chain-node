@@ -8,6 +8,7 @@ use orml_traits::MultiCurrency;
 use orml_utilities::with_transaction_result;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+use sp_runtime::traits::CheckedSub;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
@@ -19,6 +20,7 @@ use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
 pub struct ControllerData<BlockNumber> {
 	/// Block number that interest was last accrued at.
 	pub timestamp: BlockNumber,
+	pub supply_rate: Rate, // FIXME. In the future, implement via RPC
 	pub borrow_rate: Rate,
 	pub insurance_factor: Rate,
 	pub max_borrow_rate: Rate,
@@ -334,16 +336,21 @@ impl<T: Trait> Module<T> {
 		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(underlying_asset_id);
 		let current_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
 
-		// Calculate the current borrow interest rate
-		let current_borrow_interest_rate = Self::calculate_borrow_interest_rate(
-			underlying_asset_id,
+		let utilization_rate = Self::calculate_utilization_rate(
 			current_total_balance,
 			current_total_borrowed_balance,
 			current_total_insurance,
 		)?;
 
+		// Calculate the current borrow interest rate
+		let current_borrow_interest_rate = Self::calculate_borrow_interest_rate(underlying_asset_id, utilization_rate)?;
+
 		let max_borrow_rate = ControllerDates::<T>::get(underlying_asset_id).max_borrow_rate;
 		let insurance_factor = ControllerDates::<T>::get(underlying_asset_id).insurance_factor;
+
+		// Calculate the current supply interest rate
+		let current_supply_interest_rate =
+			Self::calculate_supply_interest_rate(utilization_rate, current_borrow_interest_rate, insurance_factor)?;
 
 		ensure!(
 			current_borrow_interest_rate <= max_borrow_rate,
@@ -374,6 +381,7 @@ impl<T: Trait> Module<T> {
 		// Save new params
 		ControllerDates::<T>::mutate(underlying_asset_id, |x| x.timestamp = current_block_number);
 		ControllerDates::<T>::mutate(underlying_asset_id, |x| x.borrow_rate = current_borrow_interest_rate);
+		ControllerDates::<T>::mutate(underlying_asset_id, |x| x.supply_rate = current_supply_interest_rate);
 		<LiquidityPools<T>>::set_accrual_interest_params(
 			underlying_asset_id,
 			new_total_borrow_balance,
@@ -715,18 +723,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Calculates the current borrow rate per block.
-	fn calculate_borrow_interest_rate(
-		underlying_asset_id: CurrencyId,
-		current_total_balance: Balance,
-		current_total_borrowed_balance: Balance,
-		current_total_insurance: Balance,
-	) -> RateResult {
-		let utilization_rate = Self::calculate_utilization_rate(
-			current_total_balance,
-			current_total_borrowed_balance,
-			current_total_insurance,
-		)?;
-
+	fn calculate_borrow_interest_rate(underlying_asset_id: CurrencyId, utilization_rate: Rate) -> RateResult {
 		let kink = Self::controller_dates(underlying_asset_id).kink;
 		let multiplier_per_block = Self::controller_dates(underlying_asset_id).multiplier_per_block;
 		let base_rate_per_block = Self::controller_dates(underlying_asset_id).base_rate_per_block;
@@ -780,6 +777,22 @@ impl<T: Trait> Module<T> {
 		let utilization_rate = Rate::saturating_from_rational(current_total_borrowed_balance, denominator);
 
 		Ok(utilization_rate)
+	}
+
+	/// Calculates the supply interest rate of the pool:
+	/// supply_interest_rate = utilization_rate * (borrow_rate * (1 - insurance_factor))
+	fn calculate_supply_interest_rate(utilization_rate: Rate, borrow_rate: Rate, insurance_factor: Rate) -> RateResult {
+		let one_minus_insurance_factor = Rate::saturating_from_rational(1, 1)
+			.checked_sub(&insurance_factor)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		let supply_interest_rate = utilization_rate
+			.checked_mul(&borrow_rate)
+			.ok_or(Error::<T>::NumOverflow)?
+			.checked_mul(&one_minus_insurance_factor)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		Ok(supply_interest_rate)
 	}
 
 	fn calculate_block_delta(

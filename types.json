@@ -33,6 +33,7 @@
     "Rate": "FixedU128",
     "ControllerData": {
       "timestamp": "BlockNumber",
+      "supply_rate": "Rate",
       "borrow_rate": "Rate",
       "insurance_factor": "Rate",
       "max_borrow_rate":  "Rate",

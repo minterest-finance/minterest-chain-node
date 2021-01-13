@@ -12,6 +12,7 @@ fn dollars<T: Into<u128>>(d: T) -> Balance {
 fn multiplier_per_block_equal_max_value() -> ControllerData<BlockNumber> {
 	ControllerData {
 		timestamp: 0,
+		supply_rate: Rate::from_inner(0),
 		borrow_rate: Rate::from_inner(0),
 		insurance_factor: Rate::saturating_from_rational(101, 100),
 		max_borrow_rate: Rate::saturating_from_rational(5, 1000),
@@ -26,6 +27,7 @@ fn multiplier_per_block_equal_max_value() -> ControllerData<BlockNumber> {
 fn base_rate_per_block_equal_max_value() -> ControllerData<BlockNumber> {
 	ControllerData {
 		timestamp: 0,
+		supply_rate: Rate::from_inner(0),
 		borrow_rate: Rate::from_inner(0),
 		insurance_factor: Rate::saturating_from_rational(101, 100),
 		max_borrow_rate: Rate::saturating_from_rational(5, 1000),
@@ -54,6 +56,10 @@ fn accrue_interest_should_work() {
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).borrow_rate,
 				Rate::saturating_from_rational(72u128, 10_000_000_000u128)
+			);
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).supply_rate,
+				Rate::from_inner(5_184_000_000)
 			);
 			assert_eq!(
 				TestPools::pools(CurrencyId::DOT).total_borrowed,
@@ -199,29 +205,19 @@ fn get_exchange_rate_should_work() {
 fn calculate_borrow_interest_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Utilization rate less or equal than kink:
-		// utilization_rate = 54000 / (106000 - 33000 + 54000) = 0,425196850393700787
-		// borrow_interest_rate = 0,425196850393700787 * multiplier_per_block + base_rate_per_block
+		// utilization_rate = 0.42
+		// borrow_interest_rate = 0,42 * multiplier_per_block + base_rate_per_block
 		assert_eq!(
-			Controller::calculate_borrow_interest_rate(
-				CurrencyId::DOT,
-				dollars(106_000_u128),
-				dollars(54_000_u128),
-				dollars(33_000_u128)
-			),
-			Ok(Rate::from_inner(3_826_771_653))
+			Controller::calculate_borrow_interest_rate(CurrencyId::DOT, Rate::saturating_from_rational(42, 100)),
+			Ok(Rate::from_inner(3_780_000_000))
 		);
 
 		// Utilization rate larger than kink:
-		// utilization_rate = 90 / (18 - 8 + 90) = 0.9
+		// utilization_rate = 0.9
 		// borrow_interest_rate = 0.9 * 0.8 * jump_multiplier_per_block +
 		// + (0.8 * multiplier_per_block) + base_rate_per_block
 		assert_eq!(
-			Controller::calculate_borrow_interest_rate(
-				CurrencyId::DOT,
-				dollars(18_000_u128),
-				dollars(90_000_u128),
-				dollars(8_000_u128)
-			),
+			Controller::calculate_borrow_interest_rate(CurrencyId::DOT, Rate::saturating_from_rational(9, 10)),
 			Ok(Rate::from_inner(156_240_000_000))
 		);
 	});
@@ -235,7 +231,7 @@ fn calculate_borrow_interest_rate_fails_if_overflow_kink_mul_multiplier() {
 		// utilization_rate > kink.
 		// Overflow in calculation: kink * multiplier_per_block = 1.01 * max_value()
 		assert_noop!(
-			Controller::calculate_borrow_interest_rate(CurrencyId::KSM, 1, 200, 8),
+			Controller::calculate_borrow_interest_rate(CurrencyId::KSM, Rate::saturating_from_rational(101, 100)),
 			Error::<Runtime>::NumOverflow
 		);
 	});
@@ -249,7 +245,7 @@ fn calculate_borrow_interest_rate_fails_if_overflow_add_base_rate_per_block() {
 		// utilization_rate > kink.
 		// Overflow in calculation: kink_mul_multiplier + base_rate_per_block = ... + max_value()
 		assert_noop!(
-			Controller::calculate_borrow_interest_rate(CurrencyId::KSM, 1, 200, 8),
+			Controller::calculate_borrow_interest_rate(CurrencyId::KSM, Rate::saturating_from_rational(9, 10)),
 			Error::<Runtime>::NumOverflow
 		);
 	});
@@ -449,6 +445,41 @@ fn calculate_utilization_rate_should_work() {
 		// Overflow in calculation: total_borrows / 0
 		assert_noop!(
 			Controller::calculate_utilization_rate(100, 70, 170),
+			Error::<Runtime>::NumOverflow
+		);
+	});
+}
+
+#[test]
+fn calculate_supply_rate_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// supply_rate = 0.75 * 0.23 * (1 - 0.1) = 0.15525
+		assert_eq!(
+			Controller::calculate_supply_interest_rate(
+				Rate::saturating_from_rational(75, 100),
+				Rate::saturating_from_rational(23, 100),
+				Rate::saturating_from_rational(1, 10)
+			),
+			Ok(Rate::saturating_from_rational(15525, 100_000))
+		);
+
+		// Overflow in calculation: one_minus_insurance_factor = 1 - 2
+		assert_noop!(
+			Controller::calculate_supply_interest_rate(
+				Rate::saturating_from_rational(75, 100),
+				Rate::saturating_from_rational(23, 100),
+				Rate::saturating_from_rational(2, 1)
+			),
+			Error::<Runtime>::NumOverflow
+		);
+
+		// Overflow in calculation: max_value() * 2.3 * (1 - 0.1)
+		assert_noop!(
+			Controller::calculate_supply_interest_rate(
+				Rate::from_inner(u128::max_value()),
+				Rate::saturating_from_rational(23, 10),
+				Rate::saturating_from_rational(1, 10)
+			),
 			Error::<Runtime>::NumOverflow
 		);
 	});
