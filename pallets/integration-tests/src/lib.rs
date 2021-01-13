@@ -1159,7 +1159,7 @@ mod tests {
 
 			assert_noop!(
 				MinterestProtocol::redeem_wrapped(Origin::signed(ALICE), CurrencyId::MDOT, 60_000 * DOLLARS),
-				MinterestProtocolError::<Test>::NotEnoughWrappedTokens
+				MinterestProtocolError::<Test>::NotEnoughLiquidityAvailable
 			);
 			assert_noop!(
 				MinterestProtocol::redeem_wrapped(Origin::signed(ALICE), CurrencyId::DOT, 20_000 * DOLLARS),
@@ -1370,7 +1370,7 @@ mod tests {
 			assert_noop!(
 				MinterestProtocol::repay_on_behalf(Origin::signed(BOB), CurrencyId::DOT, BOB, 100_000 * DOLLARS),
 				//FIXME: is it Ok to check internal error?
-				MinterestProtocolError::<Test>::InternalPoolError
+				MinterestProtocolError::<Test>::RepayAmountToBig
 			);
 
 			assert_ok!(MinterestProtocol::repay_on_behalf(

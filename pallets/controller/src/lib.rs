@@ -15,7 +15,7 @@ use sp_runtime::{
 use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct ControllerData<BlockNumber> {
 	/// Block number that interest was last accrued at.
 	pub timestamp: BlockNumber,
@@ -70,6 +70,9 @@ decl_event! {
 	pub enum Event {
 		/// InsuranceFactor has been successfully changed
 		InsuranceFactorChanged,
+
+		/// Max Borrow Rate has been successfully changed
+		MaxBorrowRateChanged,
 
 		/// JumpMultiplierPerBlock has been successfully changed
 		JumpMultiplierPerBlockHasChanged,
@@ -127,7 +130,7 @@ decl_error! {
 		/// The dispatch origin of this call must be Administrator.
 		RequireAdmin,
 
-		/// Not enough balance to withdraw or repay.
+		/// Not enough balance to deposit or withdraw or repay.
 		NotEnoughBalance,
 
 		/// Balance overflows maximum.
@@ -240,7 +243,7 @@ decl_module! {
 			let new_max_borow_rate = Rate::saturating_from_rational(new_amount_n, new_amount_d);
 
 			ControllerDates::<T>::mutate(pool_id, |r| r.max_borrow_rate = new_max_borow_rate);
-			Self::deposit_event(Event::InsuranceFactorChanged);
+			Self::deposit_event(Event::MaxBorrowRateChanged);
 			Ok(())
 		}
 
@@ -313,7 +316,9 @@ type LiquidityResult = result::Result<(Balance, Balance), DispatchError>;
 type CurrencyIdResult = result::Result<CurrencyId, DispatchError>;
 
 impl<T: Trait> Module<T> {
-	// Used in controller: do_deposit, do_redeem, do_borrow, do_repay
+	/// Applies accrued interest to total borrows and insurances.
+	/// This calculates interest accrued from the last checkpointed block
+	/// up to the current block and writes new checkpoint to storage.
 	pub fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult {
 		//Remember the initial block number
 		let current_block_number = <frame_system::Module<T>>::block_number();
@@ -379,7 +384,12 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	// Used in controller: do_deposit, do_redeem
+	/// Converts a specified number of underlying assets into wrapped tokens.
+	/// The calculation is based on the exchange rate.
+	///
+	/// - `underlying_asset_id`: CurrencyId of underlying assets to be converted to wrapped tokens.
+	/// - `underlying_amount`: The amount of underlying assets to be converted to wrapped tokens.
+	/// Returns `wrapped_amount = underlying_amount / exchange_rate`
 	pub fn convert_to_wrapped(underlying_asset_id: CurrencyId, underlying_amount: Balance) -> BalanceResult {
 		let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
 
@@ -391,7 +401,12 @@ impl<T: Trait> Module<T> {
 		Ok(wrapped_amount)
 	}
 
-	// Used in controller: do_redeem
+	/// Converts a specified number of wrapped tokens into underlying assets.
+	/// The calculation is based on the exchange rate.
+	///
+	/// - `wrapped_id`: CurrencyId of the wrapped tokens to be converted to underlying assets.
+	/// - `wrapped_amount`: The amount of wrapped tokens to be converted to underlying assets.
+	/// Returns `underlying_amount = wrapped_amount * exchange_rate`
 	pub fn convert_from_wrapped(wrapped_id: CurrencyId, wrapped_amount: Balance) -> BalanceResult {
 		let underlying_asset_id = Self::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
 		let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
@@ -652,7 +667,8 @@ impl<T: Trait> Module<T> {
 
 // Private methods
 impl<T: Trait> Module<T> {
-	// Used in: convert_to_wrapped
+	/// Calculates the exchange rate from the underlying to the mToken.
+	/// This function does not accrue interest before calculating the exchange rate.
 	fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
 		let wrapped_asset_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 		// The total amount of cash the market has
@@ -667,13 +683,13 @@ impl<T: Trait> Module<T> {
 
 		let current_exchange_rate =
 			Self::calculate_exchange_rate(total_cash, total_supply, total_insurance, total_borrowed)?;
-
+		// FIXME: can be removed.
 		<LiquidityPools<T>>::set_current_exchange_rate(underlying_asset_id, current_exchange_rate)?;
 
 		Ok(current_exchange_rate)
 	}
 
-	//Used in: get_exchange_rate
+	/// Calculates the exchange rate from the underlying to the mToken.
 	fn calculate_exchange_rate(
 		total_cash: Balance,
 		total_supply: Balance,
@@ -681,7 +697,9 @@ impl<T: Trait> Module<T> {
 		total_borrowed: Balance,
 	) -> RateResult {
 		let rate = match total_supply.cmp(&Balance::zero()) {
+			// If there are no tokens minted: exchangeRate = InitialExchangeRate.
 			Ordering::Equal => T::InitialExchangeRate::get(),
+			// Otherwise: exchange_rate = (total_cash - total_insurance + total_borrowed) / total_supply
 			_ => {
 				let cash_plus_borrows = total_cash.checked_add(total_borrowed).ok_or(Error::<T>::NumOverflow)?;
 
@@ -696,6 +714,7 @@ impl<T: Trait> Module<T> {
 		Ok(rate)
 	}
 
+	/// Calculates the current borrow rate per block.
 	fn calculate_borrow_interest_rate(
 		underlying_asset_id: CurrencyId,
 		current_total_balance: Balance,
@@ -715,7 +734,9 @@ impl<T: Trait> Module<T> {
 		let borrow_interest_rate = match utilization_rate.cmp(&kink) {
 			Ordering::Greater => {
 				let jump_multiplier_per_block = Self::controller_dates(underlying_asset_id).jump_multiplier_per_block;
-				let normal_rate = (kink.checked_mul(&multiplier_per_block).ok_or(Error::<T>::NumOverflow)?)
+				let normal_rate = kink
+					.checked_mul(&multiplier_per_block)
+					.ok_or(Error::<T>::NumOverflow)?
 					.checked_add(&base_rate_per_block)
 					.ok_or(Error::<T>::NumOverflow)?;
 				let excess_util = utilization_rate.checked_mul(&kink).ok_or(Error::<T>::NumOverflow)?;
@@ -736,8 +757,8 @@ impl<T: Trait> Module<T> {
 		Ok(borrow_interest_rate)
 	}
 
-	// Calculates the utilization rate of the market:
-	// borrows / (cash + borrows - reserves)
+	/// Calculates the utilization rate of the pool:
+	/// utilization_rate = total_borrows / (total_cash + total_borrows - total_insurance)
 	fn calculate_utilization_rate(
 		current_total_balance: Balance,
 		current_total_borrowed_balance: Balance,
@@ -753,6 +774,9 @@ impl<T: Trait> Module<T> {
 		let denominator = total_balance_total_borrowed_sum
 			.checked_sub(current_total_insurance)
 			.ok_or(Error::<T>::NumOverflow)?;
+
+		ensure!(denominator > 0, Error::<T>::NumOverflow);
+
 		let utilization_rate = Rate::saturating_from_rational(current_total_borrowed_balance, denominator);
 
 		Ok(utilization_rate)
@@ -770,7 +794,8 @@ impl<T: Trait> Module<T> {
 		Ok(current_block_number - accrual_block_number_previous)
 	}
 
-	// simpleInterestFactor = borrowRate * blockDelta
+	/// Calculates the simple interest factor:
+	/// interest_factor = current_borrow_interest_rate * block_delta
 	fn calculate_interest_factor(
 		current_borrow_interest_rate: Rate,
 		block_delta: &<T as system::Trait>::BlockNumber,
@@ -786,7 +811,7 @@ impl<T: Trait> Module<T> {
 		Ok(interest_factor)
 	}
 
-	// interestAccumulated = simpleInterestFactor * totalBorrows
+	// interest_accumulated = simple_interest_factor * current_total_borrowed_balance
 	fn calculate_interest_accumulated(
 		simple_interest_factor: Rate,
 		current_total_borrowed_balance: Balance,
@@ -799,7 +824,7 @@ impl<T: Trait> Module<T> {
 		Ok(interest_accumulated)
 	}
 
-	// totalBorrowsNew = interestAccumulated + totalBorrows
+	// new_total_borrows = interest_accumulated + total_borrows
 	fn calculate_new_total_borrow(
 		interest_accumulated: Balance,
 		current_total_borrowed_balance: Balance,
@@ -811,7 +836,7 @@ impl<T: Trait> Module<T> {
 		Ok(new_total_borrows)
 	}
 
-	// totalInsuranceNew = interestAccumulated * insuranceFactor + totalInsurance
+	// total_insurance_new = interest_accumulated * insurance_factor + total_insurance
 	fn calculate_new_total_insurance(
 		interest_accumulated: Balance,
 		insurance_factor: Rate,
@@ -829,7 +854,7 @@ impl<T: Trait> Module<T> {
 		Ok(total_insurance_new)
 	}
 
-	// borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
+	// new_borrow_index = simple_interest_factor * borrow_index + borrow_index
 	fn calculate_new_borrow_index(simple_interest_factor: Rate, current_borrow_index: Rate) -> RateResult {
 		let accumulated = simple_interest_factor
 			.checked_mul(&current_borrow_index)
@@ -897,7 +922,9 @@ impl<T: Trait> Module<T> {
 
 		T::MultiCurrency::transfer(pool_id, &who, &<LiquidityPools<T>>::pools_account_id(), amount)?;
 
-		let new_insurance_balance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id)
+		let current_insurance_balance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
+
+		let new_insurance_balance = current_insurance_balance
 			.checked_add(amount)
 			.ok_or(Error::<T>::BalanceOverflowed)?;
 

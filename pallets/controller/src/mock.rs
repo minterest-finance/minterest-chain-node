@@ -177,234 +177,106 @@ impl Default for ExtBuilder {
 }
 
 pub const ALICE: AccountId = 1;
+pub fn alice() -> Origin {
+	Origin::signed(ALICE)
+}
 pub const BOB: AccountId = 2;
+pub fn bob() -> Origin {
+	Origin::signed(BOB)
+}
 pub const ONE_HUNDRED: Balance = 100;
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
 
 impl ExtBuilder {
-	pub fn exchange_rate_less_than_one(mut self) -> Self {
-		self.endowed_accounts.extend_from_slice(&[
-			(ALICE, CurrencyId::DOT, ONE_HUNDRED),
-			(ALICE, CurrencyId::MBTC, ONE_HUNDRED),
-		]);
+	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts.push((user, currency_id, balance));
 		self
 	}
 
-	pub fn exchange_rate_greater_than_one(mut self) -> Self {
-		self.endowed_accounts.extend_from_slice(&[
-			(ALICE, CurrencyId::DOT, ONE_HUNDRED),
-			(ALICE, CurrencyId::BTC, ONE_HUNDRED),
-			(ALICE, CurrencyId::MBTC, 1),
-		]);
-		self
-	}
-
-	pub fn _borrow_interest_rate_too_hight(mut self) -> Self {
+	pub fn pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
-			.extend_from_slice(&[(TestPools::pools_account_id(), CurrencyId::DOT, 19)]);
+			.push((TestPools::pools_account_id(), currency_id, balance));
+		self
+	}
 
-		self.pools = vec![(
-			CurrencyId::DOT,
+	pub fn pool_total_borrowed(mut self, pool_id: CurrencyId, total_borrowed: Balance) -> Self {
+		self.pools.push((
+			pool_id,
 			Pool {
 				current_interest_rate: Rate::from_inner(0),
-				total_borrowed: 81,
+				total_borrowed,
 				borrow_index: Rate::saturating_from_rational(1, 1),
 				current_exchange_rate: Rate::from_inner(1),
 				total_insurance: Balance::zero(),
 			},
-		)];
-
+		));
 		self
 	}
 
-	pub fn borrow_interest_rate_equal_7_200_000_000(mut self) -> Self {
-		self.endowed_accounts.extend_from_slice(&[(
-			TestPools::pools_account_id(),
-			CurrencyId::DOT,
-			20_000_000_000_000_000_000,
-		)]);
-
-		self.pools = vec![
-			(
-				CurrencyId::DOT,
-				Pool {
-					current_interest_rate: Rate::from_inner(0),
-					total_borrowed: 80_000_000_000_000_000_000,
-					borrow_index: Rate::saturating_from_rational(1, 1),
-					current_exchange_rate: Rate::from_inner(1),
-					total_insurance: Balance::zero(),
-				},
-			),
-			(
-				CurrencyId::BTC,
-				Pool {
-					current_interest_rate: Rate::from_inner(0),
-					total_borrowed: Balance::zero(),
-					borrow_index: Rate::saturating_from_rational(1, 1),
-					current_exchange_rate: Rate::saturating_from_rational(1, 1),
-					total_insurance: Balance::zero(),
-				},
-			),
-		];
-
-		self
-	}
-
-	pub fn one_hundred_dots_for_alice(mut self) -> Self {
-		self.endowed_accounts.push((ALICE, CurrencyId::DOT, ONE_HUNDRED));
-		self
-	}
-
-	pub fn alice_deposit_60_dots(mut self) -> Self {
-		self.endowed_accounts.extend_from_slice(&[
-			(ALICE, CurrencyId::DOT, 40),
-			(ALICE, CurrencyId::MDOT, 60),
-			(TestPools::pools_account_id(), CurrencyId::DOT, 60),
-		]);
+	pub fn pool_total_insurance(mut self, pool_id: CurrencyId, total_insurance: Balance) -> Self {
+		self.endowed_accounts
+			.push((TestPools::pools_account_id(), pool_id, total_insurance));
 		self.pools.push((
-			CurrencyId::DOT,
+			pool_id,
 			Pool {
 				current_interest_rate: Rate::from_inner(0),
 				total_borrowed: Balance::zero(),
 				borrow_index: Rate::saturating_from_rational(1, 1),
-				current_exchange_rate: Rate::saturating_from_rational(8, 10),
-				total_insurance: Balance::zero(),
-			},
-		));
-		self.pool_user_data.push((
-			ALICE,
-			CurrencyId::DOT,
-			PoolUserData {
-				total_borrowed: 0,
-				interest_index: Rate::saturating_from_rational(1, 1),
-				collateral: true,
+				current_exchange_rate: Rate::from_inner(1),
+				total_insurance,
 			},
 		));
 		self
 	}
 
-	pub fn alice_deposit_20_eth(mut self) -> Self {
-		self.endowed_accounts.extend_from_slice(&[
-			(ALICE, CurrencyId::ETH, 80),
-			(ALICE, CurrencyId::METH, 20),
-			(TestPools::pools_account_id(), CurrencyId::ETH, 20),
-		]);
+	pub fn pool_mock(mut self, pool_id: CurrencyId) -> Self {
 		self.pools.push((
-			CurrencyId::ETH,
+			pool_id,
 			Pool {
 				current_interest_rate: Rate::from_inner(0),
 				total_borrowed: Balance::zero(),
-				borrow_index: Rate::saturating_from_rational(1, 1),
-				current_exchange_rate: Rate::saturating_from_rational(8, 10),
+				borrow_index: Rate::saturating_from_rational(2, 1),
+				current_exchange_rate: Rate::saturating_from_rational(1, 1),
 				total_insurance: Balance::zero(),
 			},
 		));
+		self
+	}
+
+	pub fn pool_user_data(
+		mut self,
+		user: AccountId,
+		pool_id: CurrencyId,
+		total_borrowed: Balance,
+		interest_index: Rate,
+		collateral: bool,
+	) -> Self {
 		self.pool_user_data.push((
-			ALICE,
-			CurrencyId::ETH,
+			user,
+			pool_id,
 			PoolUserData {
-				total_borrowed: 0,
-				interest_index: Rate::saturating_from_rational(1, 1),
-				collateral: true,
+				total_borrowed,
+				interest_index,
+				collateral,
 			},
 		));
 		self
 	}
 
-	pub fn alice_borrow_30_dot(mut self) -> Self {
-		self.pools.push((
-			CurrencyId::DOT,
-			Pool {
-				current_interest_rate: Rate::from_inner(0),
-				total_borrowed: 30,
-				borrow_index: Rate::saturating_from_rational(1, 1),
-				current_exchange_rate: Rate::saturating_from_rational(8, 10),
-				total_insurance: Balance::zero(),
-			},
-		));
-		self.pool_user_data.push((
-			ALICE,
-			CurrencyId::DOT,
-			PoolUserData {
-				total_borrowed: 30,
-				interest_index: Rate::saturating_from_rational(1, 1),
-				collateral: true,
-			},
-		));
-		self
+	pub fn alice_deposit_60_dot(self) -> Self {
+		self.user_balance(ALICE, CurrencyId::DOT, 40)
+			.user_balance(ALICE, CurrencyId::MDOT, 60)
+			.pool_balance(CurrencyId::DOT, 60)
+			.pool_mock(CurrencyId::DOT)
+			.pool_user_data(ALICE, CurrencyId::DOT, 0, Rate::from_inner(0), true)
 	}
 
-	pub fn set_alice_total_borrowed_and_interest_index(mut self) -> Self {
-		self.pool_user_data = vec![(
-			ALICE,
-			CurrencyId::DOT,
-			PoolUserData {
-				total_borrowed: 100,
-				interest_index: Rate::saturating_from_rational(2, 1),
-				collateral: true,
-			},
-		)];
-		self
-	}
-
-	pub fn set_alice_and_bob_interest_index_and_collateral(mut self) -> Self {
-		self.pool_user_data = vec![
-			(
-				ALICE,
-				CurrencyId::DOT,
-				PoolUserData {
-					total_borrowed: Balance::zero(),
-					interest_index: Rate::saturating_from_rational(1, 1),
-					collateral: true,
-				},
-			),
-			(
-				BOB,
-				CurrencyId::BTC,
-				PoolUserData {
-					total_borrowed: Balance::zero(),
-					interest_index: Rate::saturating_from_rational(1, 1),
-					collateral: false,
-				},
-			),
-		];
-		self
-	}
-
-	pub fn set_btc_and_dot_pool_mock(mut self) -> Self {
-		self.pools = vec![
-			(
-				CurrencyId::DOT,
-				Pool {
-					current_interest_rate: Rate::from_inner(0),
-					total_borrowed: Balance::zero(),
-					borrow_index: Rate::saturating_from_rational(1, 1),
-					current_exchange_rate: Rate::saturating_from_rational(1, 1),
-					total_insurance: Balance::zero(),
-				},
-			),
-			(
-				CurrencyId::BTC,
-				Pool {
-					current_interest_rate: Rate::from_inner(0),
-					total_borrowed: Balance::zero(),
-					borrow_index: Rate::saturating_from_rational(1, 1),
-					current_exchange_rate: Rate::saturating_from_rational(1, 1),
-					total_insurance: Balance::zero(),
-				},
-			),
-			(
-				CurrencyId::KSM,
-				Pool {
-					current_interest_rate: Rate::from_inner(0),
-					total_borrowed: Balance::zero(),
-					borrow_index: Rate::saturating_from_rational(1, 1),
-					current_exchange_rate: Rate::saturating_from_rational(1, 1),
-					total_insurance: Balance::zero(),
-				},
-			),
-		];
-		self
+	pub fn alice_deposit_20_eth(self) -> Self {
+		self.user_balance(ALICE, CurrencyId::ETH, 80)
+			.user_balance(ALICE, CurrencyId::METH, 20)
+			.pool_balance(CurrencyId::ETH, 20)
+			.pool_mock(CurrencyId::ETH)
+			.pool_user_data(ALICE, CurrencyId::ETH, 0, Rate::from_inner(0), true)
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
@@ -429,9 +301,9 @@ impl ExtBuilder {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
-						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
 					},
 				),
 				(
@@ -443,9 +315,9 @@ impl ExtBuilder {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
-						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
 					},
 				),
 				(
@@ -457,9 +329,9 @@ impl ExtBuilder {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
-						jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
 					},
 				),
 			],
