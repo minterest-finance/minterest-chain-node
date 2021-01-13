@@ -140,6 +140,12 @@ decl_error! {
 
 		/// Operation (deposit, redeem, borrow, repay) is paused.
 		OperationPaused,
+
+		/// Maximum borrow rate cannot be set to 0.
+		MaxBorrowRateCannotBeZero,
+
+		/// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
+		BaseRatePerBlockCannotBeZero,
 	}
 }
 
@@ -242,6 +248,8 @@ decl_module! {
 
 			let new_max_borow_rate = Rate::saturating_from_rational(new_amount_n, new_amount_d);
 
+			ensure!(new_max_borow_rate != Rate::from_inner(0), Error::<T>::MaxBorrowRateCannotBeZero);
+
 			ControllerDates::<T>::mutate(pool_id, |r| r.max_borrow_rate = new_max_borow_rate);
 			Self::deposit_event(Event::MaxBorrowRateChanged);
 			Ok(())
@@ -261,6 +269,11 @@ decl_module! {
 			let new_base_rate_per_block = new_base_rate_per_year
 				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
 				.ok_or(Error::<T>::NumOverflow)?;
+
+			// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
+			if new_base_rate_per_block == Rate::from_inner(0) {
+				ensure!(Self::controller_dates(pool_id).multiplier_per_block !=  Rate::from_inner(0), Error::<T>::BaseRatePerBlockCannotBeZero);
+			}
 
 			ControllerDates::<T>::mutate(pool_id, |r| r.base_rate_per_block = new_base_rate_per_block);
 			Self::deposit_event(Event::BaseRatePerBlockHasChanged);

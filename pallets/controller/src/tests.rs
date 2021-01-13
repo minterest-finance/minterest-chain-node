@@ -753,6 +753,15 @@ fn set_insurance_factor_should_work() {
 				Rate::saturating_from_rational(20, 10)
 			);
 
+			// ALICE set insurance factor equal 0.0
+			assert_ok!(Controller::set_insurance_factor(alice(), CurrencyId::DOT, 0, 1));
+			let expected_event = TestEvent::controller(Event::InsuranceFactorChanged);
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).insurance_factor,
+				Rate::from_inner(0)
+			);
+
 			// Overflow in calculation: 20 / 0
 			assert_noop!(
 				Controller::set_insurance_factor(alice(), CurrencyId::DOT, 20, 0),
@@ -785,6 +794,12 @@ fn set_max_borrow_rate_should_work() {
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).max_borrow_rate,
 				Rate::saturating_from_rational(20, 10)
+			);
+
+			// ALICE can't set max borrow rate equal 0.0
+			assert_noop!(
+				Controller::set_max_borrow_rate(alice(), CurrencyId::DOT, 0, 1),
+				Error::<Runtime>::MaxBorrowRateCannotBeZero
 			);
 
 			// Overflow in calculation: 20 / 0
@@ -826,6 +841,22 @@ fn set_base_rate_per_block_should_work() {
 			assert_noop!(
 				Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 20, 0),
 				Error::<Runtime>::NumOverflow
+			);
+
+			// Can be set to 0.0
+			assert_ok!(Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 0, 1));
+			let expected_event = TestEvent::controller(Event::BaseRatePerBlockHasChanged);
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).base_rate_per_block,
+				Rate::from_inner(0)
+			);
+
+			// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
+			assert_ok!(Controller::set_multiplier_per_block(alice(), CurrencyId::DOT, 0, 1));
+			assert_noop!(
+				Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 0, 1),
+				Error::<Runtime>::BaseRatePerBlockCannotBeZero
 			);
 
 			// The dispatch origin of this call must be Administrator.
