@@ -753,6 +753,15 @@ fn set_insurance_factor_should_work() {
 				Rate::saturating_from_rational(20, 10)
 			);
 
+			// ALICE set insurance factor equal 0.0
+			assert_ok!(Controller::set_insurance_factor(alice(), CurrencyId::DOT, 0, 1));
+			let expected_event = TestEvent::controller(Event::InsuranceFactorChanged);
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).insurance_factor,
+				Rate::from_inner(0)
+			);
+
 			// Overflow in calculation: 20 / 0
 			assert_noop!(
 				Controller::set_insurance_factor(alice(), CurrencyId::DOT, 20, 0),
@@ -787,6 +796,12 @@ fn set_max_borrow_rate_should_work() {
 				Rate::saturating_from_rational(20, 10)
 			);
 
+			// ALICE can't set max borrow rate equal 0.0
+			assert_noop!(
+				Controller::set_max_borrow_rate(alice(), CurrencyId::DOT, 0, 1),
+				Error::<Runtime>::MaxBorrowRateCannotBeZero
+			);
+
 			// Overflow in calculation: 20 / 0
 			assert_noop!(
 				Controller::set_max_borrow_rate(alice(), CurrencyId::DOT, 20, 0),
@@ -812,14 +827,32 @@ fn set_base_rate_per_block_should_work() {
 		.pool_mock(CurrencyId::DOT)
 		.build()
 		.execute_with(|| {
+			// Set Multiplier per block equal 2.0
+			assert_ok!(Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 20, 10));
+
+			// Can be set to 0.0
+			assert_ok!(Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 0, 1));
+			let expected_event = TestEvent::controller(Event::BaseRatePerBlockHasChanged);
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).base_rate_per_block,
+				Rate::from_inner(0)
+			);
+
 			// ALICE set Baser rate per block equal 2.0
 			assert_ok!(Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 20, 10));
 			let expected_event = TestEvent::controller(Event::BaseRatePerBlockHasChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
-
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).base_rate_per_block,
 				Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
+			);
+
+			// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
+			assert_ok!(Controller::set_multiplier_per_block(alice(), CurrencyId::DOT, 0, 1));
+			assert_noop!(
+				Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 0, 1),
+				Error::<Runtime>::BaseRatePerBlockCannotBeZero
 			);
 
 			// Overflow in calculation: 20 / 0
@@ -847,12 +880,32 @@ fn set_multiplier_per_block_should_work() {
 		.pool_mock(CurrencyId::DOT)
 		.build()
 		.execute_with(|| {
+			// Set Base rate per block equal 2.0
+			assert_ok!(Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 20, 10));
+
+			// Can be set to 0.0
+			assert_ok!(Controller::set_multiplier_per_block(alice(), CurrencyId::DOT, 0, 10));
+			let expected_event = TestEvent::controller(Event::MultiplierPerBlockHasChanged);
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).multiplier_per_block,
+				Rate::from_inner(0)
+			);
+
+			// Alice set Multiplier per block equal 2.0 / 5_256_000
 			assert_ok!(Controller::set_multiplier_per_block(alice(), CurrencyId::DOT, 20, 10));
 			let expected_event = TestEvent::controller(Event::MultiplierPerBlockHasChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).multiplier_per_block,
 				Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
+			);
+
+			//  Multiplier per block cannot be set to 0 at the same time as Base rate per block.
+			assert_ok!(Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 0, 1));
+			assert_noop!(
+				Controller::set_multiplier_per_block(alice(), CurrencyId::DOT, 0, 1),
+				Error::<Runtime>::MultiplierPerBlockCannotBeZero
 			);
 
 			// Overflow in calculation: 20 / 0
