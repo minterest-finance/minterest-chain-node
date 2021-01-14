@@ -146,6 +146,9 @@ decl_error! {
 
 		/// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
 		BaseRatePerBlockCannotBeZero,
+
+		/// Multiplier per block cannot be set to 0 at the same time as Base rate per block.
+		MultiplierPerBlockCannotBeZero,
 	}
 }
 
@@ -294,6 +297,12 @@ decl_module! {
 			let new_multiplier_per_block = new_multiplier_per_year
 				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
 				.ok_or(Error::<T>::NumOverflow)?;
+
+			// Multiplier per block cannot be set to 0 at the same time as Base rate per block .
+			if new_multiplier_per_block == Rate::from_inner(0) {
+				ensure!(Self::controller_dates(pool_id).base_rate_per_block !=  Rate::from_inner(0), Error::<T>::MultiplierPerBlockCannotBeZero);
+			}
+
 
 			ControllerDates::<T>::mutate(pool_id, |r| r.multiplier_per_block = new_multiplier_per_block);
 			Self::deposit_event(Event::MultiplierPerBlockHasChanged);
