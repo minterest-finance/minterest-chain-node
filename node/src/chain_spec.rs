@@ -233,7 +233,6 @@ fn testnet_genesis(
 				(
 					CurrencyId::ETH,
 					Pool {
-						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),
@@ -243,7 +242,6 @@ fn testnet_genesis(
 				(
 					CurrencyId::DOT,
 					Pool {
-						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),
@@ -253,7 +251,6 @@ fn testnet_genesis(
 				(
 					CurrencyId::KSM,
 					Pool {
-						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),
@@ -263,7 +260,6 @@ fn testnet_genesis(
 				(
 					CurrencyId::BTC,
 					Pool {
-						current_interest_rate: FixedU128::from_inner(0),
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::saturating_from_rational(1, 1),
 						current_exchange_rate: FixedU128::from_inner(1),

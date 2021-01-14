@@ -145,18 +145,6 @@ fn convert_from_wrapped_should_work() {
 		});
 }
 
-//FIXME. Not used yet
-#[test]
-fn calculate_interest_rate_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::calculate_interest_rate(CurrencyId::DOT));
-		assert_eq!(
-			Controller::calculate_interest_rate(CurrencyId::DOT),
-			Ok(Rate::saturating_from_rational(1, 1))
-		);
-	});
-}
-
 #[test]
 fn calculate_exchange_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {

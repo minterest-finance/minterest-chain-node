@@ -20,7 +20,7 @@ use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
 pub struct ControllerData<BlockNumber> {
 	/// Block number that interest was last accrued at.
 	pub timestamp: BlockNumber,
-	pub supply_rate: Rate, // FIXME. In the future, implement via RPC
+	pub supply_rate: Rate, // FIXME. Delete and implement via RPC
 	pub borrow_rate: Rate,
 	pub insurance_factor: Rate,
 	pub max_borrow_rate: Rate,
@@ -447,12 +447,6 @@ impl<T: Trait> Module<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(underlying_amount)
-	}
-
-	// Not used yet
-	pub fn calculate_interest_rate(_underlying_asset_id: CurrencyId) -> RateResult {
-		//FIXME
-		Ok(Rate::saturating_from_rational(1, 1)) //100%
 	}
 
 	/// Return the borrow balance of account based on stored data.

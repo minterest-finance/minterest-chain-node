@@ -16,7 +16,6 @@
       ]
     },
     "Pool": {
-      "current_interest_rate": "Rate",
       "total_borrowed": "Balance",
       "borrow_index": "Rate",
       "current_exchange_rate": "Rate",
