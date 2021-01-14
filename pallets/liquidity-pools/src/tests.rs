@@ -10,7 +10,7 @@ use sp_arithmetic::FixedPointNumber;
 fn set_current_exchange_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Set exchange_rate eq 1.2
-		assert_ok!(LiquidityPools::set_current_exchange_rate(
+		assert_ok!(TestPools::set_current_exchange_rate(
 			CurrencyId::DOT,
 			Rate::saturating_from_rational(13, 10)
 		));
@@ -25,10 +25,7 @@ fn set_current_exchange_rate_should_work() {
 fn set_pool_total_borrowed_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Set pool_total_borrowed eq 100 DOT
-		assert_ok!(LiquidityPools::set_pool_total_borrowed(
-			CurrencyId::DOT,
-			ONE_HUNDRED_DOLLARS
-		));
+		assert_ok!(TestPools::set_pool_total_borrowed(CurrencyId::DOT, ONE_HUNDRED_DOLLARS));
 		assert_eq!(<Pools>::get(CurrencyId::DOT).total_borrowed, ONE_HUNDRED_DOLLARS);
 	});
 }
@@ -37,7 +34,7 @@ fn set_pool_total_borrowed_should_work() {
 fn set_pool_borrow_index_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Set pool_borrow_index eq 0.25
-		assert_ok!(LiquidityPools::set_pool_borrow_index(
+		assert_ok!(TestPools::set_pool_borrow_index(
 			CurrencyId::DOT,
 			Rate::saturating_from_rational(25, 100)
 		));
@@ -52,7 +49,7 @@ fn set_pool_borrow_index_should_work() {
 fn set_pool_total_insurance_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Set pool_total_insurance eq 100 DOT.
-		assert_ok!(LiquidityPools::set_pool_total_insurance(
+		assert_ok!(TestPools::set_pool_total_insurance(
 			CurrencyId::DOT,
 			ONE_HUNDRED_DOLLARS
 		));
@@ -64,7 +61,7 @@ fn set_pool_total_insurance_should_work() {
 fn set_user_total_borrowed_and_interest_index_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Set user_total_borrowed eq 100 DOT and user_interest_index eq 0.33.
-		assert_ok!(LiquidityPools::set_user_total_borrowed_and_interest_index(
+		assert_ok!(TestPools::set_user_total_borrowed_and_interest_index(
 			&ALICE,
 			CurrencyId::DOT,
 			ONE_HUNDRED_DOLLARS,
@@ -85,7 +82,7 @@ fn set_user_total_borrowed_and_interest_index_should_work() {
 fn set_accrual_interest_params_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Set pool total_borrowed eq 100 DOT and pool total_insurance eq 10_000 DOT.
-		assert_ok!(LiquidityPools::set_accrual_interest_params(
+		assert_ok!(TestPools::set_accrual_interest_params(
 			CurrencyId::DOT,
 			ONE_HUNDRED_DOLLARS,
 			TEN_THOUSAND
@@ -99,7 +96,7 @@ fn set_accrual_interest_params_should_work() {
 fn enable_as_collateral_internal_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Alice enable as collateral DOT pool.
-		assert_ok!(LiquidityPools::enable_as_collateral_internal(&ALICE, CurrencyId::DOT));
+		assert_ok!(TestPools::enable_as_collateral_internal(&ALICE, CurrencyId::DOT));
 
 		assert!(<PoolUserDates<Test>>::get(ALICE, CurrencyId::DOT).collateral);
 	});
@@ -109,7 +106,7 @@ fn enable_as_collateral_internal_should_work() {
 fn disable_collateral_internal_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Alice disable collateral DOT pool.
-		assert_ok!(LiquidityPools::disable_collateral_internal(&ALICE, CurrencyId::DOT));
+		assert_ok!(TestPools::disable_collateral_internal(&ALICE, CurrencyId::DOT));
 
 		assert!(!<PoolUserDates<Test>>::get(ALICE, CurrencyId::DOT).collateral);
 	});
@@ -121,10 +118,7 @@ fn get_pool_available_liquidity_should_work() {
 		.pool_balance(CurrencyId::DOT, TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
-			assert_eq!(
-				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
-				TEN_THOUSAND
-			);
+			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), TEN_THOUSAND);
 		});
 }
 
@@ -140,7 +134,7 @@ fn get_pool_total_borrowed_should_work() {
 		)
 		.build()
 		.execute_with(|| {
-			assert_eq!(LiquidityPools::get_pool_total_borrowed(CurrencyId::DOT), TEN_THOUSAND);
+			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), TEN_THOUSAND);
 		});
 }
 
@@ -156,7 +150,7 @@ fn get_pool_total_insurance_should_work() {
 		)
 		.build()
 		.execute_with(|| {
-			assert_eq!(LiquidityPools::get_pool_total_insurance(CurrencyId::DOT), TEN_THOUSAND);
+			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), TEN_THOUSAND);
 		});
 }
 
@@ -173,7 +167,7 @@ fn get_pool_borrow_index_should_work() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-				LiquidityPools::get_pool_borrow_index(CurrencyId::DOT),
+				TestPools::get_pool_borrow_index(CurrencyId::DOT),
 				Rate::saturating_from_rational(125, 100)
 			);
 		});
@@ -186,86 +180,111 @@ fn get_user_total_borrowed_should_work() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-				LiquidityPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT),
+				TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT),
 				ONE_HUNDRED_DOLLARS
 			);
 		});
 }
 
-// #[test]
-// fn pool_should_exists() {
-// 	ExtBuilder::default().build().execute_with(|| {
-// 		assert_eq!(LiquidityPools::pool_exists(&CurrencyId::DOT), true);
-// 		assert_eq!(LiquidityPools::pool_exists(&CurrencyId::MDOT), false);
-// 	});
-// }
-//
-// #[test]
-// fn update_state_on_borrow_should_work() {
-// 	ExtBuilder::default()
-// 		.one_hundred_dots_for_alice()
-// 		.build()
-// 		.execute_with(|| {
-// 			assert_eq!(
-// 				LiquidityPools::get_user_borrow_index(&ALICE, CurrencyId::DOT),
-// 				Rate::from_inner(0)
-// 			);
-// 			assert_ok!(LiquidityPools::update_state_on_borrow(&ALICE, CurrencyId::DOT, 60, 0));
-// 			assert_eq!(LiquidityPools::get_pool_total_borrowed(CurrencyId::DOT), 60);
-// 			assert_eq!(LiquidityPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 60);
-// 			assert_eq!(
-// 				LiquidityPools::get_user_borrow_index(&ALICE, CurrencyId::DOT),
-// 				Rate::saturating_from_rational(1, 1)
-// 			);
-//
-// 			assert_ok!(LiquidityPools::set_pool_borrow_index(
-// 				CurrencyId::DOT,
-// 				Rate::saturating_from_rational(1, 5)
-// 			));
-// 			assert_ok!(LiquidityPools::update_state_on_borrow(&ALICE, CurrencyId::DOT, 30, 60));
-// 			assert_eq!(LiquidityPools::get_pool_total_borrowed(CurrencyId::DOT), 90);
-// 			assert_eq!(LiquidityPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 90);
-// 			assert_eq!(
-// 				LiquidityPools::get_user_borrow_index(&ALICE, CurrencyId::DOT),
-// 				Rate::saturating_from_rational(1, 5)
-// 			);
-//
-// 			assert_noop!(
-// 				LiquidityPools::update_state_on_borrow(&ALICE, CurrencyId::DOT, Balance::max_value(), 90),
-// 				Error::<Test>::NumOverflow
-// 			);
-// 		});
-// }
-//
-// #[test]
-// fn update_state_on_repay_should_work() {
-// 	ExtBuilder::default()
-// 		.one_hundred_dots_for_alice()
-// 		.build()
-// 		.execute_with(|| {
-// 			assert_eq!(
-// 				LiquidityPools::get_user_borrow_index(&ALICE, CurrencyId::DOT),
-// 				Rate::from_inner(0)
-// 			);
-// 			assert_ok!(LiquidityPools::update_state_on_borrow(&ALICE, CurrencyId::DOT, 60, 0));
-// 			assert_eq!(LiquidityPools::get_pool_total_borrowed(CurrencyId::DOT), 60);
-// 			assert_eq!(LiquidityPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 60);
-// 			assert_eq!(
-// 				LiquidityPools::get_user_borrow_index(&ALICE, CurrencyId::DOT),
-// 				Rate::saturating_from_rational(1, 1)
-// 			);
-//
-// 			assert_ok!(LiquidityPools::update_state_on_repay(&ALICE, CurrencyId::DOT, 30, 60));
-// 			assert_eq!(LiquidityPools::get_pool_total_borrowed(CurrencyId::DOT), 30);
-// 			assert_eq!(LiquidityPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 30);
-//
-// 			assert_ok!(LiquidityPools::update_state_on_repay(&ALICE, CurrencyId::DOT, 10, 30));
-// 			assert_eq!(LiquidityPools::get_pool_total_borrowed(CurrencyId::DOT), 20);
-// 			assert_eq!(LiquidityPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 20);
-//
-// 			assert_noop!(
-// 				LiquidityPools::update_state_on_repay(&ALICE, CurrencyId::DOT, 100, 20),
-// 				Error::<Test>::NumOverflow
-// 			);
-// 		});
-// }
+#[test]
+fn check_user_available_collateral_should_work() {
+	ExtBuilder::default()
+		.pool_user_data_with_params(ALICE, CurrencyId::DOT, Balance::default(), Rate::default(), false)
+		.build()
+		.execute_with(|| {
+			// collateral parameter is set to false
+			assert!(!TestPools::check_user_available_collateral(&ALICE, CurrencyId::DOT));
+
+			// set collateral parameter to true
+			assert_ok!(TestPools::enable_as_collateral_internal(&ALICE, CurrencyId::DOT));
+
+			assert!(TestPools::check_user_available_collateral(&ALICE, CurrencyId::DOT));
+		});
+}
+
+#[test]
+fn pool_should_exists() {
+	ExtBuilder::default()
+		.pool_mock(CurrencyId::DOT)
+		.build()
+		.execute_with(|| {
+			assert_eq!(TestPools::pool_exists(&CurrencyId::DOT), true);
+			assert_eq!(TestPools::pool_exists(&CurrencyId::MDOT), false);
+		});
+}
+
+#[test]
+fn update_state_on_borrow_should_work() {
+	ExtBuilder::default()
+		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED_DOLLARS)
+		.pool_mock(CurrencyId::DOT)
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				TestPools::get_user_borrow_index(&ALICE, CurrencyId::DOT),
+				Rate::from_inner(0)
+			);
+
+			// Alice borrow 60 DOT
+			assert_ok!(TestPools::update_state_on_borrow(&ALICE, CurrencyId::DOT, 60, 0));
+			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 60);
+			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 60);
+			assert_eq!(
+				TestPools::get_user_borrow_index(&ALICE, CurrencyId::DOT),
+				Rate::default()
+			);
+
+			assert_ok!(TestPools::set_pool_borrow_index(
+				CurrencyId::DOT,
+				Rate::saturating_from_rational(1, 5)
+			));
+
+			// ALice borrow 30 DOT
+			assert_ok!(TestPools::update_state_on_borrow(&ALICE, CurrencyId::DOT, 30, 60));
+			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 90);
+			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 90);
+			assert_eq!(
+				TestPools::get_user_borrow_index(&ALICE, CurrencyId::DOT),
+				Rate::saturating_from_rational(1, 5)
+			);
+
+			// Overflow in calculation: account_borrow_new = 90 + max_value()
+			assert_noop!(
+				TestPools::update_state_on_borrow(&ALICE, CurrencyId::DOT, Balance::max_value(), 90),
+				Error::<Test>::NumOverflow
+			);
+		});
+}
+
+#[test]
+fn update_state_on_repay_should_work() {
+	ExtBuilder::default()
+		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED_DOLLARS)
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				TestPools::get_user_borrow_index(&ALICE, CurrencyId::DOT),
+				Rate::from_inner(0)
+			);
+			assert_ok!(TestPools::update_state_on_borrow(&ALICE, CurrencyId::DOT, 60, 0));
+			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 60);
+			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 60);
+			assert_eq!(
+				TestPools::get_user_borrow_index(&ALICE, CurrencyId::DOT),
+				Rate::default()
+			);
+
+			assert_ok!(TestPools::update_state_on_repay(&ALICE, CurrencyId::DOT, 30, 60));
+			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 30);
+			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 30);
+
+			assert_ok!(TestPools::update_state_on_repay(&ALICE, CurrencyId::DOT, 10, 30));
+			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 20);
+			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT), 20);
+
+			assert_noop!(
+				TestPools::update_state_on_repay(&ALICE, CurrencyId::DOT, 100, 20),
+				Error::<Test>::NumOverflow
+			);
+		});
+}

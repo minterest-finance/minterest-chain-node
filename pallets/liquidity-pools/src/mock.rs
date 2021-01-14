@@ -129,16 +129,21 @@ impl Default for ExtBuilder {
 }
 
 type Amount = i128;
-pub type LiquidityPools = Module<Test>;
+pub type TestPools = Module<Test>;
 pub const ALICE: AccountId = 1;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
 pub const TEN_THOUSAND: Balance = 10_000 * DOLLARS;
 
 impl ExtBuilder {
+	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts.push((user, currency_id, balance));
+		self
+	}
+
 	pub fn pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
-			.push((LiquidityPools::pools_account_id(), currency_id, balance));
+			.push((TestPools::pools_account_id(), currency_id, balance));
 		self
 	}
 
@@ -177,6 +182,19 @@ impl ExtBuilder {
 				total_borrowed,
 				interest_index,
 				collateral,
+			},
+		));
+		self
+	}
+
+	pub fn pool_mock(mut self, pool_id: CurrencyId) -> Self {
+		self.pools.push((
+			pool_id,
+			Pool {
+				total_borrowed: Balance::default(),
+				borrow_index: Rate::default(),
+				current_exchange_rate: Rate::default(),
+				total_insurance: Balance::default(),
 			},
 		));
 		self

@@ -191,6 +191,7 @@ impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 		account_borrows: Balance,
 	) -> DispatchResult {
 		let pool_borrow_index = Self::get_pool_borrow_index(underlying_asset_id);
+		let pool_total_borrowed = Self::get_pool_total_borrowed(underlying_asset_id);
 
 		// Calculate the new borrower and total borrow balances, failing on overflow:
 		// account_borrows_new = account_borrows + borrow_amount
@@ -198,7 +199,7 @@ impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 		let account_borrow_new = account_borrows
 			.checked_add(borrow_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
-		let total_borrows_new = Self::get_pool_total_borrowed(underlying_asset_id)
+		let total_borrows_new = pool_total_borrowed
 			.checked_add(borrow_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
 
