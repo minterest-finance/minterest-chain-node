@@ -149,6 +149,9 @@ decl_error! {
 
 		/// Multiplier per block cannot be set to 0 at the same time as Base rate per block.
 		MultiplierPerBlockCannotBeZero,
+
+		/// An error occurred in the parameters that were passed to the function.
+		ParametersError,
 	}
 }
 
@@ -492,6 +495,8 @@ impl<T: Trait> Module<T> {
 		redeem_amount: Balance,
 		borrow_amount: Balance,
 	) -> LiquidityResult {
+		ensure!(!(borrow_amount > 0 && redeem_amount > 0), Error::<T>::ParametersError);
+
 		let m_tokens_ids = T::MTokensId::get();
 
 		let mut sum_collateral = Balance::zero();
@@ -521,22 +526,17 @@ impl<T: Trait> Module<T> {
 				.checked_mul(&oracle_price)
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			if (<LiquidityPools<T>>::check_user_available_collateral(&account, underlying_asset) && borrow_amount > 0)
-				|| redeem_amount > 0
-			{
+			if <LiquidityPools<T>>::check_user_available_collateral(&account, underlying_asset) {
 				let m_token_balance = T::MultiCurrency::free_balance(asset, account);
 
 				// sum_collateral += tokens_to_denom * m_token_balance
 				sum_collateral =
 					Self::mul_price_and_balance_add_to_prev_value(sum_collateral, m_token_balance, tokens_to_denom)?;
-
-				// sum_borrow_plus_effects += oracle_price * borrow_balance
-				sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
-					sum_borrow_plus_effects,
-					borrow_balance,
-					oracle_price,
-				)?;
 			}
+
+			// sum_borrow_plus_effects += oracle_price * borrow_balance
+			sum_borrow_plus_effects =
+				Self::mul_price_and_balance_add_to_prev_value(sum_borrow_plus_effects, borrow_balance, oracle_price)?;
 
 			// Calculate effects of interacting with Underlying Asset Modify
 			if underlying_to_borrow == underlying_asset {
@@ -613,10 +613,12 @@ impl<T: Trait> Module<T> {
 			Error::<T>::OperationPaused
 		);
 
-		let (_, shortfall) =
-			Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset_id, redeem_amount, 0)?;
+		if LiquidityPools::<T>::check_user_available_collateral(&redeemer, underlying_asset_id) {
+			let (_, shortfall) =
+				Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset_id, redeem_amount, 0)?;
 
-		ensure!(!(shortfall > 0), Error::<T>::InsufficientLiquidity);
+			ensure!(!(shortfall > 0), Error::<T>::InsufficientLiquidity);
+		}
 
 		Ok(())
 	}
