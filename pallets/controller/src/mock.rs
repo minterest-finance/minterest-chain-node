@@ -268,7 +268,7 @@ impl ExtBuilder {
 			.user_balance(ALICE, CurrencyId::MDOT, 60)
 			.pool_balance(CurrencyId::DOT, 60)
 			.pool_mock(CurrencyId::DOT)
-			.pool_user_data(ALICE, CurrencyId::DOT, 0, Rate::from_inner(0), true)
+			.pool_user_data(ALICE, CurrencyId::DOT, 0, Rate::from_inner(0), false)
 	}
 
 	pub fn alice_deposit_20_eth(self) -> Self {
@@ -276,7 +276,7 @@ impl ExtBuilder {
 			.user_balance(ALICE, CurrencyId::METH, 20)
 			.pool_balance(CurrencyId::ETH, 20)
 			.pool_mock(CurrencyId::ETH)
-			.pool_user_data(ALICE, CurrencyId::ETH, 0, Rate::from_inner(0), true)
+			.pool_user_data(ALICE, CurrencyId::ETH, 0, Rate::from_inner(0), false)
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {

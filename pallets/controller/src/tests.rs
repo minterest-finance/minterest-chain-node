@@ -558,6 +558,7 @@ fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work(
 fn get_hypothetical_account_liquidity_one_currency_from_redeem_should_work() {
 	ExtBuilder::default().alice_deposit_60_dot().build().execute_with(|| {
 		// Checking the function when called from redeem.
+		// collateral parameter is set to false, user can redeem.
 		assert_eq!(
 			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 5, 0),
 			Ok((99, 0))
@@ -581,6 +582,7 @@ fn get_hypothetical_account_liquidity_two_currencies_from_redeem_should_work() {
 		.build()
 		.execute_with(|| {
 			// Checking the function when called from redeem.
+			// collateral parameter is set to false, user can redeem.
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 15, 0),
 				Ok((117, 0))
@@ -605,21 +607,29 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 		.user_balance(ALICE, CurrencyId::MDOT, 60)
 		.pool_balance(CurrencyId::DOT, 60)
 		.pool_total_borrowed(CurrencyId::DOT, 30)
-		.pool_user_data(ALICE, CurrencyId::DOT, 30, Rate::saturating_from_rational(1, 1), true)
+		.pool_user_data(ALICE, CurrencyId::DOT, 30, Rate::saturating_from_rational(1, 1), false)
 		.build()
 		.execute_with(|| {
 			// Checking the function when called from borrow.
+			// collateral parameter for DOT and ETH pool is set to false. User can't borrow.
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 30),
-				Ok((78, 0))
+				Ok((0, 60))
 			);
+
+			// Alice set collateral parameter value to true for DOT pool. Alice can borrow.
+			assert_ok!(<LiquidityPools<Runtime>>::enable_as_collateral_internal(
+				&ALICE,
+				CurrencyId::DOT
+			));
+
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 50),
-				Ok((38, 0))
+				Ok((2, 0))
 			);
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 100),
-				Ok((0, 62))
+				Ok((0, 98))
 			);
 		});
 }
@@ -655,6 +665,18 @@ fn redeem_allowed_should_work() {
 #[test]
 fn borrow_allowed_should_work() {
 	ExtBuilder::default().alice_deposit_60_dot().build().execute_with(|| {
+		// collateral parameter is set to false. User can't borrow
+		assert_err!(
+			Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10),
+			Error::<Runtime>::InsufficientLiquidity
+		);
+
+		// collateral parameter is set to true. User can borrow.
+		assert_ok!(<LiquidityPools<Runtime>>::enable_as_collateral_internal(
+			&ALICE,
+			CurrencyId::DOT
+		));
+
 		assert_ok!(Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10));
 
 		assert_noop!(
