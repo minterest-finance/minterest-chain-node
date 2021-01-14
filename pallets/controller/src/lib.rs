@@ -499,7 +499,9 @@ impl<T: Trait> Module<T> {
 				.checked_mul(&oracle_price)
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			if <LiquidityPools<T>>::check_user_available_collateral(&account, underlying_asset) {
+			if <LiquidityPools<T>>::check_user_available_collateral(&account, underlying_asset) && borrow_amount > 0
+				|| redeem_amount > 0
+			{
 				let m_token_balance = T::MultiCurrency::free_balance(asset, account);
 
 				if m_token_balance != Balance::zero() {
@@ -669,7 +671,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
 	/// Calculates the exchange rate from the underlying to the mToken.
 	/// This function does not accrue interest before calculating the exchange rate.
-	fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
+	pub fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
 		let wrapped_asset_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 		// The total amount of cash the market has
 		let total_cash = <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id);
