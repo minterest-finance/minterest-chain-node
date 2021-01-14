@@ -528,22 +528,18 @@ impl<T: Trait> Module<T> {
 			{
 				let m_token_balance = T::MultiCurrency::free_balance(asset, account);
 
-				if m_token_balance != Balance::zero() {
-					// sum_collateral += tokens_to_denom * m_token_balance
-					sum_collateral = Self::mul_price_and_balance_add_to_prev_value(
-						sum_collateral,
-						m_token_balance,
-						tokens_to_denom,
-					)?;
+				// sum_collateral += tokens_to_denom * m_token_balance
+				sum_collateral =
+					Self::mul_price_and_balance_add_to_prev_value(sum_collateral, m_token_balance, tokens_to_denom)?;
 
-					// sum_borrow_plus_effects += oracle_price * borrow_balance
-					sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
-						sum_borrow_plus_effects,
-						borrow_balance,
-						oracle_price,
-					)?;
-				}
+				// sum_borrow_plus_effects += oracle_price * borrow_balance
+				sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
+					sum_borrow_plus_effects,
+					borrow_balance,
+					oracle_price,
+				)?;
 			}
+
 			// Calculate effects of interacting with Underlying Asset Modify
 			if underlying_to_borrow == underlying_asset {
 				// redeem effect
