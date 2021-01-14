@@ -4,22 +4,21 @@ use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 pub use minterest_primitives::{Balance, CurrencyId};
 use orml_currencies::Currency;
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, traits::Zero, FixedU128, Perbill};
+use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 
 use super::*;
 use crate::GenesisConfig;
-use sp_arithmetic::FixedPointNumber;
 
 mod liquidity_pools {
 	pub use crate::Event;
 }
 
 impl_outer_origin! {
-	pub enum Origin for Runtime {}
+	pub enum Origin for Test {}
 }
 
 impl_outer_event! {
-	pub enum TestEvent for Runtime {
+	pub enum TestEvent for Test {
 		frame_system<T>,
 		liquidity_pools,
 		orml_currencies<T>,
@@ -28,10 +27,10 @@ impl_outer_event! {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Runtime;
+pub struct Test;
 
 // For testing the module, we construct most of a mock runtime. This means
-// first constructing a configuration type (`Runtime`) which `impl`s each of the
+// first constructing a configuration type (`Test`) which `impl`s each of the
 // configuration traits of modules we want to use.
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -41,7 +40,7 @@ parameter_types! {
 }
 
 pub type AccountId = u32;
-impl frame_system::Trait for Runtime {
+impl frame_system::Trait for Test {
 	type BaseCallFilter = ();
 	type Origin = Origin;
 	type Call = ();
@@ -78,7 +77,7 @@ impl frame_system::Trait for Runtime {
 	type SystemWeightInfo = ();
 }
 
-impl orml_tokens::Trait for Runtime {
+impl orml_tokens::Trait for Test {
 	type Event = TestEvent;
 	type Balance = Balance;
 	type Amount = Amount;
@@ -91,90 +90,110 @@ parameter_types! {
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MINT;
 }
 
-type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
+type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
 
-impl orml_currencies::Trait for Runtime {
+impl orml_currencies::Trait for Test {
 	type Event = TestEvent;
-	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type MultiCurrency = orml_tokens::Module<Test>;
 	type NativeCurrency = NativeCurrency;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type WeightInfo = ();
 }
 
-pub type System = frame_system::Module<Runtime>;
+pub type System = frame_system::Module<Test>;
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
 }
 
-impl Trait for Runtime {
+impl Trait for Test {
 	type Event = TestEvent;
-	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type MultiCurrency = orml_tokens::Module<Test>;
 	type ModuleId = LiquidityPoolsModuleId;
 }
 
-pub type LiquidityPools = Module<Runtime>;
-
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+	pools: Vec<(CurrencyId, Pool)>,
+	pool_user_data: Vec<(AccountId, CurrencyId, PoolUserData)>,
 }
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
 			endowed_accounts: vec![],
+			pools: vec![],
+			pool_user_data: vec![],
 		}
 	}
 }
 
 type Amount = i128;
-
+pub type LiquidityPools = Module<Test>;
 pub const ALICE: AccountId = 1;
-pub const ONE_HUNDRED: Balance = 100;
+pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
+pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
+pub const TEN_THOUSAND: Balance = 10_000 * DOLLARS;
 
 impl ExtBuilder {
-	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
-		self.endowed_accounts = endowed_accounts;
+	pub fn pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts
+			.push((LiquidityPools::pools_account_id(), currency_id, balance));
 		self
 	}
 
-	pub fn one_hundred_dots_for_alice(self) -> Self {
-		self.balances(vec![(ALICE, CurrencyId::DOT, ONE_HUNDRED)])
+	pub fn pool_with_params(
+		mut self,
+		pool_id: CurrencyId,
+		total_borrowed: Balance,
+		borrow_index: Rate,
+		current_exchange_rate: Rate,
+		total_insurance: Balance,
+	) -> Self {
+		self.pools.push((
+			pool_id,
+			Pool {
+				total_borrowed,
+				borrow_index,
+				current_exchange_rate,
+				total_insurance,
+			},
+		));
+		self
+	}
+
+	pub fn pool_user_data_with_params(
+		mut self,
+		user: AccountId,
+		pool_id: CurrencyId,
+		total_borrowed: Balance,
+		interest_index: Rate,
+		collateral: bool,
+	) -> Self {
+		self.pool_user_data.push((
+			user,
+			pool_id,
+			PoolUserData {
+				total_borrowed,
+				interest_index,
+				collateral,
+			},
+		));
+		self
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default()
-			.build_storage::<Runtime>()
-			.unwrap();
+		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-		orml_tokens::GenesisConfig::<Runtime> {
+		orml_tokens::GenesisConfig::<Test> {
 			endowed_accounts: self.endowed_accounts,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		GenesisConfig::<Runtime> {
-			pools: vec![
-				(
-					CurrencyId::ETH,
-					Pool {
-						total_borrowed: Balance::zero(),
-						borrow_index: Rate::saturating_from_rational(1, 1),
-						current_exchange_rate: FixedU128::from_inner(1),
-						total_insurance: Balance::zero(),
-					},
-				),
-				(
-					CurrencyId::DOT,
-					Pool {
-						total_borrowed: Balance::zero(),
-						borrow_index: Rate::saturating_from_rational(1, 1),
-						current_exchange_rate: FixedU128::from_inner(1),
-						total_insurance: Balance::zero(),
-					},
-				),
-			],
-			pool_user_data: vec![],
+		GenesisConfig::<Test> {
+			pools: self.pools,
+			pool_user_data: self.pool_user_data,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
