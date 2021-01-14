@@ -523,7 +523,9 @@ impl<T: Trait> Module<T> {
 				.checked_mul(&oracle_price)
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			if <LiquidityPools<T>>::check_user_available_collateral(&account, underlying_asset) {
+			if (<LiquidityPools<T>>::check_user_available_collateral(&account, underlying_asset) && borrow_amount > 0)
+				|| redeem_amount > 0
+			{
 				let m_token_balance = T::MultiCurrency::free_balance(asset, account);
 
 				if m_token_balance != Balance::zero() {
