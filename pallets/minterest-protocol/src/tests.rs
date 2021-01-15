@@ -34,7 +34,7 @@ fn deposit_underlying_should_work() {
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 
-		// Alice has 100 ETH on her account, so she cannot make a deposit 100 ETH.
+		// Alice has 100 ETH on her account, so she cannot make a deposit 150 ETH.
 		assert_noop!(
 			TestProtocol::deposit_underlying(alice(), CurrencyId::ETH, dollars(150_u128)),
 			Error::<Test>::NotEnoughLiquidityAvailable
