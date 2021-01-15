@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-	use frame_support::{assert_noop, assert_ok, impl_outer_origin, parameter_types};
+	use frame_support::{assert_noop, assert_ok, ensure, impl_outer_origin, parameter_types};
 	use frame_system::{self as system};
 	use liquidity_pools::{Pool, PoolUserData};
 	use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
@@ -15,11 +15,12 @@ mod tests {
 		traits::{IdentityLookup, Zero},
 		ModuleId, Perbill,
 	};
-	use sp_runtime::{DispatchResult, FixedPointNumber};
+	use sp_runtime::{DispatchError, DispatchResult, FixedPointNumber};
 
-	use controller::{ControllerData, PauseKeeper};
+	use controller::{ControllerData, Error as ControllerError, PauseKeeper};
 	use minterest_protocol::Error as MinterestProtocolError;
-	use sp_runtime::traits::CheckedDiv;
+	use sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedMul};
+	use sp_std::{cmp::Ordering, result};
 
 	impl_outer_origin! {
 		pub enum Origin for Test {}
@@ -187,6 +188,7 @@ mod tests {
 	pub type TestAccounts = accounts::Module<Test>;
 	pub type Currencies = orml_currencies::Module<Test>;
 	pub type System = frame_system::Module<Test>;
+	type RateResult = result::Result<Rate, DispatchError>;
 
 	pub struct ExtBuilder {
 		endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -410,6 +412,77 @@ mod tests {
 			ext.execute_with(|| System::set_block_number(1));
 			ext
 		}
+	}
+
+	// Mock functions
+
+	pub fn calculate_borrow_interest_rate_mock(underlying_asset_id: CurrencyId) -> RateResult {
+		let current_total_balance: Balance = TestPools::get_pool_available_liquidity(underlying_asset_id);
+		let current_total_borrowed_balance: Balance = TestPools::pools(underlying_asset_id).total_borrowed;
+		let current_total_insurance: Balance = TestPools::pools(underlying_asset_id).total_insurance;
+
+		let utilization_rate = calculate_utilization_rate(
+			current_total_balance,
+			current_total_borrowed_balance,
+			current_total_insurance,
+		)?;
+
+		let kink = TestController::controller_dates(underlying_asset_id).kink;
+		let multiplier_per_block = TestController::controller_dates(underlying_asset_id).multiplier_per_block;
+		let base_rate_per_block = TestController::controller_dates(underlying_asset_id).base_rate_per_block;
+
+		let borrow_interest_rate = match utilization_rate.cmp(&kink) {
+			Ordering::Greater => {
+				let jump_multiplier_per_block =
+					TestController::controller_dates(underlying_asset_id).jump_multiplier_per_block;
+				let normal_rate = kink
+					.checked_mul(&multiplier_per_block)
+					.ok_or(ControllerError::<Test>::NumOverflow)?
+					.checked_add(&base_rate_per_block)
+					.ok_or(ControllerError::<Test>::NumOverflow)?;
+				let excess_util = utilization_rate
+					.checked_mul(&kink)
+					.ok_or(ControllerError::<Test>::NumOverflow)?;
+
+				excess_util
+					.checked_mul(&jump_multiplier_per_block)
+					.ok_or(ControllerError::<Test>::NumOverflow)?
+					.checked_add(&normal_rate)
+					.ok_or(ControllerError::<Test>::NumOverflow)?
+			}
+			_ => utilization_rate
+				.checked_mul(&multiplier_per_block)
+				.ok_or(ControllerError::<Test>::NumOverflow)?
+				.checked_add(&base_rate_per_block)
+				.ok_or(ControllerError::<Test>::NumOverflow)?,
+		};
+
+		Ok(borrow_interest_rate)
+	}
+
+	/// Calculates the utilization rate of the pool:
+	/// utilization_rate = total_borrows / (total_cash + total_borrows - total_insurance)
+	fn calculate_utilization_rate(
+		current_total_balance: Balance,
+		current_total_borrowed_balance: Balance,
+		current_total_insurance: Balance,
+	) -> RateResult {
+		if current_total_borrowed_balance == 0 {
+			return Ok(Rate::from_inner(0));
+		}
+
+		let total_balance_total_borrowed_sum = current_total_balance
+			.checked_add(current_total_borrowed_balance)
+			.ok_or(ControllerError::<Test>::NumOverflow)?;
+		let denominator = total_balance_total_borrowed_sum
+			.checked_sub(current_total_insurance)
+			.ok_or(ControllerError::<Test>::NumOverflow)?;
+
+		ensure!(denominator > 0, ControllerError::<Test>::NumOverflow);
+
+		let utilization_rate = Rate::saturating_from_rational(current_total_borrowed_balance, denominator);
+
+		Ok(utilization_rate)
 	}
 
 	/* ----------------------------------------------------------------------------------------- */
@@ -2319,6 +2392,7 @@ mod tests {
 	}
 
 	#[test]
+	// FIXME: set environment
 	fn borrow_should_work() {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_ok!(MinterestProtocol::deposit_underlying(
@@ -2510,6 +2584,308 @@ mod tests {
 	}
 
 	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn set_insurance_factor_scenario_1_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 40_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+
+				// Alice try to borrow from DOT pool
+				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_borrowed_amount_in_dot
+				));
+
+				// Checking pool available liquidity
+				assert_eq!(
+					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					alice_deposited_amount - alice_borrowed_amount_in_dot
+				);
+				// Checking total insurance for DOT pool.
+				assert_eq!(TestPools::pools(CurrencyId::DOT).total_insurance, BALANCE_ZERO);
+
+				// Jump to 10 block number.
+				System::set_block_number(10);
+
+				// Set insurance factor equal to zero.
+				assert_ok!(TestController::set_insurance_factor(admin(), CurrencyId::DOT, 0, 1));
+
+				// Alice repay full loan in DOTs.
+				assert_ok!(MinterestProtocol::repay_all(Origin::signed(ALICE), CurrencyId::DOT));
+
+				// Checking pool total insurance.
+				assert_eq!(TestPools::pools(CurrencyId::DOT).total_insurance, BALANCE_ZERO);
+			});
+	}
+
+	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn set_insurance_factor_scenario_2_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 40_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+
+				// Alice try to borrow from DOT pool
+				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_borrowed_amount_in_dot
+				));
+
+				// Checking pool available liquidity
+				assert_eq!(
+					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					alice_deposited_amount - alice_borrowed_amount_in_dot
+				);
+				// Checking total insurance for DOT pool.
+				assert_eq!(TestPools::pools(CurrencyId::DOT).total_insurance, BALANCE_ZERO);
+
+				// Jump to 10 block number.
+				System::set_block_number(10);
+
+				// Set insurance factor equal to zero.
+				assert_ok!(TestController::set_insurance_factor(admin(), CurrencyId::DOT, 1, 2));
+
+				// Alice repay full loan in DOTs.
+				assert_ok!(MinterestProtocol::repay_all(Origin::signed(ALICE), CurrencyId::DOT));
+
+				let expected_interest_accumulated: Balance = 810_000_000_000_000;
+
+				// Checking pool available liquidity
+				assert_eq!(
+					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					alice_deposited_amount + expected_interest_accumulated
+				);
+				assert_eq!(
+					TestPools::pools(CurrencyId::DOT).total_insurance,
+					BALANCE_ZERO + (expected_interest_accumulated / 2)
+				);
+			});
+	}
+
+	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn calculate_borrow_interest_rate_scenario_1_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
+			.build()
+			.execute_with(|| {
+				// Calculate expected borrow interest rate based on params before fn accrue_interest_rate called
+				let expected_borrow_rate_mock = calculate_borrow_interest_rate_mock(CurrencyId::DOT).unwrap();
+
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 40_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+
+				// Checking if real borrow interest rate is equal to the expected
+				assert_eq!(
+					TestController::controller_dates(CurrencyId::DOT).borrow_rate,
+					expected_borrow_rate_mock
+				);
+			});
+	}
+
+	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn calculate_borrow_interest_rate_scenario_2_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				// Calculate expected borrow interest rate based on params before fn accrue_interest_rate called
+				let expected_borrow_rate_mock = calculate_borrow_interest_rate_mock(CurrencyId::DOT).unwrap();
+
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 40_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+
+				// Checking if real borrow interest rate is equal to the expected
+				assert_eq!(
+					TestController::controller_dates(CurrencyId::DOT).borrow_rate,
+					expected_borrow_rate_mock
+				);
+			});
+	}
+
+	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn calculate_borrow_interest_rate_scenario_3_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 40_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+
+				// Calculate expected borrow interest rate based on params before fn accrue_interest_rate called
+				let expected_borrow_rate_mock = calculate_borrow_interest_rate_mock(CurrencyId::DOT).unwrap();
+
+				// Alice try to borrow from DOT pool
+				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_borrowed_amount_in_dot
+				));
+
+				assert_eq!(
+					TestController::controller_dates(CurrencyId::DOT).borrow_rate,
+					expected_borrow_rate_mock
+				);
+			});
+	}
+
+	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn calculate_borrow_interest_rate_scenario_4_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 40_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+
+				// Set next block number
+				System::set_block_number(1);
+
+				// Calculate expected borrow interest rate based on params before fn accrue_interest_rate called
+				let expected_borrow_rate_mock = calculate_borrow_interest_rate_mock(CurrencyId::DOT).unwrap();
+
+				// Alice try to borrow from DOT pool
+				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_borrowed_amount_in_dot
+				));
+
+				assert_eq!(
+					TestController::controller_dates(CurrencyId::DOT).borrow_rate,
+					expected_borrow_rate_mock
+				);
+			});
+	}
+
+	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn calculate_borrow_interest_rate_scenario_5_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(BOB, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 40_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+
+				// Set next block number
+				System::set_block_number(1);
+
+				// Alice borrow from DOT pool
+				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_borrowed_amount_in_dot
+				));
+
+				// Set next block number
+				System::set_block_number(2);
+
+				// Bob deposit to DOT pool
+				let bob_deposited_amount = 60_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(BOB),
+					CurrencyId::DOT,
+					bob_deposited_amount
+				));
+
+				// Set next block number
+				System::set_block_number(3);
+
+				// Calculate expected borrow interest rate based on params before fn accrue_interest_rate called
+				let expected_borrow_rate_mock = calculate_borrow_interest_rate_mock(CurrencyId::DOT).unwrap();
+
+				// Alice try to borrow from DOT pool
+				let bob_borrowed_amount_in_dot = 50_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(BOB),
+					CurrencyId::DOT,
+					alice_borrowed_amount_in_dot
+				));
+
+				assert_eq!(
+					TestController::controller_dates(CurrencyId::DOT).borrow_rate,
+					expected_borrow_rate_mock
+				);
+			});
+	}
+
+	#[test]
+	// FIXME: set environment
 	fn repay_should_work() {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_ok!(MinterestProtocol::deposit_underlying(
@@ -2570,6 +2946,7 @@ mod tests {
 	}
 
 	#[test]
+	// FIXME: set environment
 	fn repay_on_behalf_should_work() {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_ok!(MinterestProtocol::deposit_underlying(
