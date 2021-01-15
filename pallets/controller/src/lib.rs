@@ -781,20 +781,18 @@ impl<T: Trait> Module<T> {
 		current_total_borrowed_balance: Balance,
 		current_total_insurance: Balance,
 	) -> RateResult {
-		if current_total_borrowed_balance == 0 {
-			return Ok(Rate::from_inner(0));
+		if current_total_borrowed_balance.is_zero() {
+			return Ok(Rate::zero());
 		}
 
-		let total_balance_total_borrowed_sum = current_total_balance
-			.checked_add(current_total_borrowed_balance)
-			.ok_or(Error::<T>::NumOverflow)?;
-		let denominator = total_balance_total_borrowed_sum
-			.checked_sub(current_total_insurance)
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		ensure!(denominator > 0, Error::<T>::NumOverflow);
-
-		let utilization_rate = Rate::saturating_from_rational(current_total_borrowed_balance, denominator);
+		let utilization_rate = Rate::checked_from_rational(
+			current_total_borrowed_balance,
+			current_total_balance
+				.checked_add(current_total_borrowed_balance)
+				.and_then(|v| v.checked_sub(current_total_insurance))
+				.ok_or(Error::<T>::NumOverflow)?,
+		)
+		.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(utilization_rate)
 	}

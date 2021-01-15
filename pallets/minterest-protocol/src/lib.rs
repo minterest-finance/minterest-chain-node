@@ -274,6 +274,7 @@ decl_module! {
 
 			ensure!(!<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id), Error::<T>::AlreadyCollateral);
 
+			// If user does not have assets in the pool, then he cannot enable as collateral the pool.
 			let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
 			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &sender);
 			ensure!(user_wrapped_balance > 0, Error::<T>::CanotBeEnabledAsCollateral);
