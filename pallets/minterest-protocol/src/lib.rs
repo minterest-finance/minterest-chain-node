@@ -99,6 +99,7 @@ decl_error! {
 		/// Pool not found.
 		PoolNotFound,
 
+
 		/// Transaction with zero balance is not allowed.
 		ZeroBalanceTransaction,
 
