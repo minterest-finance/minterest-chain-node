@@ -19,7 +19,7 @@ mod minterest_protocol {
 }
 
 impl_outer_event! {
-	pub enum Event for Test {
+	pub enum TestEvent for Test {
 		frame_system<T>,
 		orml_tokens<T>,
 		orml_currencies<T>,
@@ -55,7 +55,7 @@ impl frame_system::Trait for Test {
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
+	type Event = TestEvent;
 	type BlockHashCount = BlockHashCount;
 	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type MaximumBlockWeight = MaximumBlockWeight;
@@ -78,7 +78,7 @@ parameter_types! {
 }
 
 impl orml_tokens::Trait for Test {
-	type Event = Event;
+	type Event = TestEvent;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
@@ -93,7 +93,7 @@ parameter_types! {
 type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
 
 impl orml_currencies::Trait for Test {
-	type Event = Event;
+	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type NativeCurrency = NativeCurrency;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
@@ -105,7 +105,7 @@ parameter_types! {
 }
 
 impl liquidity_pools::Trait for Test {
-	type Event = Event;
+	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type ModuleId = LiquidityPoolsModuleId;
 }
@@ -128,7 +128,7 @@ parameter_types! {
 }
 
 impl controller::Trait for Test {
-	type Event = Event;
+	type Event = TestEvent;
 	type InitialExchangeRate = InitialExchangeRate;
 	type BlocksPerYear = BlocksPerYear;
 	type UnderlyingAssetId = UnderlyingAssetId;
@@ -136,7 +136,7 @@ impl controller::Trait for Test {
 }
 
 impl oracle::Trait for Test {
-	type Event = Event;
+	type Event = TestEvent;
 }
 
 parameter_types! {
@@ -144,12 +144,12 @@ parameter_types! {
 }
 
 impl accounts::Trait for Test {
-	type Event = Event;
+	type Event = TestEvent;
 	type MaxMembers = MaxMembers;
 }
 
 impl Trait for Test {
-	type Event = Event;
+	type Event = TestEvent;
 	type Borrowing = MockBorrowing;
 }
 
@@ -196,6 +196,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		endowed_accounts: vec![
 			(ALICE, CurrencyId::MINT, ONE_MILL),
 			(ALICE, CurrencyId::DOT, ONE_HUNDRED),
+			(ALICE, CurrencyId::ETH, ONE_HUNDRED),
 			(BOB, CurrencyId::MINT, ONE_MILL),
 			(BOB, CurrencyId::DOT, ONE_HUNDRED),
 			(ADMIN, CurrencyId::MINT, ONE_MILL),
@@ -264,7 +265,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 				PoolUserData {
 					total_borrowed: 0,
 					interest_index: Rate::saturating_from_rational(1, 1),
-					collateral: true,
+					collateral: false,
 				},
 			),
 			(
