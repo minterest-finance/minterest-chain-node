@@ -475,14 +475,23 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
+		if !all_assets {
+			ensure!(repay_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
+		}
+
+		// Fetch the amount the borrower owes, with accumulated interest
+		let account_borrows = <Controller<T>>::borrow_balance_stored(&borrower, underlying_asset_id)
+			.map_err(|_| Error::<T>::NumOverflow)?;
+
+		repay_amount = match repay_amount.cmp(&Balance::zero()) {
+			Ordering::Equal => account_borrows,
+			_ => repay_amount,
+		};
+
 		ensure!(
 			repay_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
 			Error::<T>::NotEnoughUnderlyingsAssets
 		);
-
-		if !all_assets {
-			ensure!(repay_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
-		}
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
@@ -497,15 +506,6 @@ impl<T: Trait> Module<T> {
 			current_block_number == accrual_block_number_previous,
 			Error::<T>::PoolNotFresh
 		);
-
-		// Fetch the amount the borrower owes, with accumulated interest
-		let account_borrows = <Controller<T>>::borrow_balance_stored(&borrower, underlying_asset_id)
-			.map_err(|_| Error::<T>::NumOverflow)?;
-
-		repay_amount = match repay_amount.cmp(&Balance::zero()) {
-			Ordering::Equal => account_borrows,
-			_ => repay_amount,
-		};
 
 		<LiquidityPools<T>>::update_state_on_repay(&borrower, underlying_asset_id, repay_amount, account_borrows)
 			.map_err(|_| Error::<T>::RepayAmountToBig)?;
