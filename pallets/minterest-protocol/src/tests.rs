@@ -34,9 +34,9 @@ fn deposit_underlying_should_work() {
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 
-		// Alice has 0 ETH on her account, so she cannot make a deposit.
+		// Alice has 100 ETH on her account, so she cannot make a deposit 150 ETH.
 		assert_noop!(
-			TestProtocol::deposit_underlying(alice(), CurrencyId::ETH, dollars(10_u128)),
+			TestProtocol::deposit_underlying(alice(), CurrencyId::ETH, dollars(150_u128)),
 			Error::<Test>::NotEnoughLiquidityAvailable
 		);
 
@@ -411,6 +411,33 @@ fn repay_all_should_work() {
 }
 
 #[test]
+fn repay_all_fails_if_not_enough_underlying_assets() {
+	ExtBuilder::default().build().execute_with(|| {
+		// Alice deposited 60 DOT to the pool.
+		assert_ok!(TestProtocol::deposit_underlying(
+			alice(),
+			CurrencyId::DOT,
+			dollars(60_u128)
+		));
+		// Alice borrowed 30 DOT from the pool.
+		assert_ok!(TestProtocol::borrow(alice(), CurrencyId::DOT, dollars(30_u128)));
+
+		// Alice deposited 70 DOT to the pool. Now she have 0 DOT in her account.
+		assert_ok!(TestProtocol::deposit_underlying(
+			alice(),
+			CurrencyId::DOT,
+			dollars(70_u128)
+		));
+
+		// Insufficient DOT in the ALICE account for repay 30 DOT.
+		assert_noop!(
+			TestProtocol::repay_all(alice(), CurrencyId::DOT),
+			Error::<Test>::NotEnoughUnderlyingsAssets
+		);
+	});
+}
+
+#[test]
 fn repay_on_behalf_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Alice deposited 60 DOT to the pool.
@@ -462,11 +489,30 @@ fn repay_on_behalf_should_work() {
 #[test]
 fn enable_as_collateral_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		// Alice enable as collateral her DOT pool.
-		assert_ok!(TestProtocol::enable_as_collateral(alice(), CurrencyId::DOT));
-		let expected_event = TestEvent::minterest_protocol(RawEvent::PoolEnabledAsCollateral(ALICE, CurrencyId::DOT));
+		// Alice cannot enable as collateral ETH pool, because she has not deposited funds into the pool.
+		assert_noop!(
+			TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH),
+			Error::<Test>::CanotBeEnabledAsCollateral
+		);
+
+		// Alice deposit 60 ETH
+		assert_ok!(TestProtocol::deposit_underlying(
+			alice(),
+			CurrencyId::ETH,
+			dollars(60_u128)
+		));
+
+		// Alice enable as collateral her ETH pool.
+		assert_ok!(TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH));
+		let expected_event = TestEvent::minterest_protocol(RawEvent::PoolEnabledAsCollateral(ALICE, CurrencyId::ETH));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
-		assert!(TestPools::check_user_available_collateral(&ALICE, CurrencyId::DOT));
+		assert!(TestPools::check_user_available_collateral(&ALICE, CurrencyId::ETH));
+
+		// ETH pool is already collateral.
+		assert_noop!(
+			TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH),
+			Error::<Test>::AlreadyCollateral
+		);
 
 		assert_noop!(
 			TestProtocol::enable_as_collateral(alice(), CurrencyId::MDOT),
@@ -478,11 +524,31 @@ fn enable_as_collateral_should_work() {
 #[test]
 fn disable_collateral_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		// Alice disable collateral her DOT pool.
-		assert_ok!(TestProtocol::disable_collateral(alice(), CurrencyId::DOT));
-		let expected_event = TestEvent::minterest_protocol(RawEvent::PoolDisabledCollateral(ALICE, CurrencyId::DOT));
+		assert_noop!(
+			TestProtocol::disable_collateral(alice(), CurrencyId::ETH),
+			Error::<Test>::AlreadyDisabledCollateral
+		);
+
+		// Alice deposit 60 ETH
+		assert_ok!(TestProtocol::deposit_underlying(
+			alice(),
+			CurrencyId::ETH,
+			dollars(60_u128)
+		));
+
+		// Alice enable as collateral her ETH pool.
+		assert_ok!(TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH));
+
+		// Alice disable collateral her ETH pool.
+		assert_ok!(TestProtocol::disable_collateral(alice(), CurrencyId::ETH));
+		let expected_event = TestEvent::minterest_protocol(RawEvent::PoolDisabledCollateral(ALICE, CurrencyId::ETH));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
-		assert!(!TestPools::check_user_available_collateral(&ALICE, CurrencyId::DOT));
+		assert!(!TestPools::check_user_available_collateral(&ALICE, CurrencyId::ETH));
+
+		assert_noop!(
+			TestProtocol::disable_collateral(alice(), CurrencyId::ETH),
+			Error::<Test>::AlreadyDisabledCollateral
+		);
 
 		assert_noop!(
 			TestProtocol::disable_collateral(alice(), CurrencyId::MDOT),

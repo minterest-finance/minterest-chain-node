@@ -577,18 +577,18 @@ fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work(
 fn get_hypothetical_account_liquidity_one_currency_from_redeem_should_work() {
 	ExtBuilder::default().alice_deposit_60_dot().build().execute_with(|| {
 		// Checking the function when called from redeem.
-		// collateral parameter is set to false, user can redeem.
+		// collateral parameter is set to false, user can't redeem.
 		assert_eq!(
 			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 5, 0),
-			Ok((99, 0))
+			Ok((0, 9))
 		);
 		assert_eq!(
 			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 60, 0),
-			Ok((0, 0))
+			Ok((0, 108))
 		);
 		assert_eq!(
 			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 200, 0),
-			Ok((0, 252))
+			Ok((0, 360))
 		);
 	});
 }
@@ -601,18 +601,18 @@ fn get_hypothetical_account_liquidity_two_currencies_from_redeem_should_work() {
 		.build()
 		.execute_with(|| {
 			// Checking the function when called from redeem.
-			// collateral parameter is set to false, user can redeem.
+			// collateral parameter is set to false, user can't redeem.
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 15, 0),
-				Ok((117, 0))
+				Ok((0, 27))
 			);
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 80, 0),
-				Ok((0, 0))
+				Ok((0, 144))
 			);
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 100, 0),
-				Ok((0, 36))
+				Ok((0, 180))
 			);
 		});
 }
@@ -633,7 +633,7 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 			// collateral parameter for DOT and ETH pool is set to false. User can't borrow.
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 30),
-				Ok((0, 60))
+				Ok((0, 120))
 			);
 
 			// Alice set collateral parameter value to true for DOT pool. Alice can borrow.
@@ -672,11 +672,6 @@ fn redeem_allowed_should_work() {
 		assert_noop!(
 			Controller::redeem_allowed(CurrencyId::KSM, &ALICE, 10),
 			Error::<Runtime>::OperationPaused
-		);
-
-		assert_noop!(
-			Controller::redeem_allowed(CurrencyId::DOT, &ALICE, 999),
-			Error::<Runtime>::InsufficientLiquidity
 		);
 	});
 }
@@ -1001,19 +996,6 @@ fn set_jump_multiplier_per_block_should_work() {
 
 			assert_noop!(
 				Controller::set_jump_multiplier_per_block(alice(), CurrencyId::MDOT, 20, 10),
-				Error::<Runtime>::PoolNotFound
-			);
-		});
-}
-
-#[test]
-fn pool_not_found() {
-	ExtBuilder::default()
-		.pool_mock(CurrencyId::DOT)
-		.build()
-		.execute_with(|| {
-			assert_noop!(
-				Controller::pause_specific_operation(alice(), CurrencyId::MBTC, Operation::Deposit),
 				Error::<Runtime>::PoolNotFound
 			);
 		});

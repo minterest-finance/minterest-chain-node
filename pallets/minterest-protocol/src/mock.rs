@@ -205,6 +205,7 @@ impl Default for ExtBuilder {
 				// seed: initial DOTs. Initial MINT to pay for gas.
 				(ALICE, CurrencyId::MINT, ONE_MILL_DOLLARS),
 				(ALICE, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
+				(ALICE, CurrencyId::ETH, ONE_HUNDRED_DOLLARS),
 				(BOB, CurrencyId::MINT, ONE_MILL_DOLLARS),
 				(BOB, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
 				// seed: initial insurance, equal 10_000$
@@ -276,7 +277,7 @@ impl ExtBuilder {
 					PoolUserData {
 						total_borrowed: 0,
 						interest_index: Rate::from_inner(0),
-						collateral: true,
+						collateral: false,
 					},
 				),
 				(
