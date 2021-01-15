@@ -520,10 +520,10 @@ impl<T: Trait> Module<T> {
 			}
 
 			// Pre-compute a conversion factor from tokens -> dollars (normalized price value)
+			// tokens_to_denom = collateral_factor * exchange_rate * oracle_price
 			let tokens_to_denom = collateral_factor
 				.checked_mul(&exchange_rate)
-				.ok_or(Error::<T>::NumOverflow)?
-				.checked_mul(&oracle_price)
+				.and_then(|v| v.checked_mul(&oracle_price))
 				.ok_or(Error::<T>::NumOverflow)?;
 
 			if <LiquidityPools<T>>::check_user_available_collateral(&account, underlying_asset) {
@@ -758,21 +758,18 @@ impl<T: Trait> Module<T> {
 				let jump_multiplier_per_block = Self::controller_dates(underlying_asset_id).jump_multiplier_per_block;
 				let normal_rate = kink
 					.checked_mul(&multiplier_per_block)
-					.ok_or(Error::<T>::NumOverflow)?
-					.checked_add(&base_rate_per_block)
+					.and_then(|v| v.checked_add(&base_rate_per_block))
 					.ok_or(Error::<T>::NumOverflow)?;
 				let excess_util = utilization_rate.checked_mul(&kink).ok_or(Error::<T>::NumOverflow)?;
 
 				excess_util
 					.checked_mul(&jump_multiplier_per_block)
-					.ok_or(Error::<T>::NumOverflow)?
-					.checked_add(&normal_rate)
+					.and_then(|v| v.checked_add(&normal_rate))
 					.ok_or(Error::<T>::NumOverflow)?
 			}
 			_ => utilization_rate
 				.checked_mul(&multiplier_per_block)
-				.ok_or(Error::<T>::NumOverflow)?
-				.checked_add(&base_rate_per_block)
+				.and_then(|v| v.checked_add(&base_rate_per_block))
 				.ok_or(Error::<T>::NumOverflow)?,
 		};
 

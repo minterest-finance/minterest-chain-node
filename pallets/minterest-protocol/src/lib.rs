@@ -272,13 +272,11 @@ decl_module! {
 			let sender = ensure_signed(origin)?;
 			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 
-			let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
-
-			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &sender);
-
-			ensure!(user_wrapped_balance > 0, Error::<T>::CanotBeEnabledAsCollateral);
-
 			ensure!(!<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id), Error::<T>::AlreadyCollateral);
+
+			let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
+			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &sender);
+			ensure!(user_wrapped_balance > 0, Error::<T>::CanotBeEnabledAsCollateral);
 
 			<LiquidityPools<T>>::enable_as_collateral_internal(&sender, pool_id)?;
 			Self::deposit_event(RawEvent::PoolEnabledAsCollateral(sender, pool_id));
