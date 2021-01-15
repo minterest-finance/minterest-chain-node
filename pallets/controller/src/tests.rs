@@ -983,19 +983,6 @@ fn set_jump_multiplier_per_block_should_work() {
 }
 
 #[test]
-fn pool_not_found() {
-	ExtBuilder::default()
-		.pool_mock(CurrencyId::DOT)
-		.build()
-		.execute_with(|| {
-			assert_noop!(
-				Controller::pause_specific_operation(alice(), CurrencyId::MBTC, Operation::Deposit),
-				Error::<Runtime>::PoolNotFound
-			);
-		});
-}
-
-#[test]
 fn pause_specific_operation_should_work() {
 	ExtBuilder::default()
 		.pool_mock(CurrencyId::DOT)

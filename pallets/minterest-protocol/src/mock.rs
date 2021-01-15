@@ -196,6 +196,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		endowed_accounts: vec![
 			(ALICE, CurrencyId::MINT, ONE_MILL),
 			(ALICE, CurrencyId::DOT, ONE_HUNDRED),
+			(ALICE, CurrencyId::ETH, ONE_HUNDRED),
 			(BOB, CurrencyId::MINT, ONE_MILL),
 			(BOB, CurrencyId::DOT, ONE_HUNDRED),
 			(ADMIN, CurrencyId::MINT, ONE_MILL),
@@ -264,7 +265,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 				PoolUserData {
 					total_borrowed: 0,
 					interest_index: Rate::saturating_from_rational(1, 1),
-					collateral: true,
+					collateral: false,
 				},
 			),
 			(
