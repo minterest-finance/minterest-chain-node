@@ -1764,14 +1764,6 @@ mod tests {
 			});
 	}
 
-	//5. Вывод сверх иншуренса
-	// Ввод иншуренса (10 токенов) (в пуле - 10)
-	// Депозит от Алисы (20 токенов) (в пуле - 30)
-	// Депозит от Боба (20 ВТОРЫХ токенов) (в пуле - 30 и 20)
-	// Займ от Боба (5 ПЕРВЫХ токенов) (в пуле - 25 и 20)
-	// Вывод от Алисы (20 токенов) (в пуле - 5 и 20)
-	// Должно остаться в пуле 5 токенов иншуренса.
-
 	#[test]
 	// Scenario description:
 	// FIXME: add description
@@ -2388,6 +2380,133 @@ mod tests {
 				MinterestProtocolError::<Test>::BorrowControllerRejection
 			);
 		});
+	}
+
+	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn borrow_scenario_1_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				// Alice try to borrow from DOT pool
+				let alice_borrowed_amount_in_dot = 50_000 * DOLLARS;
+				assert_noop!(
+					MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::DOT, alice_borrowed_amount_in_dot),
+					MinterestProtocolError::<Test>::BorrowControllerRejection
+				);
+
+				// Checking pool available liquidity
+				assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), ONE_HUNDRED);
+			});
+	}
+
+	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn borrow_scenario_2_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
+			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
+			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 50_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+
+				// Alice try to borrow from ETH pool
+				let alice_borrowed_amount = 50_000 * DOLLARS;
+				assert_noop!(
+					MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::ETH, alice_borrowed_amount),
+					MinterestProtocolError::<Test>::BorrowControllerRejection
+				);
+
+				// Checking pool available liquidity
+				assert_eq!(
+					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					ONE_HUNDRED + alice_deposited_amount
+				);
+				assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::ETH), ONE_HUNDRED);
+			});
+	}
+
+	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn borrow_scenario_3_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
+			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 50_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+
+				// Alice try to borrow from ETH pool
+				let alice_borrowed_amount = 50_000 * DOLLARS;
+				assert_noop!(
+					MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::ETH, alice_borrowed_amount),
+					MinterestProtocolError::<Test>::BorrowControllerRejection
+				);
+
+				// Checking pool available liquidity
+				assert_eq!(
+					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					ONE_HUNDRED + alice_deposited_amount
+				);
+				assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::ETH), ONE_HUNDRED);
+			});
+	}
+
+	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn borrow_scenario_4_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
+			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
+			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 50_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+
+				// Alice try to borrow from ETH pool
+				let alice_borrowed_amount = 40_000 * DOLLARS;
+				assert_noop!(
+					MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::ETH, alice_borrowed_amount),
+					MinterestProtocolError::<Test>::BorrowControllerRejection
+				);
+
+				// Checking pool available liquidity
+				assert_eq!(
+					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					ONE_HUNDRED + alice_deposited_amount
+				);
+				assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::ETH), ONE_HUNDRED);
+			});
 	}
 
 	#[test]
