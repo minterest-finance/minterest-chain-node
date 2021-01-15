@@ -365,10 +365,7 @@ impl<T: Trait> Module<T> {
 		let wrapped_amount = match (underlying_amount, wrapped_amount, all_assets) {
 			(0, 0, true) => {
 				let total_wrapped_amount = T::MultiCurrency::free_balance(wrapped_id, &who);
-				ensure!(
-					total_wrapped_amount != Balance::zero(),
-					Error::<T>::NumberOfWrappedTokensIsZero
-				);
+				ensure!(!total_wrapped_amount.is_zero(), Error::<T>::NumberOfWrappedTokensIsZero);
 				underlying_amount = <Controller<T>>::convert_from_wrapped(wrapped_id, total_wrapped_amount)
 					.map_err(|_| Error::<T>::NumOverflow)?;
 				total_wrapped_amount

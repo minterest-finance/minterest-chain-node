@@ -459,7 +459,7 @@ impl<T: Trait> Module<T> {
 
 		// If borrow_balance = 0 then borrow_index is likely also 0.
 		// Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
-		if user_borrow_balance == 0 {
+		if user_borrow_balance.is_zero() {
 			return Ok(Balance::zero());
 		};
 
@@ -515,7 +515,7 @@ impl<T: Trait> Module<T> {
 			let oracle_price =
 				<Oracle<T>>::get_underlying_price(underlying_asset).map_err(|_| Error::<T>::OraclePriceError)?;
 
-			if oracle_price == Price::zero() {
+			if oracle_price.is_zero() {
 				return Ok((Balance::zero(), Balance::zero()));
 			}
 
