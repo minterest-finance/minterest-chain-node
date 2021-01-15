@@ -796,14 +796,10 @@ impl<T: Trait> Module<T> {
 	/// Calculates the supply interest rate of the pool:
 	/// supply_interest_rate = utilization_rate * (borrow_rate * (1 - insurance_factor))
 	fn calculate_supply_interest_rate(utilization_rate: Rate, borrow_rate: Rate, insurance_factor: Rate) -> RateResult {
-		let one_minus_insurance_factor = Rate::saturating_from_rational(1, 1)
+		let supply_interest_rate = Rate::one()
 			.checked_sub(&insurance_factor)
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		let supply_interest_rate = utilization_rate
-			.checked_mul(&borrow_rate)
-			.ok_or(Error::<T>::NumOverflow)?
-			.checked_mul(&one_minus_insurance_factor)
+			.and_then(|v| v.checked_mul(&borrow_rate))
+			.and_then(|v| v.checked_mul(&utilization_rate))
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(supply_interest_rate)
