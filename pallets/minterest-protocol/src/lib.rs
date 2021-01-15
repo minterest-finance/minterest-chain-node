@@ -104,6 +104,18 @@ decl_error! {
 
 		/// User is trying repay more than he borrowed.
 		RepayAmountToBig,
+
+		/// This pool is already collateral.
+		AlreadyCollateral,
+
+		/// This pool has already been disabled as a collateral.
+		AlreadyDisabledCollateral,
+
+		/// The user has an outstanding borrow. Cannot be disabled as collateral.
+		CanotBeDisabledAsCollateral,
+
+		/// The user has not deposited funds into the pool.
+		CanotBeEnabledAsCollateral
 	}
 }
 
@@ -258,6 +270,15 @@ decl_module! {
 		pub fn enable_as_collateral(origin, pool_id: CurrencyId) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+
+			let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
+
+			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &sender);
+
+			ensure!(user_wrapped_balance > 0, Error::<T>::CanotBeEnabledAsCollateral);
+
+			ensure!(!<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id), Error::<T>::AlreadyCollateral);
+
 			<LiquidityPools<T>>::enable_as_collateral_internal(&sender, pool_id)?;
 			Self::deposit_event(RawEvent::PoolEnabledAsCollateral(sender, pool_id));
 			Ok(())
@@ -268,6 +289,15 @@ decl_module! {
 		pub fn disable_collateral(origin, pool_id: CurrencyId) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+
+			ensure!(<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id), Error::<T>::AlreadyDisabledCollateral);
+
+			let user_balance_disabled_asset = T::MultiCurrency::free_balance(pool_id, &sender);
+
+			// Check if the user will have enough collateral if he removes one of the collaterals.
+			let (_, shortfall) = <Controller<T>>::get_hypothetical_account_liquidity(&sender, pool_id, user_balance_disabled_asset, 0)?;
+			ensure!(!(shortfall > 0), Error::<T>::CanotBeDisabledAsCollateral);
+
 			<LiquidityPools<T>>::disable_collateral_internal(&sender, pool_id)?;
 			Self::deposit_event(RawEvent::PoolDisabledCollateral(sender, pool_id));
 			Ok(())
