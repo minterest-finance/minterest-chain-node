@@ -9,7 +9,7 @@ use frame_support::{assert_noop, assert_ok};
 fn deposit_underlying_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::ETH, 10),
+			MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::ETH, 150),
 			Error::<Test>::NotEnoughLiquidityAvailable
 		);
 		assert_noop!(
