@@ -16,7 +16,7 @@ pub struct Pool {
 	pub total_borrowed: Balance,
 	/// Accumulator of the total earned interest rate since the opening of the pool
 	pub borrow_index: Rate,
-	pub current_exchange_rate: Rate,
+	pub current_exchange_rate: Rate, // FIXME: can be removed.
 	pub total_insurance: Balance,
 }
 
@@ -131,6 +131,16 @@ impl<T: Trait> Module<T> {
 			r.total_borrowed = new_total_borrow_balance;
 			r.total_insurance = new_total_insurance;
 		});
+		Ok(())
+	}
+
+	pub fn enable_as_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) -> DispatchResult {
+		PoolUserDates::<T>::mutate(who, pool_id, |p| p.collateral = true);
+		Ok(())
+	}
+
+	pub fn disable_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) -> DispatchResult {
+		PoolUserDates::<T>::mutate(who, pool_id, |p| p.collateral = false);
 		Ok(())
 	}
 }

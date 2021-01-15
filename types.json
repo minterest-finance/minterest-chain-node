@@ -25,7 +25,7 @@
     "PoolUserData" : {
       "total_borrowed": "Balance",
       "interest_index": "Rate",
-      "collateral": "bool",
+      "collateral": "bool"
     },
     "CurrencyIdOf": "CurrencyId",
     "Amount": "i128",
@@ -40,7 +40,7 @@
       "base_rate_per_block": "Rate",
       "multiplier_per_block": "Rate",
       "jump_multiplier_per_block": "Rate",
-      "collateral_factor": "Rate",
+      "collateral_factor": "Rate"
     },
     "PauseKeeper": {
       "deposit_paused": "bool",
