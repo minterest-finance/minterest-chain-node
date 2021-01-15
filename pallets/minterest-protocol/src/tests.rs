@@ -34,9 +34,9 @@ fn deposit_underlying_should_work() {
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 
-		// Alice has 0 ETH on her account, so she cannot make a deposit.
+		// Alice has 100 ETH on her account, so she cannot make a deposit 100 ETH.
 		assert_noop!(
-			TestProtocol::deposit_underlying(alice(), CurrencyId::ETH, dollars(10_u128)),
+			TestProtocol::deposit_underlying(alice(), CurrencyId::ETH, dollars(150_u128)),
 			Error::<Test>::NotEnoughLiquidityAvailable
 		);
 
@@ -461,7 +461,7 @@ fn repay_on_behalf_should_work() {
 
 #[test]
 fn enable_as_collateral_should_work() {
-	new_test_ext().execute_with(|| {
+	ExtBuilder::default().build().execute_with(|| {
 		// Alice cannot enable as collateral ETH pool, because she has not deposited funds into the pool.
 		assert_noop!(
 			TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH),
@@ -496,7 +496,7 @@ fn enable_as_collateral_should_work() {
 
 #[test]
 fn disable_collateral_should_work() {
-	new_test_ext().execute_with(|| {
+	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
 			TestProtocol::disable_collateral(alice(), CurrencyId::ETH),
 			Error::<Test>::AlreadyDisabledCollateral
