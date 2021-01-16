@@ -176,238 +176,263 @@ impl Borrowing<AccountId> for MockBorrowing {
 
 type Amount = i128;
 
-pub const ADMIN: AccountId = 0;
 pub const ALICE: AccountId = 1;
+pub fn alice() -> Origin {
+	Origin::signed(ALICE)
+}
 pub const BOB: AccountId = 2;
-pub const ONE_MILL: Balance = 1_000_000;
-pub const ONE_HUNDRED: Balance = 100;
+pub fn bob() -> Origin {
+	Origin::signed(BOB)
+}
+pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
+pub const ONE_MILL_DOLLARS: Balance = 1_000_000 * DOLLARS;
+pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
+pub const TEN_THOUSAND_DOLLARS: Balance = 10_000 * DOLLARS;
 pub const MAX_MEMBERS: u32 = 16;
-pub type MinterestProtocol = Module<Test>;
+pub type TestProtocol = Module<Test>;
 pub type TestPools = liquidity_pools::Module<Test>;
-pub type TestController = controller::Module<Test>;
-pub type TestAccounts = accounts::Module<Test>;
 pub type Currencies = orml_currencies::Module<Test>;
 pub type System = frame_system::Module<Test>;
 
-pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+pub struct ExtBuilder {
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+}
 
-	orml_tokens::GenesisConfig::<Test> {
-		endowed_accounts: vec![
-			(ALICE, CurrencyId::MINT, ONE_MILL),
-			(ALICE, CurrencyId::DOT, ONE_HUNDRED),
-			(ALICE, CurrencyId::ETH, ONE_HUNDRED),
-			(BOB, CurrencyId::MINT, ONE_MILL),
-			(BOB, CurrencyId::DOT, ONE_HUNDRED),
-			(ADMIN, CurrencyId::MINT, ONE_MILL),
-			(ADMIN, CurrencyId::DOT, ONE_HUNDRED),
-		],
+impl Default for ExtBuilder {
+	fn default() -> Self {
+		Self {
+			endowed_accounts: vec![
+				// seed: initial DOTs. Initial MINT to pay for gas.
+				(ALICE, CurrencyId::MINT, ONE_MILL_DOLLARS),
+				(ALICE, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
+				(ALICE, CurrencyId::ETH, ONE_HUNDRED_DOLLARS),
+				(BOB, CurrencyId::MINT, ONE_MILL_DOLLARS),
+				(BOB, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
+				// seed: initial insurance, equal 10_000$
+				(TestPools::pools_account_id(), CurrencyId::ETH, TEN_THOUSAND_DOLLARS),
+				(TestPools::pools_account_id(), CurrencyId::DOT, TEN_THOUSAND_DOLLARS),
+				(TestPools::pools_account_id(), CurrencyId::KSM, TEN_THOUSAND_DOLLARS),
+			],
+		}
 	}
-	.assimilate_storage(&mut t)
-	.unwrap();
-
-	liquidity_pools::GenesisConfig::<Test> {
-		pools: vec![
-			(
-				CurrencyId::ETH,
-				Pool {
-					current_interest_rate: Rate::from_inner(0),
-					total_borrowed: Balance::zero(),
-					borrow_index: Rate::saturating_from_rational(1, 1),
-					current_exchange_rate: Rate::from_inner(1),
-					total_insurance: Balance::zero(),
-				},
-			),
-			(
-				CurrencyId::DOT,
-				Pool {
-					current_interest_rate: Rate::from_inner(0),
-					total_borrowed: Balance::zero(),
-					borrow_index: Rate::saturating_from_rational(1, 1),
-					current_exchange_rate: Rate::from_inner(1),
-					total_insurance: Balance::zero(),
-				},
-			),
-			(
-				CurrencyId::KSM,
-				Pool {
-					current_interest_rate: Rate::from_inner(0),
-					total_borrowed: Balance::zero(),
-					borrow_index: Rate::saturating_from_rational(1, 1),
-					current_exchange_rate: Rate::from_inner(1),
-					total_insurance: Balance::zero(),
-				},
-			),
-			(
-				CurrencyId::BTC,
-				Pool {
-					current_interest_rate: Rate::from_inner(0),
-					total_borrowed: Balance::zero(),
-					borrow_index: Rate::saturating_from_rational(1, 1),
-					current_exchange_rate: Rate::from_inner(1),
-					total_insurance: Balance::zero(),
-				},
-			),
-		],
-		pool_user_data: vec![
-			(
-				ALICE,
-				CurrencyId::DOT,
-				PoolUserData {
-					total_borrowed: 0,
-					interest_index: Rate::saturating_from_rational(1, 1),
-					collateral: true,
-				},
-			),
-			(
-				ALICE,
-				CurrencyId::ETH,
-				PoolUserData {
-					total_borrowed: 0,
-					interest_index: Rate::saturating_from_rational(1, 1),
-					collateral: false,
-				},
-			),
-			(
-				ALICE,
-				CurrencyId::KSM,
-				PoolUserData {
-					total_borrowed: 0,
-					interest_index: Rate::saturating_from_rational(1, 1),
-					collateral: true,
-				},
-			),
-			(
-				ALICE,
-				CurrencyId::BTC,
-				PoolUserData {
-					total_borrowed: 0,
-					interest_index: Rate::saturating_from_rational(1, 1),
-					collateral: true,
-				},
-			),
-			(
-				BOB,
-				CurrencyId::DOT,
-				PoolUserData {
-					total_borrowed: 0,
-					interest_index: Rate::saturating_from_rational(1, 1),
-					collateral: true,
-				},
-			),
-		],
+}
+impl ExtBuilder {
+	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts.push((user, currency_id, balance));
+		self
 	}
-	.assimilate_storage(&mut t)
-	.unwrap();
 
-	controller::GenesisConfig::<Test> {
-		controller_dates: vec![
-			(
-				CurrencyId::ETH,
-				ControllerData {
-					timestamp: 0,
-					borrow_rate: Rate::from_inner(0),
-					insurance_factor: Rate::saturating_from_rational(1, 10),
-					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-					kink: Rate::saturating_from_rational(8, 10),
-					base_rate_per_block: Rate::from_inner(0),
-					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
-					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
-					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-				},
-			),
-			(
-				CurrencyId::DOT,
-				ControllerData {
-					timestamp: 0,
-					borrow_rate: Rate::from_inner(0),
-					insurance_factor: Rate::saturating_from_rational(1, 10),
-					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-					kink: Rate::saturating_from_rational(8, 10),
-					base_rate_per_block: Rate::from_inner(0),
-					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
-					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
-					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-				},
-			),
-			(
-				CurrencyId::KSM,
-				ControllerData {
-					timestamp: 0,
-					borrow_rate: Rate::from_inner(0),
-					insurance_factor: Rate::saturating_from_rational(1, 10),
-					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-					kink: Rate::saturating_from_rational(8, 10),
-					base_rate_per_block: Rate::from_inner(0),
-					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
-					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
-					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-				},
-			),
-			(
-				CurrencyId::BTC,
-				ControllerData {
-					timestamp: 0,
-					borrow_rate: Rate::from_inner(0),
-					insurance_factor: Rate::saturating_from_rational(1, 10),
-					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-					kink: Rate::saturating_from_rational(8, 10),
-					base_rate_per_block: Rate::from_inner(0),
-					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
-					jump_multiplier_per_block: Rate::saturating_from_rational(2, 1),
-					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-				},
-			),
-		],
-		pause_keepers: vec![
-			(
-				CurrencyId::ETH,
-				PauseKeeper {
-					deposit_paused: false,
-					redeem_paused: false,
-					borrow_paused: false,
-					repay_paused: false,
-				},
-			),
-			(
-				CurrencyId::DOT,
-				PauseKeeper {
-					deposit_paused: false,
-					redeem_paused: false,
-					borrow_paused: false,
-					repay_paused: false,
-				},
-			),
-			(
-				CurrencyId::KSM,
-				PauseKeeper {
-					deposit_paused: false,
-					redeem_paused: false,
-					borrow_paused: false,
-					repay_paused: false,
-				},
-			),
-			(
-				CurrencyId::BTC,
-				PauseKeeper {
-					deposit_paused: false,
-					redeem_paused: false,
-					borrow_paused: false,
-					repay_paused: false,
-				},
-			),
-		],
+	pub fn build(self) -> sp_io::TestExternalities {
+		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+		orml_tokens::GenesisConfig::<Test> {
+			endowed_accounts: self.endowed_accounts,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		liquidity_pools::GenesisConfig::<Test> {
+			pools: vec![
+				(
+					CurrencyId::ETH,
+					Pool {
+						current_interest_rate: Rate::from_inner(0),
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::saturating_from_rational(1, 1),
+						current_exchange_rate: Rate::from_inner(1),
+						total_insurance: TEN_THOUSAND_DOLLARS,
+					},
+				),
+				(
+					CurrencyId::DOT,
+					Pool {
+						current_interest_rate: Rate::from_inner(0),
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::saturating_from_rational(1, 1),
+						current_exchange_rate: Rate::from_inner(1),
+						total_insurance: TEN_THOUSAND_DOLLARS,
+					},
+				),
+				(
+					CurrencyId::KSM,
+					Pool {
+						current_interest_rate: Rate::from_inner(0),
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::saturating_from_rational(1, 1),
+						current_exchange_rate: Rate::from_inner(1),
+						total_insurance: TEN_THOUSAND_DOLLARS,
+					},
+				),
+			],
+			pool_user_data: vec![
+				(
+					ALICE,
+					CurrencyId::DOT,
+					PoolUserData {
+						total_borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						collateral: true,
+					},
+				),
+				(
+					ALICE,
+					CurrencyId::ETH,
+					PoolUserData {
+						total_borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						collateral: false,
+					},
+				),
+				(
+					ALICE,
+					CurrencyId::KSM,
+					PoolUserData {
+						total_borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						collateral: true,
+					},
+				),
+				(
+					ALICE,
+					CurrencyId::BTC,
+					PoolUserData {
+						total_borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						collateral: true,
+					},
+				),
+				(
+					BOB,
+					CurrencyId::DOT,
+					PoolUserData {
+						total_borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						collateral: true,
+					},
+				),
+				(
+					BOB,
+					CurrencyId::BTC,
+					PoolUserData {
+						total_borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						collateral: true,
+					},
+				),
+			],
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		controller::GenesisConfig::<Test> {
+			controller_dates: vec![
+				(
+					CurrencyId::ETH,
+					ControllerData {
+						timestamp: 0,
+						borrow_rate: Rate::from_inner(0),
+						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
+						kink: Rate::saturating_from_rational(8, 10),              // 80%
+						base_rate_per_block: Rate::from_inner(0),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
+					},
+				),
+				(
+					CurrencyId::DOT,
+					ControllerData {
+						timestamp: 0,
+						borrow_rate: Rate::from_inner(0),
+						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
+						kink: Rate::saturating_from_rational(8, 10),              // 80%
+						base_rate_per_block: Rate::from_inner(0),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
+					},
+				),
+				(
+					CurrencyId::KSM,
+					ControllerData {
+						timestamp: 0,
+						borrow_rate: Rate::from_inner(0),
+						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
+						kink: Rate::saturating_from_rational(8, 10),              // 80%
+						base_rate_per_block: Rate::from_inner(0),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
+					},
+				),
+				(
+					CurrencyId::BTC,
+					ControllerData {
+						timestamp: 0,
+						borrow_rate: Rate::from_inner(0),
+						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
+						kink: Rate::saturating_from_rational(8, 10),              // 80%
+						base_rate_per_block: Rate::from_inner(0),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
+					},
+				),
+			],
+			pause_keepers: vec![
+				(
+					CurrencyId::ETH,
+					PauseKeeper {
+						deposit_paused: false,
+						redeem_paused: false,
+						borrow_paused: false,
+						repay_paused: false,
+					},
+				),
+				(
+					CurrencyId::DOT,
+					PauseKeeper {
+						deposit_paused: false,
+						redeem_paused: false,
+						borrow_paused: false,
+						repay_paused: false,
+					},
+				),
+				(
+					CurrencyId::KSM,
+					PauseKeeper {
+						deposit_paused: false,
+						redeem_paused: false,
+						borrow_paused: false,
+						repay_paused: false,
+					},
+				),
+				(
+					CurrencyId::BTC,
+					PauseKeeper {
+						deposit_paused: false,
+						redeem_paused: false,
+						borrow_paused: false,
+						repay_paused: false,
+					},
+				),
+			],
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		accounts::GenesisConfig::<Test> {
+			allowed_accounts: vec![(ALICE, ())],
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		let mut ext: sp_io::TestExternalities = t.into();
+		ext.execute_with(|| System::set_block_number(1));
+		ext
 	}
-	.assimilate_storage(&mut t)
-	.unwrap();
-
-	accounts::GenesisConfig::<Test> {
-		allowed_accounts: vec![(ALICE, ())],
-	}
-	.assimilate_storage(&mut t)
-	.unwrap();
-
-	let mut ext: sp_io::TestExternalities = t.into();
-	ext.execute_with(|| System::set_block_number(1));
-	ext
 }

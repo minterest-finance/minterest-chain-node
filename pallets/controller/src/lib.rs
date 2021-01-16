@@ -233,9 +233,9 @@ decl_module! {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
-			ensure!(new_amount_d > 0, Error::<T>::NumOverflow);
 
-			let new_insurance_factor = Rate::saturating_from_rational(new_amount_n, new_amount_d);
+			let new_insurance_factor = Rate::checked_from_rational(new_amount_n, new_amount_d)
+				.ok_or(Error::<T>::NumOverflow)?;
 
 			ControllerDates::<T>::mutate(pool_id, |r| r.insurance_factor = new_insurance_factor);
 			Self::deposit_event(Event::InsuranceFactorChanged);
@@ -250,11 +250,11 @@ decl_module! {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
-			ensure!(new_amount_d > 0, Error::<T>::NumOverflow);
 
-			let new_max_borow_rate = Rate::saturating_from_rational(new_amount_n, new_amount_d);
+			let new_max_borow_rate = Rate::checked_from_rational(new_amount_n, new_amount_d)
+				.ok_or(Error::<T>::NumOverflow)?;
 
-			ensure!(new_max_borow_rate != Rate::from_inner(0), Error::<T>::MaxBorrowRateCannotBeZero);
+			ensure!(!new_max_borow_rate.is_zero(), Error::<T>::MaxBorrowRateCannotBeZero);
 
 			ControllerDates::<T>::mutate(pool_id, |r| r.max_borrow_rate = new_max_borow_rate);
 			Self::deposit_event(Event::MaxBorrowRateChanged);
@@ -269,16 +269,16 @@ decl_module! {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
-			ensure!(base_rate_per_year_d > 0, Error::<T>::NumOverflow);
 
-			let new_base_rate_per_year = Rate::saturating_from_rational(base_rate_per_year_n, base_rate_per_year_d);
+			let new_base_rate_per_year = Rate::checked_from_rational(base_rate_per_year_n, base_rate_per_year_d)
+				.ok_or(Error::<T>::NumOverflow)?;
 			let new_base_rate_per_block = new_base_rate_per_year
 				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
 				.ok_or(Error::<T>::NumOverflow)?;
 
 			// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
-			if new_base_rate_per_block == Rate::from_inner(0) {
-				ensure!(Self::controller_dates(pool_id).multiplier_per_block !=  Rate::from_inner(0), Error::<T>::BaseRatePerBlockCannotBeZero);
+			if new_base_rate_per_block.is_zero() {
+				ensure!(!Self::controller_dates(pool_id).multiplier_per_block.is_zero(), Error::<T>::BaseRatePerBlockCannotBeZero);
 			}
 
 			ControllerDates::<T>::mutate(pool_id, |r| r.base_rate_per_block = new_base_rate_per_block);
@@ -294,16 +294,16 @@ decl_module! {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
-			ensure!(multiplier_rate_per_year_d > 0, Error::<T>::NumOverflow);
 
-			let new_multiplier_per_year = Rate::saturating_from_rational(multiplier_rate_per_year_n, multiplier_rate_per_year_d);
+			let new_multiplier_per_year = Rate::checked_from_rational(multiplier_rate_per_year_n, multiplier_rate_per_year_d)
+				.ok_or(Error::<T>::NumOverflow)?;
 			let new_multiplier_per_block = new_multiplier_per_year
 				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
 				.ok_or(Error::<T>::NumOverflow)?;
 
 			// Multiplier per block cannot be set to 0 at the same time as Base rate per block .
-			if new_multiplier_per_block == Rate::from_inner(0) {
-				ensure!(Self::controller_dates(pool_id).base_rate_per_block !=  Rate::from_inner(0), Error::<T>::MultiplierPerBlockCannotBeZero);
+			if new_multiplier_per_block.is_zero() {
+				ensure!(!Self::controller_dates(pool_id).base_rate_per_block.is_zero(), Error::<T>::MultiplierPerBlockCannotBeZero);
 			}
 
 
@@ -320,10 +320,8 @@ decl_module! {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
-			ensure!(jump_multiplier_rate_per_year_d > 0, Error::<T>::NumOverflow);
 
-
-			let new_jump_multiplier_per_year = Rate::saturating_from_rational(jump_multiplier_rate_per_year_n, jump_multiplier_rate_per_year_d);
+			let new_jump_multiplier_per_year = Rate::checked_from_rational(jump_multiplier_rate_per_year_n, jump_multiplier_rate_per_year_d).ok_or(Error::<T>::NumOverflow)?;
 			let new_jump_multiplier_per_block = new_jump_multiplier_per_year
 				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
 				.ok_or(Error::<T>::NumOverflow)?;
@@ -459,7 +457,7 @@ impl<T: Trait> Module<T> {
 
 		// If borrow_balance = 0 then borrow_index is likely also 0.
 		// Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
-		if user_borrow_balance == 0 {
+		if user_borrow_balance.is_zero() {
 			return Ok(Balance::zero());
 		};
 
@@ -515,15 +513,15 @@ impl<T: Trait> Module<T> {
 			let oracle_price =
 				<Oracle<T>>::get_underlying_price(underlying_asset).map_err(|_| Error::<T>::OraclePriceError)?;
 
-			if oracle_price == Price::zero() {
+			if oracle_price.is_zero() {
 				return Ok((Balance::zero(), Balance::zero()));
 			}
 
 			// Pre-compute a conversion factor from tokens -> dollars (normalized price value)
+			// tokens_to_denom = collateral_factor * exchange_rate * oracle_price
 			let tokens_to_denom = collateral_factor
 				.checked_mul(&exchange_rate)
-				.ok_or(Error::<T>::NumOverflow)?
-				.checked_mul(&oracle_price)
+				.and_then(|v| v.checked_mul(&oracle_price))
 				.ok_or(Error::<T>::NumOverflow)?;
 
 			if <LiquidityPools<T>>::check_user_available_collateral(&account, underlying_asset) {
@@ -758,21 +756,18 @@ impl<T: Trait> Module<T> {
 				let jump_multiplier_per_block = Self::controller_dates(underlying_asset_id).jump_multiplier_per_block;
 				let normal_rate = kink
 					.checked_mul(&multiplier_per_block)
-					.ok_or(Error::<T>::NumOverflow)?
-					.checked_add(&base_rate_per_block)
+					.and_then(|v| v.checked_add(&base_rate_per_block))
 					.ok_or(Error::<T>::NumOverflow)?;
 				let excess_util = utilization_rate.checked_mul(&kink).ok_or(Error::<T>::NumOverflow)?;
 
 				excess_util
 					.checked_mul(&jump_multiplier_per_block)
-					.ok_or(Error::<T>::NumOverflow)?
-					.checked_add(&normal_rate)
+					.and_then(|v| v.checked_add(&normal_rate))
 					.ok_or(Error::<T>::NumOverflow)?
 			}
 			_ => utilization_rate
 				.checked_mul(&multiplier_per_block)
-				.ok_or(Error::<T>::NumOverflow)?
-				.checked_add(&base_rate_per_block)
+				.and_then(|v| v.checked_add(&base_rate_per_block))
 				.ok_or(Error::<T>::NumOverflow)?,
 		};
 
@@ -786,20 +781,18 @@ impl<T: Trait> Module<T> {
 		current_total_borrowed_balance: Balance,
 		current_total_insurance: Balance,
 	) -> RateResult {
-		if current_total_borrowed_balance == 0 {
-			return Ok(Rate::from_inner(0));
+		if current_total_borrowed_balance.is_zero() {
+			return Ok(Rate::zero());
 		}
 
-		let total_balance_total_borrowed_sum = current_total_balance
-			.checked_add(current_total_borrowed_balance)
-			.ok_or(Error::<T>::NumOverflow)?;
-		let denominator = total_balance_total_borrowed_sum
-			.checked_sub(current_total_insurance)
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		ensure!(denominator > 0, Error::<T>::NumOverflow);
-
-		let utilization_rate = Rate::saturating_from_rational(current_total_borrowed_balance, denominator);
+		let utilization_rate = Rate::checked_from_rational(
+			current_total_borrowed_balance,
+			current_total_balance
+				.checked_add(current_total_borrowed_balance)
+				.and_then(|v| v.checked_sub(current_total_insurance))
+				.ok_or(Error::<T>::NumOverflow)?,
+		)
+		.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(utilization_rate)
 	}
