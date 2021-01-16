@@ -69,11 +69,11 @@ decl_error! {
 		/// Insufficient wrapped tokens in the user account.
 		NotEnoughWrappedTokens,
 
+		/// User did not make deposit (no mTokens).
+		NumberOfWrappedTokensIsZero,
+
 		/// Insufficient underlying assets in the user account.
 		NotEnoughUnderlyingsAssets,
-
-		/// PoolNotFound or NotEnoughBalance or BalanceOverflowed.
-		InternalPoolError,
 
 		/// Number overflow in calculation.
 		NumOverflow,
@@ -99,6 +99,13 @@ decl_error! {
 		/// Pool not found.
 		PoolNotFound,
 
+
+		/// Transaction with zero balance is not allowed.
+		ZeroBalanceTransaction,
+
+		/// User is trying repay more than he borrowed.
+		RepayAmountToBig,
+
 		/// This pool is already collateral.
 		AlreadyCollateral,
 
@@ -120,7 +127,11 @@ decl_module! {
 
 		const UnderlyingAssetId: Vec<CurrencyId> = T::UnderlyingAssetId::get();
 
-		/// Sender supplies assets into the pool and receives mTokens in exchange.
+		/// Transfers an asset into the protocol. The user receives a quantity of mTokens equal
+		/// to the underlying tokens supplied, divided by the current Exchange Rate.
+		///
+		/// - `underlying_asset_id`: CurrencyId of underlying assets to be transferred into the protocol.
+		/// - `underlying_amount`: The amount of the asset to be supplied, in units of the underlying asset.
 		#[weight = 10_000]
 		pub fn deposit_underlying(
 			origin,
@@ -135,7 +146,11 @@ decl_module! {
 			})?;
 		}
 
-		/// Sender redeems mTokens in exchange for the underlying assets.
+		/// Converts ALL mTokens into a specified quantity of the underlying asset, and returns them
+		/// to the user. The amount of underlying tokens received is equal to the quantity of
+		/// mTokens redeemed, multiplied by the current Exchange Rate.
+		///
+		/// - `underlying_asset_id`: CurrencyId of underlying assets to be redeemed.
 		#[weight = 10_000]
 		pub fn redeem(
 			origin,
@@ -143,13 +158,18 @@ decl_module! {
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let (underlying_amount, wrapped_id, wrapped_amount) = Self::do_redeem(&who, underlying_asset_id, Balance::zero(), Balance::zero())?;
+				let (underlying_amount, wrapped_id, wrapped_amount) = Self::do_redeem(&who, underlying_asset_id, Balance::zero(), Balance::zero(), true)?;
 				Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount));
 				Ok(())
 			})?;
 		}
 
-		/// Sender redeems mTokens in exchange for a specified amount of underlying assets.
+		/// Converts mTokens into a specified quantity of the underlying asset, and returns them to
+		/// the user. The amount of mTokens redeemed is equal to the quantity of underlying tokens
+		/// received, divided by the current Exchange Rate.
+		///
+		/// - `underlying_asset_id`: CurrencyId of underlying assets to be redeemed.
+		/// - `underlying_amount`: The number of underlying assets to be redeemed.
 		#[weight = 10_000]
 		pub fn redeem_underlying(
 			origin,
@@ -158,28 +178,34 @@ decl_module! {
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let (_, wrapped_id, wrapped_amount) = Self::do_redeem(&who, underlying_asset_id, underlying_amount, Balance::zero())?;
+				let (_, wrapped_id, wrapped_amount) = Self::do_redeem(&who, underlying_asset_id, underlying_amount, Balance::zero(), false)?;
 				Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount));
 				Ok(())
 			})?;
 		}
 
-		/// Sender redeems a specified amount of mTokens in exchange for the underlying assets.
+		/// Converts a specified quantity of mTokens into the underlying asset, and returns them to the user.
+		/// The amount of underlying tokens received is equal to the quantity of mTokens redeemed,
+		/// multiplied by the current Exchange Rate.
+		///
+		/// - `wrapped_id`: CurrencyId of mTokens to be redeemed.
+		/// - `wrapped_amount`: The number of mTokens to be redeemed.
 		#[weight = 10_000]
 		pub fn redeem_wrapped(origin, wrapped_id: CurrencyId, #[compact] wrapped_amount: Balance) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
 				let underlying_asset_id = <Controller<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id).map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
-				let (underlying_amount, wrapped_id, _) = Self::do_redeem(&who, underlying_asset_id, Balance::zero(), wrapped_amount)?;
+				let (underlying_amount, wrapped_id, _) = Self::do_redeem(&who, underlying_asset_id, Balance::zero(), wrapped_amount, false)?;
 				Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount));
 				Ok(())
 			})?;
 		}
 
-		/// Borrowing a specific amount of the pool currency, provided that the borrower already deposited enough collateral.
+		/// Borrowing a specific amount of the pool currency, provided that the borrower already
+		/// deposited enough collateral.
 		///
-		/// - `underlying_asset_id`: the currency ID of the underlying asset to borrow.
-		/// - `underlying_amount`: the amount of the underlying asset to borrow.
+		/// - `underlying_asset_id`: The currency ID of the underlying asset to be borrowed.
+		/// - `underlying_amount`: The amount of the underlying asset to be borrowed.
 		#[weight = 10_000]
 		pub fn borrow(
 			origin,
@@ -196,8 +222,8 @@ decl_module! {
 
 		/// Repays a borrow on the specific pool, for the specified amount.
 		///
-		/// - `underlying_asset_id`: the currency ID of the underlying asset to repay.
-		/// - `repay_amount`: the amount of the underlying asset to repay.
+		/// - `underlying_asset_id`: The currency ID of the underlying asset to be repaid.
+		/// - `repay_amount`: The amount of the underlying asset to be repaid.
 		#[weight = 10_000]
 		pub fn repay(
 			origin,
@@ -206,7 +232,7 @@ decl_module! {
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				Self::do_repay(&who, &who, underlying_asset_id, repay_amount)?;
+				Self::do_repay(&who, &who, underlying_asset_id, repay_amount, false)?;
 				Self::deposit_event(RawEvent::Repaid(who, underlying_asset_id, repay_amount));
 				Ok(())
 			})?;
@@ -214,27 +240,27 @@ decl_module! {
 
 		/// Repays a borrow on the specific pool, for the all amount.
 		///
-		/// - `underlying_asset_id`: the currency ID of the underlying asset to repay.
+		/// - `underlying_asset_id`: The currency ID of the underlying asset to be repaid.
 		#[weight = 10_000]
 		pub fn repay_all(origin, underlying_asset_id: CurrencyId) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let repay_amount = Self::do_repay(&who, &who, underlying_asset_id, Balance::zero())?;
+				let repay_amount = Self::do_repay(&who, &who, underlying_asset_id, Balance::zero(), true)?;
 				Self::deposit_event(RawEvent::Repaid(who, underlying_asset_id, repay_amount));
 				Ok(())
 			})?;
 		}
 
-		/// Sender sends underlying assets to repay an account's borrow in the market
+		/// Transfers an asset into the protocol, reducing the target user's borrow balance.
 		///
-		/// - `underlying_asset_id`: the currency ID of the underlying asset to repay.
-		/// - `borrower`: the account with the debt being payed off.
-		/// - `repay_amount`: the amount of the underlying asset to repay.
+		/// - `underlying_asset_id`: The currency ID of the underlying asset to be repaid.
+		/// - `borrower`: The account which borrowed the asset to be repaid.
+		/// - `repay_amount`: The amount of the underlying borrowed asset to be repaid.
 		#[weight = 10_000]
 		pub fn repay_on_behalf(origin, underlying_asset_id: CurrencyId, borrower: T::AccountId, repay_amount: Balance) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let repay_amount = Self::do_repay(&who, &borrower, underlying_asset_id, repay_amount)?;
+				let repay_amount = Self::do_repay(&who, &borrower, underlying_asset_id, repay_amount, false)?;
 				Self::deposit_event(RawEvent::Repaid(who, underlying_asset_id, repay_amount));
 				Ok(())
 			})?
@@ -246,13 +272,12 @@ decl_module! {
 			let sender = ensure_signed(origin)?;
 			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 
-			let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
-
-			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &sender);
-
-			ensure!(user_wrapped_balance > 0, Error::<T>::CanotBeEnabledAsCollateral);
-
 			ensure!(!<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id), Error::<T>::AlreadyCollateral);
+
+			// If user does not have assets in the pool, then he cannot enable as collateral the pool.
+			let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
+			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &sender);
+			ensure!(user_wrapped_balance > 0, Error::<T>::CanotBeEnabledAsCollateral);
 
 			<LiquidityPools<T>>::enable_as_collateral_internal(&sender, pool_id)?;
 			Self::deposit_event(RawEvent::PoolEnabledAsCollateral(sender, pool_id));
@@ -290,6 +315,9 @@ impl<T: Trait> Module<T> {
 			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
+
+		ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
+
 		ensure!(
 			underlying_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
 			Error::<T>::NotEnoughLiquidityAvailable
@@ -324,36 +352,42 @@ impl<T: Trait> Module<T> {
 		underlying_asset_id: CurrencyId,
 		mut underlying_amount: Balance,
 		wrapped_amount: Balance,
+		all_assets: bool,
 	) -> TokensResult {
 		ensure!(
 			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
-		ensure!(
-			underlying_amount <= <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id),
-			Error::<T>::NotEnoughLiquidityAvailable
-		);
-
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
 		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
-		let wrapped_amount = match (underlying_amount, wrapped_amount) {
-			(0, 0) => {
+		let wrapped_amount = match (underlying_amount, wrapped_amount, all_assets) {
+			(0, 0, true) => {
 				let total_wrapped_amount = T::MultiCurrency::free_balance(wrapped_id, &who);
+				ensure!(!total_wrapped_amount.is_zero(), Error::<T>::NumberOfWrappedTokensIsZero);
 				underlying_amount = <Controller<T>>::convert_from_wrapped(wrapped_id, total_wrapped_amount)
 					.map_err(|_| Error::<T>::NumOverflow)?;
 				total_wrapped_amount
 			}
-			(_, 0) => <Controller<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
-				.map_err(|_| Error::<T>::NumOverflow)?,
+			(_, 0, false) => {
+				ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
+				<Controller<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
+					.map_err(|_| Error::<T>::NumOverflow)?
+			}
 			_ => {
+				ensure!(wrapped_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
 				underlying_amount = <Controller<T>>::convert_from_wrapped(wrapped_id, wrapped_amount)
 					.map_err(|_| Error::<T>::NumOverflow)?;
 				wrapped_amount
 			}
 		};
+
+		ensure!(
+			underlying_amount <= <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id),
+			Error::<T>::NotEnoughLiquidityAvailable
+		);
 
 		ensure!(
 			wrapped_amount <= T::MultiCurrency::free_balance(wrapped_id, &who),
@@ -387,11 +421,15 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
+		let pool_available_liquidity = <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id);
+
 		// Raise an error if protocol has insufficient underlying cash
 		ensure!(
-			borrow_amount <= <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id),
+			borrow_amount <= pool_available_liquidity,
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
+
+		ensure!(borrow_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
@@ -404,7 +442,7 @@ impl<T: Trait> Module<T> {
 			<Controller<T>>::borrow_balance_stored(&who, underlying_asset_id).map_err(|_| Error::<T>::NumOverflow)?;
 
 		<LiquidityPools<T>>::update_state_on_borrow(&who, underlying_asset_id, borrow_amount, account_borrows)
-			.map_err(|_| Error::<T>::InternalPoolError)?;
+			.map_err(|_| Error::<T>::NumOverflow)?;
 
 		// Transfer the borrow_amount from the protocol account to the borrower's account.
 		T::MultiCurrency::transfer(
@@ -428,11 +466,25 @@ impl<T: Trait> Module<T> {
 		borrower: &T::AccountId,
 		underlying_asset_id: CurrencyId,
 		mut repay_amount: Balance,
+		all_assets: bool,
 	) -> BalanceResult {
 		ensure!(
 			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
+
+		if !all_assets {
+			ensure!(repay_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
+		}
+
+		// Fetch the amount the borrower owes, with accumulated interest
+		let account_borrows = <Controller<T>>::borrow_balance_stored(&borrower, underlying_asset_id)
+			.map_err(|_| Error::<T>::NumOverflow)?;
+
+		repay_amount = match repay_amount.cmp(&Balance::zero()) {
+			Ordering::Equal => account_borrows,
+			_ => repay_amount,
+		};
 
 		ensure!(
 			repay_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
@@ -453,17 +505,8 @@ impl<T: Trait> Module<T> {
 			Error::<T>::PoolNotFresh
 		);
 
-		// Fetch the amount the borrower owes, with accumulated interest
-		let account_borrows = <Controller<T>>::borrow_balance_stored(&borrower, underlying_asset_id)
-			.map_err(|_| Error::<T>::NumOverflow)?;
-
-		repay_amount = match repay_amount.cmp(&Balance::zero()) {
-			Ordering::Equal => account_borrows,
-			_ => repay_amount,
-		};
-
 		<LiquidityPools<T>>::update_state_on_repay(&borrower, underlying_asset_id, repay_amount, account_borrows)
-			.map_err(|_| Error::<T>::InternalPoolError)?;
+			.map_err(|_| Error::<T>::RepayAmountToBig)?;
 
 		// Transfer the repay_amount from the borrower's account to the protocol account.
 		T::MultiCurrency::transfer(
