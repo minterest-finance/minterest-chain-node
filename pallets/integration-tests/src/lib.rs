@@ -232,7 +232,6 @@ mod tests {
 			self.pools.push((
 				pool_id,
 				Pool {
-					current_interest_rate: Rate::from_inner(0),
 					total_borrowed,
 					borrow_index: Rate::saturating_from_rational(1, 1),
 					current_exchange_rate: Rate::from_inner(1),
@@ -248,7 +247,6 @@ mod tests {
 			self.pools.push((
 				pool_id,
 				Pool {
-					current_interest_rate: Rate::from_inner(0),
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
 					current_exchange_rate: Rate::from_inner(1),
@@ -282,7 +280,6 @@ mod tests {
 			self.pools.push((
 				pool_id,
 				Pool {
-					current_interest_rate: Rate::from_inner(0),
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
 					current_exchange_rate: Rate::saturating_from_rational(1, 1),
@@ -315,6 +312,7 @@ mod tests {
 						ControllerData {
 							timestamp: 0,
 							borrow_rate: Rate::from_inner(0),
+							supply_rate: Rate::from_inner(0),
 							insurance_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							kink: Rate::saturating_from_rational(8, 10),
@@ -329,6 +327,7 @@ mod tests {
 						ControllerData {
 							timestamp: 0,
 							borrow_rate: Rate::from_inner(0),
+							supply_rate: Rate::from_inner(0),
 							insurance_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							kink: Rate::saturating_from_rational(8, 10),
@@ -343,6 +342,7 @@ mod tests {
 						ControllerData {
 							timestamp: 0,
 							borrow_rate: Rate::from_inner(0),
+							supply_rate: Rate::from_inner(0),
 							insurance_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							kink: Rate::saturating_from_rational(8, 10),
@@ -566,7 +566,6 @@ mod tests {
 
 				// Checking DOT pool Storage params
 				assert_eq!(TestPools::pools(CurrencyId::DOT).current_exchange_rate, RATE_EQUALS_ONE);
-				assert_eq!(TestPools::pools(CurrencyId::DOT).current_interest_rate, RATE_ZERO);
 				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, RATE_EQUALS_ONE);
 				// Total insurance changed: 0 -> 100 000
 				let pool_total_insurance_block_number_0 =
@@ -1374,7 +1373,7 @@ mod tests {
 				// Alice try to redeem. MDOT Balance is zero.
 				assert_noop!(
 					MinterestProtocol::redeem_wrapped(Origin::signed(ALICE), CurrencyId::MDOT, BALANCE_ZERO),
-					MinterestProtocolError::<Test>::NumberOfWrappedTokensIsZero
+					MinterestProtocolError::<Test>::ZeroBalanceTransaction
 				);
 			});
 	}
