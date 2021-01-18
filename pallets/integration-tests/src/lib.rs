@@ -1484,10 +1484,19 @@ mod tests {
 			});
 	}
 
+	// Scenario #1 description:
+	// The user redeems all assets in the first currency. He has loan in the first currency.
+	// Initial exchange rate for all assets equal 1.0;
+	// Collateral factor for all assets equal 0.9;
+	// 1. Alice deposit 60 DOT;
+	// 2. Alice deposit 50 ETH;
+	// 3. Alice borrow 50 DOT;
+	// 4. Alice can't `redeem_underlying` 60 DOT: 10 DOT * 0.9 + 50 ETH * 0.9 in pool < 60 DOT redeem;
+	// 5. Alice deposit 10 ETH;
+	// 6. Alice `redeem_underlying` 60 DOT;
+	// 7. Alice can't `redeem_underlying` 60 ETH.
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn redeem_underlying_scenario_1_should_work() {
+	fn redeem_underlying_all_assets_with_current_currency_borrowing() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
@@ -1496,15 +1505,15 @@ mod tests {
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
-				// Alice deposit to DOT pool
+				// Alice deposit 60 DOT to pool.
 				let alice_deposited_amount_in_dot = 60_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
 					CurrencyId::DOT,
-					alice_deposited_amount_in_dot
+					60_000 * DOLLARS
 				));
 
-				// Alice deposit to ETH pool
+				// Alice deposit 50 ETH to pool.
 				let alice_deposited_amount_in_eth = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
@@ -1512,7 +1521,7 @@ mod tests {
 					alice_deposited_amount_in_eth
 				));
 
-				// Alice borrow from DOT pool
+				// Alice borrow 50 DOT from pool
 				let alice_borrowed_amount_in_dot = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
@@ -1526,7 +1535,7 @@ mod tests {
 					ONE_HUNDRED + alice_deposited_amount_in_dot - alice_borrowed_amount_in_dot
 				);
 
-				// Checking free balance DOT && MDOT in pool.
+				// Checking Alice's free balance DOT && MDOT.
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot + alice_borrowed_amount_in_dot
@@ -1630,10 +1639,15 @@ mod tests {
 			});
 	}
 
+	// Scenario #2 description:
+	// The user redeems all assets in the first currency. He has loan in the second currency.
+	// Initial exchange rate for all assets equal 1.0;
+	// Collateral factor for all assets equal 0.9;
+	// 1. Alice deposit 60 DOT;
+	// 2. Alice borrow 50 ETH;
+	// 3. Alice can't `redeem_underlying` 60 DOT: 50 ETH * 0.9 in pool < 60 DOT redeem;
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn redeem_underlying_scenario_2_should_work() {
+	fn redeem_underlying_with_another_currency_borrowing() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
@@ -1712,10 +1726,20 @@ mod tests {
 			});
 	}
 
+	// Scenario #3 description:
+	// The user redeems all assets in the first currency. He has loan in the second currency and
+	// deposit in the third currency.
+	// Initial exchange rate for all assets equal 1.0;
+	// Collateral factor for all assets equal 0.9;
+	// 1. Alice deposit 40 DOT;
+	// 2. Alice deposit 40 BTC;
+	// 3. Alice borrow 70 ETH;
+	// 4. Alice can't `redeem_underlying` 40 DOT;
+	// 5. Alice deposit 40 BTC;
+	// 6. Alice redeem 40 DOT;
+	// 7. Alice can't `redeem_underlying` 40 BTC;
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn redeem_underlying_scenario_3_should_work() {
+	fn redeem_underlying_with_third_currency_borrowing() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::BTC, ONE_HUNDRED)
@@ -1733,7 +1757,7 @@ mod tests {
 					alice_deposited_amount_in_dot
 				));
 
-				// Alice deposit to DOT pool
+				// Alice deposit to BTC pool
 				let alice_deposited_amount_in_btc = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
@@ -1838,10 +1862,17 @@ mod tests {
 			});
 	}
 
+	// Scenario #4 description:
+	// It is possible to redeem assets from the pool insurance.
+	// 1. Deposit 10 DOT to pool insurance;
+	// 2. Alice deposit 20 DOT;
+	// 3. Bob deposit 20 BTC;
+	// 4. Bob deposit 10 DOT;
+	// 5. Bob borrow 15 DOT;
+	// 6. Alice redeem 20 DOT;
+	// 7. DOT pool insurance equal 5 DOT;
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn redeem_underlying_scenario_4_should_work() {
+	fn redeem_underlying_over_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::BTC, ONE_HUNDRED)

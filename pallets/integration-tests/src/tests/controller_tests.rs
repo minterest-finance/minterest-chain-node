@@ -10,10 +10,11 @@ mod tests {
 	// collateral in other assets to cover all his borrowing:
 	//
 	// Alice has 60 DOT collateral and 40 ETH collateral, and she has 50 BTC borrowing.
-	// 1. Alice can't disable DOT as collateral (because ETH won't cover the borrowing);
-	// 2. Alice can disable ETH as collateral (because DOT will cover the borrowing);
+	// Exchange rate for all assets equal 1.0.
+	// 1. Alice can't disable DOT as collateral (because 40 ETH won't cover 50 BTC borrowing);
+	// 2. Alice can disable ETH as collateral (because 60 DOT will cover 50 BTC borrowing);
 	#[test]
-	fn disable_collateral_internal_failse_if_not_cover_borrowing() {
+	fn disable_collateral_internal_fails_if_not_cover_borrowing() {
 		ExtBuilder::default()
 			.pool_initial(CurrencyId::DOT)
 			.pool_initial(CurrencyId::BTC)
