@@ -2003,6 +2003,7 @@ mod tests {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
+			.user_balance(BOB, CurrencyId::DOT, 100_000_000 * DOLLARS)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_user_data(ALICE, CurrencyId::ETH, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
@@ -2016,6 +2017,9 @@ mod tests {
 					alice_deposited_amount_in_dot
 				));
 
+				// Set next block number
+				System::set_block_number(2);
+
 				// Alice deposit to ETH pool
 				let alice_deposited_amount_in_eth = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -2023,6 +2027,9 @@ mod tests {
 					CurrencyId::ETH,
 					alice_deposited_amount_in_eth
 				));
+
+				// Set next block number
+				System::set_block_number(3);
 
 				// Alice borrow from DOT pool
 				let alice_borrowed_amount_in_dot = 50_000 * DOLLARS;
@@ -2071,11 +2078,17 @@ mod tests {
 					alice_borrowed_amount_in_dot
 				);
 
+				// Set next block number
+				System::set_block_number(4);
+
 				// Alice try to redeem all from DOT pool
 				assert_noop!(
 					MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT),
 					MinterestProtocolError::<Test>::RedeemControllerRejection
 				);
+
+				// Set next block number
+				System::set_block_number(5);
 
 				// Alice add liquidity to ETH pool
 				let alice_deposited_amount_in_eth_secondary = 10_000 * DOLLARS;
@@ -2085,13 +2098,23 @@ mod tests {
 					alice_deposited_amount_in_eth_secondary
 				));
 
+				// Bob add liquidity to ETH pool
+				let bob_deposited_amount_in_dot = 10_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(BOB),
+					CurrencyId::DOT,
+					bob_deposited_amount_in_dot
+				));
+
+				// Set next block number
+				System::set_block_number(6);
+
 				// Alice redeem all DOTs
 				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT));
 
 				// Checking free balance DOT/MDOT && ETH/METH in pool.
-				let expected_amount_redeemed_underlying_assets =
-					TestController::convert_from_wrapped(CurrencyId::MDOT, expected_amount_wrapped_tokens_in_dot)
-						.unwrap();
+				// current_exchange_rate == 1000000221932654817
+				let expected_amount_redeemed_underlying_assets = 60000013315959289020000;
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot
@@ -2105,13 +2128,14 @@ mod tests {
 
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
 				let expected_amount_wrapped_tokens_in_eth_summary = expected_amount_wrapped_tokens_in_eth
-					+ TestController::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_eth_secondary)
+					+ TestController::convert_to_wrapped(CurrencyId::ETH, alice_deposited_amount_in_eth_secondary)
 						.unwrap();
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth_summary
 				);
 				// Checking total borrow for Alice DOT pool
+				let expected_amount_accumulated_in_dot = 14841428697992866;
 				assert_eq!(
 					TestPools::pool_user_data(ALICE, CurrencyId::DOT).total_borrowed,
 					alice_borrowed_amount_in_dot
@@ -2119,8 +2143,11 @@ mod tests {
 				// Checking total borrow for DOT pool
 				assert_eq!(
 					TestPools::pools(CurrencyId::DOT).total_borrowed,
-					alice_borrowed_amount_in_dot
+					alice_borrowed_amount_in_dot + expected_amount_accumulated_in_dot
 				);
+
+				// Set next block number
+				System::set_block_number(7);
 
 				// Alice try to redeem all from ETH pool
 				assert_noop!(
@@ -2150,6 +2177,9 @@ mod tests {
 					alice_deposited_amount_in_dot
 				));
 
+				// Set next block number
+				System::set_block_number(2);
+
 				// Alice borrow from ETH pool
 				let alice_borrowed_amount_in_eth = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
@@ -2177,6 +2207,9 @@ mod tests {
 					TestPools::pools(CurrencyId::ETH).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
+
+				// Set next block number
+				System::set_block_number(3);
 
 				// Alice redeem all DOTs
 				assert_noop!(
@@ -2229,6 +2262,9 @@ mod tests {
 					alice_deposited_amount_in_dot
 				));
 
+				// Set next block number
+				System::set_block_number(2);
+
 				// Alice deposit to DOT pool
 				let alice_deposited_amount_in_btc = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -2236,6 +2272,9 @@ mod tests {
 					CurrencyId::BTC,
 					alice_deposited_amount_in_btc
 				));
+
+				// Set next block number
+				System::set_block_number(3);
 
 				// Alice borrow from ETH pool
 				let alice_borrowed_amount_in_eth = 70_000 * DOLLARS;
@@ -2269,11 +2308,17 @@ mod tests {
 					alice_borrowed_amount_in_eth
 				);
 
+				// Set next block number
+				System::set_block_number(4);
+
 				// Alice try to redeem all DOTs
 				assert_noop!(
 					MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT),
 					MinterestProtocolError::<Test>::RedeemControllerRejection
 				);
+
+				// Set next block number
+				System::set_block_number(5);
 
 				// Alice add liquidity to BTC pool
 				let alice_deposited_amount_in_btc_secondary = 40_000 * DOLLARS;
@@ -2282,6 +2327,9 @@ mod tests {
 					CurrencyId::BTC,
 					alice_deposited_amount_in_btc_secondary
 				));
+
+				// Set next block number
+				System::set_block_number(6);
 
 				// Alice redeem all DOTs
 				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(CurrencyId::MDOT, &ALICE);
@@ -2314,6 +2362,9 @@ mod tests {
 					alice_borrowed_amount_in_eth
 				);
 
+				// Set next block number
+				System::set_block_number(7);
+
 				// Alice try to redeem all BTC.
 				assert_noop!(
 					MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::BTC),
@@ -2328,8 +2379,10 @@ mod tests {
 	fn redeem_scenario_4_should_work() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::BTC, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
+			.pool_user_data(BOB, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
 			.pool_user_data(BOB, CurrencyId::BTC, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
 			.pool_total_insurance(CurrencyId::DOT, 10_000 * DOLLARS)
@@ -2343,6 +2396,9 @@ mod tests {
 					alice_deposited_amount_in_dot
 				));
 
+				// Set next block number
+				System::set_block_number(2);
+
 				// Bob deposit to BTC pool
 				let bob_deposited_amount_in_btc = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -2351,26 +2407,42 @@ mod tests {
 					bob_deposited_amount_in_btc
 				));
 
+				// Bob deposit to DOT pool
+				let bob_deposited_amount_in_dot = 10_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(BOB),
+					CurrencyId::DOT,
+					bob_deposited_amount_in_dot
+				));
+
+				// Set next block number
+				System::set_block_number(3);
+
 				// Bob borrow from DOT pool
-				let bob_borrowed_amount_in_dot = 5_000 * DOLLARS;
+				let bob_borrowed_amount_in_dot = 15_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(BOB),
 					CurrencyId::DOT,
 					bob_borrowed_amount_in_dot
 				));
 
+				// Set next block number
+				System::set_block_number(4);
+
 				// Alice redeem all DOTs.
 				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(CurrencyId::MDOT, &ALICE);
+
+				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT));
+
 				let alice_redeemed_amount_in_dot =
 					TestController::convert_from_wrapped(CurrencyId::MDOT, alice_current_balance_amount_in_m_dot)
 						.unwrap();
-				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT));
 
 				// Checking pool available liquidity.
 				assert_eq!(
 					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
-					10_000 * DOLLARS + alice_deposited_amount_in_dot
-						- alice_redeemed_amount_in_dot
+					10_000 * DOLLARS + alice_deposited_amount_in_dot - alice_redeemed_amount_in_dot
+						+ bob_deposited_amount_in_dot
 						- bob_borrowed_amount_in_dot
 				);
 
@@ -2381,7 +2453,7 @@ mod tests {
 				);
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::DOT, &BOB),
-					bob_borrowed_amount_in_dot
+					ONE_HUNDRED + bob_borrowed_amount_in_dot - bob_deposited_amount_in_dot
 				);
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::BTC, &BOB),
@@ -2392,6 +2464,7 @@ mod tests {
 
 	#[test]
 	// FIXME: set environment
+	// FIXME: delete
 	fn borrow_should_work() {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_ok!(MinterestProtocol::deposit_underlying(
@@ -2399,6 +2472,10 @@ mod tests {
 				CurrencyId::DOT,
 				60_000 * DOLLARS
 			));
+
+			// Set next block number
+			System::set_block_number(2);
+
 			assert_eq!(
 				TestPools::get_pool_available_liquidity(CurrencyId::DOT),
 				60_000 * DOLLARS
@@ -2414,6 +2491,9 @@ mod tests {
 				MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::MDOT, 60_000 * DOLLARS),
 				MinterestProtocolError::<Test>::NotValidUnderlyingAssetId
 			);
+
+			// Set next block number
+			System::set_block_number(3);
 
 			assert_ok!(MinterestProtocol::borrow(
 				Origin::signed(ALICE),
@@ -2432,8 +2512,11 @@ mod tests {
 				30_000 * DOLLARS
 			);
 
+			// Set next block number
+			System::set_block_number(4);
+
 			// pool_available_liquidity (DOT) = 30
-			// Admin depositing to the insurance 10 DOT, now pool_available_liquidity = 30 + 10 = 40 DOT
+			// Admin deposit to the insurance 10 DOT, now pool_available_liquidity = 30 + 10 = 40 DOT
 			assert_ok!(TestController::deposit_insurance(
 				Origin::signed(ADMIN),
 				CurrencyId::DOT,
@@ -2496,6 +2579,9 @@ mod tests {
 					alice_deposited_amount
 				));
 
+				// Set next block number
+				System::set_block_number(2);
+
 				// Alice try to borrow from ETH pool
 				let alice_borrowed_amount = 50_000 * DOLLARS;
 				assert_noop!(
@@ -2530,6 +2616,9 @@ mod tests {
 					CurrencyId::DOT,
 					alice_deposited_amount
 				));
+
+				// Set next block number
+				System::set_block_number(2);
 
 				// Alice try to borrow from ETH pool
 				let alice_borrowed_amount = 50_000 * DOLLARS;
@@ -2566,6 +2655,9 @@ mod tests {
 					alice_deposited_amount
 				));
 
+				// Set next block number
+				System::set_block_number(2);
+
 				// Alice try to borrow from ETH pool
 				let alice_borrowed_amount = 40_000 * DOLLARS;
 				assert_noop!(
@@ -2599,6 +2691,9 @@ mod tests {
 					CurrencyId::DOT,
 					alice_deposited_amount
 				));
+
+				// Set next block number
+				System::set_block_number(2);
 
 				// Alice try to borrow from DOT pool
 				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
@@ -2648,6 +2743,9 @@ mod tests {
 					alice_deposited_amount
 				));
 
+				// Set next block number
+				System::set_block_number(2);
+
 				// Alice try to borrow from DOT pool
 				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
@@ -2673,7 +2771,7 @@ mod tests {
 				// Alice repay full loan in DOTs.
 				assert_ok!(MinterestProtocol::repay_all(Origin::signed(ALICE), CurrencyId::DOT));
 
-				let expected_interest_accumulated: Balance = 810_000_000_000_000;
+				let expected_interest_accumulated: Balance = 720_000_000_000_000;
 
 				// Checking pool available liquidity
 				assert_eq!(
@@ -2697,8 +2795,8 @@ mod tests {
 			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
-				// Calculate expected borrow interest rate based on params before fn accrue_interest_rate called
-				let expected_borrow_rate_mock = calculate_borrow_interest_rate_mock(CurrencyId::DOT).unwrap();
+				// Expected borrow interest rate based on params before fn accrue_interest_rate called
+				let expected_borrow_rate_mock = Rate::zero();
 
 				// Alice deposit to DOT pool
 				let alice_deposited_amount = 40_000 * DOLLARS;
@@ -2726,8 +2824,8 @@ mod tests {
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
-				// Calculate expected borrow interest rate based on params before fn accrue_interest_rate called
-				let expected_borrow_rate_mock = calculate_borrow_interest_rate_mock(CurrencyId::DOT).unwrap();
+				// Expected borrow interest rate based on params before fn accrue_interest_rate called
+				let expected_borrow_rate_mock = Rate::zero();
 
 				// Alice deposit to DOT pool
 				let alice_deposited_amount = 40_000 * DOLLARS;
@@ -2763,8 +2861,11 @@ mod tests {
 					alice_deposited_amount
 				));
 
-				// Calculate expected borrow interest rate based on params before fn accrue_interest_rate called
-				let expected_borrow_rate_mock = calculate_borrow_interest_rate_mock(CurrencyId::DOT).unwrap();
+				// Set next block number
+				System::set_block_number(2);
+
+				// Expected borrow interest rate based on params before fn accrue_interest_rate called
+				let expected_borrow_rate_mock = Rate::zero();
 
 				// Alice try to borrow from DOT pool
 				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
@@ -2800,10 +2901,10 @@ mod tests {
 				));
 
 				// Set next block number
-				System::set_block_number(1);
+				System::set_block_number(2);
 
-				// Calculate expected borrow interest rate based on params before fn accrue_interest_rate called
-				let expected_borrow_rate_mock = calculate_borrow_interest_rate_mock(CurrencyId::DOT).unwrap();
+				// Expected borrow interest rate based on params before fn accrue_interest_rate called
+				let expected_borrow_rate_mock = Rate::zero();
 
 				// Alice try to borrow from DOT pool
 				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
@@ -2841,7 +2942,7 @@ mod tests {
 				));
 
 				// Set next block number
-				System::set_block_number(1);
+				System::set_block_number(2);
 
 				// Alice borrow from DOT pool
 				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
@@ -2852,7 +2953,7 @@ mod tests {
 				));
 
 				// Set next block number
-				System::set_block_number(2);
+				System::set_block_number(3);
 
 				// Bob deposit to DOT pool
 				let bob_deposited_amount = 60_000 * DOLLARS;
@@ -2863,22 +2964,264 @@ mod tests {
 				));
 
 				// Set next block number
-				System::set_block_number(3);
+				System::set_block_number(4);
 
-				// Calculate expected borrow interest rate based on params before fn accrue_interest_rate called
-				let expected_borrow_rate_mock = calculate_borrow_interest_rate_mock(CurrencyId::DOT).unwrap();
+				// Expected borrow interest rate based on params before fn accrue_interest_rate called
+				let expected_borrow_rate_mock = Rate::from_inner(1800000006);
 
 				// Alice try to borrow from DOT pool
 				let bob_borrowed_amount_in_dot = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(BOB),
 					CurrencyId::DOT,
-					alice_borrowed_amount_in_dot
+					bob_borrowed_amount_in_dot
 				));
 
+				// Checking if real borrow interest rate is equal to the expected
 				assert_eq!(
 					TestController::controller_dates(CurrencyId::DOT).borrow_rate,
 					expected_borrow_rate_mock
+				);
+			});
+	}
+
+	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn get_exchange_rate_scenario_1_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
+			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 40_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+
+				// Expected exchange rate && wrapped amount based on params after fn accrue_interest_rate called
+				let expected_amount_wrapped_tokens = 40_000 * DOLLARS;
+				let expected_exchange_rate_mock = Rate::one();
+
+				// Checking if real exchange rate && wrapped amount is equal to the expected
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					expected_amount_wrapped_tokens
+				);
+				assert_eq!(
+					TestController::get_exchange_rate(CurrencyId::DOT),
+					Ok(expected_exchange_rate_mock)
+				);
+			});
+	}
+
+	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn get_exchange_rate_scenario_2_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
+			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 40_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+
+				// Expected exchange rate && wrapped amount based on params after fn accrue_interest_rate called
+				let expected_amount_wrapped_tokens = 40_000 * DOLLARS;
+				let expected_exchange_rate_mock = Rate::one();
+
+				// Checking if real exchange rate && wrapped amount is equal to the expected
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					expected_amount_wrapped_tokens
+				);
+				assert_eq!(
+					TestController::get_exchange_rate(CurrencyId::DOT),
+					Ok(expected_exchange_rate_mock)
+				);
+			});
+	}
+
+	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn get_exchange_rate_scenario_3_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 40_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+
+				// Set next block number
+				System::set_block_number(2);
+
+				// Alice borrow from DOT pool
+				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_borrowed_amount_in_dot
+				));
+
+				// Expected exchange rate && wrapped amount based on params after fn accrue_interest_rate called
+				let expected_amount_wrapped_tokens = 40_000 * DOLLARS;
+				let expected_exchange_rate_mock = Rate::one();
+
+				// Checking if real borrow interest rate && wrapped amount is equal to the expected
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					expected_amount_wrapped_tokens
+				);
+				assert_eq!(
+					TestController::get_exchange_rate(CurrencyId::DOT),
+					Ok(expected_exchange_rate_mock)
+				);
+			});
+	}
+
+	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn get_exchange_rate_scenario_4_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 40_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+
+				// Set next block number
+				System::set_block_number(2);
+
+				// Alice borrow from DOT pool
+				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_borrowed_amount_in_dot
+				));
+
+				// Expected exchange rate && wrapped amount based on params after fn accrue_interest_rate called
+				let expected_amount_wrapped_tokens = 40_000 * DOLLARS;
+				let expected_exchange_rate_mock = Rate::one();
+
+				// Checking if real exchange rate && wrapped amount is equal to the expected
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					expected_amount_wrapped_tokens
+				);
+				assert_eq!(
+					TestController::get_exchange_rate(CurrencyId::DOT),
+					Ok(expected_exchange_rate_mock)
+				);
+			});
+	}
+
+	#[test]
+	// Scenario description:
+	// FIXME: add description
+	fn get_exchange_rate_scenario_5_should_work() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(BOB, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 40_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+
+				// Set next block number
+				System::set_block_number(2);
+
+				// Alice borrow from DOT pool
+				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_borrowed_amount_in_dot
+				));
+
+				// Set next block number
+				System::set_block_number(3);
+
+				// Bob deposit to DOT pool
+				let bob_deposited_amount = 60_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(BOB),
+					CurrencyId::DOT,
+					bob_deposited_amount
+				));
+
+				// Set next block number
+				System::set_block_number(4);
+
+				// Expected exchange rate based on params before fn accrue_interest_rate in block 4 called
+				let expected_exchange_rate_mock_block_number_3 = Rate::from_inner(1000000002025000000);
+
+				assert_eq!(
+					TestController::get_exchange_rate(CurrencyId::DOT),
+					Ok(expected_exchange_rate_mock_block_number_3)
+				);
+
+				// Alice try to borrow from DOT pool
+				let bob_borrowed_amount_in_dot = 50_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(BOB),
+					CurrencyId::DOT,
+					bob_borrowed_amount_in_dot
+				));
+
+				// Expected exchange rate && wrapped amount based on params after fn accrue_interest_rate in block 4 called
+				let expected_amount_wrapped_tokens_alice = 40_000 * DOLLARS;
+				// bob_deposited_amount/expected_exchange_rate_mock_block_number_3 = 59_999_999_878_500_000_246_037
+				let expected_amount_wrapped_tokens_bob = 59_999_999_878_500_000_246_037;
+				let expected_exchange_rate_mock_block_number_4 = Rate::from_inner(1000000002349000003);
+
+				// Checking if real exchange rate && wrapped amount is equal to the expected
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					expected_amount_wrapped_tokens_alice
+				);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &BOB),
+					expected_amount_wrapped_tokens_bob
+				);
+				assert_eq!(
+					TestController::get_exchange_rate(CurrencyId::DOT),
+					Ok(expected_exchange_rate_mock_block_number_4)
 				);
 			});
 	}
