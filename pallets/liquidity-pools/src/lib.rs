@@ -12,11 +12,10 @@ use sp_runtime::{traits::AccountIdConversion, DispatchResult, ModuleId, RuntimeD
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct Pool {
-	pub current_interest_rate: Rate, // FIXME: how can i use it?
 	pub total_borrowed: Balance,
 	/// Accumulator of the total earned interest rate since the opening of the pool
 	pub borrow_index: Rate,
-	pub current_exchange_rate: Rate, // FIXME: can be removed.
+	pub current_exchange_rate: Rate, // FIXME. Delete and implement via RPC
 	pub total_insurance: Balance,
 }
 
@@ -84,11 +83,6 @@ decl_module! {
 
 // Setters for LiquidityPools
 impl<T: Trait> Module<T> {
-	pub fn set_current_interest_rate(underlying_asset_id: CurrencyId, _rate: Rate) -> DispatchResult {
-		Pools::mutate(underlying_asset_id, |r| r.current_interest_rate = Rate::from_inner(1));
-		Ok(())
-	}
-
 	pub fn set_current_exchange_rate(underlying_asset_id: CurrencyId, rate: Rate) -> DispatchResult {
 		Pools::mutate(underlying_asset_id, |r| r.current_exchange_rate = rate);
 		Ok(())
@@ -197,6 +191,7 @@ impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 		account_borrows: Balance,
 	) -> DispatchResult {
 		let pool_borrow_index = Self::get_pool_borrow_index(underlying_asset_id);
+		let pool_total_borrowed = Self::get_pool_total_borrowed(underlying_asset_id);
 
 		// Calculate the new borrower and total borrow balances, failing on overflow:
 		// account_borrows_new = account_borrows + borrow_amount
@@ -204,7 +199,7 @@ impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 		let account_borrow_new = account_borrows
 			.checked_add(borrow_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
-		let total_borrows_new = Self::get_pool_total_borrowed(underlying_asset_id)
+		let total_borrows_new = pool_total_borrowed
 			.checked_add(borrow_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
 

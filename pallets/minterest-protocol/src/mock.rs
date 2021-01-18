@@ -236,7 +236,6 @@ impl ExtBuilder {
 				(
 					CurrencyId::ETH,
 					Pool {
-						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
 						current_exchange_rate: Rate::from_inner(1),
@@ -246,7 +245,6 @@ impl ExtBuilder {
 				(
 					CurrencyId::DOT,
 					Pool {
-						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
 						current_exchange_rate: Rate::from_inner(1),
@@ -256,7 +254,6 @@ impl ExtBuilder {
 				(
 					CurrencyId::KSM,
 					Pool {
-						current_interest_rate: Rate::from_inner(0),
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
 						current_exchange_rate: Rate::from_inner(1),
@@ -330,6 +327,7 @@ impl ExtBuilder {
 					CurrencyId::ETH,
 					ControllerData {
 						timestamp: 0,
+						supply_rate: Rate::from_inner(0),
 						borrow_rate: Rate::from_inner(0),
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
@@ -344,6 +342,7 @@ impl ExtBuilder {
 					CurrencyId::DOT,
 					ControllerData {
 						timestamp: 0,
+						supply_rate: Rate::from_inner(0),
 						borrow_rate: Rate::from_inner(0),
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
@@ -358,6 +357,7 @@ impl ExtBuilder {
 					CurrencyId::KSM,
 					ControllerData {
 						timestamp: 0,
+						supply_rate: Rate::from_inner(0),
 						borrow_rate: Rate::from_inner(0),
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
@@ -372,6 +372,7 @@ impl ExtBuilder {
 					CurrencyId::BTC,
 					ControllerData {
 						timestamp: 0,
+						supply_rate: Rate::from_inner(0),
 						borrow_rate: Rate::from_inner(0),
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
