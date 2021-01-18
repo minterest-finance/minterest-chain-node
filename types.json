@@ -16,7 +16,6 @@
       ]
     },
     "Pool": {
-      "current_interest_rate": "Rate",
       "total_borrowed": "Balance",
       "borrow_index": "Rate",
       "current_exchange_rate": "Rate",
@@ -33,6 +32,7 @@
     "Rate": "FixedU128",
     "ControllerData": {
       "timestamp": "BlockNumber",
+      "supply_rate": "Rate",
       "borrow_rate": "Rate",
       "insurance_factor": "Rate",
       "max_borrow_rate":  "Rate",
