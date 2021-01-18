@@ -22,6 +22,8 @@ mod tests {
 	use sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedMul};
 	use sp_std::{cmp::Ordering, result};
 
+	mod controller_tests;
+
 	impl_outer_origin! {
 		pub enum Origin for Test {}
 	}

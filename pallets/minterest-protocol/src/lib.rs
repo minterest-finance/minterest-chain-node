@@ -292,7 +292,9 @@ decl_module! {
 
 			ensure!(<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id), Error::<T>::AlreadyDisabledCollateral);
 
-			let user_balance_disabled_asset = T::MultiCurrency::free_balance(pool_id, &sender);
+			let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
+			let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &sender);
+			let user_balance_disabled_asset = <Controller<T>>::convert_from_wrapped(wrapped_id, user_balance_wrapped_tokens)?;
 
 			// Check if the user will have enough collateral if he removes one of the collaterals.
 			let (_, shortfall) = <Controller<T>>::get_hypothetical_account_liquidity(&sender, pool_id, user_balance_disabled_asset, 0)?;
