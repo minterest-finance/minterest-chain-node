@@ -12,6 +12,7 @@ fn dollars<T: Into<u128>>(d: T) -> Balance {
 fn multiplier_per_block_equal_max_value() -> ControllerData<BlockNumber> {
 	ControllerData {
 		timestamp: 0,
+		supply_rate: Rate::from_inner(0),
 		borrow_rate: Rate::from_inner(0),
 		insurance_factor: Rate::saturating_from_rational(101, 100),
 		max_borrow_rate: Rate::saturating_from_rational(5, 1000),
@@ -26,6 +27,7 @@ fn multiplier_per_block_equal_max_value() -> ControllerData<BlockNumber> {
 fn base_rate_per_block_equal_max_value() -> ControllerData<BlockNumber> {
 	ControllerData {
 		timestamp: 0,
+		supply_rate: Rate::from_inner(0),
 		borrow_rate: Rate::from_inner(0),
 		insurance_factor: Rate::saturating_from_rational(101, 100),
 		max_borrow_rate: Rate::saturating_from_rational(5, 1000),
@@ -54,6 +56,10 @@ fn accrue_interest_should_work() {
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).borrow_rate,
 				Rate::saturating_from_rational(72u128, 10_000_000_000u128)
+			);
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).supply_rate,
+				Rate::from_inner(5_184_000_000)
 			);
 			assert_eq!(
 				TestPools::pools(CurrencyId::DOT).total_borrowed,
@@ -139,18 +145,6 @@ fn convert_from_wrapped_should_work() {
 		});
 }
 
-//FIXME. Not used yet
-#[test]
-fn calculate_interest_rate_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::calculate_interest_rate(CurrencyId::DOT));
-		assert_eq!(
-			Controller::calculate_interest_rate(CurrencyId::DOT),
-			Ok(Rate::saturating_from_rational(1, 1))
-		);
-	});
-}
-
 #[test]
 fn calculate_exchange_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
@@ -199,29 +193,19 @@ fn get_exchange_rate_should_work() {
 fn calculate_borrow_interest_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Utilization rate less or equal than kink:
-		// utilization_rate = 54000 / (106000 - 33000 + 54000) = 0,425196850393700787
-		// borrow_interest_rate = 0,425196850393700787 * multiplier_per_block + base_rate_per_block
+		// utilization_rate = 0.42
+		// borrow_interest_rate = 0,42 * multiplier_per_block + base_rate_per_block
 		assert_eq!(
-			Controller::calculate_borrow_interest_rate(
-				CurrencyId::DOT,
-				dollars(106_000_u128),
-				dollars(54_000_u128),
-				dollars(33_000_u128)
-			),
-			Ok(Rate::from_inner(3_826_771_653))
+			Controller::calculate_borrow_interest_rate(CurrencyId::DOT, Rate::saturating_from_rational(42, 100)),
+			Ok(Rate::from_inner(3_780_000_000))
 		);
 
 		// Utilization rate larger than kink:
-		// utilization_rate = 90 / (18 - 8 + 90) = 0.9
+		// utilization_rate = 0.9
 		// borrow_interest_rate = 0.9 * 0.8 * jump_multiplier_per_block +
 		// + (0.8 * multiplier_per_block) + base_rate_per_block
 		assert_eq!(
-			Controller::calculate_borrow_interest_rate(
-				CurrencyId::DOT,
-				dollars(18_000_u128),
-				dollars(90_000_u128),
-				dollars(8_000_u128)
-			),
+			Controller::calculate_borrow_interest_rate(CurrencyId::DOT, Rate::saturating_from_rational(9, 10)),
 			Ok(Rate::from_inner(156_240_000_000))
 		);
 	});
@@ -235,7 +219,7 @@ fn calculate_borrow_interest_rate_fails_if_overflow_kink_mul_multiplier() {
 		// utilization_rate > kink.
 		// Overflow in calculation: kink * multiplier_per_block = 1.01 * max_value()
 		assert_noop!(
-			Controller::calculate_borrow_interest_rate(CurrencyId::KSM, 1, 200, 8),
+			Controller::calculate_borrow_interest_rate(CurrencyId::KSM, Rate::saturating_from_rational(101, 100)),
 			Error::<Runtime>::NumOverflow
 		);
 	});
@@ -249,7 +233,7 @@ fn calculate_borrow_interest_rate_fails_if_overflow_add_base_rate_per_block() {
 		// utilization_rate > kink.
 		// Overflow in calculation: kink_mul_multiplier + base_rate_per_block = ... + max_value()
 		assert_noop!(
-			Controller::calculate_borrow_interest_rate(CurrencyId::KSM, 1, 200, 8),
+			Controller::calculate_borrow_interest_rate(CurrencyId::KSM, Rate::saturating_from_rational(9, 10)),
 			Error::<Runtime>::NumOverflow
 		);
 	});
@@ -455,6 +439,41 @@ fn calculate_utilization_rate_should_work() {
 }
 
 #[test]
+fn calculate_supply_rate_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// supply_rate = 0.75 * 0.23 * (1 - 0.1) = 0.15525
+		assert_eq!(
+			Controller::calculate_supply_interest_rate(
+				Rate::saturating_from_rational(75, 100),
+				Rate::saturating_from_rational(23, 100),
+				Rate::saturating_from_rational(1, 10)
+			),
+			Ok(Rate::saturating_from_rational(15525, 100_000))
+		);
+
+		// Overflow in calculation: one_minus_insurance_factor = 1 - 2
+		assert_noop!(
+			Controller::calculate_supply_interest_rate(
+				Rate::saturating_from_rational(75, 100),
+				Rate::saturating_from_rational(23, 100),
+				Rate::saturating_from_rational(2, 1)
+			),
+			Error::<Runtime>::NumOverflow
+		);
+
+		// Overflow in calculation: max_value() * 2.3 * (1 - 0.1)
+		assert_noop!(
+			Controller::calculate_supply_interest_rate(
+				Rate::from_inner(u128::max_value()),
+				Rate::saturating_from_rational(23, 10),
+				Rate::saturating_from_rational(1, 10)
+			),
+			Error::<Runtime>::NumOverflow
+		);
+	});
+}
+
+#[test]
 fn calculate_new_borrow_index_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// new_borrow_index = 0.0000063 * 1.28 + 1.28 = 1.280000008064
@@ -558,17 +577,18 @@ fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work(
 fn get_hypothetical_account_liquidity_one_currency_from_redeem_should_work() {
 	ExtBuilder::default().alice_deposit_60_dot().build().execute_with(|| {
 		// Checking the function when called from redeem.
+		// collateral parameter is set to false, user can't redeem.
 		assert_eq!(
 			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 5, 0),
-			Ok((99, 0))
+			Ok((0, 9))
 		);
 		assert_eq!(
 			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 60, 0),
-			Ok((0, 0))
+			Ok((0, 108))
 		);
 		assert_eq!(
 			Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 200, 0),
-			Ok((0, 252))
+			Ok((0, 360))
 		);
 	});
 }
@@ -581,17 +601,18 @@ fn get_hypothetical_account_liquidity_two_currencies_from_redeem_should_work() {
 		.build()
 		.execute_with(|| {
 			// Checking the function when called from redeem.
+			// collateral parameter is set to false, user can't redeem.
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 15, 0),
-				Ok((117, 0))
+				Ok((0, 27))
 			);
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 80, 0),
-				Ok((0, 0))
+				Ok((0, 144))
 			);
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::ETH, 100, 0),
-				Ok((0, 36))
+				Ok((0, 180))
 			);
 		});
 }
@@ -605,21 +626,29 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 		.user_balance(ALICE, CurrencyId::MDOT, 60)
 		.pool_balance(CurrencyId::DOT, 60)
 		.pool_total_borrowed(CurrencyId::DOT, 30)
-		.pool_user_data(ALICE, CurrencyId::DOT, 30, Rate::saturating_from_rational(1, 1), true)
+		.pool_user_data(ALICE, CurrencyId::DOT, 30, Rate::saturating_from_rational(1, 1), false)
 		.build()
 		.execute_with(|| {
 			// Checking the function when called from borrow.
+			// collateral parameter for DOT and ETH pool is set to false. User can't borrow.
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 30),
-				Ok((78, 0))
+				Ok((0, 120))
 			);
+
+			// Alice set collateral parameter value to true for DOT pool. Alice can borrow.
+			assert_ok!(<LiquidityPools<Runtime>>::enable_as_collateral_internal(
+				&ALICE,
+				CurrencyId::DOT
+			));
+
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 50),
-				Ok((38, 0))
+				Ok((2, 0))
 			);
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 100),
-				Ok((0, 62))
+				Ok((0, 98))
 			);
 		});
 }
@@ -644,17 +673,24 @@ fn redeem_allowed_should_work() {
 			Controller::redeem_allowed(CurrencyId::KSM, &ALICE, 10),
 			Error::<Runtime>::OperationPaused
 		);
-
-		assert_noop!(
-			Controller::redeem_allowed(CurrencyId::DOT, &ALICE, 999),
-			Error::<Runtime>::InsufficientLiquidity
-		);
 	});
 }
 
 #[test]
 fn borrow_allowed_should_work() {
 	ExtBuilder::default().alice_deposit_60_dot().build().execute_with(|| {
+		// collateral parameter is set to false. User can't borrow
+		assert_err!(
+			Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10),
+			Error::<Runtime>::InsufficientLiquidity
+		);
+
+		// collateral parameter is set to true. User can borrow.
+		assert_ok!(<LiquidityPools<Runtime>>::enable_as_collateral_internal(
+			&ALICE,
+			CurrencyId::DOT
+		));
+
 		assert_ok!(Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10));
 
 		assert_noop!(
@@ -753,6 +789,15 @@ fn set_insurance_factor_should_work() {
 				Rate::saturating_from_rational(20, 10)
 			);
 
+			// ALICE set insurance factor equal 0.0
+			assert_ok!(Controller::set_insurance_factor(alice(), CurrencyId::DOT, 0, 1));
+			let expected_event = TestEvent::controller(Event::InsuranceFactorChanged);
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).insurance_factor,
+				Rate::from_inner(0)
+			);
+
 			// Overflow in calculation: 20 / 0
 			assert_noop!(
 				Controller::set_insurance_factor(alice(), CurrencyId::DOT, 20, 0),
@@ -787,6 +832,12 @@ fn set_max_borrow_rate_should_work() {
 				Rate::saturating_from_rational(20, 10)
 			);
 
+			// ALICE can't set max borrow rate equal 0.0
+			assert_noop!(
+				Controller::set_max_borrow_rate(alice(), CurrencyId::DOT, 0, 1),
+				Error::<Runtime>::MaxBorrowRateCannotBeZero
+			);
+
 			// Overflow in calculation: 20 / 0
 			assert_noop!(
 				Controller::set_max_borrow_rate(alice(), CurrencyId::DOT, 20, 0),
@@ -812,14 +863,32 @@ fn set_base_rate_per_block_should_work() {
 		.pool_mock(CurrencyId::DOT)
 		.build()
 		.execute_with(|| {
+			// Set Multiplier per block equal 2.0
+			assert_ok!(Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 20, 10));
+
+			// Can be set to 0.0
+			assert_ok!(Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 0, 1));
+			let expected_event = TestEvent::controller(Event::BaseRatePerBlockHasChanged);
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).base_rate_per_block,
+				Rate::from_inner(0)
+			);
+
 			// ALICE set Baser rate per block equal 2.0
 			assert_ok!(Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 20, 10));
 			let expected_event = TestEvent::controller(Event::BaseRatePerBlockHasChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
-
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).base_rate_per_block,
 				Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
+			);
+
+			// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
+			assert_ok!(Controller::set_multiplier_per_block(alice(), CurrencyId::DOT, 0, 1));
+			assert_noop!(
+				Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 0, 1),
+				Error::<Runtime>::BaseRatePerBlockCannotBeZero
 			);
 
 			// Overflow in calculation: 20 / 0
@@ -847,12 +916,32 @@ fn set_multiplier_per_block_should_work() {
 		.pool_mock(CurrencyId::DOT)
 		.build()
 		.execute_with(|| {
+			// Set Base rate per block equal 2.0
+			assert_ok!(Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 20, 10));
+
+			// Can be set to 0.0
+			assert_ok!(Controller::set_multiplier_per_block(alice(), CurrencyId::DOT, 0, 10));
+			let expected_event = TestEvent::controller(Event::MultiplierPerBlockHasChanged);
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).multiplier_per_block,
+				Rate::from_inner(0)
+			);
+
+			// Alice set Multiplier per block equal 2.0 / 5_256_000
 			assert_ok!(Controller::set_multiplier_per_block(alice(), CurrencyId::DOT, 20, 10));
 			let expected_event = TestEvent::controller(Event::MultiplierPerBlockHasChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).multiplier_per_block,
 				Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
+			);
+
+			//  Multiplier per block cannot be set to 0 at the same time as Base rate per block.
+			assert_ok!(Controller::set_base_rate_per_block(alice(), CurrencyId::DOT, 0, 1));
+			assert_noop!(
+				Controller::set_multiplier_per_block(alice(), CurrencyId::DOT, 0, 1),
+				Error::<Runtime>::MultiplierPerBlockCannotBeZero
 			);
 
 			// Overflow in calculation: 20 / 0
@@ -907,19 +996,6 @@ fn set_jump_multiplier_per_block_should_work() {
 
 			assert_noop!(
 				Controller::set_jump_multiplier_per_block(alice(), CurrencyId::MDOT, 20, 10),
-				Error::<Runtime>::PoolNotFound
-			);
-		});
-}
-
-#[test]
-fn pool_not_found() {
-	ExtBuilder::default()
-		.pool_mock(CurrencyId::DOT)
-		.build()
-		.execute_with(|| {
-			assert_noop!(
-				Controller::pause_specific_operation(alice(), CurrencyId::MBTC, Operation::Deposit),
 				Error::<Runtime>::PoolNotFound
 			);
 		});

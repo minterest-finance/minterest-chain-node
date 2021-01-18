@@ -203,7 +203,6 @@ impl ExtBuilder {
 		self.pools.push((
 			pool_id,
 			Pool {
-				current_interest_rate: Rate::from_inner(0),
 				total_borrowed,
 				borrow_index: Rate::saturating_from_rational(1, 1),
 				current_exchange_rate: Rate::from_inner(1),
@@ -219,7 +218,6 @@ impl ExtBuilder {
 		self.pools.push((
 			pool_id,
 			Pool {
-				current_interest_rate: Rate::from_inner(0),
 				total_borrowed: Balance::zero(),
 				borrow_index: Rate::saturating_from_rational(1, 1),
 				current_exchange_rate: Rate::from_inner(1),
@@ -233,7 +231,6 @@ impl ExtBuilder {
 		self.pools.push((
 			pool_id,
 			Pool {
-				current_interest_rate: Rate::from_inner(0),
 				total_borrowed: Balance::zero(),
 				borrow_index: Rate::saturating_from_rational(2, 1),
 				current_exchange_rate: Rate::saturating_from_rational(1, 1),
@@ -268,7 +265,7 @@ impl ExtBuilder {
 			.user_balance(ALICE, CurrencyId::MDOT, 60)
 			.pool_balance(CurrencyId::DOT, 60)
 			.pool_mock(CurrencyId::DOT)
-			.pool_user_data(ALICE, CurrencyId::DOT, 0, Rate::from_inner(0), true)
+			.pool_user_data(ALICE, CurrencyId::DOT, 0, Rate::from_inner(0), false)
 	}
 
 	pub fn alice_deposit_20_eth(self) -> Self {
@@ -276,7 +273,7 @@ impl ExtBuilder {
 			.user_balance(ALICE, CurrencyId::METH, 20)
 			.pool_balance(CurrencyId::ETH, 20)
 			.pool_mock(CurrencyId::ETH)
-			.pool_user_data(ALICE, CurrencyId::ETH, 0, Rate::from_inner(0), true)
+			.pool_user_data(ALICE, CurrencyId::ETH, 0, Rate::from_inner(0), false)
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
@@ -296,6 +293,7 @@ impl ExtBuilder {
 					CurrencyId::DOT,
 					ControllerData {
 						timestamp: 0,
+						supply_rate: Rate::from_inner(0),
 						borrow_rate: Rate::from_inner(0),
 						insurance_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
@@ -310,6 +308,7 @@ impl ExtBuilder {
 					CurrencyId::ETH,
 					ControllerData {
 						timestamp: 0,
+						supply_rate: Rate::from_inner(0),
 						borrow_rate: Rate::from_inner(0),
 						insurance_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
@@ -324,6 +323,7 @@ impl ExtBuilder {
 					CurrencyId::BTC,
 					ControllerData {
 						timestamp: 0,
+						supply_rate: Rate::from_inner(0),
 						borrow_rate: Rate::from_inner(0),
 						insurance_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
