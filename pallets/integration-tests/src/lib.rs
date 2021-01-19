@@ -1484,19 +1484,19 @@ mod tests {
 			});
 	}
 
-	// Scenario #1 description:
-	// The user redeems all assets in the first currency. He has loan in the first currency.
+	// Extrinsic `redeem_underlying`, description of scenario #1:
+	// The user The user tries to redeem all assets in the first currency. He has loan in the first currency.
 	// Initial exchange rate for all assets equal 1.0;
 	// Collateral factor for all assets equal 0.9;
 	// 1. Alice deposit 60 DOT;
 	// 2. Alice deposit 50 ETH;
 	// 3. Alice borrow 50 DOT;
-	// 4. Alice can't `redeem_underlying` 60 DOT: 10 DOT * 0.9 + 50 ETH * 0.9 in pool < 60 DOT redeem;
+	// 4. Alice can't `redeem_underlying` 60 DOT: 50 ETH * 0.9 collateral < 50 DOT borrow;
 	// 5. Alice deposit 10 ETH;
 	// 6. Alice `redeem_underlying` 60 DOT;
 	// 7. Alice can't `redeem_underlying` 60 ETH.
 	#[test]
-	fn redeem_underlying_all_assets_with_current_currency_borrowing() {
+	fn redeem_underlying_with_current_currency_borrowing() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
@@ -1639,13 +1639,13 @@ mod tests {
 			});
 	}
 
-	// Scenario #2 description:
-	// The user redeems all assets in the first currency. He has loan in the second currency.
+	// Extrinsic `redeem_underlying`, description of scenario #2:
+	// The user tries to redeem all assets in the first currency. He has loan in the second currency.
 	// Initial exchange rate for all assets equal 1.0;
 	// Collateral factor for all assets equal 0.9;
 	// 1. Alice deposit 60 DOT;
 	// 2. Alice borrow 50 ETH;
-	// 3. Alice can't `redeem_underlying` 60 DOT: 50 ETH * 0.9 in pool < 60 DOT redeem;
+	// 3. Alice can't `redeem` 60 DOT: 0 DOT collateral < 50 ETH borrow;
 	#[test]
 	fn redeem_underlying_with_another_currency_borrowing() {
 		ExtBuilder::default()
@@ -1726,9 +1726,9 @@ mod tests {
 			});
 	}
 
-	// Scenario #3 description:
-	// The user redeems all assets in the first currency. He has loan in the second currency and
-	// deposit in the third currency.
+	// Extrinsic `redeem_underlying`, description of scenario #3:
+	// The user tries to redeem all assets in the first currency. He has loan in the second
+	// currency and deposit in the third currency.
 	// Initial exchange rate for all assets equal 1.0;
 	// Collateral factor for all assets equal 0.9;
 	// 1. Alice deposit 40 DOT;
@@ -1862,7 +1862,7 @@ mod tests {
 			});
 	}
 
-	// Scenario #4 description:
+	// Extrinsic `redeem_underlying`, description of scenario #4:
 	// It is possible to redeem assets from the pool insurance.
 	// 1. Deposit 10 DOT to pool insurance;
 	// 2. Alice deposit 20 DOT;
@@ -2029,10 +2029,19 @@ mod tests {
 			});
 	}
 
+	// Extrinsic `redeem`, description of scenario #1:
+	// The user tries to redeem all assets in the first currency. He has loan in the first currency.
+	// Initial exchange rate for all assets equal 1.0;
+	// Collateral factor for all assets equal 0.9;
+	// 1. Alice deposit 60 DOT;
+	// 2. Alice deposit 50 ETH;
+	// 3. Alice borrow 50 DOT;
+	// 4. Alice can't `redeem` 60 DOT: 10 DOT * 0.9 + 50 ETH * 0.9 collateral < 60 DOT redeem;
+	// 5. Alice deposit 10 ETH;
+	// 6. Alice `redeem` 60 DOT;
+	// 7. Alice can't `redeem` 60 ETH.
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn redeem_scenario_1_should_work() {
+	fn redeem_with_current_currency_borrowing() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
@@ -2163,10 +2172,15 @@ mod tests {
 			});
 	}
 
+	// Extrinsic `redeem`, description of scenario #2:
+	// The user tries to redeem all assets in the first currency. He has loan in the second currency.
+	// Initial exchange rate for all assets equal 1.0;
+	// Collateral factor for all assets equal 0.9;
+	// 1. Alice deposit 60 DOT;
+	// 2. Alice borrow 50 ETH;
+	// 3. Alice can't `redeem` 60 DOT: 0 DOT collateral < 50 ETH borrow;
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn redeem_scenario_2_should_work() {
+	fn redeem_with_another_currency_borrowing() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
@@ -2241,10 +2255,20 @@ mod tests {
 			});
 	}
 
+	// Extrinsic `redeem`, description of scenario #3:
+	// The user tries to redeem all assets in the first currency. He has loan in the second
+	// currency and deposit in the third currency.
+	// Initial exchange rate for all assets equal 1.0;
+	// Collateral factor for all assets equal 0.9;
+	// 1. Alice deposit 40 DOT;
+	// 2. Alice deposit 40 BTC;
+	// 3. Alice borrow 70 ETH;
+	// 4. Alice can't `redeem` 40 DOT: (40 BTC * 0.9) collateral < 70 ETH borrow;
+	// 5. Alice deposit 40 BTC;
+	// 6. Alice redeem 40 DOT: (80 BTC * 0.9) collateral > 70 EHT borrow;
+	// 7. Alice can't `redeem` 40 BTC: (40 BTC * 0.9) collateral < 70 ETH borrow;
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn redeem_scenario_3_should_work() {
+	fn redeem_with_third_currency_borrowing() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::BTC, ONE_HUNDRED)
@@ -2262,7 +2286,7 @@ mod tests {
 					alice_deposited_amount_in_dot
 				));
 
-				// Alice deposit to DOT pool
+				// Alice deposit to BTC pool
 				let alice_deposited_amount_in_btc = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
@@ -2355,10 +2379,16 @@ mod tests {
 			});
 	}
 
+	// Extrinsic `redeem`, description of scenario #4:
+	// It is possible to redeem assets from the pool insurance.
+	// 1. Deposit 10 DOT to pool insurance;
+	// 2. Alice deposit 20 DOT;
+	// 3. Bob deposit 20 BTC;
+	// 4. Bob deposit 10 DOT;
+	// 5. Bob borrow 15 DOT;
+	// 6. Alice redeem 20 DOT, pool insurance equal 5 DOT;
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn redeem_scenario_4_should_work() {
+	fn redeem_over_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::BTC, ONE_HUNDRED)
@@ -2488,10 +2518,11 @@ mod tests {
 		});
 	}
 
+	// Extrinsic `borrow`, description of scenario #1:
+	// The user cannot borrow without making a deposit first.
+	// 1. Alice can't borrow 50 DOT: 0 collateral < 50 DOT borrow;
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn borrow_scenario_1_should_work() {
+	fn borrow_with_insufficient_collateral_no_deposits() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
@@ -2510,10 +2541,15 @@ mod tests {
 			});
 	}
 
+	// Extrinsic `borrow`, description of scenario #2:
+	// The user cannot borrow in the second currency unless he has
+	// not enabled the first currency as collateral.
+	// Initial exchange rate for all assets equal 1.0;
+	// Collateral factor for all assets equal 0.9;
+	// 1. Alice deposit 50 DOT;
+	// 2. Alice can't borrow 50 ETH: 0 collateral < 50 ETH borrow;
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn borrow_scenario_2_should_work() {
+	fn borrow_without_collateral_in_second_currency() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
@@ -2545,10 +2581,15 @@ mod tests {
 			});
 	}
 
+	// Extrinsic `borrow`, description of scenario #3:
+	// The user cannot borrow in the second currency if the collateral in the first currency
+	// is insufficient.
+	// Initial exchange rate for all assets equal 1.0;
+	// Collateral factor for all assets equal 0.9;
+	// 1. Alice deposit 50 DOT;
+	// 2. Alice can't borrow 50 ETH: 50 DOT * 0.9 collateral < 50 ETH borrow;
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn borrow_scenario_3_should_work() {
+	fn borrow_with_insufficient_collateral_in_second_currency() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
@@ -2580,10 +2621,15 @@ mod tests {
 			});
 	}
 
+	// Extrinsic `borrow`, description of scenario #4:
+	// The user can borrow in the second currency if the collateral in the first currency
+	// is sufficient.
+	// Initial exchange rate for all assets equal 1.0;
+	// Collateral factor for all assets equal 0.9;
+	// 1. Alice deposit 50 DOT;
+	// 2. Alice can borrow 40 ETH: 50 DOT * 0.9 collateral > 40 ETH borrow;
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn borrow_scenario_4_should_work() {
+	fn borrow_with_sufficient_collateral_in_second_currency() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
@@ -2615,10 +2661,14 @@ mod tests {
 			});
 	}
 
+	// Extrinsic `set_insurance_factor`, description of scenario #1:
+	// Pool insurance does not increase if the insurance_factor is zero.
+	// 1. Alice deposit 40 DOT;
+	// 2. Alice borrow 20 DOT;
+	// 3. Set insurance factor equal to zero.
+	// 4. Alice repay full loan in DOTs, pool total_insurance = 0.
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn set_insurance_factor_scenario_1_should_work() {
+	fn set_insurance_factor_equal_zero() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
@@ -2633,7 +2683,7 @@ mod tests {
 					alice_deposited_amount
 				));
 
-				// Alice try to borrow from DOT pool
+				// Alice borrow from DOT pool
 				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
@@ -2663,10 +2713,14 @@ mod tests {
 			});
 	}
 
+	// Extrinsic `set_insurance_factor`, description of scenario #2:
+	// Pool insurance is increased if the insurance_factor is greater than zero.
+	// 1. Alice deposit 40 DOT;
+	// 2. Alice borrow 20 DOT;
+	// 3. Set insurance factor equal 0.5.
+	// 4. Alice repay full loan in DOTs, pool insurance increased.
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn set_insurance_factor_scenario_2_should_work() {
+	fn set_insurance_factor_greater_than_zero() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
@@ -2681,7 +2735,7 @@ mod tests {
 					alice_deposited_amount
 				));
 
-				// Alice try to borrow from DOT pool
+				// Alice borrow from DOT pool
 				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
@@ -2700,7 +2754,7 @@ mod tests {
 				// Jump to 10 block number.
 				System::set_block_number(10);
 
-				// Set insurance factor equal to zero.
+				// Set insurance factor equal 0.5.
 				assert_ok!(TestController::set_insurance_factor(admin(), CurrencyId::DOT, 1, 2));
 
 				// Alice repay full loan in DOTs.
@@ -2720,10 +2774,9 @@ mod tests {
 			});
 	}
 
+	// Function `calculate_borrow_interest_rate + calculate_utilization_rate` scenario #1:
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn calculate_borrow_interest_rate_scenario_1_should_work() {
+	fn calculate_borrow_interest_rate_deposit_without_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
@@ -2749,10 +2802,9 @@ mod tests {
 			});
 	}
 
+	// Function `calculate_borrow_interest_rate + calculate_utilization_rate` scenario #2:
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn calculate_borrow_interest_rate_scenario_2_should_work() {
+	fn calculate_borrow_interest_rate_deposit_with_pool_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
@@ -2778,10 +2830,9 @@ mod tests {
 			});
 	}
 
+	// Function `calculate_borrow_interest_rate + calculate_utilization_rate` scenario #3:
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn calculate_borrow_interest_rate_scenario_3_should_work() {
+	fn calculate_borrow_interest_rate_deposit_and_borrow_without_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
@@ -2799,7 +2850,7 @@ mod tests {
 				// Calculate expected borrow interest rate based on params before fn accrue_interest_rate called
 				let expected_borrow_rate_mock = calculate_borrow_interest_rate_mock(CurrencyId::DOT).unwrap();
 
-				// Alice try to borrow from DOT pool
+				// Alice borrow from DOT pool
 				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
@@ -2814,10 +2865,9 @@ mod tests {
 			});
 	}
 
+	// Function `calculate_borrow_interest_rate + calculate_utilization_rate` scenario #4:
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn calculate_borrow_interest_rate_scenario_4_should_work() {
+	fn calculate_borrow_interest_rate_deposit_and_borrow_with_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
@@ -2838,7 +2888,7 @@ mod tests {
 				// Calculate expected borrow interest rate based on params before fn accrue_interest_rate called
 				let expected_borrow_rate_mock = calculate_borrow_interest_rate_mock(CurrencyId::DOT).unwrap();
 
-				// Alice try to borrow from DOT pool
+				// Alice borrow from DOT pool
 				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
@@ -2853,10 +2903,9 @@ mod tests {
 			});
 	}
 
+	// Function `calculate_borrow_interest_rate + calculate_utilization_rate` scenario #5:
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn calculate_borrow_interest_rate_scenario_5_should_work() {
+	fn calculate_borrow_interest_rate_few_deposits_and_borrows_with_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
