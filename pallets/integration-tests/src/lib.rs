@@ -489,9 +489,11 @@ mod tests {
 
 	/* ----------------------------------------------------------------------------------------- */
 
-	// Integration tests.
+	// Description of scenario #1:
+	// In this scenario, user uses four operations in the protocol (deposit, borrow, repay, redeem).
+	// Changes to the main protocol parameters are also checked here.
 	#[test]
-	fn scenario_should_work() {
+	fn scenario_with_four_operations() {
 		ExtBuilder::default()
 			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
@@ -2963,135 +2965,5 @@ mod tests {
 					expected_borrow_rate_mock
 				);
 			});
-	}
-
-	#[test]
-	// FIXME: set environment
-	fn repay_should_work() {
-		ExtBuilder::default().build().execute_with(|| {
-			assert_ok!(MinterestProtocol::deposit_underlying(
-				Origin::signed(ALICE),
-				CurrencyId::DOT,
-				60_000 * DOLLARS
-			));
-			assert_eq!(
-				TestPools::get_pool_available_liquidity(CurrencyId::DOT),
-				60_000 * DOLLARS
-			);
-			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40_000 * DOLLARS);
-			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60_000 * DOLLARS);
-
-			assert_ok!(MinterestProtocol::borrow(
-				Origin::signed(ALICE),
-				CurrencyId::DOT,
-				30_000 * DOLLARS
-			));
-			assert_eq!(
-				TestPools::get_pool_available_liquidity(CurrencyId::DOT),
-				30_000 * DOLLARS
-			);
-			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70_000 * DOLLARS);
-			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60_000 * DOLLARS);
-			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 30_000 * DOLLARS);
-			assert_eq!(
-				TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT),
-				30_000 * DOLLARS
-			);
-
-			assert_noop!(
-				MinterestProtocol::repay(Origin::signed(ALICE), CurrencyId::MDOT, 10_000 * DOLLARS),
-				MinterestProtocolError::<Test>::NotValidUnderlyingAssetId
-			);
-			assert_noop!(
-				MinterestProtocol::repay(Origin::signed(ALICE), CurrencyId::DOT, 100_000 * DOLLARS),
-				MinterestProtocolError::<Test>::NotEnoughUnderlyingsAssets
-			);
-
-			assert_ok!(MinterestProtocol::repay(
-				Origin::signed(ALICE),
-				CurrencyId::DOT,
-				20_000 * DOLLARS
-			));
-			assert_eq!(
-				TestPools::get_pool_available_liquidity(CurrencyId::DOT),
-				50_000 * DOLLARS
-			);
-			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 50_000 * DOLLARS);
-			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60_000 * DOLLARS);
-			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 10_000 * DOLLARS);
-			assert_eq!(
-				TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT),
-				10_000 * DOLLARS
-			);
-		});
-	}
-
-	#[test]
-	// FIXME: set environment
-	fn repay_on_behalf_should_work() {
-		ExtBuilder::default().build().execute_with(|| {
-			assert_ok!(MinterestProtocol::deposit_underlying(
-				Origin::signed(ALICE),
-				CurrencyId::DOT,
-				60_000 * DOLLARS
-			));
-			assert_eq!(
-				TestPools::get_pool_available_liquidity(CurrencyId::DOT),
-				60_000 * DOLLARS
-			);
-			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40_000 * DOLLARS);
-			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60_000 * DOLLARS);
-			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &BOB), 100_000 * DOLLARS);
-
-			assert_ok!(MinterestProtocol::borrow(
-				Origin::signed(ALICE),
-				CurrencyId::DOT,
-				30_000 * DOLLARS
-			));
-			assert_eq!(
-				TestPools::get_pool_available_liquidity(CurrencyId::DOT),
-				30_000 * DOLLARS
-			);
-			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70_000 * DOLLARS);
-			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60_000 * DOLLARS);
-			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 30_000 * DOLLARS);
-			assert_eq!(
-				TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT),
-				30_000 * DOLLARS
-			);
-
-			assert_noop!(
-				MinterestProtocol::repay_on_behalf(Origin::signed(BOB), CurrencyId::MDOT, ALICE, 10_000 * DOLLARS),
-				MinterestProtocolError::<Test>::NotValidUnderlyingAssetId
-			);
-			assert_noop!(
-				MinterestProtocol::repay_on_behalf(Origin::signed(BOB), CurrencyId::DOT, ALICE, 120_000 * DOLLARS),
-				MinterestProtocolError::<Test>::NotEnoughUnderlyingsAssets
-			);
-			assert_noop!(
-				MinterestProtocol::repay_on_behalf(Origin::signed(BOB), CurrencyId::DOT, BOB, 100_000 * DOLLARS),
-				//FIXME: is it Ok to check internal error?
-				MinterestProtocolError::<Test>::RepayAmountToBig
-			);
-
-			assert_ok!(MinterestProtocol::repay_on_behalf(
-				Origin::signed(BOB),
-				CurrencyId::DOT,
-				ALICE,
-				20_000 * DOLLARS
-			));
-			assert_eq!(
-				TestPools::get_pool_available_liquidity(CurrencyId::DOT),
-				50_000 * DOLLARS
-			);
-			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 70_000 * DOLLARS);
-			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 60_000 * DOLLARS);
-			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &BOB), 80_000 * DOLLARS);
-			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), 10_000 * DOLLARS);
-			assert_eq!(
-				TestPools::get_user_total_borrowed(&ALICE, CurrencyId::DOT),
-				10_000 * DOLLARS
-			);
-		});
 	}
 }
