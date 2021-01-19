@@ -1072,7 +1072,8 @@ mod tests {
 	}
 
 	// Extrinsic `redeem_underlying`, description of scenario #1:
-	// The user The user tries to redeem all assets in the first currency. He has loan in the first currency.
+	// The user The user tries to redeem all assets in the first currency. He has loan in the first
+	// currency.
 	// Initial exchange rate for all assets equal 1.0;
 	// Collateral factor for all assets equal 0.9;
 	// 1. Alice deposit 60 DOT;
@@ -2786,7 +2787,8 @@ mod tests {
 					bob_borrowed_amount_in_dot
 				));
 
-				// Expected exchange rate && wrapped amount based on params after fn accrue_interest_rate in block 4 called
+				// Expected exchange rate && wrapped amount based on params after
+				// fn accrue_interest_rate in block 4 called
 				let expected_amount_wrapped_tokens_alice = 40_000 * DOLLARS;
 				// bob_deposited_amount/expected_exchange_rate_mock_block_number_3 = 59_999_999_878_500_000_246_037
 				let expected_amount_wrapped_tokens_bob = 59_999_999_878_500_000_246_037;
