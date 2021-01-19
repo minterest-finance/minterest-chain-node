@@ -415,7 +415,9 @@ mod tests {
 			.pool_initial(CurrencyId::DOT)
 			.build()
 			.execute_with(|| {
-				// Initial params
+				// INITIAL PARAMS
+				/* ------------------------------------------------------------------------------ */
+
 				let alice_dot_free_balance_start: Balance = ONE_HUNDRED;
 				let alice_m_dot_free_balance_start: Balance = BALANCE_ZERO;
 				let alice_dot_total_borrow_start: Balance = BALANCE_ZERO;
@@ -425,6 +427,9 @@ mod tests {
 				let pool_total_insurance_start: Balance = BALANCE_ZERO;
 				let pool_dot_total_borrow_start: Balance = BALANCE_ZERO;
 
+				// ACTION: DEPOSIT INSURANCE
+				/* ------------------------------------------------------------------------------ */
+
 				// Add liquidity to DOT pool from Insurance by Admin
 				let admin_deposit_amount_block_number_0: Balance = 100_000 * DOLLARS;
 				assert_ok!(TestController::deposit_insurance(
@@ -432,6 +437,9 @@ mod tests {
 					CurrencyId::DOT,
 					admin_deposit_amount_block_number_0
 				));
+
+				// PARAMETERS CHECKING
+				/* ------------------------------------------------------------------------------ */
 
 				// Checking pool available liquidity
 				// Expected: 100_000
@@ -450,7 +458,7 @@ mod tests {
 				);
 
 				// Checking free balance DOT && MDOT
-				// ADMIN
+				// ADMIN:
 				assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), BALANCE_ZERO);
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), BALANCE_ZERO);
 
@@ -474,7 +482,7 @@ mod tests {
 				assert_eq!(TestController::controller_dates(CurrencyId::DOT).borrow_rate, RATE_ZERO);
 
 				// Checking DOT pool User params
-				// ADMIN
+				// ADMIN:
 				assert_eq!(
 					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).total_borrowed,
 					alice_dot_total_borrow_start
@@ -484,8 +492,10 @@ mod tests {
 					RATE_ZERO
 				);
 
-				// Set next block number
 				System::set_block_number(1);
+
+				// ACTION: DEPOSIT UNDERLYING
+				/* ------------------------------------------------------------------------------ */
 
 				// ALICE deposit 60 000 to DOT pool
 				let alice_deposit_amount_block_number_1: Balance = 60_000 * DOLLARS;
@@ -494,6 +504,9 @@ mod tests {
 					CurrencyId::DOT,
 					alice_deposit_amount_block_number_1
 				));
+
+				// PARAMETERS CHECKING
+				/* ------------------------------------------------------------------------------ */
 
 				// Checking pool available liquidity
 				// Expected: 160 000
@@ -516,11 +529,11 @@ mod tests {
 				);
 
 				// Checking free balance DOT && MDOT
-				// ADMIN
+				// ADMIN:
 				assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), BALANCE_ZERO);
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), BALANCE_ZERO);
 
-				// ALICE
+				// ALICE:
 				let alice_dot_free_balance_block_number_1: Balance =
 					alice_dot_free_balance_start - alice_deposit_amount_block_number_1;
 				assert_eq!(
@@ -549,7 +562,7 @@ mod tests {
 				assert_eq!(TestController::controller_dates(CurrencyId::DOT).borrow_rate, RATE_ZERO);
 
 				// Checking DOT pool User params
-				// ADMIN
+				// ADMIN:
 				assert_eq!(
 					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).total_borrowed,
 					BALANCE_ZERO
@@ -558,7 +571,7 @@ mod tests {
 					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).interest_index,
 					RATE_ZERO
 				);
-				// ALICE
+				// ALICE:
 				assert_eq!(
 					TestPools::pool_user_data(ALICE, CurrencyId::DOT).total_borrowed,
 					BALANCE_ZERO
@@ -568,8 +581,10 @@ mod tests {
 					RATE_ZERO
 				);
 
-				// Set next block number
 				System::set_block_number(2);
+
+				// ACTION: BORROW
+				/* ------------------------------------------------------------------------------ */
 
 				//  Alice borrow 30_000 from DOT pool.
 				let alice_borrow_amount_block_number_2: Balance = 30_000 * DOLLARS;
@@ -578,6 +593,9 @@ mod tests {
 					CurrencyId::DOT,
 					alice_borrow_amount_block_number_2
 				));
+
+				// PARAMETERS CHECKING
+				/* ------------------------------------------------------------------------------ */
 
 				// Checking pool available liquidity
 				// Expected 130 000
@@ -596,11 +614,11 @@ mod tests {
 				);
 
 				// Checking free balance DOT && MDOT
-				// ADMIN
+				// ADMIN:
 				assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), BALANCE_ZERO);
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), BALANCE_ZERO);
 
-				// ALICE
+				// ALICE:
 				// Expected: 70 000
 				let alice_dot_free_balance_block_number_2: Balance =
 					alice_dot_free_balance_block_number_1 + alice_borrow_amount_block_number_2;
@@ -635,7 +653,7 @@ mod tests {
 				assert_eq!(TestController::controller_dates(CurrencyId::DOT).borrow_rate, RATE_ZERO);
 
 				// Checking DOT pool User params
-				// ADMIN
+				// ADMIN:
 				assert_eq!(
 					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).total_borrowed,
 					BALANCE_ZERO
@@ -644,7 +662,7 @@ mod tests {
 					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).interest_index,
 					RATE_ZERO
 				);
-				// ALICE
+				// ALICE:
 				// User total borrowed changed: 0 -> 30 000
 				let alice_dot_total_borrow_block_number_2: Balance =
 					alice_dot_total_borrow_start + alice_borrow_amount_block_number_2;
@@ -658,8 +676,10 @@ mod tests {
 					RATE_EQUALS_ONE
 				);
 
-				// Set block number 3
 				System::set_block_number(3);
+
+				// ACTION: REPAY
+				/* ------------------------------------------------------------------------------ */
 
 				// Alice repay part of her loan(15 000).
 				let alice_repay_amount_block_number_3: Balance = 15_000 * DOLLARS;
@@ -668,6 +688,9 @@ mod tests {
 					CurrencyId::DOT,
 					alice_repay_amount_block_number_3
 				));
+
+				// PARAMETERS CHECKING
+				/* ------------------------------------------------------------------------------ */
 
 				// Checking pool available liquidity
 				// Expected 145 000
@@ -686,11 +709,11 @@ mod tests {
 				);
 
 				// Checking free balance DOT && MDOT
-				// ADMIN
+				// ADMIN:
 				assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), BALANCE_ZERO);
 				assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), BALANCE_ZERO);
 
-				// ALICE
+				// ALICE:
 				// Expected: 55 000
 				let alice_dot_free_balance_block_number_3: Balance =
 					alice_dot_free_balance_block_number_2 - alice_repay_amount_block_number_3;
@@ -740,7 +763,7 @@ mod tests {
 				);
 
 				// Checking DOT pool User params
-				// Admin
+				// ADMIN:
 				assert_eq!(
 					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).total_borrowed,
 					BALANCE_ZERO
@@ -749,7 +772,7 @@ mod tests {
 					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).interest_index,
 					RATE_ZERO
 				);
-				// Alice
+				// ALICE:
 				let alice_dot_total_borrow_block_number_3: Balance = alice_dot_total_borrow_block_number_2
 					+ borrow_accumulated_block_number_3
 					- alice_repay_amount_block_number_3;
@@ -764,11 +787,16 @@ mod tests {
 					user_interest_index_block_number_3
 				);
 
-				// Set next block number
 				System::set_block_number(4);
+
+				// ACTION: REPAY_ALL
+				/* ------------------------------------------------------------------------------ */
 
 				// Alice repay all loans.
 				assert_ok!(MinterestProtocol::repay_all(Origin::signed(ALICE), CurrencyId::DOT));
+
+				// PARAMETERS CHECKING
+				/* ------------------------------------------------------------------------------ */
 
 				// Checking pool available liquidity
 				// Real expected: 		160_000,000168750000528750
@@ -794,11 +822,11 @@ mod tests {
 					pool_m_dot_free_balance_block_number_1
 				);
 				// Checking free balance DOT && MDOT for ADMIN
-				// ADMIN
+				// ADMIN:
 				assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), BALANCE_ZERO);
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), BALANCE_ZERO);
 
-				// ALICE
+				// ALICE:
 				let alice_dot_free_balance_block_number_4: Balance = alice_dot_free_balance_block_number_3
 					- alice_dot_total_borrow_block_number_3
 					- borrow_accumulated_block_number_4;
@@ -828,7 +856,9 @@ mod tests {
 					pool_total_insurance_block_number_4
 				);
 
-				// It must be zero, but it is not. FIXME: unavailable behavior.
+				// FIXME: unavailable behavior.
+				// TODO: should be fixed
+				// It must be zero, but it is not.
 				// 1875 left - 0 right
 				// 15000000168750000528750 new borrow value accrue_interest
 				// 15000000168750000526875 new user borrow value
@@ -854,7 +884,7 @@ mod tests {
 				);
 
 				// Checking user pool Storage params
-				// Admin
+				// ADMIN:
 				assert_eq!(
 					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).total_borrowed,
 					BALANCE_ZERO
@@ -863,7 +893,7 @@ mod tests {
 					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).interest_index,
 					RATE_ZERO
 				);
-				// Alice
+				// ALICE:
 				assert_eq!(
 					TestPools::pool_user_data(ALICE, CurrencyId::DOT).total_borrowed,
 					BALANCE_ZERO
@@ -874,16 +904,21 @@ mod tests {
 					user_interest_index_block_number_4
 				);
 
-				// Set next block number
-				System::set_block_number(5);
-
 				// Check the underline amount before fn accrue_interest called
 				let alice_underlining_amount: Balance =
 					TestController::convert_from_wrapped(CurrencyId::MDOT, alice_m_dot_free_balance_block_number_1)
 						.unwrap();
 
+				System::set_block_number(5);
+
+				// ACTION: REDEEM
+				/* ------------------------------------------------------------------------------ */
+
 				// Alice redeem all assets
 				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT));
+
+				// PARAMETERS CHECKING
+				/* ------------------------------------------------------------------------------ */
 
 				// Checking pool available liquidity
 				// Expected: 160_000,000016875000046875
@@ -899,10 +934,10 @@ mod tests {
 				assert_eq!(Currencies::total_issuance(CurrencyId::MDOT), BALANCE_ZERO);
 
 				// Checking free balance DOT && MDOT
-				// ADMIN
+				// ADMIN:
 				assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), BALANCE_ZERO);
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), BALANCE_ZERO);
-				// Alice
+				// ALICE:
 				// Expected 99_999,999983124999953125
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::DOT, &ALICE),
@@ -940,7 +975,7 @@ mod tests {
 				);
 
 				// Checking user pool Storage params
-				// Admin
+				// ADMIN:
 				assert_eq!(
 					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).total_borrowed,
 					BALANCE_ZERO
@@ -949,7 +984,7 @@ mod tests {
 					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).interest_index,
 					RATE_ZERO
 				);
-				// Alice
+				// ALICE:
 				// Expected: 0
 				assert_eq!(
 					TestPools::pool_user_data(ALICE, CurrencyId::DOT).total_borrowed,
@@ -1004,7 +1039,6 @@ mod tests {
 				// Checking current total insurance
 				assert_eq!(TestPools::pools(CurrencyId::DOT).total_insurance, ONE_HUNDRED);
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice deposit to DOT pool
@@ -1101,7 +1135,6 @@ mod tests {
 					alice_deposited_amount_in_dot
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice deposit 50 ETH to pool.
@@ -1112,7 +1145,6 @@ mod tests {
 					alice_deposited_amount_in_eth
 				));
 
-				// Set next block number
 				System::set_block_number(3);
 
 				// Alice borrow from DOT pool
@@ -1162,7 +1194,6 @@ mod tests {
 					alice_borrowed_amount_in_dot
 				);
 
-				// Set next block number
 				System::set_block_number(4);
 
 				// Alice try to redeem all from DOT pool
@@ -1175,7 +1206,6 @@ mod tests {
 					MinterestProtocolError::<Test>::RedeemControllerRejection
 				);
 
-				// Set next block number
 				System::set_block_number(5);
 
 				// Alice add liquidity to ETH pool
@@ -1186,7 +1216,6 @@ mod tests {
 					alice_deposited_amount_in_eth_secondary
 				));
 
-				// Set next block number
 				System::set_block_number(6);
 
 				// Alice redeem all DOTs
@@ -1229,7 +1258,6 @@ mod tests {
 					alice_borrowed_amount_in_dot + expected_borrow_interest_accumulated
 				);
 
-				// Set next block number
 				System::set_block_number(7);
 
 				// Alice try to redeem all from ETH pool
@@ -1269,7 +1297,6 @@ mod tests {
 					alice_deposited_amount_in_dot
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice borrow from ETH pool
@@ -1300,7 +1327,6 @@ mod tests {
 					alice_borrowed_amount_in_eth
 				);
 
-				// Set next block number
 				System::set_block_number(3);
 
 				// Alice redeem all DOTs
@@ -1368,7 +1394,6 @@ mod tests {
 					alice_deposited_amount_in_dot
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice deposit to BTC pool
@@ -1379,7 +1404,6 @@ mod tests {
 					alice_deposited_amount_in_btc
 				));
 
-				// Set next block number
 				System::set_block_number(3);
 
 				// Alice borrow from ETH pool
@@ -1390,7 +1414,6 @@ mod tests {
 					alice_borrowed_amount_in_eth
 				));
 
-				// Set next block number
 				System::set_block_number(4);
 
 				// Checking free balance DOT && ETH && BTC for user.
@@ -1427,7 +1450,6 @@ mod tests {
 					MinterestProtocolError::<Test>::RedeemControllerRejection
 				);
 
-				// Set next block number
 				System::set_block_number(5);
 
 				// Alice add liquidity to BTC pool
@@ -1438,7 +1460,6 @@ mod tests {
 					alice_deposited_amount_in_btc_secondary
 				));
 
-				// Set next block number
 				System::set_block_number(6);
 
 				// Alice redeem all DOTs
@@ -1481,7 +1502,6 @@ mod tests {
 					alice_borrowed_amount_in_eth
 				);
 
-				// Set next block number
 				System::set_block_number(7);
 
 				// Alice try to redeem all BTC.
@@ -1525,7 +1545,6 @@ mod tests {
 					alice_deposited_amount_in_dot
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Bob deposit to BTC pool
@@ -1536,7 +1555,6 @@ mod tests {
 					bob_deposited_amount_in_btc
 				));
 
-				// Set next block number
 				System::set_block_number(3);
 
 				// Bob borrow from DOT pool
@@ -1547,7 +1565,6 @@ mod tests {
 					bob_borrowed_amount_in_dot
 				));
 
-				// Set next block number
 				System::set_block_number(4);
 
 				// Bob deposit to DOT pool
@@ -1558,7 +1575,6 @@ mod tests {
 					bob_deposited_amount_in_dot
 				));
 
-				// Set next block number
 				System::set_block_number(5);
 
 				// Alice redeem all DOTs.
@@ -1627,7 +1643,6 @@ mod tests {
 					alice_deposited_amount_in_dot
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice deposit to ETH pool
@@ -1638,7 +1653,6 @@ mod tests {
 					alice_deposited_amount_in_eth
 				));
 
-				// Set next block number
 				System::set_block_number(3);
 
 				// Alice borrow from DOT pool
@@ -1688,7 +1702,6 @@ mod tests {
 					alice_borrowed_amount_in_dot
 				);
 
-				// Set next block number
 				System::set_block_number(4);
 
 				// Alice try to redeem all from DOT pool
@@ -1697,7 +1710,6 @@ mod tests {
 					MinterestProtocolError::<Test>::RedeemControllerRejection
 				);
 
-				// Set next block number
 				System::set_block_number(5);
 
 				// Alice add liquidity to ETH pool
@@ -1716,7 +1728,6 @@ mod tests {
 					bob_deposited_amount_in_dot
 				));
 
-				// Set next block number
 				System::set_block_number(6);
 
 				// Alice redeem all DOTs
@@ -1756,7 +1767,6 @@ mod tests {
 					alice_borrowed_amount_in_dot + expected_amount_accumulated_in_dot
 				);
 
-				// Set next block number
 				System::set_block_number(7);
 
 				// Alice try to redeem all from ETH pool
@@ -1792,7 +1802,6 @@ mod tests {
 					alice_deposited_amount_in_dot
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice borrow from ETH pool
@@ -1823,7 +1832,6 @@ mod tests {
 					alice_borrowed_amount_in_eth
 				);
 
-				// Set next block number
 				System::set_block_number(3);
 
 				// Alice redeem all DOTs
@@ -1887,7 +1895,6 @@ mod tests {
 					alice_deposited_amount_in_dot
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice deposit to BTC pool
@@ -1898,7 +1905,6 @@ mod tests {
 					alice_deposited_amount_in_btc
 				));
 
-				// Set next block number
 				System::set_block_number(3);
 
 				// Alice borrow from ETH pool
@@ -1933,7 +1939,6 @@ mod tests {
 					alice_borrowed_amount_in_eth
 				);
 
-				// Set next block number
 				System::set_block_number(4);
 
 				// Alice try to redeem all DOTs
@@ -1942,7 +1947,6 @@ mod tests {
 					MinterestProtocolError::<Test>::RedeemControllerRejection
 				);
 
-				// Set next block number
 				System::set_block_number(5);
 
 				// Alice add liquidity to BTC pool
@@ -1953,7 +1957,6 @@ mod tests {
 					alice_deposited_amount_in_btc_secondary
 				));
 
-				// Set next block number
 				System::set_block_number(6);
 
 				// Alice redeem all DOTs
@@ -1987,7 +1990,6 @@ mod tests {
 					alice_borrowed_amount_in_eth
 				);
 
-				// Set next block number
 				System::set_block_number(7);
 
 				// Alice try to redeem all BTC.
@@ -2027,7 +2029,6 @@ mod tests {
 					alice_deposited_amount_in_dot
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Bob deposit to BTC pool
@@ -2046,7 +2047,6 @@ mod tests {
 					bob_deposited_amount_in_dot
 				));
 
-				// Set next block number
 				System::set_block_number(3);
 
 				// Bob borrow from DOT pool
@@ -2057,7 +2057,6 @@ mod tests {
 					bob_borrowed_amount_in_dot
 				));
 
-				// Set next block number
 				System::set_block_number(4);
 
 				// Alice redeem all DOTs.
@@ -2140,7 +2139,6 @@ mod tests {
 					alice_deposited_amount
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice try to borrow from ETH pool
@@ -2183,7 +2181,6 @@ mod tests {
 					alice_deposited_amount
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice try to borrow from ETH pool
@@ -2226,7 +2223,6 @@ mod tests {
 					alice_deposited_amount
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice try to borrow from ETH pool
@@ -2281,7 +2277,6 @@ mod tests {
 					alice_deposited_amount
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice borrow from DOT pool
@@ -2300,7 +2295,6 @@ mod tests {
 				// Checking total insurance for DOT pool.
 				assert_eq!(TestPools::pools(CurrencyId::DOT).total_insurance, BALANCE_ZERO);
 
-				// Jump to 10 block number.
 				System::set_block_number(10);
 
 				// Set insurance factor equal to zero.
@@ -2336,7 +2330,6 @@ mod tests {
 					alice_deposited_amount
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice borrow from DOT pool
@@ -2355,7 +2348,6 @@ mod tests {
 				// Checking total insurance for DOT pool.
 				assert_eq!(TestPools::pools(CurrencyId::DOT).total_insurance, BALANCE_ZERO);
 
-				// Jump to 10 block number.
 				System::set_block_number(10);
 
 				// Set insurance factor equal 0.5.
@@ -2451,7 +2443,6 @@ mod tests {
 					alice_deposited_amount
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Expected borrow interest rate based on params before fn accrue_interest_rate called
@@ -2489,7 +2480,6 @@ mod tests {
 					alice_deposited_amount
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Expected borrow interest rate based on params before fn accrue_interest_rate called
@@ -2529,7 +2519,6 @@ mod tests {
 					alice_deposited_amount
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice borrow from DOT pool
@@ -2540,7 +2529,6 @@ mod tests {
 					alice_borrowed_amount_in_dot
 				));
 
-				// Set next block number
 				System::set_block_number(3);
 
 				// Bob deposit to DOT pool
@@ -2551,7 +2539,6 @@ mod tests {
 					bob_deposited_amount
 				));
 
-				// Set next block number
 				System::set_block_number(4);
 
 				// Expected borrow interest rate based on params before fn accrue_interest_rate called
@@ -2656,7 +2643,6 @@ mod tests {
 					alice_deposited_amount
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice borrow from DOT pool
@@ -2700,7 +2686,6 @@ mod tests {
 					alice_deposited_amount
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice borrow from DOT pool
@@ -2746,7 +2731,6 @@ mod tests {
 					alice_deposited_amount
 				));
 
-				// Set next block number
 				System::set_block_number(2);
 
 				// Alice borrow from DOT pool
@@ -2757,7 +2741,6 @@ mod tests {
 					alice_borrowed_amount_in_dot
 				));
 
-				// Set next block number
 				System::set_block_number(3);
 
 				// Bob deposit to DOT pool
@@ -2768,7 +2751,6 @@ mod tests {
 					bob_deposited_amount
 				));
 
-				// Set next block number
 				System::set_block_number(4);
 
 				// Expected exchange rate based on params before fn accrue_interest_rate in block 4 called
