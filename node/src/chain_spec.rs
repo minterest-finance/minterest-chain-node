@@ -1,6 +1,6 @@
 use controller::{ControllerData, PauseKeeper};
 use hex_literal::hex;
-use liquidity_pools::{Pool, PoolUserData};
+use liquidity_pools::Pool;
 use node_minterest_runtime::{
 	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig,
 	GrandpaConfig, LiquidityPoolsConfig, Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
@@ -19,7 +19,7 @@ use sp_runtime::{
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
-const INITIAL_BALANCE: u128 = 10 * DOLLARS;
+const INITIAL_BALANCE: u128 = 100_000 * DOLLARS;
 
 // The URL for the telemetry server.
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -234,8 +234,8 @@ fn testnet_genesis(
 					CurrencyId::ETH,
 					Pool {
 						total_borrowed: Balance::zero(),
-						borrow_index: FixedU128::saturating_from_rational(1, 1),
-						current_exchange_rate: FixedU128::from_inner(1),
+						borrow_index: FixedU128::one(),
+						current_exchange_rate: FixedU128::one(),
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -243,8 +243,8 @@ fn testnet_genesis(
 					CurrencyId::DOT,
 					Pool {
 						total_borrowed: Balance::zero(),
-						borrow_index: FixedU128::saturating_from_rational(1, 1),
-						current_exchange_rate: FixedU128::from_inner(1),
+						borrow_index: FixedU128::one(),
+						current_exchange_rate: FixedU128::one(),
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -252,8 +252,8 @@ fn testnet_genesis(
 					CurrencyId::KSM,
 					Pool {
 						total_borrowed: Balance::zero(),
-						borrow_index: FixedU128::saturating_from_rational(1, 1),
-						current_exchange_rate: FixedU128::from_inner(1),
+						borrow_index: FixedU128::one(),
+						current_exchange_rate: FixedU128::one(),
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -261,34 +261,26 @@ fn testnet_genesis(
 					CurrencyId::BTC,
 					Pool {
 						total_borrowed: Balance::zero(),
-						borrow_index: FixedU128::saturating_from_rational(1, 1),
-						current_exchange_rate: FixedU128::from_inner(1),
+						borrow_index: FixedU128::one(),
+						current_exchange_rate: FixedU128::one(),
 						total_insurance: Balance::zero(),
 					},
 				),
 			],
-			pool_user_data: vec![(
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				CurrencyId::DOT,
-				PoolUserData {
-					total_borrowed: Balance::zero(),
-					interest_index: FixedU128::from_inner(0),
-					collateral: true,
-				},
-			)],
+			pool_user_data: vec![],
 		}),
 		controller: Some(ControllerConfig {
 			controller_dates: vec![
 				(
 					CurrencyId::ETH,
 					ControllerData {
-						timestamp: 1,
-						supply_rate: FixedU128::from_inner(0),
-						borrow_rate: FixedU128::from_inner(0),
+						timestamp: 0,
+						supply_rate: FixedU128::zero(),
+						borrow_rate: FixedU128::zero(),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						kink: FixedU128::saturating_from_rational(8, 10),
-						base_rate_per_block: FixedU128::from_inner(0),
+						base_rate_per_block: FixedU128::zero(),
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
 						collateral_factor: FixedU128::saturating_from_rational(9, 10),               // 90%
@@ -297,13 +289,13 @@ fn testnet_genesis(
 				(
 					CurrencyId::DOT,
 					ControllerData {
-						timestamp: 1,
-						supply_rate: FixedU128::from_inner(0),
-						borrow_rate: FixedU128::from_inner(0),
+						timestamp: 0,
+						supply_rate: FixedU128::zero(),
+						borrow_rate: FixedU128::zero(),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						kink: FixedU128::saturating_from_rational(8, 10),
-						base_rate_per_block: FixedU128::from_inner(0),
+						base_rate_per_block: FixedU128::zero(),
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
 						collateral_factor: FixedU128::saturating_from_rational(9, 10),               // 90%
@@ -312,13 +304,13 @@ fn testnet_genesis(
 				(
 					CurrencyId::KSM,
 					ControllerData {
-						timestamp: 1,
-						supply_rate: FixedU128::from_inner(0),
-						borrow_rate: FixedU128::from_inner(0),
+						timestamp: 0,
+						supply_rate: FixedU128::zero(),
+						borrow_rate: FixedU128::zero(),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						kink: FixedU128::saturating_from_rational(8, 10),
-						base_rate_per_block: FixedU128::from_inner(0),
+						base_rate_per_block: FixedU128::zero(),
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
 						collateral_factor: FixedU128::saturating_from_rational(9, 10),               // 90%
@@ -327,13 +319,13 @@ fn testnet_genesis(
 				(
 					CurrencyId::BTC,
 					ControllerData {
-						timestamp: 1,
-						supply_rate: FixedU128::from_inner(0),
-						borrow_rate: FixedU128::from_inner(0),
+						timestamp: 0,
+						supply_rate: FixedU128::zero(),
+						borrow_rate: FixedU128::zero(),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						kink: FixedU128::saturating_from_rational(8, 10),
-						base_rate_per_block: FixedU128::from_inner(0),
+						base_rate_per_block: FixedU128::zero(),
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
 						collateral_factor: FixedU128::saturating_from_rational(9, 10),               // 90%
