@@ -206,6 +206,10 @@ mod tests {
 		Origin::signed(ADMIN)
 	}
 
+	pub fn alice() -> Origin {
+		Origin::signed(ALICE)
+	}
+
 	impl ExtBuilder {
 		pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
 			self.endowed_accounts.push((user, currency_id, balance));
@@ -2568,10 +2572,9 @@ mod tests {
 			});
 	}
 
+	// Function `get_exchange_rate + calculate_exchange_rate` scenario #1:
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn get_exchange_rate_scenario_1_should_work() {
+	fn get_exchange_rate_deposit_without_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
@@ -2602,10 +2605,9 @@ mod tests {
 			});
 	}
 
+	// Function `get_exchange_rate + calculate_exchange_rate` scenario #2:
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn get_exchange_rate_scenario_2_should_work() {
+	fn get_exchange_rate_deposit_with_pool_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
@@ -2636,10 +2638,9 @@ mod tests {
 			});
 	}
 
+	// Function `get_exchange_rate + calculate_exchange_rate` scenario #3:
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn get_exchange_rate_scenario_3_should_work() {
+	fn get_exchange_rate_deposit_and_borrow_without_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
@@ -2681,10 +2682,9 @@ mod tests {
 			});
 	}
 
+	// Function `get_exchange_rate + calculate_exchange_rate` scenario #4:
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn get_exchange_rate_scenario_4_should_work() {
+	fn get_exchange_rate_deposit_and_borrow_with_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
@@ -2726,10 +2726,9 @@ mod tests {
 			});
 	}
 
+	// Function `get_exchange_rate + calculate_exchange_rate` scenario #5:
 	#[test]
-	// Scenario description:
-	// FIXME: add description
-	fn get_exchange_rate_scenario_5_should_work() {
+	fn get_exchange_rate_few_deposits_and_borrows_with_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
