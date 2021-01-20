@@ -691,7 +691,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
 	/// Calculates the exchange rate from the underlying to the mToken.
 	/// This function does not accrue interest before calculating the exchange rate.
-	fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
+	pub fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
 		let wrapped_asset_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 		// The total amount of cash the market has
 		let total_cash = <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id);
