@@ -516,7 +516,7 @@ fn enable_as_collateral_should_work() {
 
 		assert_noop!(
 			TestProtocol::enable_as_collateral(alice(), CurrencyId::MDOT),
-			Error::<Test>::PoolNotFound
+			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
 }
@@ -552,7 +552,7 @@ fn disable_collateral_should_work() {
 
 		assert_noop!(
 			TestProtocol::disable_collateral(alice(), CurrencyId::MDOT),
-			Error::<Test>::PoolNotFound
+			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
 }
