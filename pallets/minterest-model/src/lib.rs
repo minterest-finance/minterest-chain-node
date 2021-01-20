@@ -37,7 +37,7 @@ pub trait Trait: system::Trait + accounts::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as MinterestModel {
-		pub MinterestModlelDates get(fn minterest_model_dates) config(): map hasher(blake2_128_concat) CurrencyId => MinterestModelData;
+		pub MinterestModelDates get(fn minterest_model_dates) config(): map hasher(blake2_128_concat) CurrencyId => MinterestModelData;
 	}
 }
 
@@ -89,7 +89,7 @@ decl_module! {
 				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			MinterestModlelDates::mutate(pool_id, |r| r.jump_multiplier_per_block = new_jump_multiplier_per_block);
+			MinterestModelDates::mutate(pool_id, |r| r.jump_multiplier_per_block = new_jump_multiplier_per_block);
 			Self::deposit_event(Event::JumpMultiplierPerBlockHasChanged);
 			Ok(())
 		}
@@ -113,7 +113,7 @@ decl_module! {
 				ensure!(!Self::minterest_model_dates(pool_id).multiplier_per_block.is_zero(), Error::<T>::BaseRatePerBlockCannotBeZero);
 			}
 
-			MinterestModlelDates::mutate(pool_id, |r| r.base_rate_per_block = new_base_rate_per_block);
+			MinterestModelDates::mutate(pool_id, |r| r.base_rate_per_block = new_base_rate_per_block);
 			Self::deposit_event(Event::BaseRatePerBlockHasChanged);
 			Ok(())
 		}
@@ -137,8 +137,7 @@ decl_module! {
 				ensure!(!Self::minterest_model_dates(pool_id).base_rate_per_block.is_zero(), Error::<T>::MultiplierPerBlockCannotBeZero);
 			}
 
-
-			MinterestModlelDates::mutate(pool_id, |r| r.multiplier_per_block = new_multiplier_per_block);
+			MinterestModelDates::mutate(pool_id, |r| r.multiplier_per_block = new_multiplier_per_block);
 			Self::deposit_event(Event::MultiplierPerBlockHasChanged);
 			Ok(())
 		}
