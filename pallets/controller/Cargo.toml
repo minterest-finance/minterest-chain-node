@@ -35,6 +35,7 @@ orml-currencies = { path = "../../orml/currencies" }
 liquidity-pools = { path = "../liquidity-pools" }
 oracle = { path = "../oracle" }
 accounts = { path = "../accounts" }
+minterest-model = { path = "../minterest-model" }
 
 [features]
 default = ["std"]

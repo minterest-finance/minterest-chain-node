@@ -17,6 +17,7 @@ mod tests {
 	};
 
 	use controller::{ControllerData, PauseKeeper};
+	use minterest_model::MinterestModelData;
 	use minterest_protocol::Error as MinterestProtocolError;
 
 	mod controller_tests;
@@ -153,7 +154,6 @@ mod tests {
 	impl controller::Trait for Test {
 		type Event = ();
 		type InitialExchangeRate = InitialExchangeRate;
-		type BlocksPerYear = BlocksPerYear;
 		type UnderlyingAssetId = UnderlyingAssetId;
 		type MTokensId = MTokensId;
 	}
@@ -169,6 +169,11 @@ mod tests {
 	impl accounts::Trait for Test {
 		type Event = ();
 		type MaxMembers = MaxMembers;
+	}
+
+	impl minterest_model::Trait for Test {
+		type Event = ();
+		type BlocksPerYear = BlocksPerYear;
 	}
 
 	pub const ADMIN: AccountId = 0;
@@ -302,11 +307,7 @@ mod tests {
 							supply_rate: Rate::from_inner(0),
 							insurance_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-							kink: Rate::saturating_from_rational(8, 10),
-							base_rate_per_block: Rate::from_inner(0),
-							multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-							jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-							collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
+							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						},
 					),
 					(
@@ -317,11 +318,7 @@ mod tests {
 							supply_rate: Rate::from_inner(0),
 							insurance_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-							kink: Rate::saturating_from_rational(8, 10),
-							base_rate_per_block: Rate::from_inner(0),
-							multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-							jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-							collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
+							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						},
 					),
 					(
@@ -332,11 +329,7 @@ mod tests {
 							supply_rate: Rate::from_inner(0),
 							insurance_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-							kink: Rate::saturating_from_rational(8, 10),
-							base_rate_per_block: Rate::from_inner(0),
-							multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-							jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-							collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
+							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						},
 					),
 				],
@@ -391,6 +384,40 @@ mod tests {
 
 			accounts::GenesisConfig::<Test> {
 				allowed_accounts: vec![(ADMIN, ())],
+			}
+			.assimilate_storage(&mut t)
+			.unwrap();
+
+			minterest_model::GenesisConfig {
+				minterest_model_dates: vec![
+					(
+						CurrencyId::DOT,
+						MinterestModelData {
+							kink: Rate::saturating_from_rational(8, 10),
+							base_rate_per_block: Rate::zero(),
+							multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+							jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						},
+					),
+					(
+						CurrencyId::ETH,
+						MinterestModelData {
+							kink: Rate::saturating_from_rational(8, 10),
+							base_rate_per_block: Rate::zero(),
+							multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+							jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						},
+					),
+					(
+						CurrencyId::BTC,
+						MinterestModelData {
+							kink: Rate::saturating_from_rational(8, 10),
+							base_rate_per_block: Rate::zero(),
+							multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+							jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						},
+					),
+				],
 			}
 			.assimilate_storage(&mut t)
 			.unwrap();

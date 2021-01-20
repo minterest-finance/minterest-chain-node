@@ -36,6 +36,7 @@ controller = { path = "../controller" }
 oracle = { path = "../oracle" }
 pallet-traits = { path = "../traits" }
 accounts = { path = "../accounts" }
+minterest-model = { path = "../minterest-model" }
 
 [features]
 default = ['std']
