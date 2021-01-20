@@ -1194,6 +1194,7 @@ fn redeem_insurance_should_work() {
 	ExtBuilder::default()
 		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 		.pool_total_insurance(CurrencyId::DOT, 1000)
+		.pool_balance(CurrencyId::DOT, 1000)
 		.build()
 		.execute_with(|| {
 			// ALICE redeem 100 DOT from pool insurance.
@@ -1202,6 +1203,10 @@ fn redeem_insurance_should_work() {
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 875);
+			assert_eq!(
+				Currencies::free_balance(CurrencyId::DOT, &TestPools::pools_account_id()),
+				875,
+			);
 
 			// Bob is not added to the allow-list of admins, so this action is not available for him.
 			assert_noop!(

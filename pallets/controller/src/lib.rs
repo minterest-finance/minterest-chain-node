@@ -954,6 +954,11 @@ impl<T: Trait> Module<T> {
 	fn do_redeem_insurance(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
 		ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 
+		ensure!(
+			amount <= T::MultiCurrency::free_balance(pool_id, &<LiquidityPools<T>>::pools_account_id()),
+			Error::<T>::NotEnoughBalance
+		);
+
 		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
 		ensure!(amount <= current_total_insurance, Error::<T>::NotEnoughBalance);
 
