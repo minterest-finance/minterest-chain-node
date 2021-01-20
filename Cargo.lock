@@ -735,6 +735,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "liquidity-pools",
+ "minterest-model",
  "minterest-primitives",
  "oracle",
  "orml-currencies",
@@ -3196,9 +3197,14 @@ dependencies = [
 name = "minterest-model"
 version = "0.1.0"
 dependencies = [
+ "accounts",
  "frame-support",
  "frame-system",
+ "minterest-primitives",
  "parity-scale-codec",
+ "serde",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]

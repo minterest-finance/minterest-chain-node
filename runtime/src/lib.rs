@@ -296,7 +296,6 @@ impl controller::Trait for Runtime {
 	type Event = Event;
 	type InitialExchangeRate = InitialExchangeRate;
 	type MTokensId = MTokensId;
-	type BlocksPerYear = BlocksPerYear;
 	type UnderlyingAssetId = UnderlyingAssetId;
 }
 
@@ -315,6 +314,7 @@ impl oracle::Trait for Runtime {
 
 impl minterest_model::Trait for Runtime {
 	type Event = Event;
+	type BlocksPerYear = BlocksPerYear;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

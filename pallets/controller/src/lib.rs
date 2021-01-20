@@ -24,10 +24,6 @@ pub struct ControllerData<BlockNumber> {
 	pub borrow_rate: Rate,
 	pub insurance_factor: Rate,
 	pub max_borrow_rate: Rate,
-	pub kink: Rate,
-	pub base_rate_per_block: Rate,
-	pub multiplier_per_block: Rate,
-	pub jump_multiplier_per_block: Rate,
 	/// Determines how much a user can borrow.
 	pub collateral_factor: Rate,
 }
@@ -48,18 +44,18 @@ mod mock;
 mod tests;
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
+type MinterestModel<T> = minterest_model::Module<T>;
 type Oracle<T> = oracle::Module<T>;
 type Accounts<T> = accounts::Module<T>;
 
-pub trait Trait: liquidity_pools::Trait + system::Trait + oracle::Trait + accounts::Trait {
+pub trait Trait:
+	liquidity_pools::Trait + system::Trait + oracle::Trait + accounts::Trait + minterest_model::Trait
+{
 	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 
 	/// Start exchange rate
 	type InitialExchangeRate: Get<Rate>;
-
-	/// The approximate number of blocks per year
-	type BlocksPerYear: Get<u128>;
 
 	/// Wrapped currency IDs.
 	type UnderlyingAssetId: Get<Vec<CurrencyId>>;
@@ -75,15 +71,6 @@ decl_event! {
 
 		/// Max Borrow Rate has been successfully changed
 		MaxBorrowRateChanged,
-
-		/// JumpMultiplierPerBlock has been successfully changed
-		JumpMultiplierPerBlockHasChanged,
-
-		/// BaseRatePerBlock has been successfully changed
-		BaseRatePerBlockHasChanged,
-
-		/// MultiplierPerBlock has been successfully changed
-		MultiplierPerBlockHasChanged,
 
 		/// The operation is paused: \[pool_id, operation\]
 		OperationIsPaused(CurrencyId, Operation),
@@ -142,12 +129,6 @@ decl_error! {
 
 		/// Maximum borrow rate cannot be set to 0.
 		MaxBorrowRateCannotBeZero,
-
-		/// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
-		BaseRatePerBlockCannotBeZero,
-
-		/// Multiplier per block cannot be set to 0 at the same time as Base rate per block.
-		MultiplierPerBlockCannotBeZero,
 
 		/// An error occurred in the parameters that were passed to the function.
 		ParametersError,
@@ -259,76 +240,6 @@ decl_module! {
 			Self::deposit_event(Event::MaxBorrowRateChanged);
 			Ok(())
 		}
-
-		/// Set BaseRatePerBlock from BaseRatePerYear.
-		///
-		/// The dispatch origin of this call must be Administrator.
-		#[weight = 0]
-		pub fn set_base_rate_per_block(origin, pool_id: CurrencyId, base_rate_per_year_n: u128, base_rate_per_year_d: u128) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
-
-			let new_base_rate_per_year = Rate::checked_from_rational(base_rate_per_year_n, base_rate_per_year_d)
-				.ok_or(Error::<T>::NumOverflow)?;
-			let new_base_rate_per_block = new_base_rate_per_year
-				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
-				.ok_or(Error::<T>::NumOverflow)?;
-
-			// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
-			if new_base_rate_per_block.is_zero() {
-				ensure!(!Self::controller_dates(pool_id).multiplier_per_block.is_zero(), Error::<T>::BaseRatePerBlockCannotBeZero);
-			}
-
-			ControllerDates::<T>::mutate(pool_id, |r| r.base_rate_per_block = new_base_rate_per_block);
-			Self::deposit_event(Event::BaseRatePerBlockHasChanged);
-			Ok(())
-		}
-
-		/// Set MultiplierPerBlock from MultiplierPerYear.
-		///
-		/// The dispatch origin of this call must be Administrator.
-		#[weight = 0]
-		pub fn set_multiplier_per_block(origin, pool_id: CurrencyId, multiplier_rate_per_year_n: u128, multiplier_rate_per_year_d: u128) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
-
-			let new_multiplier_per_year = Rate::checked_from_rational(multiplier_rate_per_year_n, multiplier_rate_per_year_d)
-				.ok_or(Error::<T>::NumOverflow)?;
-			let new_multiplier_per_block = new_multiplier_per_year
-				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
-				.ok_or(Error::<T>::NumOverflow)?;
-
-			// Multiplier per block cannot be set to 0 at the same time as Base rate per block .
-			if new_multiplier_per_block.is_zero() {
-				ensure!(!Self::controller_dates(pool_id).base_rate_per_block.is_zero(), Error::<T>::MultiplierPerBlockCannotBeZero);
-			}
-
-
-			ControllerDates::<T>::mutate(pool_id, |r| r.multiplier_per_block = new_multiplier_per_block);
-			Self::deposit_event(Event::MultiplierPerBlockHasChanged);
-			Ok(())
-		}
-
-		/// Set JumpMultiplierPerBlock from JumpMultiplierPerYear.
-		///
-		/// The dispatch origin of this call must be Administrator.
-		#[weight = 0]
-		pub fn set_jump_multiplier_per_block(origin, pool_id: CurrencyId, jump_multiplier_rate_per_year_n: u128, jump_multiplier_rate_per_year_d: u128) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
-
-			let new_jump_multiplier_per_year = Rate::checked_from_rational(jump_multiplier_rate_per_year_n, jump_multiplier_rate_per_year_d).ok_or(Error::<T>::NumOverflow)?;
-			let new_jump_multiplier_per_block = new_jump_multiplier_per_year
-				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
-				.ok_or(Error::<T>::NumOverflow)?;
-
-			ControllerDates::<T>::mutate(pool_id, |r| r.jump_multiplier_per_block = new_jump_multiplier_per_block);
-			Self::deposit_event(Event::JumpMultiplierPerBlockHasChanged);
-			Ok(())
-		}
 	}
 }
 
@@ -363,7 +274,8 @@ impl<T: Trait> Module<T> {
 		)?;
 
 		// Calculate the current borrow interest rate
-		let current_borrow_interest_rate = Self::calculate_borrow_interest_rate(underlying_asset_id, utilization_rate)?;
+		let current_borrow_interest_rate =
+			<MinterestModel<T>>::calculate_borrow_interest_rate(underlying_asset_id, utilization_rate)?;
 
 		let max_borrow_rate = ControllerDates::<T>::get(underlying_asset_id).max_borrow_rate;
 		let insurance_factor = ControllerDates::<T>::get(underlying_asset_id).insurance_factor;
@@ -676,35 +588,6 @@ impl<T: Trait> Module<T> {
 		};
 
 		Ok(rate)
-	}
-
-	/// Calculates the current borrow rate per block.
-	fn calculate_borrow_interest_rate(underlying_asset_id: CurrencyId, utilization_rate: Rate) -> RateResult {
-		let kink = Self::controller_dates(underlying_asset_id).kink;
-		let multiplier_per_block = Self::controller_dates(underlying_asset_id).multiplier_per_block;
-		let base_rate_per_block = Self::controller_dates(underlying_asset_id).base_rate_per_block;
-
-		let borrow_interest_rate = match utilization_rate.cmp(&kink) {
-			Ordering::Greater => {
-				let jump_multiplier_per_block = Self::controller_dates(underlying_asset_id).jump_multiplier_per_block;
-				let normal_rate = kink
-					.checked_mul(&multiplier_per_block)
-					.and_then(|v| v.checked_add(&base_rate_per_block))
-					.ok_or(Error::<T>::NumOverflow)?;
-				let excess_util = utilization_rate.checked_mul(&kink).ok_or(Error::<T>::NumOverflow)?;
-
-				excess_util
-					.checked_mul(&jump_multiplier_per_block)
-					.and_then(|v| v.checked_add(&normal_rate))
-					.ok_or(Error::<T>::NumOverflow)?
-			}
-			_ => utilization_rate
-				.checked_mul(&multiplier_per_block)
-				.and_then(|v| v.checked_add(&base_rate_per_block))
-				.ok_or(Error::<T>::NumOverflow)?,
-		};
-
-		Ok(borrow_interest_rate)
 	}
 
 	/// Calculates the utilization rate of the pool:
