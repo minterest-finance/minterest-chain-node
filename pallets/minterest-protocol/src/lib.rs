@@ -2,7 +2,7 @@
 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{self as system, ensure_signed};
-use minterest_primitives::{Balance, CurrencyId};
+use minterest_primitives::{Balance, CurrencyId, Operation};
 use orml_traits::MultiCurrency;
 use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
