@@ -238,7 +238,6 @@ impl ExtBuilder {
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
-						current_exchange_rate: Rate::from_inner(1),
 						total_insurance: TEN_THOUSAND_DOLLARS,
 					},
 				),
@@ -247,7 +246,6 @@ impl ExtBuilder {
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
-						current_exchange_rate: Rate::from_inner(1),
 						total_insurance: TEN_THOUSAND_DOLLARS,
 					},
 				),
@@ -256,7 +254,6 @@ impl ExtBuilder {
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
-						current_exchange_rate: Rate::from_inner(1),
 						total_insurance: TEN_THOUSAND_DOLLARS,
 					},
 				),

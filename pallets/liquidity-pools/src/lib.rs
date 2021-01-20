@@ -19,7 +19,6 @@ pub struct Pool {
 	pub total_borrowed: Balance,
 	/// Accumulator of the total earned interest rate since the opening of the pool
 	pub borrow_index: Rate,
-	pub current_exchange_rate: Rate, // FIXME. Delete and implement via RPC
 	pub total_insurance: Balance,
 }
 
@@ -100,11 +99,6 @@ type BalanceResult = result::Result<Balance, DispatchError>;
 
 // Setters for LiquidityPools
 impl<T: Trait> Module<T> {
-	pub fn set_current_exchange_rate(underlying_asset_id: CurrencyId, rate: Rate) -> DispatchResult {
-		Pools::mutate(underlying_asset_id, |r| r.current_exchange_rate = rate);
-		Ok(())
-	}
-
 	pub fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) -> DispatchResult {
 		Pools::mutate(pool_id, |pool| pool.total_borrowed = new_total_borrows);
 		Ok(())

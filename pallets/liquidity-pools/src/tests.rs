@@ -11,21 +11,6 @@ fn dollars<T: Into<u128>>(d: T) -> Balance {
 }
 
 #[test]
-fn set_current_exchange_rate_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// Set exchange_rate eq 1.2
-		assert_ok!(TestPools::set_current_exchange_rate(
-			CurrencyId::DOT,
-			Rate::saturating_from_rational(13, 10)
-		));
-		assert_eq!(
-			<Pools>::get(CurrencyId::DOT).current_exchange_rate,
-			Rate::saturating_from_rational(13, 10)
-		);
-	});
-}
-
-#[test]
 fn set_pool_total_borrowed_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Set pool_total_borrowed eq 100 DOT

@@ -155,7 +155,6 @@ impl ExtBuilder {
 		pool_id: CurrencyId,
 		total_borrowed: Balance,
 		borrow_index: Rate,
-		current_exchange_rate: Rate,
 		total_insurance: Balance,
 	) -> Self {
 		self.pools.push((
@@ -163,7 +162,6 @@ impl ExtBuilder {
 			Pool {
 				total_borrowed,
 				borrow_index,
-				current_exchange_rate,
 				total_insurance,
 			},
 		));
@@ -196,7 +194,6 @@ impl ExtBuilder {
 			Pool {
 				total_borrowed: Balance::default(),
 				borrow_index: Rate::default(),
-				current_exchange_rate: Rate::default(),
 				total_insurance: Balance::default(),
 			},
 		));
@@ -209,7 +206,6 @@ impl ExtBuilder {
 			Pool {
 				total_borrowed,
 				borrow_index: Rate::one(),
-				current_exchange_rate: Rate::one(),
 				total_insurance: Balance::zero(),
 			},
 		));

@@ -228,7 +228,6 @@ mod tests {
 				Pool {
 					total_borrowed,
 					borrow_index: Rate::saturating_from_rational(1, 1),
-					current_exchange_rate: Rate::one(),
 					total_insurance: Balance::zero(),
 				},
 			));
@@ -243,7 +242,6 @@ mod tests {
 				Pool {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
-					current_exchange_rate: Rate::one(),
 					total_insurance,
 				},
 			));
@@ -276,7 +274,6 @@ mod tests {
 				Pool {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
-					current_exchange_rate: Rate::one(),
 					total_insurance: Balance::zero(),
 				},
 			));
