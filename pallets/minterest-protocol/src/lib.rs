@@ -78,9 +78,6 @@ decl_error! {
 		/// Number overflow in calculation.
 		NumOverflow,
 
-		/// The block number in the pool is equal to the current block number.
-		PoolNotFresh,
-
 		/// An internal failure occurred in the execution of the Accrue Interest function.
 		AccrueInterestFailed,
 
@@ -487,14 +484,6 @@ impl<T: Trait> Module<T> {
 		// Fail if repayBorrow not allowed
 		<Controller<T>>::repay_borrow_allowed(underlying_asset_id, &who, repay_amount)
 			.map_err(|_| Error::<T>::RepayBorrowControllerRejection)?;
-
-		// Verify pool's block number equals current block number
-		let current_block_number = <frame_system::Module<T>>::block_number();
-		let accrual_block_number_previous = <Controller<T>>::controller_dates(underlying_asset_id).timestamp;
-		ensure!(
-			current_block_number == accrual_block_number_previous,
-			Error::<T>::PoolNotFresh
-		);
 
 		// Fetch the amount the borrower owes, with accumulated interest
 		let account_borrows = <Controller<T>>::borrow_balance_stored(&borrower, underlying_asset_id)
