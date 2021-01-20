@@ -2,7 +2,7 @@
 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{self as system, ensure_signed};
-use minterest_primitives::{Balance, CurrencyId};
+use minterest_primitives::{Balance, CurrencyId, Operation};
 use orml_traits::MultiCurrency;
 use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
@@ -109,7 +109,10 @@ decl_error! {
 		CanotBeDisabledAsCollateral,
 
 		/// The user has not deposited funds into the pool.
-		CanotBeEnabledAsCollateral
+		CanotBeEnabledAsCollateral,
+
+		/// Operation (deposit, redeem, borrow, repay) is paused.
+		OperationPaused,
 	}
 }
 
@@ -327,8 +330,10 @@ impl<T: Trait> Module<T> {
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
 		// Fail if deposit not allowed
-		<Controller<T>>::deposit_allowed(underlying_asset_id, &who, underlying_amount)
-			.map_err(|_| Error::<T>::DepositControllerRejection)?;
+		ensure!(
+			<Controller<T>>::is_operation_allowed(underlying_asset_id, Operation::Deposit),
+			Error::<T>::OperationPaused
+		);
 
 		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)
 			.map_err(|_| Error::<T>::NotValidUnderlyingAssetId)?;
@@ -397,6 +402,10 @@ impl<T: Trait> Module<T> {
 		);
 
 		// Fail if redeem not allowed
+		ensure!(
+			<Controller<T>>::is_operation_allowed(underlying_asset_id, Operation::Redeem),
+			Error::<T>::OperationPaused
+		);
 		<Controller<T>>::redeem_allowed(underlying_asset_id, &who, wrapped_amount)
 			.map_err(|_| Error::<T>::RedeemControllerRejection)?;
 
@@ -436,6 +445,10 @@ impl<T: Trait> Module<T> {
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
 		// Fail if borrow not allowed
+		ensure!(
+			<Controller<T>>::is_operation_allowed(underlying_asset_id, Operation::Borrow),
+			Error::<T>::OperationPaused
+		);
 		<Controller<T>>::borrow_allowed(underlying_asset_id, &who, borrow_amount)
 			.map_err(|_| Error::<T>::BorrowControllerRejection)?;
 
@@ -481,9 +494,11 @@ impl<T: Trait> Module<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
-		// Fail if repayBorrow not allowed
-		<Controller<T>>::repay_borrow_allowed(underlying_asset_id, &who, repay_amount)
-			.map_err(|_| Error::<T>::RepayBorrowControllerRejection)?;
+		// Fail if repay_borrow not allowed
+		ensure!(
+			<Controller<T>>::is_operation_allowed(underlying_asset_id, Operation::Repay),
+			Error::<T>::OperationPaused
+		);
 
 		// Fetch the amount the borrower owes, with accumulated interest
 		let account_borrows = <Controller<T>>::borrow_balance_stored(&borrower, underlying_asset_id)

@@ -11,41 +11,50 @@ fn dollars<T: Into<u128>>(d: T) -> Balance {
 
 #[test]
 fn deposit_underlying_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// Alice deposit 60 DOT; exchange_rate = 1.0
-		// wrapped_amount = 60.0 DOT / 1.0 = 60.0
-		assert_ok!(TestProtocol::deposit_underlying(
-			alice(),
-			CurrencyId::DOT,
-			dollars(60_u128)
-		));
-		let expected_event = TestEvent::minterest_protocol(RawEvent::Deposited(
-			ALICE,
-			CurrencyId::DOT,
-			dollars(60_u128),
-			CurrencyId::MDOT,
-			dollars(60_u128),
-		));
-		assert!(System::events().iter().any(|record| record.event == expected_event));
+	ExtBuilder::default()
+		.user_balance(ALICE, CurrencyId::KSM, ONE_HUNDRED_DOLLARS)
+		.build()
+		.execute_with(|| {
+			// Alice deposit 60 DOT; exchange_rate = 1.0
+			// wrapped_amount = 60.0 DOT / 1.0 = 60.0
+			assert_ok!(TestProtocol::deposit_underlying(
+				alice(),
+				CurrencyId::DOT,
+				dollars(60_u128)
+			));
+			let expected_event = TestEvent::minterest_protocol(RawEvent::Deposited(
+				ALICE,
+				CurrencyId::DOT,
+				dollars(60_u128),
+				CurrencyId::MDOT,
+				dollars(60_u128),
+			));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-		// MDOT pool does not exist.
-		assert_noop!(
-			TestProtocol::deposit_underlying(alice(), CurrencyId::MDOT, 10),
-			Error::<Test>::NotValidUnderlyingAssetId
-		);
+			// MDOT pool does not exist.
+			assert_noop!(
+				TestProtocol::deposit_underlying(alice(), CurrencyId::MDOT, 10),
+				Error::<Test>::NotValidUnderlyingAssetId
+			);
 
-		// Alice has 100 ETH on her account, so she cannot make a deposit 150 ETH.
-		assert_noop!(
-			TestProtocol::deposit_underlying(alice(), CurrencyId::ETH, dollars(150_u128)),
-			Error::<Test>::NotEnoughLiquidityAvailable
-		);
+			// Alice has 100 ETH on her account, so she cannot make a deposit 150 ETH.
+			assert_noop!(
+				TestProtocol::deposit_underlying(alice(), CurrencyId::ETH, dollars(150_u128)),
+				Error::<Test>::NotEnoughLiquidityAvailable
+			);
 
-		// Transaction with zero balance is not allowed.
-		assert_noop!(
-			TestProtocol::deposit_underlying(alice(), CurrencyId::DOT, Balance::zero()),
-			Error::<Test>::ZeroBalanceTransaction
-		);
-	});
+			// Transaction with zero balance is not allowed.
+			assert_noop!(
+				TestProtocol::deposit_underlying(alice(), CurrencyId::DOT, Balance::zero()),
+				Error::<Test>::ZeroBalanceTransaction
+			);
+
+			// All operations in the KSM pool are paused.
+			assert_noop!(
+				TestProtocol::deposit_underlying(alice(), CurrencyId::KSM, dollars(10_u128)),
+				Error::<Test>::OperationPaused
+			);
+		});
 }
 
 #[test]
@@ -73,19 +82,28 @@ fn redeem_should_work() {
 
 #[test]
 fn redeem_should_not_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// Bob has 0 MDOT on her account, so she cannot make a redeem.
-		assert_noop!(
-			TestProtocol::redeem(bob(), CurrencyId::DOT),
-			Error::<Test>::NumberOfWrappedTokensIsZero
-		);
+	ExtBuilder::default()
+		.user_balance(ALICE, CurrencyId::MKSM, ONE_HUNDRED_DOLLARS)
+		.build()
+		.execute_with(|| {
+			// Bob has 0 MDOT on her account, so she cannot make a redeem.
+			assert_noop!(
+				TestProtocol::redeem(bob(), CurrencyId::DOT),
+				Error::<Test>::NumberOfWrappedTokensIsZero
+			);
 
-		// MDOT is wrong CurrencyId for underlying assets.
-		assert_noop!(
-			TestProtocol::redeem(alice(), CurrencyId::MDOT),
-			Error::<Test>::NotValidUnderlyingAssetId
-		);
-	});
+			// MDOT is wrong CurrencyId for underlying assets.
+			assert_noop!(
+				TestProtocol::redeem(alice(), CurrencyId::MDOT),
+				Error::<Test>::NotValidUnderlyingAssetId
+			);
+
+			// All operations in the KSM pool are paused.
+			assert_noop!(
+				TestProtocol::redeem(alice(), CurrencyId::KSM),
+				Error::<Test>::OperationPaused
+			);
+		});
 }
 
 #[test]
@@ -117,47 +135,56 @@ fn redeem_fails_if_low_balance_in_pool() {
 
 #[test]
 fn redeem_underlying_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// Alice deposited 60 DOT to the pool.
-		assert_ok!(TestProtocol::deposit_underlying(
-			alice(),
-			CurrencyId::DOT,
-			dollars(60_u128)
-		));
+	ExtBuilder::default()
+		.user_balance(ALICE, CurrencyId::MKSM, ONE_HUNDRED_DOLLARS)
+		.build()
+		.execute_with(|| {
+			// Alice deposited 60 DOT to the pool.
+			assert_ok!(TestProtocol::deposit_underlying(
+				alice(),
+				CurrencyId::DOT,
+				dollars(60_u128)
+			));
 
-		// Alice can't redeem 100 DOT, because 100 DOT equal 100 * 1.0 = 100 MDOT
-		// And she has 60 MDOT on her balance.
-		assert_noop!(
-			TestProtocol::redeem_underlying(alice(), CurrencyId::DOT, dollars(100_u128)),
-			Error::<Test>::NotEnoughWrappedTokens
-		);
+			// Alice can't redeem 100 DOT, because 100 DOT equal 100 * 1.0 = 100 MDOT
+			// And she has 60 MDOT on her balance.
+			assert_noop!(
+				TestProtocol::redeem_underlying(alice(), CurrencyId::DOT, dollars(100_u128)),
+				Error::<Test>::NotEnoughWrappedTokens
+			);
 
-		// MDOT is wrong CurrencyId for underlying assets.
-		assert_noop!(
-			TestProtocol::redeem_underlying(alice(), CurrencyId::MDOT, dollars(20_u128)),
-			Error::<Test>::NotValidUnderlyingAssetId
-		);
+			// MDOT is wrong CurrencyId for underlying assets.
+			assert_noop!(
+				TestProtocol::redeem_underlying(alice(), CurrencyId::MDOT, dollars(20_u128)),
+				Error::<Test>::NotValidUnderlyingAssetId
+			);
 
-		// Transaction with zero balance is not allowed.
-		assert_noop!(
-			TestProtocol::redeem_underlying(alice(), CurrencyId::DOT, Balance::zero()),
-			Error::<Test>::ZeroBalanceTransaction
-		);
+			// Transaction with zero balance is not allowed.
+			assert_noop!(
+				TestProtocol::redeem_underlying(alice(), CurrencyId::DOT, Balance::zero()),
+				Error::<Test>::ZeroBalanceTransaction
+			);
 
-		assert_ok!(TestProtocol::redeem_underlying(
-			alice(),
-			CurrencyId::DOT,
-			dollars(30_u128)
-		));
-		let expected_event = TestEvent::minterest_protocol(RawEvent::Redeemed(
-			ALICE,
-			CurrencyId::DOT,
-			dollars(30_u128),
-			CurrencyId::MDOT,
-			dollars(30_u128),
-		));
-		assert!(System::events().iter().any(|record| record.event == expected_event));
-	});
+			// All operations in the KSM pool are paused.
+			assert_noop!(
+				TestProtocol::redeem_underlying(alice(), CurrencyId::KSM, dollars(10_u128)),
+				Error::<Test>::OperationPaused
+			);
+
+			assert_ok!(TestProtocol::redeem_underlying(
+				alice(),
+				CurrencyId::DOT,
+				dollars(30_u128)
+			));
+			let expected_event = TestEvent::minterest_protocol(RawEvent::Redeemed(
+				ALICE,
+				CurrencyId::DOT,
+				dollars(30_u128),
+				CurrencyId::MDOT,
+				dollars(30_u128),
+			));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+		});
 }
 
 #[test]
@@ -189,46 +216,55 @@ fn redeem_underlying_fails_if_low_balance_in_pool() {
 
 #[test]
 fn redeem_wrapped_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// Alice deposited 60 DOT to the pool.
-		assert_ok!(TestProtocol::deposit_underlying(
-			alice(),
-			CurrencyId::DOT,
-			dollars(60_u128)
-		));
+	ExtBuilder::default()
+		.user_balance(ALICE, CurrencyId::MKSM, ONE_HUNDRED_DOLLARS)
+		.build()
+		.execute_with(|| {
+			// Alice deposited 60 DOT to the pool.
+			assert_ok!(TestProtocol::deposit_underlying(
+				alice(),
+				CurrencyId::DOT,
+				dollars(60_u128)
+			));
 
-		// Alice has 60 MDOT. She can't redeem 100 MDOT.
-		assert_noop!(
-			TestProtocol::redeem_wrapped(alice(), CurrencyId::MDOT, dollars(100_u128)),
-			Error::<Test>::NotEnoughWrappedTokens
-		);
+			// Alice has 60 MDOT. She can't redeem 100 MDOT.
+			assert_noop!(
+				TestProtocol::redeem_wrapped(alice(), CurrencyId::MDOT, dollars(100_u128)),
+				Error::<Test>::NotEnoughWrappedTokens
+			);
 
-		// MDOT is wrong CurrencyId for underlying assets.
-		assert_noop!(
-			TestProtocol::redeem_wrapped(alice(), CurrencyId::DOT, dollars(20_u128)),
-			Error::<Test>::NotValidWrappedTokenId
-		);
+			// MDOT is wrong CurrencyId for underlying assets.
+			assert_noop!(
+				TestProtocol::redeem_wrapped(alice(), CurrencyId::DOT, dollars(20_u128)),
+				Error::<Test>::NotValidWrappedTokenId
+			);
 
-		// Transaction with zero balance is not allowed.
-		assert_noop!(
-			TestProtocol::redeem_wrapped(alice(), CurrencyId::MDOT, Balance::zero()),
-			Error::<Test>::ZeroBalanceTransaction
-		);
+			// Transaction with zero balance is not allowed.
+			assert_noop!(
+				TestProtocol::redeem_wrapped(alice(), CurrencyId::MDOT, Balance::zero()),
+				Error::<Test>::ZeroBalanceTransaction
+			);
 
-		assert_ok!(TestProtocol::redeem_wrapped(
-			alice(),
-			CurrencyId::MDOT,
-			dollars(35_u128)
-		));
-		let expected_event = TestEvent::minterest_protocol(RawEvent::Redeemed(
-			ALICE,
-			CurrencyId::DOT,
-			dollars(35_u128),
-			CurrencyId::MDOT,
-			dollars(35_u128),
-		));
-		assert!(System::events().iter().any(|record| record.event == expected_event));
-	});
+			// All operations in the KSM pool are paused.
+			assert_noop!(
+				TestProtocol::redeem_wrapped(alice(), CurrencyId::MKSM, dollars(10_u128)),
+				Error::<Test>::OperationPaused
+			);
+
+			assert_ok!(TestProtocol::redeem_wrapped(
+				alice(),
+				CurrencyId::MDOT,
+				dollars(35_u128)
+			));
+			let expected_event = TestEvent::minterest_protocol(RawEvent::Redeemed(
+				ALICE,
+				CurrencyId::DOT,
+				dollars(35_u128),
+				CurrencyId::MDOT,
+				dollars(35_u128),
+			));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+		});
 }
 
 #[test]
@@ -289,6 +325,12 @@ fn borrow_should_work() {
 		assert_noop!(
 			TestProtocol::borrow(alice(), CurrencyId::DOT, Balance::zero()),
 			Error::<Test>::ZeroBalanceTransaction
+		);
+
+		// All operations in the KSM pool are paused.
+		assert_noop!(
+			TestProtocol::borrow(alice(), CurrencyId::KSM, dollars(10_u128)),
+			Error::<Test>::OperationPaused
 		);
 
 		// Alice borrowed 30 DOT
@@ -378,6 +420,12 @@ fn repay_should_work() {
 			Error::<Test>::ZeroBalanceTransaction
 		);
 
+		// All operations in the KSM pool are paused.
+		assert_noop!(
+			TestProtocol::repay(alice(), CurrencyId::KSM, dollars(10_u128)),
+			Error::<Test>::OperationPaused
+		);
+
 		// Alice repaid 20 DOT. Her borrow_balance = 10 DOT.
 		assert_ok!(TestProtocol::repay(alice(), CurrencyId::DOT, dollars(20_u128)));
 		let expected_event = TestEvent::minterest_protocol(RawEvent::Repaid(ALICE, CurrencyId::DOT, dollars(20_u128)));
@@ -401,6 +449,12 @@ fn repay_all_should_work() {
 		assert_noop!(
 			TestProtocol::repay_all(alice(), CurrencyId::MDOT),
 			Error::<Test>::NotValidUnderlyingAssetId
+		);
+
+		// All operations in the KSM pool are paused.
+		assert_noop!(
+			TestProtocol::repay_all(alice(), CurrencyId::KSM),
+			Error::<Test>::OperationPaused
 		);
 
 		// Alice repaid all 30 DOT.
@@ -472,6 +526,12 @@ fn repay_on_behalf_should_work() {
 		assert_noop!(
 			TestProtocol::repay_on_behalf(bob(), CurrencyId::DOT, ALICE, Balance::zero()),
 			Error::<Test>::ZeroBalanceTransaction
+		);
+
+		// All operations in the KSM pool are paused.
+		assert_noop!(
+			TestProtocol::repay_on_behalf(bob(), CurrencyId::KSM, ALICE, dollars(10_u128)),
+			Error::<Test>::OperationPaused
 		);
 
 		// Bob repaid 20 DOT for Alice.
