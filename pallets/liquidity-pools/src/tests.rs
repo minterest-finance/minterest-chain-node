@@ -114,13 +114,7 @@ fn get_pool_available_liquidity_should_work() {
 #[test]
 fn get_pool_total_borrowed_should_work() {
 	ExtBuilder::default()
-		.pool_with_params(
-			CurrencyId::DOT,
-			TEN_THOUSAND,
-			Rate::default(),
-			Rate::default(),
-			Balance::default(),
-		)
+		.pool_with_params(CurrencyId::DOT, TEN_THOUSAND, Rate::default(), Balance::default())
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_pool_total_borrowed(CurrencyId::DOT), TEN_THOUSAND);
@@ -130,13 +124,7 @@ fn get_pool_total_borrowed_should_work() {
 #[test]
 fn get_pool_total_insurance_should_work() {
 	ExtBuilder::default()
-		.pool_with_params(
-			CurrencyId::DOT,
-			Balance::default(),
-			Rate::default(),
-			Rate::default(),
-			TEN_THOUSAND,
-		)
+		.pool_with_params(CurrencyId::DOT, Balance::default(), Rate::default(), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), TEN_THOUSAND);
@@ -150,7 +138,6 @@ fn get_pool_borrow_index_should_work() {
 			CurrencyId::DOT,
 			Balance::default(),
 			Rate::saturating_from_rational(125, 100),
-			Rate::default(),
 			Balance::default(),
 		)
 		.build()
