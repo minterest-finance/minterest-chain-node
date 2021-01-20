@@ -3193,6 +3193,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "minterest-model"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+]
+
+[[package]]
 name = "minterest-primitives"
 version = "0.1.0"
 dependencies = [
@@ -3450,6 +3459,7 @@ dependencies = [
  "integration-tests",
  "liquidity-pools",
  "m-tokens",
+ "minterest-model",
  "minterest-primitives",
  "minterest-protocol",
  "oracle",

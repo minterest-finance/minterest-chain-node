@@ -313,6 +313,10 @@ impl oracle::Trait for Runtime {
 	type Event = Event;
 }
 
+impl minterest_model::Trait for Runtime {
+	type Event = Event;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -338,6 +342,7 @@ construct_runtime!(
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		Accounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		Oracle: oracle::{Module, Storage, Call, Event},
+		MinterestModel: minterest_model::{Module, Storage, Call, Event},
 	}
 );
 
