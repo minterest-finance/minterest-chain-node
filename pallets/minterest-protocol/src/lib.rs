@@ -2,7 +2,7 @@
 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{self as system, ensure_signed};
-use minterest_primitives::{Balance, CurrencyId};
+use minterest_primitives::{Balance, CurrencyId, Operation};
 use orml_traits::MultiCurrency;
 use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
@@ -99,7 +99,6 @@ decl_error! {
 		/// Pool not found.
 		PoolNotFound,
 
-
 		/// Transaction with zero balance is not allowed.
 		ZeroBalanceTransaction,
 
@@ -116,7 +115,10 @@ decl_error! {
 		CanotBeDisabledAsCollateral,
 
 		/// The user has not deposited funds into the pool.
-		CanotBeEnabledAsCollateral
+		CanotBeEnabledAsCollateral,
+
+		/// Operation (deposit, redeem, borrow, repay) is paused.
+		OperationPaused,
 	}
 }
 
@@ -328,8 +330,10 @@ impl<T: Trait> Module<T> {
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
 		// Fail if deposit not allowed
-		<Controller<T>>::deposit_allowed(underlying_asset_id, &who, underlying_amount)
-			.map_err(|_| Error::<T>::DepositControllerRejection)?;
+		ensure!(
+			<Controller<T>>::is_operation_allowed(underlying_asset_id, Operation::Deposit),
+			Error::<T>::OperationPaused
+		);
 
 		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)
 			.map_err(|_| Error::<T>::NotValidUnderlyingAssetId)?;
@@ -482,8 +486,10 @@ impl<T: Trait> Module<T> {
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
 		// Fail if repayBorrow not allowed
-		<Controller<T>>::repay_borrow_allowed(underlying_asset_id, &who, repay_amount)
-			.map_err(|_| Error::<T>::RepayBorrowControllerRejection)?;
+		ensure!(
+			<Controller<T>>::is_operation_allowed(underlying_asset_id, Operation::Repay),
+			Error::<T>::OperationPaused
+		);
 
 		// Verify pool's block number equals current block number
 		let current_block_number = <frame_system::Module<T>>::block_number();

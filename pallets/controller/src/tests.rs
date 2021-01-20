@@ -654,17 +654,6 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 }
 
 #[test]
-fn deposit_allowed_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::deposit_allowed(CurrencyId::DOT, &BOB, 10));
-		assert_noop!(
-			Controller::deposit_allowed(CurrencyId::KSM, &BOB, 10),
-			Error::<Runtime>::OperationPaused
-		);
-	});
-}
-
-#[test]
 fn redeem_allowed_should_work() {
 	ExtBuilder::default().alice_deposit_60_dot().build().execute_with(|| {
 		assert_ok!(Controller::redeem_allowed(CurrencyId::DOT, &ALICE, 40));
@@ -701,18 +690,6 @@ fn borrow_allowed_should_work() {
 		assert_noop!(
 			Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 999),
 			Error::<Runtime>::InsufficientLiquidity
-		);
-	});
-}
-
-#[test]
-fn repay_allowed_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::repay_borrow_allowed(CurrencyId::DOT, &BOB, 10));
-
-		assert_noop!(
-			Controller::repay_borrow_allowed(CurrencyId::KSM, &BOB, 10),
-			Error::<Runtime>::OperationPaused
 		);
 	});
 }

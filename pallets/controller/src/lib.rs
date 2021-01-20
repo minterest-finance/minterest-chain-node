@@ -3,7 +3,7 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{self as system, ensure_signed};
-use minterest_primitives::{Balance, CurrencyId, Operation, Price, Rate};
+use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
 use orml_utilities::with_transaction_result;
 #[cfg(feature = "std")]
@@ -577,25 +577,6 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	/// Checks if the account should be allowed to deposit tokens in the given pool.
-	///
-	/// - `underlying_asset_id` - The CurrencyId to verify the redeem against.
-	/// - `depositor` -  The account which would deposit the tokens.
-	/// - `deposit_amount` - The amount of underlying being supplied to the pool in exchange for
-	/// tokens.
-	/// Return Ok if the deposit is allowed, otherwise a semi-opaque error code.
-	pub fn deposit_allowed(
-		underlying_asset_id: CurrencyId,
-		_depositor: &T::AccountId,
-		_deposit_amount: Balance,
-	) -> DispatchResult {
-		ensure!(
-			Self::is_operation_allowed(underlying_asset_id, Operation::Deposit),
-			Error::<T>::OperationPaused
-		);
-		Ok(())
-	}
-
 	/// Checks if the account should be allowed to redeem tokens in the given pool.
 	///
 	/// - `underlying_asset_id` - The CurrencyId to verify the redeem against.
@@ -639,37 +620,11 @@ impl<T: Trait> Module<T> {
 			Error::<T>::OperationPaused
 		);
 
-		let oracle_price =
-			<Oracle<T>>::get_underlying_price(underlying_asset_id).map_err(|_| Error::<T>::OraclePriceError)?;
-
-		ensure!(oracle_price != Price::from_inner(0), Error::<T>::OraclePriceError);
-
 		//FIXME: add borrowCap checking
 
 		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, underlying_asset_id, 0, borrow_amount)?;
 
 		ensure!(!(shortfall > 0), Error::<T>::InsufficientLiquidity);
-
-		Ok(())
-	}
-
-	/// Checks if the account should be allowed to repay a borrow in the given pool.
-	///
-	/// - `underlying_asset_id` - The CurrencyId to verify the repay against.
-	/// - `who` -  The account which would repay the asset.
-	/// - `borrow_amount` - The amount of underlying assets the account would repay.
-	/// Return Ok if the borrow is allowed, otherwise a semi-opaque error code
-	pub fn repay_borrow_allowed(
-		underlying_asset_id: CurrencyId,
-		_who: &T::AccountId,
-		_repay_amount: Balance,
-	) -> DispatchResult {
-		ensure!(
-			Self::is_operation_allowed(underlying_asset_id, Operation::Repay),
-			Error::<T>::OperationPaused
-		);
-
-		let _borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
 
 		Ok(())
 	}
