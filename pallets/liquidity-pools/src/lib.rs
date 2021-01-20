@@ -9,13 +9,19 @@ use pallet_traits::Borrowing;
 use serde::{Deserialize, Serialize};
 use sp_runtime::{traits::AccountIdConversion, DispatchResult, ModuleId, RuntimeDebug};
 
+/// Pool metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct Pool {
+	/// Total amount of outstanding borrows of the underlying in this pool.
+	#[codec(compact)]
 	pub total_borrowed: Balance,
-	/// Accumulator of the total earned interest rate since the opening of the pool
+	/// Accumulator of the total earned interest rate since the opening of the pool.
 	pub borrow_index: Rate,
+	/// The rating is used to convert between underlying assets and mTokens.
 	pub current_exchange_rate: Rate, // FIXME. Delete and implement via RPC
+	/// Total amount of insurance of the underlying held in this pool.
+	#[codec(compact)]
 	pub total_insurance: Balance,
 }
 
@@ -23,10 +29,12 @@ pub struct Pool {
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct PoolUserData {
 	/// Total balance (with accrued interest), after applying the most
-	/// recent balance-changing action
+	/// recent balance-changing action.
+	#[codec(compact)]
 	pub total_borrowed: Balance,
-	/// Global borrow_index as of the most recent balance-changing action
+	/// Global borrow_index as of the most recent balance-changing action.
 	pub interest_index: Rate,
+	/// Wheter or not pool as a collateral.
 	pub collateral: bool,
 }
 
