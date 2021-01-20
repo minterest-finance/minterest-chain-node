@@ -104,12 +104,14 @@ pub type System = frame_system::Module<Test>;
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
+	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 }
 
 impl Trait for Test {
 	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type ModuleId = LiquidityPoolsModuleId;
+	type InitialExchangeRate = InitialExchangeRate;
 }
 
 pub struct ExtBuilder {
@@ -133,6 +135,7 @@ pub type TestPools = Module<Test>;
 pub const ALICE: AccountId = 1;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
+pub const ONE_HUNDRED: Balance = 100;
 pub const TEN_THOUSAND: Balance = 10_000 * DOLLARS;
 
 impl ExtBuilder {
@@ -195,6 +198,19 @@ impl ExtBuilder {
 				borrow_index: Rate::default(),
 				current_exchange_rate: Rate::default(),
 				total_insurance: Balance::default(),
+			},
+		));
+		self
+	}
+
+	pub fn pool_total_borrowed(mut self, pool_id: CurrencyId, total_borrowed: Balance) -> Self {
+		self.pools.push((
+			pool_id,
+			Pool {
+				total_borrowed,
+				borrow_index: Rate::one(),
+				current_exchange_rate: Rate::one(),
+				total_insurance: Balance::zero(),
 			},
 		));
 		self

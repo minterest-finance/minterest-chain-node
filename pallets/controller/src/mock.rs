@@ -106,12 +106,15 @@ impl orml_currencies::Trait for Runtime {
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
+	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+
 }
 
 impl liquidity_pools::Trait for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type ModuleId = LiquidityPoolsModuleId;
+	type InitialExchangeRate = InitialExchangeRate;
 }
 
 impl oracle::Trait for Runtime {
@@ -128,7 +131,6 @@ impl accounts::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 	pub const BlocksPerYear: u128 = 5256000u128;
 	pub MTokensId: Vec<CurrencyId> = vec![
 			CurrencyId::MDOT,
@@ -146,7 +148,6 @@ parameter_types! {
 
 impl Trait for Runtime {
 	type Event = TestEvent;
-	type InitialExchangeRate = InitialExchangeRate;
 	type MTokensId = MTokensId;
 	type BlocksPerYear = BlocksPerYear;
 	type UnderlyingAssetId = UnderlyingAssetId;
