@@ -96,10 +96,6 @@ decl_error! {
 		/// Repay was blocked due to Controller rejection.
 		RepayBorrowControllerRejection,
 
-		/// Pool not found.
-		PoolNotFound,
-
-
 		/// Transaction with zero balance is not allowed.
 		ZeroBalanceTransaction,
 
@@ -270,7 +266,10 @@ decl_module! {
 		#[weight = 10_000]
 		pub fn enable_as_collateral(origin, pool_id: CurrencyId) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
-			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(
+				T::UnderlyingAssetId::get().contains(&pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
 
 			ensure!(!<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id), Error::<T>::AlreadyCollateral);
 
@@ -288,7 +287,10 @@ decl_module! {
 		#[weight = 10_000]
 		pub fn disable_collateral(origin, pool_id: CurrencyId) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
-			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(
+				T::UnderlyingAssetId::get().contains(&pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
 
 			ensure!(<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id), Error::<T>::AlreadyDisabledCollateral);
 
@@ -363,7 +365,8 @@ impl<T: Trait> Module<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
-		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
+		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)
+			.map_err(|_| Error::<T>::NotValidUnderlyingAssetId)?;
 
 		let wrapped_amount = match (underlying_amount, wrapped_amount, all_assets) {
 			(0, 0, true) => {
