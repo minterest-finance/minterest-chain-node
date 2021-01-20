@@ -3418,6 +3418,7 @@ dependencies = [
  "hex-literal 0.3.1",
  "jsonrpc-core",
  "liquidity-pools",
+ "minterest-model",
  "minterest-primitives",
  "node-minterest-runtime",
  "pallet-transaction-payment-rpc",

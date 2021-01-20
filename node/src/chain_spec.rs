@@ -1,9 +1,11 @@
 use controller::{ControllerData, PauseKeeper};
 use hex_literal::hex;
 use liquidity_pools::Pool;
+use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
 	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig,
-	GrandpaConfig, LiquidityPoolsConfig, Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
+	GrandpaConfig, LiquidityPoolsConfig, MinterestModelConfig, Signature, SudoConfig, SystemConfig, TokensConfig,
+	DOLLARS, WASM_BINARY,
 };
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
@@ -279,11 +281,7 @@ fn testnet_genesis(
 						borrow_rate: FixedU128::zero(),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
-						kink: FixedU128::saturating_from_rational(8, 10),
-						base_rate_per_block: FixedU128::zero(),
-						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						collateral_factor: FixedU128::saturating_from_rational(9, 10),               // 90%
+						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 					},
 				),
 				(
@@ -294,11 +292,7 @@ fn testnet_genesis(
 						borrow_rate: FixedU128::zero(),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
-						kink: FixedU128::saturating_from_rational(8, 10),
-						base_rate_per_block: FixedU128::zero(),
-						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						collateral_factor: FixedU128::saturating_from_rational(9, 10),               // 90%
+						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 					},
 				),
 				(
@@ -309,11 +303,7 @@ fn testnet_genesis(
 						borrow_rate: FixedU128::zero(),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
-						kink: FixedU128::saturating_from_rational(8, 10),
-						base_rate_per_block: FixedU128::zero(),
-						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						collateral_factor: FixedU128::saturating_from_rational(9, 10),               // 90%
+						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 					},
 				),
 				(
@@ -324,11 +314,7 @@ fn testnet_genesis(
 						borrow_rate: FixedU128::zero(),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
-						kink: FixedU128::saturating_from_rational(8, 10),
-						base_rate_per_block: FixedU128::zero(),
-						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						collateral_factor: FixedU128::saturating_from_rational(9, 10),               // 90%
+						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 					},
 				),
 			],
@@ -373,6 +359,46 @@ fn testnet_genesis(
 		}),
 		accounts: Some(AccountsConfig {
 			allowed_accounts: vec![(get_account_id_from_seed::<sr25519::Public>("Alice"), ())],
+		}),
+		minterest_model: Some(MinterestModelConfig {
+			minterest_model_dates: vec![
+				(
+					CurrencyId::ETH,
+					MinterestModelData {
+						kink: FixedU128::saturating_from_rational(8, 10),
+						base_rate_per_block: FixedU128::zero(),
+						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
+				(
+					CurrencyId::DOT,
+					MinterestModelData {
+						kink: FixedU128::saturating_from_rational(8, 10),
+						base_rate_per_block: FixedU128::zero(),
+						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
+				(
+					CurrencyId::KSM,
+					MinterestModelData {
+						kink: FixedU128::saturating_from_rational(8, 10),
+						base_rate_per_block: FixedU128::zero(),
+						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
+				(
+					CurrencyId::BTC,
+					MinterestModelData {
+						kink: FixedU128::saturating_from_rational(8, 10),
+						base_rate_per_block: FixedU128::zero(),
+						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
+			],
 		}),
 	}
 }

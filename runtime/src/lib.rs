@@ -342,7 +342,7 @@ construct_runtime!(
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		Accounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		Oracle: oracle::{Module, Storage, Call, Event},
-		MinterestModel: minterest_model::{Module, Storage, Call, Event},
+		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 	}
 );
 

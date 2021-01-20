@@ -28,6 +28,7 @@ node-minterest-runtime = { path = '../runtime', version = '2.0.0' }
 minterest-primitives = { path = "../primitives", default-features = false }
 liquidity-pools = {path = "../pallets/liquidity-pools", default-features = false}
 controller = {path = "../pallets/controller", default-features = false}
+minterest-model = {path = "../pallets/minterest-model", default-features = false}
 
 # Substrate dependencies
 frame-benchmarking = '2.0.0'
