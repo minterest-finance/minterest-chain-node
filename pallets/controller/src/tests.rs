@@ -5,10 +5,6 @@ use mock::*;
 
 use frame_support::{assert_err, assert_noop, assert_ok};
 
-fn dollars<T: Into<u128>>(d: T) -> Balance {
-	1_000_000_000_000_000_000_u128.saturating_mul(d.into())
-}
-
 fn multiplier_per_block_equal_max_value() -> ControllerData<BlockNumber> {
 	ControllerData {
 		timestamp: 0,
@@ -654,24 +650,19 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 }
 
 #[test]
-fn deposit_allowed_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::deposit_allowed(CurrencyId::DOT, &BOB, 10));
-		assert_noop!(
-			Controller::deposit_allowed(CurrencyId::KSM, &BOB, 10),
-			Error::<Runtime>::OperationPaused
-		);
-	});
-}
-
-#[test]
 fn redeem_allowed_should_work() {
 	ExtBuilder::default().alice_deposit_60_dot().build().execute_with(|| {
-		assert_ok!(Controller::redeem_allowed(CurrencyId::DOT, &ALICE, 40));
+		assert_ok!(Controller::redeem_allowed(CurrencyId::DOT, &ALICE, dollars(40_u128)));
 
-		assert_noop!(
-			Controller::redeem_allowed(CurrencyId::KSM, &ALICE, 10),
-			Error::<Runtime>::OperationPaused
+		// collateral parameter is set to true.
+		assert_ok!(<LiquidityPools<Runtime>>::enable_as_collateral_internal(
+			&ALICE,
+			CurrencyId::DOT
+		));
+
+		assert_err!(
+			Controller::redeem_allowed(CurrencyId::DOT, &ALICE, dollars(100_u128)),
+			Error::<Runtime>::InsufficientLiquidity
 		);
 	});
 }
@@ -681,7 +672,7 @@ fn borrow_allowed_should_work() {
 	ExtBuilder::default().alice_deposit_60_dot().build().execute_with(|| {
 		// collateral parameter is set to false. User can't borrow
 		assert_err!(
-			Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10),
+			Controller::borrow_allowed(CurrencyId::DOT, &ALICE, dollars(10_u128)),
 			Error::<Runtime>::InsufficientLiquidity
 		);
 
@@ -691,28 +682,11 @@ fn borrow_allowed_should_work() {
 			CurrencyId::DOT
 		));
 
-		assert_ok!(Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10));
+		assert_ok!(Controller::borrow_allowed(CurrencyId::DOT, &ALICE, dollars(10_u128)));
 
 		assert_noop!(
-			Controller::borrow_allowed(CurrencyId::KSM, &ALICE, 10),
-			Error::<Runtime>::OperationPaused
-		);
-
-		assert_noop!(
-			Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 999),
+			Controller::borrow_allowed(CurrencyId::DOT, &ALICE, dollars(999_u128)),
 			Error::<Runtime>::InsufficientLiquidity
-		);
-	});
-}
-
-#[test]
-fn repay_allowed_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::repay_borrow_allowed(CurrencyId::DOT, &BOB, 10));
-
-		assert_noop!(
-			Controller::repay_borrow_allowed(CurrencyId::KSM, &BOB, 10),
-			Error::<Runtime>::OperationPaused
 		);
 	});
 }
@@ -1194,6 +1168,7 @@ fn redeem_insurance_should_work() {
 	ExtBuilder::default()
 		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 		.pool_total_insurance(CurrencyId::DOT, 1000)
+		.pool_balance(CurrencyId::DOT, 1000)
 		.build()
 		.execute_with(|| {
 			// ALICE redeem 100 DOT from pool insurance.
@@ -1202,6 +1177,10 @@ fn redeem_insurance_should_work() {
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 875);
+			assert_eq!(
+				Currencies::free_balance(CurrencyId::DOT, &TestPools::pools_account_id()),
+				875,
+			);
 
 			// Bob is not added to the allow-list of admins, so this action is not available for him.
 			assert_noop!(
