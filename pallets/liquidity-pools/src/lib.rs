@@ -7,7 +7,11 @@ use orml_traits::MultiCurrency;
 use pallet_traits::Borrowing;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::{traits::AccountIdConversion, DispatchResult, ModuleId, RuntimeDebug};
+use sp_runtime::{
+	traits::{AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
+	DispatchError, DispatchResult, FixedPointNumber, ModuleId, RuntimeDebug,
+};
+use sp_std::{cmp::Ordering, result};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
@@ -43,6 +47,9 @@ pub trait Trait: frame_system::Trait {
 
 	/// The `MultiCurrency` implementation.
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
+
+	/// Start exchange rate
+	type InitialExchangeRate: Get<Rate>;
 }
 
 decl_event!(
@@ -56,6 +63,12 @@ decl_error! {
 	pub enum Error for Module<T: Trait> {
 	/// Number overflow in calculation.
 	NumOverflow,
+
+	/// The currency is not enabled in protocol.
+	NotValidUnderlyingAssetId,
+
+	/// The currency is not enabled in wrapped protocol.
+	NotValidWrappedTokenId,
 	}
 }
 
@@ -80,6 +93,9 @@ decl_module! {
 			const PoolAccountId: T::AccountId = T::ModuleId::get().into_account();
 	}
 }
+
+type RateResult = result::Result<Rate, DispatchError>;
+type CurrencyIdResult = result::Result<CurrencyId, DispatchError>;
 
 // Setters for LiquidityPools
 impl<T: Trait> Module<T> {
@@ -179,6 +195,71 @@ impl<T: Trait> Module<T> {
 
 	pub fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
 		Pools::contains_key(underlying_asset_id)
+	}
+
+	/// Calculates the exchange rate from the underlying to the mToken.
+	/// This function does not accrue interest before calculating the exchange rate.
+	pub fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
+		let wrapped_asset_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
+		// The total amount of cash the market has
+		let total_cash = Self::get_pool_available_liquidity(underlying_asset_id);
+
+		// Total number of tokens in circulation
+		let total_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
+
+		let total_insurance = Self::get_pool_total_insurance(underlying_asset_id);
+
+		let total_borrowed = Self::get_pool_total_borrowed(underlying_asset_id);
+
+		let current_exchange_rate =
+			Self::calculate_exchange_rate(total_cash, total_supply, total_insurance, total_borrowed)?;
+
+		Ok(current_exchange_rate)
+	}
+
+	/// Calculates the exchange rate from the underlying to the mToken.
+	fn calculate_exchange_rate(
+		total_cash: Balance,
+		total_supply: Balance,
+		total_insurance: Balance,
+		total_borrowed: Balance,
+	) -> RateResult {
+		let rate = match total_supply.cmp(&Balance::zero()) {
+			// If there are no tokens minted: exchangeRate = InitialExchangeRate.
+			Ordering::Equal => T::InitialExchangeRate::get(),
+			// Otherwise: exchange_rate = (total_cash - total_insurance + total_borrowed) / total_supply
+			_ => {
+				let cash_plus_borrows = total_cash.checked_add(total_borrowed).ok_or(Error::<T>::NumOverflow)?;
+
+				let cash_plus_borrows_minus_insurance = cash_plus_borrows
+					.checked_sub(total_insurance)
+					.ok_or(Error::<T>::NumOverflow)?;
+
+				Rate::saturating_from_rational(cash_plus_borrows_minus_insurance, total_supply)
+			}
+		};
+
+		Ok(rate)
+	}
+
+	pub fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> CurrencyIdResult {
+		match asset_id {
+			CurrencyId::DOT => Ok(CurrencyId::MDOT),
+			CurrencyId::KSM => Ok(CurrencyId::MKSM),
+			CurrencyId::BTC => Ok(CurrencyId::MBTC),
+			CurrencyId::ETH => Ok(CurrencyId::METH),
+			_ => Err(Error::<T>::NotValidUnderlyingAssetId.into()),
+		}
+	}
+
+	pub fn get_underlying_asset_id_by_wrapped_id(wrapped_id: &CurrencyId) -> CurrencyIdResult {
+		match wrapped_id {
+			CurrencyId::MDOT => Ok(CurrencyId::DOT),
+			CurrencyId::MKSM => Ok(CurrencyId::KSM),
+			CurrencyId::MBTC => Ok(CurrencyId::BTC),
+			CurrencyId::METH => Ok(CurrencyId::ETH),
+			_ => Err(Error::<T>::NotValidWrappedTokenId.into()),
+		}
 	}
 }
 
