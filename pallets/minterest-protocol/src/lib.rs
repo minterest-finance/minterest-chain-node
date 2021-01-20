@@ -2,7 +2,7 @@
 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{self as system, ensure_signed};
-use minterest_primitives::{Balance, CurrencyId, Operation};
+use minterest_primitives::{Balance, CurrencyId};
 use orml_traits::MultiCurrency;
 use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
@@ -78,9 +78,6 @@ decl_error! {
 		/// Number overflow in calculation.
 		NumOverflow,
 
-		/// The block number in the pool is equal to the current block number.
-		PoolNotFresh,
-
 		/// An internal failure occurred in the execution of the Accrue Interest function.
 		AccrueInterestFailed,
 
@@ -95,9 +92,6 @@ decl_error! {
 
 		/// Repay was blocked due to Controller rejection.
 		RepayBorrowControllerRejection,
-
-		/// Pool not found.
-		PoolNotFound,
 
 		/// Transaction with zero balance is not allowed.
 		ZeroBalanceTransaction,
@@ -272,7 +266,10 @@ decl_module! {
 		#[weight = 10_000]
 		pub fn enable_as_collateral(origin, pool_id: CurrencyId) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
-			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(
+				T::UnderlyingAssetId::get().contains(&pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
 
 			ensure!(!<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id), Error::<T>::AlreadyCollateral);
 
@@ -290,7 +287,10 @@ decl_module! {
 		#[weight = 10_000]
 		pub fn disable_collateral(origin, pool_id: CurrencyId) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
-			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(
+				T::UnderlyingAssetId::get().contains(&pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
 
 			ensure!(<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id), Error::<T>::AlreadyDisabledCollateral);
 
@@ -367,7 +367,8 @@ impl<T: Trait> Module<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
-		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
+		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)
+			.map_err(|_| Error::<T>::NotValidUnderlyingAssetId)?;
 
 		let wrapped_amount = match (underlying_amount, wrapped_amount, all_assets) {
 			(0, 0, true) => {
@@ -497,14 +498,6 @@ impl<T: Trait> Module<T> {
 		ensure!(
 			<Controller<T>>::is_operation_allowed(underlying_asset_id, Operation::Repay),
 			Error::<T>::OperationPaused
-		);
-
-		// Verify pool's block number equals current block number
-		let current_block_number = <frame_system::Module<T>>::block_number();
-		let accrual_block_number_previous = <Controller<T>>::controller_dates(underlying_asset_id).timestamp;
-		ensure!(
-			current_block_number == accrual_block_number_previous,
-			Error::<T>::PoolNotFresh
 		);
 
 		// Fetch the amount the borrower owes, with accumulated interest
