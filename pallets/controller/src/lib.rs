@@ -405,40 +405,40 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	/// Converts a specified number of underlying assets into wrapped tokens.
-	/// The calculation is based on the exchange rate.
-	///
-	/// - `underlying_asset_id`: CurrencyId of underlying assets to be converted to wrapped tokens.
-	/// - `underlying_amount`: The amount of underlying assets to be converted to wrapped tokens.
-	/// Returns `wrapped_amount = underlying_amount / exchange_rate`
-	pub fn convert_to_wrapped(underlying_asset_id: CurrencyId, underlying_amount: Balance) -> BalanceResult {
-		let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
-
-		let wrapped_amount = Rate::from_inner(underlying_amount)
-			.checked_div(&exchange_rate)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		Ok(wrapped_amount)
-	}
-
-	/// Converts a specified number of wrapped tokens into underlying assets.
-	/// The calculation is based on the exchange rate.
-	///
-	/// - `wrapped_id`: CurrencyId of the wrapped tokens to be converted to underlying assets.
-	/// - `wrapped_amount`: The amount of wrapped tokens to be converted to underlying assets.
-	/// Returns `underlying_amount = wrapped_amount * exchange_rate`
-	pub fn convert_from_wrapped(wrapped_id: CurrencyId, wrapped_amount: Balance) -> BalanceResult {
-		let underlying_asset_id = Self::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
-		let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
-
-		let underlying_amount = Rate::from_inner(wrapped_amount)
-			.checked_mul(&exchange_rate)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		Ok(underlying_amount)
-	}
+	// /// Converts a specified number of underlying assets into wrapped tokens.
+	// /// The calculation is based on the exchange rate.
+	// ///
+	// /// - `underlying_asset_id`: CurrencyId of underlying assets to be converted to wrapped tokens.
+	// /// - `underlying_amount`: The amount of underlying assets to be converted to wrapped tokens.
+	// /// Returns `wrapped_amount = underlying_amount / exchange_rate`
+	// pub fn convert_to_wrapped(underlying_asset_id: CurrencyId, underlying_amount: Balance) -> BalanceResult {
+	// 	let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
+	//
+	// 	let wrapped_amount = Rate::from_inner(underlying_amount)
+	// 		.checked_div(&exchange_rate)
+	// 		.map(|x| x.into_inner())
+	// 		.ok_or(Error::<T>::NumOverflow)?;
+	//
+	// 	Ok(wrapped_amount)
+	// }
+	//
+	// /// Converts a specified number of wrapped tokens into underlying assets.
+	// /// The calculation is based on the exchange rate.
+	// ///
+	// /// - `wrapped_id`: CurrencyId of the wrapped tokens to be converted to underlying assets.
+	// /// - `wrapped_amount`: The amount of wrapped tokens to be converted to underlying assets.
+	// /// Returns `underlying_amount = wrapped_amount * exchange_rate`
+	// pub fn convert_from_wrapped(wrapped_id: CurrencyId, wrapped_amount: Balance) -> BalanceResult {
+	// 	let underlying_asset_id = Self::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
+	// 	let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
+	//
+	// 	let underlying_amount = Rate::from_inner(wrapped_amount)
+	// 		.checked_mul(&exchange_rate)
+	// 		.map(|x| x.into_inner())
+	// 		.ok_or(Error::<T>::NumOverflow)?;
+	//
+	// 	Ok(underlying_amount)
+	// }
 
 	/// Return the borrow balance of account based on stored data.
 	///
