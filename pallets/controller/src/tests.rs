@@ -5,10 +5,6 @@ use mock::*;
 
 use frame_support::{assert_err, assert_noop, assert_ok};
 
-fn dollars<T: Into<u128>>(d: T) -> Balance {
-	1_000_000_000_000_000_000_u128.saturating_mul(d.into())
-}
-
 fn multiplier_per_block_equal_max_value() -> ControllerData<BlockNumber> {
 	ControllerData {
 		timestamp: 0,
@@ -656,11 +652,17 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 #[test]
 fn redeem_allowed_should_work() {
 	ExtBuilder::default().alice_deposit_60_dot().build().execute_with(|| {
-		assert_ok!(Controller::redeem_allowed(CurrencyId::DOT, &ALICE, 40));
+		assert_ok!(Controller::redeem_allowed(CurrencyId::DOT, &ALICE, dollars(40_u128)));
 
-		assert_noop!(
-			Controller::redeem_allowed(CurrencyId::KSM, &ALICE, 10),
-			Error::<Runtime>::OperationPaused
+		// collateral parameter is set to true.
+		assert_ok!(<LiquidityPools<Runtime>>::enable_as_collateral_internal(
+			&ALICE,
+			CurrencyId::DOT
+		));
+
+		assert_err!(
+			Controller::redeem_allowed(CurrencyId::DOT, &ALICE, dollars(100_u128)),
+			Error::<Runtime>::InsufficientLiquidity
 		);
 	});
 }
@@ -670,7 +672,7 @@ fn borrow_allowed_should_work() {
 	ExtBuilder::default().alice_deposit_60_dot().build().execute_with(|| {
 		// collateral parameter is set to false. User can't borrow
 		assert_err!(
-			Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10),
+			Controller::borrow_allowed(CurrencyId::DOT, &ALICE, dollars(10_u128)),
 			Error::<Runtime>::InsufficientLiquidity
 		);
 
@@ -680,15 +682,10 @@ fn borrow_allowed_should_work() {
 			CurrencyId::DOT
 		));
 
-		assert_ok!(Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 10));
+		assert_ok!(Controller::borrow_allowed(CurrencyId::DOT, &ALICE, dollars(10_u128)));
 
 		assert_noop!(
-			Controller::borrow_allowed(CurrencyId::KSM, &ALICE, 10),
-			Error::<Runtime>::OperationPaused
-		);
-
-		assert_noop!(
-			Controller::borrow_allowed(CurrencyId::DOT, &ALICE, 999),
+			Controller::borrow_allowed(CurrencyId::DOT, &ALICE, dollars(999_u128)),
 			Error::<Runtime>::InsufficientLiquidity
 		);
 	});

@@ -140,9 +140,6 @@ decl_error! {
 		/// Only happened when the balance went wrong and balance overflows the integer type.
 		BalanceOverflowed,
 
-		/// Operation (deposit, redeem, borrow, repay) is paused.
-		OperationPaused,
-
 		/// Maximum borrow rate cannot be set to 0.
 		MaxBorrowRateCannotBeZero,
 
@@ -589,11 +586,6 @@ impl<T: Trait> Module<T> {
 		redeemer: &T::AccountId,
 		redeem_amount: Balance,
 	) -> DispatchResult {
-		ensure!(
-			Self::is_operation_allowed(underlying_asset_id, Operation::Redeem),
-			Error::<T>::OperationPaused
-		);
-
 		if LiquidityPools::<T>::check_user_available_collateral(&redeemer, underlying_asset_id) {
 			let (_, shortfall) =
 				Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset_id, redeem_amount, 0)?;
@@ -615,11 +607,6 @@ impl<T: Trait> Module<T> {
 		who: &T::AccountId,
 		borrow_amount: Balance,
 	) -> DispatchResult {
-		ensure!(
-			Self::is_operation_allowed(underlying_asset_id, Operation::Borrow),
-			Error::<T>::OperationPaused
-		);
-
 		//FIXME: add borrowCap checking
 
 		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, underlying_asset_id, 0, borrow_amount)?;

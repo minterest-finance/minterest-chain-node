@@ -401,6 +401,10 @@ impl<T: Trait> Module<T> {
 		);
 
 		// Fail if redeem not allowed
+		ensure!(
+			<Controller<T>>::is_operation_allowed(underlying_asset_id, Operation::Redeem),
+			Error::<T>::OperationPaused
+		);
 		<Controller<T>>::redeem_allowed(underlying_asset_id, &who, wrapped_amount)
 			.map_err(|_| Error::<T>::RedeemControllerRejection)?;
 
@@ -440,6 +444,10 @@ impl<T: Trait> Module<T> {
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
 		// Fail if borrow not allowed
+		ensure!(
+			<Controller<T>>::is_operation_allowed(underlying_asset_id, Operation::Borrow),
+			Error::<T>::OperationPaused
+		);
 		<Controller<T>>::borrow_allowed(underlying_asset_id, &who, borrow_amount)
 			.map_err(|_| Error::<T>::BorrowControllerRejection)?;
 
@@ -485,7 +493,7 @@ impl<T: Trait> Module<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
-		// Fail if repayBorrow not allowed
+		// Fail if repay_borrow not allowed
 		ensure!(
 			<Controller<T>>::is_operation_allowed(underlying_asset_id, Operation::Repay),
 			Error::<T>::OperationPaused
