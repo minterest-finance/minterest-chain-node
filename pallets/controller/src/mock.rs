@@ -187,6 +187,10 @@ pub fn bob() -> Origin {
 }
 pub const ONE_HUNDRED: Balance = 100;
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
+pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
+pub fn dollars<T: Into<u128>>(d: T) -> Balance {
+	DOLLARS.saturating_mul(d.into())
+}
 
 impl ExtBuilder {
 	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
@@ -259,19 +263,19 @@ impl ExtBuilder {
 	}
 
 	pub fn alice_deposit_60_dot(self) -> Self {
-		self.user_balance(ALICE, CurrencyId::DOT, 40)
-			.user_balance(ALICE, CurrencyId::MDOT, 60)
-			.pool_balance(CurrencyId::DOT, 60)
+		self.user_balance(ALICE, CurrencyId::DOT, dollars(40_u128))
+			.user_balance(ALICE, CurrencyId::MDOT, dollars(60_u128))
+			.pool_balance(CurrencyId::DOT, dollars(60_u128))
 			.pool_mock(CurrencyId::DOT)
-			.pool_user_data(ALICE, CurrencyId::DOT, 0, Rate::from_inner(0), false)
+			.pool_user_data(ALICE, CurrencyId::DOT, Balance::zero(), Rate::zero(), false)
 	}
 
 	pub fn alice_deposit_20_eth(self) -> Self {
-		self.user_balance(ALICE, CurrencyId::ETH, 80)
-			.user_balance(ALICE, CurrencyId::METH, 20)
-			.pool_balance(CurrencyId::ETH, 20)
+		self.user_balance(ALICE, CurrencyId::ETH, dollars(80_u128))
+			.user_balance(ALICE, CurrencyId::METH, dollars(20_u128))
+			.pool_balance(CurrencyId::ETH, dollars(20_u128))
 			.pool_mock(CurrencyId::ETH)
-			.pool_user_data(ALICE, CurrencyId::ETH, 0, Rate::from_inner(0), false)
+			.pool_user_data(ALICE, CurrencyId::ETH, Balance::zero(), Rate::zero(), false)
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {

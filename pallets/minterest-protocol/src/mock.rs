@@ -206,12 +206,14 @@ impl Default for ExtBuilder {
 				(ALICE, CurrencyId::MINT, ONE_MILL_DOLLARS),
 				(ALICE, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
 				(ALICE, CurrencyId::ETH, ONE_HUNDRED_DOLLARS),
+				(ALICE, CurrencyId::KSM, ONE_HUNDRED_DOLLARS),
 				(BOB, CurrencyId::MINT, ONE_MILL_DOLLARS),
 				(BOB, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
 				// seed: initial insurance, equal 10_000$
 				(TestPools::pools_account_id(), CurrencyId::ETH, TEN_THOUSAND_DOLLARS),
 				(TestPools::pools_account_id(), CurrencyId::DOT, TEN_THOUSAND_DOLLARS),
-				(TestPools::pools_account_id(), CurrencyId::KSM, TEN_THOUSAND_DOLLARS),
+				// seed: initial insurance = 10_000$, initial pool balance = 1_000_000$
+				(TestPools::pools_account_id(), CurrencyId::KSM, ONE_MILL_DOLLARS),
 			],
 		}
 	}
@@ -403,10 +405,10 @@ impl ExtBuilder {
 				(
 					CurrencyId::KSM,
 					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
+						deposit_paused: true,
+						redeem_paused: true,
+						borrow_paused: true,
+						repay_paused: true,
 					},
 				),
 				(
