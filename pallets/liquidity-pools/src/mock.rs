@@ -105,13 +105,13 @@ pub type System = frame_system::Module<Test>;
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
-	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
+	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = vec![
 		CurrencyId::DOT,
 		CurrencyId::KSM,
 		CurrencyId::BTC,
 		CurrencyId::ETH,
 	];
-	pub MTokensId: Vec<CurrencyId> = vec![
+	pub EnabledMTokensId: Vec<CurrencyId> = vec![
 		CurrencyId::MDOT,
 		CurrencyId::MKSM,
 		CurrencyId::MBTC,
@@ -124,8 +124,8 @@ impl Trait for Test {
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type ModuleId = LiquidityPoolsModuleId;
 	type InitialExchangeRate = InitialExchangeRate;
-	type MTokensId = MTokensId;
-	type UnderlyingAssetId = UnderlyingAssetId;
+	type EnabledMTokensId = EnabledMTokensId;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
 }
 
 pub struct ExtBuilder {

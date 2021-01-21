@@ -61,11 +61,11 @@ pub trait Trait: frame_system::Trait {
 	/// Start exchange rate
 	type InitialExchangeRate: Get<Rate>;
 
-	/// Underlying asset IDs.
-	type UnderlyingAssetId: Get<Vec<CurrencyId>>;
+	/// Enabled underlying asset IDs.
+	type EnabledUnderlyingAssetId: Get<Vec<CurrencyId>>;
 
-	/// Wrapped currency IDs.
-	type MTokensId: Get<Vec<CurrencyId>>;
+	/// Enabled wrapped currency IDs.
+	type EnabledMTokensId: Get<Vec<CurrencyId>>;
 }
 
 decl_event!(
@@ -290,9 +290,9 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> CurrencyIdResult {
-		Ok(*T::MTokensId::get()
+		Ok(*T::EnabledMTokensId::get()
 			.get(
-				T::UnderlyingAssetId::get()
+				T::EnabledUnderlyingAssetId::get()
 					.iter()
 					.position(|&underlying_id| underlying_id == *asset_id)
 					.ok_or(Error::<T>::NotValidUnderlyingAssetId)?,
@@ -301,9 +301,9 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn get_underlying_asset_id_by_wrapped_id(wrapped_id: &CurrencyId) -> CurrencyIdResult {
-		Ok(*T::UnderlyingAssetId::get()
+		Ok(*T::EnabledUnderlyingAssetId::get()
 			.get(
-				T::MTokensId::get()
+				T::EnabledMTokensId::get()
 					.iter()
 					.position(|&m_token_id| m_token_id == *wrapped_id)
 					.ok_or(Error::<T>::NotValidWrappedTokenId)?,

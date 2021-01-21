@@ -105,13 +105,13 @@ parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 	pub const BlocksPerYear: u128 = 5256000;
-	pub MTokensId: Vec<CurrencyId> = vec![
+	pub EnabledMTokensId: Vec<CurrencyId> = vec![
 		CurrencyId::MDOT,
 		CurrencyId::MKSM,
 		CurrencyId::MBTC,
 		CurrencyId::METH,
 	];
-	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
+	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = vec![
 		CurrencyId::DOT,
 		CurrencyId::KSM,
 		CurrencyId::BTC,
@@ -124,8 +124,8 @@ impl liquidity_pools::Trait for Test {
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type ModuleId = LiquidityPoolsModuleId;
 	type InitialExchangeRate = InitialExchangeRate;
-	type UnderlyingAssetId = UnderlyingAssetId;
-	type MTokensId = MTokensId;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledMTokensId = EnabledMTokensId;
 }
 
 impl controller::Trait for Test {

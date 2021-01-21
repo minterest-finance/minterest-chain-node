@@ -271,13 +271,13 @@ impl orml_currencies::Trait for Runtime {
 
 parameter_types! {
 	pub const InitialExchangeRate: Rate = INITIAL_EXCHANGE_RATE;
-	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
+	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = vec![
 		CurrencyId::DOT,
 		CurrencyId::KSM,
 		CurrencyId::BTC,
 		CurrencyId::ETH,
 	];
-	pub MTokensId: Vec<CurrencyId> = vec![
+	pub EnabledMTokensId: Vec<CurrencyId> = vec![
 		CurrencyId::MDOT,
 		CurrencyId::MKSM,
 		CurrencyId::MBTC,
@@ -290,8 +290,8 @@ impl liquidity_pools::Trait for Runtime {
 	type MultiCurrency = Currencies;
 	type ModuleId = LiquidityPoolsModuleId;
 	type InitialExchangeRate = InitialExchangeRate;
-	type MTokensId = MTokensId;
-	type UnderlyingAssetId = UnderlyingAssetId;
+	type EnabledMTokensId = EnabledMTokensId;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
 }
 
 impl controller::Trait for Runtime {
