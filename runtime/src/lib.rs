@@ -275,14 +275,18 @@ impl orml_currencies::Trait for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const InitialExchangeRate: Rate = INITIAL_EXCHANGE_RATE;
+}
+
 impl liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ModuleId = LiquidityPoolsModuleId;
+	type InitialExchangeRate = InitialExchangeRate;
 }
 
 parameter_types! {
-	pub const InitialExchangeRate: Rate = INITIAL_EXCHANGE_RATE;
 	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
 	pub MTokensId: Vec<CurrencyId> = vec![
 		CurrencyId::MDOT,
@@ -294,7 +298,6 @@ parameter_types! {
 
 impl controller::Trait for Runtime {
 	type Event = Event;
-	type InitialExchangeRate = InitialExchangeRate;
 	type MTokensId = MTokensId;
 	type UnderlyingAssetId = UnderlyingAssetId;
 }

@@ -54,9 +54,6 @@ pub trait Trait:
 	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 
-	/// Start exchange rate
-	type InitialExchangeRate: Get<Rate>;
-
 	/// Wrapped currency IDs.
 	type UnderlyingAssetId: Get<Vec<CurrencyId>>;
 
@@ -100,12 +97,6 @@ decl_error! {
 
 		/// Borrow rate is absurdly high.
 		BorrowRateIsTooHight,
-
-		/// The currency is not enabled in protocol.
-		NotValidUnderlyingAssetId,
-
-		/// The currency is not enabled in wrapped protocol.
-		NotValidWrappedTokenId,
 
 		/// Oracle unavailable or price equal 0ю
 		OraclePriceError,
@@ -246,7 +237,6 @@ decl_module! {
 type RateResult = result::Result<Rate, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 type LiquidityResult = result::Result<(Balance, Balance), DispatchError>;
-type CurrencyIdResult = result::Result<CurrencyId, DispatchError>;
 
 impl<T: Trait> Module<T> {
 	/// Applies accrued interest to total borrows and insurances.
@@ -324,41 +314,6 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	/// Converts a specified number of underlying assets into wrapped tokens.
-	/// The calculation is based on the exchange rate.
-	///
-	/// - `underlying_asset_id`: CurrencyId of underlying assets to be converted to wrapped tokens.
-	/// - `underlying_amount`: The amount of underlying assets to be converted to wrapped tokens.
-	/// Returns `wrapped_amount = underlying_amount / exchange_rate`
-	pub fn convert_to_wrapped(underlying_asset_id: CurrencyId, underlying_amount: Balance) -> BalanceResult {
-		let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
-
-		let wrapped_amount = Rate::from_inner(underlying_amount)
-			.checked_div(&exchange_rate)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		Ok(wrapped_amount)
-	}
-
-	/// Converts a specified number of wrapped tokens into underlying assets.
-	/// The calculation is based on the exchange rate.
-	///
-	/// - `wrapped_id`: CurrencyId of the wrapped tokens to be converted to underlying assets.
-	/// - `wrapped_amount`: The amount of wrapped tokens to be converted to underlying assets.
-	/// Returns `underlying_amount = wrapped_amount * exchange_rate`
-	pub fn convert_from_wrapped(wrapped_id: CurrencyId, wrapped_amount: Balance) -> BalanceResult {
-		let underlying_asset_id = Self::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
-		let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
-
-		let underlying_amount = Rate::from_inner(wrapped_amount)
-			.checked_mul(&exchange_rate)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		Ok(underlying_amount)
-	}
-
 	/// Return the borrow balance of account based on stored data.
 	///
 	/// - `who`: the address whose balance should be calculated.
@@ -413,11 +368,11 @@ impl<T: Trait> Module<T> {
 
 		// For each tokens the account is in
 		for asset in m_tokens_ids.into_iter() {
-			let underlying_asset = Self::get_underlying_asset_id_by_wrapped_id(&asset)?;
+			let underlying_asset = <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&asset)?;
 
 			// Read the balances and exchange rate from the cToken
 			let borrow_balance = Self::borrow_balance_stored(account, underlying_asset)?;
-			let exchange_rate = Self::get_exchange_rate(underlying_asset)?;
+			let exchange_rate = <LiquidityPools<T>>::get_exchange_rate(underlying_asset)?;
 			let collateral_factor = Self::get_collateral_factor(underlying_asset);
 
 			// Get the normalized price of the asset.
@@ -543,53 +498,6 @@ impl<T: Trait> Module<T> {
 
 // Private methods
 impl<T: Trait> Module<T> {
-	/// Calculates the exchange rate from the underlying to the mToken.
-	/// This function does not accrue interest before calculating the exchange rate.
-	pub fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
-		let wrapped_asset_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
-		// The total amount of cash the market has
-		let total_cash = <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id);
-
-		// Total number of tokens in circulation
-		let total_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
-
-		let total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(underlying_asset_id);
-
-		let total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id);
-
-		let current_exchange_rate =
-			Self::calculate_exchange_rate(total_cash, total_supply, total_insurance, total_borrowed)?;
-		// FIXME: can be removed.
-		<LiquidityPools<T>>::set_current_exchange_rate(underlying_asset_id, current_exchange_rate)?;
-
-		Ok(current_exchange_rate)
-	}
-
-	/// Calculates the exchange rate from the underlying to the mToken.
-	fn calculate_exchange_rate(
-		total_cash: Balance,
-		total_supply: Balance,
-		total_insurance: Balance,
-		total_borrowed: Balance,
-	) -> RateResult {
-		let rate = match total_supply.cmp(&Balance::zero()) {
-			// If there are no tokens minted: exchangeRate = InitialExchangeRate.
-			Ordering::Equal => T::InitialExchangeRate::get(),
-			// Otherwise: exchange_rate = (total_cash - total_insurance + total_borrowed) / total_supply
-			_ => {
-				let cash_plus_borrows = total_cash.checked_add(total_borrowed).ok_or(Error::<T>::NumOverflow)?;
-
-				let cash_plus_borrows_minus_insurance = cash_plus_borrows
-					.checked_sub(total_insurance)
-					.ok_or(Error::<T>::NumOverflow)?;
-
-				Rate::saturating_from_rational(cash_plus_borrows_minus_insurance, total_supply)
-			}
-		};
-
-		Ok(rate)
-	}
-
 	/// Calculates the utilization rate of the pool:
 	/// utilization_rate = total_borrows / (total_cash + total_borrows - total_insurance)
 	fn calculate_utilization_rate(
@@ -723,26 +631,6 @@ impl<T: Trait> Module<T> {
 			)
 			.ok_or(Error::<T>::NumOverflow)?;
 		Ok(result)
-	}
-
-	pub fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> CurrencyIdResult {
-		match asset_id {
-			CurrencyId::DOT => Ok(CurrencyId::MDOT),
-			CurrencyId::KSM => Ok(CurrencyId::MKSM),
-			CurrencyId::BTC => Ok(CurrencyId::MBTC),
-			CurrencyId::ETH => Ok(CurrencyId::METH),
-			_ => Err(Error::<T>::NotValidUnderlyingAssetId.into()),
-		}
-	}
-
-	pub fn get_underlying_asset_id_by_wrapped_id(wrapped_id: &CurrencyId) -> CurrencyIdResult {
-		match wrapped_id {
-			CurrencyId::MDOT => Ok(CurrencyId::DOT),
-			CurrencyId::MKSM => Ok(CurrencyId::KSM),
-			CurrencyId::MBTC => Ok(CurrencyId::BTC),
-			CurrencyId::METH => Ok(CurrencyId::ETH),
-			_ => Err(Error::<T>::NotValidWrappedTokenId.into()),
-		}
 	}
 }
 

@@ -127,12 +127,14 @@ mod tests {
 
 	parameter_types! {
 		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
+		pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 	}
 
 	impl liquidity_pools::Trait for Test {
 		type Event = ();
 		type MultiCurrency = orml_tokens::Module<Test>;
 		type ModuleId = LiquidityPoolsModuleId;
+		type InitialExchangeRate = InitialExchangeRate;
 	}
 
 	impl minterest_protocol::Trait for Test {
@@ -141,7 +143,6 @@ mod tests {
 	}
 
 	parameter_types! {
-		pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 		pub const BlocksPerYear: u128 = 5256000;
 		pub MTokensId: Vec<CurrencyId> = vec![
 			CurrencyId::MDOT,
@@ -153,7 +154,6 @@ mod tests {
 
 	impl controller::Trait for Test {
 		type Event = ();
-		type InitialExchangeRate = InitialExchangeRate;
 		type UnderlyingAssetId = UnderlyingAssetId;
 		type MTokensId = MTokensId;
 	}
@@ -233,7 +233,6 @@ mod tests {
 				Pool {
 					total_borrowed,
 					borrow_index: Rate::saturating_from_rational(1, 1),
-					current_exchange_rate: Rate::from_inner(1),
 					total_insurance: Balance::zero(),
 				},
 			));
@@ -248,7 +247,6 @@ mod tests {
 				Pool {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
-					current_exchange_rate: Rate::from_inner(1),
 					total_insurance,
 				},
 			));
@@ -281,7 +279,6 @@ mod tests {
 				Pool {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::saturating_from_rational(1, 1),
-					current_exchange_rate: Rate::saturating_from_rational(1, 1),
 					total_insurance: Balance::zero(),
 				},
 			));
@@ -490,7 +487,6 @@ mod tests {
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), BALANCE_ZERO);
 
 				// Checking DOT pool Storage params
-				assert_eq!(TestPools::pools(CurrencyId::DOT).current_exchange_rate, RATE_EQUALS_ONE);
 				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, RATE_EQUALS_ONE);
 				// Total insurance changed: 0 -> 100 000
 				let pool_total_insurance_block_number_0 =
@@ -575,7 +571,6 @@ mod tests {
 				);
 
 				// Checking DOT pool Storage params
-				assert_eq!(TestPools::pools(CurrencyId::DOT).current_exchange_rate, RATE_EQUALS_ONE);
 				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, RATE_EQUALS_ONE);
 				// Expected: 100 000
 				assert_eq!(
@@ -660,7 +655,6 @@ mod tests {
 				);
 
 				// Checking pool Storage params
-				assert_eq!(TestPools::pools(CurrencyId::DOT).current_exchange_rate, RATE_EQUALS_ONE);
 				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, RATE_EQUALS_ONE);
 				// Expected: 100 000
 				assert_eq!(
@@ -754,7 +748,6 @@ mod tests {
 				);
 
 				// Checking pool Storage params
-				assert_eq!(TestPools::pools(CurrencyId::DOT).current_exchange_rate, RATE_EQUALS_ONE);
 				// Expected: 1.000000004500000000
 				let pool_borrow_index_block_number_3: Rate =
 					Rate::saturating_from_rational(10_000_000_045u128, 10_000_000_000u128);
@@ -867,7 +860,6 @@ mod tests {
 					alice_m_dot_free_balance_block_number_1
 				);
 				// Checking pool Storage params
-				assert_eq!(TestPools::pools(CurrencyId::DOT).current_exchange_rate, RATE_EQUALS_ONE);
 				// Borrow_index changed: 1.000000004500000000 -> 1,000000006750000025
 				let pool_borrow_index_block_number_4 =
 					Rate::saturating_from_rational(1_000_000_006_750_000_025u128, 1_000_000_000_000_000_000u128);
@@ -933,8 +925,7 @@ mod tests {
 
 				// Check the underline amount before fn accrue_interest called
 				let alice_underlining_amount: Balance =
-					TestController::convert_from_wrapped(CurrencyId::MDOT, alice_m_dot_free_balance_block_number_1)
-						.unwrap();
+					TestPools::convert_from_wrapped(CurrencyId::MDOT, alice_m_dot_free_balance_block_number_1).unwrap();
 
 				System::set_block_number(5);
 
@@ -974,11 +965,6 @@ mod tests {
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), BALANCE_ZERO);
 
 				// Checking pool Storage params
-				// Expected: 1,000000002531250008
-				assert_eq!(
-					TestPools::pools(CurrencyId::DOT).current_exchange_rate,
-					Rate::from_inner(1_000_000_002_531_250_008)
-				);
 				// Expected: 1,000000006750000025
 				assert_eq!(
 					TestPools::pools(CurrencyId::DOT).borrow_index,
@@ -1045,7 +1031,7 @@ mod tests {
 
 				// Calculate expected amount of wrapped tokens for Alice
 				let alice_expected_amount_wrapped_tokens =
-					TestController::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount).unwrap();
+					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount).unwrap();
 
 				// Checking pool available liquidity increased by 60 000
 				assert_eq!(
@@ -1078,7 +1064,7 @@ mod tests {
 
 				// Calculate expected amount of wrapped tokens for Bob
 				let bob_expected_amount_wrapped_tokens =
-					TestController::convert_to_wrapped(CurrencyId::DOT, bob_deposited_amount).unwrap();
+					TestPools::convert_to_wrapped(CurrencyId::DOT, bob_deposited_amount).unwrap();
 
 				// Checking pool available liquidity increased by 60 000
 				assert_eq!(
@@ -1198,13 +1184,13 @@ mod tests {
 					ONE_HUNDRED - alice_deposited_amount_in_eth
 				);
 				let expected_amount_wrapped_tokens_in_dot =
-					TestController::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_dot).unwrap();
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
 				);
 				let expected_amount_wrapped_tokens_in_eth =
-					TestController::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_eth).unwrap();
+					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_eth).unwrap();
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth
@@ -1267,8 +1253,7 @@ mod tests {
 
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
 				let expected_amount_wrapped_tokens_in_eth_summary = expected_amount_wrapped_tokens_in_eth
-					+ TestController::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_eth_secondary)
-						.unwrap();
+					+ TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_eth_secondary).unwrap();
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth_summary
@@ -1492,8 +1477,7 @@ mod tests {
 				// Alice redeem all DOTs
 				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(CurrencyId::MDOT, &ALICE);
 				let alice_redeemed_amount_in_dot =
-					TestController::convert_from_wrapped(CurrencyId::MDOT, alice_current_balance_amount_in_m_dot)
-						.unwrap();
+					TestPools::convert_from_wrapped(CurrencyId::MDOT, alice_current_balance_amount_in_m_dot).unwrap();
 				assert_ok!(MinterestProtocol::redeem_underlying(
 					Origin::signed(ALICE),
 					CurrencyId::DOT,
@@ -1608,8 +1592,7 @@ mod tests {
 				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(CurrencyId::MDOT, &ALICE);
 				// Expected exchange rate 1000000006581250024
 				let alice_redeemed_amount_in_dot =
-					TestController::convert_from_wrapped(CurrencyId::MDOT, alice_current_balance_amount_in_m_dot)
-						.unwrap();
+					TestPools::convert_from_wrapped(CurrencyId::MDOT, alice_current_balance_amount_in_m_dot).unwrap();
 				assert_ok!(MinterestProtocol::redeem_underlying(
 					Origin::signed(ALICE),
 					CurrencyId::DOT,
@@ -1706,13 +1689,13 @@ mod tests {
 					ONE_HUNDRED - alice_deposited_amount_in_eth
 				);
 				let expected_amount_wrapped_tokens_in_dot =
-					TestController::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_dot).unwrap();
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
 				);
 				let expected_amount_wrapped_tokens_in_eth =
-					TestController::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_eth).unwrap();
+					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_eth).unwrap();
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth
@@ -1776,8 +1759,7 @@ mod tests {
 
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
 				let expected_amount_wrapped_tokens_in_eth_summary = expected_amount_wrapped_tokens_in_eth
-					+ TestController::convert_to_wrapped(CurrencyId::ETH, alice_deposited_amount_in_eth_secondary)
-						.unwrap();
+					+ TestPools::convert_to_wrapped(CurrencyId::ETH, alice_deposited_amount_in_eth_secondary).unwrap();
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth_summary
@@ -1989,8 +1971,7 @@ mod tests {
 				// Alice redeem all DOTs
 				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(CurrencyId::MDOT, &ALICE);
 				let alice_redeemed_amount_in_dot =
-					TestController::convert_from_wrapped(CurrencyId::MDOT, alice_current_balance_amount_in_m_dot)
-						.unwrap();
+					TestPools::convert_from_wrapped(CurrencyId::MDOT, alice_current_balance_amount_in_m_dot).unwrap();
 				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT));
 
 				// Checking free balance DOT && ETH && BTC for user.
@@ -2092,8 +2073,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT));
 
 				let alice_redeemed_amount_in_dot =
-					TestController::convert_from_wrapped(CurrencyId::MDOT, alice_current_balance_amount_in_m_dot)
-						.unwrap();
+					TestPools::convert_from_wrapped(CurrencyId::MDOT, alice_current_balance_amount_in_m_dot).unwrap();
 
 				// Checking pool available liquidity.
 				assert_eq!(
@@ -2614,7 +2594,7 @@ mod tests {
 					expected_amount_wrapped_tokens
 				);
 				assert_eq!(
-					TestController::get_exchange_rate(CurrencyId::DOT),
+					TestPools::get_exchange_rate(CurrencyId::DOT),
 					Ok(expected_exchange_rate_mock)
 				);
 			});
@@ -2647,7 +2627,7 @@ mod tests {
 					expected_amount_wrapped_tokens
 				);
 				assert_eq!(
-					TestController::get_exchange_rate(CurrencyId::DOT),
+					TestPools::get_exchange_rate(CurrencyId::DOT),
 					Ok(expected_exchange_rate_mock)
 				);
 			});
@@ -2690,7 +2670,7 @@ mod tests {
 					expected_amount_wrapped_tokens
 				);
 				assert_eq!(
-					TestController::get_exchange_rate(CurrencyId::DOT),
+					TestPools::get_exchange_rate(CurrencyId::DOT),
 					Ok(expected_exchange_rate_mock)
 				);
 			});
@@ -2733,7 +2713,7 @@ mod tests {
 					expected_amount_wrapped_tokens
 				);
 				assert_eq!(
-					TestController::get_exchange_rate(CurrencyId::DOT),
+					TestPools::get_exchange_rate(CurrencyId::DOT),
 					Ok(expected_exchange_rate_mock)
 				);
 			});
@@ -2784,7 +2764,7 @@ mod tests {
 				let expected_exchange_rate_mock_block_number_3 = Rate::from_inner(1000000002025000000);
 
 				assert_eq!(
-					TestController::get_exchange_rate(CurrencyId::DOT),
+					TestPools::get_exchange_rate(CurrencyId::DOT),
 					Ok(expected_exchange_rate_mock_block_number_3)
 				);
 
@@ -2813,7 +2793,7 @@ mod tests {
 					expected_amount_wrapped_tokens_bob
 				);
 				assert_eq!(
-					TestController::get_exchange_rate(CurrencyId::DOT),
+					TestPools::get_exchange_rate(CurrencyId::DOT),
 					Ok(expected_exchange_rate_mock_block_number_4)
 				);
 			});
