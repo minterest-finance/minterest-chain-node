@@ -101,91 +101,6 @@ fn accrue_interest_should_not_work() {
 }
 
 #[test]
-fn convert_to_wrapped_should_work() {
-	ExtBuilder::default()
-		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-		.user_balance(ALICE, CurrencyId::MDOT, ONE_HUNDRED)
-		.pool_total_borrowed(CurrencyId::DOT, 40)
-		.build()
-		.execute_with(|| {
-			// exchange_rate = 40 / 100 = 0.4
-			assert_eq!(Controller::convert_to_wrapped(CurrencyId::DOT, 10), Ok(25));
-
-			// Overflow in calculation: wrapped_amount = max_value() / exchange_rate,
-			// when exchange_rate < 1
-			assert_err!(
-				Controller::convert_to_wrapped(CurrencyId::DOT, Balance::max_value()),
-				Error::<Runtime>::NumOverflow
-			);
-		});
-}
-
-#[test]
-fn convert_from_wrapped_should_work() {
-	ExtBuilder::default()
-		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-		.user_balance(ALICE, CurrencyId::MDOT, ONE_HUNDRED)
-		.user_balance(ALICE, CurrencyId::MBTC, 1)
-		.pool_balance(CurrencyId::BTC, 100)
-		.pool_total_borrowed(CurrencyId::DOT, 40)
-		.build()
-		.execute_with(|| {
-			// underlying_amount = 10 * 0.4 = 4
-			assert_eq!(Controller::convert_from_wrapped(CurrencyId::MDOT, 10), Ok(4));
-
-			// Overflow in calculation: underlying_amount = max_value() * exchange_rate
-			assert_err!(
-				Controller::convert_from_wrapped(CurrencyId::MBTC, Balance::max_value()),
-				Error::<Runtime>::NumOverflow
-			);
-		});
-}
-
-#[test]
-fn calculate_exchange_rate_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// exchange_rate = (102 - 2 + 20) / 100 = 1.2
-		assert_eq!(
-			Controller::calculate_exchange_rate(102, 100, 2, 20),
-			Ok(Rate::saturating_from_rational(12, 10))
-		);
-		// If there are no tokens minted: exchangeRate = InitialExchangeRate = 1.0
-		assert_eq!(
-			Controller::calculate_exchange_rate(102, 0, 2, 0),
-			Ok(Rate::saturating_from_rational(1, 1))
-		);
-
-		// Overflow in calculation: total_cash + total_borrowed
-		assert_noop!(
-			Controller::calculate_exchange_rate(Balance::max_value(), 100, 100, 100),
-			Error::<Runtime>::NumOverflow
-		);
-
-		// Overflow in calculation: cash_plus_borrows - total_insurance
-		assert_noop!(
-			Controller::calculate_exchange_rate(100, 100, Balance::max_value(), 100),
-			Error::<Runtime>::NumOverflow
-		);
-	});
-}
-
-#[test]
-fn get_exchange_rate_should_work() {
-	ExtBuilder::default()
-		.pool_balance(CurrencyId::DOT, dollars(100_u128))
-		.user_balance(ALICE, CurrencyId::MDOT, dollars(125_u128))
-		.pool_total_borrowed(CurrencyId::DOT, dollars(300_u128))
-		.build()
-		.execute_with(|| {
-			// exchange_rate = (100 - 0 + 300) / 125 = 3.2
-			assert_eq!(
-				Controller::get_exchange_rate(CurrencyId::DOT),
-				Ok(Rate::saturating_from_rational(32, 10))
-			);
-		});
-}
-
-#[test]
 fn calculate_borrow_interest_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Utilization rate less or equal than kink:
@@ -320,34 +235,6 @@ fn calculate_new_total_insurance_should_work() {
 		assert_noop!(
 			Controller::calculate_new_total_insurance(100, Rate::saturating_from_rational(1, 1), Balance::max_value()),
 			Error::<Runtime>::NumOverflow
-		);
-	});
-}
-
-#[test]
-fn get_wrapped_id_by_underlying_asset_id_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(
-			Controller::get_wrapped_id_by_underlying_asset_id(&CurrencyId::DOT),
-			Ok(CurrencyId::MDOT)
-		);
-		assert_noop!(
-			Controller::get_wrapped_id_by_underlying_asset_id(&CurrencyId::MDOT),
-			Error::<Runtime>::NotValidUnderlyingAssetId
-		);
-	});
-}
-
-#[test]
-fn get_underlying_asset_id_by_wrapped_id_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(
-			Controller::get_underlying_asset_id_by_wrapped_id(&CurrencyId::MDOT),
-			Ok(CurrencyId::DOT)
-		);
-		assert_noop!(
-			Controller::get_underlying_asset_id_by_wrapped_id(&CurrencyId::DOT),
-			Error::<Runtime>::NotValidWrappedTokenId
 		);
 	});
 }

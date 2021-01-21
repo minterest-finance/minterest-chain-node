@@ -235,7 +235,6 @@ fn testnet_genesis(
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						current_exchange_rate: FixedU128::one(),
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -244,7 +243,6 @@ fn testnet_genesis(
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						current_exchange_rate: FixedU128::one(),
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -253,7 +251,6 @@ fn testnet_genesis(
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						current_exchange_rate: FixedU128::one(),
 						total_insurance: Balance::zero(),
 					},
 				),
@@ -262,7 +259,6 @@ fn testnet_genesis(
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						current_exchange_rate: FixedU128::one(),
 						total_insurance: Balance::zero(),
 					},
 				),

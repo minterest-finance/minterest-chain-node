@@ -190,7 +190,7 @@ decl_module! {
 		pub fn redeem_wrapped(origin, wrapped_id: CurrencyId, #[compact] wrapped_amount: Balance) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-				let underlying_asset_id = <Controller<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id).map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
+				let underlying_asset_id = <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id).map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
 				let (underlying_amount, wrapped_id, _) = Self::do_redeem(&who, underlying_asset_id, Balance::zero(), wrapped_amount, false)?;
 				Self::deposit_event(RawEvent::Redeemed(who, underlying_asset_id, underlying_amount, wrapped_id, wrapped_amount));
 				Ok(())
@@ -274,7 +274,7 @@ decl_module! {
 			ensure!(!<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id), Error::<T>::AlreadyCollateral);
 
 			// If user does not have assets in the pool, then he cannot enable as collateral the pool.
-			let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
+			let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
 			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &sender);
 			ensure!(user_wrapped_balance > 0, Error::<T>::CanotBeEnabledAsCollateral);
 
@@ -294,9 +294,9 @@ decl_module! {
 
 			ensure!(<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id), Error::<T>::AlreadyDisabledCollateral);
 
-			let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
+			let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
 			let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &sender);
-			let user_balance_disabled_asset = <Controller<T>>::convert_from_wrapped(wrapped_id, user_balance_wrapped_tokens)?;
+			let user_balance_disabled_asset = <LiquidityPools<T>>::convert_from_wrapped(wrapped_id, user_balance_wrapped_tokens)?;
 
 			// Check if the user will have enough collateral if he removes one of the collaterals.
 			let (_, shortfall) = <Controller<T>>::get_hypothetical_account_liquidity(&sender, pool_id, user_balance_disabled_asset, 0)?;
@@ -335,10 +335,10 @@ impl<T: Trait> Module<T> {
 			Error::<T>::OperationPaused
 		);
 
-		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)
+		let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)
 			.map_err(|_| Error::<T>::NotValidUnderlyingAssetId)?;
 
-		let wrapped_amount = <Controller<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
+		let wrapped_amount = <LiquidityPools<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
 			.map_err(|_| Error::<T>::NumOverflow)?;
 
 		T::MultiCurrency::transfer(
@@ -367,25 +367,25 @@ impl<T: Trait> Module<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
-		let wrapped_id = <Controller<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)
+		let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)
 			.map_err(|_| Error::<T>::NotValidUnderlyingAssetId)?;
 
 		let wrapped_amount = match (underlying_amount, wrapped_amount, all_assets) {
 			(0, 0, true) => {
 				let total_wrapped_amount = T::MultiCurrency::free_balance(wrapped_id, &who);
 				ensure!(!total_wrapped_amount.is_zero(), Error::<T>::NumberOfWrappedTokensIsZero);
-				underlying_amount = <Controller<T>>::convert_from_wrapped(wrapped_id, total_wrapped_amount)
+				underlying_amount = <LiquidityPools<T>>::convert_from_wrapped(wrapped_id, total_wrapped_amount)
 					.map_err(|_| Error::<T>::NumOverflow)?;
 				total_wrapped_amount
 			}
 			(_, 0, false) => {
 				ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
-				<Controller<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
+				<LiquidityPools<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
 					.map_err(|_| Error::<T>::NumOverflow)?
 			}
 			_ => {
 				ensure!(wrapped_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
-				underlying_amount = <Controller<T>>::convert_from_wrapped(wrapped_id, wrapped_amount)
+				underlying_amount = <LiquidityPools<T>>::convert_from_wrapped(wrapped_id, wrapped_amount)
 					.map_err(|_| Error::<T>::NumOverflow)?;
 				wrapped_amount
 			}

@@ -26,7 +26,6 @@
     "Pool": {
       "total_borrowed": "Balance",
       "borrow_index": "Rate",
-      "current_exchange_rate": "Rate",
       "total_insurance": "Balance"
     },
     "PoolUserData" : {

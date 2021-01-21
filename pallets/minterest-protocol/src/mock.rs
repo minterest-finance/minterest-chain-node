@@ -102,16 +102,17 @@ impl orml_currencies::Trait for Test {
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
+	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 }
 
 impl liquidity_pools::Trait for Test {
 	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type ModuleId = LiquidityPoolsModuleId;
+	type InitialExchangeRate = InitialExchangeRate;
 }
 
 parameter_types! {
-	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 	pub const BlocksPerYear: u128 = 5256000;
 	pub MTokensId: Vec<CurrencyId> = vec![
 		CurrencyId::MDOT,
@@ -129,7 +130,6 @@ parameter_types! {
 
 impl controller::Trait for Test {
 	type Event = TestEvent;
-	type InitialExchangeRate = InitialExchangeRate;
 	type BlocksPerYear = BlocksPerYear;
 	type UnderlyingAssetId = UnderlyingAssetId;
 	type MTokensId = MTokensId;
@@ -240,7 +240,6 @@ impl ExtBuilder {
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
-						current_exchange_rate: Rate::from_inner(1),
 						total_insurance: TEN_THOUSAND_DOLLARS,
 					},
 				),
@@ -249,7 +248,6 @@ impl ExtBuilder {
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
-						current_exchange_rate: Rate::from_inner(1),
 						total_insurance: TEN_THOUSAND_DOLLARS,
 					},
 				),
@@ -258,7 +256,6 @@ impl ExtBuilder {
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
-						current_exchange_rate: Rate::from_inner(1),
 						total_insurance: TEN_THOUSAND_DOLLARS,
 					},
 				),
