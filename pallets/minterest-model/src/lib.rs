@@ -20,6 +20,8 @@ mod tests;
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct MinterestModelData {
+	/// The "kink" in the interest rate model reflects the utilization rate at which the slope
+	/// of the interest rate goes from "gradual" to "steep".
 	pub kink: Rate,
 	pub base_rate_per_block: Rate,
 	pub multiplier_per_block: Rate,
