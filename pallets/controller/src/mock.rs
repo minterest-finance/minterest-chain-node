@@ -109,7 +109,19 @@ impl orml_currencies::Trait for Runtime {
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
-
+	pub const BlocksPerYear: u128 = 5256000u128;
+	pub MTokensId: Vec<CurrencyId> = vec![
+			CurrencyId::MDOT,
+			CurrencyId::MKSM,
+			CurrencyId::MBTC,
+			CurrencyId::METH,
+		];
+	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
+		CurrencyId::DOT,
+		CurrencyId::KSM,
+		CurrencyId::BTC,
+		CurrencyId::ETH,
+	];
 }
 
 impl liquidity_pools::Trait for Runtime {
@@ -117,6 +129,8 @@ impl liquidity_pools::Trait for Runtime {
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type ModuleId = LiquidityPoolsModuleId;
 	type InitialExchangeRate = InitialExchangeRate;
+	type MTokensId = MTokensId;
+	type UnderlyingAssetId = UnderlyingAssetId;
 }
 
 impl oracle::Trait for Runtime {
@@ -137,26 +151,8 @@ impl minterest_model::Trait for Runtime {
 	type BlocksPerYear = BlocksPerYear;
 }
 
-parameter_types! {
-	pub const BlocksPerYear: u128 = 5256000u128;
-	pub MTokensId: Vec<CurrencyId> = vec![
-			CurrencyId::MDOT,
-			CurrencyId::MKSM,
-			CurrencyId::MBTC,
-			CurrencyId::METH,
-		];
-	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
-		CurrencyId::DOT,
-		CurrencyId::KSM,
-		CurrencyId::BTC,
-		CurrencyId::ETH,
-	];
-}
-
 impl Trait for Runtime {
 	type Event = TestEvent;
-	type MTokensId = MTokensId;
-	type UnderlyingAssetId = UnderlyingAssetId;
 }
 
 pub type BlockNumber = u64;

@@ -257,12 +257,6 @@ impl orml_tokens::Trait for Runtime {
 
 parameter_types! {
 	pub const GetMinterestCurrencyId: CurrencyId = CurrencyId::MINT;
-	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
-		CurrencyId::DOT,
-		CurrencyId::KSM,
-		CurrencyId::BTC,
-		CurrencyId::ETH,
-	];
 }
 
 pub type MinterestToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
@@ -277,17 +271,12 @@ impl orml_currencies::Trait for Runtime {
 
 parameter_types! {
 	pub const InitialExchangeRate: Rate = INITIAL_EXCHANGE_RATE;
-}
-
-impl liquidity_pools::Trait for Runtime {
-	type Event = Event;
-	type MultiCurrency = Currencies;
-	type ModuleId = LiquidityPoolsModuleId;
-	type InitialExchangeRate = InitialExchangeRate;
-}
-
-parameter_types! {
-	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
+	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
+		CurrencyId::DOT,
+		CurrencyId::KSM,
+		CurrencyId::BTC,
+		CurrencyId::ETH,
+	];
 	pub MTokensId: Vec<CurrencyId> = vec![
 		CurrencyId::MDOT,
 		CurrencyId::MKSM,
@@ -296,10 +285,17 @@ parameter_types! {
 	];
 }
 
-impl controller::Trait for Runtime {
+impl liquidity_pools::Trait for Runtime {
 	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ModuleId = LiquidityPoolsModuleId;
+	type InitialExchangeRate = InitialExchangeRate;
 	type MTokensId = MTokensId;
 	type UnderlyingAssetId = UnderlyingAssetId;
+}
+
+impl controller::Trait for Runtime {
+	type Event = Event;
 }
 
 parameter_types! {
@@ -313,6 +309,10 @@ impl accounts::Trait for Runtime {
 
 impl oracle::Trait for Runtime {
 	type Event = Event;
+}
+
+parameter_types! {
+	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
 }
 
 impl minterest_model::Trait for Runtime {

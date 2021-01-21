@@ -20,8 +20,10 @@ pub struct Pool {
 	/// Total amount of outstanding borrows of the underlying in this pool.
 	#[codec(compact)]
 	pub total_borrowed: Balance,
+
 	/// Accumulator of the total earned interest rate since the opening of the pool.
 	pub borrow_index: Rate,
+
 	/// Total amount of insurance of the underlying held in this pool.
 	#[codec(compact)]
 	pub total_insurance: Balance,
@@ -34,8 +36,10 @@ pub struct PoolUserData {
 	/// recent balance-changing action.
 	#[codec(compact)]
 	pub total_borrowed: Balance,
+
 	/// Global borrow_index as of the most recent balance-changing action.
 	pub interest_index: Rate,
+
 	/// Wheter or not pool as a collateral.
 	pub collateral: bool,
 }
@@ -56,6 +60,12 @@ pub trait Trait: frame_system::Trait {
 
 	/// Start exchange rate
 	type InitialExchangeRate: Get<Rate>;
+
+	/// Underlying asset IDs.
+	type UnderlyingAssetId: Get<Vec<CurrencyId>>;
+
+	/// Wrapped currency IDs.
+	type MTokensId: Get<Vec<CurrencyId>>;
 }
 
 decl_event!(
@@ -280,23 +290,25 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> CurrencyIdResult {
-		match asset_id {
-			CurrencyId::DOT => Ok(CurrencyId::MDOT),
-			CurrencyId::KSM => Ok(CurrencyId::MKSM),
-			CurrencyId::BTC => Ok(CurrencyId::MBTC),
-			CurrencyId::ETH => Ok(CurrencyId::METH),
-			_ => Err(Error::<T>::NotValidUnderlyingAssetId.into()),
-		}
+		Ok(*T::MTokensId::get()
+			.get(
+				T::UnderlyingAssetId::get()
+					.iter()
+					.position(|&underlying_id| underlying_id == *asset_id)
+					.ok_or(Error::<T>::NotValidUnderlyingAssetId)?,
+			)
+			.ok_or(Error::<T>::NotValidWrappedTokenId)?)
 	}
 
 	pub fn get_underlying_asset_id_by_wrapped_id(wrapped_id: &CurrencyId) -> CurrencyIdResult {
-		match wrapped_id {
-			CurrencyId::MDOT => Ok(CurrencyId::DOT),
-			CurrencyId::MKSM => Ok(CurrencyId::KSM),
-			CurrencyId::MBTC => Ok(CurrencyId::BTC),
-			CurrencyId::METH => Ok(CurrencyId::ETH),
-			_ => Err(Error::<T>::NotValidWrappedTokenId.into()),
-		}
+		Ok(*T::UnderlyingAssetId::get()
+			.get(
+				T::MTokensId::get()
+					.iter()
+					.position(|&m_token_id| m_token_id == *wrapped_id)
+					.ok_or(Error::<T>::NotValidWrappedTokenId)?,
+			)
+			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?)
 	}
 }
 

@@ -20,10 +20,15 @@ use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
 pub struct ControllerData<BlockNumber> {
 	/// Block number that interest was last accrued at.
 	pub timestamp: BlockNumber,
+
 	pub supply_rate: Rate, // FIXME. Delete and implement via RPC
+
 	pub borrow_rate: Rate,
+
 	pub insurance_factor: Rate,
+
 	pub max_borrow_rate: Rate,
+
 	/// Determines how much a user can borrow.
 	pub collateral_factor: Rate,
 }
@@ -53,12 +58,6 @@ pub trait Trait:
 {
 	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
-
-	/// Wrapped currency IDs.
-	type UnderlyingAssetId: Get<Vec<CurrencyId>>;
-
-	/// Wrapped currency IDs.
-	type MTokensId: Get<Vec<CurrencyId>>;
 }
 
 decl_event! {
