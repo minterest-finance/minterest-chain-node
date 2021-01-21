@@ -361,7 +361,7 @@ fn testnet_genesis(
 				(
 					CurrencyId::ETH,
 					MinterestModelData {
-						kink: FixedU128::saturating_from_rational(8, 10),
+						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
 						base_rate_per_block: FixedU128::zero(),
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
@@ -370,7 +370,7 @@ fn testnet_genesis(
 				(
 					CurrencyId::DOT,
 					MinterestModelData {
-						kink: FixedU128::saturating_from_rational(8, 10),
+						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
 						base_rate_per_block: FixedU128::zero(),
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
@@ -379,7 +379,7 @@ fn testnet_genesis(
 				(
 					CurrencyId::KSM,
 					MinterestModelData {
-						kink: FixedU128::saturating_from_rational(8, 10),
+						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
 						base_rate_per_block: FixedU128::zero(),
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
@@ -388,7 +388,7 @@ fn testnet_genesis(
 				(
 					CurrencyId::BTC,
 					MinterestModelData {
-						kink: FixedU128::saturating_from_rational(8, 10),
+						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
 						base_rate_per_block: FixedU128::zero(),
 						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
