@@ -20,11 +20,16 @@ mod tests;
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct MinterestModelData {
-	/// The "kink" in the interest rate model reflects the utilization rate at which the slope
-	/// of the interest rate goes from "gradual" to "steep".
+	/// The utilization point at which the jump multiplier is applied
 	pub kink: Rate,
+
+	/// The base interest rate which is the y-intercept when utilization rate is 0
 	pub base_rate_per_block: Rate,
+
+	/// The multiplier of utilization rate that gives the slope of the interest rate
 	pub multiplier_per_block: Rate,
+
+	/// The multiplierPerBlock after hitting a specified utilization point
 	pub jump_multiplier_per_block: Rate,
 }
 
