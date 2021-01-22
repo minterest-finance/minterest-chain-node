@@ -360,7 +360,10 @@ impl<T: Trait> Module<T> {
 	) -> LiquidityResult {
 		ensure!(!(borrow_amount > 0 && redeem_amount > 0), Error::<T>::ParametersError);
 
-		let m_tokens_ids = T::EnabledMTokensId::get();
+		let m_tokens_ids: Vec<CurrencyId> = T::EnabledCurrencyPair::get()
+			.iter()
+			.map(|currency_pair| currency_pair.wrapped_id)
+			.collect();
 
 		let mut sum_collateral = Balance::zero();
 		let mut sum_borrow_plus_effects = Balance::zero();

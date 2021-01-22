@@ -2,7 +2,7 @@
 
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use liquidity_pools::{Pool, PoolUserData};
-use minterest_primitives::{Balance, CurrencyId, Rate};
+use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_currencies::Currency;
 use sp_core::H256;
 use sp_runtime::{
@@ -105,17 +105,11 @@ parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 	pub const BlocksPerYear: u128 = 5256000;
-	pub EnabledMTokensId: Vec<CurrencyId> = vec![
-		CurrencyId::MDOT,
-		CurrencyId::MKSM,
-		CurrencyId::MBTC,
-		CurrencyId::METH,
-	];
-	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = vec![
-		CurrencyId::DOT,
-		CurrencyId::KSM,
-		CurrencyId::BTC,
-		CurrencyId::ETH,
+	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
+		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
+		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
+		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
+		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 	];
 }
 
@@ -124,8 +118,7 @@ impl liquidity_pools::Trait for Test {
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type ModuleId = LiquidityPoolsModuleId;
 	type InitialExchangeRate = InitialExchangeRate;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
-	type EnabledMTokensId = EnabledMTokensId;
+	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
 
 impl controller::Trait for Test {

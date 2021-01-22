@@ -121,8 +121,6 @@ decl_module! {
 		type Error = Error<T>;
 		fn deposit_event() = default;
 
-		const EnabledUnderlyingAssetId: Vec<CurrencyId> = T::EnabledUnderlyingAssetId::get();
-
 		/// Transfers an asset into the protocol. The user receives a quantity of mTokens equal
 		/// to the underlying tokens supplied, divided by the current Exchange Rate.
 		///
@@ -267,7 +265,11 @@ decl_module! {
 		pub fn enable_as_collateral(origin, pool_id: CurrencyId) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(
-				T::EnabledUnderlyingAssetId::get().contains(&pool_id),
+				T::EnabledCurrencyPair::get()
+				.iter()
+				.map(|currency_pair| currency_pair.underlying_id)
+				.collect::<Vec<CurrencyId>>()
+				.contains(&pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -288,7 +290,10 @@ decl_module! {
 		pub fn disable_collateral(origin, pool_id: CurrencyId) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(
-				T::EnabledUnderlyingAssetId::get().contains(&pool_id),
+				T::EnabledCurrencyPair::get()
+				.iter()
+				.map(|currency_pair| currency_pair.underlying_id)
+				.collect::<Vec<CurrencyId>>().contains(&pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -316,7 +321,11 @@ type BalanceResult = result::Result<Balance, DispatchError>;
 impl<T: Trait> Module<T> {
 	fn do_deposit(who: &T::AccountId, underlying_asset_id: CurrencyId, underlying_amount: Balance) -> TokensResult {
 		ensure!(
-			T::EnabledUnderlyingAssetId::get().contains(&underlying_asset_id),
+			T::EnabledCurrencyPair::get()
+				.iter()
+				.map(|currency_pair| currency_pair.underlying_id)
+				.collect::<Vec<CurrencyId>>()
+				.contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
@@ -361,7 +370,11 @@ impl<T: Trait> Module<T> {
 		all_assets: bool,
 	) -> TokensResult {
 		ensure!(
-			T::EnabledUnderlyingAssetId::get().contains(&underlying_asset_id),
+			T::EnabledCurrencyPair::get()
+				.iter()
+				.map(|currency_pair| currency_pair.underlying_id)
+				.collect::<Vec<CurrencyId>>()
+				.contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
@@ -428,7 +441,11 @@ impl<T: Trait> Module<T> {
 	/// - `underlying_amount`: the amount of the underlying asset to borrow.
 	fn do_borrow(who: &T::AccountId, underlying_asset_id: CurrencyId, borrow_amount: Balance) -> DispatchResult {
 		ensure!(
-			T::EnabledUnderlyingAssetId::get().contains(&underlying_asset_id),
+			T::EnabledCurrencyPair::get()
+				.iter()
+				.map(|currency_pair| currency_pair.underlying_id)
+				.collect::<Vec<CurrencyId>>()
+				.contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
@@ -484,7 +501,11 @@ impl<T: Trait> Module<T> {
 		all_assets: bool,
 	) -> BalanceResult {
 		ensure!(
-			T::EnabledUnderlyingAssetId::get().contains(&underlying_asset_id),
+			T::EnabledCurrencyPair::get()
+				.iter()
+				.map(|currency_pair| currency_pair.underlying_id)
+				.collect::<Vec<CurrencyId>>()
+				.contains(&underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 

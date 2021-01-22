@@ -28,7 +28,8 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 pub use minterest_primitives::{
-	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DigestItem, Hash, Index, Rate, Signature,
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, CurrencyPair, DigestItem, Hash, Index, Rate,
+	Signature,
 };
 
 // A few exports that help ease life for downstream crates.
@@ -271,17 +272,11 @@ impl orml_currencies::Trait for Runtime {
 
 parameter_types! {
 	pub const InitialExchangeRate: Rate = INITIAL_EXCHANGE_RATE;
-	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = vec![
-		CurrencyId::DOT,
-		CurrencyId::KSM,
-		CurrencyId::BTC,
-		CurrencyId::ETH,
-	];
-	pub EnabledMTokensId: Vec<CurrencyId> = vec![
-		CurrencyId::MDOT,
-		CurrencyId::MKSM,
-		CurrencyId::MBTC,
-		CurrencyId::METH,
+	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
+		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
+		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
+		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
+		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 	];
 }
 
@@ -290,8 +285,7 @@ impl liquidity_pools::Trait for Runtime {
 	type MultiCurrency = Currencies;
 	type ModuleId = LiquidityPoolsModuleId;
 	type InitialExchangeRate = InitialExchangeRate;
-	type EnabledMTokensId = EnabledMTokensId;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
 
 impl controller::Trait for Runtime {

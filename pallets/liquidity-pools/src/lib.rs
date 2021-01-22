@@ -2,7 +2,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get};
-use minterest_primitives::{Balance, CurrencyId, Rate};
+use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::Borrowing;
 #[cfg(feature = "std")]
@@ -61,11 +61,8 @@ pub trait Trait: frame_system::Trait {
 	/// Start exchange rate
 	type InitialExchangeRate: Get<Rate>;
 
-	/// Enabled underlying asset IDs.
-	type EnabledUnderlyingAssetId: Get<Vec<CurrencyId>>;
-
-	/// Enabled wrapped currency IDs.
-	type EnabledMTokensId: Get<Vec<CurrencyId>>;
+	/// Enabled currency pairs.
+	type EnabledCurrencyPair: Get<Vec<CurrencyPair>>;
 }
 
 decl_event!(
@@ -107,6 +104,18 @@ decl_module! {
 
 			/// The Liquidity Pool's account id, keep all assets in Pools.
 			const PoolAccountId: T::AccountId = T::ModuleId::get().into_account();
+
+			/// Enabled underlying asset IDs.
+			const EnabledUnderlyingAssetId: Vec<CurrencyId> = T::EnabledCurrencyPair::get()
+				.iter()
+				.map(|currency_pair| currency_pair.underlying_id)
+				.collect();
+
+			/// Enabled wrapped token IDs.
+			const EnabledWrappedTokensId: Vec<CurrencyId> = T::EnabledCurrencyPair::get()
+				.iter()
+				.map(|currency_pair| currency_pair.wrapped_id)
+				.collect();
 	}
 }
 
@@ -290,25 +299,25 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> CurrencyIdResult {
-		Ok(*T::EnabledMTokensId::get()
-			.get(
-				T::EnabledUnderlyingAssetId::get()
-					.iter()
-					.position(|&underlying_id| underlying_id == *asset_id)
-					.ok_or(Error::<T>::NotValidUnderlyingAssetId)?,
-			)
-			.ok_or(Error::<T>::NotValidWrappedTokenId)?)
+		let enabled_currency_pair = T::EnabledCurrencyPair::get();
+
+		let currency_pair = *enabled_currency_pair
+			.iter()
+			.find(|currency_pair| currency_pair.underlying_id == *asset_id)
+			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+
+		Ok(currency_pair.wrapped_id)
 	}
 
 	pub fn get_underlying_asset_id_by_wrapped_id(wrapped_id: &CurrencyId) -> CurrencyIdResult {
-		Ok(*T::EnabledUnderlyingAssetId::get()
-			.get(
-				T::EnabledMTokensId::get()
-					.iter()
-					.position(|&m_token_id| m_token_id == *wrapped_id)
-					.ok_or(Error::<T>::NotValidWrappedTokenId)?,
-			)
-			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?)
+		let enabled_currency_pair = T::EnabledCurrencyPair::get();
+
+		let currency_pair = *enabled_currency_pair
+			.iter()
+			.find(|currency_pair| currency_pair.wrapped_id == *wrapped_id)
+			.ok_or(Error::<T>::NotValidWrappedTokenId)?;
+
+		Ok(currency_pair.underlying_id)
 	}
 }
 

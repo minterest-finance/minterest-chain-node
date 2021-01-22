@@ -5,7 +5,7 @@ mod tests {
 	use frame_support::{assert_noop, assert_ok, impl_outer_origin, parameter_types};
 	use frame_system::{self as system};
 	use liquidity_pools::{Pool, PoolUserData};
-	use minterest_primitives::{Balance, CurrencyId, Rate};
+	use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 	use orml_currencies::Currency;
 	use orml_traits::MultiCurrency;
 	use pallet_traits::Borrowing;
@@ -123,17 +123,11 @@ mod tests {
 	parameter_types! {
 		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
 		pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
-		pub EnabledMTokensId: Vec<CurrencyId> = vec![
-			CurrencyId::MDOT,
-			CurrencyId::MKSM,
-			CurrencyId::MBTC,
-			CurrencyId::METH,
-		];
-		pub EnabledUnderlyingAssetId: Vec<CurrencyId> = vec![
-			CurrencyId::DOT,
-			CurrencyId::KSM,
-			CurrencyId::BTC,
-			CurrencyId::ETH,
+		pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
+			CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
+			CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
+			CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
+			CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 		];
 	}
 
@@ -142,8 +136,7 @@ mod tests {
 		type MultiCurrency = orml_tokens::Module<Test>;
 		type ModuleId = LiquidityPoolsModuleId;
 		type InitialExchangeRate = InitialExchangeRate;
-		type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
-		type EnabledMTokensId = EnabledMTokensId;
+		type EnabledCurrencyPair = EnabledCurrencyPair;
 	}
 
 	impl minterest_protocol::Trait for Test {
