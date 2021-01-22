@@ -1,0 +1,36 @@
+[package]
+name = "minterest-model"
+description = 'Pallet for minteres model implementation'
+version = "0.1.0"
+authors = ["Minterest <https://github.com/minterest-defi>"]
+edition = "2018"
+
+[dependencies]
+serde = { version = "1.0.101", optional = true }
+codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false }
+sp-runtime = { version = "2.0.0", default-features = false }
+sp-std = { version = "2.0.0", default-features = false }
+
+frame-support = { default-features = false, version = '2.0.0' }
+frame-system = { default-features = false, version = '2.0.0' }
+
+minterest-primitives = { path = "../../primitives", default-features = false }
+accounts = { path = "../accounts", default-features = false }
+
+[dev-dependencies]
+sp-core = { version = '2.0.0' }
+sp-io = { version = '2.0.0' }
+
+accounts = { path = "../accounts" }
+
+[features]
+default = ['std']
+std = [
+    "serde",
+    'codec/std',
+    "sp-runtime/std",
+    "sp-std/std",
+    'frame-support/std',
+    'frame-system/std',
+    "minterest-primitives/std",
+]

@@ -12,6 +12,7 @@ use sp_runtime::{
 };
 
 use super::*;
+use minterest_model::MinterestModelData;
 
 mod controller {
 	pub use crate::Event;
@@ -30,6 +31,7 @@ impl_outer_event! {
 		controller,
 		oracle,
 		accounts<T>,
+		minterest_model,
 	}
 }
 
@@ -130,6 +132,11 @@ impl accounts::Trait for Runtime {
 	type MaxMembers = MaxMembers;
 }
 
+impl minterest_model::Trait for Runtime {
+	type Event = TestEvent;
+	type BlocksPerYear = BlocksPerYear;
+}
+
 parameter_types! {
 	pub const BlocksPerYear: u128 = 5256000u128;
 	pub MTokensId: Vec<CurrencyId> = vec![
@@ -149,7 +156,6 @@ parameter_types! {
 impl Trait for Runtime {
 	type Event = TestEvent;
 	type MTokensId = MTokensId;
-	type BlocksPerYear = BlocksPerYear;
 	type UnderlyingAssetId = UnderlyingAssetId;
 }
 
@@ -186,7 +192,6 @@ pub fn bob() -> Origin {
 	Origin::signed(BOB)
 }
 pub const ONE_HUNDRED: Balance = 100;
-pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub fn dollars<T: Into<u128>>(d: T) -> Balance {
 	DOLLARS.saturating_mul(d.into())
@@ -299,11 +304,7 @@ impl ExtBuilder {
 						borrow_rate: Rate::from_inner(0),
 						insurance_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-						kink: Rate::saturating_from_rational(8, 10),
-						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 					},
 				),
 				(
@@ -314,11 +315,7 @@ impl ExtBuilder {
 						borrow_rate: Rate::from_inner(0),
 						insurance_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-						kink: Rate::saturating_from_rational(8, 10),
-						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 					},
 				),
 				(
@@ -329,11 +326,7 @@ impl ExtBuilder {
 						borrow_rate: Rate::from_inner(0),
 						insurance_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-						kink: Rate::saturating_from_rational(8, 10),
-						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 					},
 				),
 			],
@@ -388,6 +381,40 @@ impl ExtBuilder {
 
 		accounts::GenesisConfig::<Runtime> {
 			allowed_accounts: vec![(ALICE, ())],
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		minterest_model::GenesisConfig {
+			minterest_model_dates: vec![
+				(
+					CurrencyId::DOT,
+					MinterestModelData {
+						kink: Rate::saturating_from_rational(8, 10),
+						base_rate_per_block: Rate::zero(),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
+				(
+					CurrencyId::ETH,
+					MinterestModelData {
+						kink: Rate::saturating_from_rational(8, 10),
+						base_rate_per_block: Rate::zero(),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
+				(
+					CurrencyId::BTC,
+					MinterestModelData {
+						kink: Rate::saturating_from_rational(8, 10),
+						base_rate_per_block: Rate::zero(),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
+			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

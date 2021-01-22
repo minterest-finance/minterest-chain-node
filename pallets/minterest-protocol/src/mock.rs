@@ -28,6 +28,7 @@ impl_outer_event! {
 		controller,
 		oracle,
 		accounts<T>,
+		minterest_model,
 	}
 }
 
@@ -130,7 +131,6 @@ parameter_types! {
 
 impl controller::Trait for Test {
 	type Event = TestEvent;
-	type BlocksPerYear = BlocksPerYear;
 	type UnderlyingAssetId = UnderlyingAssetId;
 	type MTokensId = MTokensId;
 }
@@ -146,6 +146,11 @@ parameter_types! {
 impl accounts::Trait for Test {
 	type Event = TestEvent;
 	type MaxMembers = MaxMembers;
+}
+
+impl minterest_model::Trait for Test {
+	type Event = TestEvent;
+	type BlocksPerYear = BlocksPerYear;
 }
 
 impl Trait for Test {
@@ -330,11 +335,7 @@ impl ExtBuilder {
 						borrow_rate: Rate::from_inner(0),
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
-						kink: Rate::saturating_from_rational(8, 10),              // 80%
-						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 					},
 				),
 				(
@@ -345,11 +346,7 @@ impl ExtBuilder {
 						borrow_rate: Rate::from_inner(0),
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
-						kink: Rate::saturating_from_rational(8, 10),              // 80%
-						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 					},
 				),
 				(
@@ -360,11 +357,7 @@ impl ExtBuilder {
 						borrow_rate: Rate::from_inner(0),
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
-						kink: Rate::saturating_from_rational(8, 10),              // 80%
-						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 					},
 				),
 				(
@@ -375,11 +368,7 @@ impl ExtBuilder {
 						borrow_rate: Rate::from_inner(0),
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
-						kink: Rate::saturating_from_rational(8, 10),              // 80%
-						base_rate_per_block: Rate::from_inner(0),
-						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						collateral_factor: Rate::saturating_from_rational(9, 10),               // 90%
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 					},
 				),
 			],

@@ -33,6 +33,7 @@ integration-tests = { path = "../pallets/integration-tests", default-features = 
 controller = { path = "../pallets/controller", default-features = false }
 accounts = { path = "../pallets/accounts", default-features = false }
 oracle = { path = "../pallets/oracle", default-features = false }
+minterest-model = { path = "../pallets/minterest-model", default-features = false }
 
 # Substrate dependencies
 frame-benchmarking = { default-features = false, optional = true, version = '2.0.0' }
@@ -123,4 +124,5 @@ std = [
     'controller/std',
     'accounts/std',
     'oracle/std',
+    'minterest-model/std',
 ]
