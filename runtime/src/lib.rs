@@ -299,7 +299,6 @@ parameter_types! {
 impl controller::Trait for Runtime {
 	type Event = Event;
 	type MTokensId = MTokensId;
-	type BlocksPerYear = BlocksPerYear;
 	type UnderlyingAssetId = UnderlyingAssetId;
 }
 
@@ -314,6 +313,11 @@ impl accounts::Trait for Runtime {
 
 impl oracle::Trait for Runtime {
 	type Event = Event;
+}
+
+impl minterest_model::Trait for Runtime {
+	type Event = Event;
+	type BlocksPerYear = BlocksPerYear;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -341,6 +345,7 @@ construct_runtime!(
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		Accounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		Oracle: oracle::{Module, Storage, Call, Event},
+		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 	}
 );
 
