@@ -141,6 +141,7 @@ impl accounts::Trait for Test {
 impl minterest_model::Trait for Test {
 	type Event = TestEvent;
 	type BlocksPerYear = BlocksPerYear;
+	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
 
 impl Trait for Test {

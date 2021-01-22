@@ -8,7 +8,7 @@ use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
 use sp_runtime::{traits::Zero, DispatchError, DispatchResult};
 use sp_std::cmp::Ordering;
-use sp_std::{prelude::Vec, result};
+use sp_std::result;
 
 #[cfg(test)]
 mod mock;
@@ -265,11 +265,10 @@ decl_module! {
 		pub fn enable_as_collateral(origin, pool_id: CurrencyId) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(
-				T::EnabledCurrencyPair::get()
+				<T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
 				.iter()
-				.map(|currency_pair| currency_pair.underlying_id)
-				.collect::<Vec<CurrencyId>>()
-				.contains(&pool_id),
+				.find(|pair| pair.underlying_id == pool_id)
+				.is_some(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -290,10 +289,10 @@ decl_module! {
 		pub fn disable_collateral(origin, pool_id: CurrencyId) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(
-				T::EnabledCurrencyPair::get()
+				<T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
 				.iter()
-				.map(|currency_pair| currency_pair.underlying_id)
-				.collect::<Vec<CurrencyId>>().contains(&pool_id),
+				.find(|pair| pair.underlying_id == pool_id)
+				.is_some(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -321,11 +320,10 @@ type BalanceResult = result::Result<Balance, DispatchError>;
 impl<T: Trait> Module<T> {
 	fn do_deposit(who: &T::AccountId, underlying_asset_id: CurrencyId, underlying_amount: Balance) -> TokensResult {
 		ensure!(
-			T::EnabledCurrencyPair::get()
+			<T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
 				.iter()
-				.map(|currency_pair| currency_pair.underlying_id)
-				.collect::<Vec<CurrencyId>>()
-				.contains(&underlying_asset_id),
+				.find(|pair| pair.underlying_id == underlying_asset_id)
+				.is_some(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
@@ -370,11 +368,10 @@ impl<T: Trait> Module<T> {
 		all_assets: bool,
 	) -> TokensResult {
 		ensure!(
-			T::EnabledCurrencyPair::get()
+			<T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
 				.iter()
-				.map(|currency_pair| currency_pair.underlying_id)
-				.collect::<Vec<CurrencyId>>()
-				.contains(&underlying_asset_id),
+				.find(|pair| pair.underlying_id == underlying_asset_id)
+				.is_some(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
@@ -441,11 +438,10 @@ impl<T: Trait> Module<T> {
 	/// - `underlying_amount`: the amount of the underlying asset to borrow.
 	fn do_borrow(who: &T::AccountId, underlying_asset_id: CurrencyId, borrow_amount: Balance) -> DispatchResult {
 		ensure!(
-			T::EnabledCurrencyPair::get()
+			<T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
 				.iter()
-				.map(|currency_pair| currency_pair.underlying_id)
-				.collect::<Vec<CurrencyId>>()
-				.contains(&underlying_asset_id),
+				.find(|pair| pair.underlying_id == underlying_asset_id)
+				.is_some(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
@@ -501,11 +497,10 @@ impl<T: Trait> Module<T> {
 		all_assets: bool,
 	) -> BalanceResult {
 		ensure!(
-			T::EnabledCurrencyPair::get()
+			<T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
 				.iter()
-				.map(|currency_pair| currency_pair.underlying_id)
-				.collect::<Vec<CurrencyId>>()
-				.contains(&underlying_asset_id),
+				.find(|pair| pair.underlying_id == underlying_asset_id)
+				.is_some(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 

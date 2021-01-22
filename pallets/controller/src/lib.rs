@@ -360,7 +360,7 @@ impl<T: Trait> Module<T> {
 	) -> LiquidityResult {
 		ensure!(!(borrow_amount > 0 && redeem_amount > 0), Error::<T>::ParametersError);
 
-		let m_tokens_ids: Vec<CurrencyId> = T::EnabledCurrencyPair::get()
+		let m_tokens_ids: Vec<CurrencyId> = <T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
 			.iter()
 			.map(|currency_pair| currency_pair.wrapped_id)
 			.collect();

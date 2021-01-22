@@ -145,6 +145,7 @@ parameter_types! {
 impl minterest_model::Trait for Runtime {
 	type Event = TestEvent;
 	type BlocksPerYear = BlocksPerYear;
+	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
 
 impl Trait for Runtime {

@@ -3,7 +3,7 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{self as system, ensure_signed};
-use minterest_primitives::{CurrencyId, Rate};
+use minterest_primitives::{CurrencyId, CurrencyPair, Rate};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -40,6 +40,9 @@ pub trait Trait: system::Trait + accounts::Trait {
 
 	/// The approximate number of blocks per year
 	type BlocksPerYear: Get<u128>;
+
+	/// Enabled currency pairs.
+	type EnabledCurrencyPair: Get<Vec<CurrencyPair>>;
 }
 
 decl_storage! {
@@ -63,6 +66,9 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
+		/// The currency is not enabled in protocol.
+		NotValidUnderlyingAssetId,
+
 		/// Number overflow in calculation.
 		NumOverflow,
 
@@ -91,6 +97,14 @@ decl_module! {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 
+			ensure!(
+				<T>::EnabledCurrencyPair::get()
+					.iter()
+					.find(|pair| pair.underlying_id == pool_id)
+					.is_some(),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+
 			let new_jump_multiplier_per_year = Rate::checked_from_rational(jump_multiplier_rate_per_year_n, jump_multiplier_rate_per_year_d).ok_or(Error::<T>::NumOverflow)?;
 			let new_jump_multiplier_per_block = new_jump_multiplier_per_year
 				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
@@ -108,6 +122,14 @@ decl_module! {
 		pub fn set_base_rate_per_block(origin, pool_id: CurrencyId, base_rate_per_year_n: u128, base_rate_per_year_d: u128) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+
+			ensure!(
+				<T>::EnabledCurrencyPair::get()
+					.iter()
+					.find(|pair| pair.underlying_id == pool_id)
+					.is_some(),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
 
 			let new_base_rate_per_year = Rate::checked_from_rational(base_rate_per_year_n, base_rate_per_year_d)
 				.ok_or(Error::<T>::NumOverflow)?;
@@ -132,6 +154,14 @@ decl_module! {
 		pub fn set_multiplier_per_block(origin, pool_id: CurrencyId, multiplier_rate_per_year_n: u128, multiplier_rate_per_year_d: u128) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+
+			ensure!(
+				<T>::EnabledCurrencyPair::get()
+					.iter()
+					.find(|pair| pair.underlying_id == pool_id)
+					.is_some(),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
 
 			let new_multiplier_per_year = Rate::checked_from_rational(multiplier_rate_per_year_n, multiplier_rate_per_year_d)
 				.ok_or(Error::<T>::NumOverflow)?;

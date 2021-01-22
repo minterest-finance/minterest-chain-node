@@ -312,6 +312,7 @@ parameter_types! {
 impl minterest_model::Trait for Runtime {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
+	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

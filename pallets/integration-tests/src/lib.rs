@@ -168,6 +168,7 @@ mod tests {
 	impl minterest_model::Trait for Test {
 		type Event = ();
 		type BlocksPerYear = BlocksPerYear;
+		type EnabledCurrencyPair = EnabledCurrencyPair;
 	}
 
 	pub const ADMIN: AccountId = 0;
