@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get, IterableStorageDoubleMap};
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::Borrowing;
@@ -297,6 +297,13 @@ impl<T: Trait> Module<T> {
 			CurrencyId::METH => Ok(CurrencyId::ETH),
 			_ => Err(Error::<T>::NotValidWrappedTokenId.into()),
 		}
+	}
+
+	pub fn get_pool_members(underlying_asset_id: CurrencyId) -> result::Result<Vec<T::AccountId>, DispatchError> {
+		let user_vec: Vec<T::AccountId> = PoolUserDates::<T>::iter_prefix(underlying_asset_id)
+			.map(|(account, _)| account)
+			.collect();
+		Ok(user_vec)
 	}
 }
 
