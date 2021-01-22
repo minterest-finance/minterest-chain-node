@@ -267,8 +267,7 @@ decl_module! {
 			ensure!(
 				<T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
 				.iter()
-				.find(|pair| pair.underlying_id == pool_id)
-				.is_some(),
+				.any(|pair| pair.underlying_id == pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -291,8 +290,7 @@ decl_module! {
 			ensure!(
 				<T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
 				.iter()
-				.find(|pair| pair.underlying_id == pool_id)
-				.is_some(),
+				.any(|pair| pair.underlying_id == pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -322,8 +320,7 @@ impl<T: Trait> Module<T> {
 		ensure!(
 			<T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
 				.iter()
-				.find(|pair| pair.underlying_id == underlying_asset_id)
-				.is_some(),
+				.any(|pair| pair.underlying_id == underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
@@ -370,8 +367,7 @@ impl<T: Trait> Module<T> {
 		ensure!(
 			<T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
 				.iter()
-				.find(|pair| pair.underlying_id == underlying_asset_id)
-				.is_some(),
+				.any(|pair| pair.underlying_id == underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
@@ -440,8 +436,7 @@ impl<T: Trait> Module<T> {
 		ensure!(
 			<T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
 				.iter()
-				.find(|pair| pair.underlying_id == underlying_asset_id)
-				.is_some(),
+				.any(|pair| pair.underlying_id == underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
@@ -499,8 +494,7 @@ impl<T: Trait> Module<T> {
 		ensure!(
 			<T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
 				.iter()
-				.find(|pair| pair.underlying_id == underlying_asset_id)
-				.is_some(),
+				.any(|pair| pair.underlying_id == underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
