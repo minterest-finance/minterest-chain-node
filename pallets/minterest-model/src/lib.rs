@@ -100,8 +100,7 @@ decl_module! {
 			ensure!(
 				<T>::EnabledCurrencyPair::get()
 					.iter()
-					.find(|pair| pair.underlying_id == pool_id)
-					.is_some(),
+					.any(|pair| pair.underlying_id == pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -126,8 +125,7 @@ decl_module! {
 			ensure!(
 				<T>::EnabledCurrencyPair::get()
 					.iter()
-					.find(|pair| pair.underlying_id == pool_id)
-					.is_some(),
+					.any(|pair| pair.underlying_id == pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -158,8 +156,7 @@ decl_module! {
 			ensure!(
 				<T>::EnabledCurrencyPair::get()
 					.iter()
-					.find(|pair| pair.underlying_id == pool_id)
-					.is_some(),
+					.any(|pair| pair.underlying_id == pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
