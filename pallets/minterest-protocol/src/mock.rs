@@ -267,8 +267,8 @@ impl ExtBuilder {
 			],
 			pool_user_data: vec![
 				(
-					ALICE,
 					CurrencyId::DOT,
+					ALICE,
 					PoolUserData {
 						total_borrowed: 0,
 						interest_index: Rate::from_inner(0),
@@ -276,8 +276,8 @@ impl ExtBuilder {
 					},
 				),
 				(
-					ALICE,
 					CurrencyId::ETH,
+					ALICE,
 					PoolUserData {
 						total_borrowed: 0,
 						interest_index: Rate::from_inner(0),
@@ -285,17 +285,8 @@ impl ExtBuilder {
 					},
 				),
 				(
-					ALICE,
 					CurrencyId::KSM,
-					PoolUserData {
-						total_borrowed: 0,
-						interest_index: Rate::from_inner(0),
-						collateral: true,
-					},
-				),
-				(
 					ALICE,
-					CurrencyId::BTC,
 					PoolUserData {
 						total_borrowed: 0,
 						interest_index: Rate::from_inner(0),
@@ -303,8 +294,17 @@ impl ExtBuilder {
 					},
 				),
 				(
-					BOB,
+					CurrencyId::BTC,
+					ALICE,
+					PoolUserData {
+						total_borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						collateral: true,
+					},
+				),
+				(
 					CurrencyId::DOT,
+					BOB,
 					PoolUserData {
 						total_borrowed: 0,
 						interest_index: Rate::from_inner(0),
@@ -312,8 +312,8 @@ impl ExtBuilder {
 					},
 				),
 				(
-					BOB,
 					CurrencyId::BTC,
+					BOB,
 					PoolUserData {
 						total_borrowed: 0,
 						interest_index: Rate::from_inner(0),
