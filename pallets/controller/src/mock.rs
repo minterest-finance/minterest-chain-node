@@ -170,7 +170,7 @@ pub const MAX_MEMBERS: u32 = 16;
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
-	pool_user_data: Vec<(AccountId, CurrencyId, PoolUserData)>,
+	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 }
 
 impl Default for ExtBuilder {
@@ -249,15 +249,15 @@ impl ExtBuilder {
 
 	pub fn pool_user_data(
 		mut self,
-		user: AccountId,
 		pool_id: CurrencyId,
+		user: AccountId,
 		total_borrowed: Balance,
 		interest_index: Rate,
 		collateral: bool,
 	) -> Self {
 		self.pool_user_data.push((
-			user,
 			pool_id,
+			user,
 			PoolUserData {
 				total_borrowed,
 				interest_index,
@@ -272,7 +272,7 @@ impl ExtBuilder {
 			.user_balance(ALICE, CurrencyId::MDOT, dollars(60_u128))
 			.pool_balance(CurrencyId::DOT, dollars(60_u128))
 			.pool_mock(CurrencyId::DOT)
-			.pool_user_data(ALICE, CurrencyId::DOT, Balance::zero(), Rate::zero(), false)
+			.pool_user_data(CurrencyId::DOT, ALICE, Balance::zero(), Rate::zero(), false)
 	}
 
 	pub fn alice_deposit_20_eth(self) -> Self {
@@ -280,7 +280,7 @@ impl ExtBuilder {
 			.user_balance(ALICE, CurrencyId::METH, dollars(20_u128))
 			.pool_balance(CurrencyId::ETH, dollars(20_u128))
 			.pool_mock(CurrencyId::ETH)
-			.pool_user_data(ALICE, CurrencyId::ETH, Balance::zero(), Rate::zero(), false)
+			.pool_user_data(CurrencyId::ETH, ALICE, Balance::zero(), Rate::zero(), false)
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {

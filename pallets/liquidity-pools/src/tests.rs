@@ -57,11 +57,11 @@ fn set_user_total_borrowed_and_interest_index_should_work() {
 			Rate::saturating_from_rational(33, 100)
 		));
 		assert_eq!(
-			<PoolUserDates<Test>>::get(ALICE, CurrencyId::DOT).total_borrowed,
+			<PoolUserDates<Test>>::get(CurrencyId::DOT, ALICE).total_borrowed,
 			ONE_HUNDRED_DOLLARS
 		);
 		assert_eq!(
-			<PoolUserDates<Test>>::get(ALICE, CurrencyId::DOT).interest_index,
+			<PoolUserDates<Test>>::get(CurrencyId::DOT, ALICE).interest_index,
 			Rate::saturating_from_rational(33, 100)
 		);
 	});
@@ -87,7 +87,7 @@ fn enable_as_collateral_internal_should_work() {
 		// Alice enable as collateral DOT pool.
 		assert_ok!(TestPools::enable_as_collateral_internal(&ALICE, CurrencyId::DOT));
 
-		assert!(<PoolUserDates<Test>>::get(ALICE, CurrencyId::DOT).collateral);
+		assert!(<PoolUserDates<Test>>::get(CurrencyId::DOT, ALICE).collateral);
 	});
 }
 
@@ -97,7 +97,7 @@ fn disable_collateral_internal_should_work() {
 		// Alice disable collateral DOT pool.
 		assert_ok!(TestPools::disable_collateral_internal(&ALICE, CurrencyId::DOT));
 
-		assert!(!<PoolUserDates<Test>>::get(ALICE, CurrencyId::DOT).collateral);
+		assert!(!<PoolUserDates<Test>>::get(CurrencyId::DOT, ALICE).collateral);
 	});
 }
 
@@ -152,7 +152,7 @@ fn get_pool_borrow_index_should_work() {
 #[test]
 fn get_user_total_borrowed_should_work() {
 	ExtBuilder::default()
-		.pool_user_data_with_params(ALICE, CurrencyId::DOT, ONE_HUNDRED_DOLLARS, Rate::default(), true)
+		.pool_user_data_with_params(CurrencyId::DOT, ALICE, ONE_HUNDRED_DOLLARS, Rate::default(), true)
 		.build()
 		.execute_with(|| {
 			assert_eq!(
@@ -165,7 +165,7 @@ fn get_user_total_borrowed_should_work() {
 #[test]
 fn check_user_available_collateral_should_work() {
 	ExtBuilder::default()
-		.pool_user_data_with_params(ALICE, CurrencyId::DOT, Balance::default(), Rate::default(), false)
+		.pool_user_data_with_params(CurrencyId::DOT, ALICE, Balance::default(), Rate::default(), false)
 		.build()
 		.execute_with(|| {
 			// collateral parameter is set to false
