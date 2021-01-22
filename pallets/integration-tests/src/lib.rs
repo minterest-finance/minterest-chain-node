@@ -189,7 +189,7 @@ mod tests {
 	pub struct ExtBuilder {
 		endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 		pools: Vec<(CurrencyId, Pool)>,
-		pool_user_data: Vec<(AccountId, CurrencyId, PoolUserData)>,
+		pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	}
 
 	impl Default for ExtBuilder {
@@ -250,15 +250,15 @@ mod tests {
 
 		pub fn pool_user_data(
 			mut self,
-			user: AccountId,
 			pool_id: CurrencyId,
+			user: AccountId,
 			total_borrowed: Balance,
 			interest_index: Rate,
 			collateral: bool,
 		) -> Self {
 			self.pool_user_data.push((
-				user,
 				pool_id,
+				user,
 				PoolUserData {
 					total_borrowed,
 					interest_index,
@@ -430,7 +430,7 @@ mod tests {
 		ExtBuilder::default()
 			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_initial(CurrencyId::DOT)
 			.build()
 			.execute_with(|| {
@@ -502,11 +502,11 @@ mod tests {
 				// Checking DOT pool User params
 				// ADMIN:
 				assert_eq!(
-					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::DOT, ADMIN).total_borrowed,
 					alice_dot_total_borrow_start
 				);
 				assert_eq!(
-					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).interest_index,
+					TestPools::pool_user_data(CurrencyId::DOT, ADMIN).interest_index,
 					RATE_ZERO
 				);
 
@@ -581,20 +581,20 @@ mod tests {
 				// Checking DOT pool User params
 				// ADMIN:
 				assert_eq!(
-					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::DOT, ADMIN).total_borrowed,
 					BALANCE_ZERO
 				);
 				assert_eq!(
-					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).interest_index,
+					TestPools::pool_user_data(CurrencyId::DOT, ADMIN).interest_index,
 					RATE_ZERO
 				);
 				// ALICE:
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::DOT).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
 					BALANCE_ZERO
 				);
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::DOT).interest_index,
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).interest_index,
 					RATE_ZERO
 				);
 
@@ -671,11 +671,11 @@ mod tests {
 				// Checking DOT pool User params
 				// ADMIN:
 				assert_eq!(
-					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::DOT, ADMIN).total_borrowed,
 					BALANCE_ZERO
 				);
 				assert_eq!(
-					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).interest_index,
+					TestPools::pool_user_data(CurrencyId::DOT, ADMIN).interest_index,
 					RATE_ZERO
 				);
 				// ALICE:
@@ -683,12 +683,12 @@ mod tests {
 				let alice_dot_total_borrow_block_number_2: Balance =
 					alice_dot_total_borrow_start + alice_borrow_amount_block_number_2;
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::DOT).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
 					alice_dot_total_borrow_block_number_2
 				);
 				// User interest index changed: 0 -> 1
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::DOT).interest_index,
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).interest_index,
 					RATE_EQUALS_ONE
 				);
 
@@ -780,11 +780,11 @@ mod tests {
 				// Checking DOT pool User params
 				// ADMIN:
 				assert_eq!(
-					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::DOT, ADMIN).total_borrowed,
 					BALANCE_ZERO
 				);
 				assert_eq!(
-					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).interest_index,
+					TestPools::pool_user_data(CurrencyId::DOT, ADMIN).interest_index,
 					RATE_ZERO
 				);
 				// ALICE:
@@ -792,13 +792,13 @@ mod tests {
 					+ borrow_accumulated_block_number_3
 					- alice_repay_amount_block_number_3;
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::DOT).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
 					alice_dot_total_borrow_block_number_3
 				);
 				// Interest_index changed: 0 -> 1.000000004500000000
 				let user_interest_index_block_number_3: Rate = pool_borrow_index_block_number_3;
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::DOT).interest_index,
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).interest_index,
 					user_interest_index_block_number_3
 				);
 
@@ -900,21 +900,21 @@ mod tests {
 				// Checking user pool Storage params
 				// ADMIN:
 				assert_eq!(
-					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::DOT, ADMIN).total_borrowed,
 					BALANCE_ZERO
 				);
 				assert_eq!(
-					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).interest_index,
+					TestPools::pool_user_data(CurrencyId::DOT, ADMIN).interest_index,
 					RATE_ZERO
 				);
 				// ALICE:
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::DOT).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
 					BALANCE_ZERO
 				);
 				let user_interest_index_block_number_4: Rate = pool_borrow_index_block_number_4;
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::DOT).interest_index,
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).interest_index,
 					user_interest_index_block_number_4
 				);
 
@@ -985,24 +985,30 @@ mod tests {
 				// Checking user pool Storage params
 				// ADMIN:
 				assert_eq!(
-					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::DOT, ADMIN).total_borrowed,
 					BALANCE_ZERO
 				);
 				assert_eq!(
-					TestPools::pool_user_data(ADMIN, CurrencyId::DOT).interest_index,
+					TestPools::pool_user_data(CurrencyId::DOT, ADMIN).interest_index,
 					RATE_ZERO
 				);
 				// ALICE:
 				// Expected: 0
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::DOT).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
 					BALANCE_ZERO
 				);
 				// Expected: 1,000000006750000025
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::DOT).interest_index,
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).interest_index,
 					user_interest_index_block_number_4
 				);
+
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					alice(),
+					CurrencyId::DOT,
+					20 * DOLLARS,
+				));
 			});
 	}
 
@@ -1012,7 +1018,7 @@ mod tests {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
@@ -1130,8 +1136,8 @@ mod tests {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
-			.pool_user_data(ALICE, CurrencyId::ETH, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::ETH, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
@@ -1193,7 +1199,7 @@ mod tests {
 
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::DOT).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
@@ -1255,7 +1261,7 @@ mod tests {
 				);
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::DOT).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
@@ -1290,7 +1296,7 @@ mod tests {
 	fn redeem_underlying_with_another_currency_borrowing() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
@@ -1325,7 +1331,7 @@ mod tests {
 				);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::ETH).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// // Checking total borrow for ETH pool
@@ -1359,7 +1365,7 @@ mod tests {
 
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::ETH).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
@@ -1387,8 +1393,8 @@ mod tests {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::BTC, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
-			.pool_user_data(ALICE, CurrencyId::BTC, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::BTC, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
 			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
 			.build()
@@ -1438,7 +1444,7 @@ mod tests {
 				);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::ETH).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
@@ -1499,7 +1505,7 @@ mod tests {
 				);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::ETH).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
@@ -1537,8 +1543,8 @@ mod tests {
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::BTC, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
-			.pool_user_data(BOB, CurrencyId::BTC, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false)
+			.pool_user_data(CurrencyId::BTC, BOB, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
 			.pool_total_insurance(CurrencyId::DOT, 10_000 * DOLLARS)
 			.build()
@@ -1635,8 +1641,8 @@ mod tests {
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::DOT, 100_000_000 * DOLLARS)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
-			.pool_user_data(ALICE, CurrencyId::ETH, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::ETH, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
@@ -1698,7 +1704,7 @@ mod tests {
 
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::DOT).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
@@ -1762,7 +1768,7 @@ mod tests {
 				// Checking total borrow for Alice DOT pool
 				let expected_amount_accumulated_in_dot = 14841428697992866;
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::DOT).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
@@ -1792,7 +1798,7 @@ mod tests {
 	fn redeem_with_another_currency_borrowing() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
@@ -1827,7 +1833,7 @@ mod tests {
 				);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::ETH).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// // Checking total borrow for ETH pool
@@ -1857,7 +1863,7 @@ mod tests {
 
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::ETH).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
@@ -1885,8 +1891,8 @@ mod tests {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::BTC, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
-			.pool_user_data(ALICE, CurrencyId::BTC, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::BTC, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
 			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
 			.build()
@@ -1934,7 +1940,7 @@ mod tests {
 				);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::ETH).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
@@ -1984,7 +1990,7 @@ mod tests {
 				);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ALICE, CurrencyId::ETH).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
@@ -2017,9 +2023,9 @@ mod tests {
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::BTC, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
-			.pool_user_data(BOB, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
-			.pool_user_data(BOB, CurrencyId::BTC, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false)
+			.pool_user_data(CurrencyId::DOT, BOB, BALANCE_ZERO, RATE_ZERO, false)
+			.pool_user_data(CurrencyId::BTC, BOB, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
 			.pool_total_insurance(CurrencyId::DOT, 10_000 * DOLLARS)
 			.build()
@@ -2101,7 +2107,7 @@ mod tests {
 	fn borrow_with_insufficient_collateral_no_deposits() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
@@ -2128,7 +2134,7 @@ mod tests {
 	fn borrow_without_collateral_in_second_currency() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
 			.build()
@@ -2170,7 +2176,7 @@ mod tests {
 	fn borrow_with_insufficient_collateral_in_second_currency() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
 			.build()
@@ -2212,7 +2218,7 @@ mod tests {
 	fn borrow_with_sufficient_collateral_in_second_currency() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
 			.build()
@@ -2251,7 +2257,7 @@ mod tests {
 				assert_eq!(Currencies::free_balance(CurrencyId::ETH, &ALICE), alice_borrowed_amount);
 				assert_eq!(TestPools::pools(CurrencyId::ETH).total_borrowed, alice_borrowed_amount);
 				assert_eq!(
-					TestPools::pool_user_data(&ALICE, CurrencyId::ETH).total_borrowed,
+					TestPools::pool_user_data(CurrencyId::ETH, &ALICE).total_borrowed,
 					alice_borrowed_amount
 				);
 			});
@@ -2267,7 +2273,7 @@ mod tests {
 	fn set_insurance_factor_equal_zero() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
@@ -2320,7 +2326,7 @@ mod tests {
 	fn set_insurance_factor_greater_than_zero() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
@@ -2377,7 +2383,7 @@ mod tests {
 	fn calculate_borrow_interest_rate_deposit_without_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
@@ -2405,7 +2411,7 @@ mod tests {
 	fn calculate_borrow_interest_rate_deposit_with_pool_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
@@ -2433,7 +2439,7 @@ mod tests {
 	fn calculate_borrow_interest_rate_deposit_and_borrow_without_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
@@ -2470,7 +2476,7 @@ mod tests {
 	fn calculate_borrow_interest_rate_deposit_and_borrow_with_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
@@ -2508,8 +2514,8 @@ mod tests {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
-			.pool_user_data(BOB, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, BOB, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
@@ -2567,7 +2573,7 @@ mod tests {
 	fn get_exchange_rate_deposit_without_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false)
 			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
@@ -2600,7 +2606,7 @@ mod tests {
 	fn get_exchange_rate_deposit_with_pool_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, false)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
@@ -2633,7 +2639,7 @@ mod tests {
 	fn get_exchange_rate_deposit_and_borrow_without_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
@@ -2676,7 +2682,7 @@ mod tests {
 	fn get_exchange_rate_deposit_and_borrow_with_insurance() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
@@ -2720,8 +2726,8 @@ mod tests {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(ALICE, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
-			.pool_user_data(BOB, CurrencyId::DOT, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true)
+			.pool_user_data(CurrencyId::DOT, BOB, BALANCE_ZERO, RATE_ZERO, true)
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {

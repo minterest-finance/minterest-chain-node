@@ -124,7 +124,7 @@ impl Trait for Test {
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
-	pool_user_data: Vec<(AccountId, CurrencyId, PoolUserData)>,
+	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 }
 
 impl Default for ExtBuilder {
@@ -177,15 +177,15 @@ impl ExtBuilder {
 
 	pub fn pool_user_data_with_params(
 		mut self,
-		user: AccountId,
 		pool_id: CurrencyId,
+		user: AccountId,
 		total_borrowed: Balance,
 		interest_index: Rate,
 		collateral: bool,
 	) -> Self {
 		self.pool_user_data.push((
-			user,
 			pool_id,
+			user,
 			PoolUserData {
 				total_borrowed,
 				interest_index,

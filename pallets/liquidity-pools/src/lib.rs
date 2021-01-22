@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get, IterableStorageDoubleMap};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::Borrowing;
@@ -11,7 +11,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, CheckedDiv, CheckedMul, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, ModuleId, RuntimeDebug,
 };
-use sp_std::{cmp::Ordering, result};
+use sp_std::{cmp::Ordering, result, vec::Vec};
 
 /// Pool metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -89,8 +89,8 @@ decl_storage! {
 	 trait Store for Module<T: Trait> as LiquidityPoolsStorage {
 		pub Pools get(fn pools) config(): map hasher(blake2_128_concat) CurrencyId => Pool;
 		pub PoolUserDates get(fn pool_user_data) config(): double_map
-			hasher(blake2_128_concat) T::AccountId,
-			hasher(blake2_128_concat) CurrencyId => PoolUserData;
+			hasher(blake2_128_concat) CurrencyId,
+			hasher(blake2_128_concat) T::AccountId => PoolUserData;
 	}
 }
 
@@ -146,7 +146,7 @@ impl<T: Trait> Module<T> {
 		new_total_borrows: Balance,
 		new_interest_index: Rate,
 	) -> DispatchResult {
-		PoolUserDates::<T>::mutate(who, pool_id, |p| {
+		PoolUserDates::<T>::mutate(pool_id, who, |p| {
 			p.total_borrowed = new_total_borrows;
 			p.interest_index = new_interest_index;
 		});
@@ -166,12 +166,12 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn enable_as_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) -> DispatchResult {
-		PoolUserDates::<T>::mutate(who, pool_id, |p| p.collateral = true);
+		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = true);
 		Ok(())
 	}
 
 	pub fn disable_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) -> DispatchResult {
-		PoolUserDates::<T>::mutate(who, pool_id, |p| p.collateral = false);
+		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = false);
 		Ok(())
 	}
 }
@@ -203,15 +203,15 @@ impl<T: Trait> Module<T> {
 
 	/// Global borrow_index as of the most recent balance-changing action
 	pub fn get_user_borrow_index(who: &T::AccountId, currency_id: CurrencyId) -> Rate {
-		Self::pool_user_data(who, currency_id).interest_index
+		Self::pool_user_data(currency_id, who).interest_index
 	}
 
 	pub fn get_user_total_borrowed(who: &T::AccountId, currency_id: CurrencyId) -> Balance {
-		Self::pool_user_data(who, currency_id).total_borrowed
+		Self::pool_user_data(currency_id, who).total_borrowed
 	}
 
 	pub fn check_user_available_collateral(who: &T::AccountId, currency_id: CurrencyId) -> bool {
-		Self::pool_user_data(who, currency_id).collateral
+		Self::pool_user_data(currency_id, who).collateral
 	}
 
 	pub fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
@@ -318,6 +318,13 @@ impl<T: Trait> Module<T> {
 			.ok_or(Error::<T>::NotValidWrappedTokenId)?;
 
 		Ok(currency_pair.underlying_id)
+	}
+
+	pub fn get_pool_members(underlying_asset_id: CurrencyId) -> result::Result<Vec<T::AccountId>, DispatchError> {
+		let user_vec: Vec<T::AccountId> = PoolUserDates::<T>::iter_prefix(underlying_asset_id)
+			.map(|(account, _)| account)
+			.collect();
+		Ok(user_vec)
 	}
 }
 
