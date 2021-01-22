@@ -10,7 +10,7 @@ use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul},
 	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
 };
-use sp_std::{cmp::Ordering, result};
+use sp_std::{cmp::Ordering, result, vec::Vec};
 
 #[cfg(test)]
 mod mock;
