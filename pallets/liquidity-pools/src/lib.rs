@@ -380,7 +380,7 @@ impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 	/// - `account_borrows`: The borrow balance of account.
 	///
 	/// calculates: `account_borrows_new = account_borrows + borrow_amount`,
-	/// 			`total_borrows_new = total_borrows + borrow_amount`.
+	///             `total_borrows_new = total_borrows + borrow_amount`.
 	fn update_state_on_borrow(
 		who: &T::AccountId,
 		pool_id: CurrencyId,
@@ -416,7 +416,7 @@ impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 	/// - `account_borrows`: The borrow balance of account.
 	///
 	/// calculates: `account_borrows_new = account_borrows - borrow_amount`,
-	/// 			`total_borrows_new = total_borrows - borrow_amount`.
+	///             `total_borrows_new = total_borrows - borrow_amount`.
 	fn update_state_on_repay(
 		who: &T::AccountId,
 		pool_id: CurrencyId,
