@@ -240,6 +240,7 @@ impl<T: Trait> Module<T> {
 	///
 	/// - `wrapped_id`: CurrencyId of the wrapped tokens to be converted to underlying assets.
 	/// - `wrapped_amount`: The amount of wrapped tokens to be converted to underlying assets.
+	///
 	/// Returns `underlying_amount = wrapped_amount * exchange_rate`
 	pub fn convert_from_wrapped(wrapped_id: CurrencyId, wrapped_amount: Balance) -> BalanceResult {
 		let underlying_asset_id = Self::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
@@ -253,14 +254,17 @@ impl<T: Trait> Module<T> {
 		Ok(underlying_amount)
 	}
 
-	/// Calculates the exchange rate from the underlying to the mToken.
+	/// Gets the exchange rate between a mToken and the underlying asset.
 	/// This function does not accrue interest before calculating the exchange rate.
+	/// - `underlying_asset_id`: CurrencyId of underlying assets for which the exchange rate is calculated.
+	///
+	/// returns `exchange_rate` between a mToken and the underlying asset.
 	pub fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
 		let wrapped_asset_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
-		// The total amount of cash the market has
+		// The total amount of cash the market has.
 		let total_cash = Self::get_pool_available_liquidity(underlying_asset_id);
 
-		// Total number of tokens in circulation
+		// Total number of tokens in circulation.
 		let total_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
 
 		let total_insurance = Self::get_pool_total_insurance(underlying_asset_id);
@@ -274,6 +278,12 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Calculates the exchange rate from the underlying to the mToken.
+	/// - `total_cash`: The total amount of cash the market has.
+	/// - `total_supply`: Total number of tokens in circulation.
+	/// - `total_insurance`: Total amount of insurance of the underlying held in the pool.
+	/// - `total_borrowed`: Total amount of outstanding borrows of the underlying in this pool.
+	///
+	/// returns `exchange_rate = (total_cash - total_insurance + total_borrowed) / total_supply`.
 	fn calculate_exchange_rate(
 		total_cash: Balance,
 		total_supply: Balance,
@@ -283,6 +293,7 @@ impl<T: Trait> Module<T> {
 		let rate = match total_supply.cmp(&Balance::zero()) {
 			// If there are no tokens minted: exchangeRate = InitialExchangeRate.
 			Ordering::Equal => T::InitialExchangeRate::get(),
+
 			// Otherwise: exchange_rate = (total_cash - total_insurance + total_borrowed) / total_supply
 			_ => {
 				let cash_plus_borrows = total_cash.checked_add(total_borrowed).ok_or(Error::<T>::NumOverflow)?;

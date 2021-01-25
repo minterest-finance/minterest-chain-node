@@ -21,12 +21,16 @@ pub struct ControllerData<BlockNumber> {
 	/// Block number that interest was last accrued at.
 	pub timestamp: BlockNumber,
 
+	/// Variable interest rate that users receive for supply assets to the protocol.
 	pub supply_rate: Rate, // FIXME. Delete and implement via RPC
 
-	pub borrow_rate: Rate,
+	/// Variable interest rate that users pay for lending assets.
+	pub borrow_rate: Rate, // FIXME. Delete and implement via RPC
 
+	/// Defines the portion of borrower interest that is converted into insurance.
 	pub insurance_factor: Rate,
 
+	/// Maximum borrow rate.
 	pub max_borrow_rate: Rate,
 
 	/// Determines how much a user can borrow.
@@ -37,9 +41,16 @@ pub struct ControllerData<BlockNumber> {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct PauseKeeper {
+	/// Pause mint operation in the pool.
 	pub deposit_paused: bool,
+
+	/// Pause redeem operation in the pool.
 	pub redeem_paused: bool,
+
+	/// Pause borrow operation in the pool.
 	pub borrow_paused: bool,
+
+	/// Pause repay operation in the pool.
 	pub repay_paused: bool,
 }
 
@@ -84,7 +95,10 @@ decl_event! {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as ControllerStorage {
+		/// Controller data information: `(timestamp, insurance_factor, collateral_factor, max_borrow_rate)`.
 		pub ControllerDates get(fn controller_dates) config(): map hasher(blake2_128_concat) CurrencyId => ControllerData<T::BlockNumber>;
+
+		///
 		pub PauseKeepers get(fn pause_keepers) config(): map hasher(blake2_128_concat) CurrencyId => PauseKeeper;
 	}
 }
@@ -404,7 +418,7 @@ impl<T: Trait> Module<T> {
 			sum_borrow_plus_effects =
 				Self::mul_price_and_balance_add_to_prev_value(sum_borrow_plus_effects, borrow_balance, oracle_price)?;
 
-			// Calculate effects of interacting with Underlying Asset Modify
+			// Calculate effects of interacting with Underlying Asset Modify.
 			if underlying_to_borrow == underlying_asset {
 				// redeem effect
 				if redeem_amount > 0 {
@@ -449,7 +463,8 @@ impl<T: Trait> Module<T> {
 	/// - `redeemer` -  The account which would redeem the tokens.
 	/// - `redeem_amount` - The number of mTokens to exchange for the underlying asset in the
 	/// market.
-	/// Return Ok if the borrow is allowed, otherwise a semi-opaque error code.
+	///
+	/// Return Ok if the borrow is allowed.
 	pub fn redeem_allowed(
 		underlying_asset_id: CurrencyId,
 		redeemer: &T::AccountId,
@@ -470,7 +485,8 @@ impl<T: Trait> Module<T> {
 	/// - `underlying_asset_id` - The CurrencyId to verify the borrow against.
 	/// - `who` -  The account which would borrow the asset.
 	/// - `borrow_amount` - The amount of underlying assets the account would borrow.
-	/// Return Ok if the borrow is allowed, otherwise a semi-opaque error code.
+	///
+	/// Return Ok if the borrow is allowed.
 	pub fn borrow_allowed(
 		underlying_asset_id: CurrencyId,
 		who: &T::AccountId,
