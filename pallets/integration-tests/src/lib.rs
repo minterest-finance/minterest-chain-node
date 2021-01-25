@@ -5,7 +5,7 @@ mod tests {
 	use frame_support::{assert_noop, assert_ok, impl_outer_origin, parameter_types};
 	use frame_system::{self as system};
 	use liquidity_pools::{Pool, PoolUserData};
-	use minterest_primitives::{Balance, CurrencyId, Rate};
+	use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 	use orml_currencies::Currency;
 	use orml_traits::MultiCurrency;
 	use pallet_traits::Borrowing;
@@ -34,12 +34,7 @@ mod tests {
 		pub const MaximumBlockWeight: u32 = 1024;
 		pub const MaximumBlockLength: u32 = 2 * 1024;
 		pub const AvailableBlockRatio: Perbill = Perbill::one();
-		pub UnderlyingAssetId: Vec<CurrencyId> = vec![
-			CurrencyId::DOT,
-			CurrencyId::KSM,
-			CurrencyId::BTC,
-			CurrencyId::ETH,
-		];
+
 	}
 
 	pub type AccountId = u32;
@@ -128,6 +123,12 @@ mod tests {
 	parameter_types! {
 		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
 		pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+		pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
+			CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
+			CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
+			CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
+			CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
+		];
 	}
 
 	impl liquidity_pools::Trait for Test {
@@ -135,6 +136,7 @@ mod tests {
 		type MultiCurrency = orml_tokens::Module<Test>;
 		type ModuleId = LiquidityPoolsModuleId;
 		type InitialExchangeRate = InitialExchangeRate;
+		type EnabledCurrencyPair = EnabledCurrencyPair;
 	}
 
 	impl minterest_protocol::Trait for Test {
@@ -144,18 +146,10 @@ mod tests {
 
 	parameter_types! {
 		pub const BlocksPerYear: u128 = 5256000;
-		pub MTokensId: Vec<CurrencyId> = vec![
-			CurrencyId::MDOT,
-			CurrencyId::MKSM,
-			CurrencyId::MBTC,
-			CurrencyId::METH,
-		];
 	}
 
 	impl controller::Trait for Test {
 		type Event = ();
-		type UnderlyingAssetId = UnderlyingAssetId;
-		type MTokensId = MTokensId;
 	}
 
 	impl oracle::Trait for Test {
@@ -174,6 +168,7 @@ mod tests {
 	impl minterest_model::Trait for Test {
 		type Event = ();
 		type BlocksPerYear = BlocksPerYear;
+		type EnabledCurrencyPair = EnabledCurrencyPair;
 	}
 
 	pub const ADMIN: AccountId = 0;

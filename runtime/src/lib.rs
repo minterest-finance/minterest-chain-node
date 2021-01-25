@@ -28,7 +28,8 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 pub use minterest_primitives::{
-	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DigestItem, Hash, Index, Rate, Signature,
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, CurrencyPair, DigestItem, Hash, Index, Rate,
+	Signature,
 };
 
 // A few exports that help ease life for downstream crates.
@@ -257,12 +258,6 @@ impl orml_tokens::Trait for Runtime {
 
 parameter_types! {
 	pub const GetMinterestCurrencyId: CurrencyId = CurrencyId::MINT;
-	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
-		CurrencyId::DOT,
-		CurrencyId::KSM,
-		CurrencyId::BTC,
-		CurrencyId::ETH,
-	];
 }
 
 pub type MinterestToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
@@ -277,6 +272,12 @@ impl orml_currencies::Trait for Runtime {
 
 parameter_types! {
 	pub const InitialExchangeRate: Rate = INITIAL_EXCHANGE_RATE;
+	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
+		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
+		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
+		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
+		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
+	];
 }
 
 impl liquidity_pools::Trait for Runtime {
@@ -284,22 +285,11 @@ impl liquidity_pools::Trait for Runtime {
 	type MultiCurrency = Currencies;
 	type ModuleId = LiquidityPoolsModuleId;
 	type InitialExchangeRate = InitialExchangeRate;
-}
-
-parameter_types! {
-	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
-	pub MTokensId: Vec<CurrencyId> = vec![
-		CurrencyId::MDOT,
-		CurrencyId::MKSM,
-		CurrencyId::MBTC,
-		CurrencyId::METH,
-	];
+	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
 
 impl controller::Trait for Runtime {
 	type Event = Event;
-	type MTokensId = MTokensId;
-	type UnderlyingAssetId = UnderlyingAssetId;
 }
 
 parameter_types! {
@@ -315,9 +305,14 @@ impl oracle::Trait for Runtime {
 	type Event = Event;
 }
 
+parameter_types! {
+	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
+}
+
 impl minterest_model::Trait for Runtime {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
+	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

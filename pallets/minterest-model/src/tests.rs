@@ -77,6 +77,12 @@ fn set_base_rate_per_block_should_work() {
 			TestMinterestModel::set_base_rate_per_block(bob(), CurrencyId::DOT, 20, 10),
 			Error::<Test>::RequireAdmin
 		);
+
+		// MDOT is wrong CurrencyId for underlying assets.
+		assert_noop!(
+			TestMinterestModel::set_base_rate_per_block(alice(), CurrencyId::MDOT, 20, 10),
+			Error::<Test>::NotValidUnderlyingAssetId
+		);
 	});
 }
 
@@ -142,6 +148,12 @@ fn set_multiplier_per_block_should_work() {
 			TestMinterestModel::set_multiplier_per_block(bob(), CurrencyId::DOT, 20, 10),
 			Error::<Test>::RequireAdmin
 		);
+
+		// MDOT is wrong CurrencyId for underlying assets.
+		assert_noop!(
+			TestMinterestModel::set_base_rate_per_block(alice(), CurrencyId::MDOT, 20, 10),
+			Error::<Test>::NotValidUnderlyingAssetId
+		);
 	});
 }
 
@@ -171,6 +183,12 @@ fn set_jump_multiplier_per_block_should_work() {
 		assert_noop!(
 			TestMinterestModel::set_jump_multiplier_per_block(bob(), CurrencyId::DOT, 20, 10),
 			Error::<Test>::RequireAdmin
+		);
+
+		// MDOT is wrong CurrencyId for underlying assets.
+		assert_noop!(
+			TestMinterestModel::set_base_rate_per_block(alice(), CurrencyId::MDOT, 20, 10),
+			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
 }
