@@ -61,6 +61,22 @@ pub enum CurrencyId {
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct CurrencyPair {
+	pub underlying_id: CurrencyId,
+	pub wrapped_id: CurrencyId,
+}
+
+impl CurrencyPair {
+	pub fn new(underlying_id: CurrencyId, wrapped_id: CurrencyId) -> Self {
+		Self {
+			underlying_id,
+			wrapped_id,
+		}
+	}
+}
+
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum Operation {
 	Deposit,
 	Redeem,

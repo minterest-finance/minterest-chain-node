@@ -2,7 +2,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get, IterableStorageDoubleMap};
-use minterest_primitives::{Balance, CurrencyId, Rate};
+use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::Borrowing;
 #[cfg(feature = "std")]
@@ -20,8 +20,10 @@ pub struct Pool {
 	/// Total amount of outstanding borrows of the underlying in this pool.
 	#[codec(compact)]
 	pub total_borrowed: Balance,
+
 	/// Accumulator of the total earned interest rate since the opening of the pool.
 	pub borrow_index: Rate,
+
 	/// Total amount of insurance of the underlying held in this pool.
 	#[codec(compact)]
 	pub total_insurance: Balance,
@@ -34,8 +36,10 @@ pub struct PoolUserData {
 	/// recent balance-changing action.
 	#[codec(compact)]
 	pub total_borrowed: Balance,
+
 	/// Global borrow_index as of the most recent balance-changing action.
 	pub interest_index: Rate,
+
 	/// Wheter or not pool as a collateral.
 	pub collateral: bool,
 }
@@ -56,6 +60,9 @@ pub trait Trait: frame_system::Trait {
 
 	/// Start exchange rate
 	type InitialExchangeRate: Get<Rate>;
+
+	/// Enabled currency pairs.
+	type EnabledCurrencyPair: Get<Vec<CurrencyPair>>;
 }
 
 decl_event!(
@@ -97,6 +104,18 @@ decl_module! {
 
 			/// The Liquidity Pool's account id, keep all assets in Pools.
 			const PoolAccountId: T::AccountId = T::ModuleId::get().into_account();
+
+			/// Enabled underlying asset IDs.
+			const EnabledUnderlyingAssetId: Vec<CurrencyId> = T::EnabledCurrencyPair::get()
+				.iter()
+				.map(|currency_pair| currency_pair.underlying_id)
+				.collect();
+
+			/// Enabled wrapped token IDs.
+			const EnabledWrappedTokensId: Vec<CurrencyId> = T::EnabledCurrencyPair::get()
+				.iter()
+				.map(|currency_pair| currency_pair.wrapped_id)
+				.collect();
 	}
 }
 
@@ -280,23 +299,25 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> CurrencyIdResult {
-		match asset_id {
-			CurrencyId::DOT => Ok(CurrencyId::MDOT),
-			CurrencyId::KSM => Ok(CurrencyId::MKSM),
-			CurrencyId::BTC => Ok(CurrencyId::MBTC),
-			CurrencyId::ETH => Ok(CurrencyId::METH),
-			_ => Err(Error::<T>::NotValidUnderlyingAssetId.into()),
-		}
+		let enabled_currency_pair = T::EnabledCurrencyPair::get();
+
+		let currency_pair = *enabled_currency_pair
+			.iter()
+			.find(|currency_pair| currency_pair.underlying_id == *asset_id)
+			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+
+		Ok(currency_pair.wrapped_id)
 	}
 
 	pub fn get_underlying_asset_id_by_wrapped_id(wrapped_id: &CurrencyId) -> CurrencyIdResult {
-		match wrapped_id {
-			CurrencyId::MDOT => Ok(CurrencyId::DOT),
-			CurrencyId::MKSM => Ok(CurrencyId::KSM),
-			CurrencyId::MBTC => Ok(CurrencyId::BTC),
-			CurrencyId::METH => Ok(CurrencyId::ETH),
-			_ => Err(Error::<T>::NotValidWrappedTokenId.into()),
-		}
+		let enabled_currency_pair = T::EnabledCurrencyPair::get();
+
+		let currency_pair = *enabled_currency_pair
+			.iter()
+			.find(|currency_pair| currency_pair.wrapped_id == *wrapped_id)
+			.ok_or(Error::<T>::NotValidWrappedTokenId)?;
+
+		Ok(currency_pair.underlying_id)
 	}
 
 	pub fn get_pool_members(underlying_asset_id: CurrencyId) -> result::Result<Vec<T::AccountId>, DispatchError> {
@@ -304,6 +325,12 @@ impl<T: Trait> Module<T> {
 			.map(|(account, _)| account)
 			.collect();
 		Ok(user_vec)
+	}
+
+	pub fn is_enabled_underlying_asset_id(underlying_asset_id: CurrencyId) -> bool {
+		T::EnabledCurrencyPair::get()
+			.iter()
+			.any(|pair| pair.underlying_id == underlying_asset_id)
 	}
 }
 

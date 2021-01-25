@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 use frame_system::{self as system, ensure_signed};
 use minterest_primitives::{Balance, CurrencyId, Operation};
 use orml_traits::MultiCurrency;
@@ -8,7 +8,7 @@ use orml_utilities::with_transaction_result;
 use pallet_traits::Borrowing;
 use sp_runtime::{traits::Zero, DispatchError, DispatchResult};
 use sp_std::cmp::Ordering;
-use sp_std::{prelude::Vec, result};
+use sp_std::result;
 
 #[cfg(test)]
 mod mock;
@@ -120,8 +120,6 @@ decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 		fn deposit_event() = default;
-
-		const UnderlyingAssetId: Vec<CurrencyId> = T::UnderlyingAssetId::get();
 
 		/// Transfers an asset into the protocol. The user receives a quantity of mTokens equal
 		/// to the underlying tokens supplied, divided by the current Exchange Rate.
@@ -267,7 +265,7 @@ decl_module! {
 		pub fn enable_as_collateral(origin, pool_id: CurrencyId) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(
-				T::UnderlyingAssetId::get().contains(&pool_id),
+				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -288,7 +286,7 @@ decl_module! {
 		pub fn disable_collateral(origin, pool_id: CurrencyId) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(
-				T::UnderlyingAssetId::get().contains(&pool_id),
+				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -316,7 +314,7 @@ type BalanceResult = result::Result<Balance, DispatchError>;
 impl<T: Trait> Module<T> {
 	fn do_deposit(who: &T::AccountId, underlying_asset_id: CurrencyId, underlying_amount: Balance) -> TokensResult {
 		ensure!(
-			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
+			<LiquidityPools<T>>::is_enabled_underlying_asset_id(underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
@@ -361,7 +359,7 @@ impl<T: Trait> Module<T> {
 		all_assets: bool,
 	) -> TokensResult {
 		ensure!(
-			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
+			<LiquidityPools<T>>::is_enabled_underlying_asset_id(underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
@@ -428,7 +426,7 @@ impl<T: Trait> Module<T> {
 	/// - `underlying_amount`: the amount of the underlying asset to borrow.
 	fn do_borrow(who: &T::AccountId, underlying_asset_id: CurrencyId, borrow_amount: Balance) -> DispatchResult {
 		ensure!(
-			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
+			<LiquidityPools<T>>::is_enabled_underlying_asset_id(underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
@@ -484,7 +482,7 @@ impl<T: Trait> Module<T> {
 		all_assets: bool,
 	) -> BalanceResult {
 		ensure!(
-			T::UnderlyingAssetId::get().contains(&underlying_asset_id),
+			<LiquidityPools<T>>::is_enabled_underlying_asset_id(underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 

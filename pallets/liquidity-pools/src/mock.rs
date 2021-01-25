@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
-pub use minterest_primitives::{Balance, CurrencyId};
+pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair};
 use orml_currencies::Currency;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
@@ -105,6 +105,12 @@ pub type System = frame_system::Module<Test>;
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
+		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
+		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
+		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
+		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
+	];
 }
 
 impl Trait for Test {
@@ -112,6 +118,7 @@ impl Trait for Test {
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type ModuleId = LiquidityPoolsModuleId;
 	type InitialExchangeRate = InitialExchangeRate;
+	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
 
 pub struct ExtBuilder {

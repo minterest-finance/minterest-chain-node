@@ -2,7 +2,7 @@
 
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use liquidity_pools::{Pool, PoolUserData};
-pub use minterest_primitives::{Balance, CurrencyId, Rate};
+pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_currencies::Currency;
 use sp_core::H256;
 use sp_runtime::{
@@ -109,7 +109,12 @@ impl orml_currencies::Trait for Runtime {
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
-
+	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
+		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
+		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
+		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
+		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
+	];
 }
 
 impl liquidity_pools::Trait for Runtime {
@@ -117,6 +122,7 @@ impl liquidity_pools::Trait for Runtime {
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type ModuleId = LiquidityPoolsModuleId;
 	type InitialExchangeRate = InitialExchangeRate;
+	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
 
 impl oracle::Trait for Runtime {
@@ -132,31 +138,18 @@ impl accounts::Trait for Runtime {
 	type MaxMembers = MaxMembers;
 }
 
+parameter_types! {
+	pub const BlocksPerYear: u128 = 5256000u128;
+}
+
 impl minterest_model::Trait for Runtime {
 	type Event = TestEvent;
 	type BlocksPerYear = BlocksPerYear;
-}
-
-parameter_types! {
-	pub const BlocksPerYear: u128 = 5256000u128;
-	pub MTokensId: Vec<CurrencyId> = vec![
-			CurrencyId::MDOT,
-			CurrencyId::MKSM,
-			CurrencyId::MBTC,
-			CurrencyId::METH,
-		];
-	pub UnderlyingAssetId: Vec<CurrencyId> = vec![
-		CurrencyId::DOT,
-		CurrencyId::KSM,
-		CurrencyId::BTC,
-		CurrencyId::ETH,
-	];
+	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
 
 impl Trait for Runtime {
 	type Event = TestEvent;
-	type MTokensId = MTokensId;
-	type UnderlyingAssetId = UnderlyingAssetId;
 }
 
 pub type BlockNumber = u64;
