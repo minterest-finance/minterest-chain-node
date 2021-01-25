@@ -17,7 +17,8 @@ use sp_std::{cmp::Ordering, result, vec::Vec};
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct Pool {
-	/// Total amount of outstanding borrows of the underlying in this pool.
+	/// The amount of underlying currently loaned out by the pool, and the amount upon which
+	/// interest is accumulated to suppliers of the pool.
 	#[codec(compact)]
 	pub total_borrowed: Balance,
 
@@ -261,7 +262,7 @@ impl<T: Trait> Module<T> {
 	/// returns `exchange_rate` between a mToken and the underlying asset.
 	pub fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
 		let wrapped_asset_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
-		// The total amount of cash the market has.
+		// The total amount of cash the pool has.
 		let total_cash = Self::get_pool_available_liquidity(underlying_asset_id);
 
 		// Total number of tokens in circulation.
@@ -278,7 +279,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Calculates the exchange rate from the underlying to the mToken.
-	/// - `total_cash`: The total amount of cash the market has.
+	/// - `total_cash`: The total amount of cash the pool has.
 	/// - `total_supply`: Total number of tokens in circulation.
 	/// - `total_insurance`: Total amount of insurance of the underlying held in the pool.
 	/// - `total_borrowed`: Total amount of outstanding borrows of the underlying in this pool.
