@@ -337,6 +337,12 @@ impl<T: Trait> Module<T> {
 			.collect();
 		Ok(user_vec)
 	}
+
+	pub fn is_enabled_underlying_asset_id(underlying_asset_id: CurrencyId) -> bool {
+		T::EnabledCurrencyPair::get()
+			.iter()
+			.any(|pair| pair.underlying_id == underlying_asset_id)
+	}
 }
 
 // Trait Borrowing for LiquidityPools
