@@ -532,7 +532,8 @@ impl<T: Trait> Module<T> {
 			return Ok(Rate::zero());
 		}
 
-		// utilization_rate = current_total_borrowed_balance / (current_total_balance + current_total_borrowed_balance - current_total_insurance)
+		// utilization_rate = current_total_borrowed_balance / (current_total_balance +
+		// + current_total_borrowed_balance - current_total_insurance)
 		let utilization_rate = Rate::checked_from_rational(
 			current_total_borrowed_balance,
 			current_total_balance

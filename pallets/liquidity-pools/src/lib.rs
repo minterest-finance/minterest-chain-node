@@ -165,7 +165,8 @@ impl<T: Trait> Module<T> {
 
 	/// Gets the exchange rate between a mToken and the underlying asset.
 	/// This function does not accrue interest before calculating the exchange rate.
-	/// - `underlying_asset_id`: CurrencyId of underlying assets for which the exchange rate is calculated.
+	/// - `underlying_asset_id`: CurrencyId of underlying assets for which the exchange rate
+	/// is calculated.
 	///
 	/// returns `exchange_rate` between a mToken and the underlying asset.
 	pub fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
