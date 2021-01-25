@@ -36,6 +36,7 @@ pub struct MinterestModelData {
 type Accounts<T> = accounts::Module<T>;
 
 pub trait Trait: system::Trait + accounts::Trait {
+	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 
 	/// The approximate number of blocks per year

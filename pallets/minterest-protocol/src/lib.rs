@@ -432,7 +432,7 @@ impl<T: Trait> Module<T> {
 
 		let pool_available_liquidity = <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id);
 
-		// Raise an error if protocol has insufficient underlying cash
+		// Raise an error if protocol has insufficient underlying cash.
 		ensure!(
 			borrow_amount <= pool_available_liquidity,
 			Error::<T>::NotEnoughLiquidityAvailable
@@ -442,7 +442,7 @@ impl<T: Trait> Module<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
-		// Fail if borrow not allowed
+		// Fail if borrow not allowed.
 		ensure!(
 			<Controller<T>>::is_operation_allowed(underlying_asset_id, Operation::Borrow),
 			Error::<T>::OperationPaused
@@ -450,7 +450,7 @@ impl<T: Trait> Module<T> {
 		<Controller<T>>::borrow_allowed(underlying_asset_id, &who, borrow_amount)
 			.map_err(|_| Error::<T>::BorrowControllerRejection)?;
 
-		// Fetch the amount the borrower owes, with accumulated interest
+		// Fetch the amount the borrower owes, with accumulated interest.
 		let account_borrows =
 			<Controller<T>>::borrow_balance_stored(&who, underlying_asset_id).map_err(|_| Error::<T>::NumOverflow)?;
 

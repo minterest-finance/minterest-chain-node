@@ -329,8 +329,8 @@ impl<T: Trait> Module<T> {
 
 	/// Return the borrow balance of account based on stored data.
 	///
-	/// - `who`: the address whose balance should be calculated.
-	/// - `currency_id`: id of the currency, the balance of borrowing of which we calculate.
+	/// - `who`: The address whose balance should be calculated.
+	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
 	pub fn borrow_balance_stored(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
 		let user_borrow_balance = <LiquidityPools<T>>::get_user_total_borrowed(&who, underlying_asset_id);
 
