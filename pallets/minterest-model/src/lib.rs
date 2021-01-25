@@ -3,7 +3,7 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{self as system, ensure_signed};
-use minterest_primitives::{CurrencyId, CurrencyPair, Rate};
+use minterest_primitives::{CurrencyId, Rate};
 use orml_utilities::with_transaction_result;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -35,16 +35,14 @@ pub struct MinterestModelData {
 }
 
 type Accounts<T> = accounts::Module<T>;
+type LiquidityPools<T> = liquidity_pools::Module<T>;
 
-pub trait Trait: system::Trait + accounts::Trait {
+pub trait Trait: system::Trait + accounts::Trait + liquidity_pools::Trait {
 	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 
 	/// The approximate number of blocks per year
 	type BlocksPerYear: Get<u128>;
-
-	/// Enabled currency pairs.
-	type EnabledCurrencyPair: Get<Vec<CurrencyPair>>;
 }
 
 decl_storage! {
@@ -111,9 +109,7 @@ decl_module! {
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 
 			ensure!(
-				<T>::EnabledCurrencyPair::get()
-					.iter()
-					.any(|pair| pair.underlying_id == pool_id),
+				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -145,9 +141,7 @@ decl_module! {
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 
 			ensure!(
-				<T>::EnabledCurrencyPair::get()
-					.iter()
-					.any(|pair| pair.underlying_id == pool_id),
+				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -183,9 +177,7 @@ decl_module! {
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 
 			ensure!(
-				<T>::EnabledCurrencyPair::get()
-					.iter()
-					.any(|pair| pair.underlying_id == pool_id),
+				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -220,9 +212,7 @@ decl_module! {
 				ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 
 				ensure!(
-					<T>::EnabledCurrencyPair::get()
-						.iter()
-						.any(|pair| pair.underlying_id == pool_id),
+					<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
 					Error::<T>::NotValidUnderlyingAssetId
 				);
 

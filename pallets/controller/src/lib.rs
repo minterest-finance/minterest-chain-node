@@ -667,7 +667,7 @@ impl<T: Trait> Module<T> {
 		Ok(new_borrow_index)
 	}
 
-	///	Performs mathematical calculations.
+	/// Performs mathematical calculations.
 	///
 	/// returns `value = value + balance_scalar * rate_scalar`
 	fn mul_price_and_balance_add_to_prev_value(

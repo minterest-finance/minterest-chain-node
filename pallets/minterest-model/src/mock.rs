@@ -1,7 +1,8 @@
 /// Mocks for the minterest-model pallet.
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
+use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
+use sp_runtime::{testing::Header, traits::IdentityLookup, ModuleId, Perbill};
 
 use super::*;
 
@@ -16,8 +17,10 @@ mod minterest_model {
 impl_outer_event! {
 	pub enum TestEvent for Test {
 		frame_system<T>,
+		orml_tokens<T>,
 		minterest_model,
 		accounts<T>,
+		liquidity_pools,
 	}
 }
 
@@ -62,6 +65,19 @@ impl system::Trait for Test {
 }
 
 parameter_types! {
+	pub const ExistentialDeposit: u64 = 1;
+}
+
+impl orml_tokens::Trait for Test {
+	type Event = TestEvent;
+	type Balance = Balance;
+	type Amount = Amount;
+	type CurrencyId = CurrencyId;
+	type OnReceived = ();
+	type WeightInfo = ();
+}
+
+parameter_types! {
 	pub const MaxMembers: u32 = MAX_MEMBERS;
 }
 
@@ -71,7 +87,8 @@ impl accounts::Trait for Test {
 }
 
 parameter_types! {
-	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
+	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
 		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
@@ -80,11 +97,24 @@ parameter_types! {
 	];
 }
 
+impl liquidity_pools::Trait for Test {
+	type Event = TestEvent;
+	type MultiCurrency = orml_tokens::Module<Test>;
+	type ModuleId = LiquidityPoolsModuleId;
+	type InitialExchangeRate = InitialExchangeRate;
+	type EnabledCurrencyPair = EnabledCurrencyPair;
+}
+
+parameter_types! {
+	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
+}
+
 impl Trait for Test {
 	type Event = TestEvent;
 	type BlocksPerYear = BlocksPerYear;
-	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
+
+type Amount = i128;
 
 pub type TestMinterestModel = Module<Test>;
 pub type System = frame_system::Module<Test>;

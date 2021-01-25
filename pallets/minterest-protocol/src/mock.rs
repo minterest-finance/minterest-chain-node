@@ -104,7 +104,6 @@ impl orml_currencies::Trait for Test {
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
-	pub const BlocksPerYear: u128 = 5256000;
 	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
 		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
@@ -138,10 +137,13 @@ impl accounts::Trait for Test {
 	type MaxMembers = MaxMembers;
 }
 
+parameter_types! {
+	pub const BlocksPerYear: u128 = 5256000;
+}
+
 impl minterest_model::Trait for Test {
 	type Event = TestEvent;
 	type BlocksPerYear = BlocksPerYear;
-	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
 
 impl Trait for Test {
