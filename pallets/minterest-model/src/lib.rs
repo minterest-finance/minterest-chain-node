@@ -48,19 +48,20 @@ pub trait Trait: system::Trait + accounts::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as MinterestModel {
+		/// The Minterest Model data information: `(kink, base_rate_per_block, multiplier_per_block, jump_multiplier_per_block)`.
 		pub MinterestModelDates get(fn minterest_model_dates) config(): map hasher(blake2_128_concat) CurrencyId => MinterestModelData;
 	}
 }
 
 decl_event!(
 	pub enum Event {
-		/// JumpMultiplierPerBlock has been successfully changed
+		/// JumpMultiplierPerBlock has been successfully changed.
 		JumpMultiplierPerBlockHasChanged,
 
-		/// BaseRatePerBlock has been successfully changed
+		/// BaseRatePerBlock has been successfully changed.
 		BaseRatePerBlockHasChanged,
 
-		/// MultiplierPerBlock has been successfully changed
+		/// MultiplierPerBlock has been successfully changed.
 		MultiplierPerBlockHasChanged,
 	}
 );
@@ -91,7 +92,11 @@ decl_module! {
 		fn deposit_event() = default;
 
 		/// Set JumpMultiplierPerBlock from JumpMultiplierPerYear.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `jump_multiplier_rate_per_year_n`: numerator.
+		/// - `jump_multiplier_rate_per_year_d`: divider.
 		///
+		/// `jump_multiplier_per_block = (jump_multiplier_rate_per_year_n / jump_multiplier_rate_per_year_d) / blocks_per_year`
 		/// The dispatch origin of this call must be Administrator.
 		#[weight = 0]
 		pub fn set_jump_multiplier_per_block(origin, pool_id: CurrencyId, jump_multiplier_rate_per_year_n: u128, jump_multiplier_rate_per_year_d: u128) -> DispatchResult {
@@ -105,18 +110,27 @@ decl_module! {
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
-			let new_jump_multiplier_per_year = Rate::checked_from_rational(jump_multiplier_rate_per_year_n, jump_multiplier_rate_per_year_d).ok_or(Error::<T>::NumOverflow)?;
+			// jump_multiplier_per_block = (jump_multiplier_rate_per_year_n / jump_multiplier_rate_per_year_d) / blocks_per_year
+			let new_jump_multiplier_per_year = Rate::checked_from_rational(jump_multiplier_rate_per_year_n, jump_multiplier_rate_per_year_d)
+				.ok_or(Error::<T>::NumOverflow)?;
 			let new_jump_multiplier_per_block = new_jump_multiplier_per_year
 				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
 				.ok_or(Error::<T>::NumOverflow)?;
 
+			// Write the previously calculated values into storage.
 			MinterestModelDates::mutate(pool_id, |r| r.jump_multiplier_per_block = new_jump_multiplier_per_block);
+
 			Self::deposit_event(Event::JumpMultiplierPerBlockHasChanged);
+
 			Ok(())
 		}
 
 		/// Set BaseRatePerBlock from BaseRatePerYear.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `base_rate_per_year_n`: numerator.
+		/// - `base_rate_per_year_d`: divider.
 		///
+		/// `base_rate_per_block = base_rate_per_year_n / base_rate_per_year_d`
 		/// The dispatch origin of this call must be Administrator.
 		#[weight = 0]
 		pub fn set_base_rate_per_block(origin, pool_id: CurrencyId, base_rate_per_year_n: u128, base_rate_per_year_d: u128) -> DispatchResult {
@@ -141,13 +155,20 @@ decl_module! {
 				ensure!(!Self::minterest_model_dates(pool_id).multiplier_per_block.is_zero(), Error::<T>::BaseRatePerBlockCannotBeZero);
 			}
 
+			// Write the previously calculated values into storage.
 			MinterestModelDates::mutate(pool_id, |r| r.base_rate_per_block = new_base_rate_per_block);
+
 			Self::deposit_event(Event::BaseRatePerBlockHasChanged);
+
 			Ok(())
 		}
 
 		/// Set MultiplierPerBlock from MultiplierPerYear.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `multiplier_rate_per_year_n`: numerator.
+		/// - `multiplier_rate_per_year_d`: divider.
 		///
+		/// `multiplier_per_block = (multiplier_rate_per_year_n / multiplier_rate_per_year_d) / blocks_per_year`
 		/// The dispatch origin of this call must be Administrator.
 		#[weight = 0]
 		pub fn set_multiplier_per_block(origin, pool_id: CurrencyId, multiplier_rate_per_year_n: u128, multiplier_rate_per_year_d: u128) -> DispatchResult {
@@ -172,6 +193,7 @@ decl_module! {
 				ensure!(!Self::minterest_model_dates(pool_id).base_rate_per_block.is_zero(), Error::<T>::MultiplierPerBlockCannotBeZero);
 			}
 
+			// Write the previously calculated values into storage.
 			MinterestModelDates::mutate(pool_id, |r| r.multiplier_per_block = new_multiplier_per_block);
 			Self::deposit_event(Event::MultiplierPerBlockHasChanged);
 			Ok(())
@@ -183,11 +205,22 @@ type RateResult = result::Result<Rate, DispatchError>;
 
 impl<T: Trait> Module<T> {
 	/// Calculates the current borrow rate per block.
+	/// - `underlying_asset_id`: Asset ID for which the borrow interest rate is calculated.
+	/// - `utilization_rate`: Current Utilization rate value.
+	///
+	/// returns `borrow_interest_rate`.
 	pub fn calculate_borrow_interest_rate(underlying_asset_id: CurrencyId, utilization_rate: Rate) -> RateResult {
 		let kink = Self::minterest_model_dates(underlying_asset_id).kink;
 		let multiplier_per_block = Self::minterest_model_dates(underlying_asset_id).multiplier_per_block;
 		let base_rate_per_block = Self::minterest_model_dates(underlying_asset_id).base_rate_per_block;
 
+		// if utilization_rate > kink:
+		// normal_rate = kink * multiplier_per_block + base_rate_per_block
+		// excess_util = utilization_rate * kink
+		// borrow_rate = excess_util * jump_multiplier_per_block + normal_rate
+		//
+		// if utilization_rate <= kink:
+		// borrow_rate = utilization_rate * multiplier_per_block + base_rate_per_block
 		let borrow_interest_rate = match utilization_rate.cmp(&kink) {
 			Ordering::Greater => {
 				let jump_multiplier_per_block =

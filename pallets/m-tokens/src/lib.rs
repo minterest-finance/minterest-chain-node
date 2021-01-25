@@ -32,23 +32,23 @@ decl_event! {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as MTokens {
-		/// Allowance for an account and token
+		/// Allowance for an account and token.
 		Allowance get(fn allowance): map hasher(blake2_128_concat) (CurrencyId, T::AccountId, T::AccountId) => Balance;
 	}
 }
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
-		/// Overflow in calculating allowance
+		/// Overflow in calculating allowance.
 		OverflowAllowance,
 
-		/// Allowance does not exist
+		/// Allowance does not exist.
 		AllowanceDoesNotExist,
 
-		/// Not enough allowance
+		/// Not enough allowance.
 		NotEnoughAllowance,
 
-		/// Underflow in calculating allowance
+		/// Underflow in calculating allowance.
 		UnderflowAllowance,
 	}
 }
@@ -58,6 +58,10 @@ decl_module! {
 		type Error = Error<T>;
 		fn deposit_event() = default;
 
+		/// Allows `spender` to withdraw from the caller's account multiple times, up to
+		/// the `value` amount.
+		///
+		/// If this function is called again it overwrites the current allowance with `value`.
 		#[weight = 10_000]
 		fn approve(origin,
 			spender: <T::Lookup as StaticLookup>::Source,
@@ -78,6 +82,7 @@ decl_module! {
 			})?
 		}
 
+		/// Transfers `value` tokens on the behalf of `from` to the account `to`.
 		#[weight = 10_000]
 		fn transfer_from(_origin,
 			from: T::AccountId,
