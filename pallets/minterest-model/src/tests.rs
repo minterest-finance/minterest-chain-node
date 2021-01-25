@@ -194,6 +194,43 @@ fn set_jump_multiplier_per_block_should_work() {
 }
 
 #[test]
+fn set_kink_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(TestMinterestModel::set_kink(alice(), CurrencyId::DOT, 8, 10));
+		assert_eq!(
+			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).kink,
+			Rate::saturating_from_rational(8, 10)
+		);
+		let expected_event = TestEvent::minterest_model(Event::KinkHasChanged);
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+
+		// Overflow in calculation: 0 / 0
+		assert_noop!(
+			TestMinterestModel::set_kink(alice(), CurrencyId::DOT, 0, 0),
+			Error::<Test>::NumOverflow
+		);
+
+		// The dispatch origin of this call must be Administrator.
+		assert_noop!(
+			TestMinterestModel::set_kink(bob(), CurrencyId::DOT, 8, 10),
+			Error::<Test>::RequireAdmin
+		);
+
+		// MDOT is wrong CurrencyId for underlying assets.
+		assert_noop!(
+			TestMinterestModel::set_kink(alice(), CurrencyId::MDOT, 8, 10),
+			Error::<Test>::NotValidUnderlyingAssetId
+		);
+
+		// Parameter `kink` cannot be more than one.
+		assert_noop!(
+			TestMinterestModel::set_kink(alice(), CurrencyId::DOT, 18, 10),
+			Error::<Test>::KinkCannotBeMoreThanOne
+		);
+	});
+}
+
+#[test]
 fn calculate_borrow_interest_rate_should_work() {
 	new_test_ext().execute_with(|| {
 		// Utilization rate less or equal than kink:

@@ -4,6 +4,7 @@ use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{self as system, ensure_signed};
 use minterest_primitives::{CurrencyId, CurrencyPair, Rate};
+use orml_utilities::with_transaction_result;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -63,6 +64,9 @@ decl_event!(
 
 		/// MultiplierPerBlock has been successfully changed.
 		MultiplierPerBlockHasChanged,
+
+		/// Parameter `kink` has been successfully changed.
+		KinkHasChanged,
 	}
 );
 
@@ -82,6 +86,9 @@ decl_error! {
 
 		/// The dispatch origin of this call must be Administrator.
 		RequireAdmin,
+
+		/// Parameter `kink` cannot be more than one.
+		KinkCannotBeMoreThanOne,
 	}
 }
 
@@ -197,6 +204,39 @@ decl_module! {
 			MinterestModelDates::mutate(pool_id, |r| r.multiplier_per_block = new_multiplier_per_block);
 			Self::deposit_event(Event::MultiplierPerBlockHasChanged);
 			Ok(())
+		}
+
+		/// Set parameter `kink`.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `kink_nominator`: numerator.
+		/// - `kink_divider`: divider.
+		///
+		/// `kink = kink_nominator / kink_divider`
+		/// The dispatch origin of this call must be Administrator.
+		#[weight = 0]
+		pub fn set_kink(origin, pool_id: CurrencyId, kink_nominator: u128, kink_divider: u128) {
+			with_transaction_result(|| {
+				let sender = ensure_signed(origin)?;
+				ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+
+				ensure!(
+					<T>::EnabledCurrencyPair::get()
+						.iter()
+						.any(|pair| pair.underlying_id == pool_id),
+					Error::<T>::NotValidUnderlyingAssetId
+				);
+
+				ensure!(kink_nominator <= kink_divider, Error::<T>::KinkCannotBeMoreThanOne);
+
+				let new_kink = Rate::checked_from_rational(kink_nominator, kink_divider)
+					.ok_or(Error::<T>::NumOverflow)?;
+
+				// Write the previously calculated values into storage.
+				MinterestModelDates::mutate(pool_id, |r| r.kink = new_kink);
+				Self::deposit_event(Event::KinkHasChanged);
+
+				Ok(())
+			})?;
 		}
 	}
 }
