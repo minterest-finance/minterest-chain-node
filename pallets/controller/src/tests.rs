@@ -20,12 +20,8 @@ fn accrue_interest_should_work() {
 			assert_eq!(Controller::controller_dates(CurrencyId::DOT).timestamp, 1);
 			assert_eq!(TestPools::pools(CurrencyId::DOT).total_insurance, 57_600_000_000);
 			assert_eq!(
-				Controller::controller_dates(CurrencyId::DOT).borrow_rate,
-				Rate::saturating_from_rational(72u128, 10_000_000_000u128)
-			);
-			assert_eq!(
-				Controller::controller_dates(CurrencyId::DOT).supply_rate,
-				Rate::from_inner(5_184_000_000)
+				Controller::get_liquidity_pool_borrow_and_supply_rates(CurrencyId::DOT),
+				Some((Rate::from_inner(139_680_000_267), Rate::from_inner(100_569_600_394)))
 			);
 			assert_eq!(
 				TestPools::pools(CurrencyId::DOT).total_borrowed,
@@ -452,6 +448,56 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 100),
 				Ok((0, 98))
+			);
+		});
+}
+
+#[test]
+fn get_liquidity_pool_exchange_rate_should_work() {
+	ExtBuilder::default()
+		.pool_balance(CurrencyId::DOT, dollars(100_u128))
+		.user_balance(ALICE, CurrencyId::MDOT, dollars(125_u128))
+		.pool_total_borrowed(CurrencyId::DOT, dollars(300_u128))
+		.build()
+		.execute_with(|| {
+			// exchange_rate = (100 - 0 + 300) / 125 = 3.2
+			assert_eq!(
+				Controller::get_liquidity_pool_exchange_rate(CurrencyId::DOT),
+				Some(Rate::saturating_from_rational(32, 10))
+			);
+		});
+}
+
+#[test]
+fn get_liquidity_pool_borrow_and_supply_rates_less_than_kink() {
+	ExtBuilder::default()
+		.pool_balance(CurrencyId::DOT, dollars(100_u128))
+		.pool_total_borrowed(CurrencyId::DOT, dollars(300_u128))
+		.build()
+		.execute_with(|| {
+			// utilization_rate = 300 / (100 - 0 + 300) = 0.75 < kink = 0.8
+			// borrow_rate = 0.75 * 0.000_000_009 + 0 = 0.00000000675
+			// supply_rate = 0.75 * 0.00_000_000_675 * (1 - 0.1) = 0.00000000455625
+			assert_eq!(
+				Controller::get_liquidity_pool_borrow_and_supply_rates(CurrencyId::DOT),
+				Some((Rate::from_inner(6750000000), Rate::from_inner(4556250000)))
+			);
+		});
+}
+
+#[test]
+fn get_liquidity_pool_borrow_and_supply_rates_above_kink() {
+	ExtBuilder::default()
+		.pool_balance(CurrencyId::DOT, dollars(100_u128))
+		.pool_total_borrowed(CurrencyId::DOT, dollars(500_u128))
+		.build()
+		.execute_with(|| {
+			// utilization_rate = 500 / (100 - 0 + 500) = 0.83 > kink = 0.8
+			// borrow_rate = 0.83 * 0.8 * 0.000_000_207  + (0.8 * 0.000_000_009) + 0 = 0.0000001452
+			// supply_rate = 0.83 * 0.0000001452 * (1 - 0.1) = 0.00000000455625
+			assert_eq!(
+				Controller::get_liquidity_pool_borrow_and_supply_rates(CurrencyId::DOT),
+				Some((Rate::from_inner(145199999999), Rate::from_inner(108899999999)))
 			);
 		});
 }

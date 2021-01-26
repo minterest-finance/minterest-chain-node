@@ -298,8 +298,6 @@ mod tests {
 						CurrencyId::DOT,
 						ControllerData {
 							timestamp: 0,
-							borrow_rate: Rate::from_inner(0),
-							supply_rate: Rate::from_inner(0),
 							insurance_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
@@ -309,8 +307,6 @@ mod tests {
 						CurrencyId::ETH,
 						ControllerData {
 							timestamp: 0,
-							borrow_rate: Rate::from_inner(0),
-							supply_rate: Rate::from_inner(0),
 							insurance_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
@@ -320,8 +316,6 @@ mod tests {
 						CurrencyId::BTC,
 						ControllerData {
 							timestamp: 0,
-							borrow_rate: Rate::from_inner(0),
-							supply_rate: Rate::from_inner(0),
 							insurance_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%

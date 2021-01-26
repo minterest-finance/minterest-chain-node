@@ -7,8 +7,7 @@
 #![allow(clippy::unnecessary_mut_passed)]
 
 use codec::{Decode, Encode};
-use minterest_primitives::CurrencyId;
-use sp_arithmetic::FixedU128;
+use minterest_primitives::{CurrencyId, Rate};
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
 
@@ -18,9 +17,9 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Eq, PartialEq, Default, RuntimeDebug)]
 pub struct PoolState {
-	pub exchange_rate: FixedU128,
-	pub borrow_rate: FixedU128,
-	pub supply_rate: FixedU128,
+	pub exchange_rate: Rate,
+	pub borrow_rate: Rate,
+	pub supply_rate: Rate,
 }
 
 // Here we declare the runtime API. It is implemented it the `impl` block in
