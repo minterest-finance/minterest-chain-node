@@ -180,14 +180,21 @@ mod tests {
 	pub const ONE_HUNDRED: Balance = 100_000 * DOLLARS;
 	pub const BALANCE_ZERO: Balance = 0;
 	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
-	pub const RATE_EQUALS_ONE: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 	pub const RATE_ZERO: Rate = Rate::from_inner(0);
 	pub const MAX_MEMBERS: u32 = 16;
+
 	pub type MinterestProtocol = minterest_protocol::Module<Test>;
 	pub type TestPools = liquidity_pools::Module<Test>;
 	pub type TestController = controller::Module<Test>;
 	pub type Currencies = orml_currencies::Module<Test>;
 	pub type System = frame_system::Module<Test>;
+
+	pub fn admin() -> Origin {
+		Origin::signed(ADMIN)
+	}
+	pub fn alice() -> Origin {
+		Origin::signed(ALICE)
+	}
 
 	pub struct ExtBuilder {
 		endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -203,14 +210,6 @@ mod tests {
 				pool_user_data: vec![],
 			}
 		}
-	}
-
-	pub fn admin() -> Origin {
-		Origin::signed(ADMIN)
-	}
-
-	pub fn alice() -> Origin {
-		Origin::signed(ALICE)
 	}
 
 	impl ExtBuilder {

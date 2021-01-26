@@ -65,7 +65,7 @@ mod tests {
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), BALANCE_ZERO);
 
 				// Checking DOT pool Storage params
-				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, RATE_EQUALS_ONE);
+				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, Rate::one());
 				// Total insurance changed: 0 -> 100 000
 				let pool_total_insurance_block_number_0 =
 					pool_total_insurance_start + admin_deposit_amount_block_number_0;
@@ -151,7 +151,7 @@ mod tests {
 				);
 
 				// Checking DOT pool Storage params
-				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, RATE_EQUALS_ONE);
+				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, Rate::one());
 				// Expected: 100 000
 				assert_eq!(
 					TestPools::pools(CurrencyId::DOT).total_insurance,
@@ -237,7 +237,7 @@ mod tests {
 				);
 
 				// Checking pool Storage params
-				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, RATE_EQUALS_ONE);
+				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, Rate::one());
 				// Expected: 100 000
 				assert_eq!(
 					TestPools::pools(CurrencyId::DOT).total_insurance,
@@ -281,7 +281,7 @@ mod tests {
 				// User interest index changed: 0 -> 1
 				assert_eq!(
 					TestPools::pool_user_data(CurrencyId::DOT, ALICE).interest_index,
-					RATE_EQUALS_ONE
+					Rate::one()
 				);
 
 				System::set_block_number(3);
