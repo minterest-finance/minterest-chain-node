@@ -1,0 +1,20 @@
+[package]
+name = "minterest-rpc"
+version = "0.1.0"
+authors = ["Minterest <https://github.com/minterest-defi>"]
+edition = "2018"
+
+[dependencies]
+jsonrpc-core = '15.0.0'
+sp-api = { version = "2.0.0" }
+sp-block-builder = { version = "2.0.0" }
+sp-blockchain = { version = "2.0.0" }
+sp-transaction-pool = { version = "2.0.0" }
+sc-rpc-api = '0.8.0'
+pallet-transaction-payment-rpc = { version = "2.0.0" }
+substrate-frame-rpc-system = { version = "2.0.0" }
+sc-rpc = { version = "2.0.0" }
+
+# local dependencies
+node-minterest-runtime = { path = '../runtime', version = '2.0.0' }
+controller-rpc = { path = "../pallets/controller/rpc" }
