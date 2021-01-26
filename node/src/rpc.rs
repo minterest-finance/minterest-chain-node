@@ -32,9 +32,11 @@ where
 	C: Send + Sync + 'static,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
+	C::Api: controller_rpc::ControllerRuntimeApi<Block>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + 'static,
 {
+	use controller_rpc::{Controller, ControllerApi};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
 	use substrate_frame_rpc_system::{FullSystem, SystemApi};
 
@@ -51,8 +53,11 @@ where
 		deny_unsafe,
 	)));
 
-	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(client)));
+	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
+		client.clone(),
+	)));
 
+	io.extend_with(ControllerApi::to_delegate(Controller::new(client)));
 	// Extend this RPC with a custom API by using the following syntax.
 	// `YourRpcStruct` should have a reference to a client, which is needed
 	// to call into the runtime.

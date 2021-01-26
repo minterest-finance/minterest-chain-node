@@ -496,7 +496,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl controller_rpc_runtime_api::LiquidityPoolsApi<Block> for Runtime {
+	impl controller_rpc_runtime_api::ControllerApi<Block> for Runtime {
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState> {
 			let exchange_rate = Controller::pool_exchange_rate(pool_id)?;
 			let borrow_rate = Controller::pool_borrow_rate(pool_id)?;

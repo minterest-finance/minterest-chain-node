@@ -751,6 +751,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "controller-rpc"
+version = "0.1.0"
+dependencies = [
+ "controller-rpc-runtime-api",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "minterest-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+]
+
+[[package]]
 name = "controller-rpc-runtime-api"
 version = "0.1.0"
 dependencies = [
@@ -3434,6 +3449,7 @@ name = "node-minterest"
 version = "2.0.0"
 dependencies = [
  "controller",
+ "controller-rpc",
  "frame-benchmarking",
  "frame-benchmarking-cli",
  "hex-literal 0.3.1",

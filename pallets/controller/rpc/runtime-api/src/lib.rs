@@ -26,7 +26,7 @@ pub struct PoolState {
 // Here we declare the runtime API. It is implemented it the `impl` block in
 // runtime amalgamator file (the `runtime/src/lib.rs`)
 sp_api::decl_runtime_apis! {
-	pub trait LiquidityPoolsApi {
+	pub trait ControllerApi {
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState>;
 	}
 }
