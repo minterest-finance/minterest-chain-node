@@ -751,6 +751,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "controller-rpc-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "minterest-primitives",
+ "parity-scale-codec",
+ "serde",
+ "serde_json",
+ "sp-api",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-std",
+]
+
+[[package]]
 name = "core-foundation"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3463,6 +3477,7 @@ version = "2.0.0"
 dependencies = [
  "accounts",
  "controller",
+ "controller-rpc-runtime-api",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, Zero},
-	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
+	DispatchError, DispatchResult, FixedPointNumber, FixedU128, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
 
@@ -511,6 +511,52 @@ impl<T: Trait> Module<T> {
 			Operation::Borrow => !Self::pause_keepers(pool_id).borrow_paused,
 			Operation::Repay => !Self::pause_keepers(pool_id).repay_paused,
 		}
+	}
+}
+
+// RPC methods
+impl<T: Trait> Module<T> {
+	pub fn pool_exchange_rate(pool_id: CurrencyId) -> Option<FixedU128> {
+		let exchange_rate = <LiquidityPools<T>>::get_exchange_rate(pool_id).ok()?;
+		Some(exchange_rate)
+	}
+
+	pub fn pool_borrow_rate(pool_id: CurrencyId) -> Option<FixedU128> {
+		let current_total_balance = <LiquidityPools<T>>::get_pool_available_liquidity(pool_id);
+		let current_total_borrowed_balance = <LiquidityPools<T>>::get_pool_total_borrowed(pool_id);
+		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
+
+		let utilization_rate = Self::calculate_utilization_rate(
+			current_total_balance,
+			current_total_borrowed_balance,
+			current_total_insurance,
+		)
+		.ok()?;
+
+		let borrow_rate = <MinterestModel<T>>::calculate_borrow_interest_rate(pool_id, utilization_rate).ok()?;
+
+		Some(borrow_rate)
+	}
+
+	pub fn pool_supply_rate(pool_id: CurrencyId) -> Option<FixedU128> {
+		let current_total_balance = <LiquidityPools<T>>::get_pool_available_liquidity(pool_id);
+		let current_total_borrowed_balance = <LiquidityPools<T>>::get_pool_total_borrowed(pool_id);
+		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
+
+		let utilization_rate = Self::calculate_utilization_rate(
+			current_total_balance,
+			current_total_borrowed_balance,
+			current_total_insurance,
+		)
+		.ok()?;
+
+		let borrow_rate = <MinterestModel<T>>::calculate_borrow_interest_rate(pool_id, utilization_rate).ok()?;
+
+		let insurance_factor = Self::get_insurance_factor(pool_id);
+
+		let supply_rate = Self::calculate_supply_interest_rate(utilization_rate, borrow_rate, insurance_factor).ok()?;
+
+		Some(supply_rate)
 	}
 }
 
