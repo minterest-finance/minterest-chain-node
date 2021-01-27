@@ -54,6 +54,10 @@
       "base_rate_per_block": "Rate",
       "multiplier_per_block": "Rate",
       "jump_multiplier_per_block": "Rate"
+    },
+    "CurrencyPair":  {
+      "underlying_id": "CurrencyId",
+      "wrapped_id": "CurrencyId"
     }
   },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
