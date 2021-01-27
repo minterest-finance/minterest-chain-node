@@ -148,10 +148,6 @@ mod tests {
 		type Borrowing = MockBorrowing;
 	}
 
-	parameter_types! {
-		pub const BlocksPerYear: u128 = 5256000;
-	}
-
 	impl controller::Trait for Test {
 		type Event = ();
 	}
@@ -169,10 +165,13 @@ mod tests {
 		type MaxMembers = MaxMembers;
 	}
 
+	parameter_types! {
+		pub const BlocksPerYear: u128 = 5256000;
+	}
+
 	impl minterest_model::Trait for Test {
 		type Event = ();
 		type BlocksPerYear = BlocksPerYear;
-		type EnabledCurrencyPair = EnabledCurrencyPair;
 	}
 
 	pub const ADMIN: AccountId = 0;
