@@ -13,6 +13,7 @@ mod mock;
 mod tests;
 
 pub trait Trait: system::Trait {
+	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
 	/// A maximum number of members. When membership reaches this number, no new members may join.

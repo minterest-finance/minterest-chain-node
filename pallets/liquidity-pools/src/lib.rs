@@ -17,7 +17,8 @@ use sp_std::{cmp::Ordering, result, vec::Vec};
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct Pool {
-	/// Total amount of outstanding borrows of the underlying in this pool.
+	/// The amount of underlying currently loaned out by the pool, and the amount upon which
+	/// interest is accumulated to suppliers of the pool.
 	#[codec(compact)]
 	pub total_borrowed: Balance,
 
@@ -50,6 +51,7 @@ mod mock;
 mod tests;
 
 pub trait Trait: frame_system::Trait {
+	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
 	/// The Liquidity Pool's module id, keep all assets in Pools.
@@ -58,7 +60,7 @@ pub trait Trait: frame_system::Trait {
 	/// The `MultiCurrency` implementation.
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 
-	/// Start exchange rate
+	/// Start exchange rate.
 	type InitialExchangeRate: Get<Rate>;
 
 	/// Enabled currency pairs.
@@ -66,10 +68,7 @@ pub trait Trait: frame_system::Trait {
 }
 
 decl_event!(
-	pub enum Event {
-		/// Pool total balance: \[pool_id, amount\]
-		PoolTotalBalance(CurrencyId, Balance),
-	}
+	pub enum Event {}
 );
 
 decl_error! {
@@ -87,7 +86,10 @@ decl_error! {
 
 decl_storage! {
 	 trait Store for Module<T: Trait> as LiquidityPoolsStorage {
+		 /// Liquidity pool information: `(total_borrowed, borrow_index, total_insurance)`.
 		pub Pools get(fn pools) config(): map hasher(blake2_128_concat) CurrencyId => Pool;
+
+		/// Information about the user of the liquidity pool: `(total_borrowed, interest_index, collateral)`.
 		pub PoolUserDates get(fn pool_user_data) config(): double_map
 			hasher(blake2_128_concat) CurrencyId,
 			hasher(blake2_128_concat) T::AccountId => PoolUserData;
@@ -123,101 +125,8 @@ type RateResult = result::Result<Rate, DispatchError>;
 type CurrencyIdResult = result::Result<CurrencyId, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 
-// Setters for LiquidityPools
+// Dispatchable calls implementation
 impl<T: Trait> Module<T> {
-	pub fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) -> DispatchResult {
-		Pools::mutate(pool_id, |pool| pool.total_borrowed = new_total_borrows);
-		Ok(())
-	}
-
-	pub fn set_pool_borrow_index(pool_id: CurrencyId, new_borrow_index: Rate) -> DispatchResult {
-		Pools::mutate(pool_id, |pool| pool.borrow_index = new_borrow_index);
-		Ok(())
-	}
-
-	pub fn set_pool_total_insurance(pool_id: CurrencyId, new_total_insurance: Balance) -> DispatchResult {
-		Pools::mutate(pool_id, |r| r.total_insurance = new_total_insurance);
-		Ok(())
-	}
-
-	pub fn set_user_total_borrowed_and_interest_index(
-		who: &T::AccountId,
-		pool_id: CurrencyId,
-		new_total_borrows: Balance,
-		new_interest_index: Rate,
-	) -> DispatchResult {
-		PoolUserDates::<T>::mutate(pool_id, who, |p| {
-			p.total_borrowed = new_total_borrows;
-			p.interest_index = new_interest_index;
-		});
-		Ok(())
-	}
-
-	pub fn set_accrual_interest_params(
-		underlying_asset_id: CurrencyId,
-		new_total_borrow_balance: Balance,
-		new_total_insurance: Balance,
-	) -> DispatchResult {
-		Pools::mutate(underlying_asset_id, |r| {
-			r.total_borrowed = new_total_borrow_balance;
-			r.total_insurance = new_total_insurance;
-		});
-		Ok(())
-	}
-
-	pub fn enable_as_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) -> DispatchResult {
-		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = true);
-		Ok(())
-	}
-
-	pub fn disable_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) -> DispatchResult {
-		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = false);
-		Ok(())
-	}
-}
-
-// Getters for LiquidityPools
-impl<T: Trait> Module<T> {
-	/// Module account id
-	pub fn pools_account_id() -> T::AccountId {
-		T::ModuleId::get().into_account()
-	}
-
-	pub fn get_pool_available_liquidity(currency_id: CurrencyId) -> Balance {
-		let module_account_id = Self::pools_account_id();
-		T::MultiCurrency::free_balance(currency_id, &module_account_id)
-	}
-
-	pub fn get_pool_total_borrowed(currency_id: CurrencyId) -> Balance {
-		Self::pools(currency_id).total_borrowed
-	}
-
-	pub fn get_pool_total_insurance(currency_id: CurrencyId) -> Balance {
-		Self::pools(currency_id).total_insurance
-	}
-
-	/// Accumulator of the total earned interest rate since the opening of the pool
-	pub fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate {
-		Self::pools(pool_id).borrow_index
-	}
-
-	/// Global borrow_index as of the most recent balance-changing action
-	pub fn get_user_borrow_index(who: &T::AccountId, currency_id: CurrencyId) -> Rate {
-		Self::pool_user_data(currency_id, who).interest_index
-	}
-
-	pub fn get_user_total_borrowed(who: &T::AccountId, currency_id: CurrencyId) -> Balance {
-		Self::pool_user_data(currency_id, who).total_borrowed
-	}
-
-	pub fn check_user_available_collateral(who: &T::AccountId, currency_id: CurrencyId) -> bool {
-		Self::pool_user_data(currency_id, who).collateral
-	}
-
-	pub fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
-		Pools::contains_key(underlying_asset_id)
-	}
-
 	/// Converts a specified number of underlying assets into wrapped tokens.
 	/// The calculation is based on the exchange rate.
 	///
@@ -240,6 +149,7 @@ impl<T: Trait> Module<T> {
 	///
 	/// - `wrapped_id`: CurrencyId of the wrapped tokens to be converted to underlying assets.
 	/// - `wrapped_amount`: The amount of wrapped tokens to be converted to underlying assets.
+	///
 	/// Returns `underlying_amount = wrapped_amount * exchange_rate`
 	pub fn convert_from_wrapped(wrapped_id: CurrencyId, wrapped_amount: Balance) -> BalanceResult {
 		let underlying_asset_id = Self::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
@@ -253,18 +163,24 @@ impl<T: Trait> Module<T> {
 		Ok(underlying_amount)
 	}
 
-	/// Calculates the exchange rate from the underlying to the mToken.
+	/// Gets the exchange rate between a mToken and the underlying asset.
 	/// This function does not accrue interest before calculating the exchange rate.
+	/// - `underlying_asset_id`: CurrencyId of underlying assets for which the exchange rate
+	/// is calculated.
+	///
+	/// returns `exchange_rate` between a mToken and the underlying asset.
 	pub fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
 		let wrapped_asset_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
-		// The total amount of cash the market has
+		// Current the total amount of cash the pool has.
 		let total_cash = Self::get_pool_available_liquidity(underlying_asset_id);
 
-		// Total number of tokens in circulation
+		// Current total number of tokens in circulation.
 		let total_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
 
+		// Current total amount of insurance of the underlying held in this pool.
 		let total_insurance = Self::get_pool_total_insurance(underlying_asset_id);
 
+		// Current the amount of underlying currently loaned out by the pool.
 		let total_borrowed = Self::get_pool_total_borrowed(underlying_asset_id);
 
 		let current_exchange_rate =
@@ -274,6 +190,12 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Calculates the exchange rate from the underlying to the mToken.
+	/// - `total_cash`: The total amount of cash the pool has.
+	/// - `total_supply`: Total number of tokens in circulation.
+	/// - `total_insurance`: Total amount of insurance of the underlying held in the pool.
+	/// - `total_borrowed`: Total amount of outstanding borrows of the underlying in this pool.
+	///
+	/// returns `exchange_rate = (total_cash - total_insurance + total_borrowed) / total_supply`.
 	fn calculate_exchange_rate(
 		total_cash: Balance,
 		total_supply: Balance,
@@ -283,6 +205,7 @@ impl<T: Trait> Module<T> {
 		let rate = match total_supply.cmp(&Balance::zero()) {
 			// If there are no tokens minted: exchangeRate = InitialExchangeRate.
 			Ordering::Equal => T::InitialExchangeRate::get(),
+
 			// Otherwise: exchange_rate = (total_cash - total_insurance + total_borrowed) / total_supply
 			_ => {
 				let cash_plus_borrows = total_cash.checked_add(total_borrowed).ok_or(Error::<T>::NumOverflow)?;
@@ -298,6 +221,14 @@ impl<T: Trait> Module<T> {
 		Ok(rate)
 	}
 
+	/// Check if enabled underlying asset id.
+	pub fn is_enabled_underlying_asset_id(underlying_asset_id: CurrencyId) -> bool {
+		T::EnabledCurrencyPair::get()
+			.iter()
+			.any(|pair| pair.underlying_id == underlying_asset_id)
+	}
+
+	/// Gets the wrapped token ID from the underlying asset ID.
 	pub fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> CurrencyIdResult {
 		let enabled_currency_pair = T::EnabledCurrencyPair::get();
 
@@ -309,6 +240,7 @@ impl<T: Trait> Module<T> {
 		Ok(currency_pair.wrapped_id)
 	}
 
+	/// Gets the underlying asset ID from the wrapped token ID.
 	pub fn get_underlying_asset_id_by_wrapped_id(wrapped_id: &CurrencyId) -> CurrencyIdResult {
 		let enabled_currency_pair = T::EnabledCurrencyPair::get();
 
@@ -319,31 +251,144 @@ impl<T: Trait> Module<T> {
 
 		Ok(currency_pair.underlying_id)
 	}
+}
 
+// Storage setters for LiquidityPools
+impl<T: Trait> Module<T> {
+	/// Sets the total borrowed value in the pool.
+	fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) -> DispatchResult {
+		Pools::mutate(pool_id, |pool| pool.total_borrowed = new_total_borrows);
+		Ok(())
+	}
+
+	/// Sets the borrow index in the pool.
+	pub fn set_pool_borrow_index(pool_id: CurrencyId, new_borrow_index: Rate) -> DispatchResult {
+		Pools::mutate(pool_id, |pool| pool.borrow_index = new_borrow_index);
+		Ok(())
+	}
+
+	/// Sets the total insurance in the pool.
+	pub fn set_pool_total_insurance(pool_id: CurrencyId, new_total_insurance: Balance) -> DispatchResult {
+		Pools::mutate(pool_id, |r| r.total_insurance = new_total_insurance);
+		Ok(())
+	}
+
+	/// Sets the total borrowed and interest index for user.
+	fn set_user_total_borrowed_and_interest_index(
+		who: &T::AccountId,
+		pool_id: CurrencyId,
+		new_total_borrows: Balance,
+		new_interest_index: Rate,
+	) -> DispatchResult {
+		PoolUserDates::<T>::mutate(pool_id, who, |p| {
+			p.total_borrowed = new_total_borrows;
+			p.interest_index = new_interest_index;
+		});
+		Ok(())
+	}
+
+	/// Sets the total borrowed and the total insurance in the pool.
+	pub fn set_accrual_interest_params(
+		underlying_asset_id: CurrencyId,
+		new_total_borrow_balance: Balance,
+		new_total_insurance: Balance,
+	) -> DispatchResult {
+		Pools::mutate(underlying_asset_id, |r| {
+			r.total_borrowed = new_total_borrow_balance;
+			r.total_insurance = new_total_insurance;
+		});
+		Ok(())
+	}
+
+	/// Sets the parameter `collateral` to `true`.
+	pub fn enable_as_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) -> DispatchResult {
+		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = true);
+		Ok(())
+	}
+
+	/// Sets the parameter `collateral` to `false`.
+	pub fn disable_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) -> DispatchResult {
+		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = false);
+		Ok(())
+	}
+}
+
+// Storage getters for LiquidityPools
+impl<T: Trait> Module<T> {
+	/// Gets module account id.
+	pub fn pools_account_id() -> T::AccountId {
+		T::ModuleId::get().into_account()
+	}
+
+	/// Gets current the total amount of cash the pool has.
+	pub fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance {
+		let module_account_id = Self::pools_account_id();
+		T::MultiCurrency::free_balance(pool_id, &module_account_id)
+	}
+
+	/// Gets current the amount of underlying currently loaned out by the pool.
+	pub fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance {
+		Self::pools(pool_id).total_borrowed
+	}
+
+	/// Gets current total amount of insurance of the underlying held in this pool.
+	pub fn get_pool_total_insurance(pool_id: CurrencyId) -> Balance {
+		Self::pools(pool_id).total_insurance
+	}
+
+	/// Accumulator of the total earned interest rate since the opening of the pool
+	pub fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate {
+		Self::pools(pool_id).borrow_index
+	}
+
+	/// Global borrow_index as of the most recent balance-changing action
+	pub fn get_user_borrow_index(who: &T::AccountId, pool_id: CurrencyId) -> Rate {
+		Self::pool_user_data(pool_id, who).interest_index
+	}
+
+	/// Gets total user borrowing.
+	pub fn get_user_total_borrowed(who: &T::AccountId, pool_id: CurrencyId) -> Balance {
+		Self::pool_user_data(pool_id, who).total_borrowed
+	}
+
+	/// Checks if the user has enabled the pool as collateral.
+	pub fn check_user_available_collateral(who: &T::AccountId, pool_id: CurrencyId) -> bool {
+		Self::pool_user_data(pool_id, who).collateral
+	}
+
+	/// Check if pool exists
+	pub fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
+		Pools::contains_key(underlying_asset_id)
+	}
+
+	// TODO: Maybe implement using a binary tree?
 	pub fn get_pool_members(underlying_asset_id: CurrencyId) -> result::Result<Vec<T::AccountId>, DispatchError> {
 		let user_vec: Vec<T::AccountId> = PoolUserDates::<T>::iter_prefix(underlying_asset_id)
 			.map(|(account, _)| account)
 			.collect();
 		Ok(user_vec)
 	}
-
-	pub fn is_enabled_underlying_asset_id(underlying_asset_id: CurrencyId) -> bool {
-		T::EnabledCurrencyPair::get()
-			.iter()
-			.any(|pair| pair.underlying_id == underlying_asset_id)
-	}
 }
 
 // Trait Borrowing for LiquidityPools
 impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
+	/// Updates the new borrower balance and pool total borrow balances during the borrow operation.
+	/// Also sets the global borrow_index to user interest index.
+	/// - `who`: The AccountId whose borrow balance should be calculated.
+	/// - `pool_id`: PoolID whose total borrow balance should be calculated.
+	/// - `borrow_amount`: The amount of the underlying asset to borrow.
+	/// - `account_borrows`: The borrow balance of account.
+	///
+	/// calculates: `account_borrows_new = account_borrows + borrow_amount`,
+	///             `total_borrows_new = total_borrows + borrow_amount`.
 	fn update_state_on_borrow(
 		who: &T::AccountId,
-		underlying_asset_id: CurrencyId,
+		pool_id: CurrencyId,
 		borrow_amount: Balance,
 		account_borrows: Balance,
 	) -> DispatchResult {
-		let pool_borrow_index = Self::get_pool_borrow_index(underlying_asset_id);
-		let pool_total_borrowed = Self::get_pool_total_borrowed(underlying_asset_id);
+		let pool_borrow_index = Self::get_pool_borrow_index(pool_id);
+		let pool_total_borrowed = Self::get_pool_total_borrowed(pool_id);
 
 		// Calculate the new borrower and total borrow balances, failing on overflow:
 		// account_borrows_new = account_borrows + borrow_amount
@@ -351,47 +396,49 @@ impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 		let account_borrow_new = account_borrows
 			.checked_add(borrow_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
-		let total_borrows_new = pool_total_borrowed
+		let new_total_borrows = pool_total_borrowed
 			.checked_add(borrow_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		// Write the previously calculated values into storage.
-		Self::set_pool_total_borrowed(underlying_asset_id, total_borrows_new)?;
-		Self::set_user_total_borrowed_and_interest_index(
-			&who,
-			underlying_asset_id,
-			account_borrow_new,
-			pool_borrow_index,
-		)?;
+		Self::set_pool_total_borrowed(pool_id, new_total_borrows)?;
+
+		Self::set_user_total_borrowed_and_interest_index(&who, pool_id, account_borrow_new, pool_borrow_index)?;
+
 		Ok(())
 	}
 
+	/// Updates the new borrower balance and pool total borrow balances during the repay operation.
+	/// Also sets the global borrow_index to user interest index.
+	/// - `who`: The AccountId whose borrow balance should be calculated.
+	/// - `pool_id`: PoolID whose total borrow balance should be calculated.
+	/// - `repay_amount`: The amount of the underlying asset to repay.
+	/// - `account_borrows`: The borrow balance of account.
+	///
+	/// calculates: `account_borrows_new = account_borrows - borrow_amount`,
+	///             `total_borrows_new = total_borrows - borrow_amount`.
 	fn update_state_on_repay(
 		who: &T::AccountId,
-		underlying_asset_id: CurrencyId,
+		pool_id: CurrencyId,
 		repay_amount: Balance,
 		account_borrows: Balance,
 	) -> DispatchResult {
-		let pool_borrow_index = Self::get_pool_borrow_index(underlying_asset_id);
+		let pool_borrow_index = Self::get_pool_borrow_index(pool_id);
 
 		// Calculate the new borrower and total borrow balances, failing on overflow:
 		// account_borrows_new = account_borrows - repay_amount
-		// total_borrows_new = total_borrows + repay_amount
+		// total_borrows_new = total_borrows - repay_amount
 		let account_borrow_new = account_borrows
 			.checked_sub(repay_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
-		let total_borrows_new = Self::get_pool_total_borrowed(underlying_asset_id)
+		let total_borrows_new = Self::get_pool_total_borrowed(pool_id)
 			.checked_sub(repay_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		// Write the previously calculated values into storage.
-		Self::set_pool_total_borrowed(underlying_asset_id, total_borrows_new)?;
-		Self::set_user_total_borrowed_and_interest_index(
-			&who,
-			underlying_asset_id,
-			account_borrow_new,
-			pool_borrow_index,
-		)?;
+		Self::set_pool_total_borrowed(pool_id, total_borrows_new)?;
+		Self::set_user_total_borrowed_and_interest_index(&who, pool_id, account_borrow_new, pool_borrow_index)?;
+
 		Ok(())
 	}
 }
