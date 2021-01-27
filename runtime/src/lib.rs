@@ -9,6 +9,8 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod constants;
+#[cfg(test)]
+mod tests;
 
 pub use controller_rpc_runtime_api::PoolState;
 use orml_currencies::BasicCurrencyAdapter;
