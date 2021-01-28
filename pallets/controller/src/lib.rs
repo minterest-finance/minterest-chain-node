@@ -21,12 +21,6 @@ pub struct ControllerData<BlockNumber> {
 	/// Block number that interest was last accrued at.
 	pub timestamp: BlockNumber,
 
-	/// Variable interest rate that users receive for supply assets to the protocol.
-	pub supply_rate: Rate, // FIXME. Delete and implement via RPC
-
-	/// Variable interest rate that users pay for lending assets.
-	pub borrow_rate: Rate, // FIXME. Delete and implement via RPC
-
 	/// Defines the portion of borrower interest that is converted into insurance.
 	pub insurance_factor: Rate,
 
@@ -283,10 +277,6 @@ impl<T: Trait> Module<T> {
 		let max_borrow_rate = Self::get_max_borrow_rate(underlying_asset_id);
 		let insurance_factor = Self::get_insurance_factor(underlying_asset_id);
 
-		// Calculate the current supply interest rate
-		let current_supply_interest_rate =
-			Self::calculate_supply_interest_rate(utilization_rate, current_borrow_interest_rate, insurance_factor)?;
-
 		ensure!(
 			current_borrow_interest_rate <= max_borrow_rate,
 			Error::<T>::BorrowRateIsTooHight
@@ -315,8 +305,6 @@ impl<T: Trait> Module<T> {
 
 		// Save new params
 		ControllerDates::<T>::mutate(underlying_asset_id, |x| x.timestamp = current_block_number);
-		ControllerDates::<T>::mutate(underlying_asset_id, |x| x.borrow_rate = current_borrow_interest_rate);
-		ControllerDates::<T>::mutate(underlying_asset_id, |x| x.supply_rate = current_supply_interest_rate);
 		<LiquidityPools<T>>::set_accrual_interest_params(
 			underlying_asset_id,
 			new_total_borrow_balance,
@@ -511,6 +499,36 @@ impl<T: Trait> Module<T> {
 			Operation::Borrow => !Self::pause_keepers(pool_id).borrow_paused,
 			Operation::Repay => !Self::pause_keepers(pool_id).repay_paused,
 		}
+	}
+}
+
+// RPC methods
+impl<T: Trait> Module<T> {
+	/// Gets the exchange rate between a mToken and the underlying asset.
+	pub fn get_liquidity_pool_exchange_rate(pool_id: CurrencyId) -> Option<Rate> {
+		let exchange_rate = <LiquidityPools<T>>::get_exchange_rate(pool_id).ok()?;
+		Some(exchange_rate)
+	}
+
+	/// Gets borrow interest rate and supply interest rate.
+	pub fn get_liquidity_pool_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
+		let current_total_balance = <LiquidityPools<T>>::get_pool_available_liquidity(pool_id);
+		let current_total_borrowed_balance = <LiquidityPools<T>>::get_pool_total_borrowed(pool_id);
+		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
+		let insurance_factor = Self::get_insurance_factor(pool_id);
+
+		let utilization_rate = Self::calculate_utilization_rate(
+			current_total_balance,
+			current_total_borrowed_balance,
+			current_total_insurance,
+		)
+		.ok()?;
+
+		let borrow_rate = <MinterestModel<T>>::calculate_borrow_interest_rate(pool_id, utilization_rate).ok()?;
+
+		let supply_rate = Self::calculate_supply_interest_rate(utilization_rate, borrow_rate, insurance_factor).ok()?;
+
+		Some((borrow_rate, supply_rate))
 	}
 }
 

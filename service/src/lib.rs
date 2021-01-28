@@ -13,6 +13,8 @@ use sp_inherents::InherentDataProviders;
 use std::sync::Arc;
 use std::time::Duration;
 
+pub mod chain_spec;
+
 // Our native executor instance.
 native_executor_instance!(
 	pub Executor,
@@ -142,13 +144,13 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 		let pool = transaction_pool.clone();
 
 		Box::new(move |deny_unsafe, _| {
-			let deps = crate::rpc::FullDeps {
+			let deps = minterest_rpc::FullDeps {
 				client: client.clone(),
 				pool: pool.clone(),
 				deny_unsafe,
 			};
 
-			crate::rpc::create_full(deps)
+			minterest_rpc::create_full(deps)
 		})
 	};
 

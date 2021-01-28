@@ -19,14 +19,12 @@ use sp_std::{cmp::Ordering, result, vec::Vec};
 pub struct Pool {
 	/// The amount of underlying currently loaned out by the pool, and the amount upon which
 	/// interest is accumulated to suppliers of the pool.
-	#[codec(compact)]
 	pub total_borrowed: Balance,
 
 	/// Accumulator of the total earned interest rate since the opening of the pool.
 	pub borrow_index: Rate,
 
 	/// Total amount of insurance of the underlying held in this pool.
-	#[codec(compact)]
 	pub total_insurance: Balance,
 }
 
@@ -35,7 +33,6 @@ pub struct Pool {
 pub struct PoolUserData {
 	/// Total balance (with accrued interest), after applying the most
 	/// recent balance-changing action.
-	#[codec(compact)]
 	pub total_borrowed: Balance,
 
 	/// Global borrow_index as of the most recent balance-changing action.

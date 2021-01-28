@@ -1,9 +1,31 @@
+[package]
+name = "minterest-chain"
+version = "0.1.0"
+authors = ["Minterest <https://github.com/minterest-defi>"]
+edition = "2018"
+
 [profile.release]
 panic = 'unwind'
 
+[[bin]]
+name = "minterest"
+path = "src/main.rs"
+
+[dependencies]
+minterest-cli = { path = "cli" }
+minterest-service = { path = "service" }
+
+[features]
+runtime-benchmarks = [
+    "minterest-cli/runtime-benchmarks",
+]
+
 [workspace]
 members = [
-    'node',
+    'cli',
+    'rpc',
+    'primitives',
+    'service',
     'runtime',
 
     'pallets/liquidity-pools',
@@ -13,8 +35,6 @@ members = [
     'pallets/controller',
     'pallets/accounts',
     'pallets/oracle',
-
-    'primitives',
 
     "orml/auction",
     "orml/authority",

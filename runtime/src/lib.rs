@@ -9,7 +9,10 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod constants;
+#[cfg(test)]
+mod tests;
 
+pub use controller_rpc_runtime_api::PoolState;
 use orml_currencies::BasicCurrencyAdapter;
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
@@ -492,6 +495,15 @@ impl_runtime_apis! {
 			len: u32,
 		) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
 			TransactionPayment::query_info(uxt, len)
+		}
+	}
+
+	impl controller_rpc_runtime_api::ControllerApi<Block> for Runtime {
+		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState> {
+			let exchange_rate = Controller::get_liquidity_pool_exchange_rate(pool_id)?;
+			let (borrow_rate, supply_rate) = Controller::get_liquidity_pool_borrow_and_supply_rates(pool_id)?;
+
+			Some(PoolState { exchange_rate, borrow_rate, supply_rate })
 		}
 	}
 
