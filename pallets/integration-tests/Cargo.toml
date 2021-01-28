@@ -21,7 +21,6 @@ m-tokens = { path = "../m-tokens", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
 minterest-protocol = { path = "../minterest-protocol", default-features = false }
 
-
 [dev-dependencies]
 sp-core = { version = "2.0.0" }
 sp-io = { version = "2.0.0" }
@@ -37,6 +36,7 @@ oracle = { path = "../oracle" }
 pallet-traits = { path = "../traits" }
 accounts = { path = "../accounts" }
 minterest-model = { path = "../minterest-model" }
+minterest-protocol = { path = "../minterest-protocol" }
 
 [features]
 default = ['std']

@@ -273,8 +273,6 @@ fn testnet_genesis(
 					CurrencyId::ETH,
 					ControllerData {
 						timestamp: 0,
-						supply_rate: FixedU128::zero(),
-						borrow_rate: FixedU128::zero(),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
@@ -284,8 +282,6 @@ fn testnet_genesis(
 					CurrencyId::DOT,
 					ControllerData {
 						timestamp: 0,
-						supply_rate: FixedU128::zero(),
-						borrow_rate: FixedU128::zero(),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
@@ -295,8 +291,6 @@ fn testnet_genesis(
 					CurrencyId::KSM,
 					ControllerData {
 						timestamp: 0,
-						supply_rate: FixedU128::zero(),
-						borrow_rate: FixedU128::zero(),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
@@ -306,8 +300,6 @@ fn testnet_genesis(
 					CurrencyId::BTC,
 					ControllerData {
 						timestamp: 0,
-						supply_rate: FixedU128::zero(),
-						borrow_rate: FixedU128::zero(),
 						insurance_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%

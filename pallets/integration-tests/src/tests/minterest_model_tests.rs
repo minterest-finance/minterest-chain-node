@@ -14,10 +14,7 @@ mod tests {
 			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
-				// Expected borrow interest rate based on params before fn accrue_interest_rate called
-				let expected_borrow_rate_mock = Rate::zero();
-
-				// Alice deposit to DOT pool
+				// Alice deposit 40 DOT in pool
 				let alice_deposited_amount = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
@@ -25,11 +22,13 @@ mod tests {
 					alice_deposited_amount
 				));
 
+				// utilization_rate = 0 / (40_000 - 0 + 0) = 0 < 0.8
+				// borrow_rate = 0 * 0.000_000_009 + 0 = 0
+				let (borrow_rate, _) =
+					TestController::get_liquidity_pool_borrow_and_supply_rates(CurrencyId::DOT).unwrap_or_default();
+
 				// Checking if real borrow interest rate is equal to the expected
-				assert_eq!(
-					TestController::controller_dates(CurrencyId::DOT).borrow_rate,
-					expected_borrow_rate_mock
-				);
+				assert_eq!(Rate::zero(), borrow_rate);
 			});
 	}
 
@@ -42,10 +41,7 @@ mod tests {
 			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
-				// Expected borrow interest rate based on params before fn accrue_interest_rate called
-				let expected_borrow_rate_mock = Rate::zero();
-
-				// Alice deposit to DOT pool
+				// Alice deposit 40 DOT in pool
 				let alice_deposited_amount = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
@@ -53,11 +49,13 @@ mod tests {
 					alice_deposited_amount
 				));
 
+				// utilization_rate = 0 / (140_000 - 100_000 + 0) = 0 < 0.8
+				// borrow_rate = 0 * 0.000_000_009 + 0 = 0
+				let (borrow_rate, _) =
+					TestController::get_liquidity_pool_borrow_and_supply_rates(CurrencyId::DOT).unwrap_or_default();
+
 				// Checking if real borrow interest rate is equal to the expected
-				assert_eq!(
-					TestController::controller_dates(CurrencyId::DOT).borrow_rate,
-					expected_borrow_rate_mock
-				);
+				assert_eq!(Rate::zero(), borrow_rate);
 			});
 	}
 
@@ -80,9 +78,6 @@ mod tests {
 
 				System::set_block_number(2);
 
-				// Expected borrow interest rate based on params before fn accrue_interest_rate called
-				let expected_borrow_rate_mock = Rate::zero();
-
 				// Alice borrow from DOT pool
 				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
@@ -91,10 +86,15 @@ mod tests {
 					alice_borrowed_amount_in_dot
 				));
 
-				assert_eq!(
-					TestController::controller_dates(CurrencyId::DOT).borrow_rate,
-					expected_borrow_rate_mock
-				);
+				// utilization_rate = 20_000 / (20_000 - 0 + 20_000) = 0.5 < kink = 0.8
+				// borrow_rate = 0.5 * 0.000_000_009 + 0 = 45 * 10^(-10)
+				let expected_borrow_rate_mock = Rate::saturating_from_rational(45_u128, 10_000_000_000_u128);
+
+				let (borrow_rate, _) =
+					TestController::get_liquidity_pool_borrow_and_supply_rates(CurrencyId::DOT).unwrap_or_default();
+
+				// Checking if real borrow interest rate is equal to the expected
+				assert_eq!(expected_borrow_rate_mock, borrow_rate);
 			});
 	}
 
@@ -117,9 +117,6 @@ mod tests {
 
 				System::set_block_number(2);
 
-				// Expected borrow interest rate based on params before fn accrue_interest_rate called
-				let expected_borrow_rate_mock = Rate::zero();
-
 				// Alice borrow from DOT pool
 				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
@@ -128,10 +125,15 @@ mod tests {
 					alice_borrowed_amount_in_dot
 				));
 
-				assert_eq!(
-					TestController::controller_dates(CurrencyId::DOT).borrow_rate,
-					expected_borrow_rate_mock
-				);
+				// utilization_rate = 20_000 / (120_000 - 100_000 + 20_000) = 0.5 < kink = 0.8
+				// borrow_rate = 0.5 * 0.000_000_009 + 0 = 45 * 10^(-10)
+				let expected_borrow_rate_mock = Rate::saturating_from_rational(45_u128, 10_000_000_000_u128);
+
+				let (borrow_rate, _) =
+					TestController::get_liquidity_pool_borrow_and_supply_rates(CurrencyId::DOT).unwrap_or_default();
+
+				// Checking if real borrow interest rate is equal to the expected
+				assert_eq!(expected_borrow_rate_mock, borrow_rate);
 			});
 	}
 
@@ -176,9 +178,6 @@ mod tests {
 
 				System::set_block_number(4);
 
-				// Expected borrow interest rate based on params before fn accrue_interest_rate called
-				let expected_borrow_rate_mock = Rate::from_inner(1800000006);
-
 				// Alice try to borrow from DOT pool
 				let bob_borrowed_amount_in_dot = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
@@ -187,11 +186,16 @@ mod tests {
 					bob_borrowed_amount_in_dot
 				));
 
+				// utilization_rate = 70_000 / (130_000 - 100_000 + 70_000) = 0.7 < kink = 0.8
+				// borrow_rate = 0.7 * 0.000_000_009 + 0 = 63 * 10^(-10) + accumulated_borrow
+				let expected_borrow_rate_mock = Rate::from_inner(6_300_000_004);
+
 				// Checking if real borrow interest rate is equal to the expected
-				assert_eq!(
-					TestController::controller_dates(CurrencyId::DOT).borrow_rate,
-					expected_borrow_rate_mock
-				);
+				let (borrow_rate, _) =
+					TestController::get_liquidity_pool_borrow_and_supply_rates(CurrencyId::DOT).unwrap_or_default();
+
+				// Checking if real borrow interest rate is equal to the expected
+				assert_eq!(expected_borrow_rate_mock, borrow_rate);
 			});
 	}
 }
