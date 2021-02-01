@@ -58,6 +58,11 @@
     "CurrencyPair":  {
       "underlying_id": "CurrencyId",
       "wrapped_id": "CurrencyId"
+    },
+    "PoolState": {
+      "exchange_rate": "Rate",
+      "borrow_rate": "Rate",
+      "supply_rate": "Rate"
     }
   },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
