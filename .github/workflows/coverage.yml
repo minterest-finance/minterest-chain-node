@@ -4,7 +4,7 @@ name: Code Coverage
 
 jobs:
   grcov:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
       - name: Checkout Repository
@@ -16,10 +16,10 @@ jobs:
           toolchain: nightly
           override: true
 
-#      - name: Cargo Clean
-#        uses: actions-rs/cargo@v1
-#        with:
-#          command: clean
+      - name: Cargo Clean
+        uses: actions-rs/cargo@v1
+        with:
+          command: clean
 
       - name: Run Tests for Coverage
         uses: actions-rs/cargo@v1
