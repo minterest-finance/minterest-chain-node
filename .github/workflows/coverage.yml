@@ -14,9 +14,9 @@ jobs:
       - name: Install Nightly toolchain
         uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
           toolchain: nightly-2020-09-27
           target: wasm32-unknown-unknown
-          override: true
           default: true
 
       - name: Cargo Clean
