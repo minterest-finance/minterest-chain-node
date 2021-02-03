@@ -1,6 +1,6 @@
 [package]
 name = "controller-rpc-runtime-api"
-version = "0.1.0"
+version = "0.5.0"
 authors = ["Minterest <https://github.com/minterest-defi>"]
 edition = "2018"
 license = "GPL-3.0-or-later"

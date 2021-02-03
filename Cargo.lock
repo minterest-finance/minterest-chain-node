@@ -12,7 +12,7 @@ dependencies = [
 
 [[package]]
 name = "accounts"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -758,7 +758,7 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 
 [[package]]
 name = "controller"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "accounts",
  "frame-support",
@@ -781,7 +781,7 @@ dependencies = [
 
 [[package]]
 name = "controller-rpc"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "controller-rpc-runtime-api",
  "jsonrpc-core",
@@ -796,7 +796,7 @@ dependencies = [
 
 [[package]]
 name = "controller-rpc-runtime-api"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "minterest-primitives",
  "parity-scale-codec",
@@ -2306,7 +2306,7 @@ checksum = "f65877bf7d44897a473350b1046277941cee20b263397e90869c50b6e766088b"
 
 [[package]]
 name = "integration-tests"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "accounts",
  "controller",
@@ -3105,7 +3105,7 @@ dependencies = [
 
 [[package]]
 name = "liquidity-pools"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3187,7 +3187,7 @@ checksum = "adb241df5c4caeb888755363fc95f8a896618dc0d435e9e775f7930cb099beab"
 
 [[package]]
 name = "m-tokens"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3337,7 +3337,7 @@ dependencies = [
 
 [[package]]
 name = "minterest-chain"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "minterest-cli",
  "minterest-service",
@@ -3345,7 +3345,7 @@ dependencies = [
 
 [[package]]
 name = "minterest-cli"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "frame-benchmarking-cli",
  "minterest-service",
@@ -3359,7 +3359,7 @@ dependencies = [
 
 [[package]]
 name = "minterest-model"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "accounts",
  "frame-support",
@@ -3378,7 +3378,7 @@ dependencies = [
 
 [[package]]
 name = "minterest-primitives"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "parity-scale-codec",
  "serde",
@@ -3389,7 +3389,7 @@ dependencies = [
 
 [[package]]
 name = "minterest-protocol"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "accounts",
  "controller",
@@ -3413,7 +3413,7 @@ dependencies = [
 
 [[package]]
 name = "minterest-rpc"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "controller-rpc",
  "jsonrpc-core",
@@ -3430,7 +3430,7 @@ dependencies = [
 
 [[package]]
 name = "minterest-service"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "controller",
  "frame-benchmarking",
@@ -3819,7 +3819,7 @@ checksum = "77af24da69f9d9341038eba93a073b1fdaaa1b788221b00a69bce9e762cb32de"
 
 [[package]]
 name = "oracle"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4203,7 +4203,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-traits"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "frame-support",
  "minterest-primitives",
