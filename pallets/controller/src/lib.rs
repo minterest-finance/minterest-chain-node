@@ -726,6 +726,7 @@ impl<T: Trait> Module<T> {
 
 // Admin functions
 impl<T: Trait> Module<T> {
+	// FIXME It is possible to remove this function
 	/// Replenishes the insurance balance.
 	/// - `who`: Account ID of the administrator who replenishes the insurance.
 	/// - `pool_id`: Pool ID of the replenishing pool.
