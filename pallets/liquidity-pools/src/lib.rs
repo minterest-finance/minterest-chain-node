@@ -359,6 +359,7 @@ impl<T: Trait> Module<T> {
 	// TODO: Maybe implement using a binary tree?
 	pub fn get_pool_members(underlying_asset_id: CurrencyId) -> result::Result<Vec<T::AccountId>, DispatchError> {
 		let user_vec: Vec<T::AccountId> = PoolUserDates::<T>::iter_prefix(underlying_asset_id)
+			.filter(|(_, pool_user_data)| !pool_user_data.total_borrowed.is_zero())
 			.map(|(account, _)| account)
 			.collect();
 		Ok(user_vec)
