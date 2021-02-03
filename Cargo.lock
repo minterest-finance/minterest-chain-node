@@ -5189,15 +5189,12 @@ dependencies = [
 name = "risk-manager"
 version = "0.1.0"
 dependencies = [
- "controller",
  "frame-support",
  "frame-system",
  "liquidity-pools",
  "minterest-primitives",
- "oracle",
  "orml-traits",
  "orml-utilities",
- "pallet-traits",
  "parity-scale-codec",
  "sp-core",
  "sp-io",

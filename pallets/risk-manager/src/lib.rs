@@ -3,7 +3,6 @@
 use frame_support::{debug, decl_error, decl_event, decl_module, decl_storage};
 
 use frame_support::traits::Get;
-use frame_system::offchain::SendTransactionTypes;
 use minterest_primitives::CurrencyId;
 use orml_utilities::OffchainErr;
 use sp_core::crypto::KeyTypeId;
@@ -28,9 +27,7 @@ pub const DEFAULT_MAX_ITERATIONS: u32 = 1000;
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 
-pub trait Trait:
-	frame_system::Trait + liquidity_pools::Trait + controller::Trait + oracle::Trait + SendTransactionTypes<Call<Self>>
-{
+pub trait Trait: frame_system::Trait + liquidity_pools::Trait {
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 }
 
@@ -86,7 +83,7 @@ impl<T: Trait> Module<T> {
 			return Ok(());
 		}
 
-		// check if we are a potential validator
+		// Check if we are a potential validator
 		if !sp_io::offchain::is_validator() {
 			return Err(OffchainErr::NotValidator);
 		}
@@ -104,7 +101,7 @@ impl<T: Trait> Module<T> {
 
 		let to_be_continue = StorageValueRef::persistent(&OFFCHAIN_WORKER_DATA);
 
-		// get to_be_continue record
+		// Get to_be_continue record
 		let (collateral_position, _start_key) =
 			if let Some(Some((last_collateral_position, maybe_last_iterator_previous_key))) =
 				to_be_continue.get::<(u32, Option<Vec<u8>>)>()
@@ -116,14 +113,14 @@ impl<T: Trait> Module<T> {
 				(rng.pick_u32(underlying_asset_ids.len().saturating_sub(1) as u32), None)
 			};
 
-		// get the max iterationns config
+		// Get the max iterationns config
 		let _max_iterations = StorageValueRef::persistent(&OFFCHAIN_WORKER_MAX_ITERATIONS)
 			.get::<u32>()
 			.unwrap_or(Some(DEFAULT_MAX_ITERATIONS));
 
 		let currency_id = underlying_asset_ids[(collateral_position as usize)];
 
-		// Get pool users list
+		// Get list of users that have an active loan for current pool
 		let _pool_members = <LiquidityPools<T>>::get_pool_members(currency_id).unwrap();
 
 		// Consume the guard but **do not** unlock the underlying lock.
