@@ -192,7 +192,7 @@ impl<T: Trait> Module<T> {
 	/// - `total_insurance`: Total amount of insurance of the underlying held in the pool.
 	/// - `total_borrowed`: Total amount of outstanding borrows of the underlying in this pool.
 	///
-	/// returns `exchange_rate = (total_cash - total_insurance + total_borrowed) / total_supply`.
+	/// returns `exchange_rate = (total_cash + total_borrowed - total_insurance) / total_supply`.
 	fn calculate_exchange_rate(
 		total_cash: Balance,
 		total_supply: Balance,
@@ -203,16 +203,14 @@ impl<T: Trait> Module<T> {
 			// If there are no tokens minted: exchangeRate = InitialExchangeRate.
 			Ordering::Equal => T::InitialExchangeRate::get(),
 
-			// Otherwise: exchange_rate = (total_cash - total_insurance + total_borrowed) / total_supply
-			_ => {
-				let cash_plus_borrows = total_cash.checked_add(total_borrowed).ok_or(Error::<T>::NumOverflow)?;
-
-				let cash_plus_borrows_minus_insurance = cash_plus_borrows
-					.checked_sub(total_insurance)
-					.ok_or(Error::<T>::NumOverflow)?;
-
-				Rate::saturating_from_rational(cash_plus_borrows_minus_insurance, total_supply)
-			}
+			// Otherwise: exchange_rate = (total_cash + total_borrowed - total_insurance) / total_supply
+			_ => Rate::saturating_from_rational(
+				total_cash
+					.checked_add(total_borrowed)
+					.and_then(|v| v.checked_sub(total_insurance))
+					.ok_or(Error::<T>::NumOverflow)?,
+				total_supply,
+			),
 		};
 
 		Ok(rate)
