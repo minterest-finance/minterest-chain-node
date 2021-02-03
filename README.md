@@ -111,3 +111,20 @@ Update ORML
 ```bash
 make update
 ```
+### Release process
+
+To mark a relase, follow the steps:
+* Master contains only those changes, which passed QA.
+* Master branch code overage has not decreased.
+* Make sure the CI is green.
+* Update pallets versions using semver in a separate MR. Merge this MR.
+* Tag a commit with pallet updates with a version tag using semver.
+* In case of hot fixes create a separate branch from tagged commit and work there. Don't forget to merge back the changes to master.
+
+## Semantic versioning
+
+Use patch level version for releases with only bugfixes. (0.5.1, 0.5.2 etc.)
+
+Use minor versions to mark releases with new features (0.5.0 , 0.6.0 etc.)
+
+Use major versions to mark going out live. 1.0.0 version will be tagged when we have a connection to Ethereum and prod env. 
