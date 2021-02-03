@@ -61,6 +61,7 @@ controller-rpc-runtime-api = { path = "../pallets/controller/rpc/runtime-api", d
 accounts = { path = "../pallets/accounts", default-features = false }
 oracle = { path = "../pallets/oracle", default-features = false }
 minterest-model = { path = "../pallets/minterest-model", default-features = false }
+risk-manager = { path = "../pallets/risk-manager", default-features = false }
 
 # ORML dependencies
 orml-benchmarking = { path = "../orml/benchmarking", default-features = false }
@@ -125,4 +126,5 @@ std = [
     'accounts/std',
     'oracle/std',
     'minterest-model/std',
+    'risk-manager/std',
 ]
