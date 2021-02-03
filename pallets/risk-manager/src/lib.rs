@@ -72,8 +72,7 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 	fn _offchain_worker() -> Result<(), OffchainErr> {
-		debug::info!("initial message");
-
+		// Get available assets list
 		let underlying_asset_ids: Vec<CurrencyId> = <T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
 			.iter()
 			.map(|currency_pair| currency_pair.underlying_id)
@@ -92,12 +91,6 @@ impl<T: Trait> Module<T> {
 		let lock_expiration = Duration::from_millis(LOCK_DURATION);
 		let mut lock = StorageLock::<'_, Time>::with_deadline(&OFFCHAIN_WORKER_LOCK, lock_expiration);
 		let guard = lock.try_lock().map_err(|_| OffchainErr::OffchainLock)?;
-
-		// Get available assets list
-		let underlying_asset_ids: Vec<CurrencyId> = <T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
-			.iter()
-			.map(|currency_pair| currency_pair.underlying_id)
-			.collect();
 
 		let to_be_continue = StorageValueRef::persistent(&OFFCHAIN_WORKER_DATA);
 
