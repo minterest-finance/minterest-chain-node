@@ -5,7 +5,6 @@ use frame_support::{debug, decl_error, decl_event, decl_module, decl_storage};
 use frame_support::traits::Get;
 use minterest_primitives::CurrencyId;
 use orml_utilities::OffchainErr;
-use sp_core::crypto::KeyTypeId;
 use sp_runtime::offchain::storage_lock::Time;
 use sp_runtime::offchain::Duration;
 use sp_runtime::traits::{BlakeTwo256, Hash, Zero};
@@ -14,9 +13,6 @@ use sp_runtime::{
 	RandomNumberGenerator,
 };
 use sp_std::{prelude::*, str};
-
-pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"mint");
-pub const NUM_VEC_LEN: usize = 10;
 
 pub const OFFCHAIN_WORKER_DATA: &[u8] = b"pallets/risk-manager/data/";
 pub const OFFCHAIN_WORKER_LOCK: &[u8] = b"pallets/risk-manager/lock/";
@@ -49,6 +45,8 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		/// Runs after every block. Start offchain worker to check unsafe loan and
+		/// submit unsigned tx to trigger liquidation.
 		fn offchain_worker(now: T::BlockNumber) {
 			debug::info!("Entering off-chain worker");
 
@@ -114,7 +112,7 @@ impl<T: Trait> Module<T> {
 		let currency_id = underlying_asset_ids[(collateral_position as usize)];
 
 		// Get list of users that have an active loan for current pool
-		let _pool_members = <LiquidityPools<T>>::get_pool_members(currency_id).unwrap();
+		let _pool_members = <LiquidityPools<T>>::get_pool_members_with_loans(currency_id).unwrap();
 
 		// Consume the guard but **do not** unlock the underlying lock.
 		guard.forget();
