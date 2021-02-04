@@ -149,6 +149,7 @@ impl minterest_model::Trait for Runtime {
 
 impl Trait for Runtime {
 	type Event = TestEvent;
+	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
 }
 
 pub type BlockNumber = u64;
