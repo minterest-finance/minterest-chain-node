@@ -3109,6 +3109,10 @@ version = "0.6.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "minterest-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
  "parity-scale-codec",
  "serde",
  "sp-core",

@@ -1,5 +1,7 @@
 /// Mocks for the liquidation-pools pallet.
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
+pub use minterest_primitives::CurrencyId;
+use orml_currencies::Currency;
 use sp_core::H256;
 use sp_io::TestExternalities;
 use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
@@ -17,6 +19,8 @@ impl_outer_origin! {
 impl_outer_event! {
 	pub enum TestEvent for Test {
 		frame_system<T>,
+		orml_currencies<T>,
+		orml_tokens<T>,
 		liquidation_pools,
 	}
 }
@@ -60,6 +64,29 @@ impl frame_system::Trait for Test {
 	type SystemWeightInfo = ();
 }
 
+impl orml_tokens::Trait for Test {
+	type Event = TestEvent;
+	type Balance = Balance;
+	type Amount = Amount;
+	type CurrencyId = CurrencyId;
+	type OnReceived = ();
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MINT;
+}
+
+type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
+
+impl orml_currencies::Trait for Test {
+	type Event = TestEvent;
+	type MultiCurrency = orml_tokens::Module<Test>;
+	type NativeCurrency = NativeCurrency;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type WeightInfo = ();
+}
+
 parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 }
@@ -67,8 +94,10 @@ parameter_types! {
 impl Trait for Test {
 	type Event = TestEvent;
 	type ModuleId = LiquidationPoolsModuleId;
+	type MultiCurrency = orml_tokens::Module<Test>;
 }
 
+type Amount = i128;
 pub type _TestLiquidationPools = Module<Test>;
 pub type System = frame_system::Module<Test>;
 

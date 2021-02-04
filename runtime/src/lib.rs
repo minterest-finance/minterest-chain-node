@@ -324,6 +324,7 @@ impl risk_manager::Trait for Runtime {
 
 impl liquidation_pools::Trait for Runtime {
 	type Event = Event;
+	type MultiCurrency = Currencies;
 	type ModuleId = LiquidationPoolsModuleId;
 }
 

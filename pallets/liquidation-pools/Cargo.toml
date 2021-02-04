@@ -13,9 +13,15 @@ frame-system = { version = '2.0.0', default-features = false }
 sp-runtime = { version = '2.0.0', default-features = false }
 sp-std = { version = '2.0.0', default-features = false }
 
+orml-traits = { path = "../../orml/traits", default-features = false }
+
+minterest-primitives = { path = "../../primitives", default-features = false }
+
 [dev-dependencies]
 sp-core = { version = '2.0.0' }
 sp-io = { version = '2.0.0' }
+orml-currencies = { path = "../../orml/currencies" }
+orml-tokens = { path = "../../orml/tokens" }
 
 [features]
 default = ['std']
