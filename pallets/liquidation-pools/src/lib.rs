@@ -6,17 +6,26 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::{Decode, Encode};
 use frame_support::traits::Get;
 use frame_support::{decl_error, decl_event, decl_module, decl_storage};
 use minterest_primitives::{Balance, CurrencyId};
 use orml_traits::MultiCurrency;
+use pallet_traits::PoolsManager;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use sp_runtime::traits::AccountIdConversion;
-use sp_runtime::ModuleId;
+use sp_runtime::{ModuleId, RuntimeDebug};
 
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
+
+/// Liquidtaion Pool metadata
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct Pool {}
 
 pub trait Trait: frame_system::Trait {
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
@@ -30,6 +39,8 @@ pub trait Trait: frame_system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Exchange {
+		 /// Liquidation pool information.
+		pub LiquidationPools get(fn liquidation_pools) config(): map hasher(blake2_128_concat) CurrencyId => Pool;
 	}
 }
 
@@ -53,15 +64,20 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Trait> PoolsManager<T::AccountId> for Module<T> {
 	/// Gets module account id.
-	pub fn pools_account_id() -> T::AccountId {
+	fn pools_account_id() -> T::AccountId {
 		T::ModuleId::get().into_account()
 	}
 
 	/// Gets current the total amount of cash the liquidation pool has.
-	pub fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance {
+	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance {
 		let module_account_id = Self::pools_account_id();
 		T::MultiCurrency::free_balance(pool_id, &module_account_id)
+	}
+
+	/// Check if pool exists
+	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
+		LiquidationPools::contains_key(underlying_asset_id)
 	}
 }

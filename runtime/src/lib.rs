@@ -249,6 +249,7 @@ impl m_tokens::Trait for Runtime {
 impl minterest_protocol::Trait for Runtime {
 	type Event = Event;
 	type Borrowing = liquidity_pools::Module<Runtime>;
+	type ManagerLiquidityPools = LiquidityPools;
 }
 
 impl orml_tokens::Trait for Runtime {
@@ -294,6 +295,7 @@ impl liquidity_pools::Trait for Runtime {
 
 impl controller::Trait for Runtime {
 	type Event = Event;
+	type LiquidityPoolsManager = LiquidityPools;
 }
 
 parameter_types! {

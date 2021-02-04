@@ -16,6 +16,7 @@ sp-std = { version = '2.0.0', default-features = false }
 orml-traits = { path = "../../orml/traits", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
+pallet-traits = { path = "../traits", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = '2.0.0' }
@@ -32,4 +33,5 @@ std = [
     'frame-system/std',
     'sp-runtime/std',
     "sp-std/std",
+    "pallet-traits/std",
 ]

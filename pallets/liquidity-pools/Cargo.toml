@@ -44,4 +44,5 @@ std = [
     "frame-system/std",
     "orml-utilities/std",
     "minterest-primitives/std",
+    "pallet-traits/std",
 ]

@@ -4,7 +4,7 @@ use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get, IterableStorageDoubleMap};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::Borrowing;
+use pallet_traits::{Borrowing, PoolsManager};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -310,17 +310,6 @@ impl<T: Trait> Module<T> {
 
 // Storage getters for LiquidityPools
 impl<T: Trait> Module<T> {
-	/// Gets module account id.
-	pub fn pools_account_id() -> T::AccountId {
-		T::ModuleId::get().into_account()
-	}
-
-	/// Gets current the total amount of cash the pool has.
-	pub fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance {
-		let module_account_id = Self::pools_account_id();
-		T::MultiCurrency::free_balance(pool_id, &module_account_id)
-	}
-
 	/// Gets current the amount of underlying currently loaned out by the pool.
 	pub fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance {
 		Self::pools(pool_id).total_borrowed
@@ -349,11 +338,6 @@ impl<T: Trait> Module<T> {
 	/// Checks if the user has enabled the pool as collateral.
 	pub fn check_user_available_collateral(who: &T::AccountId, pool_id: CurrencyId) -> bool {
 		Self::pool_user_data(pool_id, who).collateral
-	}
-
-	/// Check if pool exists
-	pub fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
-		Pools::contains_key(underlying_asset_id)
 	}
 
 	// TODO: Maybe implement using a binary tree?
@@ -439,5 +423,23 @@ impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 		Self::set_user_total_borrowed_and_interest_index(&who, pool_id, account_borrow_new, pool_borrow_index)?;
 
 		Ok(())
+	}
+}
+
+impl<T: Trait> PoolsManager<T::AccountId> for Module<T> {
+	/// Gets module account id.
+	fn pools_account_id() -> T::AccountId {
+		T::ModuleId::get().into_account()
+	}
+
+	/// Gets current the total amount of cash the pool has.
+	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance {
+		let module_account_id = Self::pools_account_id();
+		T::MultiCurrency::free_balance(pool_id, &module_account_id)
+	}
+
+	/// Check if pool exists
+	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
+		Pools::contains_key(underlying_asset_id)
 	}
 }

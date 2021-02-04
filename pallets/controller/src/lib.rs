@@ -6,6 +6,7 @@ use frame_system::{self as system, ensure_signed};
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
 use orml_utilities::with_transaction_result;
+use pallet_traits::PoolsManager;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;
@@ -63,6 +64,9 @@ pub trait Trait:
 {
 	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+
+	/// The basic liquidity pools manager.
+	type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
 }
 
 decl_event! {
@@ -146,7 +150,7 @@ decl_module! {
 		pub fn pause_specific_operation(origin, pool_id: CurrencyId, operation: Operation) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 			match operation {
 				Operation::Deposit => PauseKeepers::mutate(pool_id, |pool| pool.deposit_paused = true),
 				Operation::Redeem => PauseKeepers::mutate(pool_id, |pool| pool.redeem_paused = true),
@@ -164,7 +168,7 @@ decl_module! {
 		pub fn unpause_specific_operation(origin, pool_id: CurrencyId, operation: Operation) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 			match operation {
 				Operation::Deposit => PauseKeepers::mutate(pool_id, |pool| pool.deposit_paused = false),
 				Operation::Redeem => PauseKeepers::mutate(pool_id, |pool| pool.redeem_paused = false),
@@ -210,7 +214,7 @@ decl_module! {
 		pub fn set_insurance_factor(origin, pool_id: CurrencyId, new_amount_n: u128, new_amount_d: u128) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 
 			let new_insurance_factor = Rate::checked_from_rational(new_amount_n, new_amount_d)
 				.ok_or(Error::<T>::NumOverflow)?;
@@ -227,7 +231,7 @@ decl_module! {
 		pub fn set_max_borrow_rate(origin, pool_id: CurrencyId, new_amount_n: u128, new_amount_d: u128) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-			ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 
 			let new_max_borow_rate = Rate::checked_from_rational(new_amount_n, new_amount_d)
 				.ok_or(Error::<T>::NumOverflow)?;
@@ -259,7 +263,7 @@ impl<T: Trait> Module<T> {
 			return Ok(());
 		}
 
-		let current_total_balance = <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id);
+		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(underlying_asset_id);
 		let current_total_borrowed_balance = <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id);
 		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(underlying_asset_id);
 		let current_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
@@ -512,7 +516,7 @@ impl<T: Trait> Module<T> {
 
 	/// Gets borrow interest rate and supply interest rate.
 	pub fn get_liquidity_pool_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
-		let current_total_balance = <LiquidityPools<T>>::get_pool_available_liquidity(pool_id);
+		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
 		let current_total_borrowed_balance = <LiquidityPools<T>>::get_pool_total_borrowed(pool_id);
 		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
 		let insurance_factor = Self::get_insurance_factor(pool_id);
@@ -732,7 +736,10 @@ impl<T: Trait> Module<T> {
 	/// - `pool_id`: Pool ID of the replenishing pool.
 	/// - `amount`: Amount to replenish insurance in the pool.
 	fn do_deposit_insurance(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
-		ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+		ensure!(
+			T::LiquidityPoolsManager::pool_exists(&pool_id),
+			Error::<T>::PoolNotFound
+		);
 
 		ensure!(
 			amount <= T::MultiCurrency::free_balance(pool_id, &who),
@@ -740,7 +747,7 @@ impl<T: Trait> Module<T> {
 		);
 
 		// transfer amount to this pool
-		T::MultiCurrency::transfer(pool_id, &who, &<LiquidityPools<T>>::pools_account_id(), amount)?;
+		T::MultiCurrency::transfer(pool_id, &who, &T::LiquidityPoolsManager::pools_account_id(), amount)?;
 
 		// calculate new insurance balance
 		let current_insurance_balance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
@@ -759,10 +766,13 @@ impl<T: Trait> Module<T> {
 	/// - `pool_id`: Pool ID in which the insurance is decreasing.
 	/// - `amount`: Amount to redeem insurance in the pool.
 	fn do_redeem_insurance(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
-		ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+		ensure!(
+			T::LiquidityPoolsManager::pool_exists(&pool_id),
+			Error::<T>::PoolNotFound
+		);
 
 		ensure!(
-			amount <= T::MultiCurrency::free_balance(pool_id, &<LiquidityPools<T>>::pools_account_id()),
+			amount <= T::MultiCurrency::free_balance(pool_id, &T::LiquidityPoolsManager::pools_account_id()),
 			Error::<T>::NotEnoughBalance
 		);
 
@@ -777,7 +787,7 @@ impl<T: Trait> Module<T> {
 		<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_insurance_balance)?;
 
 		// transfer amount from this pool
-		T::MultiCurrency::transfer(pool_id, &<LiquidityPools<T>>::pools_account_id(), &who, amount)?;
+		T::MultiCurrency::transfer(pool_id, &T::LiquidityPoolsManager::pools_account_id(), &who, amount)?;
 
 		Ok(())
 	}
