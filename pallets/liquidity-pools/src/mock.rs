@@ -103,7 +103,7 @@ impl orml_currencies::Trait for Test {
 pub type System = frame_system::Module<Test>;
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),

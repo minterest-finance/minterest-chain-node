@@ -98,7 +98,8 @@ pub fn native_version() -> NativeVersion {
 
 // Module accounts of runtime
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 }
 
 parameter_types! {
@@ -323,6 +324,7 @@ impl risk_manager::Trait for Runtime {
 
 impl liquidation_pools::Trait for Runtime {
 	type Event = Event;
+	type ModuleId = LiquidationPoolsModuleId;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

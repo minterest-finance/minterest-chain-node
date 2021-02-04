@@ -1,6 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use frame_support::traits::Get;
 use frame_support::{decl_error, decl_event, decl_module, decl_storage};
+use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::ModuleId;
 
 #[cfg(test)]
 mod mock;
@@ -9,6 +12,9 @@ mod tests;
 
 pub trait Trait: frame_system::Trait {
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
+
+	/// The Liquidation Pool's module id, keep all assets in Pools.
+	type ModuleId: Get<ModuleId>;
 }
 
 decl_storage! {
@@ -30,7 +36,15 @@ decl_module! {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
+
+		/// The Liquidity Pool's module id, keep all assets in Pools.
+		const ModuleId: ModuleId = T::ModuleId::get();
 	}
 }
 
-impl<T: Trait> Module<T> {}
+impl<T: Trait> Module<T> {
+	/// Gets module account id.
+	pub fn pools_account_id() -> T::AccountId {
+		T::ModuleId::get().into_account()
+	}
+}
