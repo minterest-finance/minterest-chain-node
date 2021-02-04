@@ -40,6 +40,9 @@ pub struct PoolUserData {
 
 	/// Wheter or not pool as a collateral.
 	pub collateral: bool,
+
+	/// Number of partial liquidations for debt
+	pub liquidation_attempts: u32,
 }
 
 #[cfg(test)]
@@ -306,6 +309,12 @@ impl<T: Trait> Module<T> {
 		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = false);
 		Ok(())
 	}
+
+	/// Sets the parameter `liquidation_attempts`.
+	pub fn set_user_liquidation_attempts(who: &T::AccountId, pool_id: CurrencyId, new_count: u32) -> DispatchResult {
+		PoolUserDates::<T>::mutate(pool_id, who, |p| p.liquidation_attempts = new_count);
+		Ok(())
+	}
 }
 
 // Storage getters for LiquidityPools
@@ -367,12 +376,17 @@ impl<T: Trait> Module<T> {
 			.collect();
 		Ok(user_vec)
 	}
+
+	/// Gets user liquidation attempts.
+	pub fn get_user_liquidation_attempts(who: &T::AccountId, pool_id: CurrencyId) -> u32 {
+		Self::pool_user_data(pool_id, who).liquidation_attempts
+	}
 }
 
 // Trait Borrowing for LiquidityPools
 impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 	/// Updates the new borrower balance and pool total borrow balances during the borrow operation.
-	/// Also sets the global borrow_index to user interest index.
+	/// Also sets the global borrow_index to user interest index.u32
 	/// - `who`: The AccountId whose borrow balance should be calculated.
 	/// - `pool_id`: PoolID whose total borrow balance should be calculated.
 	/// - `borrow_amount`: The amount of the underlying asset to borrow.
