@@ -5194,6 +5194,7 @@ dependencies = [
  "frame-system",
  "liquidity-pools",
  "minterest-primitives",
+ "orml-tokens",
  "orml-traits",
  "orml-utilities",
  "parity-scale-codec",

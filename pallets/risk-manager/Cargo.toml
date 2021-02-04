@@ -23,6 +23,16 @@ minterest-primitives = { path = "../../primitives", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
 accounts = { path = "../accounts", default-features = false }
 
+[dev-dependencies]
+sp-core = { version = '2.0.0' }
+sp-io = { version = '2.0.0' }
+
+orml-tokens = { path = "../../orml/tokens" }
+
+accounts = { path = "../accounts" }
+liquidity-pools = { path = "../liquidity-pools" }
+
+
 [features]
 default = ['std']
 std = [
