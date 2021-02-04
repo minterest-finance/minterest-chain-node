@@ -3668,10 +3668,7 @@ dependencies = [
  "minterest-primitives",
  "minterest-protocol",
  "oracle",
- "orml-benchmarking",
  "orml-currencies",
- "orml-oracle",
- "orml-oracle-rpc-runtime-api",
  "orml-tokens",
  "orml-traits",
  "pallet-aura",
@@ -3947,15 +3944,6 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "orml-oracle-rpc-runtime-api"
-version = "0.3.2"
-dependencies = [
- "parity-scale-codec",
- "sp-api",
  "sp-std",
 ]
 
@@ -5217,7 +5205,6 @@ dependencies = [
  "orml-traits",
  "orml-utilities",
  "parity-scale-codec",
- "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",

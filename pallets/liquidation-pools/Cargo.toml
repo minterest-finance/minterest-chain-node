@@ -33,5 +33,9 @@ std = [
     'frame-system/std',
     'sp-runtime/std',
     "sp-std/std",
+
+    "orml-traits/std",
+
+    "minterest-primitives/std",
     "pallet-traits/std",
 ]
