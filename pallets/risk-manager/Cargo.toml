@@ -21,6 +21,7 @@ orml-traits = { path = "../../orml/traits", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
+controller = { path = "../controller", default-features = false }
 accounts = { path = "../accounts", default-features = false }
 
 [dev-dependencies]

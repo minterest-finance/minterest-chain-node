@@ -5190,6 +5190,7 @@ name = "risk-manager"
 version = "0.6.0"
 dependencies = [
  "accounts",
+ "controller",
  "frame-support",
  "frame-system",
  "liquidity-pools",
