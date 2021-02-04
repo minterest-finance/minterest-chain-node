@@ -38,7 +38,7 @@ pub struct PoolUserData {
 	/// Global borrow_index as of the most recent balance-changing action.
 	pub interest_index: Rate,
 
-	/// Wheter or not pool as a collateral.
+	/// Whether or not pool as a collateral.
 	pub collateral: bool,
 
 	/// Number of partial liquidations for debt
