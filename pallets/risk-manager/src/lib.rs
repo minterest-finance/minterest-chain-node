@@ -315,7 +315,7 @@ impl<T: Trait> Module<T> {
 
 		let iteration_end_time = sp_io::offchain::timestamp();
 		debug::debug!(
-			target: "cdp-engine offchain worker",
+			target: "RiskManager offchain worker",
 			"iteration info:\n max iterations is {:?}\n currency id: {:?}, start key: {:?}, iterate count: {:?}\n iteration start at: {:?}, end at: {:?}, execution time: {:?}\n",
 			max_iterations,
 			currency_id,
