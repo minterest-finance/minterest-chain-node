@@ -2,15 +2,18 @@
 
 use frame_support::{debug, decl_error, decl_event, decl_module, decl_storage};
 
+use codec::{Decode, Encode};
 use frame_support::traits::Get;
-use minterest_primitives::CurrencyId;
+use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_utilities::OffchainErr;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use sp_runtime::offchain::storage_lock::Time;
 use sp_runtime::offchain::Duration;
 use sp_runtime::traits::{BlakeTwo256, Hash, Zero};
 use sp_runtime::{
 	offchain::{storage::StorageValueRef, storage_lock::StorageLock},
-	RandomNumberGenerator,
+	RandomNumberGenerator, RuntimeDebug,
 };
 use sp_std::{prelude::*, str};
 
@@ -21,6 +24,24 @@ pub const OFFCHAIN_WORKER_MAX_ITERATIONS: &[u8] = b"pallets/risk-manager/max-ite
 pub const LOCK_DURATION: u64 = 100;
 pub const DEFAULT_MAX_ITERATIONS: u32 = 1000;
 
+/// RiskManager metadata
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct RiskManagerData {
+	/// The maximum amount of partial liquidation attempts.
+	pub max_attempts: u32,
+
+	/// Minimal sum for partial liquidation.
+	/// Loan whose amount below this parameter will be liquidate in full.
+	pub min_sum: Balance,
+
+	/// Step used in liquidation to protect the user from micro liquidations.
+	pub threshold: Rate,
+
+	/// Fee that covers liquidation costs.
+	pub liquidation_fee: Rate,
+}
+
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 
 pub trait Trait: frame_system::Trait + liquidity_pools::Trait {
@@ -28,7 +49,10 @@ pub trait Trait: frame_system::Trait + liquidity_pools::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as RiskManagerStorage {}
+	trait Store for Module<T: Trait> as RiskManagerStorage {
+		/// Liquidation params for pools: `(max_attempts, min_sum, threshold, liquidation_fee)`.
+		pub RiskManagerDates get(fn risk_manager_dates) config(): map hasher(blake2_128_concat) CurrencyId => RiskManagerData;
+	}
 }
 
 decl_event!(

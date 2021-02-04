@@ -347,7 +347,7 @@ construct_runtime!(
 		Accounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		Oracle: oracle::{Module, Storage, Call, Event},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
-		RiskManager: risk_manager::{Module, Storage, Call, Event}
+		RiskManager: risk_manager::{Module, Storage, Call, Event, Config}
 	}
 );
 
