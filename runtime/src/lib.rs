@@ -321,6 +321,10 @@ impl risk_manager::Trait for Runtime {
 	type Event = Event;
 }
 
+impl liquidation_pools::Trait for Runtime {
+	type Event = Event;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -347,7 +351,8 @@ construct_runtime!(
 		Accounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		Oracle: oracle::{Module, Storage, Call, Event},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
-		RiskManager: risk_manager::{Module, Storage, Call, Event}
+		RiskManager: risk_manager::{Module, Storage, Call, Event},
+		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event}
 	}
 );
 
