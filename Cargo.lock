@@ -3104,6 +3104,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "liquidation-pools"
+version = "0.6.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "liquidity-pools"
 version = "0.5.0"
 dependencies = [
@@ -3641,6 +3655,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "hex-literal 0.3.1",
  "integration-tests",
+ "liquidation-pools",
  "liquidity-pools",
  "m-tokens",
  "minterest-model",

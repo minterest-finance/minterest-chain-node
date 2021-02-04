@@ -62,6 +62,7 @@ accounts = { path = "../pallets/accounts", default-features = false }
 oracle = { path = "../pallets/oracle", default-features = false }
 minterest-model = { path = "../pallets/minterest-model", default-features = false }
 risk-manager = { path = "../pallets/risk-manager", default-features = false }
+liquidation-pools = { path = "../pallets/liquidation-pools", default-features = false }
 
 # ORML dependencies
 orml-benchmarking = { path = "../orml/benchmarking", default-features = false }
@@ -127,4 +128,5 @@ std = [
     'oracle/std',
     'minterest-model/std',
     'risk-manager/std',
+    'liquidation-pools/std',
 ]
