@@ -22,7 +22,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-/// Liquidtaion Pool metadata
+/// Liquidation Pool metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct Pool {}

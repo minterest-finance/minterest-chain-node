@@ -248,7 +248,7 @@ impl m_tokens::Trait for Runtime {
 
 impl minterest_protocol::Trait for Runtime {
 	type Event = Event;
-	type Borrowing = liquidity_pools::Module<Runtime>;
+	type Borrowing = LiquidityPools;
 	type ManagerLiquidityPools = LiquidityPools;
 }
 
