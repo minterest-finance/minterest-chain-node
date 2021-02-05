@@ -235,12 +235,11 @@ decl_module! {
 		pub fn liquidate(
 			origin,
 			who: <T::Lookup as StaticLookup>::Source,
-			pool_id: CurrencyId,
-			total_borrow: Balance
+			pool_id: CurrencyId
 		) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
 			let who = T::Lookup::lookup(who)?;
-			Self::liquidate_unsafe(who, pool_id, total_borrow)?;
+			Self::liquidate_unsafe(who, pool_id)?;
 			Ok(().into())
 		}
 	}
@@ -297,15 +296,15 @@ impl<T: Trait> Module<T> {
 		for member in pool_members.into_iter() {
 			<Controller<T>>::accrue_interest_rate(currency_id).unwrap();
 
-			let (_, sum_borrow_plus_effects) =
+			let (_, shortfall) =
 				<Controller<T>>::get_hypothetical_account_liquidity(&member, currency_id, 0, 0).unwrap();
 
-			if sum_borrow_plus_effects.is_zero() {
+			if shortfall.is_zero() {
 				debug::info!("This member is absolutely clear!");
 				continue;
 			}
 
-			Self::submit_unsigned_liquidation(member, currency_id, sum_borrow_plus_effects);
+			Self::submit_unsigned_liquidation(member, currency_id);
 
 			iteration_count += 1;
 
@@ -332,9 +331,9 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn submit_unsigned_liquidation(who: T::AccountId, pool_id: CurrencyId, total_borrow: Balance) {
+	fn submit_unsigned_liquidation(who: T::AccountId, pool_id: CurrencyId) {
 		let who = T::Lookup::unlookup(who);
-		let call = Call::<T>::liquidate(who.clone(), pool_id, total_borrow);
+		let call = Call::<T>::liquidate(who.clone(), pool_id);
 		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
 			debug::info!(
 				target: "RiskManager offchain worker",
@@ -344,7 +343,7 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	fn liquidate_unsafe(_who: T::AccountId, _pool_id: CurrencyId, _total_borrow: Balance) -> DispatchResult {
+	fn liquidate_unsafe(_who: T::AccountId, _pool_id: CurrencyId) -> DispatchResult {
 		Ok(())
 	}
 }
@@ -354,14 +353,12 @@ impl<T: Trait> ValidateUnsigned for Module<T> {
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		match call {
-			Call::liquidate(who, pool_id, total_borrow) => {
-				ValidTransaction::with_tag_prefix("RiskManagerOffchainWorker")
-					.priority(T::UnsignedPriority::get())
-					.and_provides((<frame_system::Module<T>>::block_number(), pool_id, who, total_borrow))
-					.longevity(64_u64)
-					.propagate(true)
-					.build()
-			}
+			Call::liquidate(who, pool_id) => ValidTransaction::with_tag_prefix("RiskManagerOffchainWorker")
+				.priority(T::UnsignedPriority::get())
+				.and_provides((<frame_system::Module<T>>::block_number(), pool_id, who))
+				.longevity(64_u64)
+				.propagate(true)
+				.build(),
 			_ => InvalidTransaction::Call.into(),
 		}
 	}

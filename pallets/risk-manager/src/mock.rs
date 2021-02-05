@@ -1,10 +1,11 @@
 /// Mocks for the RiskManager pallet.
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
+use frame_support::{impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, FixedPointNumber, ModuleId, Perbill};
 
 use super::*;
+use sp_runtime::testing::TestXt;
 
 impl_outer_origin! {
 	pub enum Origin for Test {}
@@ -21,6 +22,16 @@ impl_outer_event! {
 		accounts<T>,
 		liquidity_pools,
 		risk_manager,
+		controller,
+		minterest_model,
+		oracle,
+
+	}
+}
+
+impl_outer_dispatch! {
+	pub enum Call for Test where origin: Origin {
+		risk_manager::TestRiskManager,
 	}
 }
 
@@ -38,7 +49,7 @@ type AccountId = u32;
 
 impl frame_system::Trait for Test {
 	type Origin = Origin;
-	type Call = ();
+	type Call = Call;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
@@ -105,12 +116,41 @@ impl liquidity_pools::Trait for Test {
 	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
 
+impl controller::Trait for Test {
+	type Event = TestEvent;
+}
+
+impl oracle::Trait for Test {
+	type Event = TestEvent;
+}
+
 parameter_types! {
 	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
 }
 
+impl minterest_model::Trait for Test {
+	type Event = TestEvent;
+	type BlocksPerYear = BlocksPerYear;
+}
+
+parameter_types! {
+	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
+}
+
 impl Trait for Test {
 	type Event = TestEvent;
+	type UnsignedPriority = RiskManagerPriority;
+}
+
+/// An extrinsic type used for tests.
+pub type Extrinsic = TestXt<Call, ()>;
+
+impl<LocalCall> SendTransactionTypes<LocalCall> for Test
+where
+	Call: From<LocalCall>,
+{
+	type OverarchingCall = Call;
+	type Extrinsic = Extrinsic;
 }
 
 type Amount = i128;

@@ -428,13 +428,18 @@ impl<T: Trait> Module<T> {
 		}
 
 		match sum_collateral.cmp(&sum_borrow_plus_effects) {
-			Ordering::Greater => Ok((
+			Ordering::Less => Ok((
+				0,
+				sum_borrow_plus_effects
+					.checked_sub(sum_collateral)
+					.ok_or(Error::<T>::InsufficientLiquidity)?,
+			)),
+			_ => Ok((
 				sum_collateral
 					.checked_sub(sum_borrow_plus_effects)
 					.ok_or(Error::<T>::InsufficientLiquidity)?,
 				0,
 			)),
-			_ => Ok((sum_collateral, sum_borrow_plus_effects)),
 		}
 	}
 

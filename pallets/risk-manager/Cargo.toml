@@ -30,8 +30,11 @@ sp-io = { version = '2.0.0' }
 
 orml-tokens = { path = "../../orml/tokens" }
 
-accounts = { path = "../accounts" }
 liquidity-pools = { path = "../liquidity-pools" }
+oracle = { path = "../oracle" }
+controller = { path = "../controller" }
+accounts = { path = "../accounts" }
+minterest-model = { path = "../minterest-model" }
 
 
 [features]
