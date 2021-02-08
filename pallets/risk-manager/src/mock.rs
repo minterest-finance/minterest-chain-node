@@ -118,6 +118,7 @@ impl liquidity_pools::Trait for Test {
 
 impl controller::Trait for Test {
 	type Event = TestEvent;
+	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 }
 
 impl oracle::Trait for Test {
