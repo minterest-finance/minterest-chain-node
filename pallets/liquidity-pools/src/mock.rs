@@ -184,7 +184,7 @@ impl ExtBuilder {
 		total_borrowed: Balance,
 		interest_index: Rate,
 		collateral: bool,
-		liquidation_attempts: u32,
+		liquidation_attempts: u8,
 	) -> Self {
 		self.pool_user_data.push((
 			pool_id,

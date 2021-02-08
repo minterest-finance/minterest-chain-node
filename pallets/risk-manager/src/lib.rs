@@ -9,7 +9,6 @@ use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 };
 use minterest_primitives::{Balance, CurrencyId, Rate};
-use orml_utilities::OffchainErr;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -22,9 +21,9 @@ use sp_runtime::{
 	transaction_validity::{
 		InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity, ValidTransaction,
 	},
-	DispatchResult, RandomNumberGenerator, RuntimeDebug,
+	DispatchResult, FixedPointNumber, RandomNumberGenerator, RuntimeDebug,
 };
-use sp_std::{prelude::*, str};
+use sp_std::{cmp::Ordering, prelude::*, str};
 
 pub const OFFCHAIN_WORKER_DATA: &[u8] = b"pallets/risk-manager/data/";
 pub const OFFCHAIN_WORKER_LOCK: &[u8] = b"pallets/risk-manager/lock/";
@@ -38,12 +37,30 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+/// Error which may occur while executing the off-chain code.
+#[cfg_attr(test, derive(PartialEq))]
+enum OffchainErr {
+	OffchainLock,
+	NotValidator,
+	CheckFail,
+}
+
+impl sp_std::fmt::Debug for OffchainErr {
+	fn fmt(&self, fmt: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
+		match *self {
+			OffchainErr::OffchainLock => write!(fmt, "Failed to get or extend lock"),
+			OffchainErr::NotValidator => write!(fmt, "Not validator"),
+			OffchainErr::CheckFail => write!(fmt, "Check fail"),
+		}
+	}
+}
+
 /// RiskManager metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct RiskManagerData {
 	/// The maximum amount of partial liquidation attempts.
-	pub max_attempts: u32,
+	pub max_attempts: u8,
 
 	/// Minimal sum for partial liquidation.
 	/// Loan whose amount below this parameter will be liquidate in full.
@@ -97,6 +114,8 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
+	/// Number overflow in calculation.
+	NumOverflow,
 
 	/// The currency is not enabled in protocol.
 	NotValidUnderlyingAssetId,
@@ -112,13 +131,13 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		/// Set maximum amount of partial liquidation attempts..
+		/// Set maximum amount of partial liquidation attempts.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `new_max_value`: New max value of liquidation attempts.
 		///
 		/// The dispatch origin of this call must be Administrator.
 		#[weight = 0]
-		pub fn set_max_attempts(origin, pool_id: CurrencyId, new_max_value: u32) -> DispatchResult {
+		pub fn set_max_attempts(origin, pool_id: CurrencyId, new_max_value: u8) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 
@@ -160,11 +179,13 @@ decl_module! {
 
 		/// Set threshold which used in liquidation to protect the user from micro liquidations..
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_threshold`: New value of threshold parameter.
+		/// - `new_threshold_n`: numerator.
+		/// - `new_threshold_d`: divider.
 		///
+		/// `new_threshold = (new_threshold_n / new_threshold_d)`
 		/// The dispatch origin of this call must be Administrator.
 		#[weight = 0]
-		pub fn set_threshold(origin, pool_id: CurrencyId, new_threshold: Rate) -> DispatchResult {
+		pub fn set_threshold(origin, pool_id: CurrencyId, new_threshold_n: u128, new_threshold_d: u128) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 
@@ -172,6 +193,9 @@ decl_module! {
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
+
+			let new_threshold = Rate::checked_from_rational(new_threshold_n, new_threshold_d)
+				.ok_or(Error::<T>::NumOverflow)?;
 
 			// Write new value into storage.
 			RiskManagerDates::mutate(pool_id, |r| r.threshold = new_threshold);
@@ -183,11 +207,13 @@ decl_module! {
 
 		/// Set Liquidation fee that covers liquidation costs.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_liquidation_fee`: New value of liquidation fee.
+		/// - `new_liquidation_fee_n`: numerator.
+		/// - `new_liquidation_fee_d`: divider.
 		///
+		/// `new_liquidation_fee = (new_liquidation_fee_n / new_liquidation_fee_d)`
 		/// The dispatch origin of this call must be Administrator.
 		#[weight = 0]
-		pub fn set_liquidation_fee(origin, pool_id: CurrencyId, new_liquidation_fee: Rate) -> DispatchResult {
+		pub fn set_liquidation_fee(origin, pool_id: CurrencyId, new_liquidation_fee_n: u128, new_liquidation_fee_d: u128) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 
@@ -195,6 +221,9 @@ decl_module! {
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
+
+			let new_liquidation_fee = Rate::checked_from_rational(new_liquidation_fee_n, new_liquidation_fee_d)
+				.ok_or(Error::<T>::NumOverflow)?;
 
 			// Write new value into storage.
 			RiskManagerDates::mutate(pool_id, |r| r.liquidation_fee = new_liquidation_fee);
@@ -239,7 +268,7 @@ decl_module! {
 		) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
 			let who = T::Lookup::lookup(who)?;
-			Self::liquidate_unsafe(who, pool_id)?;
+			Self::liquidate_unsafe_loan(who, pool_id)?;
 			Ok(().into())
 		}
 	}
@@ -289,22 +318,21 @@ impl<T: Trait> Module<T> {
 		let currency_id = underlying_asset_ids[(collateral_position as usize)];
 
 		// Get list of users that have an active loan for current pool
-		let pool_members = <LiquidityPools<T>>::get_pool_members_with_loans(currency_id).unwrap();
+		let pool_members =
+			<LiquidityPools<T>>::get_pool_members_with_loans(currency_id).map_err(|_| OffchainErr::CheckFail)?;
 
 		let mut iteration_count = 0;
 		let iteration_start_time = sp_io::offchain::timestamp();
 		for member in pool_members.into_iter() {
-			<Controller<T>>::accrue_interest_rate(currency_id).unwrap();
+			<Controller<T>>::accrue_interest_rate(currency_id).map_err(|_| OffchainErr::CheckFail)?;
 
-			let (_, shortfall) =
-				<Controller<T>>::get_hypothetical_account_liquidity(&member, currency_id, 0, 0).unwrap();
+			let (_, shortfall) = <Controller<T>>::get_hypothetical_account_liquidity(&member, currency_id, 0, 0)
+				.map_err(|_| OffchainErr::CheckFail)?;
 
-			if shortfall.is_zero() {
-				debug::info!("This member is absolutely clear!");
-				continue;
+			match shortfall.cmp(&Balance::zero()) {
+				Ordering::Equal => continue,
+				_ => Self::submit_unsigned_liquidation(member, currency_id),
 			}
-
-			Self::submit_unsigned_liquidation(member, currency_id);
 
 			iteration_count += 1;
 
@@ -343,7 +371,7 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	fn liquidate_unsafe(_who: T::AccountId, _pool_id: CurrencyId) -> DispatchResult {
+	fn liquidate_unsafe_loan(_who: T::AccountId, _pool_id: CurrencyId) -> DispatchResult {
 		Ok(())
 	}
 }

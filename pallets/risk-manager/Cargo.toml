@@ -46,5 +46,14 @@ std = [
     'frame-system/std',
     "sp-std/std",
     "sp-runtime/std",
+    "sp-io/std",
+    "sp-core/std",
+
+    "orml-utilities/std",
+    "orml-traits/std",
+
     "minterest-primitives/std",
+    "liquidity-pools/std",
+    "controller/std",
+    "accounts/std",
 ]
