@@ -11,6 +11,7 @@ use frame_system::{
 use minterest_primitives::{Balance, CurrencyId, Rate};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+use sp_runtime::traits::CheckedMul;
 use sp_runtime::{
 	offchain::{
 		storage::StorageValueRef,
@@ -21,9 +22,9 @@ use sp_runtime::{
 	transaction_validity::{
 		InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity, ValidTransaction,
 	},
-	DispatchResult, FixedPointNumber, RandomNumberGenerator, RuntimeDebug,
+	DispatchError, DispatchResult, FixedPointNumber, RandomNumberGenerator, RuntimeDebug,
 };
-use sp_std::{cmp::Ordering, prelude::*, str};
+use sp_std::{cmp::Ordering, prelude::*, result, str};
 
 pub const OFFCHAIN_WORKER_DATA: &[u8] = b"pallets/risk-manager/data/";
 pub const OFFCHAIN_WORKER_LOCK: &[u8] = b"pallets/risk-manager/lock/";
@@ -76,6 +77,7 @@ pub struct RiskManagerData {
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 type Accounts<T> = accounts::Module<T>;
 type Controller<T> = controller::Module<T>;
+type Oracle<T> = oracle::Module<T>;
 
 pub trait Trait:
 	frame_system::Trait + liquidity_pools::Trait + accounts::Trait + controller::Trait + SendTransactionTypes<Call<Self>>
@@ -124,6 +126,8 @@ decl_error! {
 	RequireAdmin,
 	}
 }
+
+type BalanceResult = result::Result<Balance, DispatchError>;
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
@@ -371,8 +375,29 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	fn liquidate_unsafe_loan(_who: T::AccountId, _pool_id: CurrencyId) -> DispatchResult {
+	fn liquidate_unsafe_loan(who: T::AccountId, pool_id: CurrencyId) -> DispatchResult {
+		let total_borrow_in_pool = Self::get_user_total_borrow_in_usd(&who, pool_id)?;
+
+		match total_borrow_in_pool.cmp(&RiskManagerDates::get(pool_id).min_sum) {
+			Ordering::Less => Self::complete_liquidation(&who, pool_id, total_borrow_in_pool)?,
+			_ => {}
+		}
+
 		Ok(())
+	}
+
+	fn complete_liquidation(who: &T::AccountId, pool_id: CurrencyId, total_borrow_in_pool: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn get_user_total_borrow_in_usd(who: &T::AccountId, pool_id: CurrencyId) -> BalanceResult {
+		let total_borrow_in_pool = <LiquidityPools<T>>::get_user_total_borrowed(&who, pool_id);
+		let oracle_price = <Oracle<T>>::get_underlying_price(pool_id)?;
+		let result = Rate::from_inner(total_borrow_in_pool)
+			.checked_mul(&oracle_price)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+		Ok(result)
 	}
 }
 
