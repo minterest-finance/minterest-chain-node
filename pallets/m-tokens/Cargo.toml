@@ -36,8 +36,13 @@ std = [
     "sp-runtime/std",
     "sp-io/std",
     "sp-std/std",
+
     "frame-support/std",
     "frame-system/std",
+
     "orml-traits/std",
+    "orml-utilities/std",
+    "orml-tokens/std",
+
     "minterest-primitives/std",
 ]

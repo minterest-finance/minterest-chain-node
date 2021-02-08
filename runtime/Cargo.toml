@@ -62,12 +62,10 @@ accounts = { path = "../pallets/accounts", default-features = false }
 oracle = { path = "../pallets/oracle", default-features = false }
 minterest-model = { path = "../pallets/minterest-model", default-features = false }
 risk-manager = { path = "../pallets/risk-manager", default-features = false }
+liquidation-pools = { path = "../pallets/liquidation-pools", default-features = false }
 
 # ORML dependencies
-orml-benchmarking = { path = "../orml/benchmarking", default-features = false }
 orml-currencies = { path = "../orml/currencies", default-features = false }
-orml-oracle = { path = "../orml/oracle", default-features = false }
-orml-oracle-rpc-runtime-api = { path = "../orml/oracle/rpc/runtime-api", default-features = false }
 orml-tokens = { path = "../orml/tokens", default-features = false }
 orml-traits = { path = "../orml/traits", default-features = false }
 
@@ -115,6 +113,7 @@ std = [
 
     'orml-currencies/std',
     'orml-tokens/std',
+    'orml-traits/std',
 
     'm-tokens/std',
     'minterest-protocol/std',
@@ -123,8 +122,10 @@ std = [
     'pallet-traits/std',
     'integration-tests/std',
     'controller/std',
+    'controller-rpc-runtime-api/std',
     'accounts/std',
     'oracle/std',
     'minterest-model/std',
     'risk-manager/std',
+    'liquidation-pools/std',
 ]
