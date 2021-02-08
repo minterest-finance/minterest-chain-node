@@ -365,6 +365,25 @@ impl<T: Trait> Module<T> {
 	pub fn get_user_liquidation_attempts(who: &T::AccountId, pool_id: CurrencyId) -> u8 {
 		Self::pool_user_data(pool_id, who).liquidation_attempts
 	}
+
+	/// Gets user collateral pools.
+	pub fn get_pools_are_collateral(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
+		let pools_available: Vec<CurrencyId> = T::EnabledCurrencyPair::get()
+			.iter()
+			.map(|currency_pair| currency_pair.underlying_id)
+			.collect();
+		let mut pool_vec = Vec::new();
+
+		for pool in pools_available.into_iter() {
+			PoolUserDates::<T>::iter_prefix(pool).for_each(|(user, pool_user_data)| {
+				if user == *who && pool_user_data.collateral {
+					pool_vec.push(pool)
+				}
+			});
+		}
+
+		Ok(pool_vec)
+	}
 }
 
 // Trait Borrowing for LiquidityPools

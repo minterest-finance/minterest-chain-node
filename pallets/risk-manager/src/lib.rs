@@ -376,28 +376,51 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn liquidate_unsafe_loan(who: T::AccountId, pool_id: CurrencyId) -> DispatchResult {
-		let total_borrow_in_pool = Self::get_user_total_borrow_in_usd(&who, pool_id)?;
+		let (total_borrow_in_usd, total_borrow_in_underlying, oracle_price) =
+			Self::get_user_total_borrow_in_usd(&who, pool_id)?;
 
-		match total_borrow_in_pool.cmp(&RiskManagerDates::get(pool_id).min_sum) {
-			Ordering::Less => Self::complete_liquidation(&who, pool_id, total_borrow_in_pool)?,
+		match total_borrow_in_usd.cmp(&RiskManagerDates::get(pool_id).min_sum) {
+			Ordering::Less => Self::complete_liquidation(
+				&who,
+				pool_id,
+				total_borrow_in_usd,
+				total_borrow_in_underlying,
+				oracle_price,
+			)?,
 			_ => {}
 		}
 
 		Ok(())
 	}
 
-	fn complete_liquidation(who: &T::AccountId, pool_id: CurrencyId, total_borrow_in_pool: Balance) -> DispatchResult {
+	fn complete_liquidation(
+		who: &T::AccountId,
+		pool_id: CurrencyId,
+		total_borrow_in_usd: Balance,
+		total_borrow_in_underlying: Balance,
+		oracle_price: Rate,
+	) -> DispatchResult {
+		let mut total_borrow_in_usd_plus_fee = Rate::from_inner(total_borrow_in_usd)
+			.checked_mul(&RiskManagerDates::get(pool_id).liquidation_fee)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		let pools = <LiquidityPools<T>>::get_pools_are_collateral(&who)?;
+
 		Ok(())
 	}
 
-	fn get_user_total_borrow_in_usd(who: &T::AccountId, pool_id: CurrencyId) -> BalanceResult {
-		let total_borrow_in_pool = <LiquidityPools<T>>::get_user_total_borrowed(&who, pool_id);
+	fn get_user_total_borrow_in_usd(
+		who: &T::AccountId,
+		pool_id: CurrencyId,
+	) -> result::Result<(Balance, Balance, Rate), DispatchError> {
+		let total_borrow_in_underlying = <Controller<T>>::borrow_balance_stored(&who, pool_id)?;
 		let oracle_price = <Oracle<T>>::get_underlying_price(pool_id)?;
-		let result = Rate::from_inner(total_borrow_in_pool)
+		let total_borrow_in_usd = Rate::from_inner(total_borrow_in_underlying)
 			.checked_mul(&oracle_price)
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
-		Ok(result)
+		Ok((total_borrow_in_usd, total_borrow_in_underlying, oracle_price))
 	}
 }
 
