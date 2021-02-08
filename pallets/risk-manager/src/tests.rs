@@ -75,7 +75,7 @@ fn set_min_sum_should_work() {
 fn set_threshold_should_work() {
 	new_test_ext().execute_with(|| {
 		// Can be set to 0.0
-		assert_ok!(TestRiskManager::set_threshold(alice(), CurrencyId::DOT, Rate::zero()));
+		assert_ok!(TestRiskManager::set_threshold(alice(), CurrencyId::DOT, 0, 1));
 		assert_eq!(
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).threshold,
 			Rate::zero()
@@ -84,7 +84,7 @@ fn set_threshold_should_work() {
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// ALICE set min_sum equal one hundred.
-		assert_ok!(TestRiskManager::set_threshold(alice(), CurrencyId::DOT, Rate::one()));
+		assert_ok!(TestRiskManager::set_threshold(alice(), CurrencyId::DOT, 1, 1));
 		assert_eq!(
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).threshold,
 			Rate::one()
@@ -94,13 +94,13 @@ fn set_threshold_should_work() {
 
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
-			TestRiskManager::set_threshold(bob(), CurrencyId::DOT, Rate::one()),
+			TestRiskManager::set_threshold(bob(), CurrencyId::DOT, 1, 1),
 			Error::<Test>::RequireAdmin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestRiskManager::set_threshold(alice(), CurrencyId::MDOT, Rate::one()),
+			TestRiskManager::set_threshold(alice(), CurrencyId::MDOT, 1, 1),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
@@ -110,11 +110,7 @@ fn set_threshold_should_work() {
 fn set_liquidation_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		// Can be set to 0.0
-		assert_ok!(TestRiskManager::set_liquidation_fee(
-			alice(),
-			CurrencyId::DOT,
-			Rate::zero()
-		));
+		assert_ok!(TestRiskManager::set_liquidation_fee(alice(), CurrencyId::DOT, 0, 1));
 		assert_eq!(
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).liquidation_fee,
 			Rate::zero()
@@ -123,11 +119,7 @@ fn set_liquidation_fee_should_work() {
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// ALICE set min_sum equal one hundred.
-		assert_ok!(TestRiskManager::set_liquidation_fee(
-			alice(),
-			CurrencyId::DOT,
-			Rate::one()
-		));
+		assert_ok!(TestRiskManager::set_liquidation_fee(alice(), CurrencyId::DOT, 1, 1));
 		assert_eq!(
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).liquidation_fee,
 			Rate::one()
@@ -137,13 +129,13 @@ fn set_liquidation_fee_should_work() {
 
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
-			TestRiskManager::set_liquidation_fee(bob(), CurrencyId::DOT, Rate::one()),
+			TestRiskManager::set_liquidation_fee(bob(), CurrencyId::DOT, 1, 1),
 			Error::<Test>::RequireAdmin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestRiskManager::set_liquidation_fee(alice(), CurrencyId::MDOT, Rate::one()),
+			TestRiskManager::set_liquidation_fee(alice(), CurrencyId::MDOT, 1, 1),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
