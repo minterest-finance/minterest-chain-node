@@ -1,7 +1,7 @@
 [package]
 name = "risk-manager"
 description = 'Pallet for risk manager implementation'
-version = "0.6.0"
+version = "0.6.1"
 authors = ["Minterest <https://github.com/minterest-defi>"]
 edition = "2018"
 
