@@ -247,6 +247,7 @@ impl ExtBuilder {
 		total_borrowed: Balance,
 		interest_index: Rate,
 		collateral: bool,
+		liquidation_attempts: u8,
 	) -> Self {
 		self.pool_user_data.push((
 			pool_id,
@@ -255,6 +256,7 @@ impl ExtBuilder {
 				total_borrowed,
 				interest_index,
 				collateral,
+				liquidation_attempts,
 			},
 		));
 		self
@@ -265,7 +267,7 @@ impl ExtBuilder {
 			.user_balance(ALICE, CurrencyId::MDOT, dollars(60_u128))
 			.pool_balance(CurrencyId::DOT, dollars(60_u128))
 			.pool_mock(CurrencyId::DOT)
-			.pool_user_data(CurrencyId::DOT, ALICE, Balance::zero(), Rate::zero(), false)
+			.pool_user_data(CurrencyId::DOT, ALICE, Balance::zero(), Rate::zero(), false, 0)
 	}
 
 	pub fn alice_deposit_20_eth(self) -> Self {
@@ -273,7 +275,7 @@ impl ExtBuilder {
 			.user_balance(ALICE, CurrencyId::METH, dollars(20_u128))
 			.pool_balance(CurrencyId::ETH, dollars(20_u128))
 			.pool_mock(CurrencyId::ETH)
-			.pool_user_data(CurrencyId::ETH, ALICE, Balance::zero(), Rate::zero(), false)
+			.pool_user_data(CurrencyId::ETH, ALICE, Balance::zero(), Rate::zero(), false, 0)
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {

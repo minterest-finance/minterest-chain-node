@@ -31,7 +31,14 @@
     "PoolUserData" : {
       "total_borrowed": "Balance",
       "interest_index": "Rate",
-      "collateral": "bool"
+      "collateral": "bool",
+      "liquidation_attempts": "u8"
+    },
+    "RiskManagerData" : {
+      "max_attempts": "u8",
+      "min_sum": "Balance",
+      "threshold": "Rate",
+      "liquidation_fee": "Rate"
     },
     "CurrencyIdOf": "CurrencyId",
     "Amount": "i128",

@@ -4,8 +4,8 @@ use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
 	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig,
-	GrandpaConfig, LiquidityPoolsConfig, MinterestModelConfig, Signature, SudoConfig, SystemConfig, TokensConfig,
-	DOLLARS, WASM_BINARY,
+	GrandpaConfig, LiquidityPoolsConfig, MinterestModelConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
+	TokensConfig, DOLLARS, WASM_BINARY,
 };
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
@@ -387,6 +387,9 @@ fn testnet_genesis(
 					},
 				),
 			],
+		}),
+		risk_manager: Some(RiskManagerConfig {
+			risk_manager_dates: vec![],
 		}),
 	}
 }

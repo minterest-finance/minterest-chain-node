@@ -38,8 +38,11 @@ pub struct PoolUserData {
 	/// Global borrow_index as of the most recent balance-changing action.
 	pub interest_index: Rate,
 
-	/// Wheter or not pool as a collateral.
+	/// Whether or not pool as a collateral.
 	pub collateral: bool,
+
+	/// Number of partial liquidations for debt
+	pub liquidation_attempts: u8,
 }
 
 #[cfg(test)]
@@ -306,6 +309,12 @@ impl<T: Trait> Module<T> {
 		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = false);
 		Ok(())
 	}
+
+	/// Sets the parameter `liquidation_attempts`.
+	pub fn set_user_liquidation_attempts(who: &T::AccountId, pool_id: CurrencyId, new_count: u8) -> DispatchResult {
+		PoolUserDates::<T>::mutate(pool_id, who, |p| p.liquidation_attempts = new_count);
+		Ok(())
+	}
 }
 
 // Storage getters for LiquidityPools
@@ -350,6 +359,11 @@ impl<T: Trait> Module<T> {
 			.map(|(account, _)| account)
 			.collect();
 		Ok(user_vec)
+	}
+
+	/// Gets user liquidation attempts.
+	pub fn get_user_liquidation_attempts(who: &T::AccountId, pool_id: CurrencyId) -> u8 {
+		Self::pool_user_data(pool_id, who).liquidation_attempts
 	}
 }
 

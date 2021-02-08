@@ -152,7 +152,7 @@ fn get_pool_borrow_index_should_work() {
 #[test]
 fn get_user_total_borrowed_should_work() {
 	ExtBuilder::default()
-		.pool_user_data_with_params(CurrencyId::DOT, ALICE, ONE_HUNDRED_DOLLARS, Rate::default(), true)
+		.pool_user_data_with_params(CurrencyId::DOT, ALICE, ONE_HUNDRED_DOLLARS, Rate::default(), true, 0)
 		.build()
 		.execute_with(|| {
 			assert_eq!(
@@ -165,7 +165,7 @@ fn get_user_total_borrowed_should_work() {
 #[test]
 fn check_user_available_collateral_should_work() {
 	ExtBuilder::default()
-		.pool_user_data_with_params(CurrencyId::DOT, ALICE, Balance::default(), Rate::default(), false)
+		.pool_user_data_with_params(CurrencyId::DOT, ALICE, Balance::default(), Rate::default(), false, 0)
 		.build()
 		.execute_with(|| {
 			// collateral parameter is set to false
@@ -376,4 +376,44 @@ fn get_underlying_asset_id_by_wrapped_id_should_work() {
 			Error::<Test>::NotValidWrappedTokenId
 		);
 	});
+}
+
+#[test]
+fn get_user_liquidation_attempts_should_work() {
+	ExtBuilder::default()
+		.pool_user_data_with_params(CurrencyId::DOT, ALICE, ONE_HUNDRED_DOLLARS, Rate::default(), true, 12)
+		.build()
+		.execute_with(|| {
+			assert_eq!(TestPools::get_user_liquidation_attempts(&ALICE, CurrencyId::DOT), 12);
+		});
+}
+
+#[test]
+fn set_user_liquidation_attempts_should_work() {
+	ExtBuilder::default()
+		.pool_user_data_with_params(CurrencyId::DOT, ALICE, ONE_HUNDRED_DOLLARS, Rate::default(), true, 0)
+		.build()
+		.execute_with(|| {
+			assert_ok!(TestPools::set_user_liquidation_attempts(&ALICE, CurrencyId::DOT, 15));
+			assert_eq!(
+				<PoolUserDates<Test>>::get(CurrencyId::DOT, ALICE).liquidation_attempts,
+				15
+			);
+		});
+}
+
+#[test]
+fn get_pool_members_with_loans_should_work() {
+	ExtBuilder::default()
+		.pool_user_data_with_params(CurrencyId::DOT, ALICE, ONE_HUNDRED_DOLLARS, Rate::default(), true, 0)
+		.pool_user_data_with_params(CurrencyId::DOT, BOB, 0, Rate::default(), true, 0)
+		.pool_user_data_with_params(CurrencyId::DOT, CHARLIE, 100, Rate::default(), true, 0)
+		.pool_user_data_with_params(CurrencyId::BTC, ALICE, 0, Rate::default(), true, 0)
+		.pool_user_data_with_params(CurrencyId::BTC, BOB, 0, Rate::default(), true, 0)
+		.pool_user_data_with_params(CurrencyId::BTC, CHARLIE, ONE_HUNDRED, Rate::default(), true, 0)
+		.build()
+		.execute_with(|| {
+			assert_eq!(TestPools::get_pool_members_with_loans(CurrencyId::DOT), Ok(vec![1, 3]));
+			assert_eq!(TestPools::get_pool_members_with_loans(CurrencyId::BTC), Ok(vec![3]));
+		});
 }

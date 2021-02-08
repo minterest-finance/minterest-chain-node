@@ -140,6 +140,8 @@ impl Default for ExtBuilder {
 type Amount = i128;
 pub type TestPools = Module<Test>;
 pub const ALICE: AccountId = 1;
+pub const BOB: AccountId = 2;
+pub const CHARLIE: AccountId = 3;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
 pub const ONE_HUNDRED: Balance = 100;
@@ -182,6 +184,7 @@ impl ExtBuilder {
 		total_borrowed: Balance,
 		interest_index: Rate,
 		collateral: bool,
+		liquidation_attempts: u8,
 	) -> Self {
 		self.pool_user_data.push((
 			pool_id,
@@ -190,6 +193,7 @@ impl ExtBuilder {
 				total_borrowed,
 				interest_index,
 				collateral,
+				liquidation_attempts,
 			},
 		));
 		self

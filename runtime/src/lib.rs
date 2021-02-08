@@ -22,7 +22,7 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::traits::{BlakeTwo256, Block as BlockT, IdentityLookup, NumberFor, Saturating};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	transaction_validity::{TransactionSource, TransactionValidity},
+	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, ModuleId,
 };
 use sp_std::prelude::*;
@@ -320,8 +320,21 @@ impl minterest_model::Trait for Runtime {
 	type BlocksPerYear = BlocksPerYear;
 }
 
+parameter_types! {
+	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
+}
+
 impl risk_manager::Trait for Runtime {
 	type Event = Event;
+	type UnsignedPriority = RiskManagerPriority;
+}
+
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+where
+	Call: From<C>,
+{
+	type OverarchingCall = Call;
+	type Extrinsic = UncheckedExtrinsic;
 }
 
 impl liquidation_pools::Trait for Runtime {
@@ -356,7 +369,7 @@ construct_runtime!(
 		Accounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		Oracle: oracle::{Module, Storage, Call, Event},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
-		RiskManager: risk_manager::{Module, Storage, Call, Event},
+		RiskManager: risk_manager::{Module, Storage, Call, Event, Config, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event}
 	}
 );

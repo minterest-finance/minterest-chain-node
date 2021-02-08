@@ -364,8 +364,6 @@ impl<T: Trait> Module<T> {
 		redeem_amount: Balance,
 		borrow_amount: Balance,
 	) -> LiquidityResult {
-		ensure!(!(borrow_amount > 0 && redeem_amount > 0), Error::<T>::ParametersError);
-
 		let m_tokens_ids: Vec<CurrencyId> = <T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
 			.iter()
 			.map(|currency_pair| currency_pair.wrapped_id)
@@ -434,17 +432,17 @@ impl<T: Trait> Module<T> {
 		}
 
 		match sum_collateral.cmp(&sum_borrow_plus_effects) {
-			Ordering::Greater => Ok((
-				sum_collateral
-					.checked_sub(sum_borrow_plus_effects)
-					.ok_or(Error::<T>::InsufficientLiquidity)?,
-				0,
-			)),
-			_ => Ok((
+			Ordering::Less => Ok((
 				0,
 				sum_borrow_plus_effects
 					.checked_sub(sum_collateral)
 					.ok_or(Error::<T>::InsufficientLiquidity)?,
+			)),
+			_ => Ok((
+				sum_collateral
+					.checked_sub(sum_borrow_plus_effects)
+					.ok_or(Error::<T>::InsufficientLiquidity)?,
+				0,
 			)),
 		}
 	}

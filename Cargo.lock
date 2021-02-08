@@ -5196,15 +5196,22 @@ dependencies = [
 
 [[package]]
 name = "risk-manager"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
+ "accounts",
+ "controller",
  "frame-support",
  "frame-system",
  "liquidity-pools",
+ "minterest-model",
  "minterest-primitives",
+ "oracle",
+ "orml-tokens",
  "orml-traits",
  "orml-utilities",
  "parity-scale-codec",
+ "serde",
+ "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
