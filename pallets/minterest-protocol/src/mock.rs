@@ -122,6 +122,7 @@ impl liquidity_pools::Trait for Test {
 
 impl controller::Trait for Test {
 	type Event = TestEvent;
+	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 }
 
 impl oracle::Trait for Test {
@@ -148,28 +149,8 @@ impl minterest_model::Trait for Test {
 
 impl Trait for Test {
 	type Event = TestEvent;
-	type Borrowing = MockBorrowing;
-}
-
-pub struct MockBorrowing;
-impl Borrowing<AccountId> for MockBorrowing {
-	fn update_state_on_borrow(
-		_who: &AccountId,
-		_underlying_asset_id: CurrencyId,
-		_amount_borrowed: Balance,
-		_account_borrows: Balance,
-	) -> DispatchResult {
-		Ok(())
-	}
-
-	fn update_state_on_repay(
-		_who: &AccountId,
-		_underlying_asset_id: CurrencyId,
-		_amount_borrowed: Balance,
-		_account_borrows: Balance,
-	) -> DispatchResult {
-		Ok(())
-	}
+	type Borrowing = liquidity_pools::Module<Test>;
+	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 }
 
 type Amount = i128;

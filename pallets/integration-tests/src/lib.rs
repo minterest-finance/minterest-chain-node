@@ -8,17 +8,17 @@ mod tests {
 	use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 	use orml_currencies::Currency;
 	use orml_traits::MultiCurrency;
-	use pallet_traits::Borrowing;
 	use sp_core::H256;
 	use sp_runtime::{
 		testing::Header,
 		traits::{IdentityLookup, Zero},
-		DispatchResult, FixedPointNumber, ModuleId, Perbill,
+		FixedPointNumber, ModuleId, Perbill,
 	};
 
 	use controller::{ControllerData, PauseKeeper};
 	use minterest_model::MinterestModelData;
 	use minterest_protocol::Error as MinterestProtocolError;
+	use pallet_traits::PoolsManager;
 
 	mod controller_tests;
 	mod liquidity_pools_tests;
@@ -74,27 +74,6 @@ mod tests {
 		pub const ExistentialDeposit: u64 = 1;
 	}
 
-	pub struct MockBorrowing;
-	impl Borrowing<AccountId> for MockBorrowing {
-		fn update_state_on_borrow(
-			_who: &AccountId,
-			_underlying_asset_id: CurrencyId,
-			_amount_borrowed: Balance,
-			_account_borrows: Balance,
-		) -> DispatchResult {
-			Ok(())
-		}
-
-		fn update_state_on_repay(
-			_who: &AccountId,
-			_underlying_asset_id: CurrencyId,
-			_amount_borrowed: Balance,
-			_account_borrows: Balance,
-		) -> DispatchResult {
-			Ok(())
-		}
-	}
-
 	type Amount = i128;
 	impl orml_tokens::Trait for Test {
 		type Event = ();
@@ -145,11 +124,13 @@ mod tests {
 
 	impl minterest_protocol::Trait for Test {
 		type Event = ();
-		type Borrowing = MockBorrowing;
+		type Borrowing = liquidity_pools::Module<Test>;
+		type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 	}
 
 	impl controller::Trait for Test {
 		type Event = ();
+		type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	}
 
 	impl oracle::Trait for Test {

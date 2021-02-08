@@ -17,8 +17,8 @@ minterest-primitives = { path = "../../primitives", default-features = false }
 default = ['std']
 std = [
     'codec/std',
-    "sp-runtime/std",
-    "sp-std/std",
     'frame-support/std',
     'frame-system/std',
+    "sp-runtime/std",
+    "sp-std/std",
 ]

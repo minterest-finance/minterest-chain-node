@@ -5,7 +5,7 @@ use frame_system::{self as system, ensure_signed};
 use minterest_primitives::{Balance, CurrencyId, Operation};
 use orml_traits::MultiCurrency;
 use orml_utilities::with_transaction_result;
-use pallet_traits::Borrowing;
+use pallet_traits::{Borrowing, PoolsManager};
 use sp_runtime::{traits::Zero, DispatchError, DispatchResult};
 use sp_std::cmp::Ordering;
 use sp_std::result;
@@ -21,6 +21,9 @@ pub trait Trait: liquidity_pools::Trait + controller::Trait {
 
 	/// Basic borrowing functions
 	type Borrowing: Borrowing<Self::AccountId>;
+
+	/// The basic liquidity pools.
+	type ManagerLiquidityPools: PoolsManager<Self::AccountId>;
 }
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
@@ -342,7 +345,7 @@ impl<T: Trait> Module<T> {
 		T::MultiCurrency::transfer(
 			underlying_asset_id,
 			&who,
-			&<LiquidityPools<T>>::pools_account_id(),
+			&T::ManagerLiquidityPools::pools_account_id(),
 			underlying_amount,
 		)?;
 
@@ -390,7 +393,7 @@ impl<T: Trait> Module<T> {
 		};
 
 		ensure!(
-			underlying_amount <= <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id),
+			underlying_amount <= T::ManagerLiquidityPools::get_pool_available_liquidity(underlying_asset_id),
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
@@ -411,7 +414,7 @@ impl<T: Trait> Module<T> {
 
 		T::MultiCurrency::transfer(
 			underlying_asset_id,
-			&<LiquidityPools<T>>::pools_account_id(),
+			&T::ManagerLiquidityPools::pools_account_id(),
 			&who,
 			underlying_amount,
 		)?;
@@ -430,7 +433,7 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
-		let pool_available_liquidity = <LiquidityPools<T>>::get_pool_available_liquidity(underlying_asset_id);
+		let pool_available_liquidity = T::ManagerLiquidityPools::get_pool_available_liquidity(underlying_asset_id);
 
 		// Raise an error if protocol has insufficient underlying cash.
 		ensure!(
@@ -460,7 +463,7 @@ impl<T: Trait> Module<T> {
 		// Transfer the borrow_amount from the protocol account to the borrower's account.
 		T::MultiCurrency::transfer(
 			underlying_asset_id,
-			&<LiquidityPools<T>>::pools_account_id(),
+			&T::ManagerLiquidityPools::pools_account_id(),
 			&who,
 			borrow_amount,
 		)?;
@@ -519,7 +522,7 @@ impl<T: Trait> Module<T> {
 		T::MultiCurrency::transfer(
 			underlying_asset_id,
 			&who,
-			&<LiquidityPools<T>>::pools_account_id(),
+			&T::ManagerLiquidityPools::pools_account_id(),
 			repay_amount,
 		)?;
 

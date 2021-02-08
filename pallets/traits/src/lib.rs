@@ -21,3 +21,15 @@ pub trait Borrowing<AccountId> {
 		account_borrows: Balance,
 	) -> DispatchResult;
 }
+
+/// An abstraction of pools basic functionalities.
+pub trait PoolsManager<AccountId> {
+	/// Return module account id.
+	fn pools_account_id() -> AccountId;
+
+	/// Return liquidity balance of `pool_id`.
+	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance;
+
+	/// Check if pool exists
+	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool;
+}

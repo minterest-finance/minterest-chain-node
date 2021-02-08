@@ -771,6 +771,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "orml-utilities",
+ "pallet-traits",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -3104,6 +3105,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "liquidation-pools"
+version = "0.6.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "minterest-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-traits",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "liquidity-pools"
 version = "0.5.0"
 dependencies = [
@@ -3641,6 +3661,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "hex-literal 0.3.1",
  "integration-tests",
+ "liquidation-pools",
  "liquidity-pools",
  "m-tokens",
  "minterest-model",

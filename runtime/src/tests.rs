@@ -11,6 +11,7 @@ use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use minterest_primitives::{Operation, Price};
 use orml_traits::MultiCurrency;
+use pallet_traits::PoolsManager;
 use sp_runtime::traits::Zero;
 use sp_runtime::FixedPointNumber;
 

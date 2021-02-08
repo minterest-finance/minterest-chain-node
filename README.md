@@ -59,7 +59,7 @@ Once the project has been built, the following command can be used to explore al
 subcommands:
 
 ```sh
-./target/release/node-template -h
+./target/release/minterest -h
 ```
 
 ## Run
@@ -71,19 +71,19 @@ The `make run` command will launch the single-node development chain with persis
 This command will start the single-node development chain with persistent state:
 
 ```bash
-./target/release/node-template --dev
+./target/release/minterest --dev
 ```
 
 This command will launch a temporary node and its state will be discarded after you terminate the process:
 
 ```bash
-./target/release/node-template --dev --tmp
+./target/release/minterest --dev --tmp
 ```
 
 Start the development chain with detailed logging:
 
 ```bash
-RUST_LOG=debug RUST_BACKTRACE=1 ./target/release/node-template -lruntime=debug --dev
+RUST_LOG=debug RUST_BACKTRACE=1 ./target/release/minterest -lruntime=debug --dev
 ```
 
 ## Development

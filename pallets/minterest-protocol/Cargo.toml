@@ -5,8 +5,6 @@ version = "0.5.0"
 authors = ['Minterest <https://github.com/minterest-defi>']
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false }
 sp-runtime = { version = "2.0.0", default-features = false }
@@ -37,9 +35,16 @@ minterest-model = { path = "../minterest-model" }
 default = ['std']
 std = [
     'codec/std',
-    "sp-std/std",
     "sp-runtime/std",
     'frame-support/std',
     'frame-system/std',
+    "sp-std/std",
+
+    "orml-utilities/std",
+    "orml-traits/std",
+
     "minterest-primitives/std",
+    "liquidity-pools/std",
+    "pallet-traits/std",
+    "controller/std",
 ]

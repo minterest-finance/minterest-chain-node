@@ -98,7 +98,8 @@ pub fn native_version() -> NativeVersion {
 
 // Module accounts of runtime
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 }
 
 parameter_types! {
@@ -247,7 +248,8 @@ impl m_tokens::Trait for Runtime {
 
 impl minterest_protocol::Trait for Runtime {
 	type Event = Event;
-	type Borrowing = liquidity_pools::Module<Runtime>;
+	type Borrowing = LiquidityPools;
+	type ManagerLiquidityPools = LiquidityPools;
 }
 
 impl orml_tokens::Trait for Runtime {
@@ -293,6 +295,7 @@ impl liquidity_pools::Trait for Runtime {
 
 impl controller::Trait for Runtime {
 	type Event = Event;
+	type LiquidityPoolsManager = LiquidityPools;
 }
 
 parameter_types! {
@@ -334,6 +337,12 @@ where
 	type Extrinsic = UncheckedExtrinsic;
 }
 
+impl liquidation_pools::Trait for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ModuleId = LiquidationPoolsModuleId;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -360,7 +369,8 @@ construct_runtime!(
 		Accounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		Oracle: oracle::{Module, Storage, Call, Event},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
-		RiskManager: risk_manager::{Module, Storage, Call, Event, Config, ValidateUnsigned}
+		RiskManager: risk_manager::{Module, Storage, Call, Event, Config, ValidateUnsigned},
+		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event}
 	}
 );
 

@@ -42,10 +42,13 @@ minterest-protocol = { path = "../minterest-protocol" }
 default = ['std']
 std = [
     'codec/std',
-    "sp-std/std",
     "sp-runtime/std",
     'frame-support/std',
     'frame-system/std',
+    "sp-std/std",
+
+    "orml-utilities/std",
+
     "minterest-primitives/std",
     "m-tokens/std",
     "liquidity-pools/std",
