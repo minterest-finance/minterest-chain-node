@@ -61,6 +61,9 @@ decl_module! {
 
 		/// The Liquidity Pool's module id, keep all assets in Pools.
 		const ModuleId: ModuleId = T::ModuleId::get();
+
+		/// The Liquidation Pool's account id, keep all assets in Pools.
+		const PoolAccountId: T::AccountId = T::ModuleId::get().into_account();
 	}
 }
 

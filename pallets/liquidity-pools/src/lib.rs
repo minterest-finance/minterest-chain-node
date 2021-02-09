@@ -254,7 +254,7 @@ impl<T: Trait> Module<T> {
 // Storage setters for LiquidityPools
 impl<T: Trait> Module<T> {
 	/// Sets the total borrowed value in the pool.
-	fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) -> DispatchResult {
+	pub fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) -> DispatchResult {
 		Pools::mutate(pool_id, |pool| pool.total_borrowed = new_total_borrows);
 		Ok(())
 	}
@@ -272,7 +272,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Sets the total borrowed and interest index for user.
-	fn set_user_total_borrowed_and_interest_index(
+	pub fn set_user_total_borrowed_and_interest_index(
 		who: &T::AccountId,
 		pool_id: CurrencyId,
 		new_total_borrows: Balance,
