@@ -386,7 +386,7 @@ impl<T: Trait> Module<T> {
 
 	fn liquidate_unsafe_loan(who: T::AccountId, pool_id: CurrencyId) -> DispatchResult {
 		let (total_borrow_in_usd, total_borrow_in_underlying, oracle_price) =
-			Self::get_user_total_borrow_in_usd(&who, pool_id)?;
+			Self::get_user_borrow_information(&who, pool_id)?;
 
 		match total_borrow_in_usd.cmp(&RiskManagerDates::get(pool_id).min_sum) {
 			Ordering::Less => Self::complete_liquidation(
@@ -402,6 +402,7 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
+	/// Complete liquidation of loan for user in a particular pool.
 	fn complete_liquidation(
 		who: &T::AccountId,
 		liquidated_pool_id: CurrencyId,
@@ -476,7 +477,8 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn get_user_total_borrow_in_usd(
+	/// Get user's loan for particular pool in USD/Underlying assets && oracle price for liquidated pool.
+	fn get_user_borrow_information(
 		who: &T::AccountId,
 		pool_id: CurrencyId,
 	) -> result::Result<(Balance, Balance, Rate), DispatchError> {
