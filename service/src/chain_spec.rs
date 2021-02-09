@@ -7,6 +7,7 @@ use node_minterest_runtime::{
 	GrandpaConfig, LiquidityPoolsConfig, MinterestModelConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
 	TokensConfig, DOLLARS, WASM_BINARY,
 };
+use risk_manager::RiskManagerData;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use serde_json::map::Map;
@@ -389,7 +390,44 @@ fn testnet_genesis(
 			],
 		}),
 		risk_manager: Some(RiskManagerConfig {
-			risk_manager_dates: vec![],
+			risk_manager_dates: vec![
+				(
+					CurrencyId::ETH,
+					RiskManagerData {
+						max_attempts: 2,
+						min_sum: 200_000 * DOLLARS,                               // In USD. FIXME: temporary value.
+						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_fee: FixedU128::saturating_from_rational(103, 100), // 3%
+					},
+				),
+				(
+					CurrencyId::DOT,
+					RiskManagerData {
+						max_attempts: 2,
+						min_sum: 200_000 * DOLLARS,                               // In USD. FIXME: temporary value.
+						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_fee: FixedU128::saturating_from_rational(103, 100), // 3%
+					},
+				),
+				(
+					CurrencyId::KSM,
+					RiskManagerData {
+						max_attempts: 2,
+						min_sum: 200_000 * DOLLARS,                               // In USD. FIXME: temporary value.
+						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_fee: FixedU128::saturating_from_rational(103, 100), // 3%
+					},
+				),
+				(
+					CurrencyId::BTC,
+					RiskManagerData {
+						max_attempts: 2,
+						min_sum: 200_000 * DOLLARS,                               // In USD. FIXME: temporary value.
+						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_fee: FixedU128::saturating_from_rational(103, 100), // 3%
+					},
+				),
+			],
 		}),
 	}
 }

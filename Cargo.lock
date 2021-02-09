@@ -3460,6 +3460,7 @@ dependencies = [
  "minterest-rpc",
  "node-minterest-runtime",
  "parity-scale-codec",
+ "risk-manager",
  "sc-basic-authorship",
  "sc-client-api",
  "sc-consensus",
