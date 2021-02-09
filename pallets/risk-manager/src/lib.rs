@@ -477,7 +477,8 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	/// Get user's loan for particular pool in USD/Underlying assets && oracle price for liquidated pool.
+	/// Get user's loan for particular pool in USD/Underlying assets && oracle price for liquidated
+	/// pool.
 	fn get_user_borrow_information(
 		who: &T::AccountId,
 		pool_id: CurrencyId,
