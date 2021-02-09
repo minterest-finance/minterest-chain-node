@@ -21,6 +21,7 @@ impl_outer_event! {
 		orml_tokens<T>,
 		accounts<T>,
 		liquidity_pools,
+		liquidation_pools,
 		risk_manager,
 		controller,
 		minterest_model,
@@ -99,6 +100,7 @@ impl accounts::Trait for Test {
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
+	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
@@ -134,6 +136,12 @@ impl minterest_model::Trait for Test {
 	type BlocksPerYear = BlocksPerYear;
 }
 
+impl liquidation_pools::Trait for Test {
+	type Event = TestEvent;
+	type MultiCurrency = orml_tokens::Module<Test>;
+	type ModuleId = LiquidationPoolsModuleId;
+}
+
 parameter_types! {
 	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
 }
@@ -141,6 +149,9 @@ parameter_types! {
 impl Trait for Test {
 	type Event = TestEvent;
 	type UnsignedPriority = RiskManagerPriority;
+	type MultiCurrency = orml_tokens::Module<Test>;
+	type LiquidationPoolsManager = liquidation_pools::Module<Test>;
+	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 }
 
 /// An extrinsic type used for tests.

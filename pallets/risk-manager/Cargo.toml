@@ -34,6 +34,7 @@ sp-io = { version = '2.0.0' }
 orml-tokens = { path = "../../orml/tokens" }
 
 liquidity-pools = { path = "../liquidity-pools" }
+liquidation-pools = { path = "../liquidation-pools" }
 oracle = { path = "../oracle" }
 controller = { path = "../controller" }
 accounts = { path = "../accounts" }
