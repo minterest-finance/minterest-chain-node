@@ -423,6 +423,7 @@ impl<T: Trait> Module<T> {
 
 		let pools = <LiquidityPools<T>>::get_pools_are_collateral(&who)?;
 
+		// Collect pools used as collateral.
 		let mut collateral_pools: Vec<CurrencyId> = Vec::new();
 
 		for pool in pools.into_iter() {

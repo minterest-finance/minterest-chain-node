@@ -22,7 +22,7 @@ impl_outer_event! {
 		accounts<T>,
 		liquidity_pools,
 		liquidation_pools,
-		risk_manager,
+		risk_manager<T>,
 		controller,
 		minterest_model,
 		oracle,
