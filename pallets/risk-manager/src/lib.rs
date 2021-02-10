@@ -1,15 +1,14 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{
-	debug, decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResultWithPostInfo, ensure, traits::Get,
-};
+use frame_support::{debug, decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use frame_system::{
 	ensure_none, ensure_signed,
 	offchain::{SendTransactionTypes, SubmitTransaction},
 };
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
+use orml_utilities::with_transaction_result;
 use pallet_traits::PoolsManager;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -82,7 +81,7 @@ type Controller<T> = controller::Module<T>;
 type Oracle<T> = oracle::Module<T>;
 
 pub trait Trait:
-	frame_system::Trait + liquidity_pools::Trait + accounts::Trait + controller::Trait + SendTransactionTypes<Call<Self>>
+	frame_system::Trait + liquidity_pools::Trait + controller::Trait + SendTransactionTypes<Call<Self>>
 {
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
@@ -122,6 +121,9 @@ decl_event!(
 
 		/// Liquidation fee has been successfully changed.
 		ValueOfLiquidationFeeHasChanged,
+
+		/// Unsafe loan has been successfully liquidated.
+		LiquidateUnsafeLoan,
 	}
 );
 
@@ -278,11 +280,13 @@ decl_module! {
 			origin,
 			who: <T::Lookup as StaticLookup>::Source,
 			pool_id: CurrencyId
-		) -> DispatchResultWithPostInfo {
-			ensure_none(origin)?;
-			let who = T::Lookup::lookup(who)?;
-			Self::liquidate_unsafe_loan(who, pool_id)?;
-			Ok(().into())
+		) {
+			with_transaction_result(|| {
+				ensure_none(origin)?;
+				let who = T::Lookup::lookup(who)?;
+				Self::liquidate_unsafe_loan(who, pool_id)?;
+				Ok(())
+			})?;
 		}
 	}
 }
@@ -406,8 +410,8 @@ impl<T: Trait> Module<T> {
 		who: &T::AccountId,
 		liquidated_pool_id: CurrencyId,
 		total_borrow_in_usd: Balance,
-		total_borrow_in_underlying: Balance,
-		_liquidated_asset_oracle_price: Rate,
+		mut user_total_borrow_in_underlying: Balance,
+		liquidated_asset_oracle_price: Rate,
 	) -> DispatchResult {
 		let mut total_borrow_in_usd_plus_fee = Rate::from_inner(total_borrow_in_usd)
 			.checked_mul(&RiskManagerDates::get(liquidated_pool_id).liquidation_fee)
@@ -448,11 +452,11 @@ impl<T: Trait> Module<T> {
 					liquidated_pool_id,
 					&T::LiquidationPoolsManager::pools_account_id(),
 					&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
-					total_borrow_in_underlying,
+					user_total_borrow_in_underlying,
 				)?;
 
 				let new_pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id)
-					.checked_sub(total_borrow_in_underlying)
+					.checked_sub(user_total_borrow_in_underlying)
 					.ok_or(Error::<T>::NumOverflow)?;
 
 				let borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
@@ -467,6 +471,51 @@ impl<T: Trait> Module<T> {
 				)?;
 
 				total_borrow_in_usd_plus_fee = Balance::zero();
+			} else {
+				let free_balance_underlying_asset =
+					<LiquidityPools<T>>::convert_from_wrapped(wrapped_id, free_balance_wrapped_token)?;
+				let user_free_balance_in_usd = Rate::from_inner(free_balance_underlying_asset)
+					.checked_mul(&pool_n_oracle_price)
+					.map(|x| x.into_inner())
+					.ok_or(Error::<T>::NumOverflow)?;
+				let available_amount_liquidated_asset = Rate::from_inner(user_free_balance_in_usd)
+					.checked_div(&liquidated_asset_oracle_price)
+					.map(|x| x.into_inner())
+					.ok_or(Error::<T>::NumOverflow)?;
+
+				let new_pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id)
+					.checked_sub(available_amount_liquidated_asset)
+					.ok_or(Error::<T>::NumOverflow)?;
+				let user_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
+				user_total_borrow_in_underlying = user_total_borrow_in_underlying
+					.checked_sub(available_amount_liquidated_asset)
+					.ok_or(Error::<T>::NumOverflow)?;
+
+				<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, free_balance_wrapped_token)?;
+				<T as Trait>::MultiCurrency::transfer(
+					pool,
+					&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+					&T::LiquidationPoolsManager::pools_account_id(),
+					free_balance_underlying_asset,
+				)?;
+				<T as Trait>::MultiCurrency::transfer(
+					liquidated_pool_id,
+					&T::LiquidationPoolsManager::pools_account_id(),
+					&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+					available_amount_liquidated_asset,
+				)?;
+
+				<LiquidityPools<T>>::set_pool_total_borrowed(liquidated_pool_id, new_pool_total_borrowed)?;
+				<LiquidityPools<T>>::set_user_total_borrowed_and_interest_index(
+					&who,
+					liquidated_pool_id,
+					user_total_borrow_in_underlying,
+					user_borrow_index,
+				)?;
+
+				total_borrow_in_usd_plus_fee = total_borrow_in_usd_plus_fee
+					.checked_sub(user_free_balance_in_usd)
+					.ok_or(Error::<T>::NumOverflow)?;
 			}
 		}
 
