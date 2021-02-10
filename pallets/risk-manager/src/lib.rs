@@ -83,7 +83,7 @@ type Oracle<T> = oracle::Module<T>;
 pub trait Trait:
 	frame_system::Trait + liquidity_pools::Trait + controller::Trait + SendTransactionTypes<Call<Self>>
 {
-	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
 	/// A configuration for base priority of unsigned transactions.
 	///
@@ -109,21 +109,24 @@ decl_storage! {
 }
 
 decl_event!(
-	pub enum Event {
-		/// Max value of liquidation attempts has been successfully changed.
-		MaxValueOFLiquidationAttempsHasChanged,
+	pub enum Event<T>
+	 where
+		 <T as frame_system::Trait>::AccountId,
+	 {
+		/// Max value of liquidation attempts has been successfully changed: \[who, attempts_amount\]
+		MaxValueOFLiquidationAttempsHasChanged(AccountId, u8),
 
-		/// Min sum for partial liquidation has been successfully changed.
-		MinSumForPartialLiquidationHasChanged,
+		/// Min sum for partial liquidation has been successfully changed: \[who, min_sum\]
+		MinSumForPartialLiquidationHasChanged(AccountId, Balance),
 
-		/// Threshold has been successfully changed.
-		ValueOfThresholdHasChanged,
+		/// Threshold has been successfully changed: \[who, threshold\]
+		ValueOfThresholdHasChanged(AccountId, Rate),
 
-		/// Liquidation fee has been successfully changed.
-		ValueOfLiquidationFeeHasChanged,
+		/// Liquidation fee has been successfully changed: \[ who, threshold\]
+		ValueOfLiquidationFeeHasChanged(AccountId, Rate),
 
-		/// Unsafe loan has been successfully liquidated.
-		LiquidateUnsafeLoan,
+		/// Unsafe loan has been successfully liquidated: \[who, total_borrow_in_usd, liquidated_pool_id, collateral_pools\]
+		LiquidateUnsafeLoan(AccountId, Balance, CurrencyId, Vec<CurrencyId>),
 	}
 );
 
@@ -164,7 +167,7 @@ decl_module! {
 			// Write new value into storage.
 			RiskManagerDates::mutate(pool_id, |r| r.max_attempts = new_max_value);
 
-			Self::deposit_event(Event::MaxValueOFLiquidationAttempsHasChanged);
+			Self::deposit_event(RawEvent::MaxValueOFLiquidationAttempsHasChanged(sender, new_max_value));
 
 			Ok(())
 		}
@@ -187,7 +190,7 @@ decl_module! {
 			// Write new value into storage.
 			RiskManagerDates::mutate(pool_id, |r| r.min_sum = new_min_sum);
 
-			Self::deposit_event(Event::MinSumForPartialLiquidationHasChanged);
+			Self::deposit_event(RawEvent::MinSumForPartialLiquidationHasChanged(sender, new_min_sum));
 
 			Ok(())
 		}
@@ -215,7 +218,7 @@ decl_module! {
 			// Write new value into storage.
 			RiskManagerDates::mutate(pool_id, |r| r.threshold = new_threshold);
 
-			Self::deposit_event(Event::ValueOfThresholdHasChanged);
+			Self::deposit_event(RawEvent::ValueOfThresholdHasChanged(sender, new_threshold));
 
 			Ok(())
 		}
@@ -243,7 +246,7 @@ decl_module! {
 			// Write new value into storage.
 			RiskManagerDates::mutate(pool_id, |r| r.liquidation_fee = new_liquidation_fee);
 
-			Self::deposit_event(Event::ValueOfLiquidationFeeHasChanged);
+			Self::deposit_event(RawEvent::ValueOfLiquidationFeeHasChanged(sender, new_liquidation_fee));
 
 			Ok(())
 		}
@@ -394,7 +397,7 @@ impl<T: Trait> Module<T> {
 
 		if let Ordering::Less = total_borrow_in_usd.cmp(&RiskManagerDates::get(pool_id).min_sum) {
 			Self::complete_liquidation(
-				&who,
+				who,
 				pool_id,
 				total_borrow_in_usd,
 				total_borrow_in_underlying,
@@ -407,7 +410,7 @@ impl<T: Trait> Module<T> {
 
 	/// Complete liquidation of loan for user in a particular pool.
 	fn complete_liquidation(
-		who: &T::AccountId,
+		who: T::AccountId,
 		liquidated_pool_id: CurrencyId,
 		total_borrow_in_usd: Balance,
 		mut user_total_borrow_in_underlying: Balance,
@@ -419,6 +422,8 @@ impl<T: Trait> Module<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		let pools = <LiquidityPools<T>>::get_pools_are_collateral(&who)?;
+
+		let mut collateral_pools: Vec<CurrencyId> = Vec::new();
 
 		for pool in pools.into_iter() {
 			if total_borrow_in_usd_plus_fee.is_zero() {
@@ -471,6 +476,8 @@ impl<T: Trait> Module<T> {
 				)?;
 
 				total_borrow_in_usd_plus_fee = Balance::zero();
+
+				collateral_pools.push(pool)
 			} else {
 				let free_balance_underlying_asset =
 					<LiquidityPools<T>>::convert_from_wrapped(wrapped_id, free_balance_wrapped_token)?;
@@ -516,8 +523,17 @@ impl<T: Trait> Module<T> {
 				total_borrow_in_usd_plus_fee = total_borrow_in_usd_plus_fee
 					.checked_sub(user_free_balance_in_usd)
 					.ok_or(Error::<T>::NumOverflow)?;
+
+				collateral_pools.push(pool)
 			}
 		}
+
+		Self::deposit_event(RawEvent::LiquidateUnsafeLoan(
+			who,
+			total_borrow_in_usd,
+			liquidated_pool_id,
+			collateral_pools,
+		));
 
 		Ok(())
 	}
