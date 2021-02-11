@@ -395,6 +395,7 @@ impl<T: Trait> Module<T> {
 		let (total_borrow_in_usd, total_borrow_in_underlying, oracle_price) =
 			Self::get_user_borrow_information(&who, pool_id)?;
 
+		// Temporary implementation. Only small loan case works.
 		if let Ordering::Less = total_borrow_in_usd.cmp(&RiskManagerDates::get(pool_id).min_sum) {
 			Self::complete_liquidation(
 				who,
