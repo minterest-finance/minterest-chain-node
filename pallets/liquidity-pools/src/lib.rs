@@ -254,7 +254,7 @@ impl<T: Trait> Module<T> {
 // Storage setters for LiquidityPools
 impl<T: Trait> Module<T> {
 	/// Sets the total borrowed value in the pool.
-	fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) -> DispatchResult {
+	pub fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) -> DispatchResult {
 		Pools::mutate(pool_id, |pool| pool.total_borrowed = new_total_borrows);
 		Ok(())
 	}
@@ -272,7 +272,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Sets the total borrowed and interest index for user.
-	fn set_user_total_borrowed_and_interest_index(
+	pub fn set_user_total_borrowed_and_interest_index(
 		who: &T::AccountId,
 		pool_id: CurrencyId,
 		new_total_borrows: Balance,
@@ -364,6 +364,25 @@ impl<T: Trait> Module<T> {
 	/// Gets user liquidation attempts.
 	pub fn get_user_liquidation_attempts(who: &T::AccountId, pool_id: CurrencyId) -> u8 {
 		Self::pool_user_data(pool_id, who).liquidation_attempts
+	}
+
+	/// Gets user collateral pools.
+	pub fn get_pools_are_collateral(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
+		let pools_available: Vec<CurrencyId> = T::EnabledCurrencyPair::get()
+			.iter()
+			.map(|currency_pair| currency_pair.underlying_id)
+			.collect();
+		let mut pool_vec = Vec::new();
+
+		for pool in pools_available.into_iter() {
+			PoolUserDates::<T>::iter_prefix(pool).for_each(|(user, pool_user_data)| {
+				if user == *who && pool_user_data.collateral {
+					pool_vec.push(pool)
+				}
+			});
+		}
+
+		Ok(pool_vec)
 	}
 }
 

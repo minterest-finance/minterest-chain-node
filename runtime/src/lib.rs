@@ -327,6 +327,9 @@ parameter_types! {
 impl risk_manager::Trait for Runtime {
 	type Event = Event;
 	type UnsignedPriority = RiskManagerPriority;
+	type MultiCurrency = Currencies;
+	type LiquidationPoolsManager = LiquidationPools;
+	type LiquidityPoolsManager = LiquidityPools;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime

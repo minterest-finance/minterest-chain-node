@@ -21,8 +21,11 @@ orml-traits = { path = "../../orml/traits", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
+liquidation-pools = { path = "../liquidation-pools", default-features = false }
+pallet-traits = { path = "../traits", default-features = false }
 controller = { path = "../controller", default-features = false }
 accounts = { path = "../accounts", default-features = false }
+oracle = { path = "../oracle", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = '2.0.0' }
@@ -31,6 +34,7 @@ sp-io = { version = '2.0.0' }
 orml-tokens = { path = "../../orml/tokens" }
 
 liquidity-pools = { path = "../liquidity-pools" }
+liquidation-pools = { path = "../liquidation-pools" }
 oracle = { path = "../oracle" }
 controller = { path = "../controller" }
 accounts = { path = "../accounts" }
@@ -54,6 +58,7 @@ std = [
 
     "minterest-primitives/std",
     "liquidity-pools/std",
+    "liquidation-pools/std",
     "controller/std",
     "accounts/std",
 ]

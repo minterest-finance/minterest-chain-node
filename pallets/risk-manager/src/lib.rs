@@ -9,8 +9,11 @@ use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 };
 use minterest_primitives::{Balance, CurrencyId, Rate};
+use orml_traits::MultiCurrency;
+use pallet_traits::PoolsManager;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+use sp_runtime::traits::{CheckedDiv, CheckedMul};
 use sp_runtime::{
 	offchain::{
 		storage::StorageValueRef,
@@ -21,9 +24,9 @@ use sp_runtime::{
 	transaction_validity::{
 		InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity, ValidTransaction,
 	},
-	DispatchResult, FixedPointNumber, RandomNumberGenerator, RuntimeDebug,
+	DispatchError, DispatchResult, FixedPointNumber, RandomNumberGenerator, RuntimeDebug,
 };
-use sp_std::{cmp::Ordering, prelude::*, str};
+use sp_std::{cmp::Ordering, prelude::*, result, str};
 
 pub const OFFCHAIN_WORKER_DATA: &[u8] = b"pallets/risk-manager/data/";
 pub const OFFCHAIN_WORKER_LOCK: &[u8] = b"pallets/risk-manager/lock/";
@@ -76,6 +79,7 @@ pub struct RiskManagerData {
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 type Accounts<T> = accounts::Module<T>;
 type Controller<T> = controller::Module<T>;
+type Oracle<T> = oracle::Module<T>;
 
 pub trait Trait:
 	frame_system::Trait + liquidity_pools::Trait + accounts::Trait + controller::Trait + SendTransactionTypes<Call<Self>>
@@ -87,6 +91,15 @@ pub trait Trait:
 	/// This is exposed so that it can be tuned for particular runtime, when
 	/// multiple modules send unsigned transactions.
 	type UnsignedPriority: Get<TransactionPriority>;
+
+	/// The `MultiCurrency` implementation.
+	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
+
+	/// The basic liquidity pools.
+	type LiquidationPoolsManager: PoolsManager<Self::AccountId>;
+
+	/// Pools are responsible for holding funds for automatic liquidation.
+	type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
 }
 
 decl_storage! {
@@ -341,7 +354,7 @@ impl<T: Trait> Module<T> {
 		}
 
 		let iteration_end_time = sp_io::offchain::timestamp();
-		debug::debug!(
+		debug::info!(
 			target: "RiskManager offchain worker",
 			"iteration info:\n max iterations is {:?}\n currency id: {:?}, start key: {:?}, iterate count: {:?}\n iteration start at: {:?}, end at: {:?}, execution time: {:?}\n",
 			max_iterations,
@@ -371,8 +384,108 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	fn liquidate_unsafe_loan(_who: T::AccountId, _pool_id: CurrencyId) -> DispatchResult {
+	fn liquidate_unsafe_loan(who: T::AccountId, pool_id: CurrencyId) -> DispatchResult {
+		let (total_borrow_in_usd, total_borrow_in_underlying, oracle_price) =
+			Self::get_user_borrow_information(&who, pool_id)?;
+
+		if let Ordering::Less = total_borrow_in_usd.cmp(&RiskManagerDates::get(pool_id).min_sum) {
+			Self::complete_liquidation(
+				&who,
+				pool_id,
+				total_borrow_in_usd,
+				total_borrow_in_underlying,
+				oracle_price,
+			)?
+		}
+
 		Ok(())
+	}
+
+	/// Complete liquidation of loan for user in a particular pool.
+	fn complete_liquidation(
+		who: &T::AccountId,
+		liquidated_pool_id: CurrencyId,
+		total_borrow_in_usd: Balance,
+		total_borrow_in_underlying: Balance,
+		_liquidated_asset_oracle_price: Rate,
+	) -> DispatchResult {
+		let mut total_borrow_in_usd_plus_fee = Rate::from_inner(total_borrow_in_usd)
+			.checked_mul(&RiskManagerDates::get(liquidated_pool_id).liquidation_fee)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		let pools = <LiquidityPools<T>>::get_pools_are_collateral(&who)?;
+
+		for pool in pools.into_iter() {
+			if total_borrow_in_usd_plus_fee.is_zero() {
+				break;
+			}
+
+			let pool_n_oracle_price = <Oracle<T>>::get_underlying_price(pool)?;
+
+			let underlying_amount_required_to_liquidate = Rate::from_inner(total_borrow_in_usd_plus_fee)
+				.checked_div(&pool_n_oracle_price)
+				.map(|x| x.into_inner())
+				.ok_or(Error::<T>::NumOverflow)?;
+
+			let wrapped_amount_required_to_liquidate =
+				<LiquidityPools<T>>::convert_to_wrapped(pool, underlying_amount_required_to_liquidate)?;
+
+			// User's params
+			let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&pool)?;
+
+			let free_balance_wrapped_token = <T as Trait>::MultiCurrency::free_balance(wrapped_id, &who);
+
+			if free_balance_wrapped_token >= wrapped_amount_required_to_liquidate {
+				<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount_required_to_liquidate)?;
+				<T as Trait>::MultiCurrency::transfer(
+					pool,
+					&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+					&T::LiquidationPoolsManager::pools_account_id(),
+					underlying_amount_required_to_liquidate,
+				)?;
+				<T as Trait>::MultiCurrency::transfer(
+					liquidated_pool_id,
+					&T::LiquidationPoolsManager::pools_account_id(),
+					&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+					total_borrow_in_underlying,
+				)?;
+
+				let new_pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id)
+					.checked_sub(total_borrow_in_underlying)
+					.ok_or(Error::<T>::NumOverflow)?;
+
+				let borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
+
+				<LiquidityPools<T>>::set_pool_total_borrowed(liquidated_pool_id, new_pool_total_borrowed)?;
+
+				<LiquidityPools<T>>::set_user_total_borrowed_and_interest_index(
+					&who,
+					liquidated_pool_id,
+					Balance::zero(),
+					borrow_index,
+				)?;
+
+				total_borrow_in_usd_plus_fee = Balance::zero();
+			}
+		}
+
+		Ok(())
+	}
+
+	/// Get user's loan for particular pool in USD/Underlying assets && oracle price for liquidated
+	/// pool.
+	fn get_user_borrow_information(
+		who: &T::AccountId,
+		pool_id: CurrencyId,
+	) -> result::Result<(Balance, Balance, Rate), DispatchError> {
+		let total_borrow_in_underlying = <Controller<T>>::borrow_balance_stored(&who, pool_id)?;
+		let oracle_price = <Oracle<T>>::get_underlying_price(pool_id)?;
+		let total_borrow_in_usd = Rate::from_inner(total_borrow_in_underlying)
+			.checked_mul(&oracle_price)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+		Ok((total_borrow_in_usd, total_borrow_in_underlying, oracle_price))
 	}
 }
 
