@@ -446,86 +446,88 @@ impl<T: Trait> Module<T> {
 
 			let free_balance_wrapped_token = <T as Trait>::MultiCurrency::free_balance(wrapped_id, &who);
 
-			if free_balance_wrapped_token >= wrapped_amount_required_to_liquidate {
-				<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount_required_to_liquidate)?;
-				<T as Trait>::MultiCurrency::transfer(
-					pool,
-					&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
-					&T::LiquidationPoolsManager::pools_account_id(),
-					underlying_amount_required_to_liquidate,
-				)?;
-				<T as Trait>::MultiCurrency::transfer(
-					liquidated_pool_id,
-					&T::LiquidationPoolsManager::pools_account_id(),
-					&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
-					user_total_borrow_in_underlying,
-				)?;
+			match free_balance_wrapped_token.cmp(&wrapped_amount_required_to_liquidate) {
+				Ordering::Less => {
+					let free_balance_underlying_asset =
+						<LiquidityPools<T>>::convert_from_wrapped(wrapped_id, free_balance_wrapped_token)?;
+					let user_free_balance_in_usd = Rate::from_inner(free_balance_underlying_asset)
+						.checked_mul(&pool_n_oracle_price)
+						.map(|x| x.into_inner())
+						.ok_or(Error::<T>::NumOverflow)?;
+					let available_amount_liquidated_asset = Rate::from_inner(user_free_balance_in_usd)
+						.checked_div(&liquidated_asset_oracle_price)
+						.map(|x| x.into_inner())
+						.ok_or(Error::<T>::NumOverflow)?;
+					let new_pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id)
+						.checked_sub(available_amount_liquidated_asset)
+						.ok_or(Error::<T>::NumOverflow)?;
+					let user_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
+					user_total_borrow_in_underlying = user_total_borrow_in_underlying
+						.checked_sub(available_amount_liquidated_asset)
+						.ok_or(Error::<T>::NumOverflow)?;
 
-				let new_pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id)
-					.checked_sub(user_total_borrow_in_underlying)
-					.ok_or(Error::<T>::NumOverflow)?;
+					<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, free_balance_wrapped_token)?;
+					<T as Trait>::MultiCurrency::transfer(
+						pool,
+						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+						&T::LiquidationPoolsManager::pools_account_id(),
+						free_balance_underlying_asset,
+					)?;
+					<T as Trait>::MultiCurrency::transfer(
+						liquidated_pool_id,
+						&T::LiquidationPoolsManager::pools_account_id(),
+						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+						available_amount_liquidated_asset,
+					)?;
 
-				let borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
+					<LiquidityPools<T>>::set_pool_total_borrowed(liquidated_pool_id, new_pool_total_borrowed)?;
+					<LiquidityPools<T>>::set_user_total_borrowed_and_interest_index(
+						&who,
+						liquidated_pool_id,
+						user_total_borrow_in_underlying,
+						user_borrow_index,
+					)?;
 
-				<LiquidityPools<T>>::set_pool_total_borrowed(liquidated_pool_id, new_pool_total_borrowed)?;
+					total_borrow_in_usd_plus_fee = total_borrow_in_usd_plus_fee
+						.checked_sub(user_free_balance_in_usd)
+						.ok_or(Error::<T>::NumOverflow)?;
 
-				<LiquidityPools<T>>::set_user_total_borrowed_and_interest_index(
-					&who,
-					liquidated_pool_id,
-					Balance::zero(),
-					borrow_index,
-				)?;
+					collateral_pools.push(pool)
+				}
+				_ => {
+					<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount_required_to_liquidate)?; //22000000000000000000000
+					<T as Trait>::MultiCurrency::transfer(
+						pool,
+						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+						&T::LiquidationPoolsManager::pools_account_id(),
+						underlying_amount_required_to_liquidate,
+					)?;
+					<T as Trait>::MultiCurrency::transfer(
+						liquidated_pool_id,
+						&T::LiquidationPoolsManager::pools_account_id(),
+						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+						user_total_borrow_in_underlying,
+					)?;
 
-				total_borrow_in_usd_plus_fee = Balance::zero();
+					let new_pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id)
+						.checked_sub(user_total_borrow_in_underlying)
+						.ok_or(Error::<T>::NumOverflow)?;
 
-				collateral_pools.push(pool)
-			} else {
-				let free_balance_underlying_asset =
-					<LiquidityPools<T>>::convert_from_wrapped(wrapped_id, free_balance_wrapped_token)?;
-				let user_free_balance_in_usd = Rate::from_inner(free_balance_underlying_asset)
-					.checked_mul(&pool_n_oracle_price)
-					.map(|x| x.into_inner())
-					.ok_or(Error::<T>::NumOverflow)?;
-				let available_amount_liquidated_asset = Rate::from_inner(user_free_balance_in_usd)
-					.checked_div(&liquidated_asset_oracle_price)
-					.map(|x| x.into_inner())
-					.ok_or(Error::<T>::NumOverflow)?;
+					let borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
 
-				let new_pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id)
-					.checked_sub(available_amount_liquidated_asset)
-					.ok_or(Error::<T>::NumOverflow)?;
-				let user_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
-				user_total_borrow_in_underlying = user_total_borrow_in_underlying
-					.checked_sub(available_amount_liquidated_asset)
-					.ok_or(Error::<T>::NumOverflow)?;
+					<LiquidityPools<T>>::set_pool_total_borrowed(liquidated_pool_id, new_pool_total_borrowed)?;
 
-				<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, free_balance_wrapped_token)?;
-				<T as Trait>::MultiCurrency::transfer(
-					pool,
-					&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
-					&T::LiquidationPoolsManager::pools_account_id(),
-					free_balance_underlying_asset,
-				)?;
-				<T as Trait>::MultiCurrency::transfer(
-					liquidated_pool_id,
-					&T::LiquidationPoolsManager::pools_account_id(),
-					&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
-					available_amount_liquidated_asset,
-				)?;
+					<LiquidityPools<T>>::set_user_total_borrowed_and_interest_index(
+						&who,
+						liquidated_pool_id,
+						Balance::zero(),
+						borrow_index,
+					)?;
 
-				<LiquidityPools<T>>::set_pool_total_borrowed(liquidated_pool_id, new_pool_total_borrowed)?;
-				<LiquidityPools<T>>::set_user_total_borrowed_and_interest_index(
-					&who,
-					liquidated_pool_id,
-					user_total_borrow_in_underlying,
-					user_borrow_index,
-				)?;
+					total_borrow_in_usd_plus_fee = Balance::zero();
 
-				total_borrow_in_usd_plus_fee = total_borrow_in_usd_plus_fee
-					.checked_sub(user_free_balance_in_usd)
-					.ok_or(Error::<T>::NumOverflow)?;
-
-				collateral_pools.push(pool)
+					collateral_pools.push(pool)
+				}
 			}
 		}
 
