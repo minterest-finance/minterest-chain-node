@@ -392,11 +392,18 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn liquidate_unsafe_loan(who: T::AccountId, pool_id: CurrencyId) -> DispatchResult {
-		let (total_borrow_in_usd, total_borrow_in_underlying, oracle_price) =
+		let (total_borrow_in_usd, total_borrow_in_underlying, oracle_price, liquidation_attempts) =
 			Self::get_user_borrow_information(&who, pool_id)?;
 
-		// Temporary implementation. Only small loan case works.
-		if let Ordering::Less = total_borrow_in_usd.cmp(&RiskManagerDates::get(pool_id).min_sum) {
+		if total_borrow_in_usd >= RiskManagerDates::get(pool_id).min_sum && liquidation_attempts < 2 {
+			Self::partial_liquidation(
+				who.clone(),
+				pool_id,
+				total_borrow_in_usd,
+				total_borrow_in_underlying,
+				oracle_price,
+			)?
+		} else {
 			Self::complete_liquidation(
 				who,
 				pool_id,
@@ -406,6 +413,18 @@ impl<T: Trait> Module<T> {
 			)?
 		}
 
+		Ok(())
+	}
+
+	/// Partial liquidation of loan for user in a particular pool.
+	fn partial_liquidation(
+		_who: T::AccountId,
+		_liquidated_pool_id: CurrencyId,
+		total_borrow_in_usd: Balance,
+		mut _user_total_borrow_in_underlying: Balance,
+		_liquidated_asset_oracle_price: Rate,
+	) -> DispatchResult {
+		let _sum_required_to_liquidate_in_usd = <Controller<T>>::get_sum_required_to_liquidate(total_borrow_in_usd)?;
 		Ok(())
 	}
 
@@ -547,14 +566,20 @@ impl<T: Trait> Module<T> {
 	fn get_user_borrow_information(
 		who: &T::AccountId,
 		pool_id: CurrencyId,
-	) -> result::Result<(Balance, Balance, Rate), DispatchError> {
+	) -> result::Result<(Balance, Balance, Rate, u8), DispatchError> {
+		let liquidation_attempts = <LiquidityPools<T>>::get_user_liquidation_attempts(&who, pool_id);
 		let total_borrow_in_underlying = <Controller<T>>::borrow_balance_stored(&who, pool_id)?;
 		let oracle_price = <Oracle<T>>::get_underlying_price(pool_id)?;
 		let total_borrow_in_usd = Rate::from_inner(total_borrow_in_underlying)
 			.checked_mul(&oracle_price)
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
-		Ok((total_borrow_in_usd, total_borrow_in_underlying, oracle_price))
+		Ok((
+			total_borrow_in_usd,
+			total_borrow_in_underlying,
+			oracle_price,
+			liquidation_attempts,
+		))
 	}
 }
 
