@@ -418,13 +418,88 @@ impl<T: Trait> Module<T> {
 
 	/// Partial liquidation of loan for user in a particular pool.
 	fn partial_liquidation(
-		_who: T::AccountId,
-		_liquidated_pool_id: CurrencyId,
+		who: T::AccountId,
+		liquidated_pool_id: CurrencyId,
 		total_borrow_in_usd: Balance,
-		mut _user_total_borrow_in_underlying: Balance,
-		_liquidated_asset_oracle_price: Rate,
+		user_total_borrow_in_underlying: Balance,
+		liquidated_asset_oracle_price: Rate,
 	) -> DispatchResult {
-		let _sum_required_to_liquidate_in_usd = <Controller<T>>::get_sum_required_to_liquidate(total_borrow_in_usd)?;
+		let sum_required_to_liquidate_in_usd = <Controller<T>>::get_sum_required_to_liquidate(total_borrow_in_usd)?;
+
+		let underlying_amount_required_to_write_off_debt = Rate::from_inner(sum_required_to_liquidate_in_usd)
+			.checked_div(&liquidated_asset_oracle_price)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		let mut sum_required_to_liquidate_in_usd_plus_fee = Rate::from_inner(sum_required_to_liquidate_in_usd)
+			.checked_mul(&RiskManagerDates::get(liquidated_pool_id).liquidation_fee)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		// Collect pools used as collateral.
+		let mut collateral_pools: Vec<CurrencyId> = Vec::new();
+
+		let pools = <LiquidityPools<T>>::get_pools_are_collateral(&who)?;
+
+		for pool in pools.into_iter() {
+			if sum_required_to_liquidate_in_usd_plus_fee.is_zero() {
+				break;
+			}
+
+			let pool_n_oracle_price = <Oracle<T>>::get_underlying_price(pool)?;
+
+			let underlying_amount_required_to_liquidate = Rate::from_inner(sum_required_to_liquidate_in_usd_plus_fee)
+				.checked_div(&pool_n_oracle_price)
+				.map(|x| x.into_inner())
+				.ok_or(Error::<T>::NumOverflow)?;
+
+			let wrapped_amount_required_to_liquidate =
+				<LiquidityPools<T>>::convert_to_wrapped(pool, underlying_amount_required_to_liquidate)?;
+
+			// User's params
+			let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&pool)?;
+
+			let free_balance_wrapped_token = <T as Trait>::MultiCurrency::free_balance(wrapped_id, &who);
+
+			if free_balance_wrapped_token >= wrapped_amount_required_to_liquidate {
+				<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount_required_to_liquidate)?;
+				<T as Trait>::MultiCurrency::transfer(
+					pool,
+					&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+					&T::LiquidationPoolsManager::pools_account_id(),
+					underlying_amount_required_to_liquidate,
+				)?;
+				<T as Trait>::MultiCurrency::transfer(
+					liquidated_pool_id,
+					&T::LiquidationPoolsManager::pools_account_id(),
+					&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+					underlying_amount_required_to_write_off_debt,
+				)?;
+
+				let new_pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id)
+					.checked_sub(underlying_amount_required_to_write_off_debt)
+					.ok_or(Error::<T>::NumOverflow)?;
+				let new_user_total_borrowed = user_total_borrow_in_underlying
+					.checked_sub(underlying_amount_required_to_write_off_debt)
+					.ok_or(Error::<T>::NumOverflow)?;
+
+				let borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
+
+				<LiquidityPools<T>>::set_pool_total_borrowed(liquidated_pool_id, new_pool_total_borrowed)?;
+
+				<LiquidityPools<T>>::set_user_total_borrowed_and_interest_index(
+					&who,
+					liquidated_pool_id,
+					new_user_total_borrowed,
+					borrow_index,
+				)?;
+
+				sum_required_to_liquidate_in_usd_plus_fee = Balance::zero();
+
+				collateral_pools.push(pool);
+			}
+		}
+
 		Ok(())
 	}
 
@@ -515,7 +590,7 @@ impl<T: Trait> Module<T> {
 					collateral_pools.push(pool)
 				}
 				_ => {
-					<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount_required_to_liquidate)?; //22000000000000000000000
+					<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount_required_to_liquidate)?;
 					<T as Trait>::MultiCurrency::transfer(
 						pool,
 						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),

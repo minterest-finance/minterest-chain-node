@@ -456,7 +456,7 @@ impl<T: Trait> Module<T> {
 	/// Return sum required to liquidate.
 	pub fn get_sum_required_to_liquidate(total_borrow_in_usd: Balance) -> BalanceResult {
 		let result = Rate::from_inner(total_borrow_in_usd)
-			.checked_mul(&Rate::saturating_from_rational(25, 100))
+			.checked_mul(&Rate::saturating_from_rational(30, 100))
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 		Ok(result)
