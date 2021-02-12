@@ -421,7 +421,7 @@ impl<T: Trait> Module<T> {
 		who: T::AccountId,
 		liquidated_pool_id: CurrencyId,
 		total_borrow_in_usd: Balance,
-		user_total_borrow_in_underlying: Balance,
+		mut user_total_borrow_in_underlying: Balance,
 		liquidated_asset_oracle_price: Rate,
 	) -> DispatchResult {
 		let sum_required_to_liquidate_in_usd = <Controller<T>>::get_sum_required_to_liquidate(total_borrow_in_usd)?;
@@ -476,7 +476,7 @@ impl<T: Trait> Module<T> {
 					let new_pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id)
 						.checked_sub(available_amount_liquidated_asset)
 						.ok_or(Error::<T>::NumOverflow)?;
-					let new_user_total_borrowed = user_total_borrow_in_underlying
+					user_total_borrow_in_underlying = user_total_borrow_in_underlying
 						.checked_sub(available_amount_liquidated_asset)
 						.ok_or(Error::<T>::NumOverflow)?;
 					let user_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
@@ -499,7 +499,7 @@ impl<T: Trait> Module<T> {
 					<LiquidityPools<T>>::set_user_total_borrowed_and_interest_index(
 						&who,
 						liquidated_pool_id,
-						new_user_total_borrowed,
+						user_total_borrow_in_underlying,
 						user_borrow_index,
 					)?;
 
@@ -527,7 +527,7 @@ impl<T: Trait> Module<T> {
 					let new_pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id)
 						.checked_sub(underlying_amount_required_to_write_off_debt)
 						.ok_or(Error::<T>::NumOverflow)?;
-					let new_user_total_borrowed = user_total_borrow_in_underlying
+					user_total_borrow_in_underlying = user_total_borrow_in_underlying
 						.checked_sub(underlying_amount_required_to_write_off_debt)
 						.ok_or(Error::<T>::NumOverflow)?;
 
@@ -538,7 +538,7 @@ impl<T: Trait> Module<T> {
 					<LiquidityPools<T>>::set_user_total_borrowed_and_interest_index(
 						&who,
 						liquidated_pool_id,
-						new_user_total_borrowed,
+						user_total_borrow_in_underlying,
 						borrow_index,
 					)?;
 
