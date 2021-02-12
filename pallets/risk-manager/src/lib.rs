@@ -497,6 +497,52 @@ impl<T: Trait> Module<T> {
 				sum_required_to_liquidate_in_usd_plus_fee = Balance::zero();
 
 				collateral_pools.push(pool);
+			} else {
+				let free_balance_underlying_asset =
+					<LiquidityPools<T>>::convert_from_wrapped(wrapped_id, free_balance_wrapped_token)?;
+				let user_free_balance_in_usd = Rate::from_inner(free_balance_underlying_asset)
+					.checked_mul(&pool_n_oracle_price)
+					.map(|x| x.into_inner())
+					.ok_or(Error::<T>::NumOverflow)?;
+				let available_amount_liquidated_asset = Rate::from_inner(user_free_balance_in_usd)
+					.checked_div(&liquidated_asset_oracle_price)
+					.map(|x| x.into_inner())
+					.ok_or(Error::<T>::NumOverflow)?;
+				let new_pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id)
+					.checked_sub(available_amount_liquidated_asset)
+					.ok_or(Error::<T>::NumOverflow)?;
+				let new_user_total_borrowed = user_total_borrow_in_underlying
+					.checked_sub(available_amount_liquidated_asset)
+					.ok_or(Error::<T>::NumOverflow)?;
+				let user_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
+
+				<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, free_balance_wrapped_token)?;
+				<T as Trait>::MultiCurrency::transfer(
+					pool,
+					&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+					&T::LiquidationPoolsManager::pools_account_id(),
+					free_balance_underlying_asset,
+				)?;
+				<T as Trait>::MultiCurrency::transfer(
+					liquidated_pool_id,
+					&T::LiquidationPoolsManager::pools_account_id(),
+					&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+					available_amount_liquidated_asset,
+				)?;
+
+				<LiquidityPools<T>>::set_pool_total_borrowed(liquidated_pool_id, new_pool_total_borrowed)?;
+				<LiquidityPools<T>>::set_user_total_borrowed_and_interest_index(
+					&who,
+					liquidated_pool_id,
+					new_user_total_borrowed,
+					user_borrow_index,
+				)?;
+
+				sum_required_to_liquidate_in_usd_plus_fee = sum_required_to_liquidate_in_usd_plus_fee
+					.checked_sub(user_free_balance_in_usd)
+					.ok_or(Error::<T>::NumOverflow)?;
+
+				collateral_pools.push(pool);
 			}
 		}
 
