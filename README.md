@@ -123,8 +123,15 @@ To mark a relase, follow the steps:
 
 ## Semantic versioning
 
-Use patch level version for releases with only bugfixes. (0.5.1, 0.5.2 etc.)
+The system supports versioning system organized in a next way:
 
-Use minor versions to mark releases with new features (0.5.0 , 0.6.0 etc.)
+1. Patch version (0.5.1, 0.5.2) represents patch level for bugfixes, currently developed feature and intermediate tags.
 
-Use major versions to mark going out live. 1.0.0 version will be tagged when we have a connection to Ethereum and prod env. 
+2. Minor version (0.5.0, 0.6.0) represents feature developed and released.
+
+3. Major version (1.0.0, 2.0.0) represents release of the scope of features within the stable build ready for production.
+
+### Versioninng
+
+The project has current release version set up in [cargo.toml](cargo.toml) file. This version should be upgraded once a tag is released and a new version is under the development.
+Each pallet and module has its own version which is not greated than the main one. Pallet version is upgraded once a significant change is made or a new feature is developed upon that pallet. Pallet version should be upgraded in the same commit where the change was performed.
