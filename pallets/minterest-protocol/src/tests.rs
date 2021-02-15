@@ -616,3 +616,113 @@ fn disable_collateral_should_work() {
 		);
 	});
 }
+
+#[test]
+fn transfer_wrapped_should_work() {
+    ExtBuilder::default()
+		.user_balance(ALICE, CurrencyId::MDOT, ONE_HUNDRED_DOLLARS)
+        .user_balance(BOB, CurrencyId::MBTC, ONE_HUNDRED_DOLLARS)
+		.build()
+		.execute_with(|| {
+			// Alice can transfer all tokens to Bob
+			assert_ok!(TestProtocol::transfer_wrapped(
+				alice(),
+                BOB,
+				CurrencyId::MDOT,
+				ONE_HUNDRED_DOLLARS,
+			));
+			let expected_event = TestEvent::minterest_protocol(RawEvent::Transferred(
+				ALICE,
+                BOB,
+				CurrencyId::MDOT,
+				ONE_HUNDRED_DOLLARS,
+			));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+            assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
+            assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB), ONE_HUNDRED_DOLLARS);
+
+            // Bob can transfer all tokens to Alice
+			assert_ok!(TestProtocol::transfer_wrapped(
+				bob(),
+                ALICE,
+				CurrencyId::MBTC,
+				ONE_HUNDRED_DOLLARS,
+			));
+			let expected_event = TestEvent::minterest_protocol(RawEvent::Transferred(
+				BOB,
+                ALICE,
+				CurrencyId::MBTC,
+				ONE_HUNDRED_DOLLARS,
+			));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+            assert_eq!(Currencies::free_balance(CurrencyId::MBTC, &ALICE), ONE_HUNDRED_DOLLARS);
+            assert_eq!(Currencies::free_balance(CurrencyId::MBTC, &BOB), 0);
+
+			// Alice can transfer part of all tokens to Bob
+			assert_ok!(TestProtocol::transfer_wrapped(
+				alice(),
+                BOB,
+				CurrencyId::MBTC,
+				dollars(40_u128),
+			));
+			let expected_event = TestEvent::minterest_protocol(RawEvent::Transferred(
+				ALICE,
+                BOB,
+				CurrencyId::MBTC,
+				dollars(40_u128),
+			));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+            assert_eq!(Currencies::free_balance(CurrencyId::MBTC, &ALICE), dollars(60_u128));
+            assert_eq!(Currencies::free_balance(CurrencyId::MBTC, &BOB), dollars(40_u128));
+
+            // Bob can transfer all tokens to Alice
+			assert_ok!(TestProtocol::transfer_wrapped(
+				bob(),
+                ALICE,
+				CurrencyId::MDOT,
+				dollars(40_u128),
+			));
+			let expected_event = TestEvent::minterest_protocol(RawEvent::Transferred(
+				BOB,
+                ALICE,
+				CurrencyId::MDOT,
+				dollars(40_u128),
+			));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+            assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), dollars(40_u128));
+            assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB), dollars(60_u128));
+		});
+}
+
+#[test]
+fn transfer_wrapped_should_not_work() {
+    ExtBuilder::default()
+		.user_balance(ALICE, CurrencyId::MINT, ONE_HUNDRED_DOLLARS)
+		.user_balance(ALICE, CurrencyId::MDOT, ONE_HUNDRED_DOLLARS)
+		.build()
+        .execute_with(|| {
+            // Alice is unable to transfer more tokens tan she has
+			assert_noop!(
+				TestProtocol::transfer_wrapped(alice(), BOB, CurrencyId::MINT, ONE_HUNDRED_DOLLARS),
+				Error::<Test>::NotValidWrappedTokenId
+			);
+
+			// Alice is unable to transfer more tokens tan she has
+			assert_noop!(
+				TestProtocol::transfer_wrapped(alice(), BOB, CurrencyId::MDOT, dollars(101_u128)),
+				Error::<Test>::NotEnoughWrappedTokens
+			);
+
+			// Alice is unable to transfer tokens with zero balance
+			assert_noop!(
+				TestProtocol::transfer_wrapped(bob(), ALICE, CurrencyId::MDOT, 1_u128),
+				Error::<Test>::NotEnoughWrappedTokens
+			);
+
+			// Bob is unable to send zero tokens
+			assert_noop!(
+				TestProtocol::transfer_wrapped(bob(), ALICE, CurrencyId::MBTC, Balance::zero()),
+				Error::<Test>::ZeroBalanceTransaction
+			);
+        });
+}
