@@ -50,6 +50,10 @@ decl_event!(
 		/// Repaid a borrow on the specific pool, for the specified amount: \[who, underlying_asset_id, the_amount_repaid\]
 		Repaid(AccountId, CurrencyId, Balance),
 
+        /// Transferred specified amount on a specified pool from one account to another:
+        /// \[who, receiver, wrapped_currency_id, wrapped_amount\]
+        Transferred(AccountId, AccountId, CurrencyId, Balance),
+
 		/// The user allowed the assets in the pool to be used as collateral: \[who, pool_id\]
 		PoolEnabledAsCollateral(AccountId, CurrencyId),
 
@@ -259,6 +263,23 @@ decl_module! {
 				let who = ensure_signed(origin)?;
 				let repay_amount = Self::do_repay(&who, &borrower, underlying_asset_id, repay_amount, false)?;
 				Self::deposit_event(RawEvent::Repaid(who, underlying_asset_id, repay_amount));
+				Ok(())
+			})?
+		}
+        
+        /// Transfers an asset within the pool.
+		///
+		/// - `receiver`: the account that will receive tokens.
+	    /// - `wrapped_id`: the currency ID of the wrapped asset to transfer.
+	    /// - `transfer_amount`: the amount of the wrapped asset to transfer.
+		#[weight = 10_000]
+		pub fn transfer_wrapped(origin, receiver: T::AccountId, wrapped_id: CurrencyId, transfer_amount: Balance) {
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+                <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id)
+                    .map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
+				Self::do_transfer(&who, &receiver, wrapped_id, transfer_amount)?;
+				Self::deposit_event(RawEvent::Transferred(who, receiver, wrapped_id, transfer_amount));
 				Ok(())
 			})?
 		}
@@ -528,4 +549,35 @@ impl<T: Trait> Module<T> {
 
 		Ok(repay_amount)
 	}
+
+    /// Sender transfers their tokens to other account
+	///
+	/// - `who`: the account transferring tokens.
+	/// - `receiver`: the account that will receive tokens.
+	/// - `wrapped_id`: the currency ID of the wrapped asset to transfer.
+	/// - `transfer_amount`: the amount of the wrapped asset to transfer.
+    fn do_transfer(
+        who: &T::AccountId,
+        receiver: &T::AccountId,
+        wrapped_id: CurrencyId,
+        transfer_amount: Balance
+    ) -> DispatchResult {
+        ensure!(!transfer_amount.is_zero(), Error::<T>::ZeroBalanceTransaction);
+
+        // Fail if not enough free balance
+		ensure!(
+			transfer_amount <= T::MultiCurrency::free_balance(wrapped_id, &who),
+			Error::<T>::NotEnoughWrappedTokens
+		);
+
+		// Transfer the repay_amount from the borrower's account to the protocol account.
+		T::MultiCurrency::transfer(
+			wrapped_id,
+			&who,
+			&receiver,
+			transfer_amount,
+		)?;
+
+        Ok(())
+    }
 }
