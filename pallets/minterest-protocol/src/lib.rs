@@ -120,6 +120,9 @@ decl_error! {
 
 		/// Operation (deposit, redeem, borrow, repay) is paused.
 		OperationPaused,
+
+        /// The user is trying to transfer tokens to self
+        CannotTransferToSelf,
 	}
 }
 
@@ -276,8 +279,6 @@ decl_module! {
 		pub fn transfer_wrapped(origin, receiver: T::AccountId, wrapped_id: CurrencyId, transfer_amount: Balance) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
-                <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id)
-                    .map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
 				Self::do_transfer(&who, &receiver, wrapped_id, transfer_amount)?;
 				Self::deposit_event(RawEvent::Transferred(who, receiver, wrapped_id, transfer_amount));
 				Ok(())
@@ -563,6 +564,12 @@ impl<T: Trait> Module<T> {
         transfer_amount: Balance
     ) -> DispatchResult {
         ensure!(!transfer_amount.is_zero(), Error::<T>::ZeroBalanceTransaction);
+        ensure!(who != receiver, Error::<T>::CannotTransferToSelf);
+
+        let underlying_asset_id = <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id)
+            .map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
+        <Controller<T>>::redeem_allowed(underlying_asset_id, &who, transfer_amount)
+            .map_err(|_| Error::<T>::RedeemControllerRejection)?;
 
         // Fail if not enough free balance
 		ensure!(

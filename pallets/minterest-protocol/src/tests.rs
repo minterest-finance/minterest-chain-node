@@ -707,6 +707,12 @@ fn transfer_wrapped_should_not_work() {
 				Error::<Test>::NotValidWrappedTokenId
 			);
 
+            // Alice is unable to transfer tokens to self
+			assert_noop!(
+				TestProtocol::transfer_wrapped(alice(), ALICE, CurrencyId::MDOT, ONE_HUNDRED_DOLLARS),
+				Error::<Test>::CannotTransferToSelf
+			);
+
 			// Alice is unable to transfer more tokens tan she has
 			assert_noop!(
 				TestProtocol::transfer_wrapped(alice(), BOB, CurrencyId::MDOT, dollars(101_u128)),
