@@ -76,6 +76,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				vec![
 					// liquidation pool
 					hex!["6d6f646c6d696e2f6c71646e0000000000000000000000000000000000000000"].into(),
+					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),

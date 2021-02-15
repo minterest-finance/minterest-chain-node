@@ -431,10 +431,10 @@ impl<T: Trait> Module<T> {
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let mut sum_required_to_liquidate_in_usd_plus_fee = Rate::from_inner(sum_required_to_liquidate_in_usd)
-			.checked_mul(&RiskManagerDates::get(liquidated_pool_id).liquidation_fee)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
+		let mut sum_required_to_liquidate_in_usd_plus_fee = Self::mul_balance_by_rate(
+			&sum_required_to_liquidate_in_usd,
+			&RiskManagerDates::get(liquidated_pool_id).liquidation_fee,
+		)?;
 
 		// Collect pools used as collateral.
 		let mut collateral_pools: Vec<CurrencyId> = Vec::new();
@@ -448,10 +448,8 @@ impl<T: Trait> Module<T> {
 
 			let pool_n_oracle_price = <Oracle<T>>::get_underlying_price(pool)?;
 
-			let underlying_amount_required_to_liquidate = Rate::from_inner(sum_required_to_liquidate_in_usd_plus_fee)
-				.checked_div(&pool_n_oracle_price)
-				.map(|x| x.into_inner())
-				.ok_or(Error::<T>::NumOverflow)?;
+			let underlying_amount_required_to_liquidate =
+				Self::div_balance_by_rate(&sum_required_to_liquidate_in_usd_plus_fee, &pool_n_oracle_price)?;
 
 			let wrapped_amount_required_to_liquidate =
 				<LiquidityPools<T>>::convert_to_wrapped(pool, underlying_amount_required_to_liquidate)?;
@@ -465,20 +463,16 @@ impl<T: Trait> Module<T> {
 				Ordering::Less => {
 					let free_balance_underlying_asset =
 						<LiquidityPools<T>>::convert_from_wrapped(wrapped_id, free_balance_wrapped_token)?;
-					let user_free_balance_in_usd = Rate::from_inner(free_balance_underlying_asset)
-						.checked_mul(&pool_n_oracle_price)
-						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?;
-					let available_amount_liquidated_asset = Rate::from_inner(user_free_balance_in_usd)
-						.checked_div(&liquidated_asset_oracle_price)
-						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?;
-					let new_pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id)
-						.checked_sub(available_amount_liquidated_asset)
-						.ok_or(Error::<T>::NumOverflow)?;
-					user_total_borrow_in_underlying = user_total_borrow_in_underlying
-						.checked_sub(available_amount_liquidated_asset)
-						.ok_or(Error::<T>::NumOverflow)?;
+					let user_free_balance_in_usd =
+						Self::mul_balance_by_rate(&free_balance_underlying_asset, &pool_n_oracle_price)?;
+					let available_amount_liquidated_asset =
+						Self::div_balance_by_rate(&user_free_balance_in_usd, &liquidated_asset_oracle_price)?;
+					let new_pool_total_borrowed = Self::sub_a_from_b_u128(
+						&<LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id),
+						&available_amount_liquidated_asset,
+					)?;
+					user_total_borrow_in_underlying =
+						Self::sub_a_from_b_u128(&user_total_borrow_in_underlying, &available_amount_liquidated_asset)?;
 					let user_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
 
 					<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, free_balance_wrapped_token)?;
@@ -503,13 +497,21 @@ impl<T: Trait> Module<T> {
 						user_borrow_index,
 					)?;
 
-					sum_required_to_liquidate_in_usd_plus_fee = sum_required_to_liquidate_in_usd_plus_fee
-						.checked_sub(user_free_balance_in_usd)
-						.ok_or(Error::<T>::NumOverflow)?;
-
+					sum_required_to_liquidate_in_usd_plus_fee =
+						Self::sub_a_from_b_u128(&sum_required_to_liquidate_in_usd_plus_fee, &user_free_balance_in_usd)?;
 					collateral_pools.push(pool);
 				}
 				_ => {
+					let new_pool_total_borrowed = Self::sub_a_from_b_u128(
+						&<LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id),
+						&underlying_amount_required_to_write_off_debt,
+					)?;
+					user_total_borrow_in_underlying = Self::sub_a_from_b_u128(
+						&user_total_borrow_in_underlying,
+						&underlying_amount_required_to_write_off_debt,
+					)?;
+					let borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
+
 					<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount_required_to_liquidate)?;
 					<T as Trait>::MultiCurrency::transfer(
 						pool,
@@ -524,17 +526,7 @@ impl<T: Trait> Module<T> {
 						underlying_amount_required_to_write_off_debt,
 					)?;
 
-					let new_pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id)
-						.checked_sub(underlying_amount_required_to_write_off_debt)
-						.ok_or(Error::<T>::NumOverflow)?;
-					user_total_borrow_in_underlying = user_total_borrow_in_underlying
-						.checked_sub(underlying_amount_required_to_write_off_debt)
-						.ok_or(Error::<T>::NumOverflow)?;
-
-					let borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
-
 					<LiquidityPools<T>>::set_pool_total_borrowed(liquidated_pool_id, new_pool_total_borrowed)?;
-
 					<LiquidityPools<T>>::set_user_total_borrowed_and_interest_index(
 						&who,
 						liquidated_pool_id,
@@ -543,7 +535,6 @@ impl<T: Trait> Module<T> {
 					)?;
 
 					sum_required_to_liquidate_in_usd_plus_fee = Balance::zero();
-
 					collateral_pools.push(pool);
 				}
 			}
@@ -568,10 +559,10 @@ impl<T: Trait> Module<T> {
 		mut user_total_borrow_in_underlying: Balance,
 		liquidated_asset_oracle_price: Rate,
 	) -> DispatchResult {
-		let mut total_borrow_in_usd_plus_fee = Rate::from_inner(total_borrow_in_usd)
-			.checked_mul(&RiskManagerDates::get(liquidated_pool_id).liquidation_fee)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
+		let mut total_borrow_in_usd_plus_fee = Self::mul_balance_by_rate(
+			&total_borrow_in_usd,
+			&RiskManagerDates::get(liquidated_pool_id).liquidation_fee,
+		)?;
 
 		let pools = <LiquidityPools<T>>::get_pools_are_collateral(&who)?;
 
@@ -585,10 +576,8 @@ impl<T: Trait> Module<T> {
 
 			let pool_n_oracle_price = <Oracle<T>>::get_underlying_price(pool)?;
 
-			let underlying_amount_required_to_liquidate = Rate::from_inner(total_borrow_in_usd_plus_fee)
-				.checked_div(&pool_n_oracle_price)
-				.map(|x| x.into_inner())
-				.ok_or(Error::<T>::NumOverflow)?;
+			let underlying_amount_required_to_liquidate =
+				Self::div_balance_by_rate(&total_borrow_in_usd_plus_fee, &pool_n_oracle_price)?;
 
 			let wrapped_amount_required_to_liquidate =
 				<LiquidityPools<T>>::convert_to_wrapped(pool, underlying_amount_required_to_liquidate)?;
@@ -602,21 +591,17 @@ impl<T: Trait> Module<T> {
 				Ordering::Less => {
 					let free_balance_underlying_asset =
 						<LiquidityPools<T>>::convert_from_wrapped(wrapped_id, free_balance_wrapped_token)?;
-					let user_free_balance_in_usd = Rate::from_inner(free_balance_underlying_asset)
-						.checked_mul(&pool_n_oracle_price)
-						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?;
-					let available_amount_liquidated_asset = Rate::from_inner(user_free_balance_in_usd)
-						.checked_div(&liquidated_asset_oracle_price)
-						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?;
-					let new_pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id)
-						.checked_sub(available_amount_liquidated_asset)
-						.ok_or(Error::<T>::NumOverflow)?;
+					let user_free_balance_in_usd =
+						Self::mul_balance_by_rate(&free_balance_underlying_asset, &pool_n_oracle_price)?;
+					let available_amount_liquidated_asset =
+						Self::div_balance_by_rate(&user_free_balance_in_usd, &liquidated_asset_oracle_price)?;
+					let new_pool_total_borrowed = Self::sub_a_from_b_u128(
+						&<LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id),
+						&available_amount_liquidated_asset,
+					)?;
+					user_total_borrow_in_underlying =
+						Self::sub_a_from_b_u128(&user_total_borrow_in_underlying, &available_amount_liquidated_asset)?;
 					let user_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
-					user_total_borrow_in_underlying = user_total_borrow_in_underlying
-						.checked_sub(available_amount_liquidated_asset)
-						.ok_or(Error::<T>::NumOverflow)?;
 
 					<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, free_balance_wrapped_token)?;
 					<T as Trait>::MultiCurrency::transfer(
@@ -640,13 +625,17 @@ impl<T: Trait> Module<T> {
 						user_borrow_index,
 					)?;
 
-					total_borrow_in_usd_plus_fee = total_borrow_in_usd_plus_fee
-						.checked_sub(user_free_balance_in_usd)
-						.ok_or(Error::<T>::NumOverflow)?;
-
+					total_borrow_in_usd_plus_fee =
+						Self::sub_a_from_b_u128(&total_borrow_in_usd_plus_fee, &user_free_balance_in_usd)?;
 					collateral_pools.push(pool)
 				}
 				_ => {
+					let new_pool_total_borrowed = Self::sub_a_from_b_u128(
+						&<LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id),
+						&user_total_borrow_in_underlying,
+					)?;
+					let borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
+
 					<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount_required_to_liquidate)?;
 					<T as Trait>::MultiCurrency::transfer(
 						pool,
@@ -661,14 +650,7 @@ impl<T: Trait> Module<T> {
 						user_total_borrow_in_underlying,
 					)?;
 
-					let new_pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(liquidated_pool_id)
-						.checked_sub(user_total_borrow_in_underlying)
-						.ok_or(Error::<T>::NumOverflow)?;
-
-					let borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
-
 					<LiquidityPools<T>>::set_pool_total_borrowed(liquidated_pool_id, new_pool_total_borrowed)?;
-
 					<LiquidityPools<T>>::set_user_total_borrowed_and_interest_index(
 						&who,
 						liquidated_pool_id,
@@ -677,7 +659,6 @@ impl<T: Trait> Module<T> {
 					)?;
 
 					total_borrow_in_usd_plus_fee = Balance::zero();
-
 					collateral_pools.push(pool)
 				}
 			}
@@ -713,6 +694,36 @@ impl<T: Trait> Module<T> {
 			oracle_price,
 			liquidation_attempts,
 		))
+	}
+
+	/// Performs mathematical calculations.
+	///
+	/// returns `result = balance_scalar * rate_scalar`
+	fn mul_balance_by_rate(balance_scalar: &Balance, rate_scalar: &Rate) -> result::Result<Balance, DispatchError> {
+		let result = Rate::from_inner(*balance_scalar)
+			.checked_mul(rate_scalar)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+		Ok(result)
+	}
+
+	/// Performs mathematical calculations.
+	///
+	/// returns `result = balance_scalar / rate_scalar`
+	fn div_balance_by_rate(balance: &Balance, rate: &Rate) -> result::Result<Balance, DispatchError> {
+		let result = Rate::from_inner(*balance)
+			.checked_div(rate)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+		Ok(result)
+	}
+
+	/// Performs mathematical calculations.
+	///
+	/// returns `result = b - a`
+	fn sub_a_from_b_u128(b: &Balance, a: &Balance) -> result::Result<Balance, DispatchError> {
+		let result = b.checked_sub(*a).ok_or(Error::<T>::NumOverflow)?;
+		Ok(result)
 	}
 }
 
