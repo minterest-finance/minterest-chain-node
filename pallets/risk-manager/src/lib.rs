@@ -256,6 +256,7 @@ decl_module! {
 		fn offchain_worker(now: T::BlockNumber) {
 			debug::info!("Entering off-chain worker");
 
+
 			if let Err(e) = Self::_offchain_worker() {
 				debug::info!(
 					target: "RiskManager offchain worker",

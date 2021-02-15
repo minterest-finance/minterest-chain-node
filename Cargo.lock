@@ -3130,6 +3130,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "minterest-primitives",
+ "oracle",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
