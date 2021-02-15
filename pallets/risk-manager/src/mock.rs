@@ -173,6 +173,8 @@ type Amount = i128;
 
 pub type TestRiskManager = Module<Test>;
 pub type System = frame_system::Module<Test>;
+pub type LiquidityPool = liquidity_pools::Module<Test>;
+pub type LiquidationPool = liquidation_pools::Module<Test>;
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
 pub const MAX_MEMBERS: u32 = 16;
 pub const ONE_HUNDRED: Balance = 100;
@@ -203,6 +205,18 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
+	pub fn liquidity_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts
+			.push((LiquidityPool::pools_account_id(), currency_id, balance));
+		self
+	}
+
+	pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts
+			.push((LiquidationPool::pools_account_id(), currency_id, balance));
+		self
+	}
+
 	pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
 		self.pools.push((
 			pool_id,

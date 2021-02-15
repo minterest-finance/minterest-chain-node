@@ -265,3 +265,16 @@ fn sub_a_from_b_u128_should_work() {
 		assert_noop!(TestRiskManager::sub_a_from_b_u128(&40, &45), Error::<Test>::NumOverflow);
 	})
 }
+
+// FIXME: unavailable behavior.
+#[test]
+fn complete_liquidation_should_work() {
+	ExtBuilder::default()
+		.liquidity_pool_balance(CurrencyId::DOT, 200_000)
+		.liquidation_pool_balance(CurrencyId::DOT, 40_000)
+		.build()
+		.execute_with(|| {
+			assert_eq!(LiquidityPool::get_pool_available_liquidity(CurrencyId::DOT), 40_000);
+			assert_eq!(LiquidationPool::get_pool_available_liquidity(CurrencyId::DOT), 40_000);
+		})
+}

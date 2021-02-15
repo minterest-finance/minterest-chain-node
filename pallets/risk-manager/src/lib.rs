@@ -431,10 +431,8 @@ impl<T: Trait> Module<T> {
 	) -> DispatchResult {
 		let sum_required_to_liquidate_in_usd = <Controller<T>>::get_sum_required_to_liquidate(total_borrow_in_usd)?;
 
-		let underlying_amount_required_to_write_off_debt = Rate::from_inner(sum_required_to_liquidate_in_usd)
-			.checked_div(&liquidated_asset_oracle_price)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
+		let mut underlying_amount_required_to_write_off_debt =
+			Self::div_balance_by_rate(&sum_required_to_liquidate_in_usd, &liquidated_asset_oracle_price)?;
 
 		let mut sum_required_to_liquidate_in_usd_plus_fee = Self::mul_balance_by_rate(
 			&sum_required_to_liquidate_in_usd,
@@ -504,6 +502,10 @@ impl<T: Trait> Module<T> {
 
 					sum_required_to_liquidate_in_usd_plus_fee =
 						Self::sub_a_from_b_u128(&sum_required_to_liquidate_in_usd_plus_fee, &user_free_balance_in_usd)?;
+					underlying_amount_required_to_write_off_debt = Self::sub_a_from_b_u128(
+						&underlying_amount_required_to_write_off_debt,
+						&available_amount_liquidated_asset,
+					)?;
 					collateral_pools.push(pool);
 				}
 				_ => {
