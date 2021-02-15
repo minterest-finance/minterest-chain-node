@@ -115,16 +115,30 @@ make update
 
 To mark a relase, follow the steps:
 * Master contains only those changes, which passed QA.
-* Master branch code overage has not decreased.
+* Master branch code coverage has not decreased.
 * Make sure the CI is green.
 * Update pallets versions using semver in a separate MR. Merge this MR.
 * Tag a commit with pallet updates with a version tag using semver.
-* In case of hot fixes create a separate branch from tagged commit and work there. Don't forget to merge back the changes to master.
+* In case of hot fixes create a separate branch from tagged commit and work there. Merge the fixes branch back to master too.
 
 ## Semantic versioning
 
-Use patch level version for releases with only bugfixes. (0.5.1, 0.5.2 etc.)
+This repo supports versioning system organized in the next way:
 
-Use minor versions to mark releases with new features (0.5.0 , 0.6.0 etc.)
+1. Patch version (0.5.1, 0.5.2) represents patch level for bugfixes, currently developing features and intermediate tags.
 
-Use major versions to mark going out live. 1.0.0 version will be tagged when we have a connection to Ethereum and prod env. 
+2. Minor version (0.5.0, 0.6.0) represents features developed and released.
+
+3. Major version (1.0.0, 2.0.0) represents release of a scope of features within a stable build which is ready for production.
+
+### Versioninng
+
+The project has current release version set up in [cargo.toml](cargo.toml) file. This version should be upgraded once a tag is released and te team starts a new version under development.
+
+Each pallet and module has its own version which is not greater than the main one. Pallet version is upgraded once a significant change is made or a new feature is developed upon that pallet. Pallet version should be upgraded in the same commit where the change was performed.
+
+Example:
+
+Version under development is 0.6.0. The main version in cargo.toml is 0.5.12, pallets versions for pallet A and B are 0.5.11 and 0.5.12. When forming a release, a version tag should be placed on a commit with 0.6.0 version bump in cargo.toml. 
+
+After this main cargo.toml version is 0.6.0 and pallets A and B still have 0.5.11 and 0.5.12. If any changes made to pallet B, it's version is set to 0.6.1.
