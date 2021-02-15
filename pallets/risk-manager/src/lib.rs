@@ -395,13 +395,16 @@ impl<T: Trait> Module<T> {
 		let (total_borrow_in_usd, total_borrow_in_underlying, oracle_price, liquidation_attempts) =
 			Self::get_user_borrow_information(&who, pool_id)?;
 
-		if total_borrow_in_usd >= RiskManagerDates::get(pool_id).min_sum && liquidation_attempts < 2 {
+		if total_borrow_in_usd >= RiskManagerDates::get(pool_id).min_sum
+			&& liquidation_attempts < RiskManagerDates::get(pool_id).max_attempts
+		{
 			Self::partial_liquidation(
 				who.clone(),
 				pool_id,
 				total_borrow_in_usd,
 				total_borrow_in_underlying,
 				oracle_price,
+				liquidation_attempts,
 			)?
 		} else {
 			Self::complete_liquidation(
@@ -410,6 +413,7 @@ impl<T: Trait> Module<T> {
 				total_borrow_in_usd,
 				total_borrow_in_underlying,
 				oracle_price,
+				liquidation_attempts,
 			)?
 		}
 
@@ -423,6 +427,7 @@ impl<T: Trait> Module<T> {
 		total_borrow_in_usd: Balance,
 		mut user_total_borrow_in_underlying: Balance,
 		liquidated_asset_oracle_price: Rate,
+		liquidation_attempts: u8,
 	) -> DispatchResult {
 		let sum_required_to_liquidate_in_usd = <Controller<T>>::get_sum_required_to_liquidate(total_borrow_in_usd)?;
 
@@ -540,6 +545,9 @@ impl<T: Trait> Module<T> {
 			}
 		}
 
+		let new_liquidation_attempts_value = liquidation_attempts.checked_add(1).ok_or(Error::<T>::NumOverflow)?;
+		<LiquidityPools<T>>::set_user_liquidation_attempts(&who, liquidated_pool_id, new_liquidation_attempts_value)?;
+
 		Self::deposit_event(RawEvent::LiquidateUnsafeLoan(
 			who,
 			sum_required_to_liquidate_in_usd,
@@ -558,6 +566,7 @@ impl<T: Trait> Module<T> {
 		total_borrow_in_usd: Balance,
 		mut user_total_borrow_in_underlying: Balance,
 		liquidated_asset_oracle_price: Rate,
+		liquidation_attempts: u8,
 	) -> DispatchResult {
 		let mut total_borrow_in_usd_plus_fee = Self::mul_balance_by_rate(
 			&total_borrow_in_usd,
@@ -662,6 +671,10 @@ impl<T: Trait> Module<T> {
 					collateral_pools.push(pool)
 				}
 			}
+		}
+
+		if liquidation_attempts > 0 {
+			<LiquidityPools<T>>::set_user_liquidation_attempts(&who, liquidated_pool_id, 0)?;
 		}
 
 		Self::deposit_event(RawEvent::LiquidateUnsafeLoan(

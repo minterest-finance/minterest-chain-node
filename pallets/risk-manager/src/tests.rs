@@ -175,7 +175,8 @@ fn get_user_borrow_information_should_work() {
 				Ok((
 					2 * ONE_HUNDRED * DOLLARS,
 					ONE_HUNDRED * DOLLARS,
-					Rate::from_inner(2 * DOLLARS)
+					Rate::from_inner(2 * DOLLARS),
+					0
 				))
 			);
 		})
