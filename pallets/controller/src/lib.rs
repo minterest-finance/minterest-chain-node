@@ -448,7 +448,8 @@ impl<T: Trait> Module<T> {
 	}
 
 	// FIXME: Temporary implementation.
-	/// Calculate sum required to liquidate for partial liquidation according to coming back to safe supply ratio.
+	/// Calculate sum required to liquidate for partial liquidation according to coming back to safe
+	/// supply ratio.
 	///
 	/// - `account`: The account to determine liquidity.
 	/// - `total_borrow_in_usd`: Current amount of debt converted into usd.
