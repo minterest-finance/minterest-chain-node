@@ -20,6 +20,7 @@ impl_outer_event! {
 		orml_tokens<T>,
 		minterest_model,
 		accounts<T>,
+		oracle,
 		liquidity_pools,
 	}
 }
@@ -103,6 +104,10 @@ impl liquidity_pools::Trait for Test {
 	type ModuleId = LiquidityPoolsModuleId;
 	type InitialExchangeRate = InitialExchangeRate;
 	type EnabledCurrencyPair = EnabledCurrencyPair;
+}
+
+impl oracle::Trait for Test {
+	type Event = TestEvent;
 }
 
 parameter_types! {
