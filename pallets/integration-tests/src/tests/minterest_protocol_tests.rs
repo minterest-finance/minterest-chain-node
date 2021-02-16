@@ -1254,4 +1254,535 @@ mod tests {
 				);
 			});
 	}
+
+	// Extrinsic `transfer_wrapped`, description of scenario #1:
+	// The user The user tries to transfer all assets in the first currency. He has loan in the first
+	// currency.
+	// Initial exchange rate for all assets equal 1.0;
+	// Collateral factor for all assets equal 0.9;
+	// 1. Alice deposit 60 DOT;
+	// 2. Alice deposit 50 ETH;
+	// 3. Alice borrow 50 DOT;
+	// 4. Alice can't `transfer_wrapped` all deposited MDOT: 50 ETH * 0.9 collateral < 50 DOT borrow;
+	// 5. Alice deposit 10 ETH;
+	// 6. Alice `transfer_wrapped` all deposited MDOT;
+	// 7. Alice can't `transfer_wrapped` all deposited METH.
+	#[test]
+	fn transfer_wrapped_with_current_currency_borrowing() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_user_data(CurrencyId::ETH, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				// Alice deposit 60 DOT to pool.
+				let alice_deposited_amount_in_dot = 60_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount_in_dot
+				));
+
+				System::set_block_number(2);
+
+				// Alice deposit 50 ETH to pool.
+				let alice_deposited_amount_in_eth = 50_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::ETH,
+					alice_deposited_amount_in_eth
+				));
+
+				System::set_block_number(3);
+
+				// Alice borrow from DOT pool
+				let alice_borrowed_amount_in_dot = 50_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_borrowed_amount_in_dot
+				));
+
+				// Checking pool available liquidity
+				assert_eq!(
+					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					ONE_HUNDRED + alice_deposited_amount_in_dot - alice_borrowed_amount_in_dot
+				);
+
+				// Checking Alice's free balance DOT && MDOT.
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					ONE_HUNDRED - alice_deposited_amount_in_dot + alice_borrowed_amount_in_dot
+				);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::ETH, &ALICE),
+					ONE_HUNDRED - alice_deposited_amount_in_eth
+				);
+				let expected_amount_wrapped_tokens_in_dot =
+					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_dot).unwrap();
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					expected_amount_wrapped_tokens_in_dot
+				);
+				let expected_amount_wrapped_tokens_in_eth =
+					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_eth).unwrap();
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::METH, &ALICE),
+					expected_amount_wrapped_tokens_in_eth
+				);
+
+				// Checking total borrow for Alice DOT pool
+				assert_eq!(
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
+					alice_borrowed_amount_in_dot
+				);
+				// Checking total borrow for DOT pool
+				assert_eq!(
+					TestPools::pools(CurrencyId::DOT).total_borrowed,
+					alice_borrowed_amount_in_dot
+				);
+
+				System::set_block_number(4);
+
+				// Alice try to transfer all from DOT pool
+				assert_noop!(
+					MinterestProtocol::transfer_wrapped(
+						Origin::signed(ALICE),
+						BOB,
+						CurrencyId::MDOT,
+						expected_amount_wrapped_tokens_in_dot
+					),
+					MinterestProtocolError::<Test>::RedeemControllerRejection
+				);
+
+				System::set_block_number(5);
+
+				// Alice add liquidity to ETH pool
+				let alice_deposited_amount_in_eth_secondary = 10_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::ETH,
+					alice_deposited_amount_in_eth_secondary
+				));
+
+				System::set_block_number(6);
+
+				assert_ok!(MinterestProtocol::transfer_wrapped(
+					Origin::signed(ALICE),
+					BOB,
+					CurrencyId::MDOT,
+					expected_amount_wrapped_tokens_in_dot
+				));
+
+				// Checking MDOT free balance for ALICE and BOB.
+				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
+				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB), expected_amount_wrapped_tokens_in_dot);
+
+				// Checking ALICE ETH/METH balance
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::ETH, &ALICE),
+					ONE_HUNDRED - alice_deposited_amount_in_eth - alice_deposited_amount_in_eth_secondary
+				);
+				let expected_amount_wrapped_tokens_in_eth_summary = expected_amount_wrapped_tokens_in_eth
+					+ TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_eth_secondary).unwrap();
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::METH, &ALICE),
+					expected_amount_wrapped_tokens_in_eth_summary
+				);
+				// Checking total borrow for Alice DOT pool
+				assert_eq!(
+					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
+					alice_borrowed_amount_in_dot
+				);
+				// Checking total borrow for DOT pool
+				assert_eq!(
+					TestPools::pools(CurrencyId::DOT).total_borrowed,
+					alice_borrowed_amount_in_dot
+				);
+
+				System::set_block_number(7);
+
+				// Alice try to transfer all from ETH pool
+				assert_noop!(
+					MinterestProtocol::transfer_wrapped(
+						Origin::signed(ALICE),
+						BOB,
+						CurrencyId::METH,
+						expected_amount_wrapped_tokens_in_eth_summary
+					),
+					MinterestProtocolError::<Test>::RedeemControllerRejection
+				);
+			});
+	}
+
+	// Extrinsic `transfer_wrapped`, description of scenario #2:
+	// The user tries to transfer all assets in the first currency. He has loan in the second currency.
+	// Initial exchange rate for all assets equal 1.0;
+	// Collateral factor for all assets equal 0.9;
+	// 1. Alice deposit 60 DOT;
+	// 2. Alice borrow 50 ETH;
+	// 3. Alice can't `transfer_wrapped` all deposited MDOT: 0 DOT collateral < 50 ETH borrow;
+	#[test]
+	fn transfer_wrapped_with_another_currency_borrowing() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
+			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
+			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount_in_dot = 60_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount_in_dot
+				));
+
+				System::set_block_number(2);
+
+				// Alice borrow from ETH pool
+				let alice_borrowed_amount_in_eth = 50_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(ALICE),
+					CurrencyId::ETH,
+					alice_borrowed_amount_in_eth
+				));
+
+				// Checking free balance DOT/MDOT && ETH for user.
+				let expected_amount_wrapped_tokens_in_dot =
+					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_dot).unwrap();
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					expected_amount_wrapped_tokens_in_dot
+				);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					ONE_HUNDRED - alice_deposited_amount_in_dot
+				);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::ETH, &ALICE),
+					alice_borrowed_amount_in_eth
+				);
+				// Checking total borrow for Alice ETH pool
+				assert_eq!(
+					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					alice_borrowed_amount_in_eth
+				);
+				// // Checking total borrow for ETH pool
+				assert_eq!(
+					TestPools::pools(CurrencyId::ETH).total_borrowed,
+					alice_borrowed_amount_in_eth
+				);
+
+				System::set_block_number(3);
+
+				// Alice try to transfer all MDOTs
+				assert_noop!(
+					MinterestProtocol::transfer_wrapped(
+						Origin::signed(ALICE),
+						BOB,
+						CurrencyId::MDOT,
+						expected_amount_wrapped_tokens_in_dot
+					),
+					MinterestProtocolError::<Test>::RedeemControllerRejection
+				);
+
+				// Checking free balance DOT && ETH for user.
+				// Expected previously values
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					expected_amount_wrapped_tokens_in_dot
+				);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					ONE_HUNDRED - alice_deposited_amount_in_dot
+				);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::ETH, &ALICE),
+					alice_borrowed_amount_in_eth
+				);
+
+				// Checking total borrow for Alice ETH pool
+				assert_eq!(
+					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					alice_borrowed_amount_in_eth
+				);
+				// Checking total borrow for ETH pool
+				assert_eq!(
+					TestPools::pools(CurrencyId::ETH).total_borrowed,
+					alice_borrowed_amount_in_eth
+				);
+			});
+	}
+
+	// Extrinsic `transfer_wrapped`, description of scenario #3:
+	// The user tries to transfer all assets in the first currency. He has loan in the second
+	// currency and deposit in the third currency.
+	// Initial exchange rate for all assets equal 1.0;
+	// Collateral factor for all assets equal 0.9;
+	// 1. Alice deposit 40 DOT;
+	// 2. Alice deposit 40 BTC;
+	// 3. Alice borrow 70 ETH;
+	// 4. Alice can't `transfer_wrapped` 40 DOT;
+	// 5. Alice deposit 40 BTC;
+	// 6. Alice `transfer_wrapped` 40 DOT;
+	// 7. Alice can't `transfer_wrapped` 40 BTC;
+	#[test]
+	fn transfer_wrapped_with_third_currency_borrowing() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.user_balance(ALICE, CurrencyId::BTC, ONE_HUNDRED)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_user_data(CurrencyId::BTC, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
+			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount_in_dot = 40_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount_in_dot
+				));
+
+				System::set_block_number(2);
+
+				// Alice deposit to BTC pool
+				let alice_deposited_amount_in_btc = 40_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::BTC,
+					alice_deposited_amount_in_btc
+				));
+
+				System::set_block_number(3);
+
+				// Alice borrow from ETH pool
+				let alice_borrowed_amount_in_eth = 70_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(ALICE),
+					CurrencyId::ETH,
+					alice_borrowed_amount_in_eth
+				));
+
+				System::set_block_number(4);
+
+				// Checking free balance DOT/MDOT && ETH && BTC for user.
+				let expected_amount_wrapped_tokens_in_dot =
+					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_dot).unwrap();
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					expected_amount_wrapped_tokens_in_dot
+				);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					ONE_HUNDRED - alice_deposited_amount_in_dot
+				);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::BTC, &ALICE),
+					ONE_HUNDRED - alice_deposited_amount_in_btc
+				);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::ETH, &ALICE),
+					alice_borrowed_amount_in_eth
+				);
+				// Checking total borrow for Alice ETH pool
+				assert_eq!(
+					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					alice_borrowed_amount_in_eth
+				);
+				// Checking total borrow for ETH pool
+				assert_eq!(
+					TestPools::pools(CurrencyId::ETH).total_borrowed,
+					alice_borrowed_amount_in_eth
+				);
+
+				// Alice try to transfer all MDOTs
+				assert_noop!(
+					MinterestProtocol::transfer_wrapped(
+						Origin::signed(ALICE),
+						BOB,
+						CurrencyId::MDOT,
+						expected_amount_wrapped_tokens_in_dot
+					),
+					MinterestProtocolError::<Test>::RedeemControllerRejection
+				);
+
+				System::set_block_number(5);
+
+				// Alice add liquidity to BTC pool
+				let alice_deposited_amount_in_btc_secondary = 40_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::BTC,
+					alice_deposited_amount_in_btc_secondary
+				));
+
+				System::set_block_number(6);
+
+				// Alice transfer all MDOTs
+				assert_ok!(MinterestProtocol::transfer_wrapped(
+						Origin::signed(ALICE),
+						BOB,
+						CurrencyId::MDOT,
+						expected_amount_wrapped_tokens_in_dot
+				));
+
+				// Checking MDOT free balance for ALICE and BOB.
+				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
+				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB), expected_amount_wrapped_tokens_in_dot);
+
+				// Checking pool available liquidity.
+				assert_eq!(
+					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					alice_deposited_amount_in_dot
+				);
+				// Checking free balance DOT && ETH && BTC for user.
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					ONE_HUNDRED - alice_deposited_amount_in_dot
+				);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::BTC, &ALICE),
+					ONE_HUNDRED - alice_deposited_amount_in_btc - alice_deposited_amount_in_btc_secondary
+				);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::ETH, &ALICE),
+					alice_borrowed_amount_in_eth
+				);
+				// Checking total borrow for Alice ETH pool
+				assert_eq!(
+					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					alice_borrowed_amount_in_eth
+				);
+				// Checking total borrow for ETH pool
+				assert_eq!(
+					TestPools::pools(CurrencyId::ETH).total_borrowed,
+					alice_borrowed_amount_in_eth
+				);
+
+				System::set_block_number(7);
+
+				let total_alice_deposited_amount_in_btc = alice_deposited_amount_in_btc + alice_deposited_amount_in_btc_secondary;
+				let expected_amount_wrapped_tokens_in_btc =
+					TestPools::convert_to_wrapped(CurrencyId::BTC, total_alice_deposited_amount_in_btc).unwrap();
+				// Alice try to transfer all MBTC.
+				assert_noop!(
+					MinterestProtocol::transfer_wrapped(
+						Origin::signed(ALICE),
+						BOB,
+						CurrencyId::MBTC,
+						expected_amount_wrapped_tokens_in_btc
+					),
+					MinterestProtocolError::<Test>::RedeemControllerRejection
+				);
+			});
+	}
+
+	// Extrinsic `transfer_wrapped`, description of scenario #4:
+	// It is possible to transfer assets from the pool insurance.
+	// 1. Deposit 10 DOT to pool insurance;
+	// 2. Alice deposit 20 DOT;
+	// 3. Bob deposit 20 BTC;
+	// 4. Bob deposit 10 DOT;
+	// 5. Bob borrow 15 DOT;
+	// 6. Alice `transfer_wrapped` 20 DOT;
+	// 7. DOT pool insurance equal 5 DOT;
+	#[test]
+	fn transfer_wrapped_over_insurance() {
+		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.user_balance(BOB, CurrencyId::BTC, ONE_HUNDRED)
+			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
+			.pool_user_data(CurrencyId::BTC, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
+			.pool_total_insurance(CurrencyId::DOT, 10_000 * DOLLARS)
+			.build()
+			.execute_with(|| {
+				// Alice deposit to DOT pool
+				let alice_deposited_amount_in_dot = 20_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount_in_dot
+				));
+
+				System::set_block_number(2);
+
+				// Bob deposit to BTC pool
+				let bob_deposited_amount_in_btc = 20_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(BOB),
+					CurrencyId::BTC,
+					bob_deposited_amount_in_btc
+				));
+
+				System::set_block_number(3);
+
+				// Bob borrow from DOT pool
+				let bob_borrowed_amount_in_dot = 15_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(BOB),
+					CurrencyId::DOT,
+					bob_borrowed_amount_in_dot
+				));
+
+				System::set_block_number(4);
+
+				// Bob deposit to DOT pool
+				let bob_deposited_amount_in_dot = 10_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(BOB),
+					CurrencyId::DOT,
+					bob_deposited_amount_in_dot
+				));
+				let bob_deposited_amount_in_m_dot =
+					TestPools::convert_to_wrapped(CurrencyId::DOT, bob_deposited_amount_in_dot).unwrap();
+				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB), bob_deposited_amount_in_m_dot);
+
+				System::set_block_number(5);
+
+				// Alice transfer all MDOTs.
+				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(CurrencyId::MDOT, &ALICE);
+				assert_ok!(MinterestProtocol::transfer_wrapped(
+					Origin::signed(ALICE),
+					BOB,
+					CurrencyId::MDOT,
+					alice_current_balance_amount_in_m_dot
+				));
+
+				// Checking pool available liquidity.
+				assert_eq!(
+					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					10_000 * DOLLARS + alice_deposited_amount_in_dot
+						+ bob_deposited_amount_in_dot
+						- bob_borrowed_amount_in_dot
+				);
+
+				// Checking MDOT free balance for ALICE and BOB.
+				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
+				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB),
+					alice_current_balance_amount_in_m_dot + bob_deposited_amount_in_m_dot);
+
+				// Checking free balance DOT && BTC for user.
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					ONE_HUNDRED - alice_deposited_amount_in_dot
+				);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::DOT, &BOB),
+					ONE_HUNDRED + bob_borrowed_amount_in_dot - bob_deposited_amount_in_dot
+				);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::BTC, &BOB),
+					ONE_HUNDRED - bob_deposited_amount_in_btc
+				);
+			});
+	}
 }
