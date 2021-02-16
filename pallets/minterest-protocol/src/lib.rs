@@ -563,9 +563,10 @@ impl<T: Trait> Module<T> {
         wrapped_id: CurrencyId,
         transfer_amount: Balance
     ) -> DispatchResult {
-        ensure!(!transfer_amount.is_zero(), Error::<T>::ZeroBalanceTransaction);
+        ensure!(transfer_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
         ensure!(who != receiver, Error::<T>::CannotTransferToSelf);
 
+        // Fail if invalid token id or transfer_amount is not available for redeem
         let underlying_asset_id = <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id)
             .map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
         <Controller<T>>::redeem_allowed(underlying_asset_id, &who, transfer_amount)
@@ -577,7 +578,7 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotEnoughWrappedTokens
 		);
 
-		// Transfer the repay_amount from the borrower's account to the protocol account.
+		// Transfer the transfer_amount from one account to another
 		T::MultiCurrency::transfer(
 			wrapped_id,
 			&who,
