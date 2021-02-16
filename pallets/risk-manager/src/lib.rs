@@ -91,9 +91,6 @@ pub trait Trait:
 	/// multiple modules send unsigned transactions.
 	type UnsignedPriority: Get<TransactionPriority>;
 
-	/// The `MultiCurrency` implementation.
-	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
-
 	/// The basic liquidity pools.
 	type LiquidationPoolsManager: PoolsManager<Self::AccountId>;
 
@@ -399,7 +396,7 @@ impl<T: Trait> Module<T> {
 			&& liquidation_attempts < RiskManagerDates::get(pool_id).max_attempts
 		{
 			Self::partial_liquidation(
-				who.clone(),
+				who,
 				pool_id,
 				total_borrow_in_usd,
 				total_borrow_in_underlying,
@@ -460,7 +457,7 @@ impl<T: Trait> Module<T> {
 			// User's params
 			let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&pool)?;
 
-			let free_balance_wrapped_token = <T as Trait>::MultiCurrency::free_balance(wrapped_id, &who);
+			let free_balance_wrapped_token = T::MultiCurrency::free_balance(wrapped_id, &who);
 
 			match free_balance_wrapped_token.cmp(&wrapped_amount_required_to_liquidate) {
 				Ordering::Less => {
@@ -478,14 +475,14 @@ impl<T: Trait> Module<T> {
 						Self::sub_a_from_b_u128(&user_total_borrow_in_underlying, &available_amount_liquidated_asset)?;
 					let user_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
 
-					<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, free_balance_wrapped_token)?;
-					<T as Trait>::MultiCurrency::transfer(
+					T::MultiCurrency::withdraw(wrapped_id, &who, free_balance_wrapped_token)?;
+					T::MultiCurrency::transfer(
 						pool,
 						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
 						&T::LiquidationPoolsManager::pools_account_id(),
 						free_balance_underlying_asset,
 					)?;
-					<T as Trait>::MultiCurrency::transfer(
+					T::MultiCurrency::transfer(
 						liquidated_pool_id,
 						&T::LiquidationPoolsManager::pools_account_id(),
 						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
@@ -519,14 +516,14 @@ impl<T: Trait> Module<T> {
 					)?;
 					let borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
 
-					<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount_required_to_liquidate)?;
-					<T as Trait>::MultiCurrency::transfer(
+					T::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount_required_to_liquidate)?;
+					T::MultiCurrency::transfer(
 						pool,
 						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
 						&T::LiquidationPoolsManager::pools_account_id(),
 						underlying_amount_required_to_liquidate,
 					)?;
-					<T as Trait>::MultiCurrency::transfer(
+					T::MultiCurrency::transfer(
 						liquidated_pool_id,
 						&T::LiquidationPoolsManager::pools_account_id(),
 						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
@@ -596,7 +593,7 @@ impl<T: Trait> Module<T> {
 			// User's params
 			let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&pool)?;
 
-			let free_balance_wrapped_token = <T as Trait>::MultiCurrency::free_balance(wrapped_id, &who);
+			let free_balance_wrapped_token = T::MultiCurrency::free_balance(wrapped_id, &who);
 
 			match free_balance_wrapped_token.cmp(&wrapped_amount_required_to_liquidate) {
 				Ordering::Less => {
@@ -614,14 +611,14 @@ impl<T: Trait> Module<T> {
 						Self::sub_a_from_b_u128(&user_total_borrow_in_underlying, &available_amount_liquidated_asset)?;
 					let user_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
 
-					<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, free_balance_wrapped_token)?;
-					<T as Trait>::MultiCurrency::transfer(
+					T::MultiCurrency::withdraw(wrapped_id, &who, free_balance_wrapped_token)?;
+					T::MultiCurrency::transfer(
 						pool,
 						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
 						&T::LiquidationPoolsManager::pools_account_id(),
 						free_balance_underlying_asset,
 					)?;
-					<T as Trait>::MultiCurrency::transfer(
+					T::MultiCurrency::transfer(
 						liquidated_pool_id,
 						&T::LiquidationPoolsManager::pools_account_id(),
 						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
@@ -647,14 +644,14 @@ impl<T: Trait> Module<T> {
 					)?;
 					let borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(liquidated_pool_id);
 
-					<T as Trait>::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount_required_to_liquidate)?;
-					<T as Trait>::MultiCurrency::transfer(
+					T::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount_required_to_liquidate)?;
+					T::MultiCurrency::transfer(
 						pool,
 						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
 						&T::LiquidationPoolsManager::pools_account_id(),
 						underlying_amount_required_to_liquidate,
 					)?;
-					<T as Trait>::MultiCurrency::transfer(
+					T::MultiCurrency::transfer(
 						liquidated_pool_id,
 						&T::LiquidationPoolsManager::pools_account_id(),
 						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),

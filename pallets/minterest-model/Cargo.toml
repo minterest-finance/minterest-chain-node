@@ -28,6 +28,7 @@ orml-tokens = { path = "../../orml/tokens" }
 
 accounts = { path = "../accounts" }
 liquidity-pools = { path = "../liquidity-pools" }
+oracle = { path = "../oracle" }
 
 [features]
 default = ['std']

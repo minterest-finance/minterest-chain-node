@@ -50,7 +50,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait: frame_system::Trait {
+type Oracle<T> = oracle::Module<T>;
+
+pub trait Trait: frame_system::Trait + oracle::Trait {
 	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
@@ -366,23 +368,41 @@ impl<T: Trait> Module<T> {
 		Self::pool_user_data(pool_id, who).liquidation_attempts
 	}
 
-	/// Gets user collateral pools.
+	/// Returns an array of collateral pools for the user.
+	/// The array is sorted in descending order by the number of wrapped tokens in USD.
+	///
+	/// - `who`: AccountId for which the pool array is returned.
 	pub fn get_pools_are_collateral(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
-		let pools_available: Vec<CurrencyId> = T::EnabledCurrencyPair::get()
+		let mut pools: Vec<(CurrencyId, Balance)> = T::EnabledCurrencyPair::get()
 			.iter()
-			.map(|currency_pair| currency_pair.underlying_id)
+			.filter_map(|currency_pair| {
+				let pool_id = currency_pair.underlying_id;
+				let wrapped_id = currency_pair.wrapped_id;
+
+				// only collateral pools.
+				if !Self::pool_user_data(pool_id, who).collateral {
+					return None;
+				};
+
+				// We calculate the value of the user's wrapped tokens in USD.
+				let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
+				let user_balance_underlying_asset =
+					Self::convert_from_wrapped(wrapped_id, user_balance_wrapped_tokens).ok()?;
+				let oracle_price = <Oracle<T>>::get_underlying_price(pool_id).ok()?;
+				let total_deposit_in_usd = Rate::from_inner(user_balance_underlying_asset)
+					.checked_mul(&oracle_price)
+					.map(|x| x.into_inner())
+					.ok_or(Error::<T>::NumOverflow)
+					.ok()?;
+
+				Some((pool_id, total_deposit_in_usd))
+			})
 			.collect();
-		let mut pool_vec = Vec::new();
 
-		for pool in pools_available.into_iter() {
-			PoolUserDates::<T>::iter_prefix(pool).for_each(|(user, pool_user_data)| {
-				if user == *who && pool_user_data.collateral {
-					pool_vec.push(pool)
-				}
-			});
-		}
+		// Sorted array of pools in descending order.
+		pools.sort_by(|x, y| y.1.cmp(&x.1));
 
-		Ok(pool_vec)
+		Ok(pools.iter().map(|pool| pool.0).collect::<Vec<CurrencyId>>())
 	}
 }
 

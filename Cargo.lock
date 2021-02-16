@@ -3130,6 +3130,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "minterest-primitives",
+ "oracle",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -3357,7 +3358,7 @@ dependencies = [
 
 [[package]]
 name = "minterest-chain"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "minterest-cli",
  "minterest-service",
@@ -3386,6 +3387,7 @@ dependencies = [
  "frame-system",
  "liquidity-pools",
  "minterest-primitives",
+ "oracle",
  "orml-tokens",
  "orml-utilities",
  "parity-scale-codec",
