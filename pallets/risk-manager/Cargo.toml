@@ -33,6 +33,7 @@ sp-core = { version = '2.0.0' }
 sp-io = { version = '2.0.0' }
 
 orml-tokens = { path = "../../orml/tokens" }
+orml-currencies = { path = "../../orml/currencies" }
 
 liquidity-pools = { path = "../liquidity-pools" }
 liquidation-pools = { path = "../liquidation-pools" }
