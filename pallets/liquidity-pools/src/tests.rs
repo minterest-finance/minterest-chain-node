@@ -417,3 +417,32 @@ fn get_pool_members_with_loans_should_work() {
 			assert_eq!(TestPools::get_pool_members_with_loans(CurrencyId::BTC), Ok(vec![3]));
 		});
 }
+
+#[test]
+fn get_pools_are_collateral_should_work() {
+	ExtBuilder::default()
+		.pool_balance(CurrencyId::KSM, 1 * TEN_THOUSAND)
+		.pool_balance(CurrencyId::DOT, 3 * TEN_THOUSAND)
+		.pool_balance(CurrencyId::ETH, 2 * TEN_THOUSAND)
+		.pool_balance(CurrencyId::BTC, 4 * TEN_THOUSAND)
+		.pool_total_borrowed(CurrencyId::KSM, ONE_HUNDRED_DOLLARS)
+		.pool_total_borrowed(CurrencyId::DOT, ONE_HUNDRED_DOLLARS)
+		.pool_total_borrowed(CurrencyId::ETH, ONE_HUNDRED_DOLLARS)
+		.pool_total_borrowed(CurrencyId::BTC, ONE_HUNDRED_DOLLARS)
+		.pool_user_data_with_params(CurrencyId::KSM, ALICE, Balance::zero(), Rate::default(), true, 0)
+		.pool_user_data_with_params(CurrencyId::DOT, ALICE, Balance::zero(), Rate::default(), true, 0)
+		.pool_user_data_with_params(CurrencyId::ETH, ALICE, Balance::zero(), Rate::default(), true, 0)
+		.pool_user_data_with_params(CurrencyId::BTC, ALICE, Balance::zero(), Rate::default(), false, 0)
+		.user_balance(ALICE, CurrencyId::MKSM, TEN_THOUSAND)
+		.user_balance(ALICE, CurrencyId::MDOT, TEN_THOUSAND)
+		.user_balance(ALICE, CurrencyId::METH, TEN_THOUSAND)
+		.user_balance(ALICE, CurrencyId::MBTC, TEN_THOUSAND)
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				TestPools::get_pools_are_collateral(&ALICE),
+				Ok(vec![CurrencyId::DOT, CurrencyId::ETH, CurrencyId::KSM])
+			);
+			assert_eq!(TestPools::get_pools_are_collateral(&BOB), Ok(vec![]));
+		});
+}
