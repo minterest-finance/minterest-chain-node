@@ -74,6 +74,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				// Pre-funded accounts
 				vec![
+					// liquidation pool
+					hex!["6d6f646c6d696e2f6c71646e0000000000000000000000000000000000000000"].into(),
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
@@ -227,6 +229,8 @@ fn testnet_genesis(
 					vec![
 						(x.clone(), CurrencyId::DOT, INITIAL_BALANCE),
 						(x.clone(), CurrencyId::ETH, INITIAL_BALANCE),
+						(x.clone(), CurrencyId::KSM, INITIAL_BALANCE),
+						(x.clone(), CurrencyId::BTC, INITIAL_BALANCE),
 					]
 				})
 				.collect(),

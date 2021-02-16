@@ -22,6 +22,7 @@ impl_outer_event! {
 		frame_system<T>,
 		liquidity_pools,
 		orml_currencies<T>,
+		oracle,
 		orml_tokens<T>,
 	}
 }
@@ -100,7 +101,9 @@ impl orml_currencies::Trait for Test {
 	type WeightInfo = ();
 }
 
-pub type System = frame_system::Module<Test>;
+impl oracle::Trait for Test {
+	type Event = TestEvent;
+}
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
@@ -139,6 +142,7 @@ impl Default for ExtBuilder {
 
 type Amount = i128;
 pub type TestPools = Module<Test>;
+pub type System = frame_system::Module<Test>;
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
 pub const CHARLIE: AccountId = 3;

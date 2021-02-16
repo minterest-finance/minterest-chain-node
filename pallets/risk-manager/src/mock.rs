@@ -5,6 +5,7 @@ use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, FixedPointNumber, ModuleId, Perbill};
 
 use super::*;
+use liquidity_pools::{Pool, PoolUserData};
 use sp_runtime::testing::TestXt;
 
 impl_outer_origin! {
@@ -22,7 +23,7 @@ impl_outer_event! {
 		accounts<T>,
 		liquidity_pools,
 		liquidation_pools,
-		risk_manager,
+		risk_manager<T>,
 		controller,
 		minterest_model,
 		oracle,
@@ -99,8 +100,7 @@ impl accounts::Trait for Test {
 }
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
-	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
@@ -136,10 +136,14 @@ impl minterest_model::Trait for Test {
 	type BlocksPerYear = BlocksPerYear;
 }
 
+parameter_types! {
+	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+}
+
 impl liquidation_pools::Trait for Test {
 	type Event = TestEvent;
-	type MultiCurrency = orml_tokens::Module<Test>;
 	type ModuleId = LiquidationPoolsModuleId;
+	type MultiCurrency = orml_tokens::Module<Test>;
 }
 
 parameter_types! {
@@ -173,59 +177,124 @@ pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
 pub const MAX_MEMBERS: u32 = 16;
 pub const ONE_HUNDRED: Balance = 100;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
+pub const ADMIN: AccountId = 0;
+pub fn admin() -> Origin {
+	Origin::signed(ADMIN)
+}
 pub const ALICE: AccountId = 1;
 pub fn alice() -> Origin {
 	Origin::signed(ALICE)
 }
-pub const BOB: AccountId = 2;
-pub fn bob() -> Origin {
-	Origin::signed(BOB)
+
+pub struct ExtBuilder {
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+	pools: Vec<(CurrencyId, Pool)>,
+	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 }
 
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-
-	crate::GenesisConfig {
-		risk_manager_dates: vec![
-			(
-				CurrencyId::DOT,
-				RiskManagerData {
-					max_attempts: 3,
-					min_sum: ONE_HUNDRED * DOLLARS,
-					threshold: Rate::saturating_from_rational(3, 100),
-					liquidation_fee: Rate::saturating_from_rational(5, 100),
-				},
-			),
-			(
-				CurrencyId::BTC,
-				RiskManagerData {
-					max_attempts: 3,
-					min_sum: ONE_HUNDRED * DOLLARS,
-					threshold: Rate::saturating_from_rational(3, 100),
-					liquidation_fee: Rate::saturating_from_rational(5, 100),
-				},
-			),
-			(
-				CurrencyId::ETH,
-				RiskManagerData {
-					max_attempts: 3,
-					min_sum: ONE_HUNDRED * DOLLARS,
-					threshold: Rate::saturating_from_rational(3, 100),
-					liquidation_fee: Rate::saturating_from_rational(5, 100),
-				},
-			),
-		],
+impl Default for ExtBuilder {
+	fn default() -> Self {
+		Self {
+			endowed_accounts: vec![],
+			pools: vec![],
+			pool_user_data: vec![],
+		}
 	}
-	.assimilate_storage(&mut t)
-	.unwrap();
+}
 
-	accounts::GenesisConfig::<Test> {
-		allowed_accounts: vec![(ALICE, ())],
+impl ExtBuilder {
+	pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
+		self.pools.push((
+			pool_id,
+			Pool {
+				total_borrowed: Balance::zero(),
+				borrow_index: Rate::saturating_from_rational(1, 1),
+				total_insurance: Balance::zero(),
+			},
+		));
+		self
 	}
-	.assimilate_storage(&mut t)
-	.unwrap();
 
-	let mut ext: sp_io::TestExternalities = t.into();
-	ext.execute_with(|| System::set_block_number(1));
-	ext
+	pub fn pool_user_data(
+		mut self,
+		pool_id: CurrencyId,
+		user: AccountId,
+		total_borrowed: Balance,
+		interest_index: Rate,
+		collateral: bool,
+		liquidation_attempts: u8,
+	) -> Self {
+		self.pool_user_data.push((
+			pool_id,
+			user,
+			PoolUserData {
+				total_borrowed,
+				interest_index,
+				collateral,
+				liquidation_attempts,
+			},
+		));
+		self
+	}
+
+	pub fn build(self) -> sp_io::TestExternalities {
+		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+		orml_tokens::GenesisConfig::<Test> {
+			endowed_accounts: self.endowed_accounts,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		liquidity_pools::GenesisConfig::<Test> {
+			pools: self.pools,
+			pool_user_data: self.pool_user_data,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		accounts::GenesisConfig::<Test> {
+			allowed_accounts: vec![(ADMIN, ())],
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		GenesisConfig {
+			risk_manager_dates: vec![
+				(
+					CurrencyId::DOT,
+					RiskManagerData {
+						max_attempts: 3,
+						min_sum: ONE_HUNDRED * DOLLARS,
+						threshold: Rate::saturating_from_rational(103, 100),
+						liquidation_fee: Rate::saturating_from_rational(105, 100),
+					},
+				),
+				(
+					CurrencyId::BTC,
+					RiskManagerData {
+						max_attempts: 3,
+						min_sum: ONE_HUNDRED * DOLLARS,
+						threshold: Rate::saturating_from_rational(103, 100),
+						liquidation_fee: Rate::saturating_from_rational(105, 100),
+					},
+				),
+				(
+					CurrencyId::ETH,
+					RiskManagerData {
+						max_attempts: 3,
+						min_sum: ONE_HUNDRED * DOLLARS,
+						threshold: Rate::saturating_from_rational(103, 100),
+						liquidation_fee: Rate::saturating_from_rational(105, 100),
+					},
+				),
+			],
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		let mut ext = sp_io::TestExternalities::new(t);
+		ext.execute_with(|| System::set_block_number(1));
+		ext
+	}
 }
