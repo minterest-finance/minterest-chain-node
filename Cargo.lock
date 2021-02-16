@@ -5210,7 +5210,6 @@ dependencies = [
  "minterest-model",
  "minterest-primitives",
  "oracle",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "orml-utilities",

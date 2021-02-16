@@ -1,7 +1,6 @@
 /// Mocks for the RiskManager pallet.
 use frame_support::{impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
-use orml_currencies::Currency;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, FixedPointNumber, ModuleId, Perbill};
 
@@ -21,7 +20,6 @@ impl_outer_event! {
 	pub enum TestEvent for Test {
 		frame_system<T>,
 		orml_tokens<T>,
-		orml_currencies<T>,
 		accounts<T>,
 		liquidity_pools,
 		liquidation_pools,
@@ -139,20 +137,6 @@ impl minterest_model::Trait for Test {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MINT;
-}
-
-type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
-
-impl orml_currencies::Trait for Test {
-	type Event = TestEvent;
-	type MultiCurrency = orml_tokens::Module<Test>;
-	type NativeCurrency = NativeCurrency;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
-	type WeightInfo = ();
-}
-
-parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 }
 
@@ -162,35 +146,6 @@ impl liquidation_pools::Trait for Test {
 	type MultiCurrency = orml_tokens::Module<Test>;
 }
 
-pub struct LiquidationPoolsManager;
-impl PoolsManager<AccountId> for LiquidationPoolsManager {
-	fn pools_account_id() -> AccountId {
-		MOCK_LIQUIDATION_POOL_ACCOUNT
-	}
-
-	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance {
-		Currencies::free_balance(pool_id, &MOCK_LIQUIDATION_POOL_ACCOUNT)
-	}
-
-	fn pool_exists(_underlying_asset_id: &CurrencyId) -> bool {
-		unimplemented!()
-	}
-}
-pub struct LiquidityPoolsManager;
-impl PoolsManager<AccountId> for LiquidityPoolsManager {
-	fn pools_account_id() -> AccountId {
-		MOCK_LIQUIDITY_POOL_ACCOUNT
-	}
-
-	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance {
-		Currencies::free_balance(pool_id, &MOCK_LIQUIDITY_POOL_ACCOUNT)
-	}
-
-	fn pool_exists(_underlying_asset_id: &CurrencyId) -> bool {
-		unimplemented!()
-	}
-}
-
 parameter_types! {
 	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
 }
@@ -198,9 +153,8 @@ parameter_types! {
 impl Trait for Test {
 	type Event = TestEvent;
 	type UnsignedPriority = RiskManagerPriority;
-	type MultiCurrency = orml_tokens::Module<Test>;
-	type LiquidationPoolsManager = LiquidationPoolsManager;
-	type LiquidityPoolsManager = LiquidityPoolsManager;
+	type LiquidationPoolsManager = liquidation_pools::Module<Test>;
+	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 }
 
 /// An extrinsic type used for tests.
@@ -218,13 +172,10 @@ type Amount = i128;
 
 pub type TestRiskManager = Module<Test>;
 pub type System = frame_system::Module<Test>;
-pub type Currencies = orml_currencies::Module<Test>;
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
 pub const MAX_MEMBERS: u32 = 16;
 pub const ONE_HUNDRED: Balance = 100;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
-pub const MOCK_LIQUIDITY_POOL_ACCOUNT: AccountId = 2;
-pub const MOCK_LIQUIDATION_POOL_ACCOUNT: AccountId = 3;
 pub const ADMIN: AccountId = 0;
 pub fn admin() -> Origin {
 	Origin::signed(ADMIN)
@@ -251,18 +202,6 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn liquidity_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-		self.endowed_accounts
-			.push((LiquidityPoolsManager::pools_account_id(), currency_id, balance));
-		self
-	}
-
-	pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-		self.endowed_accounts
-			.push((LiquidationPoolsManager::pools_account_id(), currency_id, balance));
-		self
-	}
-
 	pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
 		self.pools.push((
 			pool_id,

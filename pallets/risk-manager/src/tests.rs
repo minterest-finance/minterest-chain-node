@@ -265,29 +265,3 @@ fn sub_a_from_b_u128_should_work() {
 		assert_noop!(TestRiskManager::sub_a_from_b_u128(&40, &45), Error::<Test>::NumOverflow);
 	})
 }
-
-#[test]
-fn complete_liquidation_should_work() {
-	ExtBuilder::default()
-		.liquidity_pool_balance(CurrencyId::DOT, 200_000)
-		.liquidation_pool_balance(CurrencyId::DOT, 40_000)
-		.build()
-		.execute_with(|| {
-			assert_eq!(
-				Currencies::free_balance(CurrencyId::DOT, &MOCK_LIQUIDITY_POOL_ACCOUNT),
-				200_000
-			);
-			assert_eq!(
-				Currencies::free_balance(CurrencyId::DOT, &MOCK_LIQUIDATION_POOL_ACCOUNT),
-				40_000
-			);
-			assert_eq!(
-				LiquidityPoolsManager::get_pool_available_liquidity(CurrencyId::DOT),
-				200_000
-			);
-			assert_eq!(
-				LiquidationPoolsManager::get_pool_available_liquidity(CurrencyId::DOT),
-				40_000
-			);
-		})
-}

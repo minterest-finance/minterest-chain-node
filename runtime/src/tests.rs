@@ -1,7 +1,7 @@
 use crate::{
 	AccountId, Balance, Block,
 	CurrencyId::{self, DOT, ETH},
-	Rate, Runtime, DOLLARS,
+	LiquidationPoolsModuleId, LiquidityPoolsModuleId, Rate, Runtime, DOLLARS,
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
@@ -12,11 +12,12 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::{Operation, Price};
 use orml_traits::MultiCurrency;
 use pallet_traits::PoolsManager;
-use sp_runtime::traits::Zero;
+use sp_runtime::traits::{AccountIdConversion, Zero};
 use sp_runtime::FixedPointNumber;
 
 type MinterestProtocol = minterest_protocol::Module<Runtime>;
 type LiquidityPools = liquidity_pools::Module<Runtime>;
+type LiquidationPools = liquidation_pools::Module<Runtime>;
 type Controller = controller::Module<Runtime>;
 type Currencies = orml_currencies::Module<Runtime>;
 type System = frame_system::Module<Runtime>;
@@ -419,5 +420,32 @@ fn demo_scenario_n2_without_insurance_should_work() {
 				supply_rate: Rate::zero()
 			})
 		);
+	});
+}
+
+// TODO tests for liquidation
+#[test]
+fn test_liquidation() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Currencies::deposit(
+			DOT,
+			&LiquidityPoolsModuleId::get().into_account(),
+			dollars(200_u128)
+		));
+		assert_ok!(Currencies::deposit(
+			DOT,
+			&LiquidationPoolsModuleId::get().into_account(),
+			dollars(40_u128)
+		));
+		assert_eq!(
+			Currencies::free_balance(DOT, &LiquidityPoolsModuleId::get().into_account()),
+			dollars(200_u128)
+		);
+		assert_eq!(
+			Currencies::free_balance(DOT, &LiquidationPoolsModuleId::get().into_account()),
+			dollars(40_u128)
+		);
+		assert_eq!(LiquidityPools::get_pool_available_liquidity(DOT), dollars(200_u128));
+		assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), dollars(40_u128));
 	});
 }
