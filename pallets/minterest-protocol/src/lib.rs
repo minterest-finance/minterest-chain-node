@@ -50,9 +50,9 @@ decl_event!(
 		/// Repaid a borrow on the specific pool, for the specified amount: \[who, underlying_asset_id, the_amount_repaid\]
 		Repaid(AccountId, CurrencyId, Balance),
 
-        /// Transferred specified amount on a specified pool from one account to another:
-        /// \[who, receiver, wrapped_currency_id, wrapped_amount\]
-        Transferred(AccountId, AccountId, CurrencyId, Balance),
+		/// Transferred specified amount on a specified pool from one account to another:
+		/// \[who, receiver, wrapped_currency_id, wrapped_amount\]
+		Transferred(AccountId, AccountId, CurrencyId, Balance),
 
 		/// The user allowed the assets in the pool to be used as collateral: \[who, pool_id\]
 		PoolEnabledAsCollateral(AccountId, CurrencyId),
@@ -121,8 +121,8 @@ decl_error! {
 		/// Operation (deposit, redeem, borrow, repay) is paused.
 		OperationPaused,
 
-        /// The user is trying to transfer tokens to self
-        CannotTransferToSelf,
+		/// The user is trying to transfer tokens to self
+		CannotTransferToSelf,
 	}
 }
 
@@ -269,12 +269,12 @@ decl_module! {
 				Ok(())
 			})?
 		}
-        
-        /// Transfers an asset within the pool.
+
+		/// Transfers an asset within the pool.
 		///
 		/// - `receiver`: the account that will receive tokens.
-	    /// - `wrapped_id`: the currency ID of the wrapped asset to transfer.
-	    /// - `transfer_amount`: the amount of the wrapped asset to transfer.
+		/// - `wrapped_id`: the currency ID of the wrapped asset to transfer.
+		/// - `transfer_amount`: the amount of the wrapped asset to transfer.
 		#[weight = 10_000]
 		pub fn transfer_wrapped(origin, receiver: T::AccountId, wrapped_id: CurrencyId, transfer_amount: Balance) {
 			with_transaction_result(|| {
@@ -551,41 +551,36 @@ impl<T: Trait> Module<T> {
 		Ok(repay_amount)
 	}
 
-    /// Sender transfers their tokens to other account
+	/// Sender transfers their tokens to other account
 	///
 	/// - `who`: the account transferring tokens.
 	/// - `receiver`: the account that will receive tokens.
 	/// - `wrapped_id`: the currency ID of the wrapped asset to transfer.
 	/// - `transfer_amount`: the amount of the wrapped asset to transfer.
-    fn do_transfer(
-        who: &T::AccountId,
-        receiver: &T::AccountId,
-        wrapped_id: CurrencyId,
-        transfer_amount: Balance
-    ) -> DispatchResult {
-        ensure!(transfer_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
-        ensure!(who != receiver, Error::<T>::CannotTransferToSelf);
+	fn do_transfer(
+		who: &T::AccountId,
+		receiver: &T::AccountId,
+		wrapped_id: CurrencyId,
+		transfer_amount: Balance,
+	) -> DispatchResult {
+		ensure!(transfer_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
+		ensure!(who != receiver, Error::<T>::CannotTransferToSelf);
 
-        // Fail if invalid token id or transfer_amount is not available for redeem
-        let underlying_asset_id = <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id)
-            .map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
-        <Controller<T>>::redeem_allowed(underlying_asset_id, &who, transfer_amount)
-            .map_err(|_| Error::<T>::RedeemControllerRejection)?;
+		// Fail if invalid token id or transfer_amount is not available for redeem
+		let underlying_asset_id = <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id)
+			.map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
+		<Controller<T>>::redeem_allowed(underlying_asset_id, &who, transfer_amount)
+			.map_err(|_| Error::<T>::RedeemControllerRejection)?;
 
-        // Fail if not enough free balance
+		// Fail if not enough free balance
 		ensure!(
 			transfer_amount <= T::MultiCurrency::free_balance(wrapped_id, &who),
 			Error::<T>::NotEnoughWrappedTokens
 		);
 
 		// Transfer the transfer_amount from one account to another
-		T::MultiCurrency::transfer(
-			wrapped_id,
-			&who,
-			&receiver,
-			transfer_amount,
-		)?;
+		T::MultiCurrency::transfer(wrapped_id, &who, &receiver, transfer_amount)?;
 
-        Ok(())
-    }
+		Ok(())
+	}
 }
