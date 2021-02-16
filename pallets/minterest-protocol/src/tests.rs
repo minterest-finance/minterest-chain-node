@@ -663,7 +663,7 @@ fn transfer_wrapped_should_work() {
 			assert_eq!(Currencies::free_balance(CurrencyId::MBTC, &ALICE), dollars(60_u128));
 			assert_eq!(Currencies::free_balance(CurrencyId::MBTC, &BOB), dollars(40_u128));
 
-			// Bob can transfer all tokens to Alice
+			// Bob can transfer part of all tokens to Alice
 			assert_ok!(TestProtocol::transfer_wrapped(
 				bob(),
 				ALICE,
@@ -683,6 +683,7 @@ fn transfer_wrapped_should_not_work() {
 	ExtBuilder::default()
 		.user_balance(ALICE, CurrencyId::MINT, ONE_HUNDRED_DOLLARS)
 		.user_balance(ALICE, CurrencyId::MDOT, ONE_HUNDRED_DOLLARS)
+		.user_balance(ALICE, CurrencyId::MKSM, ONE_HUNDRED_DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Alice is unable to transfer more tokens tan she has
@@ -697,13 +698,13 @@ fn transfer_wrapped_should_not_work() {
 				Error::<Test>::CannotTransferToSelf
 			);
 
-			// Alice is unable to transfer more tokens tan she has
+			// Alice is unable to transfer more tokens than she has
 			assert_noop!(
 				TestProtocol::transfer_wrapped(alice(), BOB, CurrencyId::MDOT, dollars(101_u128)),
 				Error::<Test>::NotEnoughWrappedTokens
 			);
 
-			// Alice is unable to transfer tokens with zero balance
+			// Bob is unable to transfer tokens with zero balance
 			assert_noop!(
 				TestProtocol::transfer_wrapped(bob(), ALICE, CurrencyId::MDOT, 1_u128),
 				Error::<Test>::NotEnoughWrappedTokens
@@ -713,6 +714,12 @@ fn transfer_wrapped_should_not_work() {
 			assert_noop!(
 				TestProtocol::transfer_wrapped(bob(), ALICE, CurrencyId::MBTC, Balance::zero()),
 				Error::<Test>::ZeroBalanceTransaction
+			);
+
+			// All operations in the KSM pool are paused.
+			assert_noop!(
+				TestProtocol::transfer_wrapped(alice(), BOB, CurrencyId::MKSM, ONE_HUNDRED_DOLLARS),
+				Error::<Test>::OperationPaused
 			);
 		});
 }

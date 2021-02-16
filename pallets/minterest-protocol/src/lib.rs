@@ -572,6 +572,12 @@ impl<T: Trait> Module<T> {
 		<Controller<T>>::redeem_allowed(underlying_asset_id, &who, transfer_amount)
 			.map_err(|_| Error::<T>::RedeemControllerRejection)?;
 
+		// Fail if repay_borrow not allowed
+		ensure!(
+			<Controller<T>>::is_operation_allowed(underlying_asset_id, Operation::Transfer),
+			Error::<T>::OperationPaused
+		);
+
 		// Fail if not enough free balance
 		ensure!(
 			transfer_amount <= T::MultiCurrency::free_balance(wrapped_id, &who),

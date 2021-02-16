@@ -82,4 +82,5 @@ pub enum Operation {
 	Redeem,
 	Borrow,
 	Repay,
+	Transfer,
 }

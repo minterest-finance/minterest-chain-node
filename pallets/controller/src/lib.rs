@@ -47,6 +47,9 @@ pub struct PauseKeeper {
 
 	/// Pause repay operation in the pool.
 	pub repay_paused: bool,
+
+	/// Pause transfer operation in the pool.
+	pub transfer_paused: bool,
 }
 
 #[cfg(test)]
@@ -156,6 +159,7 @@ decl_module! {
 				Operation::Redeem => PauseKeepers::mutate(pool_id, |pool| pool.redeem_paused = true),
 				Operation::Borrow => PauseKeepers::mutate(pool_id, |pool| pool.borrow_paused = true),
 				Operation::Repay => PauseKeepers::mutate(pool_id, |pool| pool.repay_paused = true),
+				Operation::Transfer => PauseKeepers::mutate(pool_id, |pool| pool.transfer_paused = true),
 			};
 			Self::deposit_event(Event::OperationIsPaused(pool_id, operation));
 			Ok(())
@@ -174,6 +178,7 @@ decl_module! {
 				Operation::Redeem => PauseKeepers::mutate(pool_id, |pool| pool.redeem_paused = false),
 				Operation::Borrow => PauseKeepers::mutate(pool_id, |pool| pool.borrow_paused = false),
 				Operation::Repay => PauseKeepers::mutate(pool_id, |pool| pool.repay_paused = false),
+				Operation::Transfer => PauseKeepers::mutate(pool_id, |pool| pool.transfer_paused = false),
 			};
 			Self::deposit_event(Event::OperationIsUnPaused(pool_id, operation));
 			Ok(())
@@ -500,6 +505,7 @@ impl<T: Trait> Module<T> {
 			Operation::Redeem => !Self::pause_keepers(pool_id).redeem_paused,
 			Operation::Borrow => !Self::pause_keepers(pool_id).borrow_paused,
 			Operation::Repay => !Self::pause_keepers(pool_id).repay_paused,
+			Operation::Transfer => !Self::pause_keepers(pool_id).transfer_paused,
 		}
 	}
 }
