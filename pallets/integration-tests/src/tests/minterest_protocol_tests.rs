@@ -1270,13 +1270,20 @@ mod tests {
 	#[test]
 	fn transfer_wrapped_with_current_currency_borrowing() {
 		ExtBuilder::default()
+			.pool_initial(CurrencyId::DOT)
+			.pool_initial(CurrencyId::ETH)
+			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.pool_user_data(CurrencyId::ETH, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::DOT,
+					ONE_HUNDRED
+				));
 				// Alice deposit 60 DOT to pool.
 				let alice_deposited_amount_in_dot = 60_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -1430,13 +1437,24 @@ mod tests {
 	#[test]
 	fn transfer_wrapped_with_another_currency_borrowing() {
 		ExtBuilder::default()
+			.pool_initial(CurrencyId::DOT)
+			.pool_initial(CurrencyId::ETH)
+			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
-			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::DOT,
+					ONE_HUNDRED
+				));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::ETH,
+					ONE_HUNDRED
+				));
 				// Alice deposit to DOT pool
 				let alice_deposited_amount_in_dot = 60_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -1530,10 +1548,11 @@ mod tests {
 	// 1. Alice deposit 40 DOT;
 	// 2. Alice deposit 40 BTC;
 	// 3. Alice borrow 70 ETH;
-	// 4. Alice can't `transfer_wrapped` 40 DOT;
-	// 5. Alice deposit 40 BTC;
-	// 6. Alice `transfer_wrapped` 40 DOT;
-	// 7. Alice can't `transfer_wrapped` 40 BTC;
+	// 4. Alice can't `transfer_wrapped` 40 MDOT;
+	// 5. Alice deposit 30 BTC;
+	// 4. Alice can't `transfer_wrapped` 40 MDOT;
+	// 6. Alice `transfer_wrapped` 30 MDOT;
+	// 7. Alice can't `transfer_wrapped` 40 MBTC;
 	#[test]
 	fn transfer_wrapped_with_third_currency_borrowing() {
 		ExtBuilder::default()
@@ -1635,12 +1654,12 @@ mod tests {
 
 				System::set_block_number(6);
 
-				// Alice try to transfer all MBTC.
+				// Alice try to transfer all MDOTs
 				assert_noop!(
 					MinterestProtocol::transfer_wrapped(
 						Origin::signed(ALICE),
 						BOB,
-						CurrencyId::MBTC,
+						CurrencyId::MDOT,
 						expected_amount_wrapped_tokens_in_dot
 					),
 					MinterestProtocolError::<Test>::RedeemControllerRejection
@@ -1720,20 +1739,27 @@ mod tests {
 	// 3. Bob deposit 20 BTC;
 	// 4. Bob deposit 10 DOT;
 	// 5. Bob borrow 15 DOT;
-	// 6. Alice `transfer_wrapped` 20 DOT;
+	// 6. Alice `transfer_wrapped` 20 MDOT;
 	// 7. DOT pool insurance equal 5 DOT;
 	#[test]
 	fn transfer_wrapped_over_insurance() {
 		ExtBuilder::default()
+			.pool_initial(CurrencyId::DOT)
+			.pool_initial(CurrencyId::ETH)
+			.pool_initial(CurrencyId::BTC)
+			.user_balance(ADMIN, CurrencyId::DOT, 10_000 * DOLLARS)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::BTC, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
 			.pool_user_data(CurrencyId::BTC, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
-			.pool_total_insurance(CurrencyId::DOT, 10_000 * DOLLARS)
 			.build()
 			.execute_with(|| {
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::DOT,
+					10_000 * DOLLARS
+				));
 				// Alice deposit to DOT pool
 				let alice_deposited_amount_in_dot = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
