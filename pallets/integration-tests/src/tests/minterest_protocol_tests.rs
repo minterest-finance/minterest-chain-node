@@ -1256,7 +1256,7 @@ mod tests {
 	}
 
 	// Extrinsic `transfer_wrapped`, description of scenario #1:
-	// The user The user tries to transfer all assets in the first currency. He has loan in the first
+	// The user tries to transfer all assets in the first currency. He has loan in the first
 	// currency.
 	// Initial exchange rate for all assets equal 1.0;
 	// Collateral factor for all assets equal 0.9;
@@ -1378,7 +1378,10 @@ mod tests {
 
 				// Checking MDOT free balance for ALICE and BOB.
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
-				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB), expected_amount_wrapped_tokens_in_dot);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &BOB),
+					expected_amount_wrapped_tokens_in_dot
+				);
 
 				// Checking ALICE ETH/METH balance
 				assert_eq!(
@@ -1534,14 +1537,21 @@ mod tests {
 	#[test]
 	fn transfer_wrapped_with_third_currency_borrowing() {
 		ExtBuilder::default()
+			.pool_initial(CurrencyId::DOT)
+			.pool_initial(CurrencyId::ETH)
+			.pool_initial(CurrencyId::BTC)
+			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::BTC, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.pool_user_data(CurrencyId::BTC, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
-			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::ETH,
+					ONE_HUNDRED
+				));
 				// Alice deposit to DOT pool
 				let alice_deposited_amount_in_dot = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -1627,15 +1637,18 @@ mod tests {
 
 				// Alice transfer all MDOTs
 				assert_ok!(MinterestProtocol::transfer_wrapped(
-						Origin::signed(ALICE),
-						BOB,
-						CurrencyId::MDOT,
-						expected_amount_wrapped_tokens_in_dot
+					Origin::signed(ALICE),
+					BOB,
+					CurrencyId::MDOT,
+					expected_amount_wrapped_tokens_in_dot
 				));
 
 				// Checking MDOT free balance for ALICE and BOB.
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
-				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB), expected_amount_wrapped_tokens_in_dot);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &BOB),
+					expected_amount_wrapped_tokens_in_dot
+				);
 
 				// Checking pool available liquidity.
 				assert_eq!(
@@ -1668,7 +1681,8 @@ mod tests {
 
 				System::set_block_number(7);
 
-				let total_alice_deposited_amount_in_btc = alice_deposited_amount_in_btc + alice_deposited_amount_in_btc_secondary;
+				let total_alice_deposited_amount_in_btc =
+					alice_deposited_amount_in_btc + alice_deposited_amount_in_btc_secondary;
 				let expected_amount_wrapped_tokens_in_btc =
 					TestPools::convert_to_wrapped(CurrencyId::BTC, total_alice_deposited_amount_in_btc).unwrap();
 				// Alice try to transfer all MBTC.
@@ -1744,7 +1758,10 @@ mod tests {
 				));
 				let bob_deposited_amount_in_m_dot =
 					TestPools::convert_to_wrapped(CurrencyId::DOT, bob_deposited_amount_in_dot).unwrap();
-				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB), bob_deposited_amount_in_m_dot);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &BOB),
+					bob_deposited_amount_in_m_dot
+				);
 
 				System::set_block_number(5);
 
@@ -1760,15 +1777,16 @@ mod tests {
 				// Checking pool available liquidity.
 				assert_eq!(
 					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
-					10_000 * DOLLARS + alice_deposited_amount_in_dot
-						+ bob_deposited_amount_in_dot
+					10_000 * DOLLARS + alice_deposited_amount_in_dot + bob_deposited_amount_in_dot
 						- bob_borrowed_amount_in_dot
 				);
 
 				// Checking MDOT free balance for ALICE and BOB.
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
-				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB),
-					alice_current_balance_amount_in_m_dot + bob_deposited_amount_in_m_dot);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &BOB),
+					alice_current_balance_amount_in_m_dot + bob_deposited_amount_in_m_dot
+				);
 
 				// Checking free balance DOT && BTC for user.
 				assert_eq!(

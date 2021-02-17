@@ -818,7 +818,8 @@ fn unpause_specific_operation_should_work() {
 				CurrencyId::KSM,
 				Operation::Transfer
 			));
-			let expected_event = TestEvent::controller(Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Transfer));
+			let expected_event =
+				TestEvent::controller(Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Transfer));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).deposit_paused, false);
