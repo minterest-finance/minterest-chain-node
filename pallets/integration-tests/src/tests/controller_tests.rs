@@ -85,6 +85,7 @@ mod tests {
 	#[test]
 	fn set_insurance_factor_greater_than_zero() {
 		ExtBuilder::default()
+			.pool_initial(CurrencyId::DOT)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
@@ -146,6 +147,7 @@ mod tests {
 	#[test]
 	fn set_insurance_factor_equal_zero() {
 		ExtBuilder::default()
+			.pool_initial(CurrencyId::DOT)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()

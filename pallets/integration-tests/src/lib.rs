@@ -210,7 +210,7 @@ mod tests {
 				pool_id,
 				Pool {
 					total_borrowed,
-					borrow_index: Rate::saturating_from_rational(1, 1),
+					borrow_index: Rate::one(),
 					total_insurance: Balance::zero(),
 				},
 			));
@@ -244,7 +244,7 @@ mod tests {
 				pool_id,
 				Pool {
 					total_borrowed: Balance::zero(),
-					borrow_index: Rate::saturating_from_rational(1, 1),
+					borrow_index: Rate::one(),
 					total_insurance: Balance::zero(),
 				},
 			));
