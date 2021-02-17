@@ -4,7 +4,7 @@
     "LookupSource": "AccountId",
     "CurrencyId": {
       "_enum": [
-        "MINT",
+        "MNT",
         "DOT",
         "KSM",
         "BTC",
