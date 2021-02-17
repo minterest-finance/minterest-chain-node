@@ -1626,7 +1626,7 @@ mod tests {
 				System::set_block_number(5);
 
 				// Alice add liquidity to BTC pool
-				let alice_deposited_amount_in_btc_secondary = 40_000 * DOLLARS;
+				let alice_deposited_amount_in_btc_secondary = 30_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
 					CurrencyId::BTC,
@@ -1635,19 +1635,34 @@ mod tests {
 
 				System::set_block_number(6);
 
-				// Alice transfer all MDOTs
+				// Alice try to transfer all MBTC.
+				assert_noop!(
+					MinterestProtocol::transfer_wrapped(
+						Origin::signed(ALICE),
+						BOB,
+						CurrencyId::MBTC,
+						expected_amount_wrapped_tokens_in_dot
+					),
+					MinterestProtocolError::<Test>::RedeemControllerRejection
+				);
+
+				// Alice transfer 30 MDOTs
+				let transfer_amount_in_m_dot = 30_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::transfer_wrapped(
 					Origin::signed(ALICE),
 					BOB,
 					CurrencyId::MDOT,
-					expected_amount_wrapped_tokens_in_dot
+					transfer_amount_in_m_dot
 				));
 
 				// Checking MDOT free balance for ALICE and BOB.
-				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					expected_amount_wrapped_tokens_in_dot - transfer_amount_in_m_dot
+				);
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::MDOT, &BOB),
-					expected_amount_wrapped_tokens_in_dot
+					transfer_amount_in_m_dot
 				);
 
 				// Checking pool available liquidity.
