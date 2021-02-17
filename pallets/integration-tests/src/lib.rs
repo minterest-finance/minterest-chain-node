@@ -85,7 +85,7 @@ mod tests {
 	}
 
 	parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MINT;
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
 	}
 
 	type NativeCurrency = Currency<Test, GetNativeCurrencyId>;

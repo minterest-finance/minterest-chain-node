@@ -38,7 +38,7 @@ fn approve_fails_if_overflow() {
 #[test]
 fn transfer_from_should_work() {
 	ExtBuilder::default()
-		.one_million_mint_and_mdot_for_alice()
+		.one_million_mnt_and_mdot_for_alice()
 		.build()
 		.execute_with(|| {
 			assert_ok!(MTokens::approve(Origin::signed(ALICE), BOB, CurrencyId::MDOT, 100));
@@ -80,7 +80,7 @@ fn transfer_from_fails_if_balance_too_low() {
 #[test]
 fn transfer_from_fails_if_allowance_does_not_exist() {
 	ExtBuilder::default()
-		.one_million_mint_and_mdot_for_alice()
+		.one_million_mnt_and_mdot_for_alice()
 		.build()
 		.execute_with(|| {
 			assert_ok!(MTokens::approve(Origin::signed(ALICE), BOB, CurrencyId::MDOT, 100));
