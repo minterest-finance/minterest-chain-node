@@ -131,6 +131,7 @@ mod tests {
 	#[test]
 	fn redeem_underlying_with_current_currency_borrowing() {
 		ExtBuilder::default()
+			.pool_initial(CurrencyId::DOT)
 			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
@@ -195,7 +196,7 @@ mod tests {
 					expected_amount_wrapped_tokens_in_dot
 				);
 				let expected_amount_wrapped_tokens_in_eth =
-					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_eth).unwrap();
+					TestPools::convert_to_wrapped(CurrencyId::ETH, alice_deposited_amount_in_eth).unwrap();
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth
@@ -237,7 +238,7 @@ mod tests {
 				System::set_block_number(6);
 
 				// Alice redeem all DOTs
-				let expected_amount_redeemed_underlying_assets = 60000019601999999880000;
+				let expected_amount_redeemed_underlying_assets = 60_000_000_142_382_812_500_000;
 				assert_ok!(MinterestProtocol::redeem_underlying(
 					Origin::signed(ALICE),
 					CurrencyId::DOT,
@@ -258,7 +259,7 @@ mod tests {
 
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
 				let expected_amount_wrapped_tokens_in_eth_summary = expected_amount_wrapped_tokens_in_eth
-					+ TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_eth_secondary).unwrap();
+					+ TestPools::convert_to_wrapped(CurrencyId::ETH, alice_deposited_amount_in_eth_secondary).unwrap();
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth_summary
@@ -269,7 +270,7 @@ mod tests {
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
-				let expected_borrow_interest_accumulated = 21779999999850000;
+				let expected_borrow_interest_accumulated = 421875000000000;
 				assert_eq!(
 					TestPools::pools(CurrencyId::DOT).total_borrowed,
 					alice_borrowed_amount_in_dot + expected_borrow_interest_accumulated
@@ -406,12 +407,13 @@ mod tests {
 	#[test]
 	fn redeem_underlying_with_third_currency_borrowing() {
 		ExtBuilder::default()
-			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
+			.pool_initial(CurrencyId::DOT)
+			.pool_initial(CurrencyId::ETH)
+			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::BTC, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.pool_user_data(CurrencyId::BTC, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -562,20 +564,20 @@ mod tests {
 	#[test]
 	fn redeem_underlying_over_insurance() {
 		ExtBuilder::default()
+			.pool_initial(CurrencyId::DOT)
 			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::BTC, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
 			.pool_user_data(CurrencyId::BTC, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
 					CurrencyId::DOT,
-					ONE_HUNDRED
+					10_000 * DOLLARS
 				));
 
 				// Alice deposit to DOT pool
