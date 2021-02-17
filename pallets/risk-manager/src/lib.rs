@@ -137,6 +137,9 @@ decl_error! {
 
 	/// The dispatch origin of this call must be Administrator.
 	RequireAdmin,
+
+	/// The liquidation hasn't been completed.
+	LiquidationRejection,
 	}
 }
 
@@ -418,7 +421,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Partial liquidation of loan for user in a particular pool.
-	fn partial_liquidation(
+	pub fn partial_liquidation(
 		who: T::AccountId,
 		liquidated_pool_id: CurrencyId,
 		total_borrow_in_usd: Balance,
@@ -544,6 +547,11 @@ impl<T: Trait> Module<T> {
 			}
 		}
 
+		ensure!(
+			sum_required_to_liquidate_in_usd_plus_fee == Balance::zero(),
+			Error::<T>::LiquidationRejection
+		);
+
 		let new_liquidation_attempts_value = liquidation_attempts.checked_add(1).ok_or(Error::<T>::NumOverflow)?;
 		<LiquidityPools<T>>::set_user_liquidation_attempts(&who, liquidated_pool_id, new_liquidation_attempts_value)?;
 
@@ -559,7 +567,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Complete liquidation of loan for user in a particular pool.
-	fn complete_liquidation(
+	pub fn complete_liquidation(
 		who: T::AccountId,
 		liquidated_pool_id: CurrencyId,
 		total_borrow_in_usd: Balance,
@@ -671,6 +679,11 @@ impl<T: Trait> Module<T> {
 				}
 			}
 		}
+
+		ensure!(
+			total_borrow_in_usd_plus_fee == Balance::zero(),
+			Error::<T>::LiquidationRejection
+		);
 
 		if liquidation_attempts > 0 {
 			<LiquidityPools<T>>::set_user_liquidation_attempts(&who, liquidated_pool_id, 0)?;
