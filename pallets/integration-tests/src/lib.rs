@@ -217,20 +217,6 @@ mod tests {
 			self
 		}
 
-		pub fn pool_total_insurance(mut self, pool_id: CurrencyId, total_insurance: Balance) -> Self {
-			self.endowed_accounts
-				.push((TestPools::pools_account_id(), pool_id, total_insurance));
-			self.pools.push((
-				pool_id,
-				Pool {
-					total_borrowed: Balance::zero(),
-					borrow_index: Rate::saturating_from_rational(1, 1),
-					total_insurance,
-				},
-			));
-			self
-		}
-
 		pub fn pool_user_data(
 			mut self,
 			pool_id: CurrencyId,

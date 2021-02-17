@@ -8,12 +8,19 @@ mod tests {
 	#[test]
 	fn deposit_underlying_with_supplied_insurance_should_work() {
 		ExtBuilder::default()
+			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
+				// Set initial balance
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::DOT,
+					ONE_HUNDRED
+				));
+
 				// Alice deposit to DOT pool
 				let alice_deposited_amount = 60_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -126,13 +133,20 @@ mod tests {
 	#[test]
 	fn redeem_underlying_with_current_currency_borrowing() {
 		ExtBuilder::default()
+			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.pool_user_data(CurrencyId::ETH, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
+				// Set initial balance
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::DOT,
+					ONE_HUNDRED
+				));
+
 				// Alice deposit 60 DOT to pool.
 				let alice_deposited_amount_in_dot = 60_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -287,13 +301,24 @@ mod tests {
 	#[test]
 	fn redeem_underlying_with_another_currency_borrowing() {
 		ExtBuilder::default()
+			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
-			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
+				// Set initial balance
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::DOT,
+					ONE_HUNDRED
+				));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::ETH,
+					ONE_HUNDRED
+				));
 				// Alice deposit to DOT pool
 				let alice_deposited_amount_in_dot = 60_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -383,14 +408,21 @@ mod tests {
 	#[test]
 	fn redeem_underlying_with_third_currency_borrowing() {
 		ExtBuilder::default()
+			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::BTC, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.pool_user_data(CurrencyId::BTC, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
-			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
+				// Set initial balance
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::ETH,
+					ONE_HUNDRED
+				));
+
 				// Alice deposit to DOT pool
 				let alice_deposited_amount_in_dot = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -532,15 +564,22 @@ mod tests {
 	#[test]
 	fn redeem_underlying_over_insurance() {
 		ExtBuilder::default()
+			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::BTC, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
 			.pool_user_data(CurrencyId::BTC, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
-			.pool_total_insurance(CurrencyId::DOT, 10_000 * DOLLARS)
 			.build()
 			.execute_with(|| {
+				// Set initial balance
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::DOT,
+					ONE_HUNDRED
+				));
+
 				// Alice deposit to DOT pool
 				let alice_deposited_amount_in_dot = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -630,14 +669,21 @@ mod tests {
 	#[test]
 	fn redeem_with_current_currency_borrowing() {
 		ExtBuilder::default()
+			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::DOT, 100_000_000 * DOLLARS)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.pool_user_data(CurrencyId::ETH, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
+				// Set initial balance
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::DOT,
+					ONE_HUNDRED
+				));
+
 				// Alice deposit to DOT pool
 				let alice_deposited_amount_in_dot = 60_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -789,13 +835,24 @@ mod tests {
 	#[test]
 	fn redeem_with_another_currency_borrowing() {
 		ExtBuilder::default()
+			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
-			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
+				// Set initial balance
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::DOT,
+					ONE_HUNDRED
+				));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::ETH,
+					ONE_HUNDRED
+				));
 				// Alice deposit to DOT pool
 				let alice_deposited_amount_in_dot = 60_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -881,14 +938,21 @@ mod tests {
 	#[test]
 	fn redeem_with_third_currency_borrowing() {
 		ExtBuilder::default()
+			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::BTC, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.pool_user_data(CurrencyId::BTC, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
-			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
+				// Set initial balance
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::ETH,
+					ONE_HUNDRED
+				));
+
 				// Alice deposit to DOT pool
 				let alice_deposited_amount_in_dot = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -1019,7 +1083,6 @@ mod tests {
 			.pool_user_data(CurrencyId::DOT, BOB, BALANCE_ZERO, RATE_ZERO, false, 0)
 			.pool_user_data(CurrencyId::BTC, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
-			.pool_total_insurance(CurrencyId::DOT, 10_000 * DOLLARS)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
@@ -1098,11 +1161,18 @@ mod tests {
 	#[test]
 	fn borrow_with_insufficient_collateral_no_deposits() {
 		ExtBuilder::default()
+			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
+				// Set initial balance
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::ETH,
+					ONE_HUNDRED
+				));
+
 				// Alice try to borrow from DOT pool
 				let alice_borrowed_amount_in_dot = 50_000 * DOLLARS;
 				assert_noop!(
@@ -1125,12 +1195,24 @@ mod tests {
 	#[test]
 	fn borrow_without_collateral_in_second_currency() {
 		ExtBuilder::default()
+			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
-			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
+				// Set initial balance
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::DOT,
+					ONE_HUNDRED
+				));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::ETH,
+					ONE_HUNDRED
+				));
+
 				// Alice deposit to DOT pool
 				let alice_deposited_amount = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -1167,12 +1249,23 @@ mod tests {
 	#[test]
 	fn borrow_with_insufficient_collateral_in_second_currency() {
 		ExtBuilder::default()
+			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
-			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
+				// Set initial balance
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::DOT,
+					ONE_HUNDRED
+				));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::ETH,
+					ONE_HUNDRED
+				));
 				// Alice deposit to DOT pool
 				let alice_deposited_amount = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -1209,12 +1302,23 @@ mod tests {
 	#[test]
 	fn borrow_with_sufficient_collateral_in_second_currency() {
 		ExtBuilder::default()
+			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
-			.pool_total_insurance(CurrencyId::ETH, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
+				// Set initial balance
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::DOT,
+					ONE_HUNDRED
+				));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::ETH,
+					ONE_HUNDRED
+				));
 				// Alice deposit to DOT pool
 				let alice_deposited_amount = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(

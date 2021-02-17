@@ -11,7 +11,6 @@ mod tests {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
-			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
@@ -44,7 +43,6 @@ mod tests {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
@@ -77,7 +75,6 @@ mod tests {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
@@ -120,7 +117,6 @@ mod tests {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
@@ -165,7 +161,6 @@ mod tests {
 			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.pool_user_data(CurrencyId::DOT, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
