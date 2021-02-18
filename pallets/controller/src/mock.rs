@@ -327,6 +327,7 @@ impl ExtBuilder {
 						redeem_paused: false,
 						borrow_paused: false,
 						repay_paused: false,
+						transfer_paused: false,
 					},
 				),
 				(
@@ -336,6 +337,7 @@ impl ExtBuilder {
 						redeem_paused: false,
 						borrow_paused: false,
 						repay_paused: false,
+						transfer_paused: false,
 					},
 				),
 				(
@@ -345,6 +347,7 @@ impl ExtBuilder {
 						redeem_paused: true,
 						borrow_paused: true,
 						repay_paused: true,
+						transfer_paused: true,
 					},
 				),
 				(
@@ -354,6 +357,7 @@ impl ExtBuilder {
 						redeem_paused: false,
 						borrow_paused: false,
 						repay_paused: false,
+						transfer_paused: false,
 					},
 				),
 			],
