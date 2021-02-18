@@ -344,8 +344,7 @@ impl<T: Trait> Module<T> {
 		let mut iteration_count = 0;
 		let iteration_start_time = sp_io::offchain::timestamp();
 		for member in pool_members.into_iter() {
-			<Controller<T>>::accrue_interest_rate(currency_id).map_err(|_| OffchainErr::CheckFail)?;
-
+			// Checks if the liquidation should be allowed to occur
 			let (_, shortfall) = <Controller<T>>::get_hypothetical_account_liquidity(&member, currency_id, 0, 0)
 				.map_err(|_| OffchainErr::CheckFail)?;
 
@@ -379,8 +378,8 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn submit_unsigned_liquidation(who: T::AccountId, pool_id: CurrencyId) {
-		let who = T::Lookup::unlookup(who);
+	fn submit_unsigned_liquidation(borrower: T::AccountId, pool_id: CurrencyId) {
+		let who = T::Lookup::unlookup(borrower);
 		let call = Call::<T>::liquidate(who.clone(), pool_id);
 		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
 			debug::info!(
@@ -391,29 +390,28 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	fn liquidate_unsafe_loan(who: T::AccountId, pool_id: CurrencyId) -> DispatchResult {
-		let (total_borrow_in_usd, total_borrow_in_underlying, oracle_price, liquidation_attempts) =
-			Self::get_user_borrow_information(&who, pool_id)?;
+	fn liquidate_unsafe_loan(borrower: T::AccountId, pool_id: CurrencyId) -> DispatchResult {
+		<Controller<T>>::accrue_interest_rate(pool_id)?;
 
-		if total_borrow_in_usd >= RiskManagerDates::get(pool_id).min_sum
+		let borrow_balance = <Controller<T>>::borrow_balance_stored(&borrower, pool_id)?;
+		let price_borrowed = <Oracle<T>>::get_underlying_price(pool_id)?;
+		let borrow_balance_in_usd = Rate::from_inner(borrow_balance)
+			.checked_mul(&price_borrowed)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		if borrow_balance_in_usd >= RiskManagerDates::get(pool_id).min_sum
 			&& liquidation_attempts < RiskManagerDates::get(pool_id).max_attempts
 		{
-			Self::partial_liquidation(
-				who,
-				pool_id,
-				total_borrow_in_usd,
-				total_borrow_in_underlying,
-				oracle_price,
-				liquidation_attempts,
-			)?
+			let repay_amount =
+			Self::partial_liquidation_fresh(borrower, pool_id, borrow_balance_in_usd)?
 		} else {
-			Self::complete_liquidation(
-				who,
+			Self::complete_liquidation_fresh(
+				borrower,
 				pool_id,
 				total_borrow_in_usd,
 				total_borrow_in_underlying,
 				oracle_price,
-				liquidation_attempts,
 			)?
 		}
 
@@ -421,7 +419,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Partial liquidation of loan for user in a particular pool.
-	pub fn partial_liquidation(
+	pub fn partial_liquidation_fresh(
 		who: T::AccountId,
 		liquidated_pool_id: CurrencyId,
 		total_borrow_in_usd: Balance,
@@ -567,7 +565,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Complete liquidation of loan for user in a particular pool.
-	pub fn complete_liquidation(
+	pub fn complete_liquidation_fresh(
 		who: T::AccountId,
 		liquidated_pool_id: CurrencyId,
 		total_borrow_in_usd: Balance,

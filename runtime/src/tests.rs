@@ -546,7 +546,7 @@ fn complete_liquidation_one_collateral_should_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			assert_ok!(RiskManager::complete_liquidation(
+			assert_ok!(RiskManager::complete_liquidation_fresh(
 				ALICE::get(),
 				CurrencyId::DOT,
 				180_000 * DOLLARS,
@@ -607,7 +607,7 @@ fn complete_liquidation_multi_collateral_should_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			assert_ok!(RiskManager::complete_liquidation(
+			assert_ok!(RiskManager::complete_liquidation_fresh(
 				ALICE::get(),
 				CurrencyId::DOT,
 				180_000 * DOLLARS,
@@ -673,7 +673,7 @@ fn partial_liquidation_one_collateral_should_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			assert_ok!(RiskManager::partial_liquidation(
+			assert_ok!(RiskManager::partial_liquidation_fresh(
 				ALICE::get(),
 				CurrencyId::DOT,
 				180_000 * DOLLARS,
@@ -734,7 +734,7 @@ fn partial_liquidation_multi_collateral_should_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			assert_ok!(RiskManager::partial_liquidation(
+			assert_ok!(RiskManager::partial_liquidation_fresh(
 				ALICE::get(),
 				CurrencyId::DOT,
 				180_000 * DOLLARS,
@@ -806,7 +806,7 @@ fn complete_liquidation_should_not_work() {
 		.build()
 		.execute_with(|| {
 			assert_err!(
-				RiskManager::complete_liquidation(
+				RiskManager::complete_liquidation_fresh(
 					ALICE::get(),
 					CurrencyId::DOT,
 					180_000 * DOLLARS,
@@ -833,7 +833,7 @@ fn partial_liquidation_should_not_work() {
 		.build()
 		.execute_with(|| {
 			assert_err!(
-				RiskManager::partial_liquidation(
+				RiskManager::partial_liquidation_fresh(
 					ALICE::get(),
 					CurrencyId::DOT,
 					180_000 * DOLLARS,
