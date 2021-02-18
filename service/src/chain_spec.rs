@@ -76,6 +76,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				vec![
 					// liquidation pool
 					hex!["6d6f646c6d696e2f6c71646e0000000000000000000000000000000000000000"].into(),
+					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
@@ -412,7 +413,7 @@ fn testnet_genesis(
 					CurrencyId::DOT,
 					RiskManagerData {
 						max_attempts: 2,
-						min_sum: 200_000 * DOLLARS,                               // In USD. FIXME: temporary value.
+						min_sum: 100_000 * DOLLARS,                               // In USD. FIXME: temporary value.
 						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
 						liquidation_fee: FixedU128::saturating_from_rational(103, 100), // 3%
 					},
