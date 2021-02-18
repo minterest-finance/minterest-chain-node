@@ -7,7 +7,7 @@
 #![allow(clippy::unnecessary_mut_passed)]
 
 use codec::{Decode, Encode};
-use minterest_primitives::{CurrencyId, Rate};
+use minterest_primitives::{AccountId, Balance, CurrencyId, Rate};
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
 
@@ -27,5 +27,9 @@ pub struct PoolState {
 sp_api::decl_runtime_apis! {
 	pub trait ControllerApi {
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState>;
+
+		fn get_underlying_balance(account_id: AccountId, pool_id: CurrencyId) -> Option<Balance>;
+
+		fn get_borrow_balance(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<Balance>;
 	}
 }

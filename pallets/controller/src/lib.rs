@@ -538,6 +538,20 @@ impl<T: Trait> Module<T> {
 
 		Some((borrow_rate, supply_rate))
 	}
+
+	/// Calculates the amount of tokens of underlying asset equivalent to the current wrapped token
+	/// balance
+	pub fn get_underlying_balance(account_id: &T::AccountId, pool_id: CurrencyId) -> Option<Balance> {
+		let wrapped_balance = T::MultiCurrency::free_balance(pool_id, &account_id);
+		let underlying_balance = <LiquidityPools<T>>::convert_from_wrapped(pool_id, wrapped_balance).ok()?;
+		Some(underlying_balance)
+	}
+
+	/// Calculates the amount the account owes, with accumulated interest
+	pub fn get_borrow_balance(account_id: &T::AccountId, underlying_asset_id: CurrencyId) -> Option<Balance> {
+		let account_borrows = Self::borrow_balance_stored(&account_id, underlying_asset_id).ok()?;
+		Some(account_borrows)
+	}
 }
 
 // Private methods

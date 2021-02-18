@@ -3,7 +3,7 @@
 pub use controller_rpc_runtime_api::{ControllerApi as ControllerRuntimeApi, PoolState};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use minterest_primitives::CurrencyId;
+use minterest_primitives::{AccountId, Balance, CurrencyId};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
@@ -13,6 +13,22 @@ use std::sync::Arc;
 pub trait ControllerApi<BlockHash> {
 	#[rpc(name = "controller_liquidityPoolState")]
 	fn liquidity_pool_state(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<PoolState>>;
+
+	#[rpc(name = "controller_underlyingBalance")]
+	fn get_underlying_balance(
+		&self,
+		account_id: AccountId,
+		pool_id: CurrencyId,
+		at: Option<BlockHash>,
+	) -> Result<Option<Balance>>;
+
+	#[rpc(name = "controller_borrowBalance")]
+	fn get_borrow_balance(
+		&self,
+		account_id: AccountId,
+		underlying_asset_id: CurrencyId,
+		at: Option<BlockHash>,
+	) -> Result<Option<Balance>>;
 }
 
 /// A struct that implements the [`ControllerApi`].
@@ -63,5 +79,41 @@ where
 			message: "Unable to get pool state.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})
+	}
+
+	fn get_underlying_balance(
+		&self,
+		account_id: AccountId,
+		pool_id: CurrencyId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<Option<Balance>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+            // If the block hash is not supplied assume the best block.
+            self.client.info().best_hash));
+		api.get_underlying_balance(&at, account_id, pool_id)
+			.map_err(|e| RpcError {
+				code: ErrorCode::ServerError(Error::RuntimeError.into()),
+				message: "Unable to get underlying balance.".into(),
+				data: Some(format!("{:?}", e).into()),
+			})
+	}
+
+	fn get_borrow_balance(
+		&self,
+		account_id: AccountId,
+		underlying_asset_id: CurrencyId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<Option<Balance>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+            // If the block hash is not supplied assume the best block.
+            self.client.info().best_hash));
+		api.get_borrow_balance(&at, account_id, underlying_asset_id)
+			.map_err(|e| RpcError {
+				code: ErrorCode::ServerError(Error::RuntimeError.into()),
+				message: "Unable to get borrow balance.".into(),
+				data: Some(format!("{:?}", e).into()),
+			})
 	}
 }

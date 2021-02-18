@@ -536,6 +536,18 @@ impl_runtime_apis! {
 
 			Some(PoolState { exchange_rate, borrow_rate, supply_rate })
 		}
+
+		fn get_underlying_balance(account_id: AccountId, pool_id: CurrencyId) -> Option<Balance> {
+			let underlying_balance = Controller::get_underlying_balance(&account_id, pool_id)?;
+
+			Some(underlying_balance)
+		}
+
+		fn get_borrow_balance(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<Balance> {
+			let borrow_balance = Controller::get_borrow_balance(&account_id, underlying_asset_id)?;
+
+			Some(borrow_balance)
+		}
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
