@@ -499,7 +499,7 @@ impl<T: Trait> Module<T> {
 	/// - `borrower`: the account with the debt being payed off.
 	/// - `underlying_asset_id`: the currency ID of the underlying asset to repay.
 	/// - `repay_amount`: the amount of the underlying asset to repay.
-	fn do_repay_fresh(
+	pub fn do_repay_fresh(
 		who: &T::AccountId,
 		borrower: &T::AccountId,
 		underlying_asset_id: CurrencyId,

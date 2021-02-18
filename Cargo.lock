@@ -5209,6 +5209,7 @@ dependencies = [
  "liquidity-pools",
  "minterest-model",
  "minterest-primitives",
+ "minterest-protocol",
  "oracle",
  "orml-tokens",
  "orml-traits",

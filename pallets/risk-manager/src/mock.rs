@@ -23,6 +23,7 @@ impl_outer_event! {
 		accounts<T>,
 		liquidity_pools,
 		liquidation_pools,
+		minterest_protocol<T>,
 		risk_manager<T>,
 		controller,
 		minterest_model,
@@ -144,6 +145,12 @@ impl liquidation_pools::Trait for Test {
 	type Event = TestEvent;
 	type ModuleId = LiquidationPoolsModuleId;
 	type MultiCurrency = orml_tokens::Module<Test>;
+}
+
+impl minterest_protocol::Trait for Test {
+	type Event = TestEvent;
+	type Borrowing = liquidity_pools::Module<Test>;
+	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 }
 
 parameter_types! {

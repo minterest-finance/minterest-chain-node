@@ -22,6 +22,7 @@ sp-arithmetic = { version = "2.0.0", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
+minterest-protocol = { path = "../minterest-protocol", default-features = false }
 liquidation-pools = { path = "../liquidation-pools", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
 controller = { path = "../controller", default-features = false }
@@ -59,6 +60,7 @@ std = [
 
     "minterest-primitives/std",
     "liquidity-pools/std",
+    "minterest-protocol/std",
     "liquidation-pools/std",
     "controller/std",
     "accounts/std",
