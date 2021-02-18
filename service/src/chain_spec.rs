@@ -319,6 +319,7 @@ fn testnet_genesis(
 						redeem_paused: false,
 						borrow_paused: false,
 						repay_paused: false,
+						transfer_paused: false,
 					},
 				),
 				(
@@ -328,6 +329,7 @@ fn testnet_genesis(
 						redeem_paused: false,
 						borrow_paused: false,
 						repay_paused: false,
+						transfer_paused: false,
 					},
 				),
 				(
@@ -337,6 +339,7 @@ fn testnet_genesis(
 						redeem_paused: false,
 						borrow_paused: false,
 						repay_paused: false,
+						transfer_paused: false,
 					},
 				),
 				(
@@ -346,6 +349,7 @@ fn testnet_genesis(
 						redeem_paused: false,
 						borrow_paused: false,
 						repay_paused: false,
+						transfer_paused: false,
 					},
 				),
 			],

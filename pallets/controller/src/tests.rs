@@ -709,6 +709,7 @@ fn pause_specific_operation_should_work() {
 			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).redeem_paused, false);
 			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).borrow_paused, false);
 			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).repay_paused, false);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).transfer_paused, false);
 
 			assert_ok!(Controller::pause_specific_operation(
 				alice(),
@@ -742,10 +743,19 @@ fn pause_specific_operation_should_work() {
 			let expected_event = TestEvent::controller(Event::OperationIsPaused(CurrencyId::DOT, Operation::Repay));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
+			assert_ok!(Controller::pause_specific_operation(
+				alice(),
+				CurrencyId::DOT,
+				Operation::Transfer
+			));
+			let expected_event = TestEvent::controller(Event::OperationIsPaused(CurrencyId::DOT, Operation::Transfer));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
 			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).deposit_paused, true);
 			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).redeem_paused, true);
 			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).borrow_paused, true);
 			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).repay_paused, true);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).transfer_paused, true);
 
 			assert_noop!(
 				Controller::pause_specific_operation(bob(), CurrencyId::DOT, Operation::Deposit),
@@ -769,6 +779,7 @@ fn unpause_specific_operation_should_work() {
 			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).redeem_paused, true);
 			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).borrow_paused, true);
 			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).repay_paused, true);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).transfer_paused, true);
 
 			assert_ok!(Controller::unpause_specific_operation(
 				alice(),
@@ -802,10 +813,20 @@ fn unpause_specific_operation_should_work() {
 			let expected_event = TestEvent::controller(Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Repay));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
+			assert_ok!(Controller::unpause_specific_operation(
+				alice(),
+				CurrencyId::KSM,
+				Operation::Transfer
+			));
+			let expected_event =
+				TestEvent::controller(Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Transfer));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
 			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).deposit_paused, false);
 			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).redeem_paused, false);
 			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).borrow_paused, false);
 			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).repay_paused, false);
+			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).transfer_paused, false);
 
 			assert_noop!(
 				Controller::unpause_specific_operation(bob(), CurrencyId::DOT, Operation::Deposit),

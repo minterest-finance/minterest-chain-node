@@ -312,6 +312,7 @@ mod tests {
 							redeem_paused: false,
 							borrow_paused: false,
 							repay_paused: false,
+							transfer_paused: false,
 						},
 					),
 					(
@@ -321,6 +322,7 @@ mod tests {
 							redeem_paused: false,
 							borrow_paused: false,
 							repay_paused: false,
+							transfer_paused: false,
 						},
 					),
 					(
@@ -330,6 +332,7 @@ mod tests {
 							redeem_paused: true,
 							borrow_paused: true,
 							repay_paused: true,
+							transfer_paused: true,
 						},
 					),
 					(
@@ -339,6 +342,7 @@ mod tests {
 							redeem_paused: false,
 							borrow_paused: false,
 							repay_paused: false,
+							transfer_paused: false,
 						},
 					),
 				],
