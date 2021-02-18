@@ -566,17 +566,19 @@ impl<T: Trait> Module<T> {
 		ensure!(transfer_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
 		ensure!(who != receiver, Error::<T>::CannotTransferToSelf);
 
-		// Fail if invalid token id or transfer_amount is not available for redeem
+		// Fail if invalid token id
 		let underlying_asset_id = <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id)
 			.map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
-		<Controller<T>>::redeem_allowed(underlying_asset_id, &who, transfer_amount)
-			.map_err(|_| Error::<T>::RedeemControllerRejection)?;
 
-		// Fail if repay_borrow not allowed
+		// Fail if transfer is not allowed
 		ensure!(
 			<Controller<T>>::is_operation_allowed(underlying_asset_id, Operation::Transfer),
 			Error::<T>::OperationPaused
 		);
+
+		// Fail if transfer_amount is not available for redeem
+		<Controller<T>>::redeem_allowed(underlying_asset_id, &who, transfer_amount)
+			.map_err(|_| Error::<T>::RedeemControllerRejection)?;
 
 		// Fail if not enough free balance
 		ensure!(
