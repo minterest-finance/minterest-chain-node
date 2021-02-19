@@ -350,6 +350,7 @@ impl<T: Trait> Module<T> {
 		let iteration_start_time = sp_io::offchain::timestamp();
 
 		for member in pool_members.into_iter() {
+			<Controller<T>>::accrue_interest_rate(currency_id).map_err(|_| OffchainErr::CheckFail)?;
 			// Checks if the liquidation should be allowed to occur.
 			let (_, shortfall) = <Controller<T>>::get_hypothetical_account_liquidity(&member, currency_id, 0, 0)
 				.map_err(|_| OffchainErr::CheckFail)?;
