@@ -80,7 +80,6 @@ type Accounts<T> = accounts::Module<T>;
 type Controller<T> = controller::Module<T>;
 type MinterestProtocol<T> = minterest_protocol::Module<T>;
 type Oracle<T> = oracle::Module<T>;
-type TripleBalanceResult = result::Result<(Balance, Balance, Balance), DispatchError>;
 
 pub trait Trait:
 	frame_system::Trait
@@ -128,8 +127,8 @@ decl_event!(
 		/// Liquidation fee has been successfully changed: \[ who, threshold\]
 		ValueOfLiquidationFeeHasChanged(AccountId, Rate),
 
-		/// Unsafe loan has been successfully liquidated: \[who, liquidate_amount_in_usd, liquidated_pool_id, partial_liquidation\]
-		LiquidateUnsafeLoan(AccountId, Balance, CurrencyId, bool),
+		/// Unsafe loan has been successfully liquidated: \[who, liquidate_amount_in_usd, liquidated_pool_id, seized_pools, partial_liquidation\]
+		LiquidateUnsafeLoan(AccountId, Balance, CurrencyId, Vec<CurrencyId>, bool),
 	}
 );
 
@@ -420,8 +419,6 @@ impl<T: Trait> Module<T> {
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		ensure!(total_repay_amount > Balance::zero(), Error::<T>::LiquidationRejection);
-
 		let liquidation_attempts = <LiquidityPools<T>>::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
 
 		let is_partial_liquidation = match total_repay_amount >= RiskManagerDates::get(liquidated_pool_id).min_sum
@@ -435,7 +432,7 @@ impl<T: Trait> Module<T> {
 		let (seize_amount, repay_amount, repay_tokens) =
 			Self::liquidate_calculate_seize_and_repay(liquidated_pool_id, total_repay_amount, is_partial_liquidation)?;
 
-		Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, repay_tokens, seize_amount)?;
+		let seized_pools = Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, repay_tokens, seize_amount)?;
 
 		Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation)?;
 
@@ -443,6 +440,7 @@ impl<T: Trait> Module<T> {
 			borrower,
 			repay_amount,
 			liquidated_pool_id,
+			seized_pools,
 			is_partial_liquidation,
 		));
 
@@ -461,7 +459,7 @@ impl<T: Trait> Module<T> {
 		liquidated_pool_id: CurrencyId,
 		repay_tokens: Balance,
 		mut seize_amount: Balance,
-	) -> DispatchResult {
+	) -> result::Result<Vec<CurrencyId>, DispatchError> {
 		let liquidation_pool_account_id = T::LiquidationPoolsManager::pools_account_id();
 		let liquidity_pool_account_id = <T as Trait>::LiquidityPoolsManager::pools_account_id();
 
@@ -475,9 +473,12 @@ impl<T: Trait> Module<T> {
 
 		// Get an array of collateral pools for the borrower.
 		// The array is sorted in descending order by the number of wrapped tokens in USD.
-		let pools = <LiquidityPools<T>>::get_pools_are_collateral(&borrower)?;
+		let collateral_pools = <LiquidityPools<T>>::get_pools_are_collateral(&borrower)?;
 
-		for collateral_pool_id in pools.into_iter() {
+		// Collect seized pools.
+		let mut seized_pools: Vec<CurrencyId> = Vec::new();
+
+		for collateral_pool_id in collateral_pools.into_iter() {
 			if !seize_amount.is_zero() {
 				<Controller<T>>::accrue_interest_rate(collateral_pool_id)?;
 
@@ -538,12 +539,14 @@ impl<T: Trait> Module<T> {
 						seize_amount = Balance::zero();
 					}
 				}
+				// Collecting seized pools to display in an Event.
+				seized_pools.push(collateral_pool_id);
 			}
 		}
 
 		ensure!(seize_amount == Balance::zero(), Error::<T>::LiquidationRejection);
 
-		Ok(())
+		Ok(seized_pools)
 	}
 
 	// FIXME: Temporary implementation.
@@ -563,7 +566,7 @@ impl<T: Trait> Module<T> {
 		liquidated_pool_id: CurrencyId,
 		total_repay_amount: Balance,
 		is_partial_liquidation: bool,
-	) -> TripleBalanceResult {
+	) -> result::Result<(Balance, Balance, Balance), DispatchError> {
 		let liquidation_incentive = Self::risk_manager_dates(liquidated_pool_id).liquidation_incentive;
 
 		let temporary_factor = match is_partial_liquidation {

@@ -554,6 +554,7 @@ fn complete_liquidation_one_collateral_should_work() {
 				ALICE::get(),
 				180_000_000_729_000_000_000_000,
 				CurrencyId::DOT,
+				vec![CurrencyId::DOT],
 				false,
 			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
@@ -607,6 +608,7 @@ fn complete_liquidation_multi_collateral_should_work() {
 				ALICE::get(),
 				180_000_000_583_200_000_000_000,
 				CurrencyId::DOT,
+				vec![CurrencyId::DOT, CurrencyId::ETH],
 				false,
 			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
@@ -665,6 +667,7 @@ fn partial_liquidation_one_collateral_should_work() {
 				ALICE::get(),
 				54_000_000_218_700_000_000_000,
 				CurrencyId::DOT,
+				vec![CurrencyId::DOT],
 				true,
 			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
@@ -721,6 +724,7 @@ fn partial_liquidation_multi_collateral_should_work() {
 				ALICE::get(),
 				54_000_000_198_818_181_774_000,
 				CurrencyId::DOT,
+				vec![CurrencyId::ETH],
 				true,
 			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
