@@ -387,7 +387,8 @@ impl<T: Trait> Module<T> {
 	/// Sends an unsigned liquidation transaction to the blockchain.
 	///
 	/// - `borrower`: the borrower in automatic liquidation.
-	/// - `pool_id`: the CurrencyId of the pool with loan, for which automatic liquidation is performed.
+	/// - `pool_id`: the CurrencyId of the pool with loan, for which automatic liquidation
+	/// is performed.
 	fn submit_unsigned_liquidation(borrower: T::AccountId, pool_id: CurrencyId) {
 		let who = T::Lookup::unlookup(borrower);
 		let call = Call::<T>::liquidate(who.clone(), pool_id);
@@ -451,7 +452,8 @@ impl<T: Trait> Module<T> {
 	/// transferred to the liquidation pool.
 	///
 	/// - `borrower`: the borrower in automatic liquidation.
-	/// - `liquidated_pool_id`: the CurrencyId of the pool with loan, for which automatic liquidation is performed.
+	/// - `liquidated_pool_id`: the CurrencyId of the pool with loan, for which automatic
+	/// liquidation is performed.
 	/// - `repay_tokens`: the amount of the underlying borrowed asset to repay.
 	/// - `seize_amount`: the number of collateral tokens to seize converted into USD.
 	fn liquidate_borrow_fresh(
