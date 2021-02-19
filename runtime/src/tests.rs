@@ -219,7 +219,7 @@ impl ExtBuilder {
 						max_attempts: 3,
 						min_sum: 100_000 * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
+						liquidation_incentive: Rate::saturating_from_rational(105, 100),
 					},
 				),
 				(
@@ -228,7 +228,7 @@ impl ExtBuilder {
 						max_attempts: 3,
 						min_sum: 100_000 * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
+						liquidation_incentive: Rate::saturating_from_rational(105, 100),
 					},
 				),
 			],
