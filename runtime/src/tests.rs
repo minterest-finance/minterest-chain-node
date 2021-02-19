@@ -41,13 +41,13 @@ impl Default for ExtBuilder {
 		Self {
 			endowed_accounts: vec![
 				// seed: initial assets. Initial MINT to pay for gas.
-				(ALICE::get(), CurrencyId::MINT, 100_000 * DOLLARS),
+				(ALICE::get(), CurrencyId::MNT, 100_000 * DOLLARS),
 				(ALICE::get(), CurrencyId::DOT, 100_000 * DOLLARS),
 				(ALICE::get(), CurrencyId::ETH, 100_000 * DOLLARS),
-				(BOB::get(), CurrencyId::MINT, 100_000 * DOLLARS),
+				(BOB::get(), CurrencyId::MNT, 100_000 * DOLLARS),
 				(BOB::get(), CurrencyId::DOT, 100_000 * DOLLARS),
 				(BOB::get(), CurrencyId::ETH, 100_000 * DOLLARS),
-				(CHARLIE::get(), CurrencyId::MINT, 100_000 * DOLLARS),
+				(CHARLIE::get(), CurrencyId::MNT, 100_000 * DOLLARS),
 				(CHARLIE::get(), CurrencyId::DOT, 100_000 * DOLLARS),
 				(CHARLIE::get(), CurrencyId::ETH, 100_000 * DOLLARS),
 			],

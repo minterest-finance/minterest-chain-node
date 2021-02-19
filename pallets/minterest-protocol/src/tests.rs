@@ -681,14 +681,14 @@ fn transfer_wrapped_should_work() {
 #[test]
 fn transfer_wrapped_should_not_work() {
 	ExtBuilder::default()
-		.user_balance(ALICE, CurrencyId::MINT, ONE_HUNDRED_DOLLARS)
+		.user_balance(ALICE, CurrencyId::MNT, ONE_HUNDRED_DOLLARS)
 		.user_balance(ALICE, CurrencyId::MDOT, ONE_HUNDRED_DOLLARS)
 		.user_balance(ALICE, CurrencyId::MKSM, ONE_HUNDRED_DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Alice is unable to transfer more tokens tan she has
 			assert_noop!(
-				TestProtocol::transfer_wrapped(alice(), BOB, CurrencyId::MINT, ONE_HUNDRED_DOLLARS),
+				TestProtocol::transfer_wrapped(alice(), BOB, CurrencyId::MNT, ONE_HUNDRED_DOLLARS),
 				Error::<Test>::NotValidWrappedTokenId
 			);
 

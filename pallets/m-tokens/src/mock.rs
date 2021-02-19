@@ -75,7 +75,7 @@ impl orml_tokens::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MINT;
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
 }
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
@@ -116,9 +116,9 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn one_million_mint_and_mdot_for_alice(self) -> Self {
+	pub fn one_million_mnt_and_mdot_for_alice(self) -> Self {
 		self.balances(vec![
-			(ALICE, CurrencyId::MINT, ONE_MILL),
+			(ALICE, CurrencyId::MNT, ONE_MILL),
 			(ALICE, CurrencyId::MDOT, ONE_MILL),
 		])
 	}
