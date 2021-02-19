@@ -47,6 +47,9 @@ pub struct PauseKeeper {
 
 	/// Pause repay operation in the pool.
 	pub repay_paused: bool,
+
+	/// Pause transfer operation in the pool.
+	pub transfer_paused: bool,
 }
 
 #[cfg(test)]
@@ -156,6 +159,7 @@ decl_module! {
 				Operation::Redeem => PauseKeepers::mutate(pool_id, |pool| pool.redeem_paused = true),
 				Operation::Borrow => PauseKeepers::mutate(pool_id, |pool| pool.borrow_paused = true),
 				Operation::Repay => PauseKeepers::mutate(pool_id, |pool| pool.repay_paused = true),
+				Operation::Transfer => PauseKeepers::mutate(pool_id, |pool| pool.transfer_paused = true),
 			};
 			Self::deposit_event(Event::OperationIsPaused(pool_id, operation));
 			Ok(())
@@ -174,6 +178,7 @@ decl_module! {
 				Operation::Redeem => PauseKeepers::mutate(pool_id, |pool| pool.redeem_paused = false),
 				Operation::Borrow => PauseKeepers::mutate(pool_id, |pool| pool.borrow_paused = false),
 				Operation::Repay => PauseKeepers::mutate(pool_id, |pool| pool.repay_paused = false),
+				Operation::Transfer => PauseKeepers::mutate(pool_id, |pool| pool.transfer_paused = false),
 			};
 			Self::deposit_event(Event::OperationIsUnPaused(pool_id, operation));
 			Ok(())
@@ -447,6 +452,22 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
+	// FIXME: Temporary implementation.
+	/// Calculate sum required to liquidate for partial liquidation according to coming back to safe
+	/// supply ratio.
+	///
+	/// - `account`: The account to determine liquidity.
+	/// - `total_borrow_in_usd`: Current amount of debt converted into usd.
+	///
+	/// Return sum required to liquidate.
+	pub fn get_sum_required_to_liquidate(total_borrow_in_usd: Balance) -> BalanceResult {
+		let result = Rate::from_inner(total_borrow_in_usd)
+			.checked_mul(&Rate::saturating_from_rational(30, 100))
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+		Ok(result)
+	}
+
 	/// Checks if the account should be allowed to redeem tokens in the given pool.
 	///
 	/// - `underlying_asset_id` - The CurrencyId to verify the redeem against.
@@ -500,6 +521,7 @@ impl<T: Trait> Module<T> {
 			Operation::Redeem => !Self::pause_keepers(pool_id).redeem_paused,
 			Operation::Borrow => !Self::pause_keepers(pool_id).borrow_paused,
 			Operation::Repay => !Self::pause_keepers(pool_id).repay_paused,
+			Operation::Transfer => !Self::pause_keepers(pool_id).transfer_paused,
 		}
 	}
 }

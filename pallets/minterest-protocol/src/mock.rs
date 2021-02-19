@@ -88,7 +88,7 @@ impl orml_tokens::Trait for Test {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MINT;
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
 }
 
 type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
@@ -182,11 +182,11 @@ impl Default for ExtBuilder {
 		Self {
 			endowed_accounts: vec![
 				// seed: initial DOTs. Initial MINT to pay for gas.
-				(ALICE, CurrencyId::MINT, ONE_MILL_DOLLARS),
+				(ALICE, CurrencyId::MNT, ONE_MILL_DOLLARS),
 				(ALICE, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
 				(ALICE, CurrencyId::ETH, ONE_HUNDRED_DOLLARS),
 				(ALICE, CurrencyId::KSM, ONE_HUNDRED_DOLLARS),
-				(BOB, CurrencyId::MINT, ONE_MILL_DOLLARS),
+				(BOB, CurrencyId::MNT, ONE_MILL_DOLLARS),
 				(BOB, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
 				// seed: initial insurance, equal 10_000$
 				(TestPools::pools_account_id(), CurrencyId::ETH, TEN_THOUSAND_DOLLARS),
@@ -352,6 +352,7 @@ impl ExtBuilder {
 						redeem_paused: false,
 						borrow_paused: false,
 						repay_paused: false,
+						transfer_paused: false,
 					},
 				),
 				(
@@ -361,6 +362,7 @@ impl ExtBuilder {
 						redeem_paused: false,
 						borrow_paused: false,
 						repay_paused: false,
+						transfer_paused: false,
 					},
 				),
 				(
@@ -370,6 +372,7 @@ impl ExtBuilder {
 						redeem_paused: true,
 						borrow_paused: true,
 						repay_paused: true,
+						transfer_paused: true,
 					},
 				),
 				(
@@ -379,6 +382,7 @@ impl ExtBuilder {
 						redeem_paused: false,
 						borrow_paused: false,
 						repay_paused: false,
+						transfer_paused: false,
 					},
 				),
 			],

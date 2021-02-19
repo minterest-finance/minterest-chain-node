@@ -48,7 +48,7 @@ pub type Price = FixedU128;
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
-	MINT = 0,
+	MNT = 0,
 	DOT,
 	KSM,
 	BTC,
@@ -82,4 +82,5 @@ pub enum Operation {
 	Redeem,
 	Borrow,
 	Repay,
+	Transfer,
 }

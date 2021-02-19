@@ -4,7 +4,7 @@
     "LookupSource": "AccountId",
     "CurrencyId": {
       "_enum": [
-        "MINT",
+        "MNT",
         "DOT",
         "KSM",
         "BTC",
@@ -20,7 +20,8 @@
         "Deposit",
         "Redeem",
         "Borrow",
-        "Repay"
+        "Repay",
+        "Transfer"
       ]
     },
     "Pool": {
@@ -54,7 +55,8 @@
       "deposit_paused": "bool",
       "redeem_paused": "bool",
       "borrow_paused": "bool",
-      "repay_paused": "bool"
+      "repay_paused": "bool",
+      "transfer_paused": "bool"
     },
     "MinterestModelData": {
       "kink": "Rate",

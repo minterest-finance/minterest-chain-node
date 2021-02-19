@@ -262,7 +262,7 @@ impl orml_tokens::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const GetMinterestCurrencyId: CurrencyId = CurrencyId::MINT;
+	pub const GetMinterestCurrencyId: CurrencyId = CurrencyId::MNT;
 }
 
 pub type MinterestToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;

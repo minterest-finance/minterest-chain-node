@@ -85,7 +85,7 @@ mod tests {
 	}
 
 	parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MINT;
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
 	}
 
 	type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
@@ -210,22 +210,8 @@ mod tests {
 				pool_id,
 				Pool {
 					total_borrowed,
-					borrow_index: Rate::saturating_from_rational(1, 1),
+					borrow_index: Rate::one(),
 					total_insurance: Balance::zero(),
-				},
-			));
-			self
-		}
-
-		pub fn pool_total_insurance(mut self, pool_id: CurrencyId, total_insurance: Balance) -> Self {
-			self.endowed_accounts
-				.push((TestPools::pools_account_id(), pool_id, total_insurance));
-			self.pools.push((
-				pool_id,
-				Pool {
-					total_borrowed: Balance::zero(),
-					borrow_index: Rate::saturating_from_rational(1, 1),
-					total_insurance,
 				},
 			));
 			self
@@ -258,7 +244,7 @@ mod tests {
 				pool_id,
 				Pool {
 					total_borrowed: Balance::zero(),
-					borrow_index: Rate::saturating_from_rational(1, 1),
+					borrow_index: Rate::one(),
 					total_insurance: Balance::zero(),
 				},
 			));
@@ -312,6 +298,7 @@ mod tests {
 							redeem_paused: false,
 							borrow_paused: false,
 							repay_paused: false,
+							transfer_paused: false,
 						},
 					),
 					(
@@ -321,6 +308,7 @@ mod tests {
 							redeem_paused: false,
 							borrow_paused: false,
 							repay_paused: false,
+							transfer_paused: false,
 						},
 					),
 					(
@@ -330,6 +318,7 @@ mod tests {
 							redeem_paused: true,
 							borrow_paused: true,
 							repay_paused: true,
+							transfer_paused: true,
 						},
 					),
 					(
@@ -339,6 +328,7 @@ mod tests {
 							redeem_paused: false,
 							borrow_paused: false,
 							repay_paused: false,
+							transfer_paused: false,
 						},
 					),
 				],

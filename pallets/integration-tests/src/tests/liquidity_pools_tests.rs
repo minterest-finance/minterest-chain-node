@@ -7,11 +7,10 @@ mod tests {
 
 	// Function `get_exchange_rate + calculate_exchange_rate` scenario #1:
 	#[test]
-	fn get_exchange_rate_deposit_without_insurance() {
+	fn get_exchange_rate_deposit() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
-			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
@@ -40,44 +39,10 @@ mod tests {
 
 	// Function `get_exchange_rate + calculate_exchange_rate` scenario #2:
 	#[test]
-	fn get_exchange_rate_deposit_with_pool_insurance() {
-		ExtBuilder::default()
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
-			.build()
-			.execute_with(|| {
-				// Alice deposit to DOT pool
-				let alice_deposited_amount = 40_000 * DOLLARS;
-				assert_ok!(MinterestProtocol::deposit_underlying(
-					Origin::signed(ALICE),
-					CurrencyId::DOT,
-					alice_deposited_amount
-				));
-
-				// Expected exchange rate && wrapped amount based on params after fn accrue_interest_rate called
-				let expected_amount_wrapped_tokens = 40_000 * DOLLARS;
-				let expected_exchange_rate_mock = Rate::one();
-
-				// Checking if real exchange rate && wrapped amount is equal to the expected
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
-					expected_amount_wrapped_tokens
-				);
-				assert_eq!(
-					TestPools::get_exchange_rate(CurrencyId::DOT),
-					Ok(expected_exchange_rate_mock)
-				);
-			});
-	}
-
-	// Function `get_exchange_rate + calculate_exchange_rate` scenario #3:
-	#[test]
-	fn get_exchange_rate_deposit_and_borrow_without_insurance() {
+	fn get_exchange_rate_deposit_and_borrow() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_total_insurance(CurrencyId::DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
@@ -114,58 +79,14 @@ mod tests {
 			});
 	}
 
-	// Function `get_exchange_rate + calculate_exchange_rate` scenario #4:
+	// Function `get_exchange_rate + calculate_exchange_rate` scenario #3:
 	#[test]
-	fn get_exchange_rate_deposit_and_borrow_with_insurance() {
-		ExtBuilder::default()
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
-			.build()
-			.execute_with(|| {
-				// Alice deposit to DOT pool
-				let alice_deposited_amount = 40_000 * DOLLARS;
-				assert_ok!(MinterestProtocol::deposit_underlying(
-					Origin::signed(ALICE),
-					CurrencyId::DOT,
-					alice_deposited_amount
-				));
-
-				System::set_block_number(2);
-
-				// Alice borrow from DOT pool
-				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
-				assert_ok!(MinterestProtocol::borrow(
-					Origin::signed(ALICE),
-					CurrencyId::DOT,
-					alice_borrowed_amount_in_dot
-				));
-
-				// Expected exchange rate && wrapped amount based on params after fn accrue_interest_rate called
-				let expected_amount_wrapped_tokens = 40_000 * DOLLARS;
-				let expected_exchange_rate_mock = Rate::one();
-
-				// Checking if real exchange rate && wrapped amount is equal to the expected
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
-					expected_amount_wrapped_tokens
-				);
-				assert_eq!(
-					TestPools::get_exchange_rate(CurrencyId::DOT),
-					Ok(expected_exchange_rate_mock)
-				);
-			});
-	}
-
-	// Function `get_exchange_rate + calculate_exchange_rate` scenario #5:
-	#[test]
-	fn get_exchange_rate_few_deposits_and_borrows_with_insurance() {
+	fn get_exchange_rate_few_deposits_and_borrows() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
 			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.pool_user_data(CurrencyId::DOT, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_total_insurance(CurrencyId::DOT, ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
