@@ -26,7 +26,21 @@ fn base_rate_per_block_equal_max_value() -> MinterestModelData {
 #[test]
 fn set_base_rate_per_block_should_work() {
 	new_test_ext().execute_with(|| {
-		// Can be set to 0.0
+		// Set Base rate per block equal 2.0: (10_512_000 / 1) / 5_256_000
+		assert_ok!(TestMinterestModel::set_base_rate_per_block(
+			alice(),
+			CurrencyId::DOT,
+			10_512_000,
+			1
+		));
+		assert_eq!(
+			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).base_rate_per_block,
+			Rate::saturating_from_rational(2, 1)
+		);
+		let expected_event = TestEvent::minterest_model(Event::BaseRatePerBlockHasChanged);
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+
+		// Can be set to 0.0: (0 / 10) / 5_256_000
 		assert_ok!(TestMinterestModel::set_base_rate_per_block(
 			alice(),
 			CurrencyId::DOT,
@@ -35,24 +49,20 @@ fn set_base_rate_per_block_should_work() {
 		));
 		assert_eq!(
 			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).base_rate_per_block,
-			Rate::from_inner(0)
+			Rate::zero()
 		);
-		let expected_event = TestEvent::minterest_model(Event::BaseRatePerBlockHasChanged);
-		assert!(System::events().iter().any(|record| record.event == expected_event));
 
-		// ALICE set Baser rate per block equal 2.0
+		// ALICE set Baser rate per block equal 0,000000009: (47_304 / 1_000_000) / 5_256_000
 		assert_ok!(TestMinterestModel::set_base_rate_per_block(
 			alice(),
 			CurrencyId::DOT,
-			20,
-			10
+			47304,
+			1_000_000
 		));
 		assert_eq!(
 			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).base_rate_per_block,
-			Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
+			Rate::from_inner(9_000_000_000)
 		);
-		let expected_event = TestEvent::minterest_model(Event::BaseRatePerBlockHasChanged);
-		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
 		assert_ok!(TestMinterestModel::set_multiplier_per_block(
@@ -89,15 +99,27 @@ fn set_base_rate_per_block_should_work() {
 #[test]
 fn set_multiplier_per_block_should_work() {
 	new_test_ext().execute_with(|| {
-		// Set Base rate per block equal 2.0
+		// Set Multiplier per block equal 2.0: (10_512_000 / 1) / 5_256_000
+		assert_ok!(TestMinterestModel::set_multiplier_per_block(
+			alice(),
+			CurrencyId::DOT,
+			10_512_000,
+			1
+		));
+		assert_eq!(
+			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).multiplier_per_block,
+			Rate::saturating_from_rational(2, 1)
+		);
+		let expected_event = TestEvent::minterest_model(Event::MultiplierPerBlockHasChanged);
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+
+		// Can be set to 0.0 if Base rate per block grater than zero: (0 / 10) / 5_256_000
 		assert_ok!(TestMinterestModel::set_base_rate_per_block(
 			alice(),
 			CurrencyId::DOT,
-			20,
-			10
+			1,
+			1
 		));
-
-		// Can be set to 0.0
 		assert_ok!(TestMinterestModel::set_multiplier_per_block(
 			alice(),
 			CurrencyId::DOT,
@@ -106,23 +128,19 @@ fn set_multiplier_per_block_should_work() {
 		));
 		assert_eq!(
 			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).multiplier_per_block,
-			Rate::from_inner(0)
+			Rate::zero()
 		);
-		let expected_event = TestEvent::minterest_model(Event::MultiplierPerBlockHasChanged);
-		assert!(System::events().iter().any(|record| record.event == expected_event));
 
-		// Alice set Multiplier per block equal 2.0 / 5_256_000
+		// Alice set Multiplier per block equal 0,000_000_009: (47_304 / 1_000_000) / 5_256_000
 		assert_ok!(TestMinterestModel::set_multiplier_per_block(
 			alice(),
 			CurrencyId::DOT,
-			20,
-			10
+			47304,
+			1_000_000
 		));
-		let expected_event = TestEvent::minterest_model(Event::MultiplierPerBlockHasChanged);
-		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(
 			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).multiplier_per_block,
-			Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
+			Rate::from_inner(9_000_000_000)
 		);
 
 		//  Multiplier per block cannot be set to 0 at the same time as Base rate per block.
@@ -160,18 +178,43 @@ fn set_multiplier_per_block_should_work() {
 #[test]
 fn set_jump_multiplier_per_block_should_work() {
 	new_test_ext().execute_with(|| {
+		// Set Jump multiplier per block equal 2.0: (10_512_000 / 1) / 5_256_000
 		assert_ok!(TestMinterestModel::set_jump_multiplier_per_block(
 			alice(),
 			CurrencyId::DOT,
-			20,
+			10_512_000,
+			1
+		));
+		assert_eq!(
+			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).jump_multiplier_per_block,
+			Rate::saturating_from_rational(2, 1)
+		);
+		let expected_event = TestEvent::minterest_model(Event::JumpMultiplierPerBlockHasChanged);
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+
+		// Can be set to 0.0: (0 / 10) / 5_256_000
+		assert_ok!(TestMinterestModel::set_jump_multiplier_per_block(
+			alice(),
+			CurrencyId::DOT,
+			0,
 			10
 		));
 		assert_eq!(
 			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).jump_multiplier_per_block,
-			Rate::saturating_from_rational(2_000_000_000_000_000_000u128, BLOCKS_PER_YEAR)
+			Rate::zero()
 		);
-		let expected_event = TestEvent::minterest_model(Event::JumpMultiplierPerBlockHasChanged);
-		assert!(System::events().iter().any(|record| record.event == expected_event));
+
+		// Alice set Jump multiplier per block equal 0,000_000_009: (47_304 / 1_000_000) / 5_256_000
+		assert_ok!(TestMinterestModel::set_jump_multiplier_per_block(
+			alice(),
+			CurrencyId::DOT,
+			47_304,
+			1_000_000
+		));
+		assert_eq!(
+			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).jump_multiplier_per_block,
+			Rate::from_inner(9_000_000_000)
+		);
 
 		// Overflow in calculation: 20 / 0
 		assert_noop!(

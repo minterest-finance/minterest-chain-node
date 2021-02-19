@@ -23,8 +23,7 @@ pub mod time {
 	pub const HOURS: BlockNumber = MINUTES * 60;
 	pub const DAYS: BlockNumber = HOURS * 24;
 
-	pub const SECONDS_PER_YEAR: u128 = 365 * DAYS as u128;
-	pub const BLOCKS_PER_YEAR: u128 = SECONDS_PER_YEAR / MILLISECS_PER_BLOCK as u128;
+	pub const BLOCKS_PER_YEAR: u128 = 365 * DAYS as u128;
 	// BLOCKS_PER_YEAR has to be 5256000
 }
 

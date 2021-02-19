@@ -117,7 +117,7 @@ decl_module! {
 			let new_jump_multiplier_per_year = Rate::checked_from_rational(jump_multiplier_rate_per_year_n, jump_multiplier_rate_per_year_d)
 				.ok_or(Error::<T>::NumOverflow)?;
 			let new_jump_multiplier_per_block = new_jump_multiplier_per_year
-				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
+				.checked_div(&Rate::saturating_from_rational(T::BlocksPerYear::get(), 1))
 				.ok_or(Error::<T>::NumOverflow)?;
 
 			// Write the previously calculated values into storage.
@@ -148,7 +148,7 @@ decl_module! {
 			let new_base_rate_per_year = Rate::checked_from_rational(base_rate_per_year_n, base_rate_per_year_d)
 				.ok_or(Error::<T>::NumOverflow)?;
 			let new_base_rate_per_block = new_base_rate_per_year
-				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
+				.checked_div(&Rate::saturating_from_rational(T::BlocksPerYear::get(), 1))
 				.ok_or(Error::<T>::NumOverflow)?;
 
 			// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
@@ -184,7 +184,7 @@ decl_module! {
 			let new_multiplier_per_year = Rate::checked_from_rational(multiplier_rate_per_year_n, multiplier_rate_per_year_d)
 				.ok_or(Error::<T>::NumOverflow)?;
 			let new_multiplier_per_block = new_multiplier_per_year
-				.checked_div(&Rate::from_inner(T::BlocksPerYear::get()))
+				.checked_div(&Rate::saturating_from_rational(T::BlocksPerYear::get(), 1))
 				.ok_or(Error::<T>::NumOverflow)?;
 
 			// Multiplier per block cannot be set to 0 at the same time as Base rate per block .
