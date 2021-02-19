@@ -435,26 +435,14 @@ fn demo_scenario_n2_without_insurance_should_work() {
 #[test]
 fn test_get_underlying_balance_rpc() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(
-			get_underlying_balance_rpc(BOB::get(), MDOT),
-			Some(dollars(0))
-		);
-		assert_eq!(
-			get_underlying_balance_rpc(BOB::get(), METH),
-			Some(dollars(0))
-		);
+		assert_eq!(get_underlying_balance_rpc(BOB::get(), MDOT), Some(dollars(0)));
+		assert_eq!(get_underlying_balance_rpc(BOB::get(), METH), Some(dollars(0)));
 
 		assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
 		assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
 
-		assert_eq!(
-			get_underlying_balance_rpc(BOB::get(), MDOT),
-			Some(dollars(50_000))
-		);
-		assert_eq!(
-			get_underlying_balance_rpc(BOB::get(), METH),
-			Some(dollars(70_000))
-		);
+		assert_eq!(get_underlying_balance_rpc(BOB::get(), MDOT), Some(dollars(50_000)));
+		assert_eq!(get_underlying_balance_rpc(BOB::get(), METH), Some(dollars(70_000)));
 	});
 }
 
@@ -475,16 +463,10 @@ fn test_get_borrow_balance_rpc() {
 
 		System::set_block_number(20);
 
-		assert_eq!(
-			get_borrow_balance_rpc(BOB::get(), DOT),
-			Some(dollars(0))
-		);
+		assert_eq!(get_borrow_balance_rpc(BOB::get(), DOT), Some(dollars(0)));
 
 		assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(100_000)));
 
-		assert_eq!(
-			get_borrow_balance_rpc(BOB::get(), DOT),
-			Some(dollars(100_000))
-		);
+		assert_eq!(get_borrow_balance_rpc(BOB::get(), DOT), Some(dollars(100_000)));
 	});
 }
