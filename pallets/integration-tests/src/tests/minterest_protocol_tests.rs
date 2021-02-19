@@ -784,7 +784,6 @@ mod tests {
 				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT));
 
 				// Checking free balance DOT/MDOT && ETH/METH in pool.
-				// current_exchange_rate == 1000000221932654817
 				let expected_amount_redeemed_underlying_assets = 60000000136963397880000;
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::DOT, &ALICE),
