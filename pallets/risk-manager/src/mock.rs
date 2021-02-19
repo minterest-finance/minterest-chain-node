@@ -153,7 +153,6 @@ parameter_types! {
 impl Trait for Test {
 	type Event = TestEvent;
 	type UnsignedPriority = RiskManagerPriority;
-	type MultiCurrency = orml_tokens::Module<Test>;
 	type LiquidationPoolsManager = liquidation_pools::Module<Test>;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 }
