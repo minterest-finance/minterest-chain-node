@@ -209,40 +209,6 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
-		self.pools.push((
-			pool_id,
-			Pool {
-				total_borrowed: Balance::zero(),
-				borrow_index: Rate::saturating_from_rational(1, 1),
-				total_insurance: Balance::zero(),
-			},
-		));
-		self
-	}
-
-	pub fn pool_user_data(
-		mut self,
-		pool_id: CurrencyId,
-		user: AccountId,
-		total_borrowed: Balance,
-		interest_index: Rate,
-		collateral: bool,
-		liquidation_attempts: u8,
-	) -> Self {
-		self.pool_user_data.push((
-			pool_id,
-			user,
-			PoolUserData {
-				total_borrowed,
-				interest_index,
-				collateral,
-				liquidation_attempts,
-			},
-		));
-		self
-	}
-
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 

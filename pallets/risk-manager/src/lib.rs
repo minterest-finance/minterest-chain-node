@@ -404,22 +404,23 @@ impl<T: Trait> Module<T> {
 	/// Defines the type of liquidation (partial or full) and causes liquidation.
 	///
 	/// - `borrower`: the borrower in automatic liquidation.
-	/// - `pool_id`: the CurrencyId of the pool with loan, for which automatic liquidation is performed.
+	/// - `liquidated_pool_id`: the CurrencyId of the pool with loan, for which automatic
+	/// liquidation is performed.
 	pub fn liquidate_unsafe_loan(borrower: T::AccountId, liquidated_pool_id: CurrencyId) -> DispatchResult {
 		<Controller<T>>::accrue_interest_rate(liquidated_pool_id)?;
 
 		// Read oracle price for borrowed pool.
 		let price_borrowed = <Oracle<T>>::get_underlying_price(liquidated_pool_id)?;
 
-		// Get borrower borrow balance and calculate seize_amount:
-		// repay_tokens = borrow_balance (Tokens)
-		// repay_amount = repay_tokens * price_borrowed (USD)
+		// Get borrower borrow balance and calculate total_repay_amount (in USD):
+		// total_repay_amount = borrow_balance * price_borrowed
 		let borrow_balance = <Controller<T>>::borrow_balance_stored(&borrower, liquidated_pool_id)?;
-		let total_repay_tokens = borrow_balance;
-		let total_repay_amount = Rate::from_inner(total_repay_tokens)
+		let total_repay_amount = Rate::from_inner(borrow_balance)
 			.checked_mul(&price_borrowed)
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
+
+		ensure!(total_repay_amount > Balance::zero(), Error::<T>::LiquidationRejection);
 
 		let liquidation_attempts = <LiquidityPools<T>>::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
 		let mut is_partial_liquidation: bool = false;
@@ -430,9 +431,7 @@ impl<T: Trait> Module<T> {
 			// Partial liquidation.
 			is_partial_liquidation = true;
 
-			//TODO: temporary implementation for partial liquidation:
-			// seize_amount = liquidation_incentive * (0.3 * total_repay_amount) (USD)
-			// repay_amount = 0.3 * total_repay_amount (USD)
+			// Calculate sum required to liquidate for partial liquidation.
 			let (seize_amount, repay_amount, repay_tokens) = Self::liquidate_calculate_seize_and_repay(
 				liquidated_pool_id,
 				total_repay_amount,
@@ -458,15 +457,14 @@ impl<T: Trait> Module<T> {
 			));
 		} else {
 			// Full liquidation.
-
-			// seize_amount = liquidation_incentive * total_repay_amount (USD)
+			// Calculate sum required to liquidate for complete liquidation.
 			let (seize_amount, _, _) = Self::liquidate_calculate_seize_and_repay(
 				liquidated_pool_id,
 				total_repay_amount,
 				is_partial_liquidation,
 			)?;
 
-			Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, total_repay_tokens, seize_amount)?;
+			Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, borrow_balance, seize_amount)?;
 
 			// Set the number of attempts to 0.
 			liquidity_pools::PoolUserDates::<T>::try_mutate(liquidated_pool_id, &borrower, |p| -> DispatchResult {
@@ -513,63 +511,65 @@ impl<T: Trait> Module<T> {
 		let pools = <LiquidityPools<T>>::get_pools_are_collateral(&borrower)?;
 
 		for collateral_pool_id in pools.into_iter() {
-			if seize_amount.is_zero() {
-				break;
-			}
-			<Controller<T>>::accrue_interest_rate(collateral_pool_id)?;
+			if !seize_amount.is_zero() {
+				<Controller<T>>::accrue_interest_rate(collateral_pool_id)?;
 
-			let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&collateral_pool_id)?;
-			let balance_wrapped_token = T::MultiCurrency::free_balance(wrapped_id, &borrower);
+				let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&collateral_pool_id)?;
+				let balance_wrapped_token = T::MultiCurrency::free_balance(wrapped_id, &borrower);
 
-			// Get the exchange rate, read oracle price for collateral pool and calculate the number
-			// of collateral tokens to seize:
-			// seize_tokens = seize_amount / (price_collateral * exchange_rate)
-			let price_collateral = <Oracle<T>>::get_underlying_price(collateral_pool_id)?;
-			let exchange_rate = <LiquidityPools<T>>::get_exchange_rate(collateral_pool_id)?;
-			let seize_tokens = Rate::from_inner(seize_amount)
-				.checked_div(
-					&price_collateral
-						.checked_mul(&exchange_rate)
-						.ok_or(Error::<T>::NumOverflow)?,
-				)
-				.map(|x| x.into_inner())
-				.ok_or(Error::<T>::NumOverflow)?;
+				// Get the exchange rate, read oracle price for collateral pool and calculate the number
+				// of collateral tokens to seize:
+				// seize_tokens = seize_amount / (price_collateral * exchange_rate)
+				let price_collateral = <Oracle<T>>::get_underlying_price(collateral_pool_id)?;
+				let exchange_rate = <LiquidityPools<T>>::get_exchange_rate(collateral_pool_id)?;
+				let seize_tokens = Rate::from_inner(seize_amount)
+					.checked_div(
+						&price_collateral
+							.checked_mul(&exchange_rate)
+							.ok_or(Error::<T>::NumOverflow)?,
+					)
+					.map(|x| x.into_inner())
+					.ok_or(Error::<T>::NumOverflow)?;
 
-			// Check if there are enough collateral wrapped tokens to withdraw seize_tokens.
-			match balance_wrapped_token.cmp(&seize_tokens) {
-				// Not enough collateral wrapped tokens.
-				Ordering::Less => {
-					// seize_underlying = seize_tokens * exchange_rate
-					let seize_underlying =
-						<LiquidityPools<T>>::convert_from_wrapped(wrapped_id, balance_wrapped_token)?;
-					T::MultiCurrency::withdraw(wrapped_id, &borrower, balance_wrapped_token)?;
-					T::MultiCurrency::transfer(
-						collateral_pool_id,
-						&liquidity_pool_account_id,
-						&liquidation_pool_account_id,
-						seize_underlying,
-					)?;
-					seize_amount -= Rate::from_inner(balance_wrapped_token)
-						.checked_mul(
-							&price_collateral
-								.checked_mul(&exchange_rate)
-								.ok_or(Error::<T>::NumOverflow)?,
-						)
-						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?;
-				}
-				// Enough collateral wrapped tokens. Transfer all seize_tokens to liquidation_pool.
-				_ => {
-					// seize_underlying = seize_tokens * exchange_rate
-					let seize_underlying = <LiquidityPools<T>>::convert_from_wrapped(wrapped_id, seize_tokens)?;
-					T::MultiCurrency::withdraw(wrapped_id, &borrower, seize_tokens)?;
-					T::MultiCurrency::transfer(
-						collateral_pool_id,
-						&liquidity_pool_account_id,
-						&liquidation_pool_account_id,
-						seize_underlying,
-					)?;
-					seize_amount = Balance::zero();
+				// Check if there are enough collateral wrapped tokens to withdraw seize_tokens.
+				match balance_wrapped_token.cmp(&seize_tokens) {
+					// Not enough collateral wrapped tokens.
+					Ordering::Less => {
+						// seize_underlying = balance_wrapped_token * exchange_rate
+						let seize_underlying =
+							<LiquidityPools<T>>::convert_from_wrapped(wrapped_id, balance_wrapped_token)?;
+
+						T::MultiCurrency::withdraw(wrapped_id, &borrower, balance_wrapped_token)?;
+
+						T::MultiCurrency::transfer(
+							collateral_pool_id,
+							&liquidity_pool_account_id,
+							&liquidation_pool_account_id,
+							seize_underlying,
+						)?;
+
+						// seize_amount = seize_amount - (seize_underlying * price_collateral)
+						seize_amount -= Rate::from_inner(seize_underlying)
+							.checked_mul(&price_collateral)
+							.map(|x| x.into_inner())
+							.ok_or(Error::<T>::NumOverflow)?;
+					}
+					// Enough collateral wrapped tokens. Transfer all seize_tokens to liquidation_pool.
+					_ => {
+						// seize_underlying = seize_tokens * exchange_rate
+						let seize_underlying = <LiquidityPools<T>>::convert_from_wrapped(wrapped_id, seize_tokens)?;
+
+						T::MultiCurrency::withdraw(wrapped_id, &borrower, seize_tokens)?;
+
+						T::MultiCurrency::transfer(
+							collateral_pool_id,
+							&liquidity_pool_account_id,
+							&liquidation_pool_account_id,
+							seize_underlying,
+						)?;
+						// seize_amount = 0, since all seize_tokens have already been withdrawn
+						seize_amount = Balance::zero();
+					}
 				}
 			}
 		}
@@ -580,15 +580,21 @@ impl<T: Trait> Module<T> {
 	}
 
 	// FIXME: Temporary implementation.
-	/// Calculate sum required to liquidate for partial and complete liquidation according to coming back to safe
-	/// supply ratio.
+	/// Calculate sum required to liquidate for partial and complete liquidation.
 	///
-	/// - `repay_amount`: Current amount of debt converted into usd.
+	/// - `liquidated_pool_id`: the CurrencyId of the pool with loan, for which automatic
+	/// liquidation is performed.
+	/// - `total_repay_amount`: total amount of debt converted into usd.
+	/// - `is_partial_liquidation`: partial or complete liquidation.
 	///
-	/// Return sum in USD required to liquidate.
+	/// Returns (`seize_amount`, `repay_amount`, `repay_tokens`)
+	/// - `seize_amount`: the number of collateral tokens to seize converted
+	/// into USD (consider liquidation_incentive).
+	/// - `repay_amount`: current amount of debt converted into usd.
+	/// - `repay_tokens`: the amount of the underlying borrowed asset to repay.
 	pub fn liquidate_calculate_seize_and_repay(
 		liquidated_pool_id: CurrencyId,
-		repay_amount: Balance,
+		total_repay_amount: Balance,
 		is_partial_liquidation: bool,
 	) -> TripleBalanceResult {
 		let liquidation_incentive = Self::risk_manager_dates(liquidated_pool_id).liquidation_incentive;
@@ -598,15 +604,15 @@ impl<T: Trait> Module<T> {
 			false => Rate::one(),
 		};
 
-		// seize_amount = liquidation_incentive * temporary_factor * repay_amount
-		let seize_amount = Rate::from_inner(repay_amount)
+		// seize_amount = liquidation_incentive * temporary_factor * total_repay_amount
+		let seize_amount = Rate::from_inner(total_repay_amount)
 			.checked_mul(&temporary_factor)
 			.and_then(|v| v.checked_mul(&liquidation_incentive))
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		// repay_amount = temporary_factor * repay_amount
-		let repay_amount = Rate::from_inner(repay_amount)
+		// repay_amount = temporary_factor * total_repay_amount
+		let repay_amount = Rate::from_inner(total_repay_amount)
 			.checked_mul(&temporary_factor)
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
