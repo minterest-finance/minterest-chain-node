@@ -12,7 +12,7 @@ use orml_utilities::with_transaction_result;
 use pallet_traits::PoolsManager;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::traits::{CheckedDiv, CheckedMul};
+use sp_runtime::traits::{CheckedDiv, CheckedMul, One};
 use sp_runtime::{
 	offchain::{
 		storage::StorageValueRef,
@@ -423,62 +423,29 @@ impl<T: Trait> Module<T> {
 		ensure!(total_repay_amount > Balance::zero(), Error::<T>::LiquidationRejection);
 
 		let liquidation_attempts = <LiquidityPools<T>>::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
-		let mut is_partial_liquidation: bool = false;
 
-		if total_repay_amount >= RiskManagerDates::get(liquidated_pool_id).min_sum
+		let is_partial_liquidation = match total_repay_amount >= RiskManagerDates::get(liquidated_pool_id).min_sum
 			&& liquidation_attempts < RiskManagerDates::get(liquidated_pool_id).max_attempts
 		{
-			// Partial liquidation.
-			is_partial_liquidation = true;
+			true => true,
+			false => false,
+		};
 
-			// Calculate sum required to liquidate for partial liquidation.
-			let (seize_amount, repay_amount, repay_tokens) = Self::liquidate_calculate_seize_and_repay(
-				liquidated_pool_id,
-				total_repay_amount,
-				is_partial_liquidation,
-			)?;
+		// Calculate sum required to liquidate.
+		let (seize_amount, repay_amount, repay_tokens) =
+			Self::liquidate_calculate_seize_and_repay(liquidated_pool_id, total_repay_amount, is_partial_liquidation)?;
 
-			Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, repay_tokens, seize_amount)?;
+		Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, repay_tokens, seize_amount)?;
 
-			// Increase the number of attempts by 1
-			liquidity_pools::PoolUserDates::<T>::try_mutate(liquidated_pool_id, &borrower, |p| -> DispatchResult {
-				p.liquidation_attempts = p
-					.liquidation_attempts
-					.checked_add(1_u8)
-					.ok_or(Error::<T>::NumOverflow)?;
-				Ok(())
-			})?;
+		Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation)?;
 
-			Self::deposit_event(RawEvent::LiquidateUnsafeLoan(
-				borrower,
-				repay_amount,
-				liquidated_pool_id,
-				is_partial_liquidation,
-			));
-		} else {
-			// Full liquidation.
-			// Calculate sum required to liquidate for complete liquidation.
-			let (seize_amount, _, _) = Self::liquidate_calculate_seize_and_repay(
-				liquidated_pool_id,
-				total_repay_amount,
-				is_partial_liquidation,
-			)?;
+		Self::deposit_event(RawEvent::LiquidateUnsafeLoan(
+			borrower,
+			repay_amount,
+			liquidated_pool_id,
+			is_partial_liquidation,
+		));
 
-			Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, borrow_balance, seize_amount)?;
-
-			// Set the number of attempts to 0.
-			liquidity_pools::PoolUserDates::<T>::try_mutate(liquidated_pool_id, &borrower, |p| -> DispatchResult {
-				p.liquidation_attempts = 0_u8;
-				Ok(())
-			})?;
-
-			Self::deposit_event(RawEvent::LiquidateUnsafeLoan(
-				borrower,
-				total_repay_amount,
-				liquidated_pool_id,
-				is_partial_liquidation,
-			));
-		}
 		Ok(())
 	}
 
@@ -489,7 +456,7 @@ impl<T: Trait> Module<T> {
 	/// - `liquidated_pool_id`: the CurrencyId of the pool with loan, for which automatic liquidation is performed.
 	/// - `repay_tokens`: the amount of the underlying borrowed asset to repay.
 	/// - `seize_amount`: the number of collateral tokens to seize converted into USD.
-	pub fn liquidate_borrow_fresh(
+	fn liquidate_borrow_fresh(
 		borrower: &T::AccountId,
 		liquidated_pool_id: CurrencyId,
 		repay_tokens: Balance,
@@ -626,6 +593,32 @@ impl<T: Trait> Module<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok((seize_amount, repay_amount, repay_tokens))
+	}
+
+	/// Changes the parameter liquidation_attempts depending on the type of liquidation.
+	///
+	/// - `liquidated_pool_id`: the CurrencyId of the pool with loan, for which automatic.
+	/// - `borrower`: the borrower in automatic liquidation.
+	/// - `is_partial_liquidation`: partial or complete liquidation.
+	fn mutate_liquidation_attempts(
+		liquidated_pool_id: CurrencyId,
+		borrower: &T::AccountId,
+		is_partial_liquidation: bool,
+	) -> DispatchResult {
+		// partial_liquidation -> liquidation_attempts += 1
+		// complete_liquidation -> liquidation_attempts = 0
+		liquidity_pools::PoolUserDates::<T>::try_mutate(liquidated_pool_id, &borrower, |p| -> DispatchResult {
+			if is_partial_liquidation {
+				p.liquidation_attempts = p
+					.liquidation_attempts
+					.checked_add(u8::one())
+					.ok_or(Error::<T>::NumOverflow)?;
+			} else {
+				p.liquidation_attempts = u8::zero();
+			}
+			Ok(())
+		})?;
+		Ok(())
 	}
 }
 
