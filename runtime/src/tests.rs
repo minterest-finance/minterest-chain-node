@@ -845,25 +845,29 @@ fn test_get_underlying_balance_rpc() {
 
 #[test]
 fn test_get_borrow_balance_rpc() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::deposit_insurance(alice(), DOT, dollars(100_000)));
-		assert_ok!(Controller::deposit_insurance(alice(), ETH, dollars(100_000)));
-		assert_eq!(pool_total_insurance(DOT), dollars(100_000));
-		assert_eq!(pool_total_insurance(ETH), dollars(100_000));
+	ExtBuilder::default()
+		.pool_initial(CurrencyId::DOT)
+		.pool_initial(CurrencyId::ETH)
+		.build()
+		.execute_with(|| {
+			assert_ok!(Controller::deposit_insurance(alice(), DOT, dollars(100_000)));
+			assert_ok!(Controller::deposit_insurance(alice(), ETH, dollars(100_000)));
+			assert_eq!(pool_total_insurance(DOT), dollars(100_000));
+			assert_eq!(pool_total_insurance(ETH), dollars(100_000));
 
-		System::set_block_number(10);
+			System::set_block_number(10);
 
-		assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
-		assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
-		assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
-		assert_ok!(MinterestProtocol::enable_as_collateral(bob(), ETH));
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
+			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), ETH));
 
-		System::set_block_number(20);
+			System::set_block_number(20);
 
-		assert_eq!(get_borrow_balance_rpc(BOB::get(), DOT), Some(dollars(0)));
+			assert_eq!(get_borrow_balance_rpc(BOB::get(), DOT), Some(dollars(0)));
 
-		assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(100_000)));
+			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(100_000)));
 
-		assert_eq!(get_borrow_balance_rpc(BOB::get(), DOT), Some(dollars(100_000)));
-	});
+			assert_eq!(get_borrow_balance_rpc(BOB::get(), DOT), Some(dollars(100_000)));
+		});
 }
