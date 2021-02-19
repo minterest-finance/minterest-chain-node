@@ -217,7 +217,7 @@ impl ExtBuilder {
 						max_attempts: 3,
 						min_sum: 100_000 * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
+						liquidation_incentive: Rate::saturating_from_rational(105, 100),
 					},
 				),
 				(
@@ -226,7 +226,7 @@ impl ExtBuilder {
 						max_attempts: 3,
 						min_sum: 100_000 * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
+						liquidation_incentive: Rate::saturating_from_rational(105, 100),
 					},
 				),
 			],
@@ -542,16 +542,11 @@ fn charlie() -> <Runtime as frame_system::Trait>::Origin {
 // 		.liquidation_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
 // 		.user_balance(ALICE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
 // 		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-// 		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 2)
+// 		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 3)
 // 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 // 		.build()
 // 		.execute_with(|| {
-// 			assert_ok!(RiskManager::liquidate_borrow_fresh(
-// 				&ALICE::get(),
-// 				CurrencyId::DOT,
-// 				90_000 * DOLLARS,
-// 				180_000 * DOLLARS,
-// 			));
+// 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 //
 // 			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
 // 				ALICE::get(),
@@ -588,19 +583,77 @@ fn charlie() -> <Runtime as frame_system::Trait>::Origin {
 // 		})
 // }
 
+#[test]
+fn complete_liquidation_multi_collateral_should_work() {
+	ExtBuilder::default()
+		.liquidity_pool_balance(CurrencyId::DOT, 160_000 * DOLLARS)
+		.liquidity_pool_balance(CurrencyId::ETH, 50_000 * DOLLARS)
+		.liquidation_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
+		.liquidation_pool_balance(CurrencyId::ETH, 100_000 * DOLLARS)
+		.user_balance(ALICE::get(), CurrencyId::MDOT, 50_000 * DOLLARS)
+		.user_balance(ALICE::get(), CurrencyId::METH, 50_000 * DOLLARS)
+		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
+		.user_balance(CHARLIE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
+		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 3)
+		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Rate::one(), true, 0)
+		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
+
+			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
+				ALICE::get(),
+				180_000_000_583_200_000_000_000,
+				CurrencyId::DOT,
+				false,
+			));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
+			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()), 0);
+			assert_eq!(
+				Currencies::free_balance(CurrencyId::METH, &ALICE::get()),
+				5_499_999_746_308_000_000_000
+			);
+
+			assert_eq!(
+				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
+				200_000_000_239_112_000_000_000
+			);
+			assert_eq!(
+				LiquidityPools::get_pool_available_liquidity(CurrencyId::ETH),
+				5500 * DOLLARS
+			);
+
+			assert_eq!(
+				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
+				60_000 * DOLLARS
+			);
+			assert_eq!(
+				LiquidationPools::get_pool_available_liquidity(CurrencyId::ETH),
+				144_500 * DOLLARS
+			);
+
+			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, 0);
+			assert_eq!(
+				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
+				0
+			);
+
+			assert_eq!(
+				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).liquidation_attempts,
+				0
+			);
+		})
+}
+
 // #[test]
-// fn complete_liquidation_multi_collateral_should_work() {
+// fn partial_liquidation_one_collateral_should_work() {
 // 	ExtBuilder::default()
-// 		.liquidity_pool_balance(CurrencyId::DOT, 160_000 * DOLLARS)
-// 		.liquidity_pool_balance(CurrencyId::ETH, 50_000 * DOLLARS)
+// 		.liquidity_pool_balance(CurrencyId::DOT, 110_000 * DOLLARS)
 // 		.liquidation_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
-// 		.liquidation_pool_balance(CurrencyId::ETH, 100_000 * DOLLARS)
-// 		.user_balance(ALICE::get(), CurrencyId::MDOT, 50_000 * DOLLARS)
-// 		.user_balance(ALICE::get(), CurrencyId::METH, 50_000 * DOLLARS)
+// 		.user_balance(ALICE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
 // 		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-// 		.user_balance(CHARLIE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-// 		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 2)
-// 		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Rate::one(), true, 0)
+// 		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 0)
 // 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 // 		.build()
 // 		.execute_with(|| {
@@ -608,96 +661,41 @@ fn charlie() -> <Runtime as frame_system::Trait>::Origin {
 //
 // 			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
 // 				ALICE::get(),
-// 				180_000 * DOLLARS,
+// 				54_000_000_218_700_000_000_000,
 // 				CurrencyId::DOT,
-// 				false,
+// 				true,
 // 			));
-// 			// assert!(System::events().iter().any(|record| record.event == expected_event));
+// 			assert!(System::events().iter().any(|record| record.event == expected_event));
 //
-// 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()), 0);
 // 			assert_eq!(
-// 				Currencies::free_balance(CurrencyId::METH, &ALICE::get()),
-// 				5500 * DOLLARS
+// 				Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()),
+// 				71_649_999_931_683_587_612_056
 // 			);
 //
 // 			assert_eq!(
 // 				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
-// 				200_000 * DOLLARS
+// 				108_649_999_994_532_500_000_000
 // 			);
-// 			assert_eq!(
-// 				LiquidityPools::get_pool_available_liquidity(CurrencyId::ETH),
-// 				5500 * DOLLARS
-// 			);
-//
 // 			assert_eq!(
 // 				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
-// 				60_000 * DOLLARS
-// 			);
-// 			assert_eq!(
-// 				LiquidationPools::get_pool_available_liquidity(CurrencyId::ETH),
-// 				144_500 * DOLLARS
+// 				101_350_000_005_467_500_000_000
 // 			);
 //
-// 			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, 0);
+// 			assert_eq!(
+// 				LiquidityPools::pools(CurrencyId::DOT).total_borrowed,
+// 				63_000_000_255_150_000_000_000
+// 			);
 // 			assert_eq!(
 // 				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
-// 				0
+// 				63_000_000_255_150_000_000_000
 // 			);
 //
 // 			assert_eq!(
 // 				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).liquidation_attempts,
-// 				0
+// 				1
 // 			);
 // 		})
 // }
-
-#[test]
-fn partial_liquidation_one_collateral_should_work() {
-	ExtBuilder::default()
-		.liquidity_pool_balance(CurrencyId::DOT, 110_000 * DOLLARS)
-		.liquidation_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
-		.user_balance(ALICE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 0)
-		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
-		.build()
-		.execute_with(|| {
-			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT,));
-
-			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
-				ALICE::get(),
-				54_000 * DOLLARS,
-				CurrencyId::DOT,
-				true,
-			));
-			assert!(System::events().iter().any(|record| record.event == expected_event));
-
-			assert_eq!(
-				Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()),
-				71_650 * DOLLARS
-			);
-
-			assert_eq!(
-				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
-				108_650 * DOLLARS
-			);
-			assert_eq!(
-				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
-				101_350 * DOLLARS
-			);
-
-			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, 63_000 * DOLLARS);
-			assert_eq!(
-				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
-				63_000 * DOLLARS
-			);
-
-			assert_eq!(
-				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).liquidation_attempts,
-				1
-			);
-		})
-}
 //
 // #[test]
 // fn partial_liquidation_multi_collateral_should_work() {
@@ -715,16 +713,11 @@ fn partial_liquidation_one_collateral_should_work() {
 // 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 // 		.build()
 // 		.execute_with(|| {
-// 			assert_ok!(RiskManager::liquidate_borrow_fresh(
-// 				&ALICE::get(),
-// 				CurrencyId::DOT,
-// 				90_000 * DOLLARS,
-// 				180_000 * DOLLARS,
-// 			));
+// 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 //
 // 			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
 // 				ALICE::get(),
-// 				54_000 * DOLLARS,
+// 				54_000_000_198_818_181_774_000,
 // 				CurrencyId::DOT,
 // 				true,
 // 			));
@@ -736,31 +729,34 @@ fn partial_liquidation_one_collateral_should_work() {
 // 			);
 // 			assert_eq!(
 // 				Currencies::free_balance(CurrencyId::METH, &ALICE::get()),
-// 				51_650 * DOLLARS
+// 				51_649_999_895_620_454_568_650
 // 			);
 //
 // 			assert_eq!(
 // 				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
-// 				157_000 * DOLLARS
+// 				157_000_000_099_409_090_887_000
 // 			);
 // 			assert_eq!(
 // 				LiquidityPools::get_pool_available_liquidity(CurrencyId::ETH),
-// 				51_650 * DOLLARS
+// 				51_649_999_895_620_454_568_650
 // 			);
 //
 // 			assert_eq!(
 // 				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
-// 				73_000 * DOLLARS
+// 				72_999_999_900_590_909_113_000
 // 			);
 // 			assert_eq!(
 // 				LiquidationPools::get_pool_available_liquidity(CurrencyId::ETH),
-// 				128_350 * DOLLARS
+// 				128_350_000_104_379_545_431_350
 // 			);
 //
-// 			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, 63_000 * DOLLARS);
+// 			assert_eq!(
+// 				LiquidityPools::pools(CurrencyId::DOT).total_borrowed,
+// 				63_000_000_231_954_545_403_000
+// 			);
 // 			assert_eq!(
 // 				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
-// 				63_000 * DOLLARS
+// 				63_000_000_231_954_545_403_000
 // 			);
 //
 // 			assert_eq!(
@@ -778,19 +774,14 @@ fn partial_liquidation_one_collateral_should_work() {
 // 		.user_balance(ALICE::get(), CurrencyId::MDOT, 50_000 * DOLLARS)
 // 		.user_balance(ALICE::get(), CurrencyId::METH, 50_000 * DOLLARS)
 // 		.user_balance(CHARLIE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-// 		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 2)
+// 		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 3)
 // 		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Rate::one(), false, 0)
 // 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 // 		.build()
 // 		.execute_with(|| {
 // 			assert_err!(
-// 				RiskManager::liquidate_borrow_fresh(
-// 					&ALICE::get(),
-// 					CurrencyId::DOT,
-// 					90_000 * DOLLARS,
-// 					180_000 * DOLLARS,
-// 				),
-// 				risk_manager::Error::<Runtime>::LiquidationRejection
+// 				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
+// 				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingsAssets
 // 			);
 // 		})
 // }
@@ -809,13 +800,8 @@ fn partial_liquidation_one_collateral_should_work() {
 // 		.build()
 // 		.execute_with(|| {
 // 			assert_err!(
-// 				RiskManager::liquidate_borrow_fresh(
-// 					&ALICE::get(),
-// 					CurrencyId::DOT,
-// 					90_000 * DOLLARS,
-// 					180_000 * DOLLARS,
-// 				),
-// 				risk_manager::Error::<Runtime>::LiquidationRejection
+// 				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
+// 				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingsAssets
 // 			);
 // 		})
 // }
