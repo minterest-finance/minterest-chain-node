@@ -19,6 +19,7 @@ mod tests {
 			.execute_with(|| {
 				// INITIAL PARAMS
 				/* ------------------------------------------------------------------------------ */
+				System::set_block_number(0);
 
 				let alice_dot_free_balance_start: Balance = ONE_HUNDRED;
 				let alice_m_dot_free_balance_start: Balance = BALANCE_ZERO;
@@ -32,9 +33,9 @@ mod tests {
 				// ACTION: DEPOSIT INSURANCE
 				/* ------------------------------------------------------------------------------ */
 
-				// Add liquidity to DOT pool from Insurance by Admin
+				// Add liquidity to DOT pool by Admin
 				let admin_deposit_amount_block_number_0: Balance = 100_000 * DOLLARS;
-				assert_ok!(TestController::deposit_insurance(
+				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
 					CurrencyId::DOT,
 					admin_deposit_amount_block_number_0
@@ -53,25 +54,26 @@ mod tests {
 				);
 
 				// Checking free balance MDOT in pool.
-				// Admin doesn't have to get wrapped token after adding liquidity from insurance.
 				assert_eq!(
 					Currencies::total_issuance(CurrencyId::MDOT),
-					pool_m_dot_total_issuance_start
+					pool_m_dot_total_issuance_start + admin_deposit_amount_block_number_0
 				);
 
 				// Checking free balance DOT && MDOT
+				// Admin gets 100_000 wrapped token after adding liquidity by exchange rate 1:1
 				// ADMIN:
 				assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), BALANCE_ZERO);
-				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), BALANCE_ZERO);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ADMIN),
+					admin_deposit_amount_block_number_0
+				);
 
 				// Checking DOT pool Storage params
 				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, Rate::one());
-				// Total insurance changed: 0 -> 100 000
-				let pool_total_insurance_block_number_0 =
-					pool_total_insurance_start + admin_deposit_amount_block_number_0;
+				// Total insurance didn't changed.
 				assert_eq!(
 					TestPools::pools(CurrencyId::DOT).total_insurance,
-					pool_total_insurance_block_number_0
+					pool_total_insurance_start
 				);
 				assert_eq!(
 					TestPools::pools(CurrencyId::DOT).total_borrowed,
@@ -88,7 +90,7 @@ mod tests {
 				// ADMIN:
 				assert_eq!(
 					TestPools::pool_user_data(CurrencyId::DOT, ADMIN).total_borrowed,
-					alice_dot_total_borrow_start
+					BALANCE_ZERO
 				);
 				assert_eq!(
 					TestPools::pool_user_data(CurrencyId::DOT, ADMIN).interest_index,
@@ -121,11 +123,11 @@ mod tests {
 				);
 
 				// Checking free balance MDOT in pool.
-				// Admin doesn't have to get wrapped token after adding liquidity from insurance.
-				// Alice gets wrapped token after adding liquidity by exchange rate 1:1
-				// Expected: 60 000
-				let pool_m_dot_free_balance_block_number_1: Balance =
-					pool_m_dot_total_issuance_start + alice_deposit_amount_block_number_1;
+				// Alice gets 60 000 wrapped token after adding liquidity by exchange rate 1:1
+				// Sum expected: 160 000
+				let pool_m_dot_free_balance_block_number_1: Balance = pool_m_dot_total_issuance_start
+					+ admin_deposit_amount_block_number_0
+					+ alice_deposit_amount_block_number_1;
 				assert_eq!(
 					Currencies::total_issuance(CurrencyId::MDOT),
 					pool_m_dot_free_balance_block_number_1
@@ -134,7 +136,10 @@ mod tests {
 				// Checking free balance DOT && MDOT
 				// ADMIN:
 				assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), BALANCE_ZERO);
-				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), BALANCE_ZERO);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ADMIN),
+					admin_deposit_amount_block_number_0
+				);
 
 				// ALICE:
 				let alice_dot_free_balance_block_number_1: Balance =
@@ -152,10 +157,10 @@ mod tests {
 
 				// Checking DOT pool Storage params
 				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, Rate::one());
-				// Expected: 100 000
+				// Expected start value: 0.0
 				assert_eq!(
 					TestPools::pools(CurrencyId::DOT).total_insurance,
-					pool_total_insurance_block_number_0
+					pool_total_insurance_start
 				);
 				assert_eq!(TestPools::pools(CurrencyId::DOT).total_borrowed, BALANCE_ZERO);
 
@@ -211,7 +216,7 @@ mod tests {
 				);
 
 				// Checking free balance MDOT in pool.
-				// Expected: 60 000
+				// Expected: 160 000
 				assert_eq!(
 					Currencies::total_issuance(CurrencyId::MDOT),
 					pool_m_dot_free_balance_block_number_1
@@ -220,7 +225,10 @@ mod tests {
 				// Checking free balance DOT && MDOT
 				// ADMIN:
 				assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), BALANCE_ZERO);
-				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), BALANCE_ZERO);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ADMIN),
+					admin_deposit_amount_block_number_0
+				);
 
 				// ALICE:
 				// Expected: 70 000
@@ -238,10 +246,10 @@ mod tests {
 
 				// Checking pool Storage params
 				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, Rate::one());
-				// Expected: 100 000
+				// Expected: 0
 				assert_eq!(
 					TestPools::pools(CurrencyId::DOT).total_insurance,
-					pool_total_insurance_block_number_0
+					pool_total_insurance_start
 				);
 				// Total borrowed amount changed 0 -> 30 000
 				let pool_dot_total_borrow_block_number_2: Balance =
@@ -253,9 +261,9 @@ mod tests {
 
 				// Checking controller Storage params
 				assert_eq!(TestController::controller_dates(CurrencyId::DOT).timestamp, 2);
-				// Borrow_rate changed: 0 -> 45 * 10^(-10)
+				// Borrow_rate changed: 0 -> 16_875 * 10^(-13)
 				let expected_borrow_rate_block_number_2: Rate =
-					Rate::saturating_from_rational(45u128, 10_000_000_000u128);
+					Rate::saturating_from_rational(16_875u128, 10_000_000_000_000u128);
 				let (borrow_rate, _) =
 					TestController::get_liquidity_pool_borrow_and_supply_rates(CurrencyId::DOT).unwrap_or_default();
 				assert_eq!(borrow_rate, expected_borrow_rate_block_number_2);
@@ -310,7 +318,7 @@ mod tests {
 				);
 
 				// Checking free balance MDOT in pool.
-				// Expected: 60 000
+				// Expected: 160 000
 				assert_eq!(
 					Currencies::total_issuance(CurrencyId::MDOT),
 					pool_m_dot_free_balance_block_number_1
@@ -319,7 +327,10 @@ mod tests {
 				// Checking free balance DOT && MDOT
 				// ADMIN:
 				assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), BALANCE_ZERO);
-				assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), BALANCE_ZERO);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ADMIN),
+					admin_deposit_amount_block_number_0
+				);
 
 				// ALICE:
 				// Expected: 55 000
@@ -335,23 +346,23 @@ mod tests {
 				);
 
 				// Checking pool Storage params
-				// Expected: 1.000000004500000000
+				// Expected: 1.000000001687500000
 				let pool_borrow_index_block_number_3: Rate =
-					Rate::saturating_from_rational(10_000_000_045u128, 10_000_000_000u128);
+					Rate::saturating_from_rational(10_000_000_016_875u128, 10_000_000_000_000u128);
 				assert_eq!(
 					TestPools::pools(CurrencyId::DOT).borrow_index,
 					pool_borrow_index_block_number_3
 				);
-				// Expected: 100_000,0000135
-				let insurance_accumulated_block_number_3: Balance = 13_500_000_000_000;
+				// Expected: 0,0000050625
+				let insurance_accumulated_block_number_3: Balance = 5_062_500_000_000;
 				let pool_total_insurance_block_number_3: Balance =
-					admin_deposit_amount_block_number_0 + insurance_accumulated_block_number_3;
+					pool_total_insurance_start + insurance_accumulated_block_number_3;
 				assert_eq!(
 					TestPools::pools(CurrencyId::DOT).total_insurance,
 					pool_total_insurance_block_number_3
 				);
-				// Expected: 15_000,000135
-				let borrow_accumulated_block_number_3: Balance = 135_000_000_000_000;
+				// Expected: 15_000,000050625
+				let borrow_accumulated_block_number_3: Balance = 50_625_000_000_000;
 				let pool_dot_total_borrow_block_number_3: Balance = pool_dot_total_borrow_block_number_2
 					+ borrow_accumulated_block_number_3
 					- alice_repay_amount_block_number_3;
@@ -362,9 +373,9 @@ mod tests {
 
 				// Checking controller Storage params
 				assert_eq!(TestController::controller_dates(CurrencyId::DOT).timestamp, 3);
-				// Borrow_rate changed: 0,0000000045 -> 0,000000002250000015
+				// Borrow_rate changed: 0,0000000016875 -> 0.000000000843750002
 				let expected_borrow_rate_block_number_3: Rate =
-					Rate::saturating_from_rational(2_250_000_015u128, 1_000_000_000_000_000_000u128);
+					Rate::saturating_from_rational(843_750_002u128, 1_000_000_000_000_000_000u128);
 				let (borrow_rate, _) =
 					TestController::get_liquidity_pool_borrow_and_supply_rates(CurrencyId::DOT).unwrap_or_default();
 				assert_eq!(borrow_rate, expected_borrow_rate_block_number_3);
@@ -387,7 +398,7 @@ mod tests {
 					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
 					alice_dot_total_borrow_block_number_3
 				);
-				// Interest_index changed: 0 -> 1.000000004500000000
+				// Interest_index changed: 0 -> 1.000000001687500000
 				let user_interest_index_block_number_3: Rate = pool_borrow_index_block_number_3;
 				assert_eq!(
 					TestPools::pool_user_data(CurrencyId::DOT, ALICE).interest_index,
@@ -406,12 +417,12 @@ mod tests {
 				/* ------------------------------------------------------------------------------ */
 
 				// Checking pool available liquidity
-				// Real expected: 		160_000,000168750000528750
-				// Currently expected:	160_000,000168750000526875
+				// Real expected: 		 160_000,000063281250072714
+				// Currently expected:	 160_000,000063281250066358
 				// FIXME: unavailable behavior. That is a reason of error below.
-				// FIXME: borrow_accumulated_block_number_4 should be 33_750_000_528_750
-				//										   instead of 33_750_000_526_875
-				let borrow_accumulated_block_number_4: Balance = 33_750_000_526_875;
+				// FIXME: borrow_accumulated_block_number_4 should be  12_656_250_072_714
+				//										   instead of  12_656_250_066_358
+				let borrow_accumulated_block_number_4: Balance = 12_656_250_066_358;
 				let current_pool_available_liquidity_block_number_4: Balance =
 					current_pool_available_liquidity_block_number_3
 						+ alice_repay_amount_block_number_3
@@ -423,7 +434,7 @@ mod tests {
 				);
 
 				// Checking free balance MDOT in pool.
-				// Expected: 60 000
+				// Expected: 160 000
 				assert_eq!(
 					Currencies::total_issuance(CurrencyId::MDOT),
 					pool_m_dot_free_balance_block_number_1
@@ -431,7 +442,10 @@ mod tests {
 				// Checking free balance DOT && MDOT for ADMIN
 				// ADMIN:
 				assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), BALANCE_ZERO);
-				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), BALANCE_ZERO);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ADMIN),
+					admin_deposit_amount_block_number_0
+				);
 
 				// ALICE:
 				let alice_dot_free_balance_block_number_4: Balance = alice_dot_free_balance_block_number_3
@@ -447,14 +461,14 @@ mod tests {
 					alice_m_dot_free_balance_block_number_1
 				);
 				// Checking pool Storage params
-				// Borrow_index changed: 1.000000004500000000 -> 1,000000006750000025
+				// Borrow_index changed: 1.000000001687500000 -> 1,000000002531250003
 				let pool_borrow_index_block_number_4 =
-					Rate::saturating_from_rational(1_000_000_006_750_000_025u128, 1_000_000_000_000_000_000u128);
+					Rate::saturating_from_rational(1_000_000_002_531_250_003u128, 1_000_000_000_000_000_000u128);
 				assert_eq!(
 					TestPools::pools(CurrencyId::DOT).borrow_index,
 					pool_borrow_index_block_number_4
 				);
-				let insurance_accumulated_block_number_4: Balance = 3_375_000_052_875;
+				let insurance_accumulated_block_number_4: Balance = 1_265_625_007_271;
 				let pool_total_insurance_block_number_4: Balance =
 					pool_total_insurance_block_number_3 + insurance_accumulated_block_number_4;
 				assert_eq!(
@@ -465,11 +479,11 @@ mod tests {
 				// FIXME: unavailable behavior.
 				// TODO: should be fixed
 				// It must be zero, but it is not.
-				// 1875 left - 0 right
-				// 15000000168750000528750 new borrow value accrue_interest
-				// 15000000168750000526875 new user borrow value
-				let borrow_accumulated_block_number_4 = 33_750_000_528_750u128;
-				let alice_borrow_accumulated_block_number_4 = 33_750_000_526_875u128;
+				// 6356 left - 0 right
+				// 15000000063281250072714 new borrow value accrue_interest
+				// 15000000063281250066358 new user borrow value
+				let borrow_accumulated_block_number_4 = 12_656_250_072_714u128;
+				let alice_borrow_accumulated_block_number_4 = 12_656_250_066_358u128;
 				let pool_dot_total_borrow_block_number_4 = pool_dot_total_borrow_block_number_3
 					+ borrow_accumulated_block_number_4
 					- alice_dot_total_borrow_block_number_3
@@ -524,7 +538,7 @@ mod tests {
 				/* ------------------------------------------------------------------------------ */
 
 				// Checking pool available liquidity
-				// Expected: 160_000,000016875000046875
+				// Expected: 100_000,000_041_923_828_146_358
 				let current_pool_available_liquidity_block_number_5: Balance =
 					current_pool_available_liquidity_block_number_4 - alice_underlining_amount;
 				assert_eq!(
@@ -533,15 +547,18 @@ mod tests {
 				);
 
 				// Checking free balance MDOT in pool.
-				// Expected: 0
-				assert_eq!(Currencies::total_issuance(CurrencyId::MDOT), BALANCE_ZERO);
+				// Expected: 100_00
+				assert_eq!(Currencies::total_issuance(CurrencyId::MDOT), ONE_HUNDRED);
 
 				// Checking free balance DOT && MDOT
 				// ADMIN:
 				assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ADMIN), BALANCE_ZERO);
-				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ADMIN), BALANCE_ZERO);
+				assert_eq!(
+					Currencies::free_balance(CurrencyId::MDOT, &ADMIN),
+					admin_deposit_amount_block_number_0
+				);
 				// ALICE:
-				// Expected 99_999,999983124999953125
+				// Expected 99_999,999_958_076_171_853_642
 				assert_eq!(
 					Currencies::free_balance(CurrencyId::DOT, &ALICE),
 					alice_dot_free_balance_block_number_4 + alice_underlining_amount
@@ -550,19 +567,19 @@ mod tests {
 				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), BALANCE_ZERO);
 
 				// Checking pool Storage params
-				// Expected: 1,000000006750000025
+				// Expected: 1,000000002531250003
 				assert_eq!(
 					TestPools::pools(CurrencyId::DOT).borrow_index,
 					pool_borrow_index_block_number_4
 				);
-				// Expected: 100_000,000016875000052875
+				// Expected: 0,000006328125007271
 				assert_eq!(
 					TestPools::pools(CurrencyId::DOT).total_insurance,
 					pool_total_insurance_block_number_4
 				);
 				//FIXME: something went wrong.....
 				//TODO: should be fixed
-				assert_eq!(TestPools::pools(CurrencyId::DOT).total_borrowed, 1875);
+				assert_eq!(TestPools::pools(CurrencyId::DOT).total_borrowed, 6356);
 
 				// Checking controller Storage params
 				assert_eq!(TestController::controller_dates(CurrencyId::DOT).timestamp, 5);
@@ -587,7 +604,7 @@ mod tests {
 					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
 					BALANCE_ZERO
 				);
-				// Expected: 1,000000006750000025
+				// Expected: 1,000000002531250003
 				assert_eq!(
 					TestPools::pool_user_data(CurrencyId::DOT, ALICE).interest_index,
 					user_interest_index_block_number_4
