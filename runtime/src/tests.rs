@@ -144,7 +144,8 @@ impl ExtBuilder {
 				(
 					CurrencyId::DOT,
 					ControllerData {
-						timestamp: 0,
+						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
+						timestamp: 1,
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
@@ -153,7 +154,8 @@ impl ExtBuilder {
 				(
 					CurrencyId::ETH,
 					ControllerData {
-						timestamp: 0,
+						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
+						timestamp: 1,
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
@@ -552,7 +554,7 @@ fn complete_liquidation_one_collateral_should_work() {
 
 			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
 				ALICE::get(),
-				180_000_000_729_000_000_000_000,
+				180_000 * DOLLARS,
 				CurrencyId::DOT,
 				vec![CurrencyId::DOT],
 				false,
@@ -561,22 +563,22 @@ fn complete_liquidation_one_collateral_should_work() {
 
 			assert_eq!(
 				Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()),
-				5_499_999_772_278_625_373_520
+				5_500 * DOLLARS
 			);
 
 			assert_eq!(
 				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
-				105_499_999_981_775_000_000_000
+				105_500 * DOLLARS
 			);
 			assert_eq!(
 				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
-				104_500_000_018_225_000_000_000
+				104_500 * DOLLARS
 			);
 
-			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, 0);
+			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, Balance::zero());
 			assert_eq!(
 				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
-				0
+				Balance::zero()
 			);
 
 			assert_eq!(
@@ -606,41 +608,44 @@ fn complete_liquidation_multi_collateral_should_work() {
 
 			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
 				ALICE::get(),
-				180_000_000_583_200_000_000_000,
+				180_000 * DOLLARS,
 				CurrencyId::DOT,
 				vec![CurrencyId::DOT, CurrencyId::ETH],
 				false,
 			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()), 0);
+			assert_eq!(
+				Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()),
+				Balance::zero()
+			);
 			assert_eq!(
 				Currencies::free_balance(CurrencyId::METH, &ALICE::get()),
-				5_499_999_746_308_000_000_000
+				5_500 * DOLLARS
 			);
 
 			assert_eq!(
 				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
-				200_000_000_239_112_000_000_000
+				200_000 * DOLLARS
 			);
 			assert_eq!(
 				LiquidityPools::get_pool_available_liquidity(CurrencyId::ETH),
-				5_499_999_746_308_000_000_000
+				5_500 * DOLLARS
 			);
 
 			assert_eq!(
 				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
-				59_999_999_760_888_000_000_000
+				60_000 * DOLLARS
 			);
 			assert_eq!(
 				LiquidationPools::get_pool_available_liquidity(CurrencyId::ETH),
-				144_500_000_253_692_000_000_000
+				144_500 * DOLLARS
 			);
 
-			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, 0);
+			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, Balance::zero());
 			assert_eq!(
 				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
-				0
+				Balance::zero()
 			);
 
 			assert_eq!(
@@ -665,7 +670,7 @@ fn partial_liquidation_one_collateral_should_work() {
 
 			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
 				ALICE::get(),
-				54_000_000_218_700_000_000_000,
+				54_000 * DOLLARS,
 				CurrencyId::DOT,
 				vec![CurrencyId::DOT],
 				true,
@@ -674,25 +679,22 @@ fn partial_liquidation_one_collateral_should_work() {
 
 			assert_eq!(
 				Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()),
-				71_649_999_931_683_587_612_056
+				71_650 * DOLLARS
 			);
 
 			assert_eq!(
 				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
-				108_649_999_994_532_500_000_000
+				108_650 * DOLLARS
 			);
 			assert_eq!(
 				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
-				101_350_000_005_467_500_000_000
+				101_350 * DOLLARS
 			);
 
-			assert_eq!(
-				LiquidityPools::pools(CurrencyId::DOT).total_borrowed,
-				63_000_000_255_150_000_000_000
-			);
+			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, 63_000 * DOLLARS);
 			assert_eq!(
 				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
-				63_000_000_255_150_000_000_000
+				63_000 * DOLLARS
 			);
 
 			assert_eq!(
@@ -722,7 +724,7 @@ fn partial_liquidation_multi_collateral_should_work() {
 
 			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
 				ALICE::get(),
-				54_000_000_198_818_181_774_000,
+				54_000 * DOLLARS,
 				CurrencyId::DOT,
 				vec![CurrencyId::ETH],
 				true,
@@ -735,34 +737,31 @@ fn partial_liquidation_multi_collateral_should_work() {
 			);
 			assert_eq!(
 				Currencies::free_balance(CurrencyId::METH, &ALICE::get()),
-				51_649_999_895_620_454_568_650
+				51_650 * DOLLARS
 			);
 
 			assert_eq!(
 				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
-				157_000_000_099_409_090_887_000
+				157_000 * DOLLARS
 			);
 			assert_eq!(
 				LiquidityPools::get_pool_available_liquidity(CurrencyId::ETH),
-				51_649_999_895_620_454_568_650
+				51_650 * DOLLARS
 			);
 
 			assert_eq!(
 				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
-				72_999_999_900_590_909_113_000
+				73_000 * DOLLARS
 			);
 			assert_eq!(
 				LiquidationPools::get_pool_available_liquidity(CurrencyId::ETH),
-				128_350_000_104_379_545_431_350
+				128_350 * DOLLARS
 			);
 
-			assert_eq!(
-				LiquidityPools::pools(CurrencyId::DOT).total_borrowed,
-				63_000_000_231_954_545_403_000
-			);
+			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, 63_000 * DOLLARS);
 			assert_eq!(
 				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
-				63_000_000_231_954_545_403_000
+				63_000 * DOLLARS
 			);
 
 			assert_eq!(
