@@ -1,6 +1,6 @@
 # Minterest chain node
 
-Released version: **0.5.0**
+Released version: **0.5.0** <br>
 Developed version: **0.6.0**
 
 # Building & Running MinterestChain
