@@ -30,7 +30,7 @@ mod tests {
 				let pool_total_insurance_start: Balance = BALANCE_ZERO;
 				let pool_dot_total_borrow_start: Balance = BALANCE_ZERO;
 
-				// ACTION: DEPOSIT INSURANCE
+				// ACTION: DEPOSIT UNDERLYING
 				/* ------------------------------------------------------------------------------ */
 
 				// Add liquidity to DOT pool by Admin
