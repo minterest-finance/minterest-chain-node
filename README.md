@@ -1,5 +1,7 @@
 # Minterest chain node
 
+Released version: **0.5.0**
+Developed version: **0.6.0**
 
 # Building & Running MinterestChain
 
@@ -133,7 +135,7 @@ This repo supports versioning system organized in the next way:
 
 ### Versioninng
 
-The project has current release version set up in [cargo.toml](cargo.toml) file. This version should be upgraded once a tag is released and te team starts a new version under development.
+The project has current release version set up in [cargo.toml](cargo.toml) file. This version should be upgraded once a tag is released and the team starts a new version under development. As said - **the first commit** after the release is a commit to [cargo.toml](cargo.toml) and release with version update to set the release.
 
 Each pallet and module has its own version which is not greater than the main one. Pallet version is upgraded once a significant change is made or a new feature is developed upon that pallet. Pallet version should be upgraded in the same commit where the change was performed.
 
