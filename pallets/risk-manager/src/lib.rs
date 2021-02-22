@@ -71,7 +71,7 @@ pub struct RiskManagerData {
 	/// Step used in liquidation to protect the user from micro liquidations.
 	pub threshold: Rate,
 
-	/// Fee that covers liquidation costs.
+	/// The additional collateral which is taken from borrowers as a penalty for being liquidated.
 	pub liquidation_incentive: Rate,
 }
 
@@ -145,6 +145,9 @@ decl_error! {
 
 	/// The liquidation hasn't been completed.
 	LiquidationRejection,
+
+	/// Liquidation incentive can't be less than one && greater than 1.5.
+	InvalidLiquidationIncentiveValue,
 	}
 }
 
@@ -247,6 +250,13 @@ decl_module! {
 
 			let new_liquidation_incentive = Rate::checked_from_rational(new_liquidation_incentive_n, new_liquidation_incentive_d)
 				.ok_or(Error::<T>::NumOverflow)?;
+
+			// Check if 1 <= new_liquidation_incentive <= 1.5
+			ensure!(
+				(new_liquidation_incentive >= Rate::one()
+					&& new_liquidation_incentive <= Rate::saturating_from_rational(15, 10)),
+				Error::<T>::InvalidLiquidationIncentiveValue
+			);
 
 			// Write new value into storage.
 			RiskManagerDates::mutate(pool_id, |r| r.liquidation_incentive = new_liquidation_incentive);

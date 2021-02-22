@@ -700,6 +700,53 @@ fn set_max_borrow_rate_should_work() {
 }
 
 #[test]
+fn set_collateral_factor_should_work() {
+	ExtBuilder::default()
+		.pool_mock(CurrencyId::DOT)
+		.build()
+		.execute_with(|| {
+			// ALICE set collateral factor equal 0.5.
+			assert_ok!(Controller::set_collateral_factor(alice(), CurrencyId::DOT, 1, 2));
+			let expected_event = TestEvent::controller(Event::CollateralFactorChanged);
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).collateral_factor,
+				Rate::saturating_from_rational(1, 2)
+			);
+
+			// ALICE can't set collateral factor equal 0.0
+			assert_noop!(
+				Controller::set_collateral_factor(alice(), CurrencyId::DOT, 0, 1),
+				Error::<Runtime>::CollateralFactorCannotBeZero
+			);
+
+			// ALICE can't set collateral factor grater than one.
+			assert_noop!(
+				Controller::set_collateral_factor(alice(), CurrencyId::DOT, 11, 10),
+				Error::<Runtime>::CollateralFactorCannotBeGreaterThanOne
+			);
+
+			// Overflow in calculation: 20 / 0
+			assert_noop!(
+				Controller::set_collateral_factor(alice(), CurrencyId::DOT, 20, 0),
+				Error::<Runtime>::NumOverflow
+			);
+
+			// The dispatch origin of this call must be Administrator.
+			assert_noop!(
+				Controller::set_collateral_factor(bob(), CurrencyId::DOT, 20, 10),
+				Error::<Runtime>::RequireAdmin
+			);
+
+			// Unavailable currency id.
+			assert_noop!(
+				Controller::set_collateral_factor(alice(), CurrencyId::MDOT, 20, 10),
+				Error::<Runtime>::PoolNotFound
+			);
+		});
+}
+
+#[test]
 fn pause_specific_operation_should_work() {
 	ExtBuilder::default()
 		.pool_mock(CurrencyId::DOT)
