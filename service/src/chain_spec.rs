@@ -406,7 +406,7 @@ fn testnet_genesis(
 						max_attempts: 2,
 						min_sum: 200_000 * DOLLARS,                               // In USD. FIXME: temporary value.
 						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_incentive: FixedU128::saturating_from_rational(103, 100), // 3%
 					},
 				),
 				(
@@ -415,7 +415,7 @@ fn testnet_genesis(
 						max_attempts: 2,
 						min_sum: 100_000 * DOLLARS,                               // In USD. FIXME: temporary value.
 						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_incentive: FixedU128::saturating_from_rational(103, 100), // 3%
 					},
 				),
 				(
@@ -424,7 +424,7 @@ fn testnet_genesis(
 						max_attempts: 2,
 						min_sum: 200_000 * DOLLARS,                               // In USD. FIXME: temporary value.
 						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_incentive: FixedU128::saturating_from_rational(103, 100), // 3%
 					},
 				),
 				(
@@ -433,7 +433,7 @@ fn testnet_genesis(
 						max_attempts: 2,
 						min_sum: 200_000 * DOLLARS,                               // In USD. FIXME: temporary value.
 						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_incentive: FixedU128::saturating_from_rational(103, 100), // 3%
 					},
 				),
 			],
