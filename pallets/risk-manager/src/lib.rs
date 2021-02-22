@@ -431,10 +431,10 @@ impl<T: Trait> Module<T> {
 		};
 
 		// Calculate sum required to liquidate.
-		let (seize_amount, repay_amount, repay_tokens) =
+		let (seize_amount, repay_amount, repay_assets) =
 			Self::liquidate_calculate_seize_and_repay(liquidated_pool_id, total_repay_amount, is_partial_liquidation)?;
 
-		let seized_pools = Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, repay_tokens, seize_amount)?;
+		let seized_pools = Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, repay_assets, seize_amount)?;
 
 		Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation)?;
 
@@ -455,12 +455,12 @@ impl<T: Trait> Module<T> {
 	/// - `borrower`: the borrower in automatic liquidation.
 	/// - `liquidated_pool_id`: the CurrencyId of the pool with loan, for which automatic
 	/// liquidation is performed.
-	/// - `repay_tokens`: the amount of the underlying borrowed asset to repay.
+	/// - `repay_assets`: the amount of the underlying borrowed asset to repay.
 	/// - `seize_amount`: the number of collateral tokens to seize converted into USD.
 	fn liquidate_borrow_fresh(
 		borrower: &T::AccountId,
 		liquidated_pool_id: CurrencyId,
-		repay_tokens: Balance,
+		repay_assets: Balance,
 		mut seize_amount: Balance,
 	) -> result::Result<Vec<CurrencyId>, DispatchError> {
 		let liquidation_pool_account_id = T::LiquidationPoolsManager::pools_account_id();
@@ -470,7 +470,7 @@ impl<T: Trait> Module<T> {
 			&liquidation_pool_account_id,
 			&borrower,
 			liquidated_pool_id,
-			repay_tokens,
+			repay_assets,
 			false,
 		)?;
 
@@ -560,11 +560,11 @@ impl<T: Trait> Module<T> {
 	/// - `total_repay_amount`: total amount of debt converted into usd.
 	/// - `is_partial_liquidation`: partial or complete liquidation.
 	///
-	/// Returns (`seize_amount`, `repay_amount`, `repay_tokens`)
+	/// Returns (`seize_amount`, `repay_amount`, `repay_assets`)
 	/// - `seize_amount`: the number of collateral tokens to seize converted
 	/// into USD (consider liquidation_incentive).
 	/// - `repay_amount`: current amount of debt converted into usd.
-	/// - `repay_tokens`: the amount of the underlying borrowed asset to repay.
+	/// - `repay_assets`: the amount of the underlying borrowed asset to repay.
 	pub fn liquidate_calculate_seize_and_repay(
 		liquidated_pool_id: CurrencyId,
 		total_repay_amount: Balance,
@@ -592,13 +592,13 @@ impl<T: Trait> Module<T> {
 
 		let price_borrowed = <Oracle<T>>::get_underlying_price(liquidated_pool_id)?;
 
-		// repay_tokens = repay_amount / price_borrowed (Tokens)
-		let repay_tokens = Rate::from_inner(repay_amount)
+		// repay_assets = repay_amount / price_borrowed (Tokens)
+		let repay_assets = Rate::from_inner(repay_amount)
 			.checked_div(&price_borrowed)
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		Ok((seize_amount, repay_amount, repay_tokens))
+		Ok((seize_amount, repay_amount, repay_assets))
 	}
 
 	/// Changes the parameter liquidation_attempts depending on the type of liquidation.
