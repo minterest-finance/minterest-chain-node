@@ -252,10 +252,6 @@ fn pool_balance(pool_id: CurrencyId) -> Balance {
 	Currencies::free_balance(pool_id, &LiquidityPools::pools_account_id())
 }
 
-fn pool_total_insurance(pool_id: CurrencyId) -> Balance {
-	LiquidityPools::pools(pool_id).total_insurance
-}
-
 fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 	<Runtime as ControllerApi<Block>>::liquidity_pool_state(currency_id)
 }
@@ -283,10 +279,8 @@ fn test_rates_using_rpc() {
 		.pool_initial(CurrencyId::ETH)
 		.build()
 		.execute_with(|| {
-			assert_ok!(Controller::deposit_insurance(alice(), DOT, dollars(100_000)));
-			assert_ok!(Controller::deposit_insurance(alice(), ETH, dollars(100_000)));
-			assert_eq!(pool_total_insurance(DOT), dollars(100_000));
-			assert_eq!(pool_total_insurance(ETH), dollars(100_000));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(100_000)));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
 
 			System::set_block_number(10);
 
@@ -294,7 +288,7 @@ fn test_rates_using_rpc() {
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
 			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
 			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), ETH));
-			// exchange_rate = (150 - 100 + 0) / 50 = 1
+			// exchange_rate = (150 - 0 + 0) / 150 = 1
 			assert_eq!(
 				liquidity_pool_state_rpc(DOT),
 				Some(PoolState {
@@ -309,13 +303,13 @@ fn test_rates_using_rpc() {
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(100_000)));
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(30_000)));
 			assert_eq!(pool_balance(DOT), dollars(80_000));
-			// exchange_rate = (80 - 100 + 70) / 50 = 1
+			// exchange_rate = (80 - 0 + 70) / 150 = 1
 			assert_eq!(
 				liquidity_pool_state_rpc(DOT),
 				Some(PoolState {
 					exchange_rate: Rate::one(),
-					borrow_rate: Rate::from_inner(239_040_000_000),
-					supply_rate: Rate::from_inner(301_190_400_000)
+					borrow_rate: Rate::from_inner(4_200_000_000),
+					supply_rate: Rate::from_inner(1_764_000_000)
 				})
 			);
 
@@ -327,9 +321,9 @@ fn test_rates_using_rpc() {
 			assert_eq!(
 				liquidity_pool_state_rpc(DOT),
 				Some(PoolState {
-					exchange_rate: Rate::from_inner(1_000_003_011_904_000_000),
-					borrow_rate: Rate::from_inner(172_800_039_584),
-					supply_rate: Rate::from_inner(155_520_072_800)
+					exchange_rate: Rate::from_inner(1_000_000_017_640_000_000),
+					borrow_rate: Rate::from_inner(3_705_882_450),
+					supply_rate: Rate::from_inner(1_373_356_473)
 				})
 			);
 
@@ -342,9 +336,9 @@ fn test_rates_using_rpc() {
 			assert_eq!(
 				liquidity_pool_state_rpc(DOT),
 				Some(PoolState {
-					exchange_rate: Rate::from_inner(1_000_004_567_109_412_126),
-					borrow_rate: Rate::from_inner(220_114_178_542),
-					supply_rate: Rate::from_inner(254_703_421_247)
+					exchange_rate: Rate::from_inner(1_000_000_031_373_564_979),
+					borrow_rate: Rate::from_inner(4_764_706_035),
+					supply_rate: Rate::from_inner(2_270_242_360)
 				})
 			);
 		});
