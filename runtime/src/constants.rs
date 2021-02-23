@@ -28,7 +28,7 @@ pub mod time {
 }
 
 /// A maximum number of admins. When membership reaches this number, no new members may join.
-pub const MAX_MEMBERS: u32 = 16;
+pub const MAX_MEMBERS: u8 = 16;
 
 /// Initial exchange rate: 100%
 pub const INITIAL_EXCHANGE_RATE: Rate = Rate::from_inner(1_000_000_000_000_000_000);

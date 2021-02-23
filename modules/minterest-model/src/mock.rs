@@ -2,6 +2,7 @@
 use super::*;
 use crate as minterest_model;
 use frame_support::parameter_types;
+use frame_support::traits::GenesisBuild;
 use frame_system as system;
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_traits::parameter_type_with_key;

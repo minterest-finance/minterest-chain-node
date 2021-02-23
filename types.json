@@ -1,6 +1,6 @@
 {
   "CUSTOM_TYPES": {
-    "Address": "AccountId",
+    "Address": "MultiAddress",
     "LookupSource": "AccountId",
     "CurrencyId": {
       "_enum": [

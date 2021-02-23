@@ -298,7 +298,7 @@ impl controller::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MaxMembers: u32 = MAX_MEMBERS;
+	pub const MaxMembers: u8 = MAX_MEMBERS;
 }
 
 impl accounts::Config for Runtime {
