@@ -21,6 +21,7 @@ pallet-traits = { path = "../traits", default-features = false }
 controller = { path = "../controller", default-features = false }
 
 [dev-dependencies]
+serde = { version = "1.0.101" }
 sp-core = { version = "3.0.0" }
 orml-tokens = { path = "../../orml/tokens" }
 orml-currencies = { path = "../../orml/currencies" }
