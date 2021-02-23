@@ -413,7 +413,7 @@ fn get_pool_members_with_loans_should_work() {
 		.pool_user_data_with_params(CurrencyId::BTC, CHARLIE, ONE_HUNDRED, Rate::default(), true, 0)
 		.build()
 		.execute_with(|| {
-			assert_eq!(TestPools::get_pool_members_with_loans(CurrencyId::DOT), Ok(vec![1, 3]));
+			assert_eq!(TestPools::get_pool_members_with_loans(CurrencyId::DOT), Ok(vec![3, 1]));
 			assert_eq!(TestPools::get_pool_members_with_loans(CurrencyId::BTC), Ok(vec![3]));
 		});
 }

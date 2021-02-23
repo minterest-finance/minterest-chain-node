@@ -1,90 +1,85 @@
 #![cfg(test)]
 
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
+use super::*;
+use crate as liquidity_pools;
+use frame_support::pallet_prelude::GenesisBuild;
+use frame_support::parameter_types;
+use frame_system as system;
 pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair};
 use orml_currencies::Currency;
+use orml_traits::parameter_type_with_key;
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentityLookup},
+};
 
-use super::*;
-use crate::GenesisConfig;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-mod liquidity_pools {
-	pub use crate::Event;
-}
-
-impl_outer_origin! {
-	pub enum Origin for Test {}
-}
-
-impl_outer_event! {
-	pub enum TestEvent for Test {
-		frame_system<T>,
-		liquidity_pools,
-		orml_currencies<T>,
-		oracle,
-		orml_tokens<T>,
+// Configure a mock runtime to test the pallet.
+frame_support::construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Module, Call, Event<T>},
+		Oracle: oracle::{Module, Storage, Call, Event},
+		TestPools: liquidity_pools::{Module, Storage, Call, Event, Config<T>},
 	}
-}
+);
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Test;
-
-// For testing the module, we construct most of a mock runtime. This means
-// first constructing a configuration type (`Test`) which `impl`s each of the
-// configuration traits of modules we want to use.
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: u32 = 1024;
-	pub const MaximumBlockLength: u32 = 2 * 1024;
-	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+	pub const SS58Prefix: u8 = 42;
 }
 
-pub type AccountId = u32;
-impl frame_system::Config for Test {
+pub type AccountId = u64;
+
+impl system::Config for Test {
 	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type Origin = Origin;
-	type Call = ();
+	type Call = Call;
 	type Index = u64;
 	type BlockNumber = u64;
-	// type Hash = Hash;
 	type Hash = H256;
-	type Hashing = ::sp_runtime::traits::BlakeTwo256;
-	type AccountId = u32;
-	// type Lookup = IdentityLookup<AccountId>;
+	type Hashing = BlakeTwo256;
+	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	// type Header = generic::Header<BlockNumber, BlakeTwo256>;
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = Event;
 	type BlockHashCount = BlockHashCount;
-	type MaximumBlockWeight = MaximumBlockWeight;
-	// type DbWeight = RocksDbWeight;
-	type DbWeight = ();
-	// type BlockExecutionWeight = BlockExecutionWeight;
-	type BlockExecutionWeight = ();
-	// type ExtrinsicBaseWeight = ExtrinsicBaseWeight;
-	type ExtrinsicBaseWeight = ();
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
-	// type Version = Version;
 	type Version = ();
-	// type PalletInfo = PalletInfo;
-	type PalletInfo = ();
-	// type AccountData = pallet_balances::AccountData<Balance>;
+	type PalletInfo = PalletInfo;
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
+	type SS58Prefix = SS58Prefix;
+}
+
+type Amount = i128;
+
+parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		Default::default()
+	};
 }
 
 impl orml_tokens::Config for Test {
-	type Event = TestEvent;
+	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type OnReceived = ();
 	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = ();
 }
 
 parameter_types! {
@@ -94,7 +89,7 @@ parameter_types! {
 type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
 
 impl orml_currencies::Config for Test {
-	type Event = TestEvent;
+	type Event = Event;
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type NativeCurrency = NativeCurrency;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
@@ -102,7 +97,7 @@ impl orml_currencies::Config for Test {
 }
 
 impl oracle::Config for Test {
-	type Event = TestEvent;
+	type Event = Event;
 }
 
 parameter_types! {
@@ -116,8 +111,8 @@ parameter_types! {
 	];
 }
 
-impl Trait for Test {
-	type Event = TestEvent;
+impl liquidity_pools::Config for Test {
+	type Event = Event;
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type ModuleId = LiquidityPoolsModuleId;
 	type InitialExchangeRate = InitialExchangeRate;
@@ -140,9 +135,6 @@ impl Default for ExtBuilder {
 	}
 }
 
-type Amount = i128;
-pub type TestPools = Module<Test>;
-pub type System = frame_system::Module<Test>;
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
 pub const CHARLIE: AccountId = 3;
@@ -236,7 +228,7 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		GenesisConfig::<Test> {
+		liquidity_pools::GenesisConfig::<Test> {
 			pools: self.pools,
 			pool_user_data: self.pool_user_data,
 		}
