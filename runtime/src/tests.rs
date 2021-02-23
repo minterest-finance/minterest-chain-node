@@ -264,16 +264,16 @@ fn dollars(amount: u128) -> u128 {
 	amount.saturating_mul(Price::accuracy())
 }
 
-fn alice() -> <Runtime as frame_system::Trait>::Origin {
-	<Runtime as frame_system::Trait>::Origin::signed((ALICE::get()).clone())
+fn alice() -> <Runtime as frame_system::Config>::Origin {
+	<Runtime as frame_system::Config>::Origin::signed((ALICE::get()).clone())
 }
 
-fn bob() -> <Runtime as frame_system::Trait>::Origin {
-	<Runtime as frame_system::Trait>::Origin::signed((BOB::get()).clone())
+fn bob() -> <Runtime as frame_system::Config>::Origin {
+	<Runtime as frame_system::Config>::Origin::signed((BOB::get()).clone())
 }
 
-fn charlie() -> <Runtime as frame_system::Trait>::Origin {
-	<Runtime as frame_system::Trait>::Origin::signed((CHARLIE::get()).clone())
+fn charlie() -> <Runtime as frame_system::Config>::Origin {
+	<Runtime as frame_system::Config>::Origin::signed((CHARLIE::get()).clone())
 }
 
 #[test]

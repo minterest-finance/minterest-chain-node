@@ -12,9 +12,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait: system::Trait {
+pub trait Config: system::Config {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
 	/// The `MultiCurrency` implementation for wrapped.
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
@@ -23,7 +23,7 @@ pub trait Trait: system::Trait {
 decl_event! {
 	pub enum Event<T>
 	where
-		AccountId = <T as system::Trait>::AccountId,
+		AccountId = <T as system::Config>::AccountId,
 	{
 		/// Approval is made. [currency_id, owner, spender, amount]
 		Approval(CurrencyId, AccountId, AccountId, Balance),
@@ -31,14 +31,14 @@ decl_event! {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as MTokens {
+	trait Store for Module<T: Config> as MTokens {
 		/// Allowance for an account and token.
 		Allowance get(fn allowance): map hasher(blake2_128_concat) (CurrencyId, T::AccountId, T::AccountId) => Balance;
 	}
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// Overflow in calculating allowance.
 		OverflowAllowance,
 
@@ -54,7 +54,7 @@ decl_error! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 		fn deposit_event() = default;
 
@@ -115,4 +115,4 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {}
+impl<T: Config> Module<T> {}

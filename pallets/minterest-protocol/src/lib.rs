@@ -15,9 +15,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait: liquidity_pools::Trait + controller::Trait {
+pub trait Config: liquidity_pools::Config + controller::Config {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
 	/// Basic borrowing functions
 	type Borrowing: Borrowing<Self::AccountId>;
@@ -30,13 +30,13 @@ type LiquidityPools<T> = liquidity_pools::Module<T>;
 type Controller<T> = controller::Module<T>;
 
 decl_storage! {
-	trait Store for Module<T: Trait> as MinterestProtocol {
+	trait Store for Module<T: Config> as MinterestProtocol {
 	}
 }
 
 decl_event!(
 	pub enum Event<T> where
-		<T as system::Trait>::AccountId,
+		<T as system::Config>::AccountId,
 	{
 		/// Underlying assets added to pool and wrapped tokens minted: \[who, underlying_asset_id, underlying_amount, wrapped_currency_id, wrapped_amount\]
 		Deposited(AccountId, CurrencyId, Balance, CurrencyId, Balance),
@@ -63,7 +63,7 @@ decl_event!(
 );
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
 
@@ -127,7 +127,7 @@ decl_error! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 		fn deposit_event() = default;
 
@@ -336,7 +336,7 @@ type TokensResult = result::Result<(Balance, CurrencyId, Balance), DispatchError
 type BalanceResult = result::Result<Balance, DispatchError>;
 
 // Dispatchable calls implementation
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	fn do_deposit(who: &T::AccountId, underlying_asset_id: CurrencyId, underlying_amount: Balance) -> TokensResult {
 		ensure!(
 			<LiquidityPools<T>>::is_enabled_underlying_asset_id(underlying_asset_id),

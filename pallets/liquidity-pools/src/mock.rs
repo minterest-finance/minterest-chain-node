@@ -41,7 +41,7 @@ parameter_types! {
 }
 
 pub type AccountId = u32;
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
 	type BaseCallFilter = ();
 	type Origin = Origin;
 	type Call = ();
@@ -78,7 +78,7 @@ impl frame_system::Trait for Test {
 	type SystemWeightInfo = ();
 }
 
-impl orml_tokens::Trait for Test {
+impl orml_tokens::Config for Test {
 	type Event = TestEvent;
 	type Balance = Balance;
 	type Amount = Amount;
@@ -93,7 +93,7 @@ parameter_types! {
 
 type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
 
-impl orml_currencies::Trait for Test {
+impl orml_currencies::Config for Test {
 	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type NativeCurrency = NativeCurrency;
@@ -101,7 +101,7 @@ impl orml_currencies::Trait for Test {
 	type WeightInfo = ();
 }
 
-impl oracle::Trait for Test {
+impl oracle::Config for Test {
 	type Event = TestEvent;
 }
 

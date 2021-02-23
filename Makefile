@@ -11,7 +11,7 @@ submodule:
 
 .PHONY: build
 build:
-	WASM_BUILD_TOOLCHAIN=nightly-2020-10-05 cargo build --release
+	cargo build --release
 
 .PHONY: check
 check:
@@ -23,7 +23,7 @@ test:
 
 .PHONY: run
 run:
-	WASM_BUILD_TOOLCHAIN=nightly-2020-10-05 cargo run -- --dev -lruntime=debug
+	cargo run -- --dev -lruntime=debug
 
 .PHONY: check-tests
 check-tests:

@@ -34,7 +34,7 @@ parameter_types! {
 
 type AccountId = u32;
 
-impl frame_system::Trait for Runtime {
+impl frame_system::Config for Runtime {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -65,7 +65,7 @@ pub type System = frame_system::Module<Runtime>;
 
 type Amount = i128;
 
-impl orml_tokens::Trait for Runtime {
+impl orml_tokens::Config for Runtime {
 	type Event = TestEvent;
 	type Balance = Balance;
 	type Amount = Amount;
@@ -80,7 +80,7 @@ parameter_types! {
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
 
-impl orml_currencies::Trait for Runtime {
+impl orml_currencies::Config for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type NativeCurrency = NativeCurrency;

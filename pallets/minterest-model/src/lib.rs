@@ -37,16 +37,16 @@ pub struct MinterestModelData {
 type Accounts<T> = accounts::Module<T>;
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 
-pub trait Trait: system::Trait + accounts::Trait + liquidity_pools::Trait {
+pub trait Config: system::Config + accounts::Config + liquidity_pools::Config {
 	/// The overarching event type.
-	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 
 	/// The approximate number of blocks per year
 	type BlocksPerYear: Get<u128>;
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as MinterestModel {
+	trait Store for Module<T: Config> as MinterestModel {
 		/// The Minterest Model data information: `(kink, base_rate_per_block, multiplier_per_block, jump_multiplier_per_block)`.
 		pub MinterestModelDates get(fn minterest_model_dates) config(): map hasher(blake2_128_concat) CurrencyId => MinterestModelData;
 	}
@@ -69,7 +69,7 @@ decl_event!(
 );
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
 
@@ -91,7 +91,7 @@ decl_error! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -233,7 +233,7 @@ decl_module! {
 
 type RateResult = result::Result<Rate, DispatchError>;
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// Calculates the current borrow rate per block.
 	/// - `underlying_asset_id`: Asset ID for which the borrow interest rate is calculated.
 	/// - `utilization_rate`: Current Utilization rate value.

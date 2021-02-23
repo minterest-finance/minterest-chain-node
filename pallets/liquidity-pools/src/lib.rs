@@ -52,9 +52,9 @@ mod tests;
 
 type Oracle<T> = oracle::Module<T>;
 
-pub trait Trait: frame_system::Trait + oracle::Trait {
+pub trait Config: frame_system::Config + oracle::Config {
 	/// The overarching event type.
-	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
 
 	/// The Liquidity Pool's module id, keep all assets in Pools.
 	type ModuleId: Get<ModuleId>;
@@ -74,7 +74,7 @@ decl_event!(
 );
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 	/// Number overflow in calculation.
 	NumOverflow,
 
@@ -87,7 +87,7 @@ decl_error! {
 }
 
 decl_storage! {
-	 trait Store for Module<T: Trait> as LiquidityPoolsStorage {
+	 trait Store for Module<T: Config> as LiquidityPoolsStorage {
 		 /// Liquidity pool information: `(total_borrowed, borrow_index, total_insurance)`.
 		pub Pools get(fn pools) config(): map hasher(blake2_128_concat) CurrencyId => Pool;
 
@@ -99,7 +99,7 @@ decl_storage! {
 }
 
 decl_module! {
-		pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+		pub struct Module<T: Config> for enum Call where origin: T::Origin {
 			type Error = Error<T>;
 			fn deposit_event() = default;
 
@@ -128,7 +128,7 @@ type CurrencyIdResult = result::Result<CurrencyId, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 
 // Dispatchable calls implementation
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// Converts a specified number of underlying assets into wrapped tokens.
 	/// The calculation is based on the exchange rate.
 	///
@@ -254,7 +254,7 @@ impl<T: Trait> Module<T> {
 }
 
 // Storage setters for LiquidityPools
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// Sets the total borrowed value in the pool.
 	pub fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) -> DispatchResult {
 		Pools::mutate(pool_id, |pool| pool.total_borrowed = new_total_borrows);
@@ -320,7 +320,7 @@ impl<T: Trait> Module<T> {
 }
 
 // Storage getters for LiquidityPools
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// Gets current the amount of underlying currently loaned out by the pool.
 	pub fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance {
 		Self::pools(pool_id).total_borrowed
@@ -407,7 +407,7 @@ impl<T: Trait> Module<T> {
 }
 
 // Trait Borrowing for LiquidityPools
-impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
+impl<T: Config> Borrowing<T::AccountId> for Module<T> {
 	/// Updates the new borrower balance and pool total borrow balances during the borrow operation.
 	/// Also sets the global borrow_index to user interest index.
 	/// - `who`: The AccountId whose borrow balance should be calculated.
@@ -479,7 +479,7 @@ impl<T: Trait> Borrowing<T::AccountId> for Module<T> {
 	}
 }
 
-impl<T: Trait> PoolsManager<T::AccountId> for Module<T> {
+impl<T: Config> PoolsManager<T::AccountId> for Module<T> {
 	/// Gets module account id.
 	fn pools_account_id() -> T::AccountId {
 		T::ModuleId::get().into_account()

@@ -37,7 +37,7 @@ parameter_types! {
 
 type AccountId = u32;
 
-impl system::Trait for Test {
+impl system::Config for Test {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -69,7 +69,7 @@ parameter_types! {
 	pub const ExistentialDeposit: u64 = 1;
 }
 
-impl orml_tokens::Trait for Test {
+impl orml_tokens::Config for Test {
 	type Event = TestEvent;
 	type Balance = Balance;
 	type Amount = Amount;
@@ -82,7 +82,7 @@ parameter_types! {
 	pub const MaxMembers: u32 = MAX_MEMBERS;
 }
 
-impl accounts::Trait for Test {
+impl accounts::Config for Test {
 	type Event = TestEvent;
 	type MaxMembers = MaxMembers;
 }
@@ -98,7 +98,7 @@ parameter_types! {
 	];
 }
 
-impl liquidity_pools::Trait for Test {
+impl liquidity_pools::Config for Test {
 	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type ModuleId = LiquidityPoolsModuleId;
@@ -106,7 +106,7 @@ impl liquidity_pools::Trait for Test {
 	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
 
-impl oracle::Trait for Test {
+impl oracle::Config for Test {
 	type Event = TestEvent;
 }
 

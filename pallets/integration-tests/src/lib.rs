@@ -42,7 +42,7 @@ mod tests {
 	}
 
 	pub type AccountId = u32;
-	impl system::Trait for Test {
+	impl system::Config for Test {
 		type BaseCallFilter = ();
 		type Origin = Origin;
 		type Call = ();
@@ -75,7 +75,7 @@ mod tests {
 	}
 
 	type Amount = i128;
-	impl orml_tokens::Trait for Test {
+	impl orml_tokens::Config for Test {
 		type Event = ();
 		type Balance = Balance;
 		type Amount = Amount;
@@ -90,7 +90,7 @@ mod tests {
 
 	type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
 
-	impl orml_currencies::Trait for Test {
+	impl orml_currencies::Config for Test {
 		type Event = ();
 		type MultiCurrency = orml_tokens::Module<Test>;
 		type NativeCurrency = NativeCurrency;
@@ -98,7 +98,7 @@ mod tests {
 		type WeightInfo = ();
 	}
 
-	impl m_tokens::Trait for Test {
+	impl m_tokens::Config for Test {
 		type Event = ();
 		type MultiCurrency = orml_tokens::Module<Test>;
 	}
@@ -114,7 +114,7 @@ mod tests {
 		];
 	}
 
-	impl liquidity_pools::Trait for Test {
+	impl liquidity_pools::Config for Test {
 		type Event = ();
 		type MultiCurrency = orml_tokens::Module<Test>;
 		type ModuleId = LiquidityPoolsModuleId;
@@ -122,18 +122,18 @@ mod tests {
 		type EnabledCurrencyPair = EnabledCurrencyPair;
 	}
 
-	impl minterest_protocol::Trait for Test {
+	impl minterest_protocol::Config for Test {
 		type Event = ();
 		type Borrowing = liquidity_pools::Module<Test>;
 		type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 	}
 
-	impl controller::Trait for Test {
+	impl controller::Config for Test {
 		type Event = ();
 		type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	}
 
-	impl oracle::Trait for Test {
+	impl oracle::Config for Test {
 		type Event = ();
 	}
 
@@ -141,7 +141,7 @@ mod tests {
 		pub const MaxMembers: u32 = MAX_MEMBERS;
 	}
 
-	impl accounts::Trait for Test {
+	impl accounts::Config for Test {
 		type Event = ();
 		type MaxMembers = MaxMembers;
 	}
@@ -150,7 +150,7 @@ mod tests {
 		pub const BlocksPerYear: u128 = 5256000;
 	}
 
-	impl minterest_model::Trait for Test {
+	impl minterest_model::Config for Test {
 		type Event = ();
 		type BlocksPerYear = BlocksPerYear;
 	}

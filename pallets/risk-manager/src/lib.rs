@@ -80,10 +80,10 @@ type Accounts<T> = accounts::Module<T>;
 type Controller<T> = controller::Module<T>;
 type Oracle<T> = oracle::Module<T>;
 
-pub trait Trait:
-	frame_system::Trait + liquidity_pools::Trait + controller::Trait + SendTransactionTypes<Call<Self>>
+pub trait Config:
+	frame_system::Config + liquidity_pools::Config + controller::Config + SendTransactionTypes<Call<Self>>
 {
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
 	/// A configuration for base priority of unsigned transactions.
 	///
@@ -99,7 +99,7 @@ pub trait Trait:
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as RiskManagerStorage {
+	trait Store for Module<T: Config> as RiskManagerStorage {
 		/// Liquidation params for pools: `(max_attempts, min_sum, threshold, liquidation_fee)`.
 		pub RiskManagerDates get(fn risk_manager_dates) config(): map hasher(blake2_128_concat) CurrencyId => RiskManagerData;
 	}
@@ -108,7 +108,7 @@ decl_storage! {
 decl_event!(
 	pub enum Event<T>
 	 where
-		 <T as frame_system::Trait>::AccountId,
+		 <T as frame_system::Config>::AccountId,
 	 {
 		/// Max value of liquidation attempts has been successfully changed: \[who, attempts_amount\]
 		MaxValueOFLiquidationAttempsHasChanged(AccountId, u8),
@@ -128,7 +128,7 @@ decl_event!(
 );
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 	/// Number overflow in calculation.
 	NumOverflow,
 
@@ -144,7 +144,7 @@ decl_error! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -294,10 +294,10 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	fn _offchain_worker() -> Result<(), OffchainErr> {
 		// Get available assets list
-		let underlying_asset_ids: Vec<CurrencyId> = <T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
+		let underlying_asset_ids: Vec<CurrencyId> = <T as liquidity_pools::Config>::EnabledCurrencyPair::get()
 			.iter()
 			.map(|currency_pair| currency_pair.underlying_id)
 			.collect();
@@ -481,14 +481,14 @@ impl<T: Trait> Module<T> {
 					T::MultiCurrency::withdraw(wrapped_id, &who, free_balance_wrapped_token)?;
 					T::MultiCurrency::transfer(
 						pool,
-						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+						&<T as Config>::LiquidityPoolsManager::pools_account_id(),
 						&T::LiquidationPoolsManager::pools_account_id(),
 						free_balance_underlying_asset,
 					)?;
 					T::MultiCurrency::transfer(
 						liquidated_pool_id,
 						&T::LiquidationPoolsManager::pools_account_id(),
-						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+						&<T as Config>::LiquidityPoolsManager::pools_account_id(),
 						available_amount_liquidated_asset,
 					)?;
 
@@ -522,14 +522,14 @@ impl<T: Trait> Module<T> {
 					T::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount_required_to_liquidate)?;
 					T::MultiCurrency::transfer(
 						pool,
-						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+						&<T as Config>::LiquidityPoolsManager::pools_account_id(),
 						&T::LiquidationPoolsManager::pools_account_id(),
 						underlying_amount_required_to_liquidate,
 					)?;
 					T::MultiCurrency::transfer(
 						liquidated_pool_id,
 						&T::LiquidationPoolsManager::pools_account_id(),
-						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+						&<T as Config>::LiquidityPoolsManager::pools_account_id(),
 						underlying_amount_required_to_write_off_debt,
 					)?;
 
@@ -622,14 +622,14 @@ impl<T: Trait> Module<T> {
 					T::MultiCurrency::withdraw(wrapped_id, &who, free_balance_wrapped_token)?;
 					T::MultiCurrency::transfer(
 						pool,
-						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+						&<T as Config>::LiquidityPoolsManager::pools_account_id(),
 						&T::LiquidationPoolsManager::pools_account_id(),
 						free_balance_underlying_asset,
 					)?;
 					T::MultiCurrency::transfer(
 						liquidated_pool_id,
 						&T::LiquidationPoolsManager::pools_account_id(),
-						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+						&<T as Config>::LiquidityPoolsManager::pools_account_id(),
 						available_amount_liquidated_asset,
 					)?;
 
@@ -655,14 +655,14 @@ impl<T: Trait> Module<T> {
 					T::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount_required_to_liquidate)?;
 					T::MultiCurrency::transfer(
 						pool,
-						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+						&<T as Config>::LiquidityPoolsManager::pools_account_id(),
 						&T::LiquidationPoolsManager::pools_account_id(),
 						underlying_amount_required_to_liquidate,
 					)?;
 					T::MultiCurrency::transfer(
 						liquidated_pool_id,
 						&T::LiquidationPoolsManager::pools_account_id(),
-						&<T as Trait>::LiquidityPoolsManager::pools_account_id(),
+						&<T as Config>::LiquidityPoolsManager::pools_account_id(),
 						user_total_borrow_in_underlying,
 					)?;
 
@@ -752,7 +752,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> ValidateUnsigned for Module<T> {
+impl<T: Config> ValidateUnsigned for Module<T> {
 	type Call = Call<T>;
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {

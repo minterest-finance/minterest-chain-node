@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, Zero},
-	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
+	DispatchError, DispatchResult, FixedPointNumber, FixedU128, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
 
@@ -62,11 +62,11 @@ type MinterestModel<T> = minterest_model::Module<T>;
 type Oracle<T> = oracle::Module<T>;
 type Accounts<T> = accounts::Module<T>;
 
-pub trait Trait:
-	liquidity_pools::Trait + system::Trait + oracle::Trait + accounts::Trait + minterest_model::Trait
+pub trait Config:
+	liquidity_pools::Config + system::Config + oracle::Config + accounts::Config + minterest_model::Config
 {
 	/// The overarching event type.
-	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 
 	/// The basic liquidity pools manager.
 	type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
@@ -95,7 +95,7 @@ decl_event! {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as ControllerStorage {
+	trait Store for Module<T: Config> as ControllerStorage {
 		/// Controller data information: `(timestamp, insurance_factor, collateral_factor, max_borrow_rate)`.
 		pub ControllerDates get(fn controller_dates) config(): map hasher(blake2_128_concat) CurrencyId => ControllerData<T::BlockNumber>;
 
@@ -105,7 +105,7 @@ decl_storage! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// Number overflow in calculation.
 		NumOverflow,
 
@@ -142,7 +142,7 @@ decl_error! {
 
 // Admin functions
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 		fn deposit_event() = default;
 
@@ -254,7 +254,7 @@ type RateResult = result::Result<Rate, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 type LiquidityResult = result::Result<(Balance, Balance), DispatchError>;
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// Applies accrued interest to total borrows and insurances.
 	/// This calculates interest accrued from the last checkpointed block
 	/// up to the current block and writes new checkpoint to storage.
@@ -369,7 +369,7 @@ impl<T: Trait> Module<T> {
 		redeem_amount: Balance,
 		borrow_amount: Balance,
 	) -> LiquidityResult {
-		let m_tokens_ids: Vec<CurrencyId> = <T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
+		let m_tokens_ids: Vec<CurrencyId> = <T as liquidity_pools::Config>::EnabledCurrencyPair::get()
 			.iter()
 			.map(|currency_pair| currency_pair.wrapped_id)
 			.collect();
@@ -527,7 +527,7 @@ impl<T: Trait> Module<T> {
 }
 
 // RPC methods
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// Gets the exchange rate between a mToken and the underlying asset.
 	pub fn get_liquidity_pool_exchange_rate(pool_id: CurrencyId) -> Option<Rate> {
 		let exchange_rate = <LiquidityPools<T>>::get_exchange_rate(pool_id).ok()?;
@@ -557,7 +557,7 @@ impl<T: Trait> Module<T> {
 }
 
 // Private methods
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// Calculates the utilization rate of the pool.
 	/// - `current_total_balance`: The amount of cash in the pool.
 	/// - `current_total_borrowed_balance`: The amount of borrows in the pool.
@@ -628,13 +628,13 @@ impl<T: Trait> Module<T> {
 	/// returns `interest_factor = current_borrow_interest_rate * block_delta`.
 	fn calculate_interest_factor(
 		current_borrow_interest_rate: Rate,
-		block_delta: &<T as system::Trait>::BlockNumber,
+		block_delta: &<T as system::Config>::BlockNumber,
 	) -> RateResult {
-		let block_delta_as_usize = TryInto::try_into(*block_delta)
+		let block_delta_as_usize: u8 = TryInto::try_into(*block_delta)
 			.ok()
 			.expect("blockchain will not exceed 2^32 blocks; qed");
 
-		let interest_factor = Rate::saturating_from_rational(block_delta_as_usize as u128, 1)
+		let interest_factor: FixedU128 = Rate::saturating_from_rational(block_delta_as_usize as u128, 1)
 			.checked_mul(&current_borrow_interest_rate)
 			.ok_or(Error::<T>::NumOverflow)?;
 
@@ -731,7 +731,7 @@ impl<T: Trait> Module<T> {
 }
 
 // Storage getters for Controller Data
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// Determines how much a user can borrow.
 	fn get_collateral_factor(pool_id: CurrencyId) -> Rate {
 		Self::controller_dates(pool_id).collateral_factor
@@ -749,7 +749,7 @@ impl<T: Trait> Module<T> {
 }
 
 // Admin functions
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	// FIXME It is possible to remove this function
 	/// Replenishes the insurance balance.
 	/// - `who`: Account ID of the administrator who replenishes the insurance.

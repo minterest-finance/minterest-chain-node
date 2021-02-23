@@ -12,16 +12,16 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait: system::Trait {
+pub trait Config: system::Config {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
 	/// A maximum number of members. When membership reaches this number, no new members may join.
 	type MaxMembers: Get<u32>;
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Accounts {
+	trait Store for Module<T: Config> as Accounts {
 		AllowedAccounts get(fn allowed_accounts) config(): map hasher(blake2_128_concat) T::AccountId => ();
 		MemberCount: u32;
 	}
@@ -30,7 +30,7 @@ decl_storage! {
 decl_event!(
 	pub enum Event<T>
 	where
-		AccountId = <T as system::Trait>::AccountId,
+		AccountId = <T as system::Config>::AccountId,
 	{
 		/// New account is added to the allow-list: \[who\]
 		AccountAdded(AccountId),
@@ -44,7 +44,7 @@ decl_event!(
 );
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// The account cannot be added to the allowed list because it has already been added.
 		AlreadyMember,
 
@@ -60,7 +60,7 @@ decl_error! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 		fn deposit_event() = default;
 
@@ -113,7 +113,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// Checks whether the caller is a member of the allow-list.
 	pub fn is_admin_internal(caller: &T::AccountId) -> bool {
 		let members = <AllowedAccounts<T> as IterableStorageMap<T::AccountId, ()>>::iter()

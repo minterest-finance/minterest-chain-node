@@ -46,7 +46,7 @@ parameter_types! {
 }
 
 pub type AccountId = u32;
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -78,7 +78,7 @@ parameter_types! {
 	pub const ExistentialDeposit: u64 = 1;
 }
 
-impl orml_tokens::Trait for Test {
+impl orml_tokens::Config for Test {
 	type Event = TestEvent;
 	type Balance = Balance;
 	type Amount = Amount;
@@ -93,7 +93,7 @@ parameter_types! {
 
 type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
 
-impl orml_currencies::Trait for Test {
+impl orml_currencies::Config for Test {
 	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type NativeCurrency = NativeCurrency;
@@ -112,7 +112,7 @@ parameter_types! {
 	];
 }
 
-impl liquidity_pools::Trait for Test {
+impl liquidity_pools::Config for Test {
 	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type ModuleId = LiquidityPoolsModuleId;
@@ -120,12 +120,12 @@ impl liquidity_pools::Trait for Test {
 	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
 
-impl controller::Trait for Test {
+impl controller::Config for Test {
 	type Event = TestEvent;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 }
 
-impl oracle::Trait for Test {
+impl oracle::Config for Test {
 	type Event = TestEvent;
 }
 
@@ -133,7 +133,7 @@ parameter_types! {
 	pub const MaxMembers: u32 = MAX_MEMBERS;
 }
 
-impl accounts::Trait for Test {
+impl accounts::Config for Test {
 	type Event = TestEvent;
 	type MaxMembers = MaxMembers;
 }
@@ -142,7 +142,7 @@ parameter_types! {
 	pub const BlocksPerYear: u128 = 5256000;
 }
 
-impl minterest_model::Trait for Test {
+impl minterest_model::Config for Test {
 	type Event = TestEvent;
 	type BlocksPerYear = BlocksPerYear;
 }

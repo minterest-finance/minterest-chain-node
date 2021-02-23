@@ -49,7 +49,7 @@ parameter_types! {
 }
 
 pub type AccountId = u32;
-impl system::Trait for Runtime {
+impl system::Config for Runtime {
 	type BaseCallFilter = ();
 	type Origin = Origin;
 	type Call = ();
@@ -83,7 +83,7 @@ parameter_types! {
 
 type Amount = i128;
 
-impl orml_tokens::Trait for Runtime {
+impl orml_tokens::Config for Runtime {
 	type Event = TestEvent;
 	type Balance = Balance;
 	type Amount = Amount;
@@ -98,7 +98,7 @@ parameter_types! {
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
 
-impl orml_currencies::Trait for Runtime {
+impl orml_currencies::Config for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type NativeCurrency = NativeCurrency;
@@ -117,7 +117,7 @@ parameter_types! {
 	];
 }
 
-impl liquidity_pools::Trait for Runtime {
+impl liquidity_pools::Config for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type ModuleId = LiquidityPoolsModuleId;
@@ -125,7 +125,7 @@ impl liquidity_pools::Trait for Runtime {
 	type EnabledCurrencyPair = EnabledCurrencyPair;
 }
 
-impl oracle::Trait for Runtime {
+impl oracle::Config for Runtime {
 	type Event = TestEvent;
 }
 
@@ -133,7 +133,7 @@ parameter_types! {
 	pub const MaxMembers: u32 = MAX_MEMBERS;
 }
 
-impl accounts::Trait for Runtime {
+impl accounts::Config for Runtime {
 	type Event = TestEvent;
 	type MaxMembers = MaxMembers;
 }
@@ -142,7 +142,7 @@ parameter_types! {
 	pub const BlocksPerYear: u128 = 5256000u128;
 }
 
-impl minterest_model::Trait for Runtime {
+impl minterest_model::Config for Runtime {
 	type Event = TestEvent;
 	type BlocksPerYear = BlocksPerYear;
 }

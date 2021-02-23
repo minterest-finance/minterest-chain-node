@@ -27,8 +27,8 @@ mod tests;
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct Pool {}
 
-pub trait Trait: frame_system::Trait {
-	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
+pub trait Config: frame_system::Config {
+	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
 
 	/// The Liquidation Pool's module id, keep all assets in Pools.
 	type ModuleId: Get<ModuleId>;
@@ -38,7 +38,7 @@ pub trait Trait: frame_system::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Exchange {
+	trait Store for Module<T: Config> as Exchange {
 		 /// Liquidation pool information.
 		pub LiquidationPools get(fn liquidation_pools) config(): map hasher(blake2_128_concat) CurrencyId => Pool;
 	}
@@ -49,12 +49,12 @@ decl_event!(
 );
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 	}
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -67,7 +67,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> PoolsManager<T::AccountId> for Module<T> {
+impl<T: Config> PoolsManager<T::AccountId> for Module<T> {
 	/// Gets module account id.
 	fn pools_account_id() -> T::AccountId {
 		T::ModuleId::get().into_account()
