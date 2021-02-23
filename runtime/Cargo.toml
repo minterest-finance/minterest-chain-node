@@ -51,19 +51,19 @@ sp-transaction-pool = { default-features = false, version = '3.0.0' }
 sp-version = { default-features = false, version = '3.0.0' }
 
 # local dependencies
-m-tokens = { path = "../pallets/m-tokens", default-features = false }
-minterest-protocol = { path = "../pallets/minterest-protocol", default-features = false }
+m-tokens = { path = "../modules/m-tokens", default-features = false }
+minterest-protocol = { path = "../modules/minterest-protocol", default-features = false }
 minterest-primitives = { path = "../primitives", default-features = false }
-liquidity-pools = { path = "../pallets/liquidity-pools", default-features = false }
-pallet-traits = { path = "../pallets/traits", default-features = false }
-integration-tests = { path = "../pallets/integration-tests", default-features = false }
-controller = { path = "../pallets/controller", default-features = false }
-controller-rpc-runtime-api = { path = "../pallets/controller/rpc/runtime-api", default-features = false }
-accounts = { path = "../pallets/accounts", default-features = false }
-oracle = { path = "../pallets/oracle", default-features = false }
-minterest-model = { path = "../pallets/minterest-model", default-features = false }
-risk-manager = { path = "../pallets/risk-manager", default-features = false }
-liquidation-pools = { path = "../pallets/liquidation-pools", default-features = false }
+liquidity-pools = { path = "../modules/liquidity-pools", default-features = false }
+pallet-traits = { path = "../modules/traits", default-features = false }
+integration-tests = { path = "../modules/integration-tests", default-features = false }
+controller = { path = "../modules/controller", default-features = false }
+controller-rpc-runtime-api = { path = "../modules/controller/rpc/runtime-api", default-features = false }
+accounts = { path = "../modules/accounts", default-features = false }
+oracle = { path = "../modules/oracle", default-features = false }
+minterest-model = { path = "../modules/minterest-model", default-features = false }
+risk-manager = { path = "../modules/risk-manager", default-features = false }
+liquidation-pools = { path = "../modules/liquidation-pools", default-features = false }
 
 # ORML dependencies
 orml-currencies = { path = "../orml/currencies", default-features = false }

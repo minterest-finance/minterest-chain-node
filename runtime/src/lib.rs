@@ -117,7 +117,7 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 42;
 }
 
-// Configure FRAME pallets to include in runtime.
+// Configure FRAME modules to include in runtime.
 
 impl frame_system::Config for Runtime {
 	/// The basic call filter to use in dispatchable.
@@ -344,7 +344,7 @@ impl liquidation_pools::Config for Runtime {
 	type ModuleId = LiquidationPoolsModuleId;
 }
 
-// Create the runtime by composing the FRAME pallets that were previously configured.
+// Create the runtime by composing the FRAME modules that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -364,7 +364,7 @@ construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 
-		// Minterest pallets
+		// Minterest modules
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event, Config<T>},

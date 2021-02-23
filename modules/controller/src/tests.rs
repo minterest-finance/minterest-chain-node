@@ -82,13 +82,13 @@ fn calculate_interest_factor_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// interest_factor = 0.1 * 25 = 2.5
 		assert_eq!(
-			Controller::calculate_interest_factor(Rate::saturating_from_rational(1, 10), &25),
+			Controller::calculate_interest_factor(Rate::saturating_from_rational(1, 10), 25),
 			Ok(Rate::saturating_from_rational(25, 10))
 		);
 
 		// Overflow in calculation: block_delta * borrow_interest_rate
 		assert_noop!(
-			Controller::calculate_interest_factor(Rate::from_inner(u128::max_value()), &20),
+			Controller::calculate_interest_factor(Rate::from_inner(u128::max_value()), 20),
 			Error::<Runtime>::NumOverflow
 		);
 	});

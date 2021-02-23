@@ -17,4 +17,4 @@ sc-rpc = { version = "3.0.0" }
 
 # local dependencies
 node-minterest-runtime = { path = '../runtime', version = '0.6.0' }
-controller-rpc = { path = "../pallets/controller/rpc" }
+controller-rpc = { path = "../modules/controller/rpc" }
