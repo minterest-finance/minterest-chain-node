@@ -7,6 +7,7 @@ use frame_system as system;
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
+use sp_runtime::traits::One;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -83,7 +84,7 @@ impl orml_tokens::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxMembers: u32 = MAX_MEMBERS;
+	pub const MaxMembers: u8 = MAX_MEMBERS;
 }
 
 impl accounts::Config for Test {
@@ -124,7 +125,7 @@ impl minterest_model::Config for Test {
 }
 
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
-pub const MAX_MEMBERS: u32 = 16;
+pub const MAX_MEMBERS: u8 = 16;
 pub const ALICE: AccountId = 1;
 pub fn alice() -> Origin {
 	Origin::signed(ALICE)
@@ -173,6 +174,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 	accounts::GenesisConfig::<Test> {
 		allowed_accounts: vec![(ALICE, ())],
+		member_count: u8::one(),
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

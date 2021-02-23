@@ -14,7 +14,7 @@ use minterest_primitives::{Operation, Price};
 use orml_traits::MultiCurrency;
 use pallet_traits::PoolsManager;
 use risk_manager::RiskManagerData;
-use sp_runtime::traits::Zero;
+use sp_runtime::traits::{One, Zero};
 use sp_runtime::FixedPointNumber;
 
 type MinterestProtocol = minterest_protocol::Module<Runtime>;
@@ -239,6 +239,7 @@ impl ExtBuilder {
 
 		accounts::GenesisConfig::<Runtime> {
 			allowed_accounts: vec![(ALICE::get(), ())],
+			member_count: u8::one(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

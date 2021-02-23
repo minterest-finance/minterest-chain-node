@@ -56,7 +56,7 @@ impl system::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxMembers: u32 = 16;
+	pub const MaxMembers: u8 = 16;
 }
 
 impl test_accounts::Config for Test {

@@ -20,6 +20,7 @@ mod tests {
 	use minterest_model::MinterestModelData;
 	use minterest_protocol::Error as MinterestProtocolError;
 	use pallet_traits::PoolsManager;
+	use sp_runtime::traits::One;
 
 	mod controller_tests;
 	mod liquidity_pools_tests;
@@ -154,7 +155,7 @@ mod tests {
 	}
 
 	parameter_types! {
-		pub const MaxMembers: u32 = MAX_MEMBERS;
+		pub const MaxMembers: u8 = MAX_MEMBERS;
 	}
 
 	impl accounts::Config for Test {
@@ -178,7 +179,7 @@ mod tests {
 	pub const BALANCE_ZERO: Balance = 0;
 	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 	pub const RATE_ZERO: Rate = Rate::from_inner(0);
-	pub const MAX_MEMBERS: u32 = 16;
+	pub const MAX_MEMBERS: u8 = 16;
 
 	pub fn admin() -> Origin {
 		Origin::signed(ADMIN)
@@ -355,6 +356,7 @@ mod tests {
 
 			accounts::GenesisConfig::<Test> {
 				allowed_accounts: vec![(ADMIN, ())],
+				member_count: u8::one(),
 			}
 			.assimilate_storage(&mut t)
 			.unwrap();

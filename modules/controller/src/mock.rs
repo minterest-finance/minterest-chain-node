@@ -11,6 +11,7 @@ pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
+use sp_runtime::traits::One;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, Zero},
@@ -126,7 +127,7 @@ impl oracle::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MaxMembers: u32 = MAX_MEMBERS;
+	pub const MaxMembers: u8 = MAX_MEMBERS;
 }
 
 impl accounts::Config for Runtime {
@@ -148,7 +149,7 @@ impl Config for Runtime {
 	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
 }
 
-pub const MAX_MEMBERS: u32 = 16;
+pub const MAX_MEMBERS: u8 = 16;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -364,6 +365,7 @@ impl ExtBuilder {
 
 		accounts::GenesisConfig::<Runtime> {
 			allowed_accounts: vec![(ALICE, ())],
+			member_count: u8::one(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

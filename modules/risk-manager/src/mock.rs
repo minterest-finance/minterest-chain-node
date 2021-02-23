@@ -9,6 +9,7 @@ use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::testing::TestXt;
+use sp_runtime::traits::One;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -88,7 +89,7 @@ impl orml_tokens::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxMembers: u32 = MAX_MEMBERS;
+	pub const MaxMembers: u8 = MAX_MEMBERS;
 }
 
 impl accounts::Config for Test {
@@ -166,7 +167,7 @@ where
 }
 
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
-pub const MAX_MEMBERS: u32 = 16;
+pub const MAX_MEMBERS: u8 = 16;
 pub const ONE_HUNDRED: Balance = 100;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ADMIN: AccountId = 0;
@@ -247,6 +248,7 @@ impl ExtBuilder {
 
 		accounts::GenesisConfig::<Test> {
 			allowed_accounts: vec![(ADMIN, ())],
+			member_count: u8::one(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

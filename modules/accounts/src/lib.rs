@@ -2,11 +2,8 @@
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
 
-use frame_support::pallet_prelude::*;
-use frame_support::transactional;
-use frame_support::{ensure, IterableStorageMap};
-use frame_system::pallet_prelude::*;
-use frame_system::{ensure_root, ensure_signed};
+use frame_support::{ensure, pallet_prelude::*, transactional, IterableStorageMap};
+use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use sp_std::collections::btree_set::BTreeSet;
 
 pub use module::*;
