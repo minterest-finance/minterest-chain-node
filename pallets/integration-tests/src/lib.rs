@@ -2,17 +2,18 @@
 
 #[cfg(test)]
 mod tests {
-	use frame_support::{assert_noop, assert_ok, impl_outer_origin, parameter_types};
+	use frame_support::{assert_noop, assert_ok, pallet_prelude::GenesisBuild, parameter_types};
 	use frame_system::{self as system};
 	use liquidity_pools::{Pool, PoolUserData};
 	use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 	use orml_currencies::Currency;
+	use orml_traits::parameter_type_with_key;
 	use orml_traits::MultiCurrency;
 	use sp_core::H256;
 	use sp_runtime::{
 		testing::Header,
-		traits::{IdentityLookup, Zero},
-		FixedPointNumber, ModuleId, Perbill,
+		traits::{BlakeTwo256, IdentityLookup, Zero},
+		FixedPointNumber, ModuleId,
 	};
 
 	use controller::{ControllerData, PauseKeeper};
@@ -26,62 +27,77 @@ mod tests {
 	mod minterest_protocol_tests;
 	mod scenario_tests;
 
-	impl_outer_origin! {
-		pub enum Origin for Test {}
-	}
+	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+	type Block = frame_system::mocking::MockBlock<Test>;
 
-	#[derive(Clone, PartialEq, Eq)]
-	pub struct Test;
+	// Configure a mock runtime to test the pallet.
+	frame_support::construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+		{
+			System: frame_system::{Module, Call, Config, Storage, Event<T>},
+			Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
+			Currencies: orml_currencies::{Module, Call, Event<T>},
+			MTokens: m_tokens::{Module, Storage, Call, Event<T>},
+			MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
+			TestPools: liquidity_pools::{Module, Storage, Call, Event, Config<T>},
+			TestController: controller::{Module, Storage, Call, Event, Config<T>},
+			MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+			TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
+			Oracle: oracle::{Module, Storage, Call, Event},
+		}
+	);
 
 	parameter_types! {
 		pub const BlockHashCount: u64 = 250;
-		pub const MaximumBlockWeight: u32 = 1024;
-		pub const MaximumBlockLength: u32 = 2 * 1024;
-		pub const AvailableBlockRatio: Perbill = Perbill::one();
-
+		pub const SS58Prefix: u8 = 42;
 	}
 
-	pub type AccountId = u32;
+	pub type AccountId = u64;
+
 	impl system::Config for Test {
 		type BaseCallFilter = ();
+		type BlockWeights = ();
+		type BlockLength = ();
+		type DbWeight = ();
 		type Origin = Origin;
-		type Call = ();
+		type Call = Call;
 		type Index = u64;
 		type BlockNumber = u64;
 		type Hash = H256;
-		type Hashing = ::sp_runtime::traits::BlakeTwo256;
-		type AccountId = AccountId;
+		type Hashing = BlakeTwo256;
+		type AccountId = u64;
 		type Lookup = IdentityLookup<Self::AccountId>;
 		type Header = Header;
-		type Event = ();
+		type Event = Event;
 		type BlockHashCount = BlockHashCount;
-		type MaximumBlockWeight = MaximumBlockWeight;
-		type DbWeight = ();
-		type BlockExecutionWeight = ();
-		type ExtrinsicBaseWeight = ();
-		type MaximumExtrinsicWeight = MaximumBlockWeight;
-		type MaximumBlockLength = MaximumBlockLength;
-		type AvailableBlockRatio = AvailableBlockRatio;
 		type Version = ();
-		type PalletInfo = ();
+		type PalletInfo = PalletInfo;
 		type AccountData = ();
 		type OnNewAccount = ();
 		type OnKilledAccount = ();
 		type SystemWeightInfo = ();
-	}
-
-	parameter_types! {
-		pub const ExistentialDeposit: u64 = 1;
+		type SS58Prefix = SS58Prefix;
 	}
 
 	type Amount = i128;
+
+	parameter_type_with_key! {
+		pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+			Default::default()
+		};
+	}
+
 	impl orml_tokens::Config for Test {
-		type Event = ();
+		type Event = Event;
 		type Balance = Balance;
 		type Amount = Amount;
 		type CurrencyId = CurrencyId;
-		type OnReceived = ();
 		type WeightInfo = ();
+		type ExistentialDeposits = ExistentialDeposits;
+		type OnDust = ();
 	}
 
 	parameter_types! {
@@ -91,7 +107,7 @@ mod tests {
 	type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
 
 	impl orml_currencies::Config for Test {
-		type Event = ();
+		type Event = Event;
 		type MultiCurrency = orml_tokens::Module<Test>;
 		type NativeCurrency = NativeCurrency;
 		type GetNativeCurrencyId = GetNativeCurrencyId;
@@ -99,7 +115,7 @@ mod tests {
 	}
 
 	impl m_tokens::Config for Test {
-		type Event = ();
+		type Event = Event;
 		type MultiCurrency = orml_tokens::Module<Test>;
 	}
 
@@ -115,7 +131,7 @@ mod tests {
 	}
 
 	impl liquidity_pools::Config for Test {
-		type Event = ();
+		type Event = Event;
 		type MultiCurrency = orml_tokens::Module<Test>;
 		type ModuleId = LiquidityPoolsModuleId;
 		type InitialExchangeRate = InitialExchangeRate;
@@ -123,18 +139,18 @@ mod tests {
 	}
 
 	impl minterest_protocol::Config for Test {
-		type Event = ();
+		type Event = Event;
 		type Borrowing = liquidity_pools::Module<Test>;
 		type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 	}
 
 	impl controller::Config for Test {
-		type Event = ();
+		type Event = Event;
 		type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	}
 
 	impl oracle::Config for Test {
-		type Event = ();
+		type Event = Event;
 	}
 
 	parameter_types! {
@@ -142,7 +158,7 @@ mod tests {
 	}
 
 	impl accounts::Config for Test {
-		type Event = ();
+		type Event = Event;
 		type MaxMembers = MaxMembers;
 	}
 
@@ -151,7 +167,7 @@ mod tests {
 	}
 
 	impl minterest_model::Config for Test {
-		type Event = ();
+		type Event = Event;
 		type BlocksPerYear = BlocksPerYear;
 	}
 
@@ -163,12 +179,6 @@ mod tests {
 	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 	pub const RATE_ZERO: Rate = Rate::from_inner(0);
 	pub const MAX_MEMBERS: u32 = 16;
-
-	pub type MinterestProtocol = minterest_protocol::Module<Test>;
-	pub type TestPools = liquidity_pools::Module<Test>;
-	pub type TestController = controller::Module<Test>;
-	pub type Currencies = orml_currencies::Module<Test>;
-	pub type System = frame_system::Module<Test>;
 
 	pub fn admin() -> Origin {
 		Origin::signed(ADMIN)
