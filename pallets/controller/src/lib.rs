@@ -303,7 +303,7 @@ impl<T: Config> Module<T> {
 			*  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
 		*/
 
-		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, &block_delta)?;
+		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, block_delta)?;
 		let interest_accumulated =
 			Self::calculate_interest_accumulated(simple_interest_factor, current_total_borrowed_balance)?;
 		let new_total_borrow_balance =
@@ -626,11 +626,8 @@ impl<T: Config> Module<T> {
 	/// - `block_delta`: The number of blocks elapsed since the last accrual.
 	///
 	/// returns `interest_factor = current_borrow_interest_rate * block_delta`.
-	fn calculate_interest_factor(
-		current_borrow_interest_rate: Rate,
-		block_delta: &<T as system::Config>::BlockNumber,
-	) -> RateResult {
-		let block_delta_as_usize: u8 = TryInto::try_into(*block_delta)
+	fn calculate_interest_factor(current_borrow_interest_rate: Rate, block_delta: T::BlockNumber) -> RateResult {
+		let block_delta_as_usize = TryInto::<usize>::try_into(block_delta)
 			.ok()
 			.expect("blockchain will not exceed 2^32 blocks; qed");
 

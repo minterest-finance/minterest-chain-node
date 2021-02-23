@@ -6,6 +6,7 @@ use crate::{
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
 use controller_rpc_runtime_api::PoolState;
+use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::{assert_err, assert_noop, assert_ok, parameter_types};
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
