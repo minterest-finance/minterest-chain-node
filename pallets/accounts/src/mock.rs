@@ -1,85 +1,78 @@
 /// Mocks for the accounts pallet.
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
+use crate as test_accounts;
+use frame_support::parameter_types;
+use frame_system as system;
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentityLookup},
+};
 
-use super::*;
-use sp_io::TestExternalities;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-impl_outer_origin! {
-	pub enum Origin for Test {}
-}
-
-mod accounts {
-	pub use crate::Event;
-}
-
-impl_outer_event! {
-	pub enum TestEvent for Test {
-		frame_system<T>,
-		accounts<T>,
+// Configure a mock runtime to test the pallet.
+frame_support::construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		TestAccounts: test_accounts::{Module, Storage, Call, Event<T>, Config<T>},
 	}
-}
+);
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Test;
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: u32 = 1024;
-	pub const MaximumBlockLength: u32 = 2 * 1024;
-	pub const AvailableBlockRatio: Perbill = Perbill::one();
+	pub const SS58Prefix: u8 = 42;
 }
 
-type AccountId = u32;
+pub type AccountId = u64;
 
-impl frame_system::Config for Test {
+impl system::Config for Test {
+	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type Origin = Origin;
-	type Call = ();
+	type Call = Call;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
-	type Hashing = ::sp_runtime::traits::BlakeTwo256;
-	type AccountId = AccountId;
+	type Hashing = BlakeTwo256;
+	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = Event;
 	type BlockHashCount = BlockHashCount;
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
-	type MaximumBlockWeight = MaximumBlockWeight;
-	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
-	type PalletInfo = ();
+	type PalletInfo = PalletInfo;
+	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
-	type AccountData = ();
-	type BaseCallFilter = ();
 	type SystemWeightInfo = ();
+	type SS58Prefix = SS58Prefix;
 }
 
 parameter_types! {
 	pub const MaxMembers: u32 = 16;
 }
 
-impl Trait for Test {
-	type Event = TestEvent;
+impl test_accounts::Config for Test {
+	type Event = Event;
 	type MaxMembers = MaxMembers;
 }
 
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
-pub type TestAccounts = Module<Test>;
-pub type System = frame_system::Module<Test>;
 
 pub struct ExternalityBuilder;
 
 impl ExternalityBuilder {
-	pub fn build() -> TestExternalities {
+	pub fn build() -> sp_io::TestExternalities {
 		let storage = system::GenesisConfig::default().build_storage::<Test>().unwrap();
-		let mut ext = TestExternalities::from(storage);
+		let mut ext = sp_io::TestExternalities::from(storage);
 		ext.execute_with(|| System::set_block_number(1));
 		ext
 	}

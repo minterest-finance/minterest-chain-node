@@ -1,7 +1,7 @@
 //! Tests for the accounts pallet.
 
 use super::*;
-use mock::*;
+use mock::{Event, *};
 
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 
@@ -13,13 +13,13 @@ fn add_member_should_work() {
 
 		// Add Alice to allow-list.
 		assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
-		let expected_event = TestEvent::accounts(RawEvent::AccountAdded(ALICE));
+		let expected_event = Event::test_accounts(crate::RawEvent::AccountAdded(ALICE));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(<AllowedAccounts<Test>>::contains_key(ALICE));
 
 		// Add Bob to allow-list.
 		assert_ok!(TestAccounts::add_member(Origin::root(), BOB));
-		let expected_event = TestEvent::accounts(RawEvent::AccountAdded(BOB));
+		let expected_event = Event::test_accounts(crate::RawEvent::AccountAdded(BOB));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(<AllowedAccounts<Test>>::contains_key(BOB));
 
@@ -70,7 +70,7 @@ fn remove_member_should_work() {
 			.into_iter()
 			.map(|r| r.event)
 			.filter_map(|e| {
-				if let TestEvent::accounts(inner) = e {
+				if let Event::test_accounts(inner) = e {
 					Some(inner)
 				} else {
 					None
@@ -105,7 +105,7 @@ fn is_admin_should_work() {
 		assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
 
 		assert_ok!(TestAccounts::is_admin(Origin::signed(ALICE)));
-		let expected_event = TestEvent::accounts(RawEvent::IsAnAdmin(ALICE));
+		let expected_event = Event::test_accounts(crate::RawEvent::IsAnAdmin(ALICE));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		assert_noop!(TestAccounts::is_admin(Origin::signed(BOB)), Error::<Test>::NotAnAdmin);
