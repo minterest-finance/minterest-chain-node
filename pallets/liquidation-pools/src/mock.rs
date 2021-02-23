@@ -1,76 +1,81 @@
 /// Mocks for the liquidation-pools pallet.
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
+use super::*;
+use crate as liquidation_pools;
+use frame_support::parameter_types;
+use frame_system as system;
 pub use minterest_primitives::CurrencyId;
 use orml_currencies::Currency;
+use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_io::TestExternalities;
-use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentityLookup},
+};
 
-use super::*;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-mod liquidation_pools {
-	pub use crate::Event;
-}
-
-impl_outer_origin! {
-	pub enum Origin for Test {}
-}
-
-impl_outer_event! {
-	pub enum TestEvent for Test {
-		frame_system<T>,
-		orml_currencies<T>,
-		orml_tokens<T>,
-		liquidation_pools,
+// Configure a mock runtime to test the pallet.
+frame_support::construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		//ORML palletts
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Module, Call, Event<T>},
+		// Minterest pallets
+		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event},
 	}
-}
+);
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Test;
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: u32 = 1024;
-	pub const MaximumBlockLength: u32 = 2 * 1024;
-	pub const AvailableBlockRatio: Perbill = Perbill::one();
+	pub const SS58Prefix: u8 = 42;
 }
 
-pub type AccountId = u32;
-
-impl frame_system::Config for Test {
+impl system::Config for Test {
+	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type Origin = Origin;
-	type Call = ();
+	type Call = Call;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
-	type Hashing = ::sp_runtime::traits::BlakeTwo256;
-	type AccountId = AccountId;
+	type Hashing = BlakeTwo256;
+	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = Event;
 	type BlockHashCount = BlockHashCount;
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
-	type MaximumBlockWeight = MaximumBlockWeight;
-	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
-	type PalletInfo = ();
+	type PalletInfo = PalletInfo;
+	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
-	type AccountData = ();
-	type BaseCallFilter = ();
 	type SystemWeightInfo = ();
+	type SS58Prefix = SS58Prefix;
+}
+
+parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		Default::default()
+	};
 }
 
 impl orml_tokens::Config for Test {
-	type Event = TestEvent;
+	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type OnReceived = ();
 	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = ();
 }
 
 parameter_types! {
@@ -80,7 +85,7 @@ parameter_types! {
 type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
 
 impl orml_currencies::Config for Test {
-	type Event = TestEvent;
+	type Event = Event;
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type NativeCurrency = NativeCurrency;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
@@ -91,15 +96,13 @@ parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 }
 
-impl Trait for Test {
-	type Event = TestEvent;
+impl liquidation_pools::Config for Test {
+	type Event = Event;
 	type ModuleId = LiquidationPoolsModuleId;
 	type MultiCurrency = orml_tokens::Module<Test>;
 }
 
 type Amount = i128;
-pub type _TestLiquidationPools = Module<Test>;
-pub type System = frame_system::Module<Test>;
 
 pub struct ExternalityBuilder;
 
