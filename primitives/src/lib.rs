@@ -1,4 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::unnecessary_cast)]
+#![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
 use sp_runtime::{

@@ -1,4 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
 use frame_support::{debug, decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};

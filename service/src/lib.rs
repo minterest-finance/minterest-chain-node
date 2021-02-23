@@ -1,4 +1,5 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
+#![allow(clippy::type_complexity)]
 
 use node_minterest_runtime::{self, opaque::Block, RuntimeApi};
 use sc_client_api::{ExecutorProvider, RemoteBackend};
@@ -48,7 +49,7 @@ pub fn new_partial(
 	ServiceError,
 > {
 	if config.keystore_remote.is_some() {
-		return Err(ServiceError::Other(format!("Remote Keystores are not supported.")));
+		return Err(ServiceError::Other("Remote Keystores are not supported.".to_string()));
 	}
 	let inherent_data_providers = sp_inherents::InherentDataProviders::new();
 
@@ -75,7 +76,7 @@ pub fn new_partial(
 	let import_queue = sc_consensus_aura::import_queue::<_, _, _, AuraPair, _, _>(
 		sc_consensus_aura::slot_duration(&*client)?,
 		aura_block_import.clone(),
-		Some(Box::new(grandpa_block_import.clone())),
+		Some(Box::new(grandpa_block_import)),
 		client.clone(),
 		inherent_data_providers.clone(),
 		&task_manager.spawn_handle(),
@@ -96,7 +97,7 @@ pub fn new_partial(
 	})
 }
 
-fn remote_keystore(_url: &String) -> Result<Arc<LocalKeystore>, &'static str> {
+fn remote_keystore(_url: &str) -> Result<Arc<LocalKeystore>, &'static str> {
 	// FIXME: here would the concrete keystore be built,
 	//        must return a concrete type (NOT `LocalKeystore`) that
 	//        implements `CryptoStore` and `SyncCryptoStore`
@@ -209,7 +210,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
 			block_import,
 			proposer,
 			network.clone(),
-			inherent_data_providers.clone(),
+			inherent_data_providers,
 			force_authoring,
 			backoff_authoring_blocks,
 			keystore_container.sync_keystore(),
@@ -288,7 +289,7 @@ pub fn new_light(mut config: Configuration) -> Result<TaskManager, ServiceError>
 	));
 
 	let (grandpa_block_import, _) =
-		sc_finality_grandpa::block_import(client.clone(), &(client.clone() as Arc<_>), select_chain.clone())?;
+		sc_finality_grandpa::block_import(client.clone(), &(client.clone() as Arc<_>), select_chain)?;
 
 	let aura_block_import =
 		sc_consensus_aura::AuraBlockImport::<_, _, _, AuraPair>::new(grandpa_block_import.clone(), client.clone());
