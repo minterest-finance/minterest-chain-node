@@ -1,81 +1,84 @@
 /// Mocks for the minterest-model pallet.
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
-use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
-use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, ModuleId, Perbill};
-
 use super::*;
+use crate as minterest_model;
+use frame_support::parameter_types;
+use frame_system as system;
+use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
+use orml_traits::parameter_type_with_key;
+use sp_core::H256;
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentityLookup},
+	ModuleId,
+};
 
-impl_outer_origin! {
-	pub enum Origin for Test {}
-}
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-mod minterest_model {
-	pub use crate::Event;
-}
-
-impl_outer_event! {
-	pub enum TestEvent for Test {
-		frame_system<T>,
-		orml_tokens<T>,
-		minterest_model,
-		accounts<T>,
-		oracle,
-		liquidity_pools,
+// Configure a mock runtime to test the pallet.
+frame_support::construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Oracle: oracle::{Module, Storage, Call, Event},
+		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
+		TestPools: liquidity_pools::{Module, Storage, Call, Event, Config<T>},
 	}
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Test;
+);
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: u32 = 1024;
-	pub const MaximumBlockLength: u32 = 2 * 1024;
-	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+	pub const SS58Prefix: u8 = 42;
 }
 
-type AccountId = u32;
+pub type AccountId = u64;
 
 impl system::Config for Test {
+	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type Origin = Origin;
-	type Call = ();
+	type Call = Call;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
-	type Hashing = ::sp_runtime::traits::BlakeTwo256;
-	type AccountId = AccountId;
+	type Hashing = BlakeTwo256;
+	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = Event;
 	type BlockHashCount = BlockHashCount;
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
-	type MaximumBlockWeight = MaximumBlockWeight;
-	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
-	type PalletInfo = ();
+	type PalletInfo = PalletInfo;
+	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
-	type AccountData = ();
-	type BaseCallFilter = ();
 	type SystemWeightInfo = ();
+	type SS58Prefix = SS58Prefix;
 }
 
-parameter_types! {
-	pub const ExistentialDeposit: u64 = 1;
+type Amount = i128;
+
+parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		Default::default()
+	};
 }
 
 impl orml_tokens::Config for Test {
-	type Event = TestEvent;
+	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type OnReceived = ();
 	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = ();
 }
 
 parameter_types! {
@@ -83,7 +86,7 @@ parameter_types! {
 }
 
 impl accounts::Config for Test {
-	type Event = TestEvent;
+	type Event = Event;
 	type MaxMembers = MaxMembers;
 }
 
@@ -99,7 +102,7 @@ parameter_types! {
 }
 
 impl liquidity_pools::Config for Test {
-	type Event = TestEvent;
+	type Event = Event;
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type ModuleId = LiquidityPoolsModuleId;
 	type InitialExchangeRate = InitialExchangeRate;
@@ -107,22 +110,18 @@ impl liquidity_pools::Config for Test {
 }
 
 impl oracle::Config for Test {
-	type Event = TestEvent;
+	type Event = Event;
 }
 
 parameter_types! {
 	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
 }
 
-impl Trait for Test {
-	type Event = TestEvent;
+impl minterest_model::Config for Test {
+	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
 }
 
-type Amount = i128;
-
-pub type TestMinterestModel = Module<Test>;
-pub type System = frame_system::Module<Test>;
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
 pub const MAX_MEMBERS: u32 = 16;
 pub const ALICE: AccountId = 1;

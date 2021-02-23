@@ -3525,6 +3525,7 @@ dependencies = [
  "minterest-primitives",
  "oracle",
  "orml-tokens",
+ "orml-traits",
  "orml-utilities",
  "parity-scale-codec",
  "serde",

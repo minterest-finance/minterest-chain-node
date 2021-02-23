@@ -1,7 +1,7 @@
 //! Tests for the minterest-model pallet.
 
 use super::*;
-use mock::*;
+use mock::{Event, *};
 
 use frame_support::{assert_noop, assert_ok};
 
@@ -9,7 +9,7 @@ fn multiplier_per_block_equal_max_value() -> MinterestModelData {
 	MinterestModelData {
 		kink: Rate::saturating_from_rational(12, 10),
 		base_rate_per_block: Rate::from_inner(0),
-		multiplier_per_block: Rate::from_inner(u128::max_value()),
+		multiplier_per_block: Rate::from_inner(u128::MAX),
 		jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
 	}
 }
@@ -17,7 +17,7 @@ fn multiplier_per_block_equal_max_value() -> MinterestModelData {
 fn base_rate_per_block_equal_max_value() -> MinterestModelData {
 	MinterestModelData {
 		kink: Rate::saturating_from_rational(12, 10),
-		base_rate_per_block: Rate::from_inner(u128::max_value()),
+		base_rate_per_block: Rate::from_inner(u128::MAX),
 		multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
 		jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
 	}
@@ -37,7 +37,7 @@ fn set_base_rate_per_block_should_work() {
 			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).base_rate_per_block,
 			Rate::saturating_from_rational(2, 1)
 		);
-		let expected_event = TestEvent::minterest_model(Event::BaseRatePerBlockHasChanged);
+		let expected_event = Event::minterest_model(crate::Event::BaseRatePerBlockHasChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 0.0: (0 / 10) / 5_256_000
@@ -110,7 +110,7 @@ fn set_multiplier_per_block_should_work() {
 			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).multiplier_per_block,
 			Rate::saturating_from_rational(2, 1)
 		);
-		let expected_event = TestEvent::minterest_model(Event::MultiplierPerBlockHasChanged);
+		let expected_event = Event::minterest_model(crate::Event::MultiplierPerBlockHasChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 0.0 if Base rate per block grater than zero: (0 / 10) / 5_256_000
@@ -189,7 +189,7 @@ fn set_jump_multiplier_per_block_should_work() {
 			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).jump_multiplier_per_block,
 			Rate::saturating_from_rational(2, 1)
 		);
-		let expected_event = TestEvent::minterest_model(Event::JumpMultiplierPerBlockHasChanged);
+		let expected_event = Event::minterest_model(crate::Event::JumpMultiplierPerBlockHasChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 0.0: (0 / 10) / 5_256_000
@@ -244,7 +244,7 @@ fn set_kink_should_work() {
 			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).kink,
 			Rate::saturating_from_rational(8, 10)
 		);
-		let expected_event = TestEvent::minterest_model(Event::KinkHasChanged);
+		let expected_event = Event::minterest_model(crate::Event::KinkHasChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Overflow in calculation: 0 / 0
