@@ -1,5 +1,7 @@
 # Minterest chain node
 
+Released version: **0.5.0** <br>
+Developed version: **0.6.0**
 
 # Building & Running MinterestChain
 
@@ -111,17 +113,8 @@ Update ORML
 ```bash
 make update
 ```
-### Release process
 
-To mark a relase, follow the steps:
-* Master contains only those changes, which passed QA.
-* Master branch code coverage has not decreased.
-* Make sure the CI is green.
-* Update pallets versions using semver in a separate MR. Merge this MR.
-* Tag a commit with pallet updates with a version tag using semver.
-* In case of hot fixes create a separate branch from tagged commit and work there. Merge the fixes branch back to master too.
-
-## Semantic versioning
+# Versioning
 
 This repo supports versioning system organized in the next way:
 
@@ -131,14 +124,28 @@ This repo supports versioning system organized in the next way:
 
 3. Major version (1.0.0, 2.0.0) represents release of a scope of features within a stable build which is ready for production.
 
-### Versioninng
+The project has current under development version set up in [cargo.toml](cargo.toml) file. This version should be upgraded once a tag for the previous version is released and the team starts a new version under development. As said - **the first commit** after the release is a commit to [cargo.toml](cargo.toml) with the next under development version number.
 
-The project has current release version set up in [cargo.toml](cargo.toml) file. This version should be upgraded once a tag is released and te team starts a new version under development.
+Each pallet and module has its own version which is not greater than the main one. Pallet version is upgraded once a significant change is made or a new feature is developed upon that pallet. **Pallet version should be upgraded in the same commit where the change was performed.**
 
-Each pallet and module has its own version which is not greater than the main one. Pallet version is upgraded once a significant change is made or a new feature is developed upon that pallet. Pallet version should be upgraded in the same commit where the change was performed.
+## Example:
 
-Example:
+New version under development should be 0.6.0. The first commit in master branch after the previous version was cut is a cahnge of version to 0.6.0 in cargo.toml.
 
-Version under development is 0.6.0. The main version in cargo.toml is 0.5.12, pallets versions for pallet A and B are 0.5.11 and 0.5.12. When forming a release, a version tag should be placed on a commit with 0.6.0 version bump in cargo.toml. 
+The pallets versions for pallet A and B are 0.5.11 and 0.5.12. 
 
-After this main cargo.toml version is 0.6.0 and pallets A and B still have 0.5.11 and 0.5.12. If any changes made to pallet B, it's version is set to 0.6.1.
+During development the team changes pallet B and increases it's version to 0.6.0. Pallet A remains with 0.5.11.
+
+Ongoing development causes pallet B version to grow to 0.6.21.
+
+To form a release, last commit in master should be marked with 0.6.0.
+
+Next commit to master is a cargo.toml file change with version 0.7.0, and the process repeats.
+
+## Release process
+
+To form a relase, follow the steps:
+* Tag the last commit with a version tag from [cargo.toml](cargo.toml). This marks the end of previous version development.
+* Push a new version in Cargo.toml and this readme to mark the beginning of development of a new version.
+
+In case of hot fixes create a separate branch from tagged commit and work there. Merge the fixes branch back to master too.
