@@ -2,7 +2,6 @@
 use super::*;
 use crate as minterest_model;
 use frame_support::parameter_types;
-use frame_support::traits::GenesisBuild;
 use frame_system as system;
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_traits::parameter_type_with_key;
@@ -148,7 +147,7 @@ pub fn bob() -> Origin {
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	crate::GenesisConfig {
+	minterest_model::GenesisConfig {
 		minterest_model_dates: vec![
 			(
 				CurrencyId::DOT,
@@ -179,7 +178,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			),
 		],
 	}
-	.assimilate_storage(&mut t)
+	.assimilate_storage::<Test>(&mut t)
 	.unwrap();
 
 	accounts::GenesisConfig::<Test> {
