@@ -5,10 +5,12 @@
 //! Liquidation Pools are responsible for holding funds for automatic liquidation.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::unused_unit)]
+#![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-use frame_support::traits::Get;
-use frame_support::{decl_error, decl_event, decl_module, decl_storage};
+use frame_support::{pallet_prelude::*, traits::Get};
+use frame_system::{ensure_signed, pallet_prelude::*};
 use minterest_primitives::{Balance, CurrencyId};
 use orml_traits::MultiCurrency;
 use pallet_traits::PoolsManager;
@@ -16,6 +18,8 @@ use pallet_traits::PoolsManager;
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::AccountIdConversion;
 use sp_runtime::{ModuleId, RuntimeDebug};
+
+pub use module::*;
 
 #[cfg(test)]
 mod mock;
@@ -27,47 +31,59 @@ mod tests;
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct Pool {}
 
-pub trait Config: frame_system::Config {
-	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
+#[frame_support::pallet]
+pub mod module {
+	use super::*;
 
-	/// The Liquidation Pool's module id, keep all assets in Pools.
-	type ModuleId: Get<ModuleId>;
+	#[pallet::config]
+	pub trait Config: frame_system::Config {
+		/// The overarching event type.
+		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
 
-	/// The `MultiCurrency` implementation.
-	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
-}
+		#[pallet::constant]
+		/// The Liquidation Pool's module id, keep all assets in Pools.
+		type ModuleId: Get<ModuleId>;
 
-decl_storage! {
-	trait Store for Module<T: Config> as Exchange {
-		 /// Liquidation pool information.
-		pub LiquidationPools get(fn liquidation_pools) config(): map hasher(blake2_128_concat) CurrencyId => Pool;
-	}
-}
-
-decl_event!(
-	pub enum Event {}
-);
-
-decl_error! {
-	pub enum Error for Module<T: Config> {
-	}
-}
-
-decl_module! {
-	pub struct Module<T: Config> for enum Call where origin: T::Origin {
-		type Error = Error<T>;
-
-		fn deposit_event() = default;
-
-		/// The Liquidity Pool's module id, keep all assets in Pools.
-		const ModuleId: ModuleId = T::ModuleId::get();
-
+		#[pallet::constant]
 		/// The Liquidation Pool's account id, keep all assets in Pools.
-		const PoolAccountId: T::AccountId = T::ModuleId::get().into_account();
+		type LiquidationPoolAccountId: Get<Self::AccountId>;
+
+		/// The `MultiCurrency` implementation.
+		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
+	}
+
+	#[pallet::error]
+	pub enum Error<T> {}
+
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
+	pub enum Event {
+		Dummy,
+	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn liquidation_pools)]
+	pub(crate) type LiquidationPools<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Pool, ValueQuery>;
+
+	#[pallet::pallet]
+	pub struct Pallet<T>(PhantomData<T>);
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		/// Dummy.
+		#[pallet::weight(0)]
+		pub fn dummy(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+			ensure_signed(origin)?;
+			Self::deposit_event(Event::Dummy);
+			Ok(().into())
+		}
 	}
 }
 
-impl<T: Config> PoolsManager<T::AccountId> for Module<T> {
+impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	/// Gets module account id.
 	fn pools_account_id() -> T::AccountId {
 		T::ModuleId::get().into_account()
@@ -81,6 +97,6 @@ impl<T: Config> PoolsManager<T::AccountId> for Module<T> {
 
 	/// Check if pool exists
 	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
-		LiquidationPools::contains_key(underlying_asset_id)
+		LiquidationPools::<T>::contains_key(underlying_asset_id)
 	}
 }

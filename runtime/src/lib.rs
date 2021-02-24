@@ -22,7 +22,7 @@ use pallet_transaction_payment::CurrencyAdapter;
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
-use sp_runtime::traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, Zero};
+use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, Zero};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
@@ -339,10 +339,15 @@ where
 	type Extrinsic = UncheckedExtrinsic;
 }
 
+parameter_types! {
+	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
+}
+
 impl liquidation_pools::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ModuleId = LiquidationPoolsModuleId;
+	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 }
 
 // Create the runtime by composing the FRAME modules that were previously configured.
