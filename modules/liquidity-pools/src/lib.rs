@@ -1,8 +1,17 @@
+//! # Liquidity Pools Module
+//!
+//! ## Overview
+//!
+//! TODO: add overview.
+
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::unused_unit)]
+#![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get, IterableStorageDoubleMap};
+use frame_support::{pallet_prelude::*, traits::Get};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
+pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{Borrowing, PoolsManager};
 #[cfg(feature = "std")]
@@ -51,84 +60,120 @@ mod mock;
 mod tests;
 
 type Oracle<T> = oracle::Module<T>;
-
-pub trait Config: frame_system::Config + oracle::Config {
-	/// The overarching event type.
-	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
-
-	/// The Liquidity Pool's module id, keep all assets in Pools.
-	type ModuleId: Get<ModuleId>;
-
-	/// The `MultiCurrency` implementation.
-	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
-
-	/// Start exchange rate.
-	type InitialExchangeRate: Get<Rate>;
-
-	/// Enabled currency pairs.
-	type EnabledCurrencyPair: Get<Vec<CurrencyPair>>;
-}
-
-decl_event!(
-	pub enum Event {}
-);
-
-decl_error! {
-	pub enum Error for Module<T: Config> {
-	/// Number overflow in calculation.
-	NumOverflow,
-
-	/// The currency is not enabled in protocol.
-	NotValidUnderlyingAssetId,
-
-	/// The currency is not enabled in wrapped protocol.
-	NotValidWrappedTokenId,
-	}
-}
-
-decl_storage! {
-	 trait Store for Module<T: Config> as LiquidityPoolsStorage {
-		 /// Liquidity pool information: `(total_borrowed, borrow_index, total_insurance)`.
-		pub Pools get(fn pools) config(): map hasher(blake2_128_concat) CurrencyId => Pool;
-
-		/// Information about the user of the liquidity pool: `(total_borrowed, interest_index, collateral)`.
-		pub PoolUserDates get(fn pool_user_data) config(): double_map
-			hasher(blake2_128_concat) CurrencyId,
-			hasher(blake2_128_concat) T::AccountId => PoolUserData;
-	}
-}
-
-decl_module! {
-		pub struct Module<T: Config> for enum Call where origin: T::Origin {
-			type Error = Error<T>;
-			fn deposit_event() = default;
-
-			/// The Liquidity Pool's module id, keep all assets in Pools.
-			const ModuleId: ModuleId = T::ModuleId::get();
-
-			/// The Liquidity Pool's account id, keep all assets in Pools.
-			const PoolAccountId: T::AccountId = T::ModuleId::get().into_account();
-
-			/// Enabled underlying asset IDs.
-			const EnabledUnderlyingAssetId: Vec<CurrencyId> = T::EnabledCurrencyPair::get()
-				.iter()
-				.map(|currency_pair| currency_pair.underlying_id)
-				.collect();
-
-			/// Enabled wrapped token IDs.
-			const EnabledWrappedTokensId: Vec<CurrencyId> = T::EnabledCurrencyPair::get()
-				.iter()
-				.map(|currency_pair| currency_pair.wrapped_id)
-				.collect();
-	}
-}
-
 type RateResult = result::Result<Rate, DispatchError>;
 type CurrencyIdResult = result::Result<CurrencyId, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 
+#[frame_support::pallet]
+pub mod module {
+	use super::*;
+
+	#[pallet::config]
+	pub trait Config: frame_system::Config + oracle::Config {
+		/// The `MultiCurrency` implementation.
+		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
+
+		/// Start exchange rate.
+		type InitialExchangeRate: Get<Rate>;
+
+		/// Enabled currency pairs.
+		type EnabledCurrencyPair: Get<Vec<CurrencyPair>>;
+
+		#[pallet::constant]
+		/// The Liquidity Pool's module id, keep all assets in Pools.
+		type ModuleId: Get<ModuleId>;
+
+		#[pallet::constant]
+		/// The Liquidity Pool's account id, keep all assets in Pools.
+		type LiquidityPoolAccountId: Get<Self::AccountId>;
+
+		#[pallet::constant]
+		/// Enabled underlying asset IDs.
+		type EnabledUnderlyingAssetId: Get<Vec<CurrencyId>>;
+
+		#[pallet::constant]
+		/// Enabled wrapped token IDs.
+		type EnabledWrappedTokensId: Get<Vec<CurrencyId>>;
+	}
+
+	#[pallet::error]
+	pub enum Error<T> {
+		/// Number overflow in calculation.
+		NumOverflow,
+		/// The currency is not enabled in protocol.
+		NotValidUnderlyingAssetId,
+		/// The currency is not enabled in wrapped protocol.
+		NotValidWrappedTokenId,
+	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn pools)]
+	pub(crate) type Pools<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Pool, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn pool_user_data)]
+	pub(crate) type PoolUserDates<T: Config> =
+		StorageDoubleMap<_, Blake2_128Concat, CurrencyId, Twox64Concat, T::AccountId, PoolUserData, ValueQuery>;
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		#[allow(clippy::type_complexity)]
+		pub pools: Vec<(CurrencyId, Pool)>,
+		pub pool_user_data: Vec<(CurrencyId, T::AccountId, PoolUserData)>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			GenesisConfig {
+				pools: vec![],
+				pool_user_data: vec![],
+			}
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			self.pools.iter().for_each(|(currency_id, pool)| {
+				Pools::<T>::insert(
+					currency_id,
+					Pool {
+						total_borrowed: pool.total_borrowed,
+						borrow_index: pool.borrow_index,
+						total_insurance: pool.total_insurance,
+					},
+				)
+			});
+			self.pool_user_data
+				.iter()
+				.for_each(|(currency_id, account_id, pool_user_data)| {
+					PoolUserDates::<T>::insert(
+						currency_id,
+						account_id,
+						PoolUserData {
+							total_borrowed: pool_user_data.total_borrowed,
+							interest_index: pool_user_data.interest_index,
+							collateral: pool_user_data.collateral,
+							liquidation_attempts: pool_user_data.liquidation_attempts,
+						},
+					)
+				});
+		}
+	}
+
+	#[pallet::pallet]
+	pub struct Pallet<T>(PhantomData<T>);
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {}
+}
+
 // Dispatchable calls implementation
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
 	/// Converts a specified number of underlying assets into wrapped tokens.
 	/// The calculation is based on the exchange rate.
 	///
@@ -197,7 +242,8 @@ impl<T: Config> Module<T> {
 	/// - `total_insurance`: Total amount of insurance of the underlying held in the pool.
 	/// - `total_borrowed`: Total amount of outstanding borrows of the underlying in this pool.
 	///
-	/// returns `exchange_rate = (total_cash + total_borrowed - total_insurance) / total_supply`.
+	/// returns `exchange_rate = (total_cash + total_borrowed - total_insurance) /
+	/// total_supply`.
 	fn calculate_exchange_rate(
 		total_cash: Balance,
 		total_supply: Balance,
@@ -254,22 +300,22 @@ impl<T: Config> Module<T> {
 }
 
 // Storage setters for LiquidityPools
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
 	/// Sets the total borrowed value in the pool.
 	pub fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) -> DispatchResult {
-		Pools::mutate(pool_id, |pool| pool.total_borrowed = new_total_borrows);
+		Pools::<T>::mutate(pool_id, |pool| pool.total_borrowed = new_total_borrows);
 		Ok(())
 	}
 
 	/// Sets the borrow index in the pool.
 	pub fn set_pool_borrow_index(pool_id: CurrencyId, new_borrow_index: Rate) -> DispatchResult {
-		Pools::mutate(pool_id, |pool| pool.borrow_index = new_borrow_index);
+		Pools::<T>::mutate(pool_id, |pool| pool.borrow_index = new_borrow_index);
 		Ok(())
 	}
 
 	/// Sets the total insurance in the pool.
 	pub fn set_pool_total_insurance(pool_id: CurrencyId, new_total_insurance: Balance) -> DispatchResult {
-		Pools::mutate(pool_id, |r| r.total_insurance = new_total_insurance);
+		Pools::<T>::mutate(pool_id, |r| r.total_insurance = new_total_insurance);
 		Ok(())
 	}
 
@@ -293,7 +339,7 @@ impl<T: Config> Module<T> {
 		new_total_borrow_balance: Balance,
 		new_total_insurance: Balance,
 	) -> DispatchResult {
-		Pools::mutate(underlying_asset_id, |r| {
+		Pools::<T>::mutate(underlying_asset_id, |r| {
 			r.total_borrowed = new_total_borrow_balance;
 			r.total_insurance = new_total_insurance;
 		});
@@ -320,7 +366,7 @@ impl<T: Config> Module<T> {
 }
 
 // Storage getters for LiquidityPools
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
 	/// Gets current the amount of underlying currently loaned out by the pool.
 	pub fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance {
 		Self::pools(pool_id).total_borrowed
@@ -407,7 +453,7 @@ impl<T: Config> Module<T> {
 }
 
 // Trait Borrowing for LiquidityPools
-impl<T: Config> Borrowing<T::AccountId> for Module<T> {
+impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 	/// Updates the new borrower balance and pool total borrow balances during the borrow operation.
 	/// Also sets the global borrow_index to user interest index.
 	/// - `who`: The AccountId whose borrow balance should be calculated.
@@ -479,7 +525,7 @@ impl<T: Config> Borrowing<T::AccountId> for Module<T> {
 	}
 }
 
-impl<T: Config> PoolsManager<T::AccountId> for Module<T> {
+impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	/// Gets module account id.
 	fn pools_account_id() -> T::AccountId {
 		T::ModuleId::get().into_account()
@@ -493,6 +539,6 @@ impl<T: Config> PoolsManager<T::AccountId> for Module<T> {
 
 	/// Check if pool exists
 	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
-		Pools::contains_key(underlying_asset_id)
+		Pools::<T>::contains_key(underlying_asset_id)
 	}
 }

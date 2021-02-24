@@ -12,7 +12,7 @@ mod tests {
 	use sp_core::H256;
 	use sp_runtime::{
 		testing::Header,
-		traits::{BlakeTwo256, IdentityLookup, Zero},
+		traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
 		FixedPointNumber, ModuleId,
 	};
 
@@ -43,7 +43,7 @@ mod tests {
 			Currencies: orml_currencies::{Module, Call, Event<T>},
 			MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 			MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
-			TestPools: liquidity_pools::{Module, Storage, Call, Event, Config<T>},
+			TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 			TestController: controller::{Module, Storage, Call, Event, Config<T>},
 			MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 			TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
@@ -121,22 +121,31 @@ mod tests {
 	}
 
 	parameter_types! {
-		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
-		pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+		pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
+		pub InitialExchangeRate: Rate = Rate::one();
 		pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 			CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
 			CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
 			CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
 			CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 		];
+		pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+				.map(|currency_pair| currency_pair.underlying_id)
+				.collect();
+		pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+				.map(|currency_pair| currency_pair.wrapped_id)
+				.collect();
 	}
 
 	impl liquidity_pools::Config for Test {
-		type Event = Event;
 		type MultiCurrency = orml_tokens::Module<Test>;
 		type ModuleId = LiquidityPoolsModuleId;
+		type LiquidityPoolAccountId = LiquidityPoolAccountId;
 		type InitialExchangeRate = InitialExchangeRate;
 		type EnabledCurrencyPair = EnabledCurrencyPair;
+		type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+		type EnabledWrappedTokensId = EnabledWrappedTokensId;
 	}
 
 	impl minterest_protocol::Config for Test {

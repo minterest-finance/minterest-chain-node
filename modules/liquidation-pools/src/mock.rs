@@ -94,15 +94,18 @@ impl orml_currencies::Config for Test {
 
 parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 }
 
 impl liquidation_pools::Config for Test {
 	type Event = Event;
 	type ModuleId = LiquidationPoolsModuleId;
+	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type MultiCurrency = orml_tokens::Module<Test>;
 }
 
 type Amount = i128;
+type AccountId = u64;
 
 pub struct ExternalityBuilder;
 

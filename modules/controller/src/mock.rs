@@ -2,8 +2,7 @@
 
 use super::*;
 use crate as controller;
-use frame_support::pallet_prelude::GenesisBuild;
-use frame_support::parameter_types;
+use frame_support::{pallet_prelude::GenesisBuild, parameter_types};
 use frame_system as system;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
@@ -11,10 +10,9 @@ pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
-use sp_runtime::traits::One;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup, Zero},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One, Zero},
 	FixedPointNumber, ModuleId,
 };
 
@@ -35,7 +33,7 @@ frame_support::construct_runtime!(
 		Oracle: oracle::{Module, Storage, Call, Event},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
-		TestPools: liquidity_pools::{Module, Storage, Call, Event, Config<T>},
+		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 	}
 );
 
@@ -104,22 +102,31 @@ impl orml_currencies::Config for Runtime {
 }
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
-	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
+	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
 		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
 		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
 		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 	];
+	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+			.map(|currency_pair| currency_pair.underlying_id)
+			.collect();
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+			.map(|currency_pair| currency_pair.wrapped_id)
+			.collect();
 }
 
 impl liquidity_pools::Config for Runtime {
-	type Event = Event;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type ModuleId = LiquidityPoolsModuleId;
+	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
 	type EnabledCurrencyPair = EnabledCurrencyPair;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
 impl oracle::Config for Runtime {

@@ -46,7 +46,7 @@ pub use frame_support::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
 	},
-	StorageValue,
+	IterableStorageDoubleMap, StorageValue,
 };
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
@@ -276,6 +276,7 @@ impl orml_currencies::Config for Runtime {
 }
 
 parameter_types! {
+	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub const InitialExchangeRate: Rate = INITIAL_EXCHANGE_RATE;
 	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
@@ -283,14 +284,22 @@ parameter_types! {
 		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
 		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 	];
+	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+			.map(|currency_pair| currency_pair.underlying_id)
+			.collect();
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+			.map(|currency_pair| currency_pair.wrapped_id)
+			.collect();
 }
 
 impl liquidity_pools::Config for Runtime {
-	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ModuleId = LiquidityPoolsModuleId;
+	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
 	type EnabledCurrencyPair = EnabledCurrencyPair;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
 impl controller::Config for Runtime {
@@ -373,7 +382,7 @@ construct_runtime!(
 		// Minterest modules
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
-		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event, Config<T>},
+		LiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		Accounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		Oracle: oracle::{Module, Storage, Call, Event},

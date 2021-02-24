@@ -28,7 +28,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Oracle: oracle::{Module, Storage, Call, Event},
-		TestPools: liquidity_pools::{Module, Storage, Call, Event, Config<T>},
+		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 	}
 );
 
@@ -102,21 +102,30 @@ impl oracle::Config for Test {
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
-	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
+	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
 		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
 		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
 		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 	];
+	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+			.map(|currency_pair| currency_pair.underlying_id)
+			.collect();
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+			.map(|currency_pair| currency_pair.wrapped_id)
+			.collect();
 }
 
 impl liquidity_pools::Config for Test {
-	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Test>;
+	type MultiCurrency = Currencies;
 	type ModuleId = LiquidityPoolsModuleId;
+	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
 	type EnabledCurrencyPair = EnabledCurrencyPair;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
 pub struct ExtBuilder {
