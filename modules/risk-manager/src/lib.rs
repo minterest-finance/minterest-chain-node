@@ -475,7 +475,7 @@ impl<T: Config> Module<T> {
 		mut seize_amount: Balance,
 	) -> result::Result<Vec<CurrencyId>, DispatchError> {
 		let liquidation_pool_account_id = T::LiquidationPoolsManager::pools_account_id();
-		let liquidity_pool_account_id = <T as Trait>::LiquidityPoolsManager::pools_account_id();
+		let liquidity_pool_account_id = <T as Config>::LiquidityPoolsManager::pools_account_id();
 
 		<MinterestProtocol<T>>::do_repay_fresh(
 			&liquidation_pool_account_id,

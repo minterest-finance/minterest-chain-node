@@ -112,7 +112,7 @@ pub mod module {
 
 	#[pallet::storage]
 	#[pallet::getter(fn pool_user_data)]
-	pub(crate) type PoolUserDates<T: Config> =
+	pub type PoolUserDates<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, CurrencyId, Twox64Concat, T::AccountId, PoolUserData, ValueQuery>;
 
 	#[pallet::genesis_config]

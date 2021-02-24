@@ -29,7 +29,7 @@ frame_support::construct_runtime!(
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		Oracle: oracle::{Module},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
-		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event, Config},
+		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
