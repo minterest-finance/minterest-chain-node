@@ -72,8 +72,8 @@ pub struct RiskManagerData {
 	/// Step used in liquidation to protect the user from micro liquidations.
 	pub threshold: Rate,
 
-	/// Fee that covers liquidation costs.
-	pub liquidation_fee: Rate,
+	/// The additional collateral which is taken from borrowers as a penalty for being liquidated.
+	pub liquidation_incentive: Rate,
 }
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
@@ -141,6 +141,9 @@ decl_error! {
 
 	/// The liquidation hasn't been completed.
 	LiquidationRejection,
+
+	/// Liquidation incentive can't be less than one && greater than 1.5.
+	InvalidLiquidationIncentiveValue,
 	}
 }
 
@@ -226,13 +229,13 @@ decl_module! {
 
 		/// Set Liquidation fee that covers liquidation costs.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_liquidation_fee_n`: numerator.
-		/// - `new_liquidation_fee_d`: divider.
+		/// - `new_liquidation_incentive_n`: numerator.
+		/// - `new_liquidation_incentive_d`: divider.
 		///
-		/// `new_liquidation_fee = (new_liquidation_fee_n / new_liquidation_fee_d)`
+		/// `new_liquidation_incentive = (new_liquidation_incentive_n / new_liquidation_incentive_d)`
 		/// The dispatch origin of this call must be Administrator.
 		#[weight = 0]
-		pub fn set_liquidation_fee(origin, pool_id: CurrencyId, new_liquidation_fee_n: u128, new_liquidation_fee_d: u128) -> DispatchResult {
+		pub fn set_liquidation_incentive(origin, pool_id: CurrencyId, new_liquidation_incentive_n: u128, new_liquidation_incentive_d: u128) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 
@@ -241,13 +244,20 @@ decl_module! {
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
-			let new_liquidation_fee = Rate::checked_from_rational(new_liquidation_fee_n, new_liquidation_fee_d)
+			let new_liquidation_incentive = Rate::checked_from_rational(new_liquidation_incentive_n, new_liquidation_incentive_d)
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			// Write new value into storage.
-			RiskManagerDates::mutate(pool_id, |r| r.liquidation_fee = new_liquidation_fee);
+			// Check if 1 <= new_liquidation_incentive <= 1.5
+			ensure!(
+				(new_liquidation_incentive >= Rate::one()
+					&& new_liquidation_incentive <= Rate::saturating_from_rational(15, 10)),
+				Error::<T>::InvalidLiquidationIncentiveValue
+			);
 
-			Self::deposit_event(RawEvent::ValueOfLiquidationFeeHasChanged(sender, new_liquidation_fee));
+			// Write new value into storage.
+			RiskManagerDates::mutate(pool_id, |r| r.liquidation_incentive = new_liquidation_incentive);
+
+			Self::deposit_event(RawEvent::ValueOfLiquidationFeeHasChanged(sender, new_liquidation_incentive));
 
 			Ok(())
 		}
@@ -437,7 +447,7 @@ impl<T: Config> Module<T> {
 
 		let mut sum_required_to_liquidate_in_usd_plus_fee = Self::mul_balance_by_rate(
 			&sum_required_to_liquidate_in_usd,
-			&RiskManagerDates::get(liquidated_pool_id).liquidation_fee,
+			&RiskManagerDates::get(liquidated_pool_id).liquidation_incentive,
 		)?;
 
 		// Collect pools used as collateral.
@@ -578,7 +588,7 @@ impl<T: Config> Module<T> {
 	) -> DispatchResult {
 		let mut total_borrow_in_usd_plus_fee = Self::mul_balance_by_rate(
 			&total_borrow_in_usd,
-			&RiskManagerDates::get(liquidated_pool_id).liquidation_fee,
+			&RiskManagerDates::get(liquidated_pool_id).liquidation_incentive,
 		)?;
 
 		let pools = <LiquidityPools<T>>::get_pools_are_collateral(&who)?;

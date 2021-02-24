@@ -105,6 +105,10 @@ pub mod module {
 		MaxBorrowRateCannotBeZero,
 		/// An error occurred in the parameters that were passed to the function.
 		ParametersError,
+		/// Collateral factor cannot be greater than one.
+		CollateralFactorCannotBeGreaterThanOne,
+		/// Collateral factor cannot be set to 0.
+		CollateralFactorCannotBeZero,
 	}
 
 	#[pallet::event]
@@ -114,6 +118,8 @@ pub mod module {
 		InsuranceFactorChanged,
 		/// Max Borrow Rate has been successfully changed
 		MaxBorrowRateChanged,
+		/// Collateral factor has been successfully changed
+		CollateralFactorChanged,
 		/// The operation is paused: \[pool_id, operation\]
 		OperationIsPaused(CurrencyId, Operation),
 		/// The operation is unpaused: \[pool_id, operation\]
@@ -330,6 +336,41 @@ pub mod module {
 
 			ControllerDates::<T>::mutate(pool_id, |r| r.max_borrow_rate = new_max_borow_rate);
 			Self::deposit_event(Event::MaxBorrowRateChanged);
+			Ok(().into())
+		}
+
+		/// Set Collateral factor.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn set_collateral_factor(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			new_amount_n: u128,
+			new_amount_d: u128,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
+
+			let new_collateral_factor =
+				Rate::checked_from_rational(new_amount_n, new_amount_d).ok_or(Error::<T>::NumOverflow)?;
+
+			ensure!(
+				new_collateral_factor <= Rate::one(),
+				Error::<T>::CollateralFactorCannotBeGreaterThanOne
+			);
+			ensure!(
+				!new_collateral_factor.is_zero(),
+				Error::<T>::CollateralFactorCannotBeZero
+			);
+
+			ControllerDates::<T>::mutate(pool_id, |r| r.collateral_factor = new_collateral_factor);
+			Self::deposit_event(Event::CollateralFactorChanged);
 			Ok(().into())
 		}
 	}

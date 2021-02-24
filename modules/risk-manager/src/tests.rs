@@ -117,35 +117,43 @@ fn set_threshold_should_work() {
 }
 
 #[test]
-fn set_liquidation_fee_should_work() {
+fn set_liquidation_incentive_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		// Can be set to 0.0
-		assert_ok!(TestRiskManager::set_liquidation_fee(admin(), CurrencyId::DOT, 0, 1));
+		// Can be set to 1.0
+		assert_ok!(TestRiskManager::set_liquidation_incentive(
+			admin(),
+			CurrencyId::DOT,
+			1,
+			1
+		));
 		assert_eq!(
-			TestRiskManager::risk_manager_dates(CurrencyId::DOT).liquidation_fee,
-			Rate::zero()
-		);
-		let expected_event = Event::risk_manager(crate::RawEvent::ValueOfLiquidationFeeHasChanged(ADMIN, Rate::zero()));
-		assert!(System::events().iter().any(|record| record.event == expected_event));
-
-		// ALICE set min_sum equal one hundred.
-		assert_ok!(TestRiskManager::set_liquidation_fee(admin(), CurrencyId::DOT, 1, 1));
-		assert_eq!(
-			TestRiskManager::risk_manager_dates(CurrencyId::DOT).liquidation_fee,
+			TestRiskManager::risk_manager_dates(CurrencyId::DOT).liquidation_incentive,
 			Rate::one()
 		);
 		let expected_event = Event::risk_manager(crate::RawEvent::ValueOfLiquidationFeeHasChanged(ADMIN, Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
+		// Can not be set to 0.0
+		assert_noop!(
+			TestRiskManager::set_liquidation_incentive(admin(), CurrencyId::DOT, 0, 1),
+			Error::<Test>::InvalidLiquidationIncentiveValue
+		);
+
+		// Can not be set to 2.0
+		assert_noop!(
+			TestRiskManager::set_liquidation_incentive(admin(), CurrencyId::DOT, 2, 1),
+			Error::<Test>::InvalidLiquidationIncentiveValue
+		);
+
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
-			TestRiskManager::set_liquidation_fee(alice(), CurrencyId::DOT, 1, 1),
+			TestRiskManager::set_liquidation_incentive(alice(), CurrencyId::DOT, 1, 1),
 			Error::<Test>::RequireAdmin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestRiskManager::set_liquidation_fee(admin(), CurrencyId::MDOT, 1, 1),
+			TestRiskManager::set_liquidation_incentive(admin(), CurrencyId::MDOT, 1, 1),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
