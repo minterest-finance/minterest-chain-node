@@ -31,7 +31,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		Oracle: oracle::{Module, Storage, Call, Event},
+		Oracle: oracle::{Module},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		TestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
@@ -136,9 +136,7 @@ impl controller::Config for Test {
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 }
 
-impl oracle::Config for Test {
-	type Event = Event;
-}
+impl oracle::Config for Test {}
 
 parameter_types! {
 	pub const MaxMembers: u8 = MAX_MEMBERS;

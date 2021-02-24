@@ -27,7 +27,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
-		Oracle: oracle::{Module, Storage, Call, Event},
+		Oracle: oracle::{Module},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 	}
 );
@@ -96,9 +96,7 @@ impl orml_currencies::Config for Test {
 	type WeightInfo = ();
 }
 
-impl oracle::Config for Test {
-	type Event = Event;
-}
+impl oracle::Config for Test {}
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");

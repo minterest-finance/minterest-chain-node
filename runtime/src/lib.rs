@@ -316,9 +316,7 @@ impl accounts::Config for Runtime {
 	type MaxMembers = MaxMembers;
 }
 
-impl oracle::Config for Runtime {
-	type Event = Event;
-}
+impl oracle::Config for Runtime {}
 
 parameter_types! {
 	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
@@ -385,7 +383,7 @@ construct_runtime!(
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		Accounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
-		Oracle: oracle::{Module, Storage, Call, Event},
+		Oracle: oracle::{Module},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		RiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event}

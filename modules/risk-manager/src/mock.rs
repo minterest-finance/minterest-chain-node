@@ -27,7 +27,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		Oracle: oracle::{Module, Storage, Call, Event},
+		Oracle: oracle::{Module},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
@@ -128,9 +128,7 @@ impl controller::Config for Test {
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 }
 
-impl oracle::Config for Test {
-	type Event = Event;
-}
+impl oracle::Config for Test {}
 
 parameter_types! {
 	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;

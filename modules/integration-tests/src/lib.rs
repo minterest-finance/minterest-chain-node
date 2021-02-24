@@ -47,7 +47,7 @@ mod tests {
 			TestController: controller::{Module, Storage, Call, Event, Config<T>},
 			MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 			TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
-			Oracle: oracle::{Module, Storage, Call, Event},
+			Oracle: oracle::{Module},
 		}
 	);
 
@@ -159,9 +159,7 @@ mod tests {
 		type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	}
 
-	impl oracle::Config for Test {
-		type Event = Event;
-	}
+	impl oracle::Config for Test {}
 
 	parameter_types! {
 		pub const MaxMembers: u8 = MAX_MEMBERS;
