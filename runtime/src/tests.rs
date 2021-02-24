@@ -236,7 +236,7 @@ impl ExtBuilder {
 				),
 			],
 		}
-		.assimilate_storage(&mut t)
+		.assimilate_storage::<Runtime>(&mut t)
 		.unwrap();
 
 		accounts::GenesisConfig::<Runtime> {
@@ -548,7 +548,7 @@ fn complete_liquidation_one_collateral_should_work() {
 		.execute_with(|| {
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
-			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
 				ALICE::get(),
 				180_000 * DOLLARS,
 				CurrencyId::DOT,
@@ -602,7 +602,7 @@ fn complete_liquidation_multi_collateral_should_work() {
 		.execute_with(|| {
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
-			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
 				ALICE::get(),
 				180_000 * DOLLARS,
 				CurrencyId::DOT,
@@ -664,7 +664,7 @@ fn partial_liquidation_one_collateral_should_work() {
 		.execute_with(|| {
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
-			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
 				ALICE::get(),
 				54_000 * DOLLARS,
 				CurrencyId::DOT,
@@ -718,7 +718,7 @@ fn partial_liquidation_multi_collateral_should_work() {
 		.execute_with(|| {
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
-			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
 				ALICE::get(),
 				54_000 * DOLLARS,
 				CurrencyId::DOT,

@@ -264,7 +264,7 @@ impl ExtBuilder {
 				),
 			],
 		}
-		.assimilate_storage(&mut t)
+		.assimilate_storage::<Test>(&mut t)
 		.unwrap();
 
 		let mut ext = sp_io::TestExternalities::new(t);

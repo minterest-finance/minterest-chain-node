@@ -1,3 +1,9 @@
+//! # Integration Tests Module
+//!
+//! ## Overview
+//!
+//! TODO: add overview.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(test)]
