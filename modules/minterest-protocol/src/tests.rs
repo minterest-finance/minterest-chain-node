@@ -19,7 +19,7 @@ fn deposit_underlying_should_work() {
 			CurrencyId::DOT,
 			dollars(60_u128)
 		));
-		let expected_event = Event::minterest_protocol(crate::RawEvent::Deposited(
+		let expected_event = Event::minterest_protocol(crate::Event::Deposited(
 			ALICE,
 			CurrencyId::DOT,
 			dollars(60_u128),
@@ -66,7 +66,7 @@ fn redeem_should_work() {
 
 		// Alice redeem all 60 MDOT; exchange_rate = 1.0
 		assert_ok!(TestProtocol::redeem(alice(), CurrencyId::DOT));
-		let expected_event = Event::minterest_protocol(crate::RawEvent::Redeemed(
+		let expected_event = Event::minterest_protocol(crate::Event::Redeemed(
 			ALICE,
 			CurrencyId::DOT,
 			dollars(60_u128),
@@ -173,7 +173,7 @@ fn redeem_underlying_should_work() {
 				CurrencyId::DOT,
 				dollars(30_u128)
 			));
-			let expected_event = Event::minterest_protocol(crate::RawEvent::Redeemed(
+			let expected_event = Event::minterest_protocol(crate::Event::Redeemed(
 				ALICE,
 				CurrencyId::DOT,
 				dollars(30_u128),
@@ -253,7 +253,7 @@ fn redeem_wrapped_should_work() {
 				CurrencyId::MDOT,
 				dollars(35_u128)
 			));
-			let expected_event = Event::minterest_protocol(crate::RawEvent::Redeemed(
+			let expected_event = Event::minterest_protocol(crate::Event::Redeemed(
 				ALICE,
 				CurrencyId::DOT,
 				dollars(35_u128),
@@ -333,7 +333,7 @@ fn borrow_should_work() {
 		// Alice borrowed 30 DOT
 		assert_ok!(TestProtocol::borrow(alice(), CurrencyId::DOT, dollars(30_u128)));
 		let expected_event =
-			Event::minterest_protocol(crate::RawEvent::Borrowed(ALICE, CurrencyId::DOT, dollars(30_u128)));
+			Event::minterest_protocol(crate::Event::Borrowed(ALICE, CurrencyId::DOT, dollars(30_u128)));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 	});
 }
@@ -425,8 +425,7 @@ fn repay_should_work() {
 
 		// Alice repaid 20 DOT. Her borrow_balance = 10 DOT.
 		assert_ok!(TestProtocol::repay(alice(), CurrencyId::DOT, dollars(20_u128)));
-		let expected_event =
-			Event::minterest_protocol(crate::RawEvent::Repaid(ALICE, CurrencyId::DOT, dollars(20_u128)));
+		let expected_event = Event::minterest_protocol(crate::Event::Repaid(ALICE, CurrencyId::DOT, dollars(20_u128)));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 	});
 }
@@ -457,8 +456,7 @@ fn repay_all_should_work() {
 
 		// Alice repaid all 30 DOT.
 		assert_ok!(TestProtocol::repay_all(alice(), CurrencyId::DOT));
-		let expected_event =
-			Event::minterest_protocol(crate::RawEvent::Repaid(ALICE, CurrencyId::DOT, dollars(30_u128)));
+		let expected_event = Event::minterest_protocol(crate::Event::Repaid(ALICE, CurrencyId::DOT, dollars(30_u128)));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 	});
 }
@@ -540,7 +538,7 @@ fn repay_on_behalf_should_work() {
 			ALICE,
 			dollars(20_u128)
 		));
-		let expected_event = Event::minterest_protocol(crate::RawEvent::Repaid(BOB, CurrencyId::DOT, dollars(20_u128)));
+		let expected_event = Event::minterest_protocol(crate::Event::Repaid(BOB, CurrencyId::DOT, dollars(20_u128)));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 	});
 }
@@ -563,8 +561,7 @@ fn enable_as_collateral_should_work() {
 
 		// Alice enable as collateral her ETH pool.
 		assert_ok!(TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH));
-		let expected_event =
-			Event::minterest_protocol(crate::RawEvent::PoolEnabledAsCollateral(ALICE, CurrencyId::ETH));
+		let expected_event = Event::minterest_protocol(crate::Event::PoolEnabledAsCollateral(ALICE, CurrencyId::ETH));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(TestPools::check_user_available_collateral(&ALICE, CurrencyId::ETH));
 
@@ -601,7 +598,7 @@ fn disable_collateral_should_work() {
 
 		// Alice disable collateral her ETH pool.
 		assert_ok!(TestProtocol::disable_collateral(alice(), CurrencyId::ETH));
-		let expected_event = Event::minterest_protocol(crate::RawEvent::PoolDisabledCollateral(ALICE, CurrencyId::ETH));
+		let expected_event = Event::minterest_protocol(crate::Event::PoolDisabledCollateral(ALICE, CurrencyId::ETH));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(!TestPools::check_user_available_collateral(&ALICE, CurrencyId::ETH));
 
@@ -631,7 +628,7 @@ fn transfer_wrapped_should_work() {
 				CurrencyId::MDOT,
 				ONE_HUNDRED_DOLLARS,
 			));
-			let expected_event = Event::minterest_protocol(crate::RawEvent::Transferred(
+			let expected_event = Event::minterest_protocol(crate::Event::Transferred(
 				ALICE,
 				BOB,
 				CurrencyId::MDOT,
@@ -648,7 +645,7 @@ fn transfer_wrapped_should_work() {
 				CurrencyId::MBTC,
 				ONE_HUNDRED_DOLLARS,
 			));
-			let expected_event = Event::minterest_protocol(crate::RawEvent::Transferred(
+			let expected_event = Event::minterest_protocol(crate::Event::Transferred(
 				BOB,
 				ALICE,
 				CurrencyId::MBTC,
@@ -665,7 +662,7 @@ fn transfer_wrapped_should_work() {
 				CurrencyId::MBTC,
 				dollars(40_u128),
 			));
-			let expected_event = Event::minterest_protocol(crate::RawEvent::Transferred(
+			let expected_event = Event::minterest_protocol(crate::Event::Transferred(
 				ALICE,
 				BOB,
 				CurrencyId::MBTC,
@@ -682,7 +679,7 @@ fn transfer_wrapped_should_work() {
 				CurrencyId::MDOT,
 				dollars(40_u128),
 			));
-			let expected_event = Event::minterest_protocol(crate::RawEvent::Transferred(
+			let expected_event = Event::minterest_protocol(crate::Event::Transferred(
 				BOB,
 				ALICE,
 				CurrencyId::MDOT,

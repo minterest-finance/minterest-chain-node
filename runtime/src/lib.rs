@@ -379,7 +379,7 @@ construct_runtime!(
 
 		// Minterest modules
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
-		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
+		MinterestProtocol: minterest_protocol::{Module, Call, Event<T>},
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		Accounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
