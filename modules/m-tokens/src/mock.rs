@@ -1,5 +1,4 @@
 /// Mocks for the m-tokens module.
-use super::*;
 use crate as m_tokens;
 use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::parameter_types;
@@ -36,7 +35,7 @@ parameter_types! {
 
 pub type AccountId = u64;
 
-impl system::Config for Runtime {
+impl frame_system::Config for Runtime {
 	type BaseCallFilter = ();
 	type BlockWeights = ();
 	type BlockLength = ();
