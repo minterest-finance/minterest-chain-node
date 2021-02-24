@@ -707,7 +707,7 @@ fn set_collateral_factor_should_work() {
 		.execute_with(|| {
 			// ALICE set collateral factor equal 0.5.
 			assert_ok!(Controller::set_collateral_factor(alice(), CurrencyId::DOT, 1, 2));
-			let expected_event = TestEvent::controller(Event::CollateralFactorChanged);
+			let expected_event = Event::controller(crate::Event::CollateralFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).collateral_factor,
