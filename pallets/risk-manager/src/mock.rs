@@ -23,6 +23,7 @@ impl_outer_event! {
 		accounts<T>,
 		liquidity_pools,
 		liquidation_pools,
+		minterest_protocol<T>,
 		risk_manager<T>,
 		controller,
 		minterest_model,
@@ -146,6 +147,12 @@ impl liquidation_pools::Trait for Test {
 	type MultiCurrency = orml_tokens::Module<Test>;
 }
 
+impl minterest_protocol::Trait for Test {
+	type Event = TestEvent;
+	type Borrowing = liquidity_pools::Module<Test>;
+	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
+}
+
 parameter_types! {
 	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
 }
@@ -202,40 +209,6 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
-		self.pools.push((
-			pool_id,
-			Pool {
-				total_borrowed: Balance::zero(),
-				borrow_index: Rate::saturating_from_rational(1, 1),
-				total_insurance: Balance::zero(),
-			},
-		));
-		self
-	}
-
-	pub fn pool_user_data(
-		mut self,
-		pool_id: CurrencyId,
-		user: AccountId,
-		total_borrowed: Balance,
-		interest_index: Rate,
-		collateral: bool,
-		liquidation_attempts: u8,
-	) -> Self {
-		self.pool_user_data.push((
-			pool_id,
-			user,
-			PoolUserData {
-				total_borrowed,
-				interest_index,
-				collateral,
-				liquidation_attempts,
-			},
-		));
-		self
-	}
-
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 

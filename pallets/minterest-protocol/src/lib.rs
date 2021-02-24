@@ -510,12 +510,27 @@ impl<T: Trait> Module<T> {
 			<LiquidityPools<T>>::is_enabled_underlying_asset_id(underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
+		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
+		repay_amount = Self::do_repay_fresh(who, borrower, underlying_asset_id, repay_amount, all_assets)?;
+		Ok(repay_amount)
+	}
 
+	/// Borrows are repaid by another user (possibly the borrower).
+	///
+	/// - `who`: the account paying off the borrow.
+	/// - `borrower`: the account with the debt being payed off.
+	/// - `underlying_asset_id`: the currency ID of the underlying asset to repay.
+	/// - `repay_amount`: the amount of the underlying asset to repay.
+	pub fn do_repay_fresh(
+		who: &T::AccountId,
+		borrower: &T::AccountId,
+		underlying_asset_id: CurrencyId,
+		mut repay_amount: Balance,
+		all_assets: bool,
+	) -> BalanceResult {
 		if !all_assets {
 			ensure!(repay_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
 		}
-
-		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
 		// Fail if repay_borrow not allowed
 		ensure!(

@@ -758,7 +758,7 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 
 [[package]]
 name = "controller"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "accounts",
  "frame-support",
@@ -5199,7 +5199,7 @@ dependencies = [
 
 [[package]]
 name = "risk-manager"
-version = "0.6.2"
+version = "0.6.0"
 dependencies = [
  "accounts",
  "controller",
@@ -5209,6 +5209,7 @@ dependencies = [
  "liquidity-pools",
  "minterest-model",
  "minterest-primitives",
+ "minterest-protocol",
  "oracle",
  "orml-tokens",
  "orml-traits",
