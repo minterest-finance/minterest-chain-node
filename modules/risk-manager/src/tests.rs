@@ -1,10 +1,9 @@
 //! Tests for the risk-manager pallet.
-
+/// Unit tests for liquidation functions see in unit-tests for runtime.
 use super::*;
 use mock::{Event, *};
 
 use frame_support::{assert_noop, assert_ok};
-use sp_arithmetic::traits::Bounded;
 use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 
 #[test]
@@ -169,109 +168,42 @@ fn liquidate_should_work() {
 		);
 
 		// Origin::none is available origin for fn liquidate.
-		assert_ok!(TestRiskManager::liquidate(Origin::none(), ALICE, CurrencyId::DOT));
-	})
-}
-
-#[test]
-fn get_user_borrow_information_should_work() {
-	ExtBuilder::default()
-		.pool_initial(CurrencyId::DOT)
-		.pool_user_data(CurrencyId::DOT, ALICE, ONE_HUNDRED * DOLLARS, Rate::one(), true, 0)
-		.build()
-		.execute_with(|| {
-			assert_ok!(TestRiskManager::get_user_borrow_information(&ALICE, CurrencyId::DOT));
-			assert_eq!(
-				TestRiskManager::get_user_borrow_information(&ALICE, CurrencyId::DOT),
-				Ok((
-					2 * ONE_HUNDRED * DOLLARS,
-					ONE_HUNDRED * DOLLARS,
-					Rate::from_inner(2 * DOLLARS),
-					0
-				))
-			);
-		})
-}
-
-#[test]
-fn get_user_borrow_information_should_not_work() {
-	ExtBuilder::default()
-		.pool_initial(CurrencyId::DOT)
-		.pool_user_data(CurrencyId::DOT, ALICE, Balance::max_value(), Rate::one(), true, 0)
-		.build()
-		.execute_with(|| {
-			assert_noop!(
-				TestRiskManager::get_user_borrow_information(&ALICE, CurrencyId::DOT),
-				Error::<Test>::NumOverflow
-			);
-		})
-}
-
-#[test]
-fn mul_balance_by_rate_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// 987999 * 1 = 987999
-		assert_eq!(
-			TestRiskManager::mul_balance_by_rate(&987_999, &Rate::one()),
-			Ok(987_999)
-		);
-
-		// 100 * 0 = 0
-		assert_eq!(
-			TestRiskManager::mul_balance_by_rate(&ONE_HUNDRED, &Rate::zero()),
-			Ok(Balance::zero())
-		);
-
-		// Balance::max_value() * 1,1 = NumOverflow
 		assert_noop!(
-			TestRiskManager::mul_balance_by_rate(&Balance::max_value(), &Rate::saturating_from_rational(11, 10)),
-			Error::<Test>::NumOverflow
-		);
-
-		// (100 * 10^18) * Rate::max_value() = NumOverflow
-		assert_noop!(
-			TestRiskManager::mul_balance_by_rate(&(ONE_HUNDRED * DOLLARS), &Rate::max_value()),
-			Error::<Test>::NumOverflow
+			TestRiskManager::liquidate(Origin::none(), ALICE, CurrencyId::DOT),
+			minterest_protocol::Error::<Test>::ZeroBalanceTransaction
 		);
 	})
 }
 
 #[test]
-fn div_balance_by_rate_should_work() {
+fn mutate_liquidation_attempts_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		// 340_000 / 2 = 170_000
+		assert_ok!(TestRiskManager::mutate_liquidation_attempts(
+			CurrencyId::DOT,
+			&ALICE,
+			true
+		));
 		assert_eq!(
-			TestRiskManager::div_balance_by_rate(&340_000, &Rate::saturating_from_rational(2, 1)),
-			Ok(170_000)
+			liquidity_pools::PoolUserDates::<Test>::get(CurrencyId::DOT, ALICE).liquidation_attempts,
+			u8::one()
 		);
-
-		// 0 / 1 = 0
+		assert_ok!(TestRiskManager::mutate_liquidation_attempts(
+			CurrencyId::DOT,
+			&ALICE,
+			true
+		));
 		assert_eq!(
-			TestRiskManager::div_balance_by_rate(&Balance::zero(), &Rate::one()),
-			Ok(Balance::zero())
+			liquidity_pools::PoolUserDates::<Test>::get(CurrencyId::DOT, ALICE).liquidation_attempts,
+			2_u8
 		);
-
-		// Balance::max_value() / 0.9 = NumOverflow
-		assert_noop!(
-			TestRiskManager::div_balance_by_rate(&Balance::max_value(), &Rate::saturating_from_rational(9, 10)),
-			Error::<Test>::NumOverflow
+		assert_ok!(TestRiskManager::mutate_liquidation_attempts(
+			CurrencyId::DOT,
+			&ALICE,
+			false
+		));
+		assert_eq!(
+			liquidity_pools::PoolUserDates::<Test>::get(CurrencyId::DOT, ALICE).liquidation_attempts,
+			u8::zero()
 		);
-
-		// 100 / Rate::zero() = NumOverflow
-		assert_noop!(
-			TestRiskManager::div_balance_by_rate(&100, &Rate::zero()),
-			Error::<Test>::NumOverflow
-		);
-	})
-}
-
-#[test]
-fn sub_a_from_b_u128_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// 340_000 - 90_000 = 250_000
-		assert_eq!(TestRiskManager::sub_a_from_b_u128(&340_000, &90_000), Ok(250_000));
-
-		// 40 - 45 = NumOverflow
-		assert_noop!(TestRiskManager::sub_a_from_b_u128(&40, &45), Error::<Test>::NumOverflow);
 	})
 }

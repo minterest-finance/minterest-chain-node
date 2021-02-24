@@ -50,9 +50,6 @@ mod tests {
 					alice_expected_amount_wrapped_tokens
 				);
 
-				// Checking current total insurance
-				assert_eq!(TestPools::pools(CurrencyId::DOT).total_insurance, BALANCE_ZERO);
-
 				System::set_block_number(2);
 
 				// Alice deposit to DOT pool
@@ -553,14 +550,14 @@ mod tests {
 	}
 
 	// Extrinsic `redeem_underlying`, description of scenario #4:
-	// It is possible to redeem assets from the pool insurance.
-	// 1. Deposit 10 DOT to pool insurance;
+	// It is possible to redeem assets from the extra liquidity from Admin.
+	// 1. Admin deposit 10 DOT to pool;
 	// 2. Alice deposit 20 DOT;
 	// 3. Bob deposit 20 BTC;
 	// 4. Bob deposit 10 DOT;
 	// 5. Bob borrow 15 DOT;
 	// 6. Alice redeem 20 DOT;
-	// 7. DOT pool insurance equal 5 DOT;
+	// 7. DOT pool extra liquidity equals 5 DOT;
 	#[test]
 	fn redeem_underlying_over_insurance() {
 		ExtBuilder::default()
@@ -1068,13 +1065,13 @@ mod tests {
 	}
 
 	// Extrinsic `redeem`, description of scenario #4:
-	// It is possible to redeem assets from the pool insurance.
-	// 1. Deposit 10 DOT to pool insurance;
+	// It is possible to redeem assets from the extra liquidity from Admin.
+	// 1. Admin deposit 10 DOT to pool;
 	// 2. Alice deposit 20 DOT;
 	// 3. Bob deposit 20 BTC;
 	// 4. Bob deposit 10 DOT;
 	// 5. Bob borrow 15 DOT;
-	// 6. Alice redeem 20 DOT, pool insurance equal 5 DOT;
+	// 6. Alice redeem 20 DOT, pool extra liquidity equals 5 DOT;
 	#[test]
 	fn redeem_over_insurance() {
 		ExtBuilder::default()

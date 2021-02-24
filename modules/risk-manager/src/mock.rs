@@ -29,6 +29,7 @@ frame_support::construct_runtime!(
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		Oracle: oracle::{Module},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event, Config},
 		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
@@ -151,6 +152,12 @@ impl liquidation_pools::Config for Test {
 	type MultiCurrency = orml_tokens::Module<Test>;
 }
 
+impl minterest_protocol::Config for Test {
+	type Event = Event;
+	type Borrowing = liquidity_pools::Module<Test>;
+	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
+}
+
 parameter_types! {
 	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
 }
@@ -203,40 +210,6 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
-		self.pools.push((
-			pool_id,
-			Pool {
-				total_borrowed: Balance::zero(),
-				borrow_index: Rate::saturating_from_rational(1, 1),
-				total_insurance: Balance::zero(),
-			},
-		));
-		self
-	}
-
-	pub fn pool_user_data(
-		mut self,
-		pool_id: CurrencyId,
-		user: AccountId,
-		total_borrowed: Balance,
-		interest_index: Rate,
-		collateral: bool,
-		liquidation_attempts: u8,
-	) -> Self {
-		self.pool_user_data.push((
-			pool_id,
-			user,
-			PoolUserData {
-				total_borrowed,
-				interest_index,
-				collateral,
-				liquidation_attempts,
-			},
-		));
-		self
-	}
-
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
