@@ -55,9 +55,6 @@ pub mod module {
 		#[pallet::constant]
 		/// The Liquidation Pool's account id, keep all assets in Pools.
 		type LiquidationPoolAccountId: Get<Self::AccountId>;
-
-		/// The `MultiCurrency` implementation.
-		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 	}
 
 	#[pallet::error]
@@ -88,6 +85,11 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Set new value of balancing period.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `new_period`: New value of balancing period.
+		///
+		/// The dispatch origin of this call must be Administrator.
 		#[pallet::weight(0)]
 		pub fn set_balancing_period(
 			origin: OriginFor<T>,
@@ -121,7 +123,7 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	/// Gets current the total amount of cash the liquidation pool has.
 	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance {
 		let module_account_id = Self::pools_account_id();
-		<T as Config>::MultiCurrency::free_balance(pool_id, &module_account_id)
+		T::MultiCurrency::free_balance(pool_id, &module_account_id)
 	}
 
 	/// Check if pool exists

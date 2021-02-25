@@ -352,7 +352,6 @@ parameter_types! {
 
 impl liquidation_pools::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Currencies;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 }
