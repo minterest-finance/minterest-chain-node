@@ -15,6 +15,8 @@ sp-std = { version = '3.0.0', default-features = false }
 
 orml-traits = { path = "../../orml/traits", default-features = false }
 
+liquidity-pools = { path = "../liquidity-pools", default-features = false }
+accounts = { path = "../accounts", default-features = false }
 minterest-primitives = { path = "../../primitives", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
 

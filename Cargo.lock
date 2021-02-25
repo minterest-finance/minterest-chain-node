@@ -3263,8 +3263,10 @@ dependencies = [
 name = "liquidation-pools"
 version = "0.6.0"
 dependencies = [
+ "accounts",
  "frame-support",
  "frame-system",
+ "liquidity-pools",
  "minterest-primitives",
  "orml-currencies",
  "orml-tokens",
