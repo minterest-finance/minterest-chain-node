@@ -3,14 +3,15 @@ use super::*;
 use crate as liquidation_pools;
 use frame_support::parameter_types;
 use frame_system as system;
-pub use minterest_primitives::CurrencyId;
+pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_io::TestExternalities;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+	traits::{BlakeTwo256, IdentityLookup, One},
+	FixedPointNumber,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -28,7 +29,9 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		// Minterest modules
-		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event},
+		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>},
+		TestLiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
+		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -93,26 +96,93 @@ impl orml_currencies::Config for Test {
 }
 
 parameter_types! {
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
+	pub InitialExchangeRate: Rate = Rate::one();
+	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
+		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
+		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
+		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
+		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
+	];
+	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+			.map(|currency_pair| currency_pair.underlying_id)
+			.collect();
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+			.map(|currency_pair| currency_pair.wrapped_id)
+			.collect();
+}
+
+impl liquidity_pools::Config for Test {
+	type MultiCurrency = orml_tokens::Module<Test>;
+	type ModuleId = LiquidityPoolsModuleId;
+	type LiquidityPoolAccountId = LiquidityPoolAccountId;
+	type InitialExchangeRate = InitialExchangeRate;
+	type EnabledCurrencyPair = EnabledCurrencyPair;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledWrappedTokensId = EnabledWrappedTokensId;
+}
+
+parameter_types! {
+	pub const MaxMembers: u8 = MAX_MEMBERS;
+}
+
+impl accounts::Config for Test {
+	type Event = Event;
+	type MaxMembers = MaxMembers;
+}
+
+impl oracle::Config for Test {}
+
+parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 }
 
-impl liquidation_pools::Config for Test {
+impl Config for Test {
 	type Event = Event;
-	type ModuleId = LiquidationPoolsModuleId;
+	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
-	type MultiCurrency = orml_tokens::Module<Test>;
 }
 
 type Amount = i128;
 type AccountId = u64;
+pub const MAX_MEMBERS: u8 = 16;
+pub const ADMIN: AccountId = 0;
+pub fn admin() -> Origin {
+	Origin::signed(ADMIN)
+}
+pub const ALICE: AccountId = 1;
+pub fn alice() -> Origin {
+	Origin::signed(ALICE)
+}
 
 pub struct ExternalityBuilder;
 
 impl ExternalityBuilder {
 	pub fn build() -> TestExternalities {
-		let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-		let mut ext = TestExternalities::from(storage);
+		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+		accounts::GenesisConfig::<Test> {
+			allowed_accounts: vec![(ADMIN, ())],
+			member_count: u8::one(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		liquidation_pools::GenesisConfig::<Test> {
+			liquidation_pools: vec![(
+				CurrencyId::DOT,
+				LiquidationPool {
+					timestamp: 1,
+					balancing_period: 600, // Blocks per 10 minutes.
+				},
+			)],
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		let mut ext = TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));
 		ext
 	}
