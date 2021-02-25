@@ -385,7 +385,7 @@ construct_runtime!(
 		Oracle: oracle::{Module},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		RiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
-		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>}
+		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>}
 	}
 );
 

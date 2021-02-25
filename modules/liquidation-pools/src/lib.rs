@@ -77,6 +77,36 @@ pub mod module {
 	pub(crate) type LiquidationPools<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, LiquidationPool<T::BlockNumber>, ValueQuery>;
 
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		#[allow(clippy::type_complexity)]
+		pub liquidation_pools: Vec<(CurrencyId, LiquidationPool<T::BlockNumber>)>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			GenesisConfig {
+				liquidation_pools: vec![],
+			}
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			self.liquidation_pools.iter().for_each(|(currency_id, pool_data)| {
+				LiquidationPools::<T>::insert(
+					currency_id,
+					LiquidationPool {
+						timestamp: pool_data.timestamp,
+						balancing_period: pool_data.balancing_period,
+					},
+				)
+			});
+		}
+	}
+
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
 

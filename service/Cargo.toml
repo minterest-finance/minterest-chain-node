@@ -49,6 +49,7 @@ sp-std = { version = "3.0.0" }
 minterest-rpc = { path = "../rpc" }
 controller = { path = "../modules/controller" }
 liquidity-pools = { path = "../modules/liquidity-pools" }
+liquidation-pools = { path = "../modules/liquidation-pools" }
 minterest-model = { path = "../modules/minterest-model" }
 risk-manager = { path = "../modules/risk-manager" }
 
