@@ -9,7 +9,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-use frame_support::{ensure, pallet_prelude::*, traits::Get};
+use frame_support::{ensure, pallet_prelude::*, traits::Get, transactional};
 use frame_system::{ensure_signed, pallet_prelude::*};
 use minterest_primitives::{Balance, CurrencyId};
 use orml_traits::MultiCurrency;
@@ -121,6 +121,7 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be Administrator.
 		#[pallet::weight(0)]
+		#[transactional]
 		pub fn set_balancing_period(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
