@@ -28,7 +28,7 @@ frame_support::construct_runtime!(
 		//ORML palletts
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
-		// Minterest modules
+		// Minterest pallets
 		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>},
 		TestLiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},

@@ -47,11 +47,11 @@ sp-std = { version = "3.0.0" }
 
 # local dependencies
 minterest-rpc = { path = "../rpc" }
-controller = { path = "../modules/controller" }
-liquidity-pools = { path = "../modules/liquidity-pools" }
-liquidation-pools = { path = "../modules/liquidation-pools" }
-minterest-model = { path = "../modules/minterest-model" }
-risk-manager = { path = "../modules/risk-manager" }
+controller = { path = "../pallets/controller" }
+liquidity-pools = { path = "../pallets/liquidity-pools" }
+liquidation-pools = { path = "../pallets/liquidation-pools" }
+minterest-model = { path = "../pallets/minterest-model" }
+risk-manager = { path = "../pallets/risk-manager" }
 
 node-minterest-runtime = { path = '../runtime' }
 
