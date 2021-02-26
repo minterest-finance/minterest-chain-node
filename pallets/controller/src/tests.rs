@@ -1,7 +1,7 @@
 //! Tests for the controller pallet.
 
 use super::*;
-use mock::*;
+use mock::{Event, *};
 
 use frame_support::{assert_err, assert_noop, assert_ok};
 
@@ -82,13 +82,13 @@ fn calculate_interest_factor_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// interest_factor = 0.1 * 25 = 2.5
 		assert_eq!(
-			Controller::calculate_interest_factor(Rate::saturating_from_rational(1, 10), &25),
+			Controller::calculate_interest_factor(Rate::saturating_from_rational(1, 10), 25),
 			Ok(Rate::saturating_from_rational(25, 10))
 		);
 
 		// Overflow in calculation: block_delta * borrow_interest_rate
 		assert_noop!(
-			Controller::calculate_interest_factor(Rate::from_inner(u128::max_value()), &20),
+			Controller::calculate_interest_factor(Rate::from_inner(u128::max_value()), 20),
 			Error::<Runtime>::NumOverflow
 		);
 	});
@@ -624,7 +624,7 @@ fn set_insurance_factor_should_work() {
 		.execute_with(|| {
 			// ALICE set insurance factor equal 2.0
 			assert_ok!(Controller::set_insurance_factor(alice(), CurrencyId::DOT, 20, 10));
-			let expected_event = TestEvent::controller(Event::InsuranceFactorChanged);
+			let expected_event = Event::controller(crate::Event::InsuranceFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).insurance_factor,
@@ -633,7 +633,7 @@ fn set_insurance_factor_should_work() {
 
 			// ALICE set insurance factor equal 0.0
 			assert_ok!(Controller::set_insurance_factor(alice(), CurrencyId::DOT, 0, 1));
-			let expected_event = TestEvent::controller(Event::InsuranceFactorChanged);
+			let expected_event = Event::controller(crate::Event::InsuranceFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).insurance_factor,
@@ -667,7 +667,7 @@ fn set_max_borrow_rate_should_work() {
 		.execute_with(|| {
 			// ALICE set max borrow rate equal 2.0
 			assert_ok!(Controller::set_max_borrow_rate(alice(), CurrencyId::DOT, 20, 10));
-			let expected_event = TestEvent::controller(Event::MaxBorrowRateChanged);
+			let expected_event = Event::controller(crate::Event::MaxBorrowRateChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).max_borrow_rate,
@@ -707,7 +707,7 @@ fn set_collateral_factor_should_work() {
 		.execute_with(|| {
 			// ALICE set collateral factor equal 0.5.
 			assert_ok!(Controller::set_collateral_factor(alice(), CurrencyId::DOT, 1, 2));
-			let expected_event = TestEvent::controller(Event::CollateralFactorChanged);
+			let expected_event = Event::controller(crate::Event::CollateralFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
 				Controller::controller_dates(CurrencyId::DOT).collateral_factor,
@@ -763,7 +763,8 @@ fn pause_specific_operation_should_work() {
 				CurrencyId::DOT,
 				Operation::Deposit
 			));
-			let expected_event = TestEvent::controller(Event::OperationIsPaused(CurrencyId::DOT, Operation::Deposit));
+			let expected_event =
+				Event::controller(crate::Event::OperationIsPaused(CurrencyId::DOT, Operation::Deposit));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(Controller::pause_specific_operation(
@@ -771,7 +772,7 @@ fn pause_specific_operation_should_work() {
 				CurrencyId::DOT,
 				Operation::Redeem
 			));
-			let expected_event = TestEvent::controller(Event::OperationIsPaused(CurrencyId::DOT, Operation::Redeem));
+			let expected_event = Event::controller(crate::Event::OperationIsPaused(CurrencyId::DOT, Operation::Redeem));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(Controller::pause_specific_operation(
@@ -779,7 +780,7 @@ fn pause_specific_operation_should_work() {
 				CurrencyId::DOT,
 				Operation::Borrow
 			));
-			let expected_event = TestEvent::controller(Event::OperationIsPaused(CurrencyId::DOT, Operation::Borrow));
+			let expected_event = Event::controller(crate::Event::OperationIsPaused(CurrencyId::DOT, Operation::Borrow));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(Controller::pause_specific_operation(
@@ -787,7 +788,7 @@ fn pause_specific_operation_should_work() {
 				CurrencyId::DOT,
 				Operation::Repay
 			));
-			let expected_event = TestEvent::controller(Event::OperationIsPaused(CurrencyId::DOT, Operation::Repay));
+			let expected_event = Event::controller(crate::Event::OperationIsPaused(CurrencyId::DOT, Operation::Repay));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(Controller::pause_specific_operation(
@@ -795,7 +796,8 @@ fn pause_specific_operation_should_work() {
 				CurrencyId::DOT,
 				Operation::Transfer
 			));
-			let expected_event = TestEvent::controller(Event::OperationIsPaused(CurrencyId::DOT, Operation::Transfer));
+			let expected_event =
+				Event::controller(crate::Event::OperationIsPaused(CurrencyId::DOT, Operation::Transfer));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).deposit_paused, true);
@@ -833,7 +835,8 @@ fn unpause_specific_operation_should_work() {
 				CurrencyId::KSM,
 				Operation::Deposit
 			));
-			let expected_event = TestEvent::controller(Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Deposit));
+			let expected_event =
+				Event::controller(crate::Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Deposit));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(Controller::unpause_specific_operation(
@@ -841,7 +844,8 @@ fn unpause_specific_operation_should_work() {
 				CurrencyId::KSM,
 				Operation::Redeem
 			));
-			let expected_event = TestEvent::controller(Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Redeem));
+			let expected_event =
+				Event::controller(crate::Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Redeem));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(Controller::unpause_specific_operation(
@@ -849,7 +853,8 @@ fn unpause_specific_operation_should_work() {
 				CurrencyId::KSM,
 				Operation::Borrow
 			));
-			let expected_event = TestEvent::controller(Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Borrow));
+			let expected_event =
+				Event::controller(crate::Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Borrow));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(Controller::unpause_specific_operation(
@@ -857,7 +862,8 @@ fn unpause_specific_operation_should_work() {
 				CurrencyId::KSM,
 				Operation::Repay
 			));
-			let expected_event = TestEvent::controller(Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Repay));
+			let expected_event =
+				Event::controller(crate::Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Repay));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(Controller::unpause_specific_operation(
@@ -866,7 +872,7 @@ fn unpause_specific_operation_should_work() {
 				Operation::Transfer
 			));
 			let expected_event =
-				TestEvent::controller(Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Transfer));
+				Event::controller(crate::Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Transfer));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).deposit_paused, false);
@@ -895,7 +901,7 @@ fn deposit_insurance_should_work() {
 		.execute_with(|| {
 			// ALICE deposit 100 DOT in pool insurance
 			assert_ok!(Controller::deposit_insurance(alice(), CurrencyId::DOT, 100));
-			let expected_event = TestEvent::controller(Event::DepositedInsurance(CurrencyId::DOT, 100));
+			let expected_event = Event::controller(crate::Event::DepositedInsurance(CurrencyId::DOT, 100));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 100);
@@ -960,12 +966,11 @@ fn redeem_insurance_should_work() {
 	ExtBuilder::default()
 		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 		.pool_total_insurance(CurrencyId::DOT, 1000)
-		.pool_balance(CurrencyId::DOT, 1000)
 		.build()
 		.execute_with(|| {
 			// ALICE redeem 100 DOT from pool insurance.
 			assert_ok!(Controller::redeem_insurance(alice(), CurrencyId::DOT, 125));
-			let expected_event = TestEvent::controller(Event::RedeemedInsurance(CurrencyId::DOT, 125));
+			let expected_event = Event::controller(crate::Event::RedeemedInsurance(CurrencyId::DOT, 125));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 875);

@@ -1,14 +1,23 @@
+//! # Risk Manager Module
+//!
+//! ## Overview
+//!
+//! TODO: add overview.
+
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::unused_unit)]
+#![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-use frame_support::{debug, decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
+use frame_support::{debug, ensure, traits::Get};
+use frame_support::{pallet_prelude::*, transactional};
+use frame_system::pallet_prelude::*;
 use frame_system::{
 	ensure_none, ensure_signed,
 	offchain::{SendTransactionTypes, SubmitTransaction},
 };
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
-use orml_utilities::with_transaction_result;
 use pallet_traits::PoolsManager;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -33,6 +42,8 @@ pub const OFFCHAIN_WORKER_MAX_ITERATIONS: &[u8] = b"pallets/risk-manager/max-ite
 
 pub const LOCK_DURATION: u64 = 100;
 pub const DEFAULT_MAX_ITERATIONS: u32 = 1000;
+
+pub use module::*;
 
 #[cfg(test)]
 mod mock;
@@ -81,196 +92,127 @@ type Controller<T> = controller::Module<T>;
 type MinterestProtocol<T> = minterest_protocol::Module<T>;
 type Oracle<T> = oracle::Module<T>;
 
-pub trait Trait:
-	frame_system::Trait
-	+ minterest_protocol::Trait
-	+ liquidity_pools::Trait
-	+ controller::Trait
-	+ SendTransactionTypes<Call<Self>>
-{
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+#[frame_support::pallet]
+pub mod module {
+	use super::*;
 
-	/// A configuration for base priority of unsigned transactions.
-	///
-	/// This is exposed so that it can be tuned for particular runtime, when
-	/// multiple modules send unsigned transactions.
-	type UnsignedPriority: Get<TransactionPriority>;
+	#[pallet::config]
+	pub trait Config:
+		frame_system::Config
+		+ liquidity_pools::Config
+		+ minterest_protocol::Config
+		+ controller::Config
+		+ SendTransactionTypes<Call<Self>>
+	{
+		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-	/// The basic liquidity pools.
-	type LiquidationPoolsManager: PoolsManager<Self::AccountId>;
+		/// A configuration for base priority of unsigned transactions.
+		///
+		/// This is exposed so that it can be tuned for particular runtime, when
+		/// multiple pallets send unsigned transactions.
+		type UnsignedPriority: Get<TransactionPriority>;
 
-	/// Pools are responsible for holding funds for automatic liquidation.
-	type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
-}
+		/// The basic liquidity pools.
+		type LiquidationPoolsManager: PoolsManager<Self::AccountId>;
 
-decl_storage! {
-	trait Store for Module<T: Trait> as RiskManagerStorage {
-		/// Liquidation params for pools: `(max_attempts, min_sum, threshold, liquidation_incentive)`.
-		pub RiskManagerDates get(fn risk_manager_dates) config(): map hasher(blake2_128_concat) CurrencyId => RiskManagerData;
+		/// Pools are responsible for holding funds for automatic liquidation.
+		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
 	}
-}
 
-decl_event!(
-	pub enum Event<T>
-	 where
-		 <T as frame_system::Trait>::AccountId,
-	 {
-		/// Max value of liquidation attempts has been successfully changed: \[who, attempts_amount\]
-		MaxValueOFLiquidationAttempsHasChanged(AccountId, u8),
+	#[pallet::error]
+	pub enum Error<T> {
+		/// Number overflow in calculation.
+		NumOverflow,
+		/// The currency is not enabled in protocol.
+		NotValidUnderlyingAssetId,
+		/// The dispatch origin of this call must be Administrator.
+		RequireAdmin,
+		/// The liquidation hasn't been completed.
+		LiquidationRejection,
+		/// Liquidation incentive can't be less than one && greater than 1.5.
+		InvalidLiquidationIncentiveValue,
+	}
 
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
+	pub enum Event<T: Config> {
+		/// Max value of liquidation attempts has been successfully changed: \[who,
+		/// attempts_amount\]
+		MaxValueOFLiquidationAttempsHasChanged(T::AccountId, u8),
 		/// Min sum for partial liquidation has been successfully changed: \[who, min_sum\]
-		MinSumForPartialLiquidationHasChanged(AccountId, Balance),
-
+		MinSumForPartialLiquidationHasChanged(T::AccountId, Balance),
 		/// Threshold has been successfully changed: \[who, threshold\]
-		ValueOfThresholdHasChanged(AccountId, Rate),
-
+		ValueOfThresholdHasChanged(T::AccountId, Rate),
 		/// Liquidation fee has been successfully changed: \[ who, threshold\]
-		ValueOfLiquidationFeeHasChanged(AccountId, Rate),
-
-		/// Unsafe loan has been successfully liquidated: \[who, liquidate_amount_in_usd, liquidated_pool_id, seized_pools, partial_liquidation\]
-		LiquidateUnsafeLoan(AccountId, Balance, CurrencyId, Vec<CurrencyId>, bool),
+		ValueOfLiquidationFeeHasChanged(T::AccountId, Rate),
+		/// Unsafe loan has been successfully liquidated: \[who, liquidate_amount_in_usd,
+		/// liquidated_pool_id, seized_pools, partial_liquidation\]
+		LiquidateUnsafeLoan(T::AccountId, Balance, CurrencyId, Vec<CurrencyId>, bool),
 	}
-);
 
-decl_error! {
-	pub enum Error for Module<T: Trait> {
-	/// Number overflow in calculation.
-	NumOverflow,
+	/// Liquidation params for pools: `(max_attempts, min_sum, threshold, liquidation_fee)`.
+	#[pallet::storage]
+	#[pallet::getter(fn risk_manager_dates)]
+	pub(crate) type RiskManagerDates<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, RiskManagerData, ValueQuery>;
 
-	/// The currency is not enabled in protocol.
-	NotValidUnderlyingAssetId,
-
-	/// The dispatch origin of this call must be Administrator.
-	RequireAdmin,
-
-	/// The liquidation hasn't been completed.
-	LiquidationRejection,
-
-	/// Liquidation incentive can't be less than one && greater than 1.5.
-	InvalidLiquidationIncentiveValue,
+	#[pallet::genesis_config]
+	pub struct GenesisConfig {
+		pub risk_manager_dates: Vec<(CurrencyId, RiskManagerData)>,
 	}
-}
 
-decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-		type Error = Error<T>;
+	#[cfg(feature = "std")]
+	impl Default for GenesisConfig {
+		fn default() -> Self {
+			GenesisConfig {
+				risk_manager_dates: vec![],
+			}
+		}
+	}
 
-		fn deposit_event() = default;
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+		fn build(&self) {
+			self.risk_manager_dates
+				.iter()
+				.for_each(|(currency_id, risk_manager_data)| {
+					RiskManagerDates::<T>::insert(
+						currency_id,
+						RiskManagerData {
+							max_attempts: risk_manager_data.max_attempts,
+							min_sum: risk_manager_data.min_sum,
+							threshold: risk_manager_data.threshold,
+							liquidation_incentive: risk_manager_data.liquidation_incentive,
+						},
+					)
+				});
+		}
+	}
 
-		/// Set maximum amount of partial liquidation attempts.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_max_value`: New max value of liquidation attempts.
+	#[cfg(feature = "std")]
+	impl GenesisConfig {
+		/// Direct implementation of `GenesisBuild::build_storage`.
 		///
-		/// The dispatch origin of this call must be Administrator.
-		#[weight = 0]
-		pub fn set_max_attempts(origin, pool_id: CurrencyId, new_max_value: u8) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-
-			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
-
-			// Write new value into storage.
-			RiskManagerDates::mutate(pool_id, |r| r.max_attempts = new_max_value);
-
-			Self::deposit_event(RawEvent::MaxValueOFLiquidationAttempsHasChanged(sender, new_max_value));
-
-			Ok(())
+		/// Kept in order not to break dependency.
+		pub fn build_storage<T: Config>(&self) -> Result<sp_runtime::Storage, String> {
+			<Self as frame_support::traits::GenesisBuild<T>>::build_storage(self)
 		}
 
-		/// Set minimal sum for partial liquidation.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_min_sum`: New min sum for partial liquidation.
+		/// Direct implementation of `GenesisBuild::assimilate_storage`.
 		///
-		/// The dispatch origin of this call must be Administrator.
-		#[weight = 0]
-		pub fn set_min_sum(origin, pool_id: CurrencyId, new_min_sum: Balance) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-
-			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
-
-			// Write new value into storage.
-			RiskManagerDates::mutate(pool_id, |r| r.min_sum = new_min_sum);
-
-			Self::deposit_event(RawEvent::MinSumForPartialLiquidationHasChanged(sender, new_min_sum));
-
-			Ok(())
+		/// Kept in order not to break dependency.
+		pub fn assimilate_storage<T: Config>(&self, storage: &mut sp_runtime::Storage) -> Result<(), String> {
+			<Self as frame_support::traits::GenesisBuild<T>>::assimilate_storage(self, storage)
 		}
+	}
 
-		/// Set threshold which used in liquidation to protect the user from micro liquidations..
-		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_threshold_n`: numerator.
-		/// - `new_threshold_d`: divider.
-		///
-		/// `new_threshold = (new_threshold_n / new_threshold_d)`
-		/// The dispatch origin of this call must be Administrator.
-		#[weight = 0]
-		pub fn set_threshold(origin, pool_id: CurrencyId, new_threshold_n: u128, new_threshold_d: u128) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+	#[pallet::pallet]
+	pub struct Pallet<T>(PhantomData<T>);
 
-			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
-
-			let new_threshold = Rate::checked_from_rational(new_threshold_n, new_threshold_d)
-				.ok_or(Error::<T>::NumOverflow)?;
-
-			// Write new value into storage.
-			RiskManagerDates::mutate(pool_id, |r| r.threshold = new_threshold);
-
-			Self::deposit_event(RawEvent::ValueOfThresholdHasChanged(sender, new_threshold));
-
-			Ok(())
-		}
-
-		/// Set Liquidation fee that covers liquidation costs.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_liquidation_incentive_n`: numerator.
-		/// - `new_liquidation_incentive_d`: divider.
-		///
-		/// `new_liquidation_incentive = (new_liquidation_incentive_n / new_liquidation_incentive_d)`
-		/// The dispatch origin of this call must be Administrator.
-		#[weight = 0]
-		pub fn set_liquidation_incentive(origin, pool_id: CurrencyId, new_liquidation_incentive_n: u128, new_liquidation_incentive_d: u128) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-
-			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
-
-			let new_liquidation_incentive = Rate::checked_from_rational(new_liquidation_incentive_n, new_liquidation_incentive_d)
-				.ok_or(Error::<T>::NumOverflow)?;
-
-			// Check if 1 <= new_liquidation_incentive <= 1.5
-			ensure!(
-				(new_liquidation_incentive >= Rate::one()
-					&& new_liquidation_incentive <= Rate::saturating_from_rational(15, 10)),
-				Error::<T>::InvalidLiquidationIncentiveValue
-			);
-
-			// Write new value into storage.
-			RiskManagerDates::mutate(pool_id, |r| r.liquidation_incentive = new_liquidation_incentive);
-
-			Self::deposit_event(RawEvent::ValueOfLiquidationFeeHasChanged(sender, new_liquidation_incentive));
-
-			Ok(())
-		}
-
+	#[pallet::hooks]
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		/// Runs after every block. Start offchain worker to check unsafe loan and
 		/// submit unsigned tx to trigger liquidation.
 		fn offchain_worker(now: T::BlockNumber) {
-			debug::info!("Entering off-chain worker");
-
 			if let Err(e) = Self::_offchain_worker() {
 				debug::info!(
 					target: "RiskManager offchain worker",
@@ -286,6 +228,144 @@ decl_module! {
 				);
 			}
 		}
+	}
+
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		/// Set maximum amount of partial liquidation attempts.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `new_max_value`: New max value of liquidation attempts.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn set_max_attempts(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			new_max_value: u8,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+
+			ensure!(
+				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+
+			// Write new value into storage.
+			RiskManagerDates::<T>::mutate(pool_id, |r| r.max_attempts = new_max_value);
+
+			Self::deposit_event(Event::MaxValueOFLiquidationAttempsHasChanged(sender, new_max_value));
+
+			Ok(().into())
+		}
+
+		/// Set minimal sum for partial liquidation.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `new_min_sum`: New min sum for partial liquidation.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn set_min_sum(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			new_min_sum: Balance,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+
+			ensure!(
+				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+
+			// Write new value into storage.
+			RiskManagerDates::<T>::mutate(pool_id, |r| r.min_sum = new_min_sum);
+
+			Self::deposit_event(Event::MinSumForPartialLiquidationHasChanged(sender, new_min_sum));
+
+			Ok(().into())
+		}
+
+		/// Set threshold which used in liquidation to protect the user from micro liquidations..
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `new_threshold_n`: numerator.
+		/// - `new_threshold_d`: divider.
+		///
+		/// `new_threshold = (new_threshold_n / new_threshold_d)`
+		/// The dispatch origin of this call must be Administrator.
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn set_threshold(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			new_threshold_n: u128,
+			new_threshold_d: u128,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+
+			ensure!(
+				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+
+			let new_threshold =
+				Rate::checked_from_rational(new_threshold_n, new_threshold_d).ok_or(Error::<T>::NumOverflow)?;
+
+			// Write new value into storage.
+			RiskManagerDates::<T>::mutate(pool_id, |r| r.threshold = new_threshold);
+
+			Self::deposit_event(Event::ValueOfThresholdHasChanged(sender, new_threshold));
+
+			Ok(().into())
+		}
+
+		/// Set Liquidation fee that covers liquidation costs.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `new_liquidation_incentive_n`: numerator.
+		/// - `new_liquidation_incentive_d`: divider.
+		///
+		/// `new_liquidation_incentive = (new_liquidation_incentive_n /
+		/// new_liquidation_incentive_d)` The dispatch origin of this call must be Administrator.
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn set_liquidation_incentive(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			new_liquidation_incentive_n: u128,
+			new_liquidation_incentive_d: u128,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+
+			ensure!(
+				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+
+			let new_liquidation_incentive =
+				Rate::checked_from_rational(new_liquidation_incentive_n, new_liquidation_incentive_d)
+					.ok_or(Error::<T>::NumOverflow)?;
+
+			// Check if 1 <= new_liquidation_incentive <= 1.5
+			ensure!(
+				(new_liquidation_incentive >= Rate::one()
+					&& new_liquidation_incentive <= Rate::saturating_from_rational(15, 10)),
+				Error::<T>::InvalidLiquidationIncentiveValue
+			);
+
+			// Write new value into storage.
+			RiskManagerDates::<T>::mutate(pool_id, |r| r.liquidation_incentive = new_liquidation_incentive);
+
+			Self::deposit_event(Event::ValueOfLiquidationFeeHasChanged(
+				sender,
+				new_liquidation_incentive,
+			));
+
+			Ok(().into())
+		}
 
 		/// Liquidate unsafe loans
 		///
@@ -293,26 +373,25 @@ decl_module! {
 		///
 		/// - `currency_id`: PoolID for which the loan is being liquidate
 		/// - `who`: loan's owner.
-		#[weight = 0]
+		#[pallet::weight(0)]
+		#[transactional]
 		pub fn liquidate(
-			origin,
+			origin: OriginFor<T>,
 			who: <T::Lookup as StaticLookup>::Source,
-			pool_id: CurrencyId
-		) {
-			with_transaction_result(|| {
-				ensure_none(origin)?;
-				let who = T::Lookup::lookup(who)?;
-				Self::liquidate_unsafe_loan(who, pool_id)?;
-				Ok(())
-			})?;
+			pool_id: CurrencyId,
+		) -> DispatchResultWithPostInfo {
+			ensure_none(origin)?;
+			let who = T::Lookup::lookup(who)?;
+			Self::liquidate_unsafe_loan(who, pool_id)?;
+			Ok(().into())
 		}
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
 	fn _offchain_worker() -> Result<(), OffchainErr> {
 		// Get available assets list
-		let underlying_asset_ids: Vec<CurrencyId> = <T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
+		let underlying_asset_ids: Vec<CurrencyId> = <T as liquidity_pools::Config>::EnabledCurrencyPair::get()
 			.iter()
 			.map(|currency_pair| currency_pair.underlying_id)
 			.collect();
@@ -433,12 +512,8 @@ impl<T: Trait> Module<T> {
 
 		let liquidation_attempts = <LiquidityPools<T>>::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
 
-		let is_partial_liquidation = match total_repay_amount >= RiskManagerDates::get(liquidated_pool_id).min_sum
-			&& liquidation_attempts < RiskManagerDates::get(liquidated_pool_id).max_attempts
-		{
-			true => true,
-			false => false,
-		};
+		let is_partial_liquidation = total_repay_amount >= RiskManagerDates::<T>::get(liquidated_pool_id).min_sum
+			&& liquidation_attempts < RiskManagerDates::<T>::get(liquidated_pool_id).max_attempts;
 
 		// Calculate sum required to liquidate.
 		let (seize_amount, repay_amount, repay_assets) =
@@ -448,7 +523,7 @@ impl<T: Trait> Module<T> {
 
 		Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation)?;
 
-		Self::deposit_event(RawEvent::LiquidateUnsafeLoan(
+		Self::deposit_event(Event::LiquidateUnsafeLoan(
 			borrower,
 			repay_amount,
 			liquidated_pool_id,
@@ -474,7 +549,7 @@ impl<T: Trait> Module<T> {
 		mut seize_amount: Balance,
 	) -> result::Result<Vec<CurrencyId>, DispatchError> {
 		let liquidation_pool_account_id = T::LiquidationPoolsManager::pools_account_id();
-		let liquidity_pool_account_id = <T as Trait>::LiquidityPoolsManager::pools_account_id();
+		let liquidity_pool_account_id = <T as Config>::LiquidityPoolsManager::pools_account_id();
 
 		<MinterestProtocol<T>>::do_repay_fresh(
 			&liquidation_pool_account_id,
@@ -638,7 +713,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> ValidateUnsigned for Module<T> {
+impl<T: Config> ValidateUnsigned for Pallet<T> {
 	type Call = Call<T>;
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {

@@ -6,6 +6,7 @@ use crate::{
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
 use controller_rpc_runtime_api::PoolState;
+use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::{assert_err, assert_noop, assert_ok, parameter_types};
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
@@ -13,7 +14,7 @@ use minterest_primitives::{Operation, Price};
 use orml_traits::MultiCurrency;
 use pallet_traits::PoolsManager;
 use risk_manager::RiskManagerData;
-use sp_runtime::traits::{AccountIdConversion, Zero};
+use sp_runtime::traits::{AccountIdConversion, One, Zero};
 use sp_runtime::FixedPointNumber;
 
 type MinterestProtocol = minterest_protocol::Module<Runtime>;
@@ -210,7 +211,7 @@ impl ExtBuilder {
 				),
 			],
 		}
-		.assimilate_storage(&mut t)
+		.assimilate_storage::<Runtime>(&mut t)
 		.unwrap();
 
 		risk_manager::GenesisConfig {
@@ -235,11 +236,12 @@ impl ExtBuilder {
 				),
 			],
 		}
-		.assimilate_storage(&mut t)
+		.assimilate_storage::<Runtime>(&mut t)
 		.unwrap();
 
 		accounts::GenesisConfig::<Runtime> {
 			allowed_accounts: vec![(ALICE::get(), ())],
+			member_count: u8::one(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -262,16 +264,16 @@ fn dollars(amount: u128) -> u128 {
 	amount.saturating_mul(Price::accuracy())
 }
 
-fn alice() -> <Runtime as frame_system::Trait>::Origin {
-	<Runtime as frame_system::Trait>::Origin::signed((ALICE::get()).clone())
+fn alice() -> <Runtime as frame_system::Config>::Origin {
+	<Runtime as frame_system::Config>::Origin::signed((ALICE::get()).clone())
 }
 
-fn bob() -> <Runtime as frame_system::Trait>::Origin {
-	<Runtime as frame_system::Trait>::Origin::signed((BOB::get()).clone())
+fn bob() -> <Runtime as frame_system::Config>::Origin {
+	<Runtime as frame_system::Config>::Origin::signed((BOB::get()).clone())
 }
 
-fn charlie() -> <Runtime as frame_system::Trait>::Origin {
-	<Runtime as frame_system::Trait>::Origin::signed((CHARLIE::get()).clone())
+fn charlie() -> <Runtime as frame_system::Config>::Origin {
+	<Runtime as frame_system::Config>::Origin::signed((CHARLIE::get()).clone())
 }
 
 #[test]
@@ -546,7 +548,7 @@ fn complete_liquidation_one_collateral_should_work() {
 		.execute_with(|| {
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
-			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
 				ALICE::get(),
 				180_000 * DOLLARS,
 				CurrencyId::DOT,
@@ -600,7 +602,7 @@ fn complete_liquidation_multi_collateral_should_work() {
 		.execute_with(|| {
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
-			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
 				ALICE::get(),
 				180_000 * DOLLARS,
 				CurrencyId::DOT,
@@ -662,7 +664,7 @@ fn partial_liquidation_one_collateral_should_work() {
 		.execute_with(|| {
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
-			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
 				ALICE::get(),
 				54_000 * DOLLARS,
 				CurrencyId::DOT,
@@ -716,7 +718,7 @@ fn partial_liquidation_multi_collateral_should_work() {
 		.execute_with(|| {
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
-			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
 				ALICE::get(),
 				54_000 * DOLLARS,
 				CurrencyId::DOT,

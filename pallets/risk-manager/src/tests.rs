@@ -1,7 +1,7 @@
 //! Tests for the risk-manager pallet.
 /// Unit tests for liquidation functions see in unit-tests for runtime.
 use super::*;
-use mock::*;
+use mock::{Event, *};
 
 use frame_support::{assert_noop, assert_ok};
 use sp_runtime::{traits::BadOrigin, FixedPointNumber};
@@ -12,13 +12,13 @@ fn set_max_attempts_should_work() {
 		// Can be set to 0.0
 		assert_ok!(TestRiskManager::set_max_attempts(admin(), CurrencyId::DOT, 0));
 		assert_eq!(TestRiskManager::risk_manager_dates(CurrencyId::DOT).max_attempts, 0);
-		let expected_event = TestEvent::risk_manager(RawEvent::MaxValueOFLiquidationAttempsHasChanged(ADMIN, 0));
+		let expected_event = Event::risk_manager(crate::Event::MaxValueOFLiquidationAttempsHasChanged(ADMIN, 0));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// ALICE set max_attempts equal 2.0
 		assert_ok!(TestRiskManager::set_max_attempts(admin(), CurrencyId::DOT, 2));
 		assert_eq!(TestRiskManager::risk_manager_dates(CurrencyId::DOT).max_attempts, 2);
-		let expected_event = TestEvent::risk_manager(RawEvent::MaxValueOFLiquidationAttempsHasChanged(ADMIN, 2));
+		let expected_event = Event::risk_manager(crate::Event::MaxValueOFLiquidationAttempsHasChanged(ADMIN, 2));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Administrator.
@@ -44,8 +44,10 @@ fn set_min_sum_should_work() {
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).min_sum,
 			Balance::zero()
 		);
-		let expected_event =
-			TestEvent::risk_manager(RawEvent::MinSumForPartialLiquidationHasChanged(ADMIN, Balance::zero()));
+		let expected_event = Event::risk_manager(crate::Event::MinSumForPartialLiquidationHasChanged(
+			ADMIN,
+			Balance::zero(),
+		));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// ALICE set min_sum equal one hundred.
@@ -58,7 +60,7 @@ fn set_min_sum_should_work() {
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).min_sum,
 			ONE_HUNDRED * DOLLARS
 		);
-		let expected_event = TestEvent::risk_manager(RawEvent::MinSumForPartialLiquidationHasChanged(
+		let expected_event = Event::risk_manager(crate::Event::MinSumForPartialLiquidationHasChanged(
 			ADMIN,
 			ONE_HUNDRED * DOLLARS,
 		));
@@ -87,7 +89,7 @@ fn set_threshold_should_work() {
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).threshold,
 			Rate::zero()
 		);
-		let expected_event = TestEvent::risk_manager(RawEvent::ValueOfThresholdHasChanged(ADMIN, Rate::zero()));
+		let expected_event = Event::risk_manager(crate::Event::ValueOfThresholdHasChanged(ADMIN, Rate::zero()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// ALICE set min_sum equal one hundred.
@@ -96,7 +98,7 @@ fn set_threshold_should_work() {
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).threshold,
 			Rate::one()
 		);
-		let expected_event = TestEvent::risk_manager(RawEvent::ValueOfThresholdHasChanged(ADMIN, Rate::one()));
+		let expected_event = Event::risk_manager(crate::Event::ValueOfThresholdHasChanged(ADMIN, Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Administrator.
@@ -127,7 +129,7 @@ fn set_liquidation_incentive_should_work() {
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).liquidation_incentive,
 			Rate::one()
 		);
-		let expected_event = TestEvent::risk_manager(RawEvent::ValueOfLiquidationFeeHasChanged(ADMIN, Rate::one()));
+		let expected_event = Event::risk_manager(crate::Event::ValueOfLiquidationFeeHasChanged(ADMIN, Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can not be set to 0.0

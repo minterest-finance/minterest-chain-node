@@ -27,7 +27,6 @@ members = [
     'primitives',
     'service',
     'runtime',
-
     'pallets/liquidity-pools',
     'pallets/m-tokens',
     'pallets/minterest-model',
@@ -49,3 +48,4 @@ members = [
     "orml/utilities",
     "orml/vesting",
 ]
+

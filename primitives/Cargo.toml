@@ -5,11 +5,11 @@ authors = ['Minterest <https://github.com/minterest-defi>']
 edition = "2018"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "1.3.0", default-features = false }
-sp-runtime = { version = "2.0.0", default-features = false }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
+sp-runtime = { version = "3.0.0", default-features = false }
 serde = { version = "1.0.101", optional = true }
-sp-core = { default-features = false, version = '2.0.0' }
-sp-std = { default-features = false, version = '2.0.0' }
+sp-core = { default-features = false, version = '3.0.0' }
+sp-std = { default-features = false, version = '3.0.0' }
 
 [features]
 default = ["std"]
