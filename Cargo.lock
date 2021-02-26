@@ -3263,9 +3263,12 @@ dependencies = [
 name = "liquidation-pools"
 version = "0.6.0"
 dependencies = [
+ "accounts",
  "frame-support",
  "frame-system",
+ "liquidity-pools",
  "minterest-primitives",
+ "oracle",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -3596,6 +3599,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-system-rpc-runtime-api",
  "hex-literal 0.3.1",
+ "liquidation-pools",
  "liquidity-pools",
  "minterest-model",
  "minterest-rpc",
