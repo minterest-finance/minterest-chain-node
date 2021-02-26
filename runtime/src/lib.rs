@@ -118,7 +118,7 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 42;
 }
 
-// Configure FRAME modules to include in runtime.
+// Configure FRAME pallets to include in runtime.
 
 impl frame_system::Config for Runtime {
 	/// The basic call filter to use in dispatchable.
@@ -357,7 +357,7 @@ impl liquidation_pools::Config for Runtime {
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 }
 
-// Create the runtime by composing the FRAME modules that were previously configured.
+// Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -377,7 +377,7 @@ construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 
-		// Minterest modules
+		// Minterest pallets
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 		MinterestProtocol: minterest_protocol::{Module, Call, Event<T>},
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
@@ -414,7 +414,7 @@ pub type SignedExtra = (
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
-/// Executive: handles dispatch to the various modules.
+/// Executive: handles dispatch to the various pallets.
 pub type Executive =
 	frame_executive::Executive<Runtime, Block, frame_system::ChainContext<Runtime>, Runtime, AllModules>;
 

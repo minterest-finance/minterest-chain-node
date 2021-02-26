@@ -36,9 +36,9 @@ use sp_runtime::{
 };
 use sp_std::{cmp::Ordering, prelude::*, result, str};
 
-pub const OFFCHAIN_WORKER_DATA: &[u8] = b"modules/risk-manager/data/";
-pub const OFFCHAIN_WORKER_LOCK: &[u8] = b"modules/risk-manager/lock/";
-pub const OFFCHAIN_WORKER_MAX_ITERATIONS: &[u8] = b"modules/risk-manager/max-iterations/";
+pub const OFFCHAIN_WORKER_DATA: &[u8] = b"pallets/risk-manager/data/";
+pub const OFFCHAIN_WORKER_LOCK: &[u8] = b"pallets/risk-manager/lock/";
+pub const OFFCHAIN_WORKER_MAX_ITERATIONS: &[u8] = b"pallets/risk-manager/max-iterations/";
 
 pub const LOCK_DURATION: u64 = 100;
 pub const DEFAULT_MAX_ITERATIONS: u32 = 1000;
@@ -109,7 +109,7 @@ pub mod module {
 		/// A configuration for base priority of unsigned transactions.
 		///
 		/// This is exposed so that it can be tuned for particular runtime, when
-		/// multiple modules send unsigned transactions.
+		/// multiple pallets send unsigned transactions.
 		type UnsignedPriority: Get<TransactionPriority>;
 
 		/// The basic liquidity pools.
