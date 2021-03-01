@@ -3,9 +3,9 @@ use hex_literal::hex;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
-	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig,
-	GrandpaConfig, LiquidityPoolsConfig, MinterestModelConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
-	TokensConfig, DOLLARS, WASM_BINARY,
+	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, BandOracleConfig, ControllerConfig, CurrencyId,
+	GenesisConfig, GrandpaConfig, LiquidityPoolsConfig, MinterestModelConfig, MinterestOracleConfig, RiskManagerConfig,
+	Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -439,6 +439,14 @@ fn testnet_genesis(
 					},
 				),
 			],
+		}),
+		orml_oracle_Instance1: Some(MinterestOracleConfig {
+			members: Default::default(), // initialized by OperatorMembership
+			phantom: Default::default(),
+		}),
+		orml_oracle_Instance2: Some(BandOracleConfig {
+			members: Default::default(), // initialized by OperatorMembership
+			phantom: Default::default(),
 		}),
 	}
 }

@@ -72,6 +72,14 @@
       "exchange_rate": "Rate",
       "borrow_rate": "Rate",
       "supply_rate": "Rate"
+    },
+    "OracleKey": "u32",
+    "DataProviderId": {
+      "_enum": [
+        "Aggregated",
+        "Minterest",
+        "Band"
+      ]
     }
   },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"

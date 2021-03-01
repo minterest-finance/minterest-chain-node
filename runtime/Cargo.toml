@@ -69,6 +69,8 @@ liquidation-pools = { path = "../pallets/liquidation-pools", default-features = 
 orml-currencies = { path = "../orml/currencies", default-features = false }
 orml-tokens = { path = "../orml/tokens", default-features = false }
 orml-traits = { path = "../orml/traits", default-features = false }
+orml-oracle = { path = "../orml/oracle", default-features = false }
+orml-oracle-rpc-runtime-api = { path = "../orml/oracle/rpc/runtime-api", default-features = false }
 
 [features]
 default = ['std']
@@ -115,6 +117,8 @@ std = [
     'orml-currencies/std',
     'orml-tokens/std',
     'orml-traits/std',
+    "orml-oracle-rpc-runtime-api/std",
+    "orml-oracle/std",
 
     'm-tokens/std',
     'minterest-protocol/std',

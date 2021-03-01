@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use node_minterest_runtime::{opaque::Block, AccountId, Balance, Index};
+use node_minterest_runtime::{opaque::Block, AccountId, Balance, CurrencyId, DataProviderId, Index};
 pub use sc_rpc_api::DenyUnsafe;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
@@ -25,11 +25,14 @@ where
 	C: Send + Sync + 'static,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
+	C::Api:
+		orml_oracle_rpc::OracleRuntimeApi<Block, DataProviderId, CurrencyId, node_minterest_runtime::TimeStampedPrice>,
 	C::Api: controller_rpc::ControllerRuntimeApi<Block>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + 'static,
 {
 	use controller_rpc::{Controller, ControllerApi};
+	use orml_oracle_rpc::{Oracle, OracleApi};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
 	use substrate_frame_rpc_system::{FullSystem, SystemApi};
 
@@ -50,7 +53,10 @@ where
 		client.clone(),
 	)));
 
-	io.extend_with(ControllerApi::to_delegate(Controller::new(client)));
+	io.extend_with(ControllerApi::to_delegate(Controller::new(client.clone())));
+
+	io.extend_with(OracleApi::to_delegate(Oracle::new(client.clone())));
+
 	// Extend this RPC with a custom API by using the following syntax.
 	// `YourRpcStruct` should have a reference to a client, which is needed
 	// to call into the runtime.

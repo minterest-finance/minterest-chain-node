@@ -3494,7 +3494,7 @@ dependencies = [
 
 [[package]]
 name = "minterest-chain"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "minterest-cli",
  "minterest-service",
@@ -3578,6 +3578,7 @@ dependencies = [
  "controller-rpc",
  "jsonrpc-core",
  "node-minterest-runtime",
+ "orml-oracle-rpc",
  "pallet-transaction-payment-rpc",
  "sc-rpc",
  "sc-rpc-api",
@@ -3853,6 +3854,8 @@ dependencies = [
  "minterest-protocol",
  "oracle",
  "orml-currencies",
+ "orml-oracle",
+ "orml-oracle-rpc-runtime-api",
  "orml-tokens",
  "orml-traits",
  "pallet-aura",
@@ -4124,6 +4127,31 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "orml-oracle-rpc"
+version = "0.4.1-dev"
+dependencies = [
+ "funty",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "orml-oracle-rpc-runtime-api",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+]
+
+[[package]]
+name = "orml-oracle-rpc-runtime-api"
+version = "0.4.1-dev"
+dependencies = [
+ "funty",
+ "parity-scale-codec",
+ "sp-api",
  "sp-std",
 ]
 

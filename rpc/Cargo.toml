@@ -15,6 +15,8 @@ pallet-transaction-payment-rpc = { version = "3.0.0" }
 substrate-frame-rpc-system = { version = "3.0.0" }
 sc-rpc = { version = "3.0.0" }
 
+orml-oracle-rpc = { path = "../orml/oracle/rpc" }
+
 # local dependencies
 node-minterest-runtime = { path = '../runtime', version = '0.6.0' }
 controller-rpc = { path = "../pallets/controller/rpc" }

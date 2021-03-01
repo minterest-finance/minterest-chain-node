@@ -15,7 +15,7 @@ mod tests;
 
 pub use controller_rpc_runtime_api::PoolState;
 use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::parameter_type_with_key;
+use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_transaction_payment::CurrencyAdapter;
@@ -26,7 +26,7 @@ use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Bloc
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, ModuleId,
+	ApplyExtrinsicResult, DispatchResult, ModuleId,
 };
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -34,8 +34,8 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 pub use minterest_primitives::{
-	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, CurrencyPair, DigestItem, Hash, Index, Rate,
-	Signature,
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, CurrencyPair, DataProviderId, DigestItem, Hash,
+	Index, Moment, Price, Rate, Signature,
 };
 
 // A few exports that help ease life for downstream crates.
@@ -195,7 +195,7 @@ parameter_types! {
 
 impl pallet_timestamp::Config for Runtime {
 	/// A timestamp: milliseconds since the unix epoch.
-	type Moment = u64;
+	type Moment = Moment;
 	type OnTimestampSet = Aura;
 	type MinimumPeriod = MinimumPeriod;
 	type WeightInfo = ();
@@ -357,6 +357,52 @@ impl liquidation_pools::Config for Runtime {
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 }
 
+parameter_types! {
+	pub const MinimumCount: u32 = 1;
+	pub const ExpiresIn: Moment = 1000 * 60 * 60; // 60 mins
+	pub ZeroAccountId: AccountId = AccountId::from([0u8; 32]);
+}
+
+pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, minterest_primitives::Moment>;
+
+type MinterestDataProvider = orml_oracle::Instance1;
+impl orml_oracle::Config<MinterestDataProvider> for Runtime {
+	type Event = Event;
+	type OnNewData = ();
+	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn, MinterestDataProvider>;
+	type Time = Timestamp;
+	type OracleKey = CurrencyId;
+	type OracleValue = Price;
+	type RootOperatorAccountId = ZeroAccountId;
+	type WeightInfo = ();
+}
+
+type BandDataProvider = orml_oracle::Instance2;
+impl orml_oracle::Config<BandDataProvider> for Runtime {
+	type Event = Event;
+	type OnNewData = ();
+	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn, BandDataProvider>;
+	type Time = Timestamp;
+	type OracleKey = CurrencyId;
+	type OracleValue = Price;
+	type RootOperatorAccountId = ZeroAccountId;
+	type WeightInfo = ();
+}
+
+create_median_value_data_provider!(
+	AggregatedDataProvider,
+	CurrencyId,
+	Price,
+	TimeStampedPrice,
+	[MinterestOracle, BandOracle]
+);
+// Aggregated data provider cannot feed.
+impl DataFeeder<CurrencyId, Price, AccountId> for AggregatedDataProvider {
+	fn feed_value(_: AccountId, _: CurrencyId, _: Price) -> DispatchResult {
+		Err("Not supported".into())
+	}
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -364,18 +410,29 @@ construct_runtime!(
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
+		// Core
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-		Aura: pallet_aura::{Module, Config<T>},
-		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
+
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
+
+		// Consensus & Staking
+		Aura: pallet_aura::{Module, Config<T>},
+		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
+
+		// Dev
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
 		//ORML palletts
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
+
+		// Oracle
+		MinterestOracle: orml_oracle::<Instance1>::{Module, Storage, Call, Config<T>, Event<T>},
+		BandOracle: orml_oracle::<Instance2>::{Module, Storage, Call, Config<T>, Event<T>},
+		Oracle: oracle::{Module}, // FIXME remove after connecting oracles.
 
 		// Minterest pallets
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
@@ -383,7 +440,6 @@ construct_runtime!(
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		Accounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
-		Oracle: oracle::{Module},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		RiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event}
@@ -554,6 +610,29 @@ impl_runtime_apis! {
 			let (borrow_rate, supply_rate) = Controller::get_liquidity_pool_borrow_and_supply_rates(pool_id)?;
 
 			Some(PoolState { exchange_rate, borrow_rate, supply_rate })
+		}
+	}
+
+	impl orml_oracle_rpc_runtime_api::OracleApi<
+		Block,
+		DataProviderId,
+		CurrencyId,
+		TimeStampedPrice,
+	> for Runtime {
+		fn get_value(provider_id: DataProviderId ,key: CurrencyId) -> Option<TimeStampedPrice> {
+			match provider_id {
+				DataProviderId::Minterest => MinterestOracle::get_no_op(&key),
+				DataProviderId::Band => BandOracle::get_no_op(&key),
+				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_no_op(&key)
+			}
+		}
+
+		fn get_all_values(provider_id: DataProviderId) -> Vec<(CurrencyId, Option<TimeStampedPrice>)> {
+			match provider_id {
+				DataProviderId::Minterest => MinterestOracle::get_all_values(),
+				DataProviderId::Band => BandOracle::get_all_values(),
+				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_all_values()
+			}
 		}
 	}
 
