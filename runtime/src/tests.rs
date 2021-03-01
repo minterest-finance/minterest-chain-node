@@ -260,12 +260,8 @@ fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 	<Runtime as ControllerApi<Block>>::liquidity_pool_state(currency_id)
 }
 
-fn get_underlying_balance_rpc(account_id: AccountId, pool_id: CurrencyId) -> Option<Balance> {
-	<Runtime as ControllerApi<Block>>::get_underlying_balance(account_id, pool_id)
-}
-
-fn get_borrow_balance_rpc(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<Balance> {
-	<Runtime as ControllerApi<Block>>::get_borrow_balance(account_id, underlying_asset_id)
+fn get_total_supply_and_borrowed_usd_balance_rpc(account_id: AccountId) -> Option<(Balance, Balance)> {
+	<Runtime as ControllerApi<Block>>::get_total_supply_and_borrowed_usd_balance(account_id)
 }
 
 fn dollars(amount: u128) -> u128 {
@@ -827,47 +823,4 @@ fn partial_liquidation_should_not_work() {
 				risk_manager::Error::<Runtime>::LiquidationRejection
 			);
 		})
-}
-
-#[test]
-fn test_get_underlying_balance_rpc() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(get_underlying_balance_rpc(BOB::get(), MDOT), Some(dollars(0)));
-		assert_eq!(get_underlying_balance_rpc(BOB::get(), METH), Some(dollars(0)));
-
-		assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
-		assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
-
-		assert_eq!(get_underlying_balance_rpc(BOB::get(), MDOT), Some(dollars(50_000)));
-		assert_eq!(get_underlying_balance_rpc(BOB::get(), METH), Some(dollars(70_000)));
-	});
-}
-
-#[test]
-fn test_get_borrow_balance_rpc() {
-	ExtBuilder::default()
-		.pool_initial(CurrencyId::DOT)
-		.pool_initial(CurrencyId::ETH)
-		.build()
-		.execute_with(|| {
-			assert_ok!(Controller::deposit_insurance(alice(), DOT, dollars(100_000)));
-			assert_ok!(Controller::deposit_insurance(alice(), ETH, dollars(100_000)));
-			assert_eq!(pool_total_insurance(DOT), dollars(100_000));
-			assert_eq!(pool_total_insurance(ETH), dollars(100_000));
-
-			System::set_block_number(10);
-
-			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
-			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), ETH));
-
-			System::set_block_number(20);
-
-			assert_eq!(get_borrow_balance_rpc(BOB::get(), DOT), Some(dollars(0)));
-
-			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(100_000)));
-
-			assert_eq!(get_borrow_balance_rpc(BOB::get(), DOT), Some(dollars(100_000)));
-		});
 }

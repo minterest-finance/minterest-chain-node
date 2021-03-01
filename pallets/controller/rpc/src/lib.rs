@@ -14,21 +14,8 @@ pub trait ControllerApi<BlockHash> {
 	#[rpc(name = "controller_liquidityPoolState")]
 	fn liquidity_pool_state(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<PoolState>>;
 
-	#[rpc(name = "controller_underlyingBalance")]
-	fn get_underlying_balance(
-		&self,
-		account_id: AccountId,
-		pool_id: CurrencyId,
-		at: Option<BlockHash>,
-	) -> Result<Option<Balance>>;
-
-	#[rpc(name = "controller_borrowBalance")]
-	fn get_borrow_balance(
-		&self,
-		account_id: AccountId,
-		underlying_asset_id: CurrencyId,
-		at: Option<BlockHash>,
-	) -> Result<Option<Balance>>;
+	#[rpc(name = "controller_userBalanceInfo")]
+	fn get_user_balance(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<(Balance, Balance)>>;
 }
 
 /// A struct that implements the [`ControllerApi`].
@@ -81,38 +68,19 @@ where
 		})
 	}
 
-	fn get_underlying_balance(
+	fn get_user_balance(
 		&self,
 		account_id: AccountId,
-		pool_id: CurrencyId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<Option<Balance>> {
+	) -> Result<Option<(Balance, Balance)>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume the best block.
             self.client.info().best_hash));
-		api.get_underlying_balance(&at, account_id, pool_id)
+		api.get_total_supply_and_borrowed_usd_balance(&at, account_id)
 			.map_err(|e| RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
-				message: "Unable to get underlying balance.".into(),
-				data: Some(format!("{:?}", e).into()),
-			})
-	}
-
-	fn get_borrow_balance(
-		&self,
-		account_id: AccountId,
-		underlying_asset_id: CurrencyId,
-		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<Option<Balance>> {
-		let api = self.client.runtime_api();
-		let at = BlockId::hash(at.unwrap_or_else(||
-            // If the block hash is not supplied assume the best block.
-            self.client.info().best_hash));
-		api.get_borrow_balance(&at, account_id, underlying_asset_id)
-			.map_err(|e| RpcError {
-				code: ErrorCode::ServerError(Error::RuntimeError.into()),
-				message: "Unable to get borrow balance.".into(),
+				message: "Unable to get balance info.".into(),
 				data: Some(format!("{:?}", e).into()),
 			})
 	}

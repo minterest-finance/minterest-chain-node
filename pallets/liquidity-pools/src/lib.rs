@@ -191,6 +191,25 @@ impl<T: Trait> Module<T> {
 		Ok(current_exchange_rate)
 	}
 
+	///
+	pub fn get_exchange_rate_by_interest_params(
+		underlying_asset_id: CurrencyId,
+		total_insurance: Balance,
+		total_borrowed: Balance,
+	) -> RateResult {
+		let wrapped_asset_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
+		// Current the total amount of cash the pool has.
+		let total_cash = Self::get_pool_available_liquidity(underlying_asset_id);
+
+		// Current total number of tokens in circulation.
+		let total_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
+
+		let current_exchange_rate =
+			Self::calculate_exchange_rate(total_cash, total_supply, total_insurance, total_borrowed)?;
+
+		Ok(current_exchange_rate)
+	}
+
 	/// Calculates the exchange rate from the underlying to the mToken.
 	/// - `total_cash`: The total amount of cash the pool has.
 	/// - `total_supply`: Total number of tokens in circulation.
