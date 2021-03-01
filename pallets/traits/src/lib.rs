@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use minterest_primitives::{Balance, CurrencyId};
+use minterest_primitives::{Balance, CurrencyId, Price};
 use sp_runtime::DispatchResult;
 
 /// An abstraction of basic borrowing functions
@@ -32,4 +32,13 @@ pub trait PoolsManager<AccountId> {
 
 	/// Check if pool exists
 	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool;
+}
+
+pub trait PriceProvider<CurrencyId> {
+	fn get_relative_price(base: CurrencyId, quote: CurrencyId) -> Option<Price>;
+	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price>;
+	// FIXME: temporary function
+	fn stub_price(currency_id: CurrencyId, price: Price);
+	fn lock_price(currency_id: CurrencyId);
+	fn unlock_price(currency_id: CurrencyId);
 }
