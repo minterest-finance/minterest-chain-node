@@ -3498,7 +3498,7 @@ dependencies = [
 
 [[package]]
 name = "minterest-chain"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "minterest-cli",
  "minterest-service",
