@@ -49,6 +49,7 @@
     "Amount": "i128",
     "AmountOf": "Amount",
     "Rate": "FixedU128",
+    "Price": "FixedU128",
     "ControllerData": {
       "timestamp": "BlockNumber",
       "insurance_factor": "Rate",
@@ -77,14 +78,20 @@
       "borrow_rate": "Rate",
       "supply_rate": "Rate"
     },
-    "OracleKey": "u32",
+    "OracleKey": "CurrencyId",
+    "OracleValue": "Price",
     "DataProviderId": {
       "_enum": [
         "Aggregated",
         "Minterest",
         "Band"
       ]
-    }
+    },
+    "TimestampedValue": {
+      "value": "OracleValue",
+      "timestamp": "Moment"
+    },
+    "TimestampedValueOf": "TimestampedValue"
   },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
 }
