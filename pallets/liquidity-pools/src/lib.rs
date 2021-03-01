@@ -59,7 +59,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-type Oracle<T> = oracle::Module<T>;
+type Prices<T> = module_prices::Module<T>;
 type RateResult = result::Result<Rate, DispatchError>;
 type CurrencyIdResult = result::Result<CurrencyId, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
@@ -69,7 +69,7 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + oracle::Config {
+	pub trait Config: frame_system::Config + module_prices::Config {
 		/// The `MultiCurrency` implementation.
 		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 
@@ -434,7 +434,7 @@ impl<T: Config> Pallet<T> {
 				let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
 				let user_balance_underlying_asset =
 					Self::convert_from_wrapped(wrapped_id, user_balance_wrapped_tokens).ok()?;
-				let oracle_price = <Oracle<T>>::get_underlying_price(pool_id).ok()?;
+				let oracle_price = <Prices<T>>::get_underlying_price(pool_id).ok()?;
 				let total_deposit_in_usd = Rate::from_inner(user_balance_underlying_asset)
 					.checked_mul(&oracle_price)
 					.map(|x| x.into_inner())

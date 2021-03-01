@@ -29,7 +29,7 @@ orml-traits = { path = "../../orml/traits" }
 
 accounts = { path = "../accounts" }
 liquidity-pools = { path = "../liquidity-pools" }
-oracle = { path = "../oracle" }
+module-prices = { path = "../prices" }
 
 [features]
 default = ['std']

@@ -30,7 +30,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		Oracle: oracle::{Module},
+		Prices: module_prices::{Module},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
@@ -129,7 +129,7 @@ impl liquidity_pools::Config for Runtime {
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
-impl oracle::Config for Runtime {}
+impl module_prices::Config for Runtime {}
 
 parameter_types! {
 	pub const MaxMembers: u8 = MAX_MEMBERS;

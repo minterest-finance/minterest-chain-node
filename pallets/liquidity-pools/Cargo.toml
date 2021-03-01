@@ -23,14 +23,14 @@ orml-tokens = { path = "../../orml/tokens", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
-oracle = { path = "../oracle", default-features = false }
+module-prices = { path = "../prices", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = "3.0.0" }
 pallet-balances = { version = "3.0.0" }
 orml-tokens = { path = "../../orml/tokens" }
 orml-currencies = { path = "../../orml/currencies" }
-oracle = { path = "../oracle" }
+module-prices = { path = "../prices" }
 
 [features]
 default = ["std"]
@@ -51,5 +51,5 @@ std = [
 
     "minterest-primitives/std",
     "pallet-traits/std",
-    "oracle/std",
+    "module-prices/std",
 ]

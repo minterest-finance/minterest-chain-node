@@ -855,7 +855,7 @@ dependencies = [
  "liquidity-pools",
  "minterest-model",
  "minterest-primitives",
- "oracle",
+ "module-prices",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -2484,7 +2484,7 @@ dependencies = [
  "minterest-model",
  "minterest-primitives",
  "minterest-protocol",
- "oracle",
+ "module-prices",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -3285,7 +3285,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "minterest-primitives",
- "oracle",
+ "module-prices",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -3523,7 +3523,7 @@ dependencies = [
  "frame-system",
  "liquidity-pools",
  "minterest-primitives",
- "oracle",
+ "module-prices",
  "orml-tokens",
  "orml-traits",
  "orml-utilities",
@@ -3557,7 +3557,7 @@ dependencies = [
  "liquidity-pools",
  "minterest-model",
  "minterest-primitives",
- "oracle",
+ "module-prices",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -3716,6 +3716,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "module-prices"
+version = "0.5.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "minterest-primitives",
+ "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "more-asserts"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3852,7 +3864,7 @@ dependencies = [
  "minterest-model",
  "minterest-primitives",
  "minterest-protocol",
- "oracle",
+ "module-prices",
  "orml-currencies",
  "orml-oracle",
  "orml-oracle-rpc-runtime-api",
@@ -4013,18 +4025,6 @@ name = "openssl-probe"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77af24da69f9d9341038eba93a073b1fdaaa1b788221b00a69bce9e762cb32de"
-
-[[package]]
-name = "oracle"
-version = "0.5.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "minterest-primitives",
- "parity-scale-codec",
- "sp-runtime",
- "sp-std",
-]
 
 [[package]]
 name = "orml-auction"
@@ -5463,7 +5463,7 @@ dependencies = [
  "minterest-model",
  "minterest-primitives",
  "minterest-protocol",
- "oracle",
+ "module-prices",
  "orml-tokens",
  "orml-traits",
  "orml-utilities",

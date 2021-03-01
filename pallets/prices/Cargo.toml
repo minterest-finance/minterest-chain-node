@@ -1,5 +1,5 @@
 [package]
-name = 'oracle'
+name = 'module-prices'
 authors = ["Alexandr Liutsko <alexandr.liutsko@gmail.com>"]
 version = '0.5.0'
 edition = '2018'

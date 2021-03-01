@@ -316,7 +316,7 @@ impl accounts::Config for Runtime {
 	type MaxMembers = MaxMembers;
 }
 
-impl oracle::Config for Runtime {}
+impl module_prices::Config for Runtime {}
 
 parameter_types! {
 	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
@@ -432,7 +432,7 @@ construct_runtime!(
 		// Oracle
 		MinterestOracle: orml_oracle::<Instance1>::{Module, Storage, Call, Config<T>, Event<T>},
 		BandOracle: orml_oracle::<Instance2>::{Module, Storage, Call, Config<T>, Event<T>},
-		Oracle: oracle::{Module}, // FIXME remove after connecting oracles.
+		Prices: module_prices::{Module}, // FIXME remove after connecting oracles.
 
 		// Minterest pallets
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},

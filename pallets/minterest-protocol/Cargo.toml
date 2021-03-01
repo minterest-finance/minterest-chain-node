@@ -27,7 +27,7 @@ orml-tokens = { path = "../../orml/tokens" }
 orml-currencies = { path = "../../orml/currencies" }
 sp-io = { version = "3.0.0" }
 liquidity-pools = { path = "../liquidity-pools" }
-oracle = { path = "../oracle" }
+module-prices = { path = "../prices" }
 controller = { path = "../controller" }
 accounts = { path = "../accounts" }
 minterest-model = { path = "../minterest-model" }

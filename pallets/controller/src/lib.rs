@@ -68,7 +68,7 @@ pub struct PauseKeeper {
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 type MinterestModel<T> = minterest_model::Module<T>;
-type Oracle<T> = oracle::Module<T>;
+type Prices<T> = module_prices::Module<T>;
 type Accounts<T> = accounts::Module<T>;
 type RateResult = result::Result<Rate, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
@@ -80,7 +80,11 @@ pub mod module {
 
 	#[pallet::config]
 	pub trait Config:
-		frame_system::Config + liquidity_pools::Config + oracle::Config + accounts::Config + minterest_model::Config
+		frame_system::Config
+		+ liquidity_pools::Config
+		+ module_prices::Config
+		+ accounts::Config
+		+ minterest_model::Config
 	{
 		/// The overarching event type.
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
@@ -94,7 +98,7 @@ pub mod module {
 		NumOverflow,
 		/// Borrow rate is absurdly high.
 		BorrowRateIsTooHight,
-		/// Oracle unavailable or price equal 0ю
+		/// Oracle unavailable or price equal 0.
 		OraclePriceError,
 		/// Insufficient available liquidity.
 		InsufficientLiquidity,
@@ -516,7 +520,7 @@ impl<T: Config> Pallet<T> {
 
 			// Get the normalized price of the asset.
 			let oracle_price =
-				<Oracle<T>>::get_underlying_price(underlying_asset).map_err(|_| Error::<T>::OraclePriceError)?;
+				<Prices<T>>::get_underlying_price(underlying_asset).map_err(|_| Error::<T>::OraclePriceError)?;
 
 			if oracle_price.is_zero() {
 				return Ok((Balance::zero(), Balance::zero()));
