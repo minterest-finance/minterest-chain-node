@@ -3268,7 +3268,7 @@ dependencies = [
  "frame-system",
  "liquidity-pools",
  "minterest-primitives",
- "oracle",
+ "module-prices",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",

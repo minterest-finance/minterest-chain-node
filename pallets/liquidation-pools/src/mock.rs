@@ -132,7 +132,7 @@ impl accounts::Config for Test {
 	type MaxMembers = MaxMembers;
 }
 
-impl oracle::Config for Test {}
+impl module_prices::Config for Test {}
 
 parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");

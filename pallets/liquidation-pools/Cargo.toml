@@ -27,7 +27,7 @@ orml-currencies = { path = "../../orml/currencies" }
 orml-tokens = { path = "../../orml/tokens" }
 
 liquidity-pools = { path = "../liquidity-pools" }
-oracle = { path = "../oracle" }
+module-prices = { path = "../prices" }
 accounts = { path = "../accounts" }
 
 [features]
