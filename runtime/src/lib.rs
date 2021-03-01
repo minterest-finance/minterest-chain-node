@@ -352,8 +352,7 @@ parameter_types! {
 
 impl liquidation_pools::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Currencies;
-	type ModuleId = LiquidationPoolsModuleId;
+	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 }
 
@@ -442,7 +441,7 @@ construct_runtime!(
 		Accounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		RiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
-		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event}
+		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>}
 	}
 );
 

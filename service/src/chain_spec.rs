@@ -1,11 +1,12 @@
 use controller::{ControllerData, PauseKeeper};
 use hex_literal::hex;
+use liquidation_pools::LiquidationPool;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
 	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, BandOracleConfig, ControllerConfig, CurrencyId,
-	GenesisConfig, GrandpaConfig, LiquidityPoolsConfig, MinterestModelConfig, MinterestOracleConfig, RiskManagerConfig,
-	Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
+	GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestModelConfig,
+	MinterestOracleConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -436,6 +437,38 @@ fn testnet_genesis(
 						min_sum: 200_000 * DOLLARS,                               // In USD. FIXME: temporary value.
 						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
 						liquidation_incentive: FixedU128::saturating_from_rational(105, 100), // 5%
+					},
+				),
+			],
+		}),
+		liquidation_pools: Some(LiquidationPoolsConfig {
+			liquidation_pools: vec![
+				(
+					CurrencyId::DOT,
+					LiquidationPool {
+						timestamp: 1,
+						balancing_period: 600, // Blocks per 10 minutes.
+					},
+				),
+				(
+					CurrencyId::ETH,
+					LiquidationPool {
+						timestamp: 1,
+						balancing_period: 600, // Blocks per 10 minutes.
+					},
+				),
+				(
+					CurrencyId::BTC,
+					LiquidationPool {
+						timestamp: 1,
+						balancing_period: 600, // Blocks per 10 minutes.
+					},
+				),
+				(
+					CurrencyId::KSM,
+					LiquidationPool {
+						timestamp: 1,
+						balancing_period: 600, // Blocks per 10 minutes.
 					},
 				),
 			],
