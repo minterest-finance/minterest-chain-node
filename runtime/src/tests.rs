@@ -23,7 +23,9 @@ parameter_types! {
 	pub ALICE: AccountId = AccountId::from([1u8; 32]);
 	pub BOB: AccountId = AccountId::from([2u8; 32]);
 	pub CHARLIE: AccountId = AccountId::from([3u8; 32]);
-	pub ORACLE: AccountId = AccountId::from([4u8; 32]);
+	pub ORACLE1: AccountId = AccountId::from([4u8; 32]);
+	pub ORACLE2: AccountId = AccountId::from([5u8; 32]);
+	pub ORACLE3: AccountId = AccountId::from([6u8; 32]);
 
 }
 
@@ -235,6 +237,13 @@ impl ExtBuilder {
 		.assimilate_storage::<Runtime>(&mut t)
 		.unwrap();
 
+		pallet_membership::GenesisConfig::<Runtime, pallet_membership::Instance2> {
+			members: vec![ORACLE1::get().clone(), ORACLE2::get().clone(), ORACLE3::get().clone()],
+			phantom: Default::default(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 		accounts::GenesisConfig::<Runtime> {
 			allowed_accounts: vec![(ALICE::get(), ())],
 			member_count: u8::one(),
@@ -276,19 +285,13 @@ fn origin_of(account_id: AccountId) -> <Runtime as frame_system::Config>::Origin
 	<Runtime as frame_system::Config>::Origin::signed(account_id)
 }
 
-fn set_price_for_all_pools(price: u128) {
-	EnabledUnderlyingAssetId::get()
-		.iter()
-		.for_each(|pool_id| Prices::stub_price(*pool_id, Price::saturating_from_integer(price)));
-}
-
 fn set_oracle_price_for_all_pools(price: Price) -> DispatchResult {
 	let prices: Vec<(CurrencyId, Price)> = EnabledUnderlyingAssetId::get()
 		.into_iter()
 		.map(|pool_id| (pool_id, price))
 		.collect();
 	MinterestOracle::on_finalize(0);
-	assert_ok!(MinterestOracle::feed_values(origin_of(ORACLE::get().clone()), prices));
+	assert_ok!(MinterestOracle::feed_values(origin_of(ORACLE1::get().clone()), prices));
 	Ok(())
 }
 
@@ -300,7 +303,7 @@ fn test_rates_using_rpc() {
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all polls.
-			set_oracle_price_for_all_pools(Rate::saturating_from_integer(2));
+			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
 
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(100_000)));
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
@@ -375,7 +378,7 @@ fn demo_scenario_n2_without_insurance_should_work() {
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all polls.
-			set_oracle_price_for_all_pools(Rate::saturating_from_integer(2));
+			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
 
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 100_000 * DOLLARS));
 			System::set_block_number(200);
@@ -569,7 +572,7 @@ fn complete_liquidation_one_collateral_should_work() {
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all polls.
-			set_oracle_price_for_all_pools(Rate::saturating_from_integer(2));
+			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
 
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
@@ -626,7 +629,7 @@ fn complete_liquidation_multi_collateral_should_work() {
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all polls.
-			set_oracle_price_for_all_pools(Rate::saturating_from_integer(2));
+			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
 
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
@@ -691,7 +694,7 @@ fn partial_liquidation_one_collateral_should_work() {
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all polls.
-			set_oracle_price_for_all_pools(Rate::saturating_from_integer(2));
+			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
 
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
@@ -748,7 +751,7 @@ fn partial_liquidation_multi_collateral_should_work() {
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all polls.
-			set_oracle_price_for_all_pools(Rate::saturating_from_integer(2));
+			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
 
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
@@ -815,7 +818,7 @@ fn complete_liquidation_should_not_work() {
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all polls.
-			set_oracle_price_for_all_pools(Rate::saturating_from_integer(2));
+			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
 
 			assert_err!(
 				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
@@ -838,7 +841,7 @@ fn partial_liquidation_should_not_work() {
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all polls.
-			set_oracle_price_for_all_pools(Rate::saturating_from_integer(2));
+			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
 
 			assert_err!(
 				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
