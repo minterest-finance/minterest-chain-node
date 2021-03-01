@@ -3,6 +3,7 @@ use crate::{
 	CurrencyId::{self, DOT, ETH},
 	Event, LiquidationPoolsModuleId, LiquidityPoolsModuleId, Rate, Runtime, DOLLARS,
 };
+use accounts_rpc_runtime_api::runtime_decl_for_AccountsApi::AccountsApi;
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
 use controller_rpc_runtime_api::PoolState;
@@ -258,6 +259,10 @@ fn pool_balance(pool_id: CurrencyId) -> Balance {
 
 fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 	<Runtime as ControllerApi<Block>>::liquidity_pool_state(currency_id)
+}
+
+fn is_admin_rpc(caller: AccountId) -> Option<bool> {
+	<Runtime as AccountsApi<Block, AccountId>>::is_admin_rpc(caller)
 }
 
 fn dollars(amount: u128) -> u128 {
@@ -805,4 +810,12 @@ fn partial_liquidation_should_not_work() {
 				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingsAssets
 			);
 		})
+}
+
+#[test]
+fn is_admin_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_eq!(is_admin_rpc(ALICE::get()), Some(true));
+		assert_eq!(is_admin_rpc(BOB::get()), Some(false));
+	})
 }
