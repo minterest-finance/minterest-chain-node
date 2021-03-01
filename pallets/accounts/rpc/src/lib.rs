@@ -12,7 +12,7 @@ use std::sync::Arc;
 #[rpc]
 pub trait AccountsApi<BlockHash, AccountId> {
 	#[rpc(name = "accounts_isAdmin")]
-	fn is_admin_rpc(&self, caller: AccountId, at: Option<BlockHash>) -> Result<Option<bool>>;
+	fn is_admin(&self, caller: AccountId, at: Option<BlockHash>) -> Result<Option<bool>>;
 }
 
 /// A struct that implements the [`AccountsApi`].
@@ -50,12 +50,12 @@ where
 	C::Api: AccountsRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
 {
-	fn is_admin_rpc(&self, caller: AccountId, at: Option<<Block as BlockT>::Hash>) -> Result<Option<bool>> {
+	fn is_admin(&self, caller: AccountId, at: Option<<Block as BlockT>::Hash>) -> Result<Option<bool>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume the best block.
             self.client.info().best_hash));
-		api.is_admin_rpc(&at, caller).map_err(|e| RpcError {
+		api.is_admin(&at, caller).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
 			message: "Unable to check if is an admin.".into(),
 			data: Some(format!("{:?}", e).into()),

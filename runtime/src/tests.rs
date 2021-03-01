@@ -262,7 +262,7 @@ fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 }
 
 fn is_admin_rpc(caller: AccountId) -> Option<bool> {
-	<Runtime as AccountsApi<Block, AccountId>>::is_admin_rpc(caller)
+	<Runtime as AccountsApi<Block, AccountId>>::is_admin(caller)
 }
 
 fn dollars(amount: u128) -> u128 {

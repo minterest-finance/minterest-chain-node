@@ -15,6 +15,6 @@ sp_api::decl_runtime_apis! {
 	pub trait AccountsApi<AccountId> where
 		AccountId: Codec,
 	{
-		fn is_admin_rpc(caller: AccountId) -> Option<bool>;
+		fn is_admin(caller: AccountId) -> Option<bool>;
 	}
 }
