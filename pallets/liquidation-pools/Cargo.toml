@@ -1,7 +1,7 @@
 [package]
 name = "liquidation-pools"
 description = 'Pallet for managing liquidastion pools'
-version = "0.6.0"
+version = "0.6.1"
 authors = ['Minterest <https://github.com/minterest-defi>']
 edition = "2018"
 
@@ -15,6 +15,8 @@ sp-std = { version = '3.0.0', default-features = false }
 
 orml-traits = { path = "../../orml/traits", default-features = false }
 
+liquidity-pools = { path = "../liquidity-pools", default-features = false }
+accounts = { path = "../accounts", default-features = false }
 minterest-primitives = { path = "../../primitives", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
 
@@ -23,6 +25,10 @@ sp-core = { version = '3.0.0' }
 sp-io = { version = '3.0.0' }
 orml-currencies = { path = "../../orml/currencies" }
 orml-tokens = { path = "../../orml/tokens" }
+
+liquidity-pools = { path = "../liquidity-pools" }
+oracle = { path = "../oracle" }
+accounts = { path = "../accounts" }
 
 [features]
 default = ['std']

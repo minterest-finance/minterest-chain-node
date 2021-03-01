@@ -29,6 +29,10 @@
       "borrow_index": "Rate",
       "total_insurance": "Balance"
     },
+    "LiquidationPool": {
+      "timestamp": "BlockNumber",
+      "balancing_period": "u32"
+    },
     "PoolUserData" : {
       "total_borrowed": "Balance",
       "interest_index": "Rate",

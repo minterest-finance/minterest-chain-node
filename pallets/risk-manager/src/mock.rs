@@ -33,7 +33,7 @@ frame_support::construct_runtime!(
 		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
-		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event}
+		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>}
 	}
 );
 
@@ -147,9 +147,8 @@ parameter_types! {
 
 impl liquidation_pools::Config for Test {
 	type Event = Event;
-	type ModuleId = LiquidationPoolsModuleId;
+	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
-	type MultiCurrency = orml_tokens::Module<Test>;
 }
 
 impl minterest_protocol::Config for Test {
