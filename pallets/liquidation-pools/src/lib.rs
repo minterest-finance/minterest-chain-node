@@ -26,7 +26,7 @@ use sp_runtime::{
 		Duration,
 	},
 	transaction_validity::TransactionPriority,
-	DispatchResult, ModuleId, RandomNumberGenerator, RuntimeDebug,
+	ModuleId, RandomNumberGenerator, RuntimeDebug,
 };
 use sp_std::{convert::TryInto, prelude::*, result};
 
@@ -200,7 +200,7 @@ pub mod module {
 		#[transactional]
 		pub fn balancing(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
-			Self::balancing_attempt(pool_id)?;
+			Self::balancing_attempt(pool_id);
 			Ok(().into())
 		}
 	}
@@ -292,8 +292,8 @@ impl<T: Config> Pallet<T> {
 	/// Preparing data for pool balancing.
 	///
 	/// - `pool_id`: the CurrencyId of the pool for which automatic balancing is performed.
-	fn balancing_attempt(_pool_id: CurrencyId) -> DispatchResult {
-		Ok(())
+	fn balancing_attempt(_pool_id: CurrencyId) -> () {
+		()
 	}
 }
 
