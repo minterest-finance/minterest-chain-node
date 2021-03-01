@@ -30,9 +30,9 @@ use sp_runtime::{
 };
 use sp_std::{convert::TryInto, prelude::*, result};
 
-pub const OFFCHAIN_WORKER_DATA: &[u8] = b"modules/liquidation-pools/data/";
-pub const OFFCHAIN_WORKER_LOCK: &[u8] = b"modules/liquidation-pools/lock/";
-pub const OFFCHAIN_WORKER_MAX_ITERATIONS: &[u8] = b"modules/liquidation-pools/max-iterations/";
+pub const OFFCHAIN_WORKER_DATA: &[u8] = b"pallets/liquidation-pools/data/";
+pub const OFFCHAIN_WORKER_LOCK: &[u8] = b"pallets/liquidation-pools/lock/";
+pub const OFFCHAIN_WORKER_MAX_ITERATIONS: &[u8] = b"pallets/liquidation-pools/max-iterations/";
 
 pub const LOCK_DURATION: u64 = 100;
 pub const DEFAULT_MAX_ITERATIONS: u32 = 1000;
@@ -71,7 +71,7 @@ pub mod module {
 		/// A configuration for base priority of unsigned transactions.
 		///
 		/// This is exposed so that it can be tuned for particular runtime, when
-		/// multiple modules send unsigned transactions.
+		/// multiple pallets send unsigned transactions.
 		type UnsignedPriority: Get<TransactionPriority>;
 
 		#[pallet::constant]
