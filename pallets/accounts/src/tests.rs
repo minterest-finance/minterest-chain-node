@@ -84,20 +84,6 @@ fn remove_member_should_work() {
 }
 
 #[test]
-fn is_admin_should_work() {
-	ExternalityBuilder::build().execute_with(|| {
-		// Add Alice to allow-list.
-		assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
-
-		assert_ok!(TestAccounts::is_admin(Origin::signed(ALICE)));
-		let expected_event = Event::test_accounts(crate::Event::IsAnAdmin(ALICE));
-		assert!(System::events().iter().any(|record| record.event == expected_event));
-
-		assert_noop!(TestAccounts::is_admin(Origin::signed(BOB)), Error::<Test>::NotAnAdmin);
-	});
-}
-
-#[test]
 fn is_admin_internal_should_work() {
 	ExternalityBuilder::build().execute_with(|| {
 		assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
