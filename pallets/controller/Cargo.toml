@@ -22,7 +22,6 @@ orml-utilities = { path = "../../orml/utilities", default-features = false }
 minterest-primitives = { path = "../../primitives", default-features = false }
 minterest-model = { path = "../minterest-model", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
-module-prices = { path = "../prices", default-features = false }
 accounts = { path = "../accounts", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
 
@@ -34,7 +33,6 @@ orml-tokens = { path = "../../orml/tokens" }
 orml-currencies = { path = "../../orml/currencies" }
 
 liquidity-pools = { path = "../liquidity-pools" }
-module-prices = { path = "../prices" }
 accounts = { path = "../accounts" }
 minterest-model = { path = "../minterest-model" }
 
@@ -56,7 +54,6 @@ std = [
     "minterest-primitives/std",
     "minterest-model/std",
     "liquidity-pools/std",
-    "module-prices/std",
     "accounts/std",
     "pallet-traits/std",
 ]

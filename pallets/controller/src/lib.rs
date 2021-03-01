@@ -79,11 +79,7 @@ pub mod module {
 
 	#[pallet::config]
 	pub trait Config:
-		frame_system::Config
-		+ liquidity_pools::Config
-		+ module_prices::Config
-		+ accounts::Config
-		+ minterest_model::Config
+		frame_system::Config + liquidity_pools::Config + accounts::Config + minterest_model::Config
 	{
 		/// The overarching event type.
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;

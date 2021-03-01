@@ -96,7 +96,10 @@ impl orml_currencies::Config for Test {
 	type WeightInfo = ();
 }
 
-impl module_prices::Config for Test {}
+impl module_prices::Config for Test {
+	type Event = Event;
+	type Source = AggregatedDataProvider;
+}
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");

@@ -69,7 +69,7 @@ pub mod module {
 	use pallet_traits::PriceProvider;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + module_prices::Config {
+	pub trait Config: frame_system::Config {
 		/// The `MultiCurrency` implementation.
 		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 

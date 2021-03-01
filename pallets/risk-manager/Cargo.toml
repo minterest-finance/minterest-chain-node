@@ -27,7 +27,6 @@ liquidation-pools = { path = "../liquidation-pools", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
 controller = { path = "../controller", default-features = false }
 accounts = { path = "../accounts", default-features = false }
-module-prices = { path = "../prices", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = '3.0.0' }
@@ -37,7 +36,6 @@ orml-tokens = { path = "../../orml/tokens" }
 
 liquidity-pools = { path = "../liquidity-pools" }
 liquidation-pools = { path = "../liquidation-pools" }
-module-prices = { path = "../prices" }
 controller = { path = "../controller" }
 accounts = { path = "../accounts" }
 minterest-model = { path = "../minterest-model" }
@@ -63,5 +61,4 @@ std = [
     "liquidation-pools/std",
     "controller/std",
     "accounts/std",
-    "module-prices/std",
 ]
