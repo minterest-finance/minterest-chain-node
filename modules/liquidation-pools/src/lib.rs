@@ -25,6 +25,7 @@ use sp_runtime::{
 		storage_lock::{StorageLock, Time},
 		Duration,
 	},
+	transaction_validity::TransactionPriority,
 	DispatchResult, ModuleId, RandomNumberGenerator, RuntimeDebug,
 };
 use sp_std::{convert::TryInto, prelude::*, result};
@@ -225,16 +226,15 @@ impl<T: Config> Pallet<T> {
 		let to_be_continue = StorageValueRef::persistent(&OFFCHAIN_WORKER_DATA);
 
 		// Get to_be_continue record
-		let (pool_to_check, start_key) =
-			if let Some(Some((last_collateral_position, maybe_last_iterator_previous_key))) =
-				to_be_continue.get::<(u32, Option<Vec<u8>>)>()
-			{
-				(last_collateral_position, maybe_last_iterator_previous_key)
-			} else {
-				let random_seed = sp_io::offchain::random_seed();
-				let mut rng = RandomNumberGenerator::<BlakeTwo256>::new(BlakeTwo256::hash(&random_seed[..]));
-				(rng.pick_u32(underlying_asset_ids.len().saturating_sub(1) as u32), None)
-			};
+		let (pool_to_check, start_key) = if let Some(Some((last_pool_to_check, maybe_last_iterator_previous_key))) =
+			to_be_continue.get::<(u32, Option<Vec<u8>>)>()
+		{
+			(last_pool_to_check, maybe_last_iterator_previous_key)
+		} else {
+			let random_seed = sp_io::offchain::random_seed();
+			let mut rng = RandomNumberGenerator::<BlakeTwo256>::new(BlakeTwo256::hash(&random_seed[..]));
+			(rng.pick_u32(underlying_asset_ids.len().saturating_sub(1) as u32), None)
+		};
 
 		let currency_id = underlying_asset_ids[(pool_to_check as usize)];
 		let iteration_start_time = sp_io::offchain::timestamp();
@@ -267,12 +267,12 @@ impl<T: Config> Pallet<T> {
 		let timestamp = Self::liquidation_pools(pool_id).timestamp;
 		let period = Self::liquidation_pools(pool_id).balancing_period;
 
-		let block_delta_as_u32 = TryInto::<u32>::try_into(timestamp)
+		let timestamp_as_u32 = TryInto::<u32>::try_into(timestamp)
 			.ok()
 			.expect("blockchain will not exceed 2^32 blocks; qed");
 
 		Ok(
-			TryInto::<T::BlockNumber>::try_into(period.checked_add(block_delta_as_u32).ok_or(Error::<T>::NumOverflow)?)
+			TryInto::<T::BlockNumber>::try_into(period.checked_add(timestamp_as_u32).ok_or(Error::<T>::NumOverflow)?)
 				.ok()
 				.expect(" result convert failed"),
 		)
