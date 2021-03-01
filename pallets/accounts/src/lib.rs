@@ -167,10 +167,3 @@ impl<T: Config> Pallet<T> {
 		members.contains(&caller)
 	}
 }
-
-// RPC method
-impl<T: Config> Pallet<T> {
-	pub fn is_admin_rpc(caller: &T::AccountId) -> Option<bool> {
-		Some(Self::is_admin_internal(&caller))
-	}
-}

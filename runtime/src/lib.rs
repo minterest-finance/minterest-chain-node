@@ -560,7 +560,7 @@ impl_runtime_apis! {
 
 	impl accounts_rpc_runtime_api::AccountsApi<Block, AccountId,> for Runtime {
 			fn is_admin_rpc(caller: AccountId) -> Option<bool> {
-				Some(Accounts::is_admin_rpc(&caller)?)
+				Some(Accounts::is_admin_internal(&caller))
 			}
 		}
 
