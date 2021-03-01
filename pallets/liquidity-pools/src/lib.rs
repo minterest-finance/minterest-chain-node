@@ -13,7 +13,7 @@ use frame_support::{pallet_prelude::*, traits::Get};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{Borrowing, PoolsManager};
+use pallet_traits::{Borrowing, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -59,7 +59,6 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-type Prices<T> = module_prices::Module<T>;
 type RateResult = result::Result<Rate, DispatchError>;
 type CurrencyIdResult = result::Result<CurrencyId, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
@@ -67,6 +66,7 @@ type BalanceResult = result::Result<Balance, DispatchError>;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
+	use pallet_traits::PriceProvider;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + module_prices::Config {
@@ -78,6 +78,9 @@ pub mod module {
 
 		/// Enabled currency pairs.
 		type EnabledCurrencyPair: Get<Vec<CurrencyPair>>;
+
+		/// The price source of currencies
+		type PriceSource: PriceProvider<CurrencyId>;
 
 		#[pallet::constant]
 		/// The Liquidity Pool's module id, keep all assets in Pools.
@@ -104,6 +107,8 @@ pub mod module {
 		NotValidUnderlyingAssetId,
 		/// The currency is not enabled in wrapped protocol.
 		NotValidWrappedTokenId,
+		/// Feed price is invalid
+		InvalidFeedPrice,
 	}
 
 	#[pallet::storage]
@@ -434,7 +439,9 @@ impl<T: Config> Pallet<T> {
 				let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
 				let user_balance_underlying_asset =
 					Self::convert_from_wrapped(wrapped_id, user_balance_wrapped_tokens).ok()?;
-				let oracle_price = <Prices<T>>::get_underlying_price(pool_id).ok()?;
+				let oracle_price = T::PriceSource::get_underlying_price(pool_id)
+					.ok_or(Error::<T>::InvalidFeedPrice)
+					.ok()?;
 				let total_deposit_in_usd = Rate::from_inner(user_balance_underlying_asset)
 					.checked_mul(&oracle_price)
 					.map(|x| x.into_inner())

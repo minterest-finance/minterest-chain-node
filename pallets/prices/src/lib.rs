@@ -15,12 +15,10 @@
 use frame_support::pallet_prelude::*;
 use minterest_primitives::{CurrencyId, Price};
 use orml_traits::{DataFeeder, DataProvider};
-use sp_runtime::DispatchError;
-use sp_std::result;
+use pallet_traits::PriceProvider;
 
 pub use module::*;
-
-type PriceResult = result::Result<Price, DispatchError>;
+use sp_runtime::traits::CheckedDiv;
 
 #[cfg(test)]
 mod mock;
@@ -47,6 +45,8 @@ pub mod module {
 		LockPrice(CurrencyId, Price),
 		/// Unlock price. \[currency_id\]
 		UnlockPrice(CurrencyId),
+		/// Stub price. \[currency_id, stubbed_price\]
+		StubPrice(CurrencyId, Price),
 	}
 
 	/// Mapping from currency id to it's locked price
@@ -63,9 +63,55 @@ pub mod module {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {}
 }
-impl<T: Config> Pallet<T> {
-	pub fn get_underlying_price(_underlying_asset_id: CurrencyId) -> PriceResult {
-		let price_two_dollars = 2_00u128 * 10_000_000_000_000_000;
-		Ok(Price::from_inner(price_two_dollars)) // Price = 2.00 USD
+// impl<T: Config> Pallet<T> {
+// pub fn get_underlying_price(_underlying_asset_id: CurrencyId) -> PriceResult {
+// 	let price_two_dollars = 2_00u128 * 10_000_000_000_000_000;
+// 	Ok(Price::from_inner(price_two_dollars)) // Price = 2.00 USD
+// }
+// }
+
+impl<T: Config> PriceProvider<CurrencyId> for Pallet<T> {
+	/// Get relative price between two currency types.
+	///
+	/// - `base_currency_id` - The CurrencyId of the first token.
+	/// - `quote_currency_id` -  The CurrencyId of the second token.
+	///
+	/// Returns base_price / quote_price.
+	fn get_relative_price(base_currency_id: CurrencyId, quote_currency_id: CurrencyId) -> Option<Price> {
+		if let (Some(base_price), Some(quote_price)) = (
+			Self::get_underlying_price(base_currency_id),
+			Self::get_underlying_price(quote_currency_id),
+		) {
+			base_price.checked_div(&quote_price)
+		} else {
+			None
+		}
+	}
+
+	/// Get price underlying token in USD.
+	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
+		// if locked price exists, return it, otherwise return latest price from oracle.
+		Self::locked_price(currency_id).or_else(|| T::Source::get(&currency_id))
+	}
+
+	// FIXME: temporary function.
+	fn stub_price(currency_id: CurrencyId, price: Price) {
+		LockedPrice::<T>::insert(currency_id, price);
+		<Pallet<T>>::deposit_event(Event::StubPrice(currency_id, price));
+	}
+
+	/// Locks price when get valid price from source.
+	fn lock_price(currency_id: CurrencyId) {
+		// lock price when get valid price from source
+		if let Some(val) = T::Source::get(&currency_id) {
+			LockedPrice::<T>::insert(currency_id, val);
+			<Pallet<T>>::deposit_event(Event::LockPrice(currency_id, val));
+		}
+	}
+
+	/// Unlocks price when get valid price from source.
+	fn unlock_price(currency_id: CurrencyId) {
+		LockedPrice::<T>::remove(currency_id);
+		<Pallet<T>>::deposit_event(Event::UnlockPrice(currency_id));
 	}
 }

@@ -13,7 +13,7 @@ use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, pallet_prelude::*};
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::PoolsManager;
+use pallet_traits::{PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;
@@ -68,7 +68,6 @@ pub struct PauseKeeper {
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 type MinterestModel<T> = minterest_model::Module<T>;
-type Prices<T> = module_prices::Module<T>;
 type Accounts<T> = accounts::Module<T>;
 type RateResult = result::Result<Rate, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
@@ -520,7 +519,7 @@ impl<T: Config> Pallet<T> {
 
 			// Get the normalized price of the asset.
 			let oracle_price =
-				<Prices<T>>::get_underlying_price(underlying_asset).map_err(|_| Error::<T>::OraclePriceError)?;
+				T::PriceSource::get_underlying_price(underlying_asset).ok_or(Error::<T>::OraclePriceError)?;
 
 			if oracle_price.is_zero() {
 				return Ok((Balance::zero(), Balance::zero()));

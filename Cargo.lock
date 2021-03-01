@@ -3727,6 +3727,7 @@ dependencies = [
  "frame-system",
  "minterest-primitives",
  "orml-traits",
+ "pallet-traits",
  "parity-scale-codec",
  "sp-runtime",
  "sp-std",

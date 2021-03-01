@@ -294,6 +294,7 @@ parameter_types! {
 
 impl liquidity_pools::Config for Runtime {
 	type MultiCurrency = Currencies;
+	type PriceSource = Prices;
 	type ModuleId = LiquidityPoolsModuleId;
 	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
