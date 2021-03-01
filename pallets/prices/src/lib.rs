@@ -63,12 +63,6 @@ pub mod module {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {}
 }
-// impl<T: Config> Pallet<T> {
-// pub fn get_underlying_price(_underlying_asset_id: CurrencyId) -> PriceResult {
-// 	let price_two_dollars = 2_00u128 * 10_000_000_000_000_000;
-// 	Ok(Price::from_inner(price_two_dollars)) // Price = 2.00 USD
-// }
-// }
 
 impl<T: Config> PriceProvider<CurrencyId> for Pallet<T> {
 	/// Get relative price between two currency types.

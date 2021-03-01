@@ -1,7 +1,8 @@
 use crate::{
-	AccountId, Balance, Block,
+	AccountId, Balance, Block, Controller, Currencies,
 	CurrencyId::{self, DOT, ETH},
-	Event, LiquidationPoolsModuleId, LiquidityPoolsModuleId, Rate, Runtime, DOLLARS,
+	EnabledUnderlyingAssetId, Event, LiquidationPools, LiquidationPoolsModuleId, LiquidityPools,
+	LiquidityPoolsModuleId, MinterestProtocol, Prices, Rate, RiskManager, Runtime, System, DOLLARS,
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
@@ -13,17 +14,10 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::{Operation, Price};
 use orml_traits::MultiCurrency;
 use pallet_traits::PoolsManager;
+use pallet_traits::PriceProvider;
 use risk_manager::RiskManagerData;
 use sp_runtime::traits::{AccountIdConversion, One, Zero};
 use sp_runtime::FixedPointNumber;
-
-type MinterestProtocol = minterest_protocol::Module<Runtime>;
-type LiquidityPools = liquidity_pools::Module<Runtime>;
-type LiquidationPools = liquidation_pools::Module<Runtime>;
-type RiskManager = risk_manager::Module<Runtime>;
-type Controller = controller::Module<Runtime>;
-type Currencies = orml_currencies::Module<Runtime>;
-type System = frame_system::Module<Runtime>;
 
 parameter_types! {
 	pub ALICE: AccountId = AccountId::from([1u8; 32]);
@@ -276,6 +270,12 @@ fn charlie() -> <Runtime as frame_system::Config>::Origin {
 	<Runtime as frame_system::Config>::Origin::signed((CHARLIE::get()).clone())
 }
 
+fn set_price_for_all_pools(price: u128) {
+	EnabledUnderlyingAssetId::get()
+		.iter()
+		.for_each(|pool_id| Prices::stub_price(*pool_id, Price::saturating_from_integer(price)));
+}
+
 #[test]
 fn test_rates_using_rpc() {
 	ExtBuilder::default()
@@ -283,6 +283,9 @@ fn test_rates_using_rpc() {
 		.pool_initial(CurrencyId::ETH)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			set_price_for_all_pools(2_u128);
+
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(100_000)));
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
 
@@ -355,6 +358,9 @@ fn demo_scenario_n2_without_insurance_should_work() {
 		.pool_initial(CurrencyId::ETH)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			set_price_for_all_pools(2_u128);
+
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 100_000 * DOLLARS));
 			System::set_block_number(200);
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 100_000 * DOLLARS));
@@ -546,6 +552,9 @@ fn complete_liquidation_one_collateral_should_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			set_price_for_all_pools(2_u128);
+
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
 			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
@@ -600,6 +609,9 @@ fn complete_liquidation_multi_collateral_should_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			set_price_for_all_pools(2_u128);
+
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
 			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
@@ -662,6 +674,9 @@ fn partial_liquidation_one_collateral_should_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			set_price_for_all_pools(2_u128);
+
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
 			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
@@ -716,6 +731,9 @@ fn partial_liquidation_multi_collateral_should_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			set_price_for_all_pools(2_u128);
+
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
 			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
@@ -780,6 +798,9 @@ fn complete_liquidation_should_not_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			set_price_for_all_pools(2_u128);
+
 			assert_err!(
 				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
 				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingsAssets
@@ -800,6 +821,9 @@ fn partial_liquidation_should_not_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			set_price_for_all_pools(2_u128);
+
 			assert_err!(
 				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
 				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingsAssets

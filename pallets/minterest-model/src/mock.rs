@@ -3,8 +3,9 @@ use super::*;
 use crate as minterest_model;
 use frame_support::parameter_types;
 use frame_system as system;
-use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
+use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_traits::parameter_type_with_key;
+use pallet_traits::PriceProvider;
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
 use sp_runtime::traits::One;
@@ -26,7 +27,6 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
-		Prices: module_prices::{Module},
 		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
@@ -110,8 +110,27 @@ parameter_types! {
 			.collect();
 }
 
+pub struct MockPriceSource;
+
+impl PriceProvider<CurrencyId> for MockPriceSource {
+	fn get_relative_price(_base: CurrencyId, _quota: CurrencyId) -> Option<Price> {
+		Some(Price::one())
+	}
+
+	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
+		Some(Price::one())
+	}
+
+	fn stub_price(_currency_id: CurrencyId, _price: Price) {}
+
+	fn lock_price(_currency_id: CurrencyId) {}
+
+	fn unlock_price(_currency_id: CurrencyId) {}
+}
+
 impl liquidity_pools::Config for Test {
 	type MultiCurrency = orml_tokens::Module<Test>;
+	type PriceSource = MockPriceSource;
 	type ModuleId = LiquidityPoolsModuleId;
 	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
@@ -119,8 +138,6 @@ impl liquidity_pools::Config for Test {
 	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
-
-impl module_prices::Config for Test {}
 
 parameter_types! {
 	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
