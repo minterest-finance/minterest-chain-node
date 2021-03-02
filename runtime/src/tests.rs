@@ -2,7 +2,7 @@ use crate::{
 	AccountId, Balance, Block, Controller, Currencies,
 	CurrencyId::{self, DOT, ETH},
 	EnabledUnderlyingAssetId, Event, LiquidationPools, LiquidationPoolsModuleId, LiquidityPools,
-	LiquidityPoolsModuleId, MinterestOracle, MinterestProtocol, Prices, Rate, RiskManager, Runtime, System, DOLLARS,
+	LiquidityPoolsModuleId, MinterestOracle, MinterestProtocol, Rate, RiskManager, Runtime, System, DOLLARS,
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
@@ -14,7 +14,6 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::{Operation, Price};
 use orml_traits::MultiCurrency;
 use pallet_traits::PoolsManager;
-use pallet_traits::PriceProvider;
 use risk_manager::RiskManagerData;
 use sp_runtime::traits::{AccountIdConversion, One, Zero};
 use sp_runtime::{DispatchResult, FixedPointNumber};

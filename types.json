@@ -83,8 +83,7 @@
     "DataProviderId": {
       "_enum": [
         "Aggregated",
-        "Minterest",
-        "Band"
+        "Minterest"
       ]
     },
     "TimestampedValue": {

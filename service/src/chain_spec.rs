@@ -4,10 +4,10 @@ use liquidation_pools::LiquidationPool;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
-	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, BandOracleConfig, ControllerConfig, CurrencyId,
+	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId,
 	GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig,
-	MinterestModelConfig, MinterestOracleConfig, OperatorMembershipBandConfig, OperatorMembershipMinterestConfig,
-	RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
+	MinterestModelConfig, MinterestOracleConfig, OperatorMembershipMinterestConfig, RiskManagerConfig, Signature,
+	SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -483,15 +483,7 @@ fn testnet_genesis(
 			members: endowed_accounts.clone(),
 			phantom: Default::default(),
 		}),
-		pallet_membership_Instance3: Some(OperatorMembershipBandConfig {
-			members: endowed_accounts.clone(),
-			phantom: Default::default(),
-		}),
 		orml_oracle_Instance1: Some(MinterestOracleConfig {
-			members: Default::default(), // initialized by OperatorMembership
-			phantom: Default::default(),
-		}),
-		orml_oracle_Instance2: Some(BandOracleConfig {
 			members: Default::default(), // initialized by OperatorMembership
 			phantom: Default::default(),
 		}),

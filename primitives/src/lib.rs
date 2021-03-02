@@ -110,5 +110,4 @@ pub enum Operation {
 pub enum DataProviderId {
 	Aggregated = 0,
 	Minterest = 1,
-	Band = 2,
 }
