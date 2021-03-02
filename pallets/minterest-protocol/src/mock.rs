@@ -132,8 +132,6 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 		Some(Price::one())
 	}
 
-	fn stub_price(_currency_id: CurrencyId, _price: Price) {}
-
 	fn lock_price(_currency_id: CurrencyId) {}
 
 	fn unlock_price(_currency_id: CurrencyId) {}

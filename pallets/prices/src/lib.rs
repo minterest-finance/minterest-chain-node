@@ -88,12 +88,6 @@ impl<T: Config> PriceProvider<CurrencyId> for Pallet<T> {
 		Self::locked_price(currency_id).or_else(|| T::Source::get(&currency_id))
 	}
 
-	// FIXME: temporary function.
-	fn stub_price(currency_id: CurrencyId, price: Price) {
-		LockedPrice::<T>::insert(currency_id, price);
-		<Pallet<T>>::deposit_event(Event::StubPrice(currency_id, price));
-	}
-
 	/// Locks price when get valid price from source.
 	fn lock_price(currency_id: CurrencyId) {
 		// lock price when get valid price from source
