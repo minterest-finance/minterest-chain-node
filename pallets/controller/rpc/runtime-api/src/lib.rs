@@ -22,12 +22,19 @@ pub struct PoolState {
 	pub supply_rate: Rate,
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Eq, PartialEq, Default, RuntimeDebug)]
+pub struct UserPoolBalanceData {
+	pub total_supply: Balance,
+	pub total_borrowed: Balance,
+}
+
 // Here we declare the runtime API. It is implemented it the `impl` block in
 // runtime amalgamator file (the `runtime/src/lib.rs`)
 sp_api::decl_runtime_apis! {
 	pub trait ControllerApi {
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState>;
 
-		fn get_total_supply_and_borrowed_usd_balance(account_id: AccountId) -> Option<(Balance, Balance)>;
+		fn get_total_supply_and_borrowed_usd_balance(account_id: AccountId) -> Option<UserPoolBalanceData>;
 	}
 }

@@ -14,6 +14,7 @@ mod constants;
 mod tests;
 
 pub use controller_rpc_runtime_api::PoolState;
+pub use controller_rpc_runtime_api::UserPoolBalanceData;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
 use pallet_grandpa::fg_primitives;
@@ -555,10 +556,10 @@ impl_runtime_apis! {
 			Some(PoolState { exchange_rate, borrow_rate, supply_rate })
 		}
 
-		fn get_total_supply_and_borrowed_usd_balance(account_id: AccountId) -> Option<(Balance, Balance)> {
-			let result = Controller::get_total_supply_and_borrowed_usd_balance(&account_id).ok()?;
+		fn get_total_supply_and_borrowed_usd_balance(account_id: AccountId) -> Option<UserPoolBalanceData> {
+			let (total_supply, total_borrowed) = Controller::get_total_supply_and_borrowed_usd_balance(&account_id).ok()?;
 
-			Some(result)
+			Some(UserPoolBalanceData {total_supply, total_borrowed})
 		}
 	}
 

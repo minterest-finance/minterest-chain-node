@@ -6,6 +6,7 @@ use crate::{
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
 use controller_rpc_runtime_api::PoolState;
+use controller_rpc_runtime_api::UserPoolBalanceData;
 use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::{assert_err, assert_noop, assert_ok, parameter_types};
 use liquidity_pools::{Pool, PoolUserData};
@@ -260,7 +261,7 @@ fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 	<Runtime as ControllerApi<Block>>::liquidity_pool_state(currency_id)
 }
 
-fn get_total_supply_and_borrowed_usd_balance_rpc(account_id: AccountId) -> Option<(Balance, Balance)> {
+fn get_total_supply_and_borrowed_usd_balance_rpc(account_id: AccountId) -> Option<UserPoolBalanceData> {
 	<Runtime as ControllerApi<Block>>::get_total_supply_and_borrowed_usd_balance(account_id)
 }
 
