@@ -1,4 +1,4 @@
-//! Runtime API definition for liquidation-pools pallet.
+//! Runtime API definition for the liquidation-pools pallet.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 // The `too_many_arguments` warning originates from `decl_runtime_apis` macro.

@@ -1,4 +1,4 @@
-//! RPC interface for the controller module.
+//! RPC interface for the controller pallet.
 
 pub use controller_rpc_runtime_api::{ControllerApi as ControllerRuntimeApi, PoolState};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
