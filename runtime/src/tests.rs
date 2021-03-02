@@ -821,11 +821,17 @@ fn test_pool_balance_using_rpc() {
 		.execute_with(|| {
 			assert_eq!(
 				get_total_supply_and_borrowed_usd_balance_rpc(ALICE::get()),
-				Some(UserPoolBalanceData { total_supply: dollars(0), total_borrowed: dollars(0) })
+				Some(UserPoolBalanceData {
+					total_supply: dollars(0),
+					total_borrowed: dollars(0)
+				})
 			);
 			assert_eq!(
 				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()),
-				Some(UserPoolBalanceData { total_supply: dollars(0), total_borrowed: dollars(0) })
+				Some(UserPoolBalanceData {
+					total_supply: dollars(0),
+					total_borrowed: dollars(0)
+				})
 			);
 
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
@@ -833,11 +839,17 @@ fn test_pool_balance_using_rpc() {
 
 			assert_eq!(
 				get_total_supply_and_borrowed_usd_balance_rpc(ALICE::get()),
-				Some(UserPoolBalanceData { total_supply: dollars(0), total_borrowed: dollars(0) })
+				Some(UserPoolBalanceData {
+					total_supply: dollars(0),
+					total_borrowed: dollars(0)
+				})
 			);
 			assert_eq!(
 				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()),
-				Some(UserPoolBalanceData { total_supply: dollars(240_000), total_borrowed: dollars(0) })
+				Some(UserPoolBalanceData {
+					total_supply: dollars(240_000),
+					total_borrowed: dollars(0)
+				})
 			);
 
 			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
@@ -847,13 +859,19 @@ fn test_pool_balance_using_rpc() {
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(50_000)));
 			assert_eq!(
 				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()),
-				Some(UserPoolBalanceData { total_supply: dollars(240_000), total_borrowed: dollars(100_000) })
+				Some(UserPoolBalanceData {
+					total_supply: dollars(240_000),
+					total_borrowed: dollars(100_000)
+				})
 			);
 
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(30_000)));
 			assert_eq!(
 				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()),
-				Some(UserPoolBalanceData { total_supply: dollars(240_000), total_borrowed: dollars(40_000) })
+				Some(UserPoolBalanceData {
+					total_supply: dollars(240_000),
+					total_borrowed: dollars(40_000)
+				})
 			);
 
 			System::set_block_number(30);
