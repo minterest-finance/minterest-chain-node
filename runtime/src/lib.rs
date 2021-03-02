@@ -376,9 +376,18 @@ impl accounts::Config for Runtime {
 	type MaxMembers = MaxMembers;
 }
 
+orml_traits::parameter_type_with_key! {
+	pub TokenDecimals: |currency_id: CurrencyId| -> u32 {
+		// TODO: config
+		18
+	};
+}
+
 impl module_prices::Config for Runtime {
 	type Event = Event;
 	type Source = AggregatedDataProvider;
+	type LockOrigin = EnsureRootOrTwoThirdsGeneralCouncil;
+	type TokenDecimals = TokenDecimals;
 }
 
 parameter_types! {

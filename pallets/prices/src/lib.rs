@@ -12,13 +12,14 @@
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
 
-use frame_support::pallet_prelude::*;
+use frame_support::{pallet_prelude::*, transactional};
 use minterest_primitives::{CurrencyId, Price};
-use orml_traits::{DataFeeder, DataProvider};
+use orml_traits::{DataFeeder, DataProvider, GetByKey};
 use pallet_traits::PriceProvider;
 
 pub use module::*;
 use sp_runtime::traits::CheckedDiv;
+use sp_runtime::FixedPointNumber;
 
 #[cfg(test)]
 mod mock;
@@ -28,6 +29,8 @@ mod tests;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
+	use frame_system::pallet_prelude::OriginFor;
+	use orml_traits::GetByKey;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -36,6 +39,13 @@ pub mod module {
 
 		/// The data source, such as Oracle.
 		type Source: DataProvider<CurrencyId, Price> + DataFeeder<CurrencyId, Price, Self::AccountId>;
+
+		/// The origin which may lock and unlock prices feed to system.
+		type LockOrigin: EnsureOrigin<Self::Origin>;
+
+		/// Almost all oracles feed prices based on the natural `1` of tokens,
+		/// it's necessary to handle prices with decimals.
+		type TokenDecimals: GetByKey<CurrencyId, u32>;
 	}
 
 	#[pallet::event]
@@ -45,8 +55,6 @@ pub mod module {
 		LockPrice(CurrencyId, Price),
 		/// Unlock price. \[currency_id\]
 		UnlockPrice(CurrencyId),
-		/// Stub price. \[currency_id, stubbed_price\]
-		StubPrice(CurrencyId, Price),
 	}
 
 	/// Mapping from currency id to it's locked price
@@ -61,7 +69,33 @@ pub mod module {
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {}
+	impl<T: Config> Pallet<T> {
+		/// Lock the price and feed it to system.
+		///
+		/// The dispatch origin of this call must be `LockOrigin`.
+		///
+		/// - `currency_id`: currency type.
+		#[pallet::weight((10_000, DispatchClass::Operational))]
+		#[transactional]
+		pub fn lock_price(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
+			T::LockOrigin::ensure_origin(origin)?;
+			<Pallet<T> as PriceProvider<CurrencyId>>::lock_price(currency_id);
+			Ok(().into())
+		}
+
+		/// Unlock the price and get the price from `PriceProvider` again
+		///
+		/// The dispatch origin of this call must be `LockOrigin`.
+		///
+		/// - `currency_id`: currency type.
+		#[pallet::weight((10_000, DispatchClass::Operational))]
+		#[transactional]
+		pub fn unlock_price(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
+			T::LockOrigin::ensure_origin(origin)?;
+			<Pallet<T> as PriceProvider<CurrencyId>>::unlock_price(currency_id);
+			Ok(().into())
+		}
+	}
 }
 
 impl<T: Config> PriceProvider<CurrencyId> for Pallet<T> {
@@ -72,20 +106,31 @@ impl<T: Config> PriceProvider<CurrencyId> for Pallet<T> {
 	///
 	/// Returns base_price / quote_price.
 	fn get_relative_price(base_currency_id: CurrencyId, quote_currency_id: CurrencyId) -> Option<Price> {
-		if let (Some(base_price), Some(quote_price)) = (
+		match (
 			Self::get_underlying_price(base_currency_id),
 			Self::get_underlying_price(quote_currency_id),
 		) {
-			base_price.checked_div(&quote_price)
-		} else {
-			None
+			(Some(base_price), Some(quote_price)) => base_price.checked_div(&quote_price),
+			_ => None,
 		}
 	}
 
 	/// Get price underlying token in USD.
+	/// Note: this returns the price for 1 basic unit
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
-		// if locked price exists, return it, otherwise return latest price from oracle.
-		Self::locked_price(currency_id).or_else(|| T::Source::get(&currency_id))
+		// if locked price exists, return it, otherwise return latest price from oracle:
+		// Example (DOT costs 40 USD):
+		// oracle_price: Price = 40 * 10^18;
+		// feed_price: Price = 40 * 10^18 / 10^10 = 40 * 10^8 - the price for 1 basic unit;
+		match (
+			Self::locked_price(currency_id).or_else(|| T::Source::get(&currency_id)),
+			10_u128.checked_pow(T::TokenDecimals::get(&currency_id)),
+		) {
+			(Some(feed_price), Some(adjustment_multiplier)) => {
+				Price::checked_from_rational(feed_price.into_inner(), adjustment_multiplier)
+			}
+			_ => None,
+		}
 	}
 
 	/// Locks price when get valid price from source.
