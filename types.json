@@ -1,10 +1,10 @@
 {
   "CUSTOM_TYPES": {
-    "Address": "AccountId",
+    "Address": "MultiAddress",
     "LookupSource": "AccountId",
     "CurrencyId": {
       "_enum": [
-        "MINT",
+        "MNT",
         "DOT",
         "KSM",
         "BTC",
@@ -29,6 +29,10 @@
       "borrow_index": "Rate",
       "total_insurance": "Balance"
     },
+    "LiquidationPool": {
+      "timestamp": "BlockNumber",
+      "balancing_period": "u32"
+    },
     "PoolUserData" : {
       "total_borrowed": "Balance",
       "interest_index": "Rate",
@@ -39,7 +43,7 @@
       "max_attempts": "u8",
       "min_sum": "Balance",
       "threshold": "Rate",
-      "liquidation_fee": "Rate"
+      "liquidation_incentive": "Rate"
     },
     "CurrencyIdOf": "CurrencyId",
     "Amount": "i128",

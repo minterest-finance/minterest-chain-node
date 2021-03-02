@@ -1,101 +1,104 @@
 /// Mocks for the m-tokens module.
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
+use crate as m_tokens;
+use frame_support::pallet_prelude::GenesisBuild;
+use frame_support::parameter_types;
 pub use minterest_primitives::{Balance, CurrencyId};
 use orml_currencies::Currency;
+use orml_traits::parameter_type_with_key;
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentityLookup},
+};
 
-use super::*;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
+type Block = frame_system::mocking::MockBlock<Runtime>;
 
-impl_outer_origin! {
-	pub enum Origin for Runtime {}
-}
-
-mod m_tokens {
-	pub use crate::Event;
-}
-
-impl_outer_event! {
-	pub enum TestEvent for Runtime {
-		frame_system<T>,
-		orml_tokens<T>, orml_currencies<T>,
-		m_tokens<T>,
+// Configure a mock runtime to test the pallet.
+frame_support::construct_runtime!(
+	pub enum Runtime where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Module, Call, Event<T>},
+		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 	}
-}
+);
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Runtime;
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: u32 = 1024;
-	pub const MaximumBlockLength: u32 = 2 * 1024;
-	pub const AvailableBlockRatio: Perbill = Perbill::one();
+	pub const SS58Prefix: u8 = 42;
 }
 
-type AccountId = u32;
+pub type AccountId = u64;
 
-impl frame_system::Trait for Runtime {
+impl frame_system::Config for Runtime {
+	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type Origin = Origin;
-	type Call = ();
+	type Call = Call;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
-	type Hashing = ::sp_runtime::traits::BlakeTwo256;
-	type AccountId = AccountId;
+	type Hashing = BlakeTwo256;
+	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = Event;
 	type BlockHashCount = BlockHashCount;
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
-	type MaximumBlockWeight = MaximumBlockWeight;
-	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
-	type PalletInfo = ();
+	type PalletInfo = PalletInfo;
+	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
-	type AccountData = ();
-	type BaseCallFilter = ();
 	type SystemWeightInfo = ();
+	type SS58Prefix = SS58Prefix;
 }
-pub type System = frame_system::Module<Runtime>;
 
 type Amount = i128;
 
-impl orml_tokens::Trait for Runtime {
-	type Event = TestEvent;
+parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		Default::default()
+	};
+}
+
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type OnReceived = ();
 	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = ();
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MINT;
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
 }
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
 
-impl orml_currencies::Trait for Runtime {
-	type Event = TestEvent;
+impl orml_currencies::Config for Runtime {
+	type Event = Event;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type NativeCurrency = NativeCurrency;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type WeightInfo = ();
 }
 
-impl Trait for Runtime {
-	type Event = TestEvent;
+impl m_tokens::Config for Runtime {
+	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 }
 
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
-pub type MTokens = Module<Runtime>;
 pub const ONE_MILL: Balance = 1_000_000;
 
 pub struct ExtBuilder {
@@ -116,9 +119,9 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn one_million_mint_and_mdot_for_alice(self) -> Self {
+	pub fn one_million_mnt_and_mdot_for_alice(self) -> Self {
 		self.balances(vec![
-			(ALICE, CurrencyId::MINT, ONE_MILL),
+			(ALICE, CurrencyId::MNT, ONE_MILL),
 			(ALICE, CurrencyId::MDOT, ONE_MILL),
 		])
 	}

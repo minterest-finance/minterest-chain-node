@@ -1,7 +1,7 @@
 //! Tests for the accounts pallet.
 
 use super::*;
-use mock::*;
+use mock::{Event, *};
 
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 
@@ -13,13 +13,13 @@ fn add_member_should_work() {
 
 		// Add Alice to allow-list.
 		assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
-		let expected_event = TestEvent::accounts(RawEvent::AccountAdded(ALICE));
+		let expected_event = Event::test_accounts(crate::Event::AccountAdded(ALICE));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(<AllowedAccounts<Test>>::contains_key(ALICE));
 
 		// Add Bob to allow-list.
 		assert_ok!(TestAccounts::add_member(Origin::root(), BOB));
-		let expected_event = TestEvent::accounts(RawEvent::AccountAdded(BOB));
+		let expected_event = Event::test_accounts(crate::Event::AccountAdded(BOB));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(<AllowedAccounts<Test>>::contains_key(BOB));
 
@@ -52,39 +52,24 @@ fn remove_member_should_work() {
 	ExternalityBuilder::build().execute_with(|| {
 		// Add Alice to allow-list.
 		assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
+		let expected_event = Event::test_accounts(crate::Event::AccountAdded(1));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Add Bob to allow-list.
 		assert_ok!(TestAccounts::add_member(Origin::root(), BOB));
+		let expected_event = Event::test_accounts(crate::Event::AccountAdded(2));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Remove Bob from allow-list.
 		assert_ok!(TestAccounts::remove_member(Origin::root(), BOB));
+		let expected_event = Event::test_accounts(crate::Event::AccountRemoved(2));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Cannot remove Alice, because ay least one member must remain.
 		assert_noop!(
 			TestAccounts::remove_member(Origin::root(), ALICE),
 			Error::<Test>::MustBeAtLeastOneMember
 		);
-
-		// Test that the expected events were emitted.
-		let our_events = System::events()
-			.into_iter()
-			.map(|r| r.event)
-			.filter_map(|e| {
-				if let TestEvent::accounts(inner) = e {
-					Some(inner)
-				} else {
-					None
-				}
-			})
-			.collect::<Vec<_>>();
-
-		let expected_events = vec![
-			RawEvent::AccountAdded(1),
-			RawEvent::AccountAdded(2),
-			RawEvent::AccountRemoved(2),
-		];
-
-		assert_eq!(our_events, expected_events);
 
 		// Check storage changes.
 		assert!(<AllowedAccounts<Test>>::contains_key(ALICE));
@@ -105,7 +90,7 @@ fn is_admin_should_work() {
 		assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
 
 		assert_ok!(TestAccounts::is_admin(Origin::signed(ALICE)));
-		let expected_event = TestEvent::accounts(RawEvent::IsAnAdmin(ALICE));
+		let expected_event = Event::test_accounts(crate::Event::IsAnAdmin(ALICE));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		assert_noop!(TestAccounts::is_admin(Origin::signed(BOB)), Error::<Test>::NotAnAdmin);

@@ -1,7 +1,7 @@
 //! Tests for the minterest-protocol pallet.
 
 use super::*;
-use mock::*;
+use mock::{Event, *};
 
 use frame_support::{assert_noop, assert_ok};
 
@@ -11,50 +11,47 @@ fn dollars<T: Into<u128>>(d: T) -> Balance {
 
 #[test]
 fn deposit_underlying_should_work() {
-	ExtBuilder::default()
-		.user_balance(ALICE, CurrencyId::KSM, ONE_HUNDRED_DOLLARS)
-		.build()
-		.execute_with(|| {
-			// Alice deposit 60 DOT; exchange_rate = 1.0
-			// wrapped_amount = 60.0 DOT / 1.0 = 60.0
-			assert_ok!(TestProtocol::deposit_underlying(
-				alice(),
-				CurrencyId::DOT,
-				dollars(60_u128)
-			));
-			let expected_event = TestEvent::minterest_protocol(RawEvent::Deposited(
-				ALICE,
-				CurrencyId::DOT,
-				dollars(60_u128),
-				CurrencyId::MDOT,
-				dollars(60_u128),
-			));
-			assert!(System::events().iter().any(|record| record.event == expected_event));
+	ExtBuilder::default().build().execute_with(|| {
+		// Alice deposit 60 DOT; exchange_rate = 1.0
+		// wrapped_amount = 60.0 DOT / 1.0 = 60.0
+		assert_ok!(TestProtocol::deposit_underlying(
+			alice(),
+			CurrencyId::DOT,
+			dollars(60_u128)
+		));
+		let expected_event = Event::minterest_protocol(crate::Event::Deposited(
+			ALICE,
+			CurrencyId::DOT,
+			dollars(60_u128),
+			CurrencyId::MDOT,
+			dollars(60_u128),
+		));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			// MDOT pool does not exist.
-			assert_noop!(
-				TestProtocol::deposit_underlying(alice(), CurrencyId::MDOT, 10),
-				Error::<Test>::NotValidUnderlyingAssetId
-			);
+		// MDOT pool does not exist.
+		assert_noop!(
+			TestProtocol::deposit_underlying(alice(), CurrencyId::MDOT, 10),
+			Error::<Test>::NotValidUnderlyingAssetId
+		);
 
-			// Alice has 100 ETH on her account, so she cannot make a deposit 150 ETH.
-			assert_noop!(
-				TestProtocol::deposit_underlying(alice(), CurrencyId::ETH, dollars(150_u128)),
-				Error::<Test>::NotEnoughLiquidityAvailable
-			);
+		// Alice has 100 ETH on her account, so she cannot make a deposit 150 ETH.
+		assert_noop!(
+			TestProtocol::deposit_underlying(alice(), CurrencyId::ETH, dollars(150_u128)),
+			Error::<Test>::NotEnoughLiquidityAvailable
+		);
 
-			// Transaction with zero balance is not allowed.
-			assert_noop!(
-				TestProtocol::deposit_underlying(alice(), CurrencyId::DOT, Balance::zero()),
-				Error::<Test>::ZeroBalanceTransaction
-			);
+		// Transaction with zero balance is not allowed.
+		assert_noop!(
+			TestProtocol::deposit_underlying(alice(), CurrencyId::DOT, Balance::zero()),
+			Error::<Test>::ZeroBalanceTransaction
+		);
 
-			// All operations in the KSM pool are paused.
-			assert_noop!(
-				TestProtocol::deposit_underlying(alice(), CurrencyId::KSM, dollars(10_u128)),
-				Error::<Test>::OperationPaused
-			);
-		});
+		// All operations in the KSM pool are paused.
+		assert_noop!(
+			TestProtocol::deposit_underlying(alice(), CurrencyId::KSM, dollars(10_u128)),
+			Error::<Test>::OperationPaused
+		);
+	});
 }
 
 #[test]
@@ -69,7 +66,7 @@ fn redeem_should_work() {
 
 		// Alice redeem all 60 MDOT; exchange_rate = 1.0
 		assert_ok!(TestProtocol::redeem(alice(), CurrencyId::DOT));
-		let expected_event = TestEvent::minterest_protocol(RawEvent::Redeemed(
+		let expected_event = Event::minterest_protocol(crate::Event::Redeemed(
 			ALICE,
 			CurrencyId::DOT,
 			dollars(60_u128),
@@ -176,7 +173,7 @@ fn redeem_underlying_should_work() {
 				CurrencyId::DOT,
 				dollars(30_u128)
 			));
-			let expected_event = TestEvent::minterest_protocol(RawEvent::Redeemed(
+			let expected_event = Event::minterest_protocol(crate::Event::Redeemed(
 				ALICE,
 				CurrencyId::DOT,
 				dollars(30_u128),
@@ -256,7 +253,7 @@ fn redeem_wrapped_should_work() {
 				CurrencyId::MDOT,
 				dollars(35_u128)
 			));
-			let expected_event = TestEvent::minterest_protocol(RawEvent::Redeemed(
+			let expected_event = Event::minterest_protocol(crate::Event::Redeemed(
 				ALICE,
 				CurrencyId::DOT,
 				dollars(35_u128),
@@ -336,7 +333,7 @@ fn borrow_should_work() {
 		// Alice borrowed 30 DOT
 		assert_ok!(TestProtocol::borrow(alice(), CurrencyId::DOT, dollars(30_u128)));
 		let expected_event =
-			TestEvent::minterest_protocol(RawEvent::Borrowed(ALICE, CurrencyId::DOT, dollars(30_u128)));
+			Event::minterest_protocol(crate::Event::Borrowed(ALICE, CurrencyId::DOT, dollars(30_u128)));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 	});
 }
@@ -428,7 +425,7 @@ fn repay_should_work() {
 
 		// Alice repaid 20 DOT. Her borrow_balance = 10 DOT.
 		assert_ok!(TestProtocol::repay(alice(), CurrencyId::DOT, dollars(20_u128)));
-		let expected_event = TestEvent::minterest_protocol(RawEvent::Repaid(ALICE, CurrencyId::DOT, dollars(20_u128)));
+		let expected_event = Event::minterest_protocol(crate::Event::Repaid(ALICE, CurrencyId::DOT, dollars(20_u128)));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 	});
 }
@@ -459,7 +456,7 @@ fn repay_all_should_work() {
 
 		// Alice repaid all 30 DOT.
 		assert_ok!(TestProtocol::repay_all(alice(), CurrencyId::DOT));
-		let expected_event = TestEvent::minterest_protocol(RawEvent::Repaid(ALICE, CurrencyId::DOT, dollars(30_u128)));
+		let expected_event = Event::minterest_protocol(crate::Event::Repaid(ALICE, CurrencyId::DOT, dollars(30_u128)));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 	});
 }
@@ -541,7 +538,7 @@ fn repay_on_behalf_should_work() {
 			ALICE,
 			dollars(20_u128)
 		));
-		let expected_event = TestEvent::minterest_protocol(RawEvent::Repaid(BOB, CurrencyId::DOT, dollars(20_u128)));
+		let expected_event = Event::minterest_protocol(crate::Event::Repaid(BOB, CurrencyId::DOT, dollars(20_u128)));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 	});
 }
@@ -564,7 +561,7 @@ fn enable_as_collateral_should_work() {
 
 		// Alice enable as collateral her ETH pool.
 		assert_ok!(TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH));
-		let expected_event = TestEvent::minterest_protocol(RawEvent::PoolEnabledAsCollateral(ALICE, CurrencyId::ETH));
+		let expected_event = Event::minterest_protocol(crate::Event::PoolEnabledAsCollateral(ALICE, CurrencyId::ETH));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(TestPools::check_user_available_collateral(&ALICE, CurrencyId::ETH));
 
@@ -601,7 +598,7 @@ fn disable_collateral_should_work() {
 
 		// Alice disable collateral her ETH pool.
 		assert_ok!(TestProtocol::disable_collateral(alice(), CurrencyId::ETH));
-		let expected_event = TestEvent::minterest_protocol(RawEvent::PoolDisabledCollateral(ALICE, CurrencyId::ETH));
+		let expected_event = Event::minterest_protocol(crate::Event::PoolDisabledCollateral(ALICE, CurrencyId::ETH));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(!TestPools::check_user_available_collateral(&ALICE, CurrencyId::ETH));
 
@@ -631,8 +628,12 @@ fn transfer_wrapped_should_work() {
 				CurrencyId::MDOT,
 				ONE_HUNDRED_DOLLARS,
 			));
-			let expected_event =
-				TestEvent::minterest_protocol(RawEvent::Transferred(ALICE, BOB, CurrencyId::MDOT, ONE_HUNDRED_DOLLARS));
+			let expected_event = Event::minterest_protocol(crate::Event::Transferred(
+				ALICE,
+				BOB,
+				CurrencyId::MDOT,
+				ONE_HUNDRED_DOLLARS,
+			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB), ONE_HUNDRED_DOLLARS);
@@ -644,8 +645,12 @@ fn transfer_wrapped_should_work() {
 				CurrencyId::MBTC,
 				ONE_HUNDRED_DOLLARS,
 			));
-			let expected_event =
-				TestEvent::minterest_protocol(RawEvent::Transferred(BOB, ALICE, CurrencyId::MBTC, ONE_HUNDRED_DOLLARS));
+			let expected_event = Event::minterest_protocol(crate::Event::Transferred(
+				BOB,
+				ALICE,
+				CurrencyId::MBTC,
+				ONE_HUNDRED_DOLLARS,
+			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(Currencies::free_balance(CurrencyId::MBTC, &ALICE), ONE_HUNDRED_DOLLARS);
 			assert_eq!(Currencies::free_balance(CurrencyId::MBTC, &BOB), 0);
@@ -657,8 +662,12 @@ fn transfer_wrapped_should_work() {
 				CurrencyId::MBTC,
 				dollars(40_u128),
 			));
-			let expected_event =
-				TestEvent::minterest_protocol(RawEvent::Transferred(ALICE, BOB, CurrencyId::MBTC, dollars(40_u128)));
+			let expected_event = Event::minterest_protocol(crate::Event::Transferred(
+				ALICE,
+				BOB,
+				CurrencyId::MBTC,
+				dollars(40_u128),
+			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(Currencies::free_balance(CurrencyId::MBTC, &ALICE), dollars(60_u128));
 			assert_eq!(Currencies::free_balance(CurrencyId::MBTC, &BOB), dollars(40_u128));
@@ -670,8 +679,12 @@ fn transfer_wrapped_should_work() {
 				CurrencyId::MDOT,
 				dollars(40_u128),
 			));
-			let expected_event =
-				TestEvent::minterest_protocol(RawEvent::Transferred(BOB, ALICE, CurrencyId::MDOT, dollars(40_u128)));
+			let expected_event = Event::minterest_protocol(crate::Event::Transferred(
+				BOB,
+				ALICE,
+				CurrencyId::MDOT,
+				dollars(40_u128),
+			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), dollars(40_u128));
 			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &BOB), dollars(60_u128));
@@ -681,14 +694,13 @@ fn transfer_wrapped_should_work() {
 #[test]
 fn transfer_wrapped_should_not_work() {
 	ExtBuilder::default()
-		.user_balance(ALICE, CurrencyId::MINT, ONE_HUNDRED_DOLLARS)
 		.user_balance(ALICE, CurrencyId::MDOT, ONE_HUNDRED_DOLLARS)
 		.user_balance(ALICE, CurrencyId::MKSM, ONE_HUNDRED_DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Alice is unable to transfer more tokens tan she has
 			assert_noop!(
-				TestProtocol::transfer_wrapped(alice(), BOB, CurrencyId::MINT, ONE_HUNDRED_DOLLARS),
+				TestProtocol::transfer_wrapped(alice(), BOB, CurrencyId::MNT, ONE_HUNDRED_DOLLARS),
 				Error::<Test>::NotValidWrappedTokenId
 			);
 

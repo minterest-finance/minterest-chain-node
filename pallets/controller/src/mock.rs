@@ -1,105 +1,100 @@
 #![cfg(test)]
 
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
+use super::*;
+use crate as controller;
+use frame_support::{pallet_prelude::GenesisBuild, parameter_types};
+use frame_system as system;
 use liquidity_pools::{Pool, PoolUserData};
+use minterest_model::MinterestModelData;
 pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_currencies::Currency;
+use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{IdentityLookup, Zero},
-	ModuleId, Perbill,
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One, Zero},
+	FixedPointNumber, ModuleId,
 };
 
-use super::*;
-use minterest_model::MinterestModelData;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
+type Block = frame_system::mocking::MockBlock<Runtime>;
 
-mod controller {
-	pub use crate::Event;
-}
-
-impl_outer_origin! {
-	pub enum Origin for Runtime {}
-}
-
-impl_outer_event! {
-	pub enum TestEvent for Runtime {
-		frame_system<T>,
-		orml_tokens<T>,
-		orml_currencies<T>,
-		liquidity_pools,
-		controller,
-		oracle,
-		accounts<T>,
-		minterest_model,
+// Configure a mock runtime to test the pallet.
+frame_support::construct_runtime!(
+	pub enum Runtime where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Module, Call, Event<T>},
+		Controller: controller::{Module, Storage, Call, Event, Config<T>},
+		Oracle: oracle::{Module},
+		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
+		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 	}
-}
+);
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Runtime;
-
-// For testing the module, we construct most of a mock runtime. This means
-// first constructing a configuration type (`Runtime`) which `impl`s each of the
-// configuration traits of modules we want to use.
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: u32 = 1024;
-	pub const MaximumBlockLength: u32 = 2 * 1024;
-	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+	pub const SS58Prefix: u8 = 42;
 }
 
-pub type AccountId = u32;
-impl system::Trait for Runtime {
+pub type AccountId = u64;
+
+impl system::Config for Runtime {
 	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type Origin = Origin;
-	type Call = ();
+	type Call = Call;
 	type Index = u64;
-	type BlockNumber = BlockNumber;
+	type BlockNumber = u64;
 	type Hash = H256;
-	type Hashing = ::sp_runtime::traits::BlakeTwo256;
-	type AccountId = AccountId;
+	type Hashing = BlakeTwo256;
+	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = Event;
 	type BlockHashCount = BlockHashCount;
-	type MaximumBlockWeight = MaximumBlockWeight;
-	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
-	type PalletInfo = ();
+	type PalletInfo = PalletInfo;
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
-}
-
-parameter_types! {
-	pub const ExistentialDeposit: u64 = 1;
+	type SS58Prefix = SS58Prefix;
 }
 
 type Amount = i128;
 
-impl orml_tokens::Trait for Runtime {
-	type Event = TestEvent;
+parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		Default::default()
+	};
+}
+
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type OnReceived = ();
 	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = ();
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MINT;
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
 }
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
 
-impl orml_currencies::Trait for Runtime {
-	type Event = TestEvent;
+impl orml_currencies::Config for Runtime {
+	type Event = Event;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type NativeCurrency = NativeCurrency;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
@@ -107,34 +102,41 @@ impl orml_currencies::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/pool");
-	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
+	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
 		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
 		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
 		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 	];
+	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+			.map(|currency_pair| currency_pair.underlying_id)
+			.collect();
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+			.map(|currency_pair| currency_pair.wrapped_id)
+			.collect();
 }
 
-impl liquidity_pools::Trait for Runtime {
-	type Event = TestEvent;
+impl liquidity_pools::Config for Runtime {
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type ModuleId = LiquidityPoolsModuleId;
+	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
 	type EnabledCurrencyPair = EnabledCurrencyPair;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
-impl oracle::Trait for Runtime {
-	type Event = TestEvent;
-}
+impl oracle::Config for Runtime {}
 
 parameter_types! {
-	pub const MaxMembers: u32 = MAX_MEMBERS;
+	pub const MaxMembers: u8 = MAX_MEMBERS;
 }
 
-impl accounts::Trait for Runtime {
-	type Event = TestEvent;
+impl accounts::Config for Runtime {
+	type Event = Event;
 	type MaxMembers = MaxMembers;
 }
 
@@ -142,23 +144,17 @@ parameter_types! {
 	pub const BlocksPerYear: u128 = 5256000u128;
 }
 
-impl minterest_model::Trait for Runtime {
-	type Event = TestEvent;
+impl minterest_model::Config for Runtime {
+	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
 }
 
-impl Trait for Runtime {
-	type Event = TestEvent;
+impl Config for Runtime {
+	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
 }
 
-pub type BlockNumber = u64;
-
-pub type Controller = Module<Runtime>;
-pub type TestPools = liquidity_pools::Module<Runtime>;
-pub type System = frame_system::Module<Runtime>;
-pub type Currencies = orml_currencies::Module<Runtime>;
-pub const MAX_MEMBERS: u32 = 16;
+pub const MAX_MEMBERS: u8 = 16;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -289,7 +285,7 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		GenesisConfig::<Runtime> {
+		controller::GenesisConfig::<Runtime> {
 			controller_dates: vec![
 				(
 					CurrencyId::DOT,
@@ -374,6 +370,7 @@ impl ExtBuilder {
 
 		accounts::GenesisConfig::<Runtime> {
 			allowed_accounts: vec![(ALICE, ())],
+			member_count: u8::one(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -409,7 +406,7 @@ impl ExtBuilder {
 				),
 			],
 		}
-		.assimilate_storage(&mut t)
+		.assimilate_storage::<Runtime>(&mut t)
 		.unwrap();
 
 		let mut ext = sp_io::TestExternalities::new(t);

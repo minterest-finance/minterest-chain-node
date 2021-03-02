@@ -1,11 +1,12 @@
 use controller::{ControllerData, PauseKeeper};
 use hex_literal::hex;
+use liquidation_pools::LiquidationPool;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
 	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig,
-	GrandpaConfig, LiquidityPoolsConfig, MinterestModelConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
-	TokensConfig, DOLLARS, WASM_BINARY,
+	GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestModelConfig, RiskManagerConfig, Signature,
+	SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -14,6 +15,7 @@ use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
+use sp_runtime::traits::One;
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify, Zero},
 	FixedPointNumber, FixedU128,
@@ -195,7 +197,7 @@ pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
 	))
 }
 
-/// Configure initial storage state for FRAME modules.
+/// Configure initial storage state for FRAME pallets.
 fn testnet_genesis(
 	wasm_binary: &[u8],
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
@@ -357,6 +359,7 @@ fn testnet_genesis(
 		}),
 		accounts: Some(AccountsConfig {
 			allowed_accounts: vec![(get_account_id_from_seed::<sr25519::Public>("Alice"), ())],
+			member_count: u8::one(),
 		}),
 		minterest_model: Some(MinterestModelConfig {
 			minterest_model_dates: vec![
@@ -406,7 +409,7 @@ fn testnet_genesis(
 						max_attempts: 2,
 						min_sum: 200_000 * DOLLARS,                               // In USD. FIXME: temporary value.
 						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_incentive: FixedU128::saturating_from_rational(105, 100), // 5%
 					},
 				),
 				(
@@ -415,7 +418,7 @@ fn testnet_genesis(
 						max_attempts: 2,
 						min_sum: 100_000 * DOLLARS,                               // In USD. FIXME: temporary value.
 						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_incentive: FixedU128::saturating_from_rational(105, 100), // 5%
 					},
 				),
 				(
@@ -424,7 +427,7 @@ fn testnet_genesis(
 						max_attempts: 2,
 						min_sum: 200_000 * DOLLARS,                               // In USD. FIXME: temporary value.
 						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_incentive: FixedU128::saturating_from_rational(105, 100), // 5%
 					},
 				),
 				(
@@ -433,7 +436,39 @@ fn testnet_genesis(
 						max_attempts: 2,
 						min_sum: 200_000 * DOLLARS,                               // In USD. FIXME: temporary value.
 						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_incentive: FixedU128::saturating_from_rational(105, 100), // 5%
+					},
+				),
+			],
+		}),
+		liquidation_pools: Some(LiquidationPoolsConfig {
+			liquidation_pools: vec![
+				(
+					CurrencyId::DOT,
+					LiquidationPool {
+						timestamp: 1,
+						balancing_period: 600, // Blocks per 10 minutes.
+					},
+				),
+				(
+					CurrencyId::ETH,
+					LiquidationPool {
+						timestamp: 1,
+						balancing_period: 600, // Blocks per 10 minutes.
+					},
+				),
+				(
+					CurrencyId::BTC,
+					LiquidationPool {
+						timestamp: 1,
+						balancing_period: 600, // Blocks per 10 minutes.
+					},
+				),
+				(
+					CurrencyId::KSM,
+					LiquidationPool {
+						timestamp: 1,
+						balancing_period: 600, // Blocks per 10 minutes.
 					},
 				),
 			],

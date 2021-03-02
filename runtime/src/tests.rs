@@ -1,11 +1,12 @@
 use crate::{
 	AccountId, Balance, Block,
 	CurrencyId::{self, DOT, ETH, MDOT, METH},
-	Event, Rate, Runtime, DOLLARS,
+	Event, LiquidationPoolsModuleId, LiquidityPoolsModuleId, Rate, Runtime, DOLLARS,
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
 use controller_rpc_runtime_api::PoolState;
+use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::{assert_err, assert_noop, assert_ok, parameter_types};
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
@@ -13,7 +14,7 @@ use minterest_primitives::{Operation, Price};
 use orml_traits::MultiCurrency;
 use pallet_traits::PoolsManager;
 use risk_manager::RiskManagerData;
-use sp_runtime::traits::Zero;
+use sp_runtime::traits::{AccountIdConversion, One, Zero};
 use sp_runtime::FixedPointNumber;
 
 type MinterestProtocol = minterest_protocol::Module<Runtime>;
@@ -41,13 +42,13 @@ impl Default for ExtBuilder {
 		Self {
 			endowed_accounts: vec![
 				// seed: initial assets. Initial MINT to pay for gas.
-				(ALICE::get(), CurrencyId::MINT, 100_000 * DOLLARS),
+				(ALICE::get(), CurrencyId::MNT, 100_000 * DOLLARS),
 				(ALICE::get(), CurrencyId::DOT, 100_000 * DOLLARS),
 				(ALICE::get(), CurrencyId::ETH, 100_000 * DOLLARS),
-				(BOB::get(), CurrencyId::MINT, 100_000 * DOLLARS),
+				(BOB::get(), CurrencyId::MNT, 100_000 * DOLLARS),
 				(BOB::get(), CurrencyId::DOT, 100_000 * DOLLARS),
 				(BOB::get(), CurrencyId::ETH, 100_000 * DOLLARS),
-				(CHARLIE::get(), CurrencyId::MINT, 100_000 * DOLLARS),
+				(CHARLIE::get(), CurrencyId::MNT, 100_000 * DOLLARS),
 				(CHARLIE::get(), CurrencyId::DOT, 100_000 * DOLLARS),
 				(CHARLIE::get(), CurrencyId::ETH, 100_000 * DOLLARS),
 			],
@@ -144,7 +145,8 @@ impl ExtBuilder {
 				(
 					CurrencyId::DOT,
 					ControllerData {
-						timestamp: 0,
+						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
+						timestamp: 1,
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
@@ -153,7 +155,8 @@ impl ExtBuilder {
 				(
 					CurrencyId::ETH,
 					ControllerData {
-						timestamp: 0,
+						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
+						timestamp: 1,
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
@@ -208,7 +211,7 @@ impl ExtBuilder {
 				),
 			],
 		}
-		.assimilate_storage(&mut t)
+		.assimilate_storage::<Runtime>(&mut t)
 		.unwrap();
 
 		risk_manager::GenesisConfig {
@@ -219,7 +222,7 @@ impl ExtBuilder {
 						max_attempts: 3,
 						min_sum: 100_000 * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
+						liquidation_incentive: Rate::saturating_from_rational(105, 100),
 					},
 				),
 				(
@@ -228,16 +231,17 @@ impl ExtBuilder {
 						max_attempts: 3,
 						min_sum: 100_000 * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
+						liquidation_incentive: Rate::saturating_from_rational(105, 100),
 					},
 				),
 			],
 		}
-		.assimilate_storage(&mut t)
+		.assimilate_storage::<Runtime>(&mut t)
 		.unwrap();
 
 		accounts::GenesisConfig::<Runtime> {
 			allowed_accounts: vec![(ALICE::get(), ())],
+			member_count: u8::one(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -252,10 +256,6 @@ fn pool_balance(pool_id: CurrencyId) -> Balance {
 	Currencies::free_balance(pool_id, &LiquidityPools::pools_account_id())
 }
 
-fn pool_total_insurance(pool_id: CurrencyId) -> Balance {
-	LiquidityPools::pools(pool_id).total_insurance
-}
-
 fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 	<Runtime as ControllerApi<Block>>::liquidity_pool_state(currency_id)
 }
@@ -268,16 +268,16 @@ fn dollars(amount: u128) -> u128 {
 	amount.saturating_mul(Price::accuracy())
 }
 
-fn alice() -> <Runtime as frame_system::Trait>::Origin {
-	<Runtime as frame_system::Trait>::Origin::signed((ALICE::get()).clone())
+fn alice() -> <Runtime as frame_system::Config>::Origin {
+	<Runtime as frame_system::Config>::Origin::signed((ALICE::get()).clone())
 }
 
-fn bob() -> <Runtime as frame_system::Trait>::Origin {
-	<Runtime as frame_system::Trait>::Origin::signed((BOB::get()).clone())
+fn bob() -> <Runtime as frame_system::Config>::Origin {
+	<Runtime as frame_system::Config>::Origin::signed((BOB::get()).clone())
 }
 
-fn charlie() -> <Runtime as frame_system::Trait>::Origin {
-	<Runtime as frame_system::Trait>::Origin::signed((CHARLIE::get()).clone())
+fn charlie() -> <Runtime as frame_system::Config>::Origin {
+	<Runtime as frame_system::Config>::Origin::signed((CHARLIE::get()).clone())
 }
 
 #[test]
@@ -287,10 +287,8 @@ fn test_rates_using_rpc() {
 		.pool_initial(CurrencyId::ETH)
 		.build()
 		.execute_with(|| {
-			assert_ok!(Controller::deposit_insurance(alice(), DOT, dollars(100_000)));
-			assert_ok!(Controller::deposit_insurance(alice(), ETH, dollars(100_000)));
-			assert_eq!(pool_total_insurance(DOT), dollars(100_000));
-			assert_eq!(pool_total_insurance(ETH), dollars(100_000));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(100_000)));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
 
 			System::set_block_number(10);
 
@@ -298,7 +296,7 @@ fn test_rates_using_rpc() {
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
 			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
 			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), ETH));
-			// exchange_rate = (150 - 100 + 0) / 50 = 1
+			// exchange_rate = (150 - 0 + 0) / 150 = 1
 			assert_eq!(
 				liquidity_pool_state_rpc(DOT),
 				Some(PoolState {
@@ -313,13 +311,13 @@ fn test_rates_using_rpc() {
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(100_000)));
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(30_000)));
 			assert_eq!(pool_balance(DOT), dollars(80_000));
-			// exchange_rate = (80 - 100 + 70) / 50 = 1
+			// exchange_rate = (80 - 0 + 70) / 150 = 1
 			assert_eq!(
 				liquidity_pool_state_rpc(DOT),
 				Some(PoolState {
 					exchange_rate: Rate::one(),
-					borrow_rate: Rate::from_inner(239_040_000_000),
-					supply_rate: Rate::from_inner(301_190_400_000)
+					borrow_rate: Rate::from_inner(4_200_000_000),
+					supply_rate: Rate::from_inner(1_764_000_000)
 				})
 			);
 
@@ -331,9 +329,9 @@ fn test_rates_using_rpc() {
 			assert_eq!(
 				liquidity_pool_state_rpc(DOT),
 				Some(PoolState {
-					exchange_rate: Rate::from_inner(1_000_003_011_904_000_000),
-					borrow_rate: Rate::from_inner(172_800_039_584),
-					supply_rate: Rate::from_inner(155_520_072_800)
+					exchange_rate: Rate::from_inner(1_000_000_017_640_000_000),
+					borrow_rate: Rate::from_inner(3_705_882_450),
+					supply_rate: Rate::from_inner(1_373_356_473)
 				})
 			);
 
@@ -346,9 +344,9 @@ fn test_rates_using_rpc() {
 			assert_eq!(
 				liquidity_pool_state_rpc(DOT),
 				Some(PoolState {
-					exchange_rate: Rate::from_inner(1_000_004_567_109_412_126),
-					borrow_rate: Rate::from_inner(220_114_178_542),
-					supply_rate: Rate::from_inner(254_703_421_247)
+					exchange_rate: Rate::from_inner(1_000_000_031_373_564_979),
+					borrow_rate: Rate::from_inner(4_764_706_035),
+					supply_rate: Rate::from_inner(2_270_242_360)
 				})
 			);
 		});
@@ -514,6 +512,33 @@ fn demo_scenario_n2_without_insurance_should_work() {
 		});
 }
 
+// TODO tests for liquidation
+#[test]
+fn test_liquidation() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Currencies::deposit(
+			DOT,
+			&LiquidityPoolsModuleId::get().into_account(),
+			dollars(200_u128)
+		));
+		assert_ok!(Currencies::deposit(
+			DOT,
+			&LiquidationPoolsModuleId::get().into_account(),
+			dollars(40_u128)
+		));
+		assert_eq!(
+			Currencies::free_balance(DOT, &LiquidityPoolsModuleId::get().into_account()),
+			dollars(200_u128)
+		);
+		assert_eq!(
+			Currencies::free_balance(DOT, &LiquidationPoolsModuleId::get().into_account()),
+			dollars(40_u128)
+		);
+		assert_eq!(LiquidityPools::get_pool_available_liquidity(DOT), dollars(200_u128));
+		assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), dollars(40_u128));
+	});
+}
+
 #[test]
 fn complete_liquidation_one_collateral_should_work() {
 	ExtBuilder::default()
@@ -521,20 +546,13 @@ fn complete_liquidation_one_collateral_should_work() {
 		.liquidation_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
 		.user_balance(ALICE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
 		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 2)
+		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 3)
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			assert_ok!(RiskManager::complete_liquidation(
-				ALICE::get(),
-				CurrencyId::DOT,
-				180_000 * DOLLARS,
-				90_000 * DOLLARS,
-				Rate::from_inner(2 * DOLLARS),
-				2
-			));
+			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
-			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
 				ALICE::get(),
 				180_000 * DOLLARS,
 				CurrencyId::DOT,
@@ -545,7 +563,7 @@ fn complete_liquidation_one_collateral_should_work() {
 
 			assert_eq!(
 				Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()),
-				5500 * DOLLARS
+				5_500 * DOLLARS
 			);
 
 			assert_eq!(
@@ -557,10 +575,10 @@ fn complete_liquidation_one_collateral_should_work() {
 				104_500 * DOLLARS
 			);
 
-			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, 0);
+			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, Balance::zero());
 			assert_eq!(
 				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
-				0
+				Balance::zero()
 			);
 
 			assert_eq!(
@@ -581,21 +599,14 @@ fn complete_liquidation_multi_collateral_should_work() {
 		.user_balance(ALICE::get(), CurrencyId::METH, 50_000 * DOLLARS)
 		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
 		.user_balance(CHARLIE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 2)
+		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 3)
 		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Rate::one(), true, 0)
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			assert_ok!(RiskManager::complete_liquidation(
-				ALICE::get(),
-				CurrencyId::DOT,
-				180_000 * DOLLARS,
-				90_000 * DOLLARS,
-				Rate::from_inner(2 * DOLLARS),
-				2
-			));
+			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
-			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
 				ALICE::get(),
 				180_000 * DOLLARS,
 				CurrencyId::DOT,
@@ -604,10 +615,13 @@ fn complete_liquidation_multi_collateral_should_work() {
 			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()), 0);
+			assert_eq!(
+				Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()),
+				Balance::zero()
+			);
 			assert_eq!(
 				Currencies::free_balance(CurrencyId::METH, &ALICE::get()),
-				5500 * DOLLARS
+				5_500 * DOLLARS
 			);
 
 			assert_eq!(
@@ -616,7 +630,7 @@ fn complete_liquidation_multi_collateral_should_work() {
 			);
 			assert_eq!(
 				LiquidityPools::get_pool_available_liquidity(CurrencyId::ETH),
-				5500 * DOLLARS
+				5_500 * DOLLARS
 			);
 
 			assert_eq!(
@@ -628,10 +642,10 @@ fn complete_liquidation_multi_collateral_should_work() {
 				144_500 * DOLLARS
 			);
 
-			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, 0);
+			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, Balance::zero());
 			assert_eq!(
 				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
-				0
+				Balance::zero()
 			);
 
 			assert_eq!(
@@ -652,16 +666,9 @@ fn partial_liquidation_one_collateral_should_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			assert_ok!(RiskManager::partial_liquidation(
-				ALICE::get(),
-				CurrencyId::DOT,
-				180_000 * DOLLARS,
-				90_000 * DOLLARS,
-				Rate::from_inner(2 * DOLLARS),
-				0
-			));
+			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
-			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
 				ALICE::get(),
 				54_000 * DOLLARS,
 				CurrencyId::DOT,
@@ -713,16 +720,9 @@ fn partial_liquidation_multi_collateral_should_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			assert_ok!(RiskManager::partial_liquidation(
-				ALICE::get(),
-				CurrencyId::DOT,
-				180_000 * DOLLARS,
-				90_000 * DOLLARS,
-				Rate::from_inner(2 * DOLLARS),
-				0
-			));
+			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
-			let expected_event = Event::risk_manager(risk_manager::RawEvent::LiquidateUnsafeLoan(
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
 				ALICE::get(),
 				54_000 * DOLLARS,
 				CurrencyId::DOT,
@@ -779,21 +779,14 @@ fn complete_liquidation_should_not_work() {
 		.user_balance(ALICE::get(), CurrencyId::MDOT, 50_000 * DOLLARS)
 		.user_balance(ALICE::get(), CurrencyId::METH, 50_000 * DOLLARS)
 		.user_balance(CHARLIE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 2)
+		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 3)
 		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Rate::one(), false, 0)
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			assert_err!(
-				RiskManager::complete_liquidation(
-					ALICE::get(),
-					CurrencyId::DOT,
-					180_000 * DOLLARS,
-					90_000 * DOLLARS,
-					Rate::from_inner(2 * DOLLARS),
-					2
-				),
-				risk_manager::Error::<Runtime>::LiquidationRejection
+				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
+				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingsAssets
 			);
 		})
 }
@@ -812,15 +805,8 @@ fn partial_liquidation_should_not_work() {
 		.build()
 		.execute_with(|| {
 			assert_err!(
-				RiskManager::partial_liquidation(
-					ALICE::get(),
-					CurrencyId::DOT,
-					180_000 * DOLLARS,
-					90_000 * DOLLARS,
-					Rate::from_inner(2 * DOLLARS),
-					2
-				),
-				risk_manager::Error::<Runtime>::LiquidationRejection
+				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
+				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingsAssets
 			);
 		})
 }

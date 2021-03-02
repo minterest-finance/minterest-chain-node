@@ -1,9 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::unnecessary_cast)]
+#![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
 use sp_runtime::{
 	generic,
-	traits::{IdentifyAccount, Verify},
+	traits::{BlakeTwo256, IdentifyAccount, Verify},
 	FixedU128, MultiSignature, RuntimeDebug,
 };
 
@@ -23,6 +25,9 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 /// The type for looking up accounts. We don't expect more than 4 billion of them, but you
 /// never know...
 pub type AccountIndex = u32;
+
+/// Index of a transaction in the chain. 32-bit should be plenty.
+pub type Nonce = u32;
 
 /// Balance of an account.
 pub type Balance = u128;
@@ -45,10 +50,22 @@ pub type Rate = FixedU128;
 /// Token Price
 pub type Price = FixedU128;
 
+/// Header type.
+pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+
+/// Block type.
+pub type Block = generic::Block<Header, UncheckedExtrinsic>;
+
+/// Block ID.
+pub type BlockId = generic::BlockId<Block>;
+
+/// Opaque, encoded, unchecked extrinsic.
+pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
+
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
-	MINT = 0,
+	MNT = 0,
 	DOT,
 	KSM,
 	BTC,

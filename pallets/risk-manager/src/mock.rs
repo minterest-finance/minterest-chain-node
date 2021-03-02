@@ -1,157 +1,168 @@
 /// Mocks for the RiskManager pallet.
-use frame_support::{impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types};
-use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
-use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, FixedPointNumber, ModuleId, Perbill};
-
 use super::*;
+use crate as risk_manager;
+use frame_support::pallet_prelude::GenesisBuild;
+use frame_support::parameter_types;
+use frame_system as system;
 use liquidity_pools::{Pool, PoolUserData};
-use sp_runtime::testing::TestXt;
+use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
+use orml_traits::parameter_type_with_key;
+use sp_core::H256;
+use sp_runtime::{
+	testing::{Header, TestXt},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One},
+	FixedPointNumber, ModuleId,
+};
 
-impl_outer_origin! {
-	pub enum Origin for Test {}
-}
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-mod risk_manager {
-	pub use crate::Event;
-}
-
-impl_outer_event! {
-	pub enum TestEvent for Test {
-		frame_system<T>,
-		orml_tokens<T>,
-		accounts<T>,
-		liquidity_pools,
-		liquidation_pools,
-		risk_manager<T>,
-		controller,
-		minterest_model,
-		oracle,
-
+// Configure a mock runtime to test the pallet.
+frame_support::construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Controller: controller::{Module, Storage, Call, Event, Config<T>},
+		Oracle: oracle::{Module},
+		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
+		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
+		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
+		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
+		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>}
 	}
-}
-
-impl_outer_dispatch! {
-	pub enum Call for Test where origin: Origin {
-		risk_manager::TestRiskManager,
-	}
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Test;
+);
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: u32 = 1024;
-	pub const MaximumBlockLength: u32 = 2 * 1024;
-	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+	pub const SS58Prefix: u8 = 42;
 }
 
-type AccountId = u32;
+pub type AccountId = u64;
 
-impl frame_system::Trait for Test {
+impl system::Config for Test {
+	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type Origin = Origin;
 	type Call = Call;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
-	type Hashing = ::sp_runtime::traits::BlakeTwo256;
-	type AccountId = AccountId;
+	type Hashing = BlakeTwo256;
+	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = Event;
 	type BlockHashCount = BlockHashCount;
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
-	type MaximumBlockWeight = MaximumBlockWeight;
-	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
-	type PalletInfo = ();
+	type PalletInfo = PalletInfo;
+	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
-	type AccountData = ();
-	type BaseCallFilter = ();
 	type SystemWeightInfo = ();
+	type SS58Prefix = SS58Prefix;
 }
 
-parameter_types! {
-	pub const ExistentialDeposit: u64 = 1;
+type Amount = i128;
+
+parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		Default::default()
+	};
 }
 
-impl orml_tokens::Trait for Test {
-	type Event = TestEvent;
+impl orml_tokens::Config for Test {
+	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type OnReceived = ();
 	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = ();
 }
 
 parameter_types! {
-	pub const MaxMembers: u32 = MAX_MEMBERS;
+	pub const MaxMembers: u8 = MAX_MEMBERS;
 }
 
-impl accounts::Trait for Test {
-	type Event = TestEvent;
+impl accounts::Config for Test {
+	type Event = Event;
 	type MaxMembers = MaxMembers;
 }
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
-	pub const InitialExchangeRate: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
+	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
 		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
 		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
 		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 	];
+	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+			.map(|currency_pair| currency_pair.underlying_id)
+			.collect();
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+			.map(|currency_pair| currency_pair.wrapped_id)
+			.collect();
 }
 
-impl liquidity_pools::Trait for Test {
-	type Event = TestEvent;
+impl liquidity_pools::Config for Test {
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type ModuleId = LiquidityPoolsModuleId;
+	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
 	type EnabledCurrencyPair = EnabledCurrencyPair;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
-impl controller::Trait for Test {
-	type Event = TestEvent;
+impl controller::Config for Test {
+	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 }
 
-impl oracle::Trait for Test {
-	type Event = TestEvent;
-}
+impl oracle::Config for Test {}
 
 parameter_types! {
 	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
 }
 
-impl minterest_model::Trait for Test {
-	type Event = TestEvent;
+impl minterest_model::Config for Test {
+	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
 }
 
 parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 }
 
-impl liquidation_pools::Trait for Test {
-	type Event = TestEvent;
-	type ModuleId = LiquidationPoolsModuleId;
-	type MultiCurrency = orml_tokens::Module<Test>;
+impl liquidation_pools::Config for Test {
+	type Event = Event;
+	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
+	type LiquidationPoolAccountId = LiquidationPoolAccountId;
+}
+
+impl minterest_protocol::Config for Test {
+	type Event = Event;
+	type Borrowing = liquidity_pools::Module<Test>;
+	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 }
 
 parameter_types! {
 	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
 }
 
-impl Trait for Test {
-	type Event = TestEvent;
+impl risk_manager::Config for Test {
+	type Event = Event;
 	type UnsignedPriority = RiskManagerPriority;
 	type LiquidationPoolsManager = liquidation_pools::Module<Test>;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
@@ -168,12 +179,8 @@ where
 	type Extrinsic = Extrinsic;
 }
 
-type Amount = i128;
-
-pub type TestRiskManager = Module<Test>;
-pub type System = frame_system::Module<Test>;
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
-pub const MAX_MEMBERS: u32 = 16;
+pub const MAX_MEMBERS: u8 = 16;
 pub const ONE_HUNDRED: Balance = 100;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ADMIN: AccountId = 0;
@@ -202,40 +209,6 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
-		self.pools.push((
-			pool_id,
-			Pool {
-				total_borrowed: Balance::zero(),
-				borrow_index: Rate::saturating_from_rational(1, 1),
-				total_insurance: Balance::zero(),
-			},
-		));
-		self
-	}
-
-	pub fn pool_user_data(
-		mut self,
-		pool_id: CurrencyId,
-		user: AccountId,
-		total_borrowed: Balance,
-		interest_index: Rate,
-		collateral: bool,
-		liquidation_attempts: u8,
-	) -> Self {
-		self.pool_user_data.push((
-			pool_id,
-			user,
-			PoolUserData {
-				total_borrowed,
-				interest_index,
-				collateral,
-				liquidation_attempts,
-			},
-		));
-		self
-	}
-
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
@@ -254,11 +227,12 @@ impl ExtBuilder {
 
 		accounts::GenesisConfig::<Test> {
 			allowed_accounts: vec![(ADMIN, ())],
+			member_count: u8::one(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		GenesisConfig {
+		risk_manager::GenesisConfig {
 			risk_manager_dates: vec![
 				(
 					CurrencyId::DOT,
@@ -266,7 +240,7 @@ impl ExtBuilder {
 						max_attempts: 3,
 						min_sum: ONE_HUNDRED * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
+						liquidation_incentive: Rate::saturating_from_rational(105, 100),
 					},
 				),
 				(
@@ -275,7 +249,7 @@ impl ExtBuilder {
 						max_attempts: 3,
 						min_sum: ONE_HUNDRED * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
+						liquidation_incentive: Rate::saturating_from_rational(105, 100),
 					},
 				),
 				(
@@ -284,12 +258,12 @@ impl ExtBuilder {
 						max_attempts: 3,
 						min_sum: ONE_HUNDRED * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
+						liquidation_incentive: Rate::saturating_from_rational(105, 100),
 					},
 				),
 			],
 		}
-		.assimilate_storage(&mut t)
+		.assimilate_storage::<Test>(&mut t)
 		.unwrap();
 
 		let mut ext = sp_io::TestExternalities::new(t);

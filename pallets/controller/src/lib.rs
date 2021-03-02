@@ -1,20 +1,34 @@
+//! # Controller Module
+//!
+//! ## Overview
+//!
+//! TODO: add overview.
+
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::unused_unit)]
+#![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
-use frame_system::{self as system, ensure_signed};
+use frame_support::{ensure, pallet_prelude::*, transactional};
+use frame_system::{ensure_signed, pallet_prelude::*};
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
-use orml_utilities::with_transaction_result;
 use pallet_traits::PoolsManager;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, Zero},
-	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
+	DispatchError, DispatchResult, FixedPointNumber, FixedU128, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
+
+pub use module::*;
+
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
@@ -52,209 +66,323 @@ pub struct PauseKeeper {
 	pub transfer_paused: bool,
 }
 
-#[cfg(test)]
-mod mock;
-#[cfg(test)]
-mod tests;
-
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 type MinterestModel<T> = minterest_model::Module<T>;
 type Oracle<T> = oracle::Module<T>;
 type Accounts<T> = accounts::Module<T>;
+type RateResult = result::Result<Rate, DispatchError>;
+type BalanceResult = result::Result<Balance, DispatchError>;
+type LiquidityResult = result::Result<(Balance, Balance), DispatchError>;
 
-pub trait Trait:
-	liquidity_pools::Trait + system::Trait + oracle::Trait + accounts::Trait + minterest_model::Trait
-{
-	/// The overarching event type.
-	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+#[frame_support::pallet]
+pub mod module {
+	use super::*;
 
-	/// The basic liquidity pools manager.
-	type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
-}
+	#[pallet::config]
+	pub trait Config:
+		frame_system::Config + liquidity_pools::Config + oracle::Config + accounts::Config + minterest_model::Config
+	{
+		/// The overarching event type.
+		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
+		/// The basic liquidity pools manager.
+		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
+	}
 
-decl_event! {
+	#[pallet::error]
+	pub enum Error<T> {
+		/// Number overflow in calculation.
+		NumOverflow,
+		/// Borrow rate is absurdly high.
+		BorrowRateIsTooHight,
+		/// Oracle unavailable or price equal 0ю
+		OraclePriceError,
+		/// Insufficient available liquidity.
+		InsufficientLiquidity,
+		/// Pool not found.
+		PoolNotFound,
+		/// The dispatch origin of this call must be Administrator.
+		RequireAdmin,
+		/// Not enough balance to deposit or withdraw or repay.
+		NotEnoughBalance,
+		/// Balance overflows maximum.
+		/// Only happened when the balance went wrong and balance overflows the integer type.
+		BalanceOverflowed,
+		/// Maximum borrow rate cannot be set to 0.
+		MaxBorrowRateCannotBeZero,
+		/// An error occurred in the parameters that were passed to the function.
+		ParametersError,
+		/// Collateral factor cannot be greater than one.
+		CollateralFactorCannotBeGreaterThanOne,
+		/// Collateral factor cannot be set to 0.
+		CollateralFactorCannotBeZero,
+	}
+
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event {
 		/// InsuranceFactor has been successfully changed
 		InsuranceFactorChanged,
-
 		/// Max Borrow Rate has been successfully changed
 		MaxBorrowRateChanged,
-
+		/// Collateral factor has been successfully changed
+		CollateralFactorChanged,
 		/// The operation is paused: \[pool_id, operation\]
 		OperationIsPaused(CurrencyId, Operation),
-
 		/// The operation is unpaused: \[pool_id, operation\]
 		OperationIsUnPaused(CurrencyId, Operation),
-
 		/// Insurance balance replenished: \[pool_id, amount\]
 		DepositedInsurance(CurrencyId, Balance),
-
 		/// Insurance balance redeemed: \[pool_id, amount\]
 		RedeemedInsurance(CurrencyId, Balance),
 	}
-}
 
-decl_storage! {
-	trait Store for Module<T: Trait> as ControllerStorage {
-		/// Controller data information: `(timestamp, insurance_factor, collateral_factor, max_borrow_rate)`.
-		pub ControllerDates get(fn controller_dates) config(): map hasher(blake2_128_concat) CurrencyId => ControllerData<T::BlockNumber>;
+	/// Controller data information: `(timestamp, insurance_factor, collateral_factor,
+	/// max_borrow_rate)`.
+	#[pallet::storage]
+	#[pallet::getter(fn controller_dates)]
+	pub(crate) type ControllerDates<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyId, ControllerData<T::BlockNumber>, ValueQuery>;
 
-		/// The Pause Guardian can pause certain actions as a safety mechanism
-		pub PauseKeepers get(fn pause_keepers) config(): map hasher(blake2_128_concat) CurrencyId => PauseKeeper;
+	/// The Pause Guardian can pause certain actions as a safety mechanism
+	#[pallet::storage]
+	#[pallet::getter(fn pause_keepers)]
+	pub(crate) type PauseKeepers<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, PauseKeeper, ValueQuery>;
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		#[allow(clippy::type_complexity)]
+		pub controller_dates: Vec<(CurrencyId, ControllerData<T::BlockNumber>)>,
+		pub pause_keepers: Vec<(CurrencyId, PauseKeeper)>,
 	}
-}
 
-decl_error! {
-	pub enum Error for Module<T: Trait> {
-		/// Number overflow in calculation.
-		NumOverflow,
-
-		/// Borrow rate is absurdly high.
-		BorrowRateIsTooHight,
-
-		/// Oracle unavailable or price equal 0ю
-		OraclePriceError,
-
-		/// Insufficient available liquidity.
-		InsufficientLiquidity,
-
-		/// Pool not found.
-		PoolNotFound,
-
-		/// The dispatch origin of this call must be Administrator.
-		RequireAdmin,
-
-		/// Not enough balance to deposit or withdraw or repay.
-		NotEnoughBalance,
-
-		/// Balance overflows maximum.
-		///
-		/// Only happened when the balance went wrong and balance overflows the integer type.
-		BalanceOverflowed,
-
-		/// Maximum borrow rate cannot be set to 0.
-		MaxBorrowRateCannotBeZero,
-
-		/// An error occurred in the parameters that were passed to the function.
-		ParametersError,
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			GenesisConfig {
+				controller_dates: vec![],
+				pause_keepers: vec![],
+			}
+		}
 	}
-}
 
-// Admin functions
-decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-		type Error = Error<T>;
-		fn deposit_event() = default;
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			self.controller_dates.iter().for_each(|(currency_id, controller_data)| {
+				ControllerDates::<T>::insert(
+					currency_id,
+					ControllerData {
+						timestamp: controller_data.timestamp,
+						insurance_factor: controller_data.insurance_factor,
+						max_borrow_rate: controller_data.max_borrow_rate,
+						collateral_factor: controller_data.collateral_factor,
+					},
+				)
+			});
+			self.pause_keepers.iter().for_each(|(currency_id, pause_keeper)| {
+				PauseKeepers::<T>::insert(
+					currency_id,
+					PauseKeeper {
+						deposit_paused: pause_keeper.deposit_paused,
+						redeem_paused: pause_keeper.redeem_paused,
+						borrow_paused: pause_keeper.borrow_paused,
+						repay_paused: pause_keeper.repay_paused,
+						transfer_paused: pause_keeper.transfer_paused,
+					},
+				)
+			});
+		}
+	}
 
+	#[pallet::pallet]
+	pub struct Pallet<T>(PhantomData<T>);
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+
+	// Admin functions
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
 		/// Pause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
 		/// The dispatch origin of this call must be Administrator.
-		#[weight = 0]
-		pub fn pause_specific_operation(origin, pool_id: CurrencyId, operation: Operation) -> DispatchResult {
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn pause_specific_operation(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			operation: Operation,
+		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
 			match operation {
-				Operation::Deposit => PauseKeepers::mutate(pool_id, |pool| pool.deposit_paused = true),
-				Operation::Redeem => PauseKeepers::mutate(pool_id, |pool| pool.redeem_paused = true),
-				Operation::Borrow => PauseKeepers::mutate(pool_id, |pool| pool.borrow_paused = true),
-				Operation::Repay => PauseKeepers::mutate(pool_id, |pool| pool.repay_paused = true),
-				Operation::Transfer => PauseKeepers::mutate(pool_id, |pool| pool.transfer_paused = true),
+				Operation::Deposit => PauseKeepers::<T>::mutate(pool_id, |pool| pool.deposit_paused = true),
+				Operation::Redeem => PauseKeepers::<T>::mutate(pool_id, |pool| pool.redeem_paused = true),
+				Operation::Borrow => PauseKeepers::<T>::mutate(pool_id, |pool| pool.borrow_paused = true),
+				Operation::Repay => PauseKeepers::<T>::mutate(pool_id, |pool| pool.repay_paused = true),
+				Operation::Transfer => PauseKeepers::<T>::mutate(pool_id, |pool| pool.transfer_paused = true),
 			};
 			Self::deposit_event(Event::OperationIsPaused(pool_id, operation));
-			Ok(())
+			Ok(().into())
 		}
 
 		/// Unpause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
 		/// The dispatch origin of this call must be Administrator.
-		#[weight = 0]
-		pub fn unpause_specific_operation(origin, pool_id: CurrencyId, operation: Operation) -> DispatchResult {
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn unpause_specific_operation(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			operation: Operation,
+		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
 			match operation {
-				Operation::Deposit => PauseKeepers::mutate(pool_id, |pool| pool.deposit_paused = false),
-				Operation::Redeem => PauseKeepers::mutate(pool_id, |pool| pool.redeem_paused = false),
-				Operation::Borrow => PauseKeepers::mutate(pool_id, |pool| pool.borrow_paused = false),
-				Operation::Repay => PauseKeepers::mutate(pool_id, |pool| pool.repay_paused = false),
-				Operation::Transfer => PauseKeepers::mutate(pool_id, |pool| pool.transfer_paused = false),
+				Operation::Deposit => PauseKeepers::<T>::mutate(pool_id, |pool| pool.deposit_paused = false),
+				Operation::Redeem => PauseKeepers::<T>::mutate(pool_id, |pool| pool.redeem_paused = false),
+				Operation::Borrow => PauseKeepers::<T>::mutate(pool_id, |pool| pool.borrow_paused = false),
+				Operation::Repay => PauseKeepers::<T>::mutate(pool_id, |pool| pool.repay_paused = false),
+				Operation::Transfer => PauseKeepers::<T>::mutate(pool_id, |pool| pool.transfer_paused = false),
 			};
 			Self::deposit_event(Event::OperationIsUnPaused(pool_id, operation));
-			Ok(())
+			Ok(().into())
 		}
 
 		/// Replenishes the insurance balance.
 		///
 		/// The dispatch origin of this call must be Administrator.
-		#[weight = 0]
-		pub fn deposit_insurance(origin, pool_id: CurrencyId, #[compact] amount: Balance) {
-			with_transaction_result(|| {
-				let sender = ensure_signed(origin)?;
-				ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-				Self::do_deposit_insurance(&sender, pool_id, amount)?;
-				Self::deposit_event(Event::DepositedInsurance(pool_id, amount));
-				Ok(())
-			})?;
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn deposit_insurance(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			amount: Balance,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			Self::do_deposit_insurance(&sender, pool_id, amount)?;
+			Self::deposit_event(Event::DepositedInsurance(pool_id, amount));
+			Ok(().into())
 		}
 
 		/// Redeem the insurance balance.
 		///
 		/// The dispatch origin of this call must be Administrator.
-		#[weight = 0]
-		pub fn redeem_insurance(origin, pool_id: CurrencyId, #[compact] amount: Balance) {
-			with_transaction_result(|| {
-				let sender = ensure_signed(origin)?;
-				ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-				Self::do_redeem_insurance(&sender, pool_id, amount)?;
-				Self::deposit_event(Event::RedeemedInsurance(pool_id, amount));
-				Ok(())
-			})?;
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn redeem_insurance(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			amount: Balance,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			Self::do_redeem_insurance(&sender, pool_id, amount)?;
+			Self::deposit_event(Event::RedeemedInsurance(pool_id, amount));
+			Ok(().into())
 		}
 
 		/// Set insurance factor.
 		///
 		/// The dispatch origin of this call must be Administrator.
-		#[weight = 0]
-		pub fn set_insurance_factor(origin, pool_id: CurrencyId, new_amount_n: u128, new_amount_d: u128) -> DispatchResult {
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn set_insurance_factor(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			new_amount_n: u128,
+			new_amount_d: u128,
+		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
 
-			let new_insurance_factor = Rate::checked_from_rational(new_amount_n, new_amount_d)
-				.ok_or(Error::<T>::NumOverflow)?;
+			let new_insurance_factor =
+				Rate::checked_from_rational(new_amount_n, new_amount_d).ok_or(Error::<T>::NumOverflow)?;
 
 			ControllerDates::<T>::mutate(pool_id, |r| r.insurance_factor = new_insurance_factor);
 			Self::deposit_event(Event::InsuranceFactorChanged);
-			Ok(())
+			Ok(().into())
 		}
 
 		/// Set Maximum borrow rate.
 		///
 		/// The dispatch origin of this call must be Administrator.
-		#[weight = 0]
-		pub fn set_max_borrow_rate(origin, pool_id: CurrencyId, new_amount_n: u128, new_amount_d: u128) -> DispatchResult {
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn set_max_borrow_rate(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			new_amount_n: u128,
+			new_amount_d: u128,
+		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
-			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
 
-			let new_max_borow_rate = Rate::checked_from_rational(new_amount_n, new_amount_d)
-				.ok_or(Error::<T>::NumOverflow)?;
+			let new_max_borow_rate =
+				Rate::checked_from_rational(new_amount_n, new_amount_d).ok_or(Error::<T>::NumOverflow)?;
 
 			ensure!(!new_max_borow_rate.is_zero(), Error::<T>::MaxBorrowRateCannotBeZero);
 
 			ControllerDates::<T>::mutate(pool_id, |r| r.max_borrow_rate = new_max_borow_rate);
 			Self::deposit_event(Event::MaxBorrowRateChanged);
-			Ok(())
+			Ok(().into())
+		}
+
+		/// Set Collateral factor.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn set_collateral_factor(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			new_amount_n: u128,
+			new_amount_d: u128,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
+
+			let new_collateral_factor =
+				Rate::checked_from_rational(new_amount_n, new_amount_d).ok_or(Error::<T>::NumOverflow)?;
+
+			ensure!(
+				new_collateral_factor <= Rate::one(),
+				Error::<T>::CollateralFactorCannotBeGreaterThanOne
+			);
+			ensure!(
+				!new_collateral_factor.is_zero(),
+				Error::<T>::CollateralFactorCannotBeZero
+			);
+
+			ControllerDates::<T>::mutate(pool_id, |r| r.collateral_factor = new_collateral_factor);
+			Self::deposit_event(Event::CollateralFactorChanged);
+			Ok(().into())
 		}
 	}
 }
 
-type RateResult = result::Result<Rate, DispatchError>;
-type BalanceResult = result::Result<Balance, DispatchError>;
-type LiquidityResult = result::Result<(Balance, Balance), DispatchError>;
-
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
 	/// Applies accrued interest to total borrows and insurances.
 	/// This calculates interest accrued from the last checkpointed block
 	/// up to the current block and writes new checkpoint to storage.
@@ -303,7 +431,7 @@ impl<T: Trait> Module<T> {
 			*  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
 		*/
 
-		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, &block_delta)?;
+		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, block_delta)?;
 		let interest_accumulated =
 			Self::calculate_interest_accumulated(simple_interest_factor, current_total_borrowed_balance)?;
 		let new_total_borrow_balance =
@@ -400,7 +528,7 @@ impl<T: Trait> Module<T> {
 		redeem_amount: Balance,
 		borrow_amount: Balance,
 	) -> LiquidityResult {
-		let m_tokens_ids: Vec<CurrencyId> = <T as liquidity_pools::Trait>::EnabledCurrencyPair::get()
+		let m_tokens_ids: Vec<CurrencyId> = <T as liquidity_pools::Config>::EnabledCurrencyPair::get()
 			.iter()
 			.map(|currency_pair| currency_pair.wrapped_id)
 			.collect();
@@ -483,22 +611,6 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	// FIXME: Temporary implementation.
-	/// Calculate sum required to liquidate for partial liquidation according to coming back to safe
-	/// supply ratio.
-	///
-	/// - `account`: The account to determine liquidity.
-	/// - `total_borrow_in_usd`: Current amount of debt converted into usd.
-	///
-	/// Return sum required to liquidate.
-	pub fn get_sum_required_to_liquidate(total_borrow_in_usd: Balance) -> BalanceResult {
-		let result = Rate::from_inner(total_borrow_in_usd)
-			.checked_mul(&Rate::saturating_from_rational(30, 100))
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-		Ok(result)
-	}
-
 	/// Checks if the account should be allowed to redeem tokens in the given pool.
 	///
 	/// - `underlying_asset_id` - The CurrencyId to verify the redeem against.
@@ -558,7 +670,7 @@ impl<T: Trait> Module<T> {
 }
 
 // RPC methods
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
 	/// Gets the exchange rate between a mToken and the underlying asset.
 	pub fn get_liquidity_pool_exchange_rate(pool_id: CurrencyId) -> Option<Rate> {
 		let exchange_rate = <LiquidityPools<T>>::get_exchange_rate(pool_id).ok()?;
@@ -648,7 +760,7 @@ impl<T: Trait> Module<T> {
 }
 
 // Private methods
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
 	/// Calculates the utilization rate of the pool.
 	/// - `current_total_balance`: The amount of cash in the pool.
 	/// - `current_total_borrowed_balance`: The amount of borrows in the pool.
@@ -717,15 +829,12 @@ impl<T: Trait> Module<T> {
 	/// - `block_delta`: The number of blocks elapsed since the last accrual.
 	///
 	/// returns `interest_factor = current_borrow_interest_rate * block_delta`.
-	fn calculate_interest_factor(
-		current_borrow_interest_rate: Rate,
-		block_delta: &<T as system::Trait>::BlockNumber,
-	) -> RateResult {
-		let block_delta_as_usize = TryInto::try_into(*block_delta)
+	fn calculate_interest_factor(current_borrow_interest_rate: Rate, block_delta: T::BlockNumber) -> RateResult {
+		let block_delta_as_usize = TryInto::<usize>::try_into(block_delta)
 			.ok()
 			.expect("blockchain will not exceed 2^32 blocks; qed");
 
-		let interest_factor = Rate::saturating_from_rational(block_delta_as_usize as u128, 1)
+		let interest_factor: FixedU128 = Rate::saturating_from_rational(block_delta_as_usize as u128, 1)
 			.checked_mul(&current_borrow_interest_rate)
 			.ok_or(Error::<T>::NumOverflow)?;
 
@@ -822,7 +931,7 @@ impl<T: Trait> Module<T> {
 }
 
 // Storage getters for Controller Data
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
 	/// Determines how much a user can borrow.
 	fn get_collateral_factor(pool_id: CurrencyId) -> Rate {
 		Self::controller_dates(pool_id).collateral_factor
@@ -903,7 +1012,7 @@ impl<T: Trait> Module<T> {
 }
 
 // Admin functions
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
 	// FIXME It is possible to remove this function
 	/// Replenishes the insurance balance.
 	/// - `who`: Account ID of the administrator who replenishes the insurance.

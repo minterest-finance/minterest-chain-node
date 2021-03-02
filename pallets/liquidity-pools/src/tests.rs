@@ -15,7 +15,7 @@ fn set_pool_total_borrowed_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Set pool_total_borrowed eq 100 DOT
 		assert_ok!(TestPools::set_pool_total_borrowed(CurrencyId::DOT, ONE_HUNDRED_DOLLARS));
-		assert_eq!(<Pools>::get(CurrencyId::DOT).total_borrowed, ONE_HUNDRED_DOLLARS);
+		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_borrowed, ONE_HUNDRED_DOLLARS);
 	});
 }
 
@@ -28,7 +28,7 @@ fn set_pool_borrow_index_should_work() {
 			Rate::saturating_from_rational(25, 100)
 		));
 		assert_eq!(
-			<Pools>::get(CurrencyId::DOT).borrow_index,
+			Pools::<Test>::get(CurrencyId::DOT).borrow_index,
 			Rate::saturating_from_rational(25, 100)
 		);
 	});
@@ -42,7 +42,7 @@ fn set_pool_total_insurance_should_work() {
 			CurrencyId::DOT,
 			ONE_HUNDRED_DOLLARS
 		));
-		assert_eq!(<Pools>::get(CurrencyId::DOT).total_insurance, ONE_HUNDRED_DOLLARS);
+		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_insurance, ONE_HUNDRED_DOLLARS);
 	});
 }
 
@@ -76,8 +76,8 @@ fn set_accrual_interest_params_should_work() {
 			ONE_HUNDRED_DOLLARS,
 			TEN_THOUSAND
 		));
-		assert_eq!(<Pools>::get(CurrencyId::DOT).total_borrowed, ONE_HUNDRED_DOLLARS);
-		assert_eq!(<Pools>::get(CurrencyId::DOT).total_insurance, TEN_THOUSAND);
+		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_borrowed, ONE_HUNDRED_DOLLARS);
+		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_insurance, TEN_THOUSAND);
 	});
 }
 
@@ -413,7 +413,7 @@ fn get_pool_members_with_loans_should_work() {
 		.pool_user_data_with_params(CurrencyId::BTC, CHARLIE, ONE_HUNDRED, Rate::default(), true, 0)
 		.build()
 		.execute_with(|| {
-			assert_eq!(TestPools::get_pool_members_with_loans(CurrencyId::DOT), Ok(vec![1, 3]));
+			assert_eq!(TestPools::get_pool_members_with_loans(CurrencyId::DOT), Ok(vec![3, 1]));
 			assert_eq!(TestPools::get_pool_members_with_loans(CurrencyId::BTC), Ok(vec![3]));
 		});
 }
