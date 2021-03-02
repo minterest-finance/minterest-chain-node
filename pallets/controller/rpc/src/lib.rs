@@ -3,7 +3,7 @@
 pub use controller_rpc_runtime_api::{ControllerApi as ControllerRuntimeApi, PoolState, UserPoolBalanceData};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use minterest_primitives::{AccountId, Balance, CurrencyId};
+use minterest_primitives::{AccountId, CurrencyId};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};

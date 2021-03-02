@@ -1,6 +1,6 @@
 use crate::{
 	AccountId, Balance, Block,
-	CurrencyId::{self, DOT, ETH, MDOT, METH},
+	CurrencyId::{self, DOT, ETH},
 	Event, LiquidationPoolsModuleId, LiquidityPoolsModuleId, Rate, Runtime, DOLLARS,
 };
 use controller::{ControllerData, PauseKeeper};
