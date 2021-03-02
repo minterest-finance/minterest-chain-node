@@ -483,37 +483,6 @@ impl<T: Config> Pallet<T> {
 		Ok(result)
 	}
 
-	///
-	pub fn borrow_balance_by_interest_params(
-		who: &T::AccountId,
-		underlying_asset_id: CurrencyId,
-		pool_borrow_index: Rate,
-	) -> BalanceResult {
-		let user_borrow_balance = <LiquidityPools<T>>::get_user_total_borrowed(&who, underlying_asset_id);
-
-		// If borrow_balance = 0 then borrow_index is likely also 0.
-		// Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
-		if user_borrow_balance.is_zero() {
-			return Ok(Balance::zero());
-		};
-
-		let user_borrow_index = <LiquidityPools<T>>::get_user_borrow_index(&who, underlying_asset_id);
-
-		// Calculate new borrow balance using the borrow index:
-		// recent_borrow_balance = user_borrow_balance * pool_borrow_index / user_borrow_index
-		let principal_times_index = Rate::from_inner(user_borrow_balance)
-			.checked_mul(&pool_borrow_index)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		let result = Rate::from_inner(principal_times_index)
-			.checked_div(&user_borrow_index)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		Ok(result)
-	}
-
 	/// Determine what the account liquidity would be if the given amounts were redeemed/borrowed.
 	///
 	/// - `account`: The account to determine liquidity.
@@ -757,6 +726,110 @@ impl<T: Config> Pallet<T> {
 		)?;
 		Ok((total_supply_balance, total_borrowed_balance))
 	}
+
+	/// Return the borrow balance of account based on pool_borrow_index calculated beforehand.
+	///
+	/// - `who`: The address whose balance should be calculated.
+	/// - `underlying_asset_id`: ID of the currency, the balance of borrowing of which we calculate.
+	/// - `pool_borrow_index`: borrow index for the pool
+	pub fn borrow_balance_by_interest_params(
+		who: &T::AccountId,
+		underlying_asset_id: CurrencyId,
+		pool_borrow_index: Rate,
+	) -> BalanceResult {
+		let user_borrow_balance = <LiquidityPools<T>>::get_user_total_borrowed(&who, underlying_asset_id);
+
+		// If borrow_balance = 0 then borrow_index is likely also 0.
+		// Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
+		if user_borrow_balance.is_zero() {
+			return Ok(Balance::zero());
+		};
+
+		let user_borrow_index = <LiquidityPools<T>>::get_user_borrow_index(&who, underlying_asset_id);
+
+		// Calculate new borrow balance using the borrow index:
+		// recent_borrow_balance = user_borrow_balance * pool_borrow_index / user_borrow_index
+		let principal_times_index = Rate::from_inner(user_borrow_balance)
+			.checked_mul(&pool_borrow_index)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		let result = Rate::from_inner(principal_times_index)
+			.checked_div(&user_borrow_index)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		Ok(result)
+	}
+
+	/// Calculates total borrows, total insurance and borrow index for given pool.
+	/// Applies accrued interest to total borrows and insurances and calculates interest accrued
+	/// from the last checkpointed block up to the current block and writes new checkpoint to
+	/// storage.
+	///
+	/// - `underlying_asset_id`: ID of the currency to make calculations for.
+	pub fn calculate_interest_params(
+		underlying_asset_id: CurrencyId,
+	) -> result::Result<(Balance, Balance, Rate), DispatchError> {
+		//Remember the initial block number.
+		let current_block_number = <frame_system::Module<T>>::block_number();
+		let accrual_block_number_previous = Self::controller_dates(underlying_asset_id).timestamp;
+
+		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(underlying_asset_id);
+		let current_total_borrowed_balance = <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id);
+		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(underlying_asset_id);
+		let current_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
+
+		//Short-circuit accumulating 0 interest.
+		if current_block_number == accrual_block_number_previous {
+			return Ok((
+				current_total_borrowed_balance,
+				current_total_insurance,
+				current_borrow_index,
+			));
+		}
+
+		let utilization_rate = Self::calculate_utilization_rate(
+			current_total_balance,
+			current_total_borrowed_balance,
+			current_total_insurance,
+		)?;
+
+		// Calculate the current borrow interest rate
+		let current_borrow_interest_rate =
+			<MinterestModel<T>>::calculate_borrow_interest_rate(underlying_asset_id, utilization_rate)?;
+
+		let max_borrow_rate = Self::get_max_borrow_rate(underlying_asset_id);
+		let insurance_factor = Self::get_insurance_factor(underlying_asset_id);
+
+		ensure!(
+			current_borrow_interest_rate <= max_borrow_rate,
+			Error::<T>::BorrowRateIsTooHight
+		);
+
+		// Calculate the number of blocks elapsed since the last accrual
+		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
+
+		/*
+		Calculate the interest accumulated into borrows and insurance and the new index:
+			*  simpleInterestFactor = borrowRate * blockDelta
+			*  interestAccumulated = simpleInterestFactor * totalBorrows
+			*  totalBorrowsNew = interestAccumulated + totalBorrows
+			*  totalInsuranceNew = interestAccumulated * insuranceFactor + totalInsurance
+			*  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
+		*/
+
+		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, block_delta)?;
+		let interest_accumulated =
+			Self::calculate_interest_accumulated(simple_interest_factor, current_total_borrowed_balance)?;
+		let new_total_borrow_balance =
+			Self::calculate_new_total_borrow(interest_accumulated, current_total_borrowed_balance)?;
+		let new_total_insurance =
+			Self::calculate_new_total_insurance(interest_accumulated, insurance_factor, current_total_insurance)?;
+		let new_borrow_index = Self::calculate_new_borrow_index(simple_interest_factor, current_borrow_index)?;
+
+		Ok((new_total_borrow_balance, new_total_insurance, new_borrow_index))
+	}
 }
 
 // Private methods
@@ -945,69 +1018,6 @@ impl<T: Config> Pallet<T> {
 	/// Get the insurance factor.
 	fn get_insurance_factor(pool_id: CurrencyId) -> Rate {
 		Self::controller_dates(pool_id).insurance_factor
-	}
-
-	pub fn calculate_interest_params(
-		underlying_asset_id: CurrencyId,
-	) -> result::Result<(Balance, Balance, Rate), DispatchError> {
-		//Remember the initial block number.
-		let current_block_number = <frame_system::Module<T>>::block_number();
-		let accrual_block_number_previous = Self::controller_dates(underlying_asset_id).timestamp;
-
-		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(underlying_asset_id);
-		let current_total_borrowed_balance = <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id);
-		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(underlying_asset_id);
-		let current_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
-
-		//Short-circuit accumulating 0 interest.
-		if current_block_number == accrual_block_number_previous {
-			return Ok((
-				current_total_borrowed_balance,
-				current_total_insurance,
-				current_borrow_index,
-			));
-		}
-
-		let utilization_rate = Self::calculate_utilization_rate(
-			current_total_balance,
-			current_total_borrowed_balance,
-			current_total_insurance,
-		)?;
-
-		// Calculate the current borrow interest rate
-		let current_borrow_interest_rate =
-			<MinterestModel<T>>::calculate_borrow_interest_rate(underlying_asset_id, utilization_rate)?;
-
-		let max_borrow_rate = Self::get_max_borrow_rate(underlying_asset_id);
-		let insurance_factor = Self::get_insurance_factor(underlying_asset_id);
-
-		ensure!(
-			current_borrow_interest_rate <= max_borrow_rate,
-			Error::<T>::BorrowRateIsTooHight
-		);
-
-		// Calculate the number of blocks elapsed since the last accrual
-		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
-
-		/*
-		Calculate the interest accumulated into borrows and insurance and the new index:
-			*  simpleInterestFactor = borrowRate * blockDelta
-			*  interestAccumulated = simpleInterestFactor * totalBorrows
-			*  totalBorrowsNew = interestAccumulated + totalBorrows
-			*  totalInsuranceNew = interestAccumulated * insuranceFactor + totalInsurance
-			*  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
-		*/
-
-		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, &block_delta)?;
-		let interest_accumulated =
-			Self::calculate_interest_accumulated(simple_interest_factor, current_total_borrowed_balance)?;
-		let new_total_borrow_balance =
-			Self::calculate_new_total_borrow(interest_accumulated, current_total_borrowed_balance)?;
-		let new_total_insurance =
-			Self::calculate_new_total_insurance(interest_accumulated, insurance_factor, current_total_insurance)?;
-		let new_borrow_index = Self::calculate_new_borrow_index(simple_interest_factor, current_borrow_index)?;
-
-		Ok((new_total_borrow_balance, new_total_insurance, new_borrow_index))
 	}
 }
 
