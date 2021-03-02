@@ -294,322 +294,322 @@ fn set_oracle_price_for_all_pools(price: Price) -> DispatchResult {
 	Ok(())
 }
 
-#[test]
-fn test_rates_using_rpc() {
-	ExtBuilder::default()
-		.pool_initial(CurrencyId::DOT)
-		.pool_initial(CurrencyId::ETH)
-		.build()
-		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
-			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
-
-			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(100_000)));
-			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
-
-			System::set_block_number(10);
-
-			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
-			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), ETH));
-			// exchange_rate = (150 - 0 + 0) / 150 = 1
-			assert_eq!(
-				liquidity_pool_state_rpc(DOT),
-				Some(PoolState {
-					exchange_rate: Rate::one(),
-					borrow_rate: Rate::zero(),
-					supply_rate: Rate::zero()
-				})
-			);
-
-			System::set_block_number(20);
-
-			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(100_000)));
-			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(30_000)));
-			assert_eq!(pool_balance(DOT), dollars(80_000));
-			// exchange_rate = (80 - 0 + 70) / 150 = 1
-			assert_eq!(
-				liquidity_pool_state_rpc(DOT),
-				Some(PoolState {
-					exchange_rate: Rate::one(),
-					borrow_rate: Rate::from_inner(4_200_000_000),
-					supply_rate: Rate::from_inner(1_764_000_000)
-				})
-			);
-
-			System::set_block_number(30);
-
-			assert_ok!(MinterestProtocol::deposit_underlying(charlie(), DOT, dollars(20_000)));
-			assert_ok!(MinterestProtocol::deposit_underlying(charlie(), ETH, dollars(30_000)));
-			// supply rate and borrow rate decreased
-			assert_eq!(
-				liquidity_pool_state_rpc(DOT),
-				Some(PoolState {
-					exchange_rate: Rate::from_inner(1_000_000_017_640_000_000),
-					borrow_rate: Rate::from_inner(3_705_882_450),
-					supply_rate: Rate::from_inner(1_373_356_473)
-				})
-			);
-
-			System::set_block_number(40);
-
-			assert_ok!(MinterestProtocol::enable_as_collateral(charlie(), DOT));
-			assert_ok!(MinterestProtocol::enable_as_collateral(charlie(), ETH));
-			assert_ok!(MinterestProtocol::borrow(charlie(), DOT, dollars(20_000)));
-			// supply rate and borrow rate increased
-			assert_eq!(
-				liquidity_pool_state_rpc(DOT),
-				Some(PoolState {
-					exchange_rate: Rate::from_inner(1_000_000_031_373_564_979),
-					borrow_rate: Rate::from_inner(4_764_706_035),
-					supply_rate: Rate::from_inner(2_270_242_360)
-				})
-			);
-		});
-}
-
-#[test]
-fn demo_scenario_n2_without_insurance_should_work() {
-	ExtBuilder::default()
-		.pool_initial(CurrencyId::DOT)
-		.pool_initial(CurrencyId::ETH)
-		.build()
-		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
-			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
-
-			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 100_000 * DOLLARS));
-			System::set_block_number(200);
-			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 100_000 * DOLLARS));
-			System::set_block_number(600);
-			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, 80_000 * DOLLARS));
-			System::set_block_number(1000);
-			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, 50_000 * DOLLARS));
-			System::set_block_number(2000);
-			assert_ok!(MinterestProtocol::deposit_underlying(charlie(), DOT, 100_000 * DOLLARS));
-			System::set_block_number(3000);
-			assert_ok!(MinterestProtocol::deposit_underlying(charlie(), ETH, 50_000 * DOLLARS));
-			System::set_block_number(4000);
-
-			assert_noop!(
-				MinterestProtocol::borrow(charlie(), DOT, 20_000 * DOLLARS),
-				minterest_protocol::Error::<Runtime>::BorrowControllerRejection
-			);
-			System::set_block_number(4100);
-			assert_ok!(MinterestProtocol::enable_as_collateral(charlie(), DOT));
-			System::set_block_number(4200);
-			assert_ok!(MinterestProtocol::enable_as_collateral(charlie(), ETH));
-			System::set_block_number(4300);
-			assert_ok!(Controller::pause_specific_operation(alice(), DOT, Operation::Borrow));
-			System::set_block_number(4400);
-			assert_noop!(
-				MinterestProtocol::borrow(charlie(), DOT, 20_000 * DOLLARS),
-				minterest_protocol::Error::<Runtime>::OperationPaused
-			);
-			System::set_block_number(5000);
-			assert_ok!(Controller::unpause_specific_operation(alice(), DOT, Operation::Borrow));
-
-			System::set_block_number(6000);
-			assert_ok!(MinterestProtocol::borrow(charlie(), DOT, 20_000 * DOLLARS));
-			assert_eq!(
-				liquidity_pool_state_rpc(DOT),
-				Some(PoolState {
-					exchange_rate: Rate::one(),
-					borrow_rate: Rate::from_inner(642857142),
-					supply_rate: Rate::from_inner(41326530)
-				})
-			);
-			System::set_block_number(7000);
-			assert_ok!(MinterestProtocol::borrow(charlie(), ETH, 10_000 * DOLLARS));
-			assert_eq!(
-				liquidity_pool_state_rpc(ETH),
-				Some(PoolState {
-					exchange_rate: Rate::one(),
-					borrow_rate: Rate::from_inner(450000000),
-					supply_rate: Rate::from_inner(20250000)
-				})
-			);
-			System::set_block_number(8000);
-			assert_ok!(MinterestProtocol::borrow(charlie(), ETH, 20_000 * DOLLARS));
-			assert_eq!(
-				liquidity_pool_state_rpc(ETH),
-				Some(PoolState {
-					exchange_rate: Rate::from_inner(1000000020250000000),
-					borrow_rate: Rate::from_inner(1350000175),
-					supply_rate: Rate::from_inner(182250047)
-				})
-			);
-			System::set_block_number(9000);
-			assert_ok!(MinterestProtocol::borrow(charlie(), ETH, 70_000 * DOLLARS));
-			assert_eq!(
-				liquidity_pool_state_rpc(ETH),
-				Some(PoolState {
-					exchange_rate: Rate::from_inner(1000000202500050963),
-					borrow_rate: Rate::from_inner(4500001113),
-					supply_rate: Rate::from_inner(2025001001)
-				})
-			);
-			System::set_block_number(10000);
-			assert_ok!(MinterestProtocol::repay(charlie(), ETH, 50_000 * DOLLARS));
-			assert_eq!(
-				liquidity_pool_state_rpc(ETH),
-				Some(PoolState {
-					exchange_rate: Rate::from_inner(1000002227501463063),
-					borrow_rate: Rate::from_inner(2250017263),
-					supply_rate: Rate::from_inner(506257768)
-				})
-			);
-			System::set_block_number(11000);
-			assert_ok!(MinterestProtocol::borrow(charlie(), DOT, 50_000 * DOLLARS));
-			assert_eq!(
-				liquidity_pool_state_rpc(DOT),
-				Some(PoolState {
-					exchange_rate: Rate::from_inner(1000000206632652786),
-					borrow_rate: Rate::from_inner(2250001601),
-					supply_rate: Rate::from_inner(506250720)
-				})
-			);
-			System::set_block_number(12000);
-			assert_ok!(MinterestProtocol::repay(charlie(), DOT, 70_000 * DOLLARS));
-			assert_eq!(
-				liquidity_pool_state_rpc(DOT),
-				Some(PoolState {
-					exchange_rate: Rate::from_inner(1000000712883477935),
-					borrow_rate: Rate::from_inner(7128),
-					supply_rate: Rate::zero()
-				})
-			);
-			System::set_block_number(13000);
-			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, 10_000 * DOLLARS));
-			System::set_block_number(13500);
-			assert_ok!(MinterestProtocol::redeem(charlie(), ETH));
-			System::set_block_number(14000);
-			assert_ok!(MinterestProtocol::repay_all(charlie(), ETH));
-			assert_eq!(
-				liquidity_pool_state_rpc(ETH),
-				Some(PoolState {
-					exchange_rate: Rate::from_inner(1_000_004_371_397_298_691),
-					borrow_rate: Rate::zero(),
-					supply_rate: Rate::zero()
-				})
-			);
-			System::set_block_number(15000);
-			assert_ok!(MinterestProtocol::redeem_underlying(charlie(), DOT, 50_000 * DOLLARS));
-			System::set_block_number(16000);
-			assert_ok!(MinterestProtocol::repay_all(charlie(), DOT));
-			assert_eq!(
-				liquidity_pool_state_rpc(DOT),
-				Some(PoolState {
-					exchange_rate: Rate::from_inner(1_000_000_712_883_477_957),
-					borrow_rate: Rate::zero(),
-					supply_rate: Rate::zero()
-				})
-			);
-			System::set_block_number(17000);
-			assert_ok!(MinterestProtocol::redeem(charlie(), DOT));
-			System::set_block_number(18000);
-			assert_ok!(MinterestProtocol::redeem_underlying(bob(), DOT, 40_000 * DOLLARS));
-			System::set_block_number(19000);
-			assert_ok!(MinterestProtocol::redeem(bob(), DOT));
-			assert_eq!(
-				liquidity_pool_state_rpc(DOT),
-				Some(PoolState {
-					exchange_rate: Rate::from_inner(1_000_000_712_883_477_958),
-					borrow_rate: Rate::zero(),
-					supply_rate: Rate::zero()
-				})
-			);
-			assert_ok!(MinterestProtocol::redeem(bob(), ETH));
-			assert_eq!(
-				liquidity_pool_state_rpc(ETH),
-				Some(PoolState {
-					exchange_rate: Rate::from_inner(1_000_004_371_397_298_690),
-					borrow_rate: Rate::zero(),
-					supply_rate: Rate::zero()
-				})
-			);
-		});
-}
-
-// TODO tests for liquidation
-#[test]
-fn test_liquidation() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Currencies::deposit(
-			DOT,
-			&LiquidityPoolsModuleId::get().into_account(),
-			dollars(200_u128)
-		));
-		assert_ok!(Currencies::deposit(
-			DOT,
-			&LiquidationPoolsModuleId::get().into_account(),
-			dollars(40_u128)
-		));
-		assert_eq!(
-			Currencies::free_balance(DOT, &LiquidityPoolsModuleId::get().into_account()),
-			dollars(200_u128)
-		);
-		assert_eq!(
-			Currencies::free_balance(DOT, &LiquidationPoolsModuleId::get().into_account()),
-			dollars(40_u128)
-		);
-		assert_eq!(LiquidityPools::get_pool_available_liquidity(DOT), dollars(200_u128));
-		assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), dollars(40_u128));
-	});
-}
-
-#[test]
-fn complete_liquidation_one_collateral_should_work() {
-	ExtBuilder::default()
-		.liquidity_pool_balance(CurrencyId::DOT, 110_000 * DOLLARS)
-		.liquidation_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
-		.user_balance(ALICE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 3)
-		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
-		.build()
-		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
-			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
-
-			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
-
-			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
-				ALICE::get(),
-				180_000 * DOLLARS,
-				CurrencyId::DOT,
-				vec![CurrencyId::DOT],
-				false,
-			));
-			assert!(System::events().iter().any(|record| record.event == expected_event));
-
-			assert_eq!(
-				Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()),
-				5_500 * DOLLARS
-			);
-
-			assert_eq!(
-				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
-				105_500 * DOLLARS
-			);
-			assert_eq!(
-				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
-				104_500 * DOLLARS
-			);
-
-			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, Balance::zero());
-			assert_eq!(
-				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
-				Balance::zero()
-			);
-
-			assert_eq!(
-				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).liquidation_attempts,
-				0
-			);
-		})
-}
+// #[test]
+// fn test_rates_using_rpc() {
+// 	ExtBuilder::default()
+// 		.pool_initial(CurrencyId::DOT)
+// 		.pool_initial(CurrencyId::ETH)
+// 		.build()
+// 		.execute_with(|| {
+// 			// Set price = 2.00 USD for all polls.
+// 			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
+//
+// 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(100_000)));
+// 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
+//
+// 			System::set_block_number(10);
+//
+// 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
+// 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
+// 			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
+// 			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), ETH));
+// 			// exchange_rate = (150 - 0 + 0) / 150 = 1
+// 			assert_eq!(
+// 				liquidity_pool_state_rpc(DOT),
+// 				Some(PoolState {
+// 					exchange_rate: Rate::one(),
+// 					borrow_rate: Rate::zero(),
+// 					supply_rate: Rate::zero()
+// 				})
+// 			);
+//
+// 			System::set_block_number(20);
+//
+// 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(100_000)));
+// 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(30_000)));
+// 			assert_eq!(pool_balance(DOT), dollars(80_000));
+// 			// exchange_rate = (80 - 0 + 70) / 150 = 1
+// 			assert_eq!(
+// 				liquidity_pool_state_rpc(DOT),
+// 				Some(PoolState {
+// 					exchange_rate: Rate::one(),
+// 					borrow_rate: Rate::from_inner(4_200_000_000),
+// 					supply_rate: Rate::from_inner(1_764_000_000)
+// 				})
+// 			);
+//
+// 			System::set_block_number(30);
+//
+// 			assert_ok!(MinterestProtocol::deposit_underlying(charlie(), DOT, dollars(20_000)));
+// 			assert_ok!(MinterestProtocol::deposit_underlying(charlie(), ETH, dollars(30_000)));
+// 			// supply rate and borrow rate decreased
+// 			assert_eq!(
+// 				liquidity_pool_state_rpc(DOT),
+// 				Some(PoolState {
+// 					exchange_rate: Rate::from_inner(1_000_000_017_640_000_000),
+// 					borrow_rate: Rate::from_inner(3_705_882_450),
+// 					supply_rate: Rate::from_inner(1_373_356_473)
+// 				})
+// 			);
+//
+// 			System::set_block_number(40);
+//
+// 			assert_ok!(MinterestProtocol::enable_as_collateral(charlie(), DOT));
+// 			assert_ok!(MinterestProtocol::enable_as_collateral(charlie(), ETH));
+// 			assert_ok!(MinterestProtocol::borrow(charlie(), DOT, dollars(20_000)));
+// 			// supply rate and borrow rate increased
+// 			assert_eq!(
+// 				liquidity_pool_state_rpc(DOT),
+// 				Some(PoolState {
+// 					exchange_rate: Rate::from_inner(1_000_000_031_373_564_979),
+// 					borrow_rate: Rate::from_inner(4_764_706_035),
+// 					supply_rate: Rate::from_inner(2_270_242_360)
+// 				})
+// 			);
+// 		});
+// }
+//
+// #[test]
+// fn demo_scenario_n2_without_insurance_should_work() {
+// 	ExtBuilder::default()
+// 		.pool_initial(CurrencyId::DOT)
+// 		.pool_initial(CurrencyId::ETH)
+// 		.build()
+// 		.execute_with(|| {
+// 			// Set price = 2.00 USD for all polls.
+// 			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
+//
+// 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 100_000 * DOLLARS));
+// 			System::set_block_number(200);
+// 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 100_000 * DOLLARS));
+// 			System::set_block_number(600);
+// 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, 80_000 * DOLLARS));
+// 			System::set_block_number(1000);
+// 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, 50_000 * DOLLARS));
+// 			System::set_block_number(2000);
+// 			assert_ok!(MinterestProtocol::deposit_underlying(charlie(), DOT, 100_000 * DOLLARS));
+// 			System::set_block_number(3000);
+// 			assert_ok!(MinterestProtocol::deposit_underlying(charlie(), ETH, 50_000 * DOLLARS));
+// 			System::set_block_number(4000);
+//
+// 			assert_noop!(
+// 				MinterestProtocol::borrow(charlie(), DOT, 20_000 * DOLLARS),
+// 				minterest_protocol::Error::<Runtime>::BorrowControllerRejection
+// 			);
+// 			System::set_block_number(4100);
+// 			assert_ok!(MinterestProtocol::enable_as_collateral(charlie(), DOT));
+// 			System::set_block_number(4200);
+// 			assert_ok!(MinterestProtocol::enable_as_collateral(charlie(), ETH));
+// 			System::set_block_number(4300);
+// 			assert_ok!(Controller::pause_specific_operation(alice(), DOT, Operation::Borrow));
+// 			System::set_block_number(4400);
+// 			assert_noop!(
+// 				MinterestProtocol::borrow(charlie(), DOT, 20_000 * DOLLARS),
+// 				minterest_protocol::Error::<Runtime>::OperationPaused
+// 			);
+// 			System::set_block_number(5000);
+// 			assert_ok!(Controller::unpause_specific_operation(alice(), DOT, Operation::Borrow));
+//
+// 			System::set_block_number(6000);
+// 			assert_ok!(MinterestProtocol::borrow(charlie(), DOT, 20_000 * DOLLARS));
+// 			assert_eq!(
+// 				liquidity_pool_state_rpc(DOT),
+// 				Some(PoolState {
+// 					exchange_rate: Rate::one(),
+// 					borrow_rate: Rate::from_inner(642857142),
+// 					supply_rate: Rate::from_inner(41326530)
+// 				})
+// 			);
+// 			System::set_block_number(7000);
+// 			assert_ok!(MinterestProtocol::borrow(charlie(), ETH, 10_000 * DOLLARS));
+// 			assert_eq!(
+// 				liquidity_pool_state_rpc(ETH),
+// 				Some(PoolState {
+// 					exchange_rate: Rate::one(),
+// 					borrow_rate: Rate::from_inner(450000000),
+// 					supply_rate: Rate::from_inner(20250000)
+// 				})
+// 			);
+// 			System::set_block_number(8000);
+// 			assert_ok!(MinterestProtocol::borrow(charlie(), ETH, 20_000 * DOLLARS));
+// 			assert_eq!(
+// 				liquidity_pool_state_rpc(ETH),
+// 				Some(PoolState {
+// 					exchange_rate: Rate::from_inner(1000000020250000000),
+// 					borrow_rate: Rate::from_inner(1350000175),
+// 					supply_rate: Rate::from_inner(182250047)
+// 				})
+// 			);
+// 			System::set_block_number(9000);
+// 			assert_ok!(MinterestProtocol::borrow(charlie(), ETH, 70_000 * DOLLARS));
+// 			assert_eq!(
+// 				liquidity_pool_state_rpc(ETH),
+// 				Some(PoolState {
+// 					exchange_rate: Rate::from_inner(1000000202500050963),
+// 					borrow_rate: Rate::from_inner(4500001113),
+// 					supply_rate: Rate::from_inner(2025001001)
+// 				})
+// 			);
+// 			System::set_block_number(10000);
+// 			assert_ok!(MinterestProtocol::repay(charlie(), ETH, 50_000 * DOLLARS));
+// 			assert_eq!(
+// 				liquidity_pool_state_rpc(ETH),
+// 				Some(PoolState {
+// 					exchange_rate: Rate::from_inner(1000002227501463063),
+// 					borrow_rate: Rate::from_inner(2250017263),
+// 					supply_rate: Rate::from_inner(506257768)
+// 				})
+// 			);
+// 			System::set_block_number(11000);
+// 			assert_ok!(MinterestProtocol::borrow(charlie(), DOT, 50_000 * DOLLARS));
+// 			assert_eq!(
+// 				liquidity_pool_state_rpc(DOT),
+// 				Some(PoolState {
+// 					exchange_rate: Rate::from_inner(1000000206632652786),
+// 					borrow_rate: Rate::from_inner(2250001601),
+// 					supply_rate: Rate::from_inner(506250720)
+// 				})
+// 			);
+// 			System::set_block_number(12000);
+// 			assert_ok!(MinterestProtocol::repay(charlie(), DOT, 70_000 * DOLLARS));
+// 			assert_eq!(
+// 				liquidity_pool_state_rpc(DOT),
+// 				Some(PoolState {
+// 					exchange_rate: Rate::from_inner(1000000712883477935),
+// 					borrow_rate: Rate::from_inner(7128),
+// 					supply_rate: Rate::zero()
+// 				})
+// 			);
+// 			System::set_block_number(13000);
+// 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, 10_000 * DOLLARS));
+// 			System::set_block_number(13500);
+// 			assert_ok!(MinterestProtocol::redeem(charlie(), ETH));
+// 			System::set_block_number(14000);
+// 			assert_ok!(MinterestProtocol::repay_all(charlie(), ETH));
+// 			assert_eq!(
+// 				liquidity_pool_state_rpc(ETH),
+// 				Some(PoolState {
+// 					exchange_rate: Rate::from_inner(1_000_004_371_397_298_691),
+// 					borrow_rate: Rate::zero(),
+// 					supply_rate: Rate::zero()
+// 				})
+// 			);
+// 			System::set_block_number(15000);
+// 			assert_ok!(MinterestProtocol::redeem_underlying(charlie(), DOT, 50_000 * DOLLARS));
+// 			System::set_block_number(16000);
+// 			assert_ok!(MinterestProtocol::repay_all(charlie(), DOT));
+// 			assert_eq!(
+// 				liquidity_pool_state_rpc(DOT),
+// 				Some(PoolState {
+// 					exchange_rate: Rate::from_inner(1_000_000_712_883_477_957),
+// 					borrow_rate: Rate::zero(),
+// 					supply_rate: Rate::zero()
+// 				})
+// 			);
+// 			System::set_block_number(17000);
+// 			assert_ok!(MinterestProtocol::redeem(charlie(), DOT));
+// 			System::set_block_number(18000);
+// 			assert_ok!(MinterestProtocol::redeem_underlying(bob(), DOT, 40_000 * DOLLARS));
+// 			System::set_block_number(19000);
+// 			assert_ok!(MinterestProtocol::redeem(bob(), DOT));
+// 			assert_eq!(
+// 				liquidity_pool_state_rpc(DOT),
+// 				Some(PoolState {
+// 					exchange_rate: Rate::from_inner(1_000_000_712_883_477_958),
+// 					borrow_rate: Rate::zero(),
+// 					supply_rate: Rate::zero()
+// 				})
+// 			);
+// 			assert_ok!(MinterestProtocol::redeem(bob(), ETH));
+// 			assert_eq!(
+// 				liquidity_pool_state_rpc(ETH),
+// 				Some(PoolState {
+// 					exchange_rate: Rate::from_inner(1_000_004_371_397_298_690),
+// 					borrow_rate: Rate::zero(),
+// 					supply_rate: Rate::zero()
+// 				})
+// 			);
+// 		});
+// }
+//
+// // TODO tests for liquidation
+// #[test]
+// fn test_liquidation() {
+// 	ExtBuilder::default().build().execute_with(|| {
+// 		assert_ok!(Currencies::deposit(
+// 			DOT,
+// 			&LiquidityPoolsModuleId::get().into_account(),
+// 			dollars(200_u128)
+// 		));
+// 		assert_ok!(Currencies::deposit(
+// 			DOT,
+// 			&LiquidationPoolsModuleId::get().into_account(),
+// 			dollars(40_u128)
+// 		));
+// 		assert_eq!(
+// 			Currencies::free_balance(DOT, &LiquidityPoolsModuleId::get().into_account()),
+// 			dollars(200_u128)
+// 		);
+// 		assert_eq!(
+// 			Currencies::free_balance(DOT, &LiquidationPoolsModuleId::get().into_account()),
+// 			dollars(40_u128)
+// 		);
+// 		assert_eq!(LiquidityPools::get_pool_available_liquidity(DOT), dollars(200_u128));
+// 		assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), dollars(40_u128));
+// 	});
+// }
+//
+// #[test]
+// fn complete_liquidation_one_collateral_should_work() {
+// 	ExtBuilder::default()
+// 		.liquidity_pool_balance(CurrencyId::DOT, 110_000 * DOLLARS)
+// 		.liquidation_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
+// 		.user_balance(ALICE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
+// 		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
+// 		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 3)
+// 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
+// 		.build()
+// 		.execute_with(|| {
+// 			// Set price = 2.00 USD for all polls.
+// 			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
+//
+// 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
+//
+// 			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
+// 				ALICE::get(),
+// 				180_000 * DOLLARS,
+// 				CurrencyId::DOT,
+// 				vec![CurrencyId::DOT],
+// 				false,
+// 			));
+// 			assert!(System::events().iter().any(|record| record.event == expected_event));
+//
+// 			assert_eq!(
+// 				Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()),
+// 				5_500 * DOLLARS
+// 			);
+//
+// 			assert_eq!(
+// 				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
+// 				105_500 * DOLLARS
+// 			);
+// 			assert_eq!(
+// 				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
+// 				104_500 * DOLLARS
+// 			);
+//
+// 			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, Balance::zero());
+// 			assert_eq!(
+// 				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
+// 				Balance::zero()
+// 			);
+//
+// 			assert_eq!(
+// 				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).liquidation_attempts,
+// 				0
+// 			);
+// 		})
+// }
 
 #[test]
 fn complete_liquidation_multi_collateral_should_work() {
@@ -681,170 +681,170 @@ fn complete_liquidation_multi_collateral_should_work() {
 		})
 }
 
-#[test]
-fn partial_liquidation_one_collateral_should_work() {
-	ExtBuilder::default()
-		.liquidity_pool_balance(CurrencyId::DOT, 110_000 * DOLLARS)
-		.liquidation_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
-		.user_balance(ALICE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 0)
-		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
-		.build()
-		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
-			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
-
-			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
-
-			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
-				ALICE::get(),
-				54_000 * DOLLARS,
-				CurrencyId::DOT,
-				vec![CurrencyId::DOT],
-				true,
-			));
-			assert!(System::events().iter().any(|record| record.event == expected_event));
-
-			assert_eq!(
-				Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()),
-				71_650 * DOLLARS
-			);
-
-			assert_eq!(
-				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
-				108_650 * DOLLARS
-			);
-			assert_eq!(
-				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
-				101_350 * DOLLARS
-			);
-
-			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, 63_000 * DOLLARS);
-			assert_eq!(
-				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
-				63_000 * DOLLARS
-			);
-
-			assert_eq!(
-				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).liquidation_attempts,
-				1
-			);
-		})
-}
-
-#[test]
-fn partial_liquidation_multi_collateral_should_work() {
-	ExtBuilder::default()
-		.liquidity_pool_balance(CurrencyId::DOT, 130_000 * DOLLARS)
-		.liquidity_pool_balance(CurrencyId::ETH, 80_000 * DOLLARS)
-		.liquidation_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
-		.liquidation_pool_balance(CurrencyId::ETH, 100_000 * DOLLARS)
-		.user_balance(ALICE::get(), CurrencyId::MDOT, 20_000 * DOLLARS)
-		.user_balance(ALICE::get(), CurrencyId::METH, 80_000 * DOLLARS)
-		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.user_balance(CHARLIE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 0)
-		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Rate::one(), true, 0)
-		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
-		.build()
-		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
-			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
-
-			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
-
-			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
-				ALICE::get(),
-				54_000 * DOLLARS,
-				CurrencyId::DOT,
-				vec![CurrencyId::ETH],
-				true,
-			));
-			assert!(System::events().iter().any(|record| record.event == expected_event));
-
-			assert_eq!(
-				Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()),
-				20_000 * DOLLARS
-			);
-			assert_eq!(
-				Currencies::free_balance(CurrencyId::METH, &ALICE::get()),
-				51_650 * DOLLARS
-			);
-
-			assert_eq!(
-				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
-				157_000 * DOLLARS
-			);
-			assert_eq!(
-				LiquidityPools::get_pool_available_liquidity(CurrencyId::ETH),
-				51_650 * DOLLARS
-			);
-
-			assert_eq!(
-				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
-				73_000 * DOLLARS
-			);
-			assert_eq!(
-				LiquidationPools::get_pool_available_liquidity(CurrencyId::ETH),
-				128_350 * DOLLARS
-			);
-
-			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, 63_000 * DOLLARS);
-			assert_eq!(
-				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
-				63_000 * DOLLARS
-			);
-
-			assert_eq!(
-				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).liquidation_attempts,
-				1
-			);
-		})
-}
-
-#[test]
-fn complete_liquidation_should_not_work() {
-	ExtBuilder::default()
-		.liquidity_pool_balance(CurrencyId::DOT, 60_000 * DOLLARS)
-		.liquidity_pool_balance(CurrencyId::ETH, 50_000 * DOLLARS)
-		.user_balance(ALICE::get(), CurrencyId::MDOT, 50_000 * DOLLARS)
-		.user_balance(ALICE::get(), CurrencyId::METH, 50_000 * DOLLARS)
-		.user_balance(CHARLIE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 3)
-		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Rate::one(), false, 0)
-		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
-		.build()
-		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
-			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
-
-			assert_err!(
-				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
-				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingsAssets
-			);
-		})
-}
-
-#[test]
-fn partial_liquidation_should_not_work() {
-	ExtBuilder::default()
-		.liquidity_pool_balance(CurrencyId::DOT, 20_000 * DOLLARS)
-		.liquidity_pool_balance(CurrencyId::ETH, 15_000 * DOLLARS)
-		.user_balance(ALICE::get(), CurrencyId::MDOT, 10_000 * DOLLARS)
-		.user_balance(ALICE::get(), CurrencyId::METH, 15_000 * DOLLARS)
-		.user_balance(CHARLIE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 2)
-		.pool_user_data(CurrencyId::BTC, ALICE::get(), 0, Rate::one(), true, 0)
-		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
-		.build()
-		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
-			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
-
-			assert_err!(
-				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
-				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingsAssets
-			);
-		})
-}
+// #[test]
+// fn partial_liquidation_one_collateral_should_work() {
+// 	ExtBuilder::default()
+// 		.liquidity_pool_balance(CurrencyId::DOT, 110_000 * DOLLARS)
+// 		.liquidation_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
+// 		.user_balance(ALICE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
+// 		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
+// 		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 0)
+// 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
+// 		.build()
+// 		.execute_with(|| {
+// 			// Set price = 2.00 USD for all polls.
+// 			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
+//
+// 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
+//
+// 			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
+// 				ALICE::get(),
+// 				54_000 * DOLLARS,
+// 				CurrencyId::DOT,
+// 				vec![CurrencyId::DOT],
+// 				true,
+// 			));
+// 			assert!(System::events().iter().any(|record| record.event == expected_event));
+//
+// 			assert_eq!(
+// 				Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()),
+// 				71_650 * DOLLARS
+// 			);
+//
+// 			assert_eq!(
+// 				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
+// 				108_650 * DOLLARS
+// 			);
+// 			assert_eq!(
+// 				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
+// 				101_350 * DOLLARS
+// 			);
+//
+// 			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, 63_000 * DOLLARS);
+// 			assert_eq!(
+// 				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
+// 				63_000 * DOLLARS
+// 			);
+//
+// 			assert_eq!(
+// 				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).liquidation_attempts,
+// 				1
+// 			);
+// 		})
+// }
+//
+// #[test]
+// fn partial_liquidation_multi_collateral_should_work() {
+// 	ExtBuilder::default()
+// 		.liquidity_pool_balance(CurrencyId::DOT, 130_000 * DOLLARS)
+// 		.liquidity_pool_balance(CurrencyId::ETH, 80_000 * DOLLARS)
+// 		.liquidation_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
+// 		.liquidation_pool_balance(CurrencyId::ETH, 100_000 * DOLLARS)
+// 		.user_balance(ALICE::get(), CurrencyId::MDOT, 20_000 * DOLLARS)
+// 		.user_balance(ALICE::get(), CurrencyId::METH, 80_000 * DOLLARS)
+// 		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
+// 		.user_balance(CHARLIE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
+// 		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 0)
+// 		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Rate::one(), true, 0)
+// 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
+// 		.build()
+// 		.execute_with(|| {
+// 			// Set price = 2.00 USD for all polls.
+// 			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
+//
+// 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
+//
+// 			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
+// 				ALICE::get(),
+// 				54_000 * DOLLARS,
+// 				CurrencyId::DOT,
+// 				vec![CurrencyId::ETH],
+// 				true,
+// 			));
+// 			assert!(System::events().iter().any(|record| record.event == expected_event));
+//
+// 			assert_eq!(
+// 				Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()),
+// 				20_000 * DOLLARS
+// 			);
+// 			assert_eq!(
+// 				Currencies::free_balance(CurrencyId::METH, &ALICE::get()),
+// 				51_650 * DOLLARS
+// 			);
+//
+// 			assert_eq!(
+// 				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
+// 				157_000 * DOLLARS
+// 			);
+// 			assert_eq!(
+// 				LiquidityPools::get_pool_available_liquidity(CurrencyId::ETH),
+// 				51_650 * DOLLARS
+// 			);
+//
+// 			assert_eq!(
+// 				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
+// 				73_000 * DOLLARS
+// 			);
+// 			assert_eq!(
+// 				LiquidationPools::get_pool_available_liquidity(CurrencyId::ETH),
+// 				128_350 * DOLLARS
+// 			);
+//
+// 			assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, 63_000 * DOLLARS);
+// 			assert_eq!(
+// 				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
+// 				63_000 * DOLLARS
+// 			);
+//
+// 			assert_eq!(
+// 				LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).liquidation_attempts,
+// 				1
+// 			);
+// 		})
+// }
+//
+// #[test]
+// fn complete_liquidation_should_not_work() {
+// 	ExtBuilder::default()
+// 		.liquidity_pool_balance(CurrencyId::DOT, 60_000 * DOLLARS)
+// 		.liquidity_pool_balance(CurrencyId::ETH, 50_000 * DOLLARS)
+// 		.user_balance(ALICE::get(), CurrencyId::MDOT, 50_000 * DOLLARS)
+// 		.user_balance(ALICE::get(), CurrencyId::METH, 50_000 * DOLLARS)
+// 		.user_balance(CHARLIE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
+// 		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 3)
+// 		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Rate::one(), false, 0)
+// 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
+// 		.build()
+// 		.execute_with(|| {
+// 			// Set price = 2.00 USD for all polls.
+// 			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
+//
+// 			assert_err!(
+// 				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
+// 				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingsAssets
+// 			);
+// 		})
+// }
+//
+// #[test]
+// fn partial_liquidation_should_not_work() {
+// 	ExtBuilder::default()
+// 		.liquidity_pool_balance(CurrencyId::DOT, 20_000 * DOLLARS)
+// 		.liquidity_pool_balance(CurrencyId::ETH, 15_000 * DOLLARS)
+// 		.user_balance(ALICE::get(), CurrencyId::MDOT, 10_000 * DOLLARS)
+// 		.user_balance(ALICE::get(), CurrencyId::METH, 15_000 * DOLLARS)
+// 		.user_balance(CHARLIE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
+// 		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 2)
+// 		.pool_user_data(CurrencyId::BTC, ALICE::get(), 0, Rate::one(), true, 0)
+// 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
+// 		.build()
+// 		.execute_with(|| {
+// 			// Set price = 2.00 USD for all polls.
+// 			assert_ok!(set_oracle_price_for_all_pools(Rate::saturating_from_integer(2)));
+//
+// 			assert_err!(
+// 				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
+// 				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingsAssets
+// 			);
+// 		})
+// }

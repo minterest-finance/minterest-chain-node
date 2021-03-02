@@ -378,8 +378,14 @@ impl accounts::Config for Runtime {
 
 orml_traits::parameter_type_with_key! {
 	pub TokenDecimals: |currency_id: CurrencyId| -> u32 {
-		// TODO: config
-		18
+		match currency_id {
+			&CurrencyId::MNT => 18,
+			&CurrencyId::ETH | &CurrencyId::METH => 18,
+			&CurrencyId::KSM | &CurrencyId::MKSM => 18,
+			&CurrencyId::DOT | &CurrencyId::MDOT => 10,
+			&CurrencyId::BTC | &CurrencyId::MBTC  => 8,
+		}
+		// 18
 	};
 }
 
