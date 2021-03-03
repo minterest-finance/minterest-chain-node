@@ -1,28 +1,28 @@
-//! RPC interface for the controller pallet.
+//! RPC interface for the accounts pallet.
 
-pub use controller_rpc_runtime_api::{ControllerApi as ControllerRuntimeApi, PoolState};
+pub use accounts_rpc_runtime_api::AccountsApi as AccountsRuntimeApi;
+use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use minterest_primitives::CurrencyId;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
 
 #[rpc]
-pub trait ControllerApi<BlockHash> {
-	#[rpc(name = "controller_liquidityPoolState")]
-	fn liquidity_pool_state(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<PoolState>>;
+pub trait AccountsApi<BlockHash, AccountId> {
+	#[rpc(name = "accounts_isAdmin")]
+	fn is_admin(&self, caller: AccountId, at: Option<BlockHash>) -> Result<Option<bool>>;
 }
 
-/// A struct that implements the [`ControllerApi`].
-pub struct Controller<C, B> {
+/// A struct that implements the [`AccountsApi`].
+pub struct Accounts<C, B> {
 	client: Arc<C>,
 	_marker: std::marker::PhantomData<B>,
 }
 
-impl<C, B> Controller<C, B> {
-	/// Create new `LiquidityPool` with the given reference to the client.
+impl<C, B> Accounts<C, B> {
+	/// Create new `Accounts` with the given reference to the client.
 	pub fn new(client: Arc<C>) -> Self {
 		Self {
 			client,
@@ -43,24 +43,21 @@ impl From<Error> for i64 {
 	}
 }
 
-impl<C, Block> ControllerApi<<Block as BlockT>::Hash> for Controller<C, Block>
+impl<C, Block, AccountId> AccountsApi<<Block as BlockT>::Hash, AccountId> for Accounts<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-	C::Api: ControllerRuntimeApi<Block>,
+	C::Api: AccountsRuntimeApi<Block, AccountId>,
+	AccountId: Codec,
 {
-	fn liquidity_pool_state(
-		&self,
-		pool_id: CurrencyId,
-		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<Option<PoolState>> {
+	fn is_admin(&self, caller: AccountId, at: Option<<Block as BlockT>::Hash>) -> Result<Option<bool>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume the best block.
             self.client.info().best_hash));
-		api.liquidity_pool_state(&at, pool_id).map_err(|e| RpcError {
+		api.is_admin(&at, caller).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
-			message: "Unable to get pool state.".into(),
+			message: "Unable to check if is an admin.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})
 	}

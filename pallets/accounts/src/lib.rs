@@ -9,7 +9,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use frame_support::{ensure, pallet_prelude::*, transactional, IterableStorageMap};
-use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
+use frame_system::{ensure_root, pallet_prelude::*};
 use sp_std::collections::btree_set::BTreeSet;
 
 pub use module::*;
@@ -53,8 +53,6 @@ pub mod module {
 		AccountAdded(T::AccountId),
 		/// Account is removed from the allow-list: \[who\]
 		AccountRemoved(T::AccountId),
-		/// The caller is a member: \[who\]
-		IsAnAdmin(T::AccountId),
 	}
 
 	#[pallet::storage]
@@ -141,17 +139,6 @@ pub mod module {
 			AllowedAccounts::<T>::remove(&account_to_remove);
 			MemberCount::<T>::mutate(|v| *v -= 1);
 			Self::deposit_event(Event::AccountRemoved(account_to_remove));
-			Ok(().into())
-		}
-
-		/// Checks whether the caller is a member of the allow-list.
-		/// Emits an event if they are, and errors if not.
-		#[pallet::weight(0)]
-		#[transactional]
-		pub fn is_admin(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-			let caller = ensure_signed(origin)?;
-			ensure!(AllowedAccounts::<T>::contains_key(&caller), Error::<T>::NotAnAdmin);
-			Self::deposit_event(Event::IsAnAdmin(caller));
 			Ok(().into())
 		}
 	}
