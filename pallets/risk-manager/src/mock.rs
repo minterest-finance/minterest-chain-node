@@ -32,7 +32,7 @@ frame_support::construct_runtime!(
 		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
-		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>}
+		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned}
 	}
 );
 
@@ -153,10 +153,13 @@ impl minterest_model::Config for Test {
 parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
+		pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
+
 }
 
 impl liquidation_pools::Config for Test {
 	type Event = Event;
+	type UnsignedPriority = LiquidityPoolsPriority;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 }

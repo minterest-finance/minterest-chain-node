@@ -214,6 +214,8 @@ pub mod module {
 		/// Runs after every block. Start offchain worker to check unsafe loan and
 		/// submit unsigned tx to trigger liquidation.
 		fn offchain_worker(now: T::BlockNumber) {
+			debug::info!("Entering off-chain worker");
+
 			if let Err(e) = Self::_offchain_worker() {
 				debug::info!(
 					target: "RiskManager offchain worker",
@@ -514,8 +516,12 @@ impl<T: Config> Pallet<T> {
 
 		let liquidation_attempts = <LiquidityPools<T>>::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
 
-		let is_partial_liquidation = total_repay_amount >= RiskManagerDates::<T>::get(liquidated_pool_id).min_sum
-			&& liquidation_attempts < RiskManagerDates::<T>::get(liquidated_pool_id).max_attempts;
+		let is_partial_liquidation = match total_repay_amount >= RiskManagerDates::<T>::get(liquidated_pool_id).min_sum
+			&& liquidation_attempts < RiskManagerDates::<T>::get(liquidated_pool_id).max_attempts
+		{
+			true => true,
+			false => false,
+		};
 
 		// Calculate sum required to liquidate.
 		let (seize_amount, repay_amount, repay_assets) =
