@@ -173,7 +173,8 @@ pub fn alice() -> Origin {
 }
 
 pub struct ExternalityBuilder {
-	liquidation_pools: Vec<(CurrencyId, LiquidationPoolCommonData<BlockNumber>)>,
+	liquidation_pools: Vec<(CurrencyId, LiquidationPool)>,
+	liquidation_pool_params: LiquidationPoolCommonData<BlockNumber>,
 }
 
 impl Default for ExternalityBuilder {
@@ -181,29 +182,24 @@ impl Default for ExternalityBuilder {
 		Self {
 			liquidation_pools: vec![(
 				CurrencyId::DOT,
-				LiquidationPoolCommonData {
-					timestamp: 1,
-					balancing_period: 600, // Blocks per 10 minutes.
+				LiquidationPool {
+					deviation_threshold: Rate::saturating_from_rational(1, 10),
 				},
 			)],
+			liquidation_pool_params: LiquidationPoolCommonData {
+				timestamp: 1,
+				balancing_period: 600, // Blocks per 10 minutes.},
+			},
 		}
 	}
 }
 
 impl ExternalityBuilder {
-	pub fn pool_timestamp_and_period(
-		mut self,
-		pool_id: CurrencyId,
-		timestamp: BlockNumber,
-		balancing_period: u32,
-	) -> Self {
-		self.liquidation_pools.push((
-			pool_id,
-			LiquidationPoolCommonData {
-				timestamp,
-				balancing_period,
-			},
-		));
+	pub fn pool_timestamp_and_period(mut self, timestamp: BlockNumber, balancing_period: u32) -> Self {
+		self.liquidation_pool_params = LiquidationPoolCommonData {
+			timestamp,
+			balancing_period,
+		};
 		self
 	}
 
@@ -219,6 +215,7 @@ impl ExternalityBuilder {
 
 		liquidation_pools::GenesisConfig::<Test> {
 			liquidation_pools: self.liquidation_pools,
+			liquidation_pool_params: self.liquidation_pool_params,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

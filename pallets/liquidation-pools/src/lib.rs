@@ -134,7 +134,9 @@ pub mod module {
 		fn default() -> Self {
 			GenesisConfig {
 				liquidation_pool_params: LiquidationPoolCommonData {
-					timestamp: Default::default(),
+					timestamp: TryInto::<T::BlockNumber>::try_into(1 as u32)
+						.ok()
+						.expect(" result convert failed"),
 					balancing_period: 600, // Blocks per 10 minutes.
 				},
 				liquidation_pools: vec![],
@@ -362,8 +364,8 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	}
 
 	/// Check if pool exists
-	fn pool_exists(_underlying_asset_id: &CurrencyId) -> bool {
-		Default::default()
+	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
+		LiquidationPools::<T>::contains_key(underlying_asset_id)
 	}
 }
 
