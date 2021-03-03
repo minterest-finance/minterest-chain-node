@@ -1,4 +1,4 @@
-//! RPC interface for the liquidation-pools pallet.
+//! RPC interface for the accounts pallet.
 
 pub use accounts_rpc_runtime_api::AccountsApi as AccountsRuntimeApi;
 use codec::Codec;
