@@ -18,7 +18,7 @@ use orml_utilities::OffchainErr;
 use pallet_traits::PoolsManager;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::traits::{AccountIdConversion, BlakeTwo256, Hash, Zero};
+use sp_runtime::traits::{AccountIdConversion, Zero};
 use sp_runtime::{
 	offchain::{
 		storage::StorageValueRef,
@@ -26,7 +26,7 @@ use sp_runtime::{
 		Duration,
 	},
 	transaction_validity::TransactionPriority,
-	ModuleId, RandomNumberGenerator, RuntimeDebug,
+	ModuleId, RuntimeDebug,
 };
 use sp_std::{convert::TryInto, prelude::*, result};
 
@@ -142,8 +142,6 @@ pub mod module {
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		/// Runs after every block. Start offchain worker to check if balancing needed.
 		fn offchain_worker(now: T::BlockNumber) {
-			debug::info!("Entering off-chain worker");
-
 			if let Err(e) = Self::_offchain_worker() {
 				debug::info!(
 					target: "LiquidationPool offchain worker",
@@ -231,9 +229,7 @@ impl<T: Config> Pallet<T> {
 		{
 			(last_pool_to_check, maybe_last_iterator_previous_key)
 		} else {
-			let random_seed = sp_io::offchain::random_seed();
-			let mut rng = RandomNumberGenerator::<BlakeTwo256>::new(BlakeTwo256::hash(&random_seed[..]));
-			(rng.pick_u32(underlying_asset_ids.len().saturating_sub(1) as u32), None)
+			(0, None)
 		};
 
 		let currency_id = underlying_asset_ids[(pool_to_check as usize)];
@@ -244,6 +240,14 @@ impl<T: Config> Pallet<T> {
 		if <frame_system::Module<T>>::block_number() > dead_line {
 			Self::submit_unsigned_tx(currency_id);
 		}
+
+		// update to_be_continue record
+		let nex_pool_id = if pool_to_check < underlying_asset_ids.len().saturating_sub(1) as u32 {
+			pool_to_check + 1
+		} else {
+			0
+		};
+		to_be_continue.set(&(nex_pool_id, Option::<Vec<u8>>::None));
 
 		let iteration_end_time = sp_io::offchain::timestamp();
 
