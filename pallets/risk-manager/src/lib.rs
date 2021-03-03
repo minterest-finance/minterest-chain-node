@@ -16,7 +16,7 @@ use frame_system::{
 	ensure_none, ensure_signed,
 	offchain::{SendTransactionTypes, SubmitTransaction},
 };
-use minterest_primitives::{Balance, CurrencyId, Price, Rate};
+use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
@@ -501,10 +501,8 @@ impl<T: Config> Pallet<T> {
 		<Controller<T>>::accrue_interest_rate(liquidated_pool_id)?;
 
 		// Read prices price for borrowed pool.
-		let price_borrowed = T::PriceSource::get_underlying_price(liquidated_pool_id)
-			.unwrap_or_default()
-			.checked_div(&Price::saturating_from_integer(Price::accuracy()))
-			.ok_or(Error::<T>::InvalidFeedPrice)?;
+		let price_borrowed =
+			T::PriceSource::get_underlying_price(liquidated_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
 		// Get borrower borrow balance and calculate total_repay_amount (in USD):
 		// total_repay_amount = borrow_balance * price_borrowed
@@ -580,10 +578,8 @@ impl<T: Config> Pallet<T> {
 				// Get the exchange rate, read prices price for collateral pool and calculate the number
 				// of collateral tokens to seize:
 				// seize_tokens = seize_amount / (price_collateral * exchange_rate)
-				let price_collateral = T::PriceSource::get_underlying_price(collateral_pool_id)
-					.unwrap_or_default()
-					.checked_div(&Price::saturating_from_integer(Price::accuracy()))
-					.ok_or(Error::<T>::InvalidFeedPrice)?;
+				let price_collateral =
+					T::PriceSource::get_underlying_price(collateral_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 				let exchange_rate = <LiquidityPools<T>>::get_exchange_rate(collateral_pool_id)?;
 				let seize_tokens = Rate::from_inner(seize_amount)
 					.checked_div(
@@ -682,10 +678,8 @@ impl<T: Config> Pallet<T> {
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let price_borrowed = T::PriceSource::get_underlying_price(liquidated_pool_id)
-			.unwrap_or_default()
-			.checked_div(&Price::saturating_from_integer(Price::accuracy()))
-			.ok_or(Error::<T>::InvalidFeedPrice)?;
+		let price_borrowed =
+			T::PriceSource::get_underlying_price(liquidated_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
 		// repay_assets = repay_amount / price_borrowed (Tokens)
 		let repay_assets = Rate::from_inner(repay_amount)

@@ -131,10 +131,6 @@ impl MockPriceSource {
 	}
 }
 impl PriceProvider<CurrencyId> for MockPriceSource {
-	fn get_relative_price(_base: CurrencyId, _quota: CurrencyId) -> Option<Price> {
-		Some(Price::one())
-	}
-
 	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
 		UNDERLYING_PRICE.with(|v| *v.borrow_mut())
 	}

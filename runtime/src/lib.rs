@@ -376,24 +376,10 @@ impl accounts::Config for Runtime {
 	type MaxMembers = MaxMembers;
 }
 
-orml_traits::parameter_type_with_key! {
-	pub TokenDecimals: |currency_id: CurrencyId| -> u32 {
-		match currency_id {
-			&CurrencyId::MNT => 18,
-			&CurrencyId::ETH | &CurrencyId::METH => 18,
-			&CurrencyId::KSM | &CurrencyId::MKSM => 18,
-			&CurrencyId::DOT | &CurrencyId::MDOT => 10,
-			&CurrencyId::BTC | &CurrencyId::MBTC  => 8,
-		}
-		// 18
-	};
-}
-
 impl module_prices::Config for Runtime {
 	type Event = Event;
 	type Source = AggregatedDataProvider;
 	type LockOrigin = EnsureRootOrTwoThirdsGeneralCouncil;
-	type TokenDecimals = TokenDecimals;
 }
 
 parameter_types! {

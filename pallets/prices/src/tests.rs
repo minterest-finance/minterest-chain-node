@@ -8,15 +8,15 @@ use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 #[test]
 fn get_underlying_price_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		// Price = 48000 USD, right shift the decimal point (18-8) places
+		// Price 1 BTC = 48000 USD
 		assert_eq!(
 			PricesModule::get_underlying_price(CurrencyId::BTC),
-			Some(Price::saturating_from_integer(48000_0000000000u128))
+			Some(Price::saturating_from_integer(48000u128))
 		);
-		// Price = 40 USD, right shift the decimal point (18-10) places
+		// Price 1 DOT = 40 USD
 		assert_eq!(
 			PricesModule::get_underlying_price(CurrencyId::DOT),
-			Some(Price::saturating_from_integer(40_00000000u128))
+			Some(Price::saturating_from_integer(40u128))
 		);
 
 		assert_eq!(PricesModule::get_underlying_price(CurrencyId::MNT), Some(Price::zero()));
@@ -26,44 +26,16 @@ fn get_underlying_price_should_work() {
 }
 
 #[test]
-fn get_relative_price_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(
-			PricesModule::get_relative_price(CurrencyId::BTC, CurrencyId::DOT),
-			// 1 BTC = 1200 DOT, right shift the decimal point (12-10) places
-			Some(Price::saturating_from_integer(1200_00))
-		);
-		assert_eq!(
-			PricesModule::get_relative_price(CurrencyId::ETH, CurrencyId::DOT),
-			// 1 DOT = 48000 * 10^10, 1 ETH = 1500.
-			// 1 ETH = 37.5 DOT, left shift the decimal point 10 places
-			Some(Price::saturating_from_rational(375, 1000000000))
-		);
-		assert_eq!(
-			// 1 BTC = 48000 * 10^10, 1 KSM = 250.
-			// 1 BTC = 192 KSM, right shift the decimal point 10 places
-			PricesModule::get_relative_price(CurrencyId::BTC, CurrencyId::KSM),
-			Some(Price::saturating_from_integer(192_0000000000_u128))
-		);
-		assert_eq!(
-			PricesModule::get_relative_price(CurrencyId::BTC, CurrencyId::BTC),
-			Some(Price::saturating_from_rational(1, 1)) // 1 BTC = 1 BTC,
-		);
-		assert_eq!(PricesModule::get_relative_price(CurrencyId::DOT, CurrencyId::MNT), None);
-	});
-}
-
-#[test]
 fn lock_price_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_eq!(
 			PricesModule::get_underlying_price(CurrencyId::BTC),
-			Some(Price::saturating_from_integer(48000_0000000000u128))
+			Some(Price::saturating_from_integer(48_000))
 		);
-		LockedPrice::<Test>::insert(CurrencyId::BTC, Price::saturating_from_integer(80000));
+		LockedPrice::<Test>::insert(CurrencyId::BTC, Price::saturating_from_integer(80_000));
 		assert_eq!(
 			PricesModule::get_underlying_price(CurrencyId::BTC),
-			Some(Price::saturating_from_integer(800000000000000u128))
+			Some(Price::saturating_from_integer(80_000))
 		);
 	});
 }

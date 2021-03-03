@@ -5,10 +5,10 @@ use crate as module_prices;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system::{self as system, EnsureSignedBy};
 use minterest_primitives::CurrencyId;
-use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::testing::Header;
 use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
+use sp_runtime::FixedPointNumber;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -79,22 +79,10 @@ ord_parameter_types! {
 	pub const One: AccountId = 1;
 }
 
-parameter_type_with_key! {
-	pub TokenDecimals: |currency_id: CurrencyId| -> u32 {
-		match currency_id {
-			&CurrencyId::MNT => 12,
-			&CurrencyId::DOT | &CurrencyId::MDOT => 10,
-			&CurrencyId::BTC | &CurrencyId::MBTC  => 8,
-			_ => 18,
-		}
-	};
-}
-
 impl module_prices::Config for Test {
 	type Event = Event;
 	type Source = MockDataProvider;
 	type LockOrigin = EnsureSignedBy<One, AccountId>;
-	type TokenDecimals = TokenDecimals;
 }
 
 type AccountId = u64;
