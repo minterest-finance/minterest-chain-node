@@ -1,7 +1,7 @@
 use crate::{
 	AccountId, Balance, Block,
 	CurrencyId::{self, DOT, ETH},
-	Event, LiquidationPoolsModuleId, LiquidityPoolsModuleId, Rate, Runtime, DOLLARS,
+	Event, LiquidationPoolsModuleId, LiquidityPoolsModuleId, Oracle, Rate, Runtime, DOLLARS,
 };
 use accounts_rpc_runtime_api::runtime_decl_for_AccountsApi::AccountsApi;
 use controller::{ControllerData, PauseKeeper};
@@ -818,7 +818,7 @@ fn partial_liquidation_should_not_work() {
 }
 
 #[test]
-fn test_pool_balance_using_rpc() {
+fn test_user_balance_using_rpc() {
 	ExtBuilder::default()
 		.pool_initial(CurrencyId::DOT)
 		.pool_initial(CurrencyId::ETH)
@@ -884,6 +884,143 @@ fn test_pool_balance_using_rpc() {
 			assert!(account_data.total_supply > dollars(240_000));
 			assert!(account_data.total_borrowed > dollars(40_000));
 		});
+}
+
+#[test]
+fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
+	ExtBuilder::default()
+		.pool_initial(CurrencyId::DOT)
+		.pool_initial(CurrencyId::ETH)
+		.build()
+		.execute_with(|| {
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
+			System::set_block_number(50);
+			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
+			System::set_block_number(100);
+			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(30_000)));
+			System::set_block_number(150);
+			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(10_000)));
+			System::set_block_number(200);
+
+			let account_data_before_repay_all =
+				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
+
+			let oracle_price = Oracle::get_underlying_price(DOT).unwrap();
+
+			let bob_balance_before_repay_all = Currencies::free_balance(DOT, &BOB::get());
+
+			let expected_free_balance_bob = bob_balance_before_repay_all
+				+ (Rate::from_inner(
+					account_data_before_repay_all.total_supply - account_data_before_repay_all.total_borrowed,
+				) / oracle_price)
+					.into_inner();
+
+			assert_ok!(MinterestProtocol::repay_all(bob(), DOT));
+			assert_ok!(MinterestProtocol::redeem(bob(), DOT));
+
+			assert_eq!(Currencies::free_balance(DOT, &BOB::get()), expected_free_balance_bob);
+		})
+}
+
+#[test]
+fn test_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc() {
+	ExtBuilder::default()
+		.pool_initial(CurrencyId::DOT)
+		.pool_initial(CurrencyId::ETH)
+		.build()
+		.execute_with(|| {
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
+			System::set_block_number(50);
+			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
+			System::set_block_number(100);
+			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(30_000)));
+			System::set_block_number(150);
+
+			let account_data_before_repay =
+				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
+
+			let oracle_price = Oracle::get_underlying_price(DOT).unwrap();
+
+			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(10_000)));
+			let account_data_after_repay =
+				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
+
+			assert_eq!(
+				LiquidityPools::pool_user_data(CurrencyId::DOT, BOB::get()).total_borrowed,
+				(Rate::from_inner(account_data_after_repay.total_borrowed) / oracle_price).into_inner()
+			);
+			assert_eq!(
+				dollars(10_000),
+				(Rate::from_inner(account_data_before_repay.total_borrowed - account_data_after_repay.total_borrowed)
+					/ oracle_price)
+					.into_inner()
+			);
+		})
+}
+
+#[test]
+fn test_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rpc() {
+	ExtBuilder::default()
+		.pool_initial(CurrencyId::DOT)
+		.pool_initial(CurrencyId::ETH)
+		.build()
+		.execute_with(|| {
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
+			System::set_block_number(50);
+			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
+			System::set_block_number(100);
+
+			let account_data_before_borrow =
+				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
+
+			let oracle_price = Oracle::get_underlying_price(DOT).unwrap();
+
+			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(30_000)));
+			let account_data_after_borrow =
+				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
+
+			assert_eq!(
+				LiquidityPools::pool_user_data(CurrencyId::DOT, BOB::get()).total_borrowed,
+				(Rate::from_inner(account_data_after_borrow.total_borrowed) / oracle_price).into_inner()
+			);
+			assert_eq!(
+				dollars(30_000),
+				(Rate::from_inner(
+					account_data_after_borrow.total_borrowed - account_data_before_borrow.total_borrowed
+				) / oracle_price)
+					.into_inner()
+			);
+		})
+}
+
+#[test]
+fn test_total_borrowed_difference_is_ok_before_and_after_deposit_using_balance_rpc() {
+	ExtBuilder::default()
+		.pool_initial(CurrencyId::DOT)
+		.pool_initial(CurrencyId::ETH)
+		.build()
+		.execute_with(|| {
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
+			System::set_block_number(50);
+			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
+			System::set_block_number(100);
+
+			let account_data_before_deposit =
+				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
+
+			let oracle_price = Oracle::get_underlying_price(DOT).unwrap();
+
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(30_000)));
+			let account_data_after_deposit =
+				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
+
+			assert_eq!(
+				dollars(30_000),
+				(Rate::from_inner(account_data_after_deposit.total_supply - account_data_before_deposit.total_supply)
+					/ oracle_price)
+					.into_inner()
+			);
+		})
 }
 
 #[test]
