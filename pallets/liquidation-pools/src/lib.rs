@@ -134,7 +134,7 @@ pub mod module {
 		fn default() -> Self {
 			GenesisConfig {
 				liquidation_pool_params: LiquidationPoolCommonData {
-					timestamp: TryInto::<T::BlockNumber>::try_into(1 as u32)
+					timestamp: TryInto::<T::BlockNumber>::try_into(1u32)
 						.ok()
 						.expect(" result convert failed"),
 					balancing_period: 600, // Blocks per 10 minutes.
