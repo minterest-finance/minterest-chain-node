@@ -558,6 +558,12 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl accounts_rpc_runtime_api::AccountsApi<Block, AccountId,> for Runtime {
+			fn is_admin(caller: AccountId) -> Option<bool> {
+				Some(Accounts::is_admin_internal(&caller))
+			}
+		}
+
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
 		fn dispatch_benchmark(

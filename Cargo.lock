@@ -27,6 +27,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "accounts-rpc"
+version = "0.6.1"
+dependencies = [
+ "accounts-rpc-runtime-api",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+]
+
+[[package]]
+name = "accounts-rpc-runtime-api"
+version = "0.6.1"
+dependencies = [
+ "parity-scale-codec",
+ "serde_json",
+ "sp-api",
+ "sp-core",
+ "sp-std",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3579,6 +3604,7 @@ dependencies = [
 name = "minterest-rpc"
 version = "0.5.0"
 dependencies = [
+ "accounts-rpc",
  "controller-rpc",
  "jsonrpc-core",
  "node-minterest-runtime",
@@ -3840,6 +3866,7 @@ name = "node-minterest-runtime"
 version = "0.6.0"
 dependencies = [
  "accounts",
+ "accounts-rpc-runtime-api",
  "controller",
  "controller-rpc-runtime-api",
  "frame-benchmarking",
