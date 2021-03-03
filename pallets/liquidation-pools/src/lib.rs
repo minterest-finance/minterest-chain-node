@@ -26,7 +26,7 @@ use sp_runtime::{
 		Duration,
 	},
 	transaction_validity::TransactionPriority,
-	ModuleId, RuntimeDebug,
+	FixedPointNumber, ModuleId, RuntimeDebug,
 };
 use sp_std::{convert::TryInto, prelude::*, result};
 
@@ -58,10 +58,12 @@ pub struct LiquidationPoolCommonData<BlockNumber> {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct LiquidationPool {
+	/// Balance Deviation Threshold represents how much current value in a pool may differ from
+	/// ideal value (defined by balance_ratio).
 	pub deviation_threshold: Rate,
 }
 
-// type LiquidityPools<T> = liquidity_pools::Module<T>;
+type LiquidityPools<T> = liquidity_pools::Module<T>;
 type Accounts<T> = accounts::Module<T>;
 
 #[frame_support::pallet]
@@ -98,6 +100,8 @@ pub mod module {
 		RequireAdmin,
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
+		/// Value must be in range [0..1]
+		NotValidDeviationThresholdValue,
 	}
 
 	#[pallet::event]
@@ -105,6 +109,8 @@ pub mod module {
 	pub enum Event<T: Config> {
 		///  Balancing period has been successfully changed: \[who, new_period\]
 		BalancingPeriodChanged(T::AccountId, u32),
+		///  Deviation Threshold has been successfully changed: \[who, new_threshold_value\]
+		DeviationThresholdChanged(T::AccountId, Rate),
 	}
 
 	#[pallet::storage]
@@ -192,6 +198,41 @@ pub mod module {
 			LiquidationPoolParams::<T>::mutate(|x| x.balancing_period = new_period);
 
 			Self::deposit_event(Event::BalancingPeriodChanged(sender, new_period));
+
+			Ok(().into())
+		}
+
+		/// Set new value of deviation threshold.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `new_threshold`: New value of deviation threshold.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn set_deviation_threshold(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			new_threshold: u128,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+
+			ensure!(
+				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+
+			let new_deviation_threshold = Rate::from_inner(new_threshold);
+
+			ensure!(
+				(Rate::zero() <= new_deviation_threshold && new_deviation_threshold <= Rate::one()),
+				Error::<T>::NotValidDeviationThresholdValue
+			);
+
+			// Write new value into storage.
+			LiquidationPools::<T>::mutate(pool_id, |x| x.deviation_threshold = new_deviation_threshold);
+
+			Self::deposit_event(Event::DeviationThresholdChanged(sender, new_deviation_threshold));
 
 			Ok(().into())
 		}
