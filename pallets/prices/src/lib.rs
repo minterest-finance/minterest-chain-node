@@ -16,6 +16,7 @@ use frame_support::{pallet_prelude::*, traits::Get, transactional};
 use minterest_primitives::{CurrencyId, Price};
 use orml_traits::{DataFeeder, DataProvider};
 use pallet_traits::PriceProvider;
+use sp_std::vec::Vec;
 
 pub use module::*;
 
@@ -84,8 +85,8 @@ pub mod module {
 
 			ensure!(
 				T::EnabledUnderlyingAssetId::get()
-					.iter()
-					.any(|asset_id| *asset_id == currency_id),
+					.into_iter()
+					.any(|asset_id| asset_id == currency_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -105,8 +106,8 @@ pub mod module {
 
 			ensure!(
 				T::EnabledUnderlyingAssetId::get()
-					.iter()
-					.any(|asset_id| *asset_id == currency_id),
+					.into_iter()
+					.any(|asset_id| asset_id == currency_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
