@@ -12,7 +12,7 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, traits::Get, transactional};
 use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
 use frame_system::{ensure_signed, pallet_prelude::*};
-use minterest_primitives::{Balance, CurrencyId};
+use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
 use orml_utilities::OffchainErr;
 use pallet_traits::PoolsManager;
@@ -52,6 +52,13 @@ pub struct LiquidationPoolCommonData<BlockNumber> {
 	pub timestamp: BlockNumber,
 	/// Balancing pool frequency.
 	pub balancing_period: u32,
+}
+
+/// Liquidation Pool metadata
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct LiquidationPool {
+	pub deviation_threshold: Rate,
 }
 
 // type LiquidityPools<T> = liquidity_pools::Module<T>;
@@ -105,9 +112,15 @@ pub mod module {
 	pub(crate) type LiquidationPoolParams<T: Config> =
 		StorageValue<_, LiquidationPoolCommonData<T::BlockNumber>, ValueQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn liquidation_pools)]
+	pub(crate) type LiquidationPools<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, LiquidationPool, ValueQuery>;
+
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub liquidation_pool_params: LiquidationPoolCommonData<T::BlockNumber>,
+		#[allow(clippy::type_complexity)]
+		pub liquidation_pools: Vec<(CurrencyId, LiquidationPool)>,
 	}
 
 	#[cfg(feature = "std")]
@@ -118,6 +131,7 @@ pub mod module {
 					timestamp: Default::default(),
 					balancing_period: 600, // Blocks per 10 minutes.
 				},
+				liquidation_pools: vec![],
 			}
 		}
 	}
@@ -126,6 +140,14 @@ pub mod module {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			LiquidationPoolParams::<T>::put(self.liquidation_pool_params.clone());
+			self.liquidation_pools.iter().for_each(|(currency_id, pool_data)| {
+				LiquidationPools::<T>::insert(
+					currency_id,
+					LiquidationPool {
+						deviation_threshold: pool_data.deviation_threshold,
+					},
+				)
+			});
 		}
 	}
 
