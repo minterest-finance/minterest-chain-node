@@ -699,16 +699,11 @@ impl<T: Config> Pallet<T> {
 						total_insurance,
 						total_borrowed,
 					)?;
-					let underlying_balance = Rate::from_inner(wrapped_balance)
+					supply_in_usd += Rate::from_inner(wrapped_balance)
 						.checked_mul(&current_exchange_rate)
+						.and_then(|v| v.checked_mul(&oracle_price))
 						.map(|x| x.into_inner())
 						.ok_or(Error::<T>::NumOverflow)?;
-
-					let balance_in_usd = Rate::from_inner(underlying_balance)
-						.checked_mul(&oracle_price)
-						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?;
-					supply_in_usd += balance_in_usd;
 				}
 				if has_borrow_balance {
 					let borrow_balance = Self::borrow_balance_by_interest_params(&who, pool_id, borrow_index)?;
