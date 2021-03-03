@@ -380,6 +380,7 @@ impl module_prices::Config for Runtime {
 	type Event = Event;
 	type Source = AggregatedDataProvider;
 	type LockOrigin = EnsureRootOrTwoThirdsGeneralCouncil;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
 }
 
 parameter_types! {

@@ -12,7 +12,7 @@
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
 
-use frame_support::{pallet_prelude::*, transactional};
+use frame_support::{pallet_prelude::*, traits::Get, transactional};
 use minterest_primitives::{CurrencyId, Price};
 use orml_traits::{DataFeeder, DataProvider};
 use pallet_traits::PriceProvider;
@@ -39,6 +39,15 @@ pub mod module {
 
 		/// The origin which may lock and unlock prices feed to system.
 		type LockOrigin: EnsureOrigin<Self::Origin>;
+
+		/// Enabled underlying asset IDs.
+		type EnabledUnderlyingAssetId: Get<Vec<CurrencyId>>;
+	}
+
+	#[pallet::error]
+	pub enum Error<T> {
+		/// The currency is not enabled in protocol.
+		NotValidUnderlyingAssetId,
 	}
 
 	#[pallet::event]
@@ -72,6 +81,14 @@ pub mod module {
 		#[transactional]
 		pub fn lock_price(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 			T::LockOrigin::ensure_origin(origin)?;
+
+			ensure!(
+				T::EnabledUnderlyingAssetId::get()
+					.iter()
+					.any(|asset_id| *asset_id == currency_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+
 			<Pallet<T> as PriceProvider<CurrencyId>>::lock_price(currency_id);
 			Ok(().into())
 		}
@@ -85,6 +102,14 @@ pub mod module {
 		#[transactional]
 		pub fn unlock_price(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 			T::LockOrigin::ensure_origin(origin)?;
+
+			ensure!(
+				T::EnabledUnderlyingAssetId::get()
+					.iter()
+					.any(|asset_id| *asset_id == currency_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+
 			<Pallet<T> as PriceProvider<CurrencyId>>::unlock_price(currency_id);
 			Ok(().into())
 		}

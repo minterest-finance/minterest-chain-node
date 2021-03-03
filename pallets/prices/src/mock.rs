@@ -4,7 +4,7 @@ use super::*;
 use crate as module_prices;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system::{self as system, EnsureSignedBy};
-use minterest_primitives::CurrencyId;
+use minterest_primitives::{CurrencyId, CurrencyPair};
 use sp_core::H256;
 use sp_runtime::testing::Header;
 use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
@@ -79,10 +79,23 @@ ord_parameter_types! {
 	pub const One: AccountId = 1;
 }
 
+parameter_types! {
+	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
+		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
+		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
+		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
+		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
+	];
+	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+			.map(|currency_pair| currency_pair.underlying_id)
+			.collect();
+}
+
 impl module_prices::Config for Test {
 	type Event = Event;
 	type Source = MockDataProvider;
 	type LockOrigin = EnsureSignedBy<One, AccountId>;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
 }
 
 type AccountId = u64;
