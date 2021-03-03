@@ -46,15 +46,15 @@ mod tests;
 
 /// Liquidation Pool metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct LiquidationPool<BlockNumber> {
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct LiquidationPoolCommonData<BlockNumber> {
 	/// Block number that pool was last balancing attempted at.
 	pub timestamp: BlockNumber,
 	/// Balancing pool frequency.
 	pub balancing_period: u32,
 }
 
-type LiquidityPools<T> = liquidity_pools::Module<T>;
+// type LiquidityPools<T> = liquidity_pools::Module<T>;
 type Accounts<T> = accounts::Module<T>;
 
 #[frame_support::pallet]
@@ -101,21 +101,23 @@ pub mod module {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn liquidation_pools)]
-	pub(crate) type LiquidationPools<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyId, LiquidationPool<T::BlockNumber>, ValueQuery>;
+	#[pallet::getter(fn liquidation_pool_params)]
+	pub(crate) type LiquidationPoolParams<T: Config> =
+		StorageValue<_, LiquidationPoolCommonData<T::BlockNumber>, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		#[allow(clippy::type_complexity)]
-		pub liquidation_pools: Vec<(CurrencyId, LiquidationPool<T::BlockNumber>)>,
+		pub liquidation_pool_params: LiquidationPoolCommonData<T::BlockNumber>,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			GenesisConfig {
-				liquidation_pools: vec![],
+				liquidation_pool_params: LiquidationPoolCommonData {
+					timestamp: Default::default(),
+					balancing_period: 600, // Blocks per 10 minutes.
+				},
 			}
 		}
 	}
@@ -123,15 +125,7 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.liquidation_pools.iter().for_each(|(currency_id, pool_data)| {
-				LiquidationPools::<T>::insert(
-					currency_id,
-					LiquidationPool {
-						timestamp: pool_data.timestamp,
-						balancing_period: pool_data.balancing_period,
-					},
-				)
-			});
+			LiquidationPoolParams::<T>::put(self.liquidation_pool_params.clone());
 		}
 	}
 
@@ -168,21 +162,12 @@ pub mod module {
 		/// The dispatch origin of this call must be Administrator.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_balancing_period(
-			origin: OriginFor<T>,
-			pool_id: CurrencyId,
-			new_period: u32,
-		) -> DispatchResultWithPostInfo {
+		pub fn set_balancing_period(origin: OriginFor<T>, new_period: u32) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 
-			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
-
 			// Write new value into storage.
-			LiquidationPools::<T>::mutate(pool_id, |x| x.balancing_period = new_period);
+			LiquidationPoolParams::<T>::mutate(|x| x.balancing_period = new_period);
 
 			Self::deposit_event(Event::BalancingPeriodChanged(sender, new_period));
 
@@ -235,7 +220,7 @@ impl<T: Config> Pallet<T> {
 		let currency_id = underlying_asset_ids[(pool_to_check as usize)];
 		let iteration_start_time = sp_io::offchain::timestamp();
 
-		let dead_line = Self::calculate_deadline(currency_id).map_err(|_| OffchainErr::OffchainLock)?;
+		let dead_line = Self::calculate_deadline().map_err(|_| OffchainErr::OffchainLock)?;
 
 		if <frame_system::Module<T>>::block_number() > dead_line {
 			Self::submit_unsigned_tx(currency_id);
@@ -267,9 +252,9 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	fn calculate_deadline(pool_id: CurrencyId) -> result::Result<T::BlockNumber, DispatchError> {
-		let timestamp = Self::liquidation_pools(pool_id).timestamp;
-		let period = Self::liquidation_pools(pool_id).balancing_period;
+	fn calculate_deadline() -> result::Result<T::BlockNumber, DispatchError> {
+		let timestamp = Self::liquidation_pool_params().timestamp;
+		let period = Self::liquidation_pool_params().balancing_period;
 
 		let timestamp_as_u32 = TryInto::<u32>::try_into(timestamp)
 			.ok()
@@ -314,8 +299,8 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	}
 
 	/// Check if pool exists
-	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
-		LiquidationPools::<T>::contains_key(underlying_asset_id)
+	fn pool_exists(_underlying_asset_id: &CurrencyId) -> bool {
+		Default::default()
 	}
 }
 

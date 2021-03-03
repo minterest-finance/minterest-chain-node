@@ -173,7 +173,7 @@ pub fn alice() -> Origin {
 }
 
 pub struct ExternalityBuilder {
-	liquidation_pools: Vec<(CurrencyId, LiquidationPool<BlockNumber>)>,
+	liquidation_pools: Vec<(CurrencyId, LiquidationPoolCommonData<BlockNumber>)>,
 }
 
 impl Default for ExternalityBuilder {
@@ -181,7 +181,7 @@ impl Default for ExternalityBuilder {
 		Self {
 			liquidation_pools: vec![(
 				CurrencyId::DOT,
-				LiquidationPool {
+				LiquidationPoolCommonData {
 					timestamp: 1,
 					balancing_period: 600, // Blocks per 10 minutes.
 				},
@@ -199,7 +199,7 @@ impl ExternalityBuilder {
 	) -> Self {
 		self.liquidation_pools.push((
 			pool_id,
-			LiquidationPool {
+			LiquidationPoolCommonData {
 				timestamp,
 				balancing_period,
 			},
