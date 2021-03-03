@@ -3,6 +3,7 @@ use crate::{
 	CurrencyId::{self, DOT, ETH},
 	Event, LiquidationPoolsModuleId, LiquidityPoolsModuleId, Rate, Runtime, DOLLARS,
 };
+use accounts_rpc_runtime_api::runtime_decl_for_AccountsApi::AccountsApi;
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
 use controller_rpc_runtime_api::PoolState;
@@ -263,6 +264,10 @@ fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 
 fn get_total_supply_and_borrowed_usd_balance_rpc(account_id: AccountId) -> Option<UserPoolBalanceData> {
 	<Runtime as ControllerApi<Block>>::get_total_supply_and_borrowed_usd_balance(account_id)
+}
+
+fn is_admin_rpc(caller: AccountId) -> Option<bool> {
+	<Runtime as AccountsApi<Block, AccountId>>::is_admin(caller)
 }
 
 fn dollars(amount: u128) -> u128 {
@@ -879,4 +884,12 @@ fn test_pool_balance_using_rpc() {
 			assert!(account_data.total_supply > dollars(240_000));
 			assert!(account_data.total_borrowed > dollars(40_000));
 		});
+}
+
+#[test]
+fn is_admin_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_eq!(is_admin_rpc(ALICE::get()), Some(true));
+		assert_eq!(is_admin_rpc(BOB::get()), Some(false));
+	})
 }
