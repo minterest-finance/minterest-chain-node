@@ -438,14 +438,10 @@ impl<T: Config> Pallet<T> {
 				let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
 				let user_balance_underlying_asset =
 					Self::convert_from_wrapped(wrapped_id, user_balance_wrapped_tokens).ok()?;
-				let oracle_price = T::PriceSource::get_underlying_price(pool_id)
-					.ok_or(Error::<T>::InvalidFeedPrice)
-					.ok()?;
+				let oracle_price = T::PriceSource::get_underlying_price(pool_id)?;
 				let total_deposit_in_usd = Rate::from_inner(user_balance_underlying_asset)
 					.checked_mul(&oracle_price)
-					.map(|x| x.into_inner())
-					.ok_or(Error::<T>::NumOverflow)
-					.ok()?;
+					.map(|x| x.into_inner())?;
 
 				Some((pool_id, total_deposit_in_usd))
 			})
