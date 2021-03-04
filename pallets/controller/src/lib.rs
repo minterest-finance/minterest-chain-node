@@ -44,6 +44,12 @@ pub struct ControllerData<BlockNumber> {
 
 	/// Determines how much a user can borrow.
 	pub collateral_factor: Rate,
+
+	/// Defines if borrow cap is enabled
+	pub borrow_cap_enabled: bool,
+
+	/// Maximum total borrow amount per pool in usd
+	pub borrow_cap: Balance,
 }
 
 /// The Administrator can pause certain actions as a safety mechanism.
@@ -115,6 +121,8 @@ pub mod module {
 		CollateralFactorCannotBeGreaterThanOne,
 		/// Collateral factor cannot be set to 0.
 		CollateralFactorCannotBeZero,
+		/// Borrow cap is reached
+		BorrowCapReached,
 	}
 
 	#[pallet::event]
@@ -176,6 +184,8 @@ pub mod module {
 						insurance_factor: controller_data.insurance_factor,
 						max_borrow_rate: controller_data.max_borrow_rate,
 						collateral_factor: controller_data.collateral_factor,
+						borrow_cap_enabled: controller_data.borrow_cap_enabled,
+						borrow_cap: controller_data.borrow_cap,
 					},
 				)
 			});
@@ -615,7 +625,20 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		borrow_amount: Balance,
 	) -> DispatchResult {
-		//FIXME: add borrowCap checking
+		if Self::is_borrow_cap_enabled(underlying_asset_id) {
+			let oracle_price = <Oracle<T>>::get_underlying_price(underlying_asset_id)?;
+			let pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id);
+			let new_total_borrows = pool_total_borrowed
+				.checked_add(borrow_amount)
+				.ok_or(Error::<T>::NumOverflow)?;
+			let new_total_borrows_in_usd = Rate::from_inner(new_total_borrows)
+				.checked_mul(&oracle_price)
+				.map(|x| x.into_inner())
+				.ok_or(Error::<T>::NumOverflow)?;
+
+			let borrow_cap = Self::get_borrow_cap(underlying_asset_id);
+			ensure!(new_total_borrows_in_usd <= borrow_cap, Error::<T>::BorrowCapReached);
+		}
 
 		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, underlying_asset_id, 0, borrow_amount)?;
 
@@ -854,6 +877,16 @@ impl<T: Config> Pallet<T> {
 	/// Get the insurance factor.
 	fn get_insurance_factor(pool_id: CurrencyId) -> Rate {
 		Self::controller_dates(pool_id).insurance_factor
+	}
+
+	/// Gets the borrow cap amount
+	fn get_borrow_cap(pool_id: CurrencyId) -> Balance {
+		Self::controller_dates(pool_id).borrow_cap
+	}
+
+	/// Checks if borrow cap is enabled
+	fn is_borrow_cap_enabled(pool_id: CurrencyId) -> bool {
+		Self::controller_dates(pool_id).borrow_cap_enabled
 	}
 }
 
