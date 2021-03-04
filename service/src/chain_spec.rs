@@ -357,6 +357,7 @@ fn testnet_genesis(
 					},
 				),
 			],
+			whitelist_mode: false,
 		}),
 		accounts: Some(AccountsConfig {
 			allowed_accounts: vec![(get_account_id_from_seed::<sr25519::Public>("Alice"), ())],

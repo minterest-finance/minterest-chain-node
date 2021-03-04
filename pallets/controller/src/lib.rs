@@ -142,16 +142,23 @@ pub mod module {
 	pub(crate) type ControllerDates<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, ControllerData<T::BlockNumber>, ValueQuery>;
 
-	/// The Pause Guardian can pause certain actions as a safety mechanism
+	/// The Pause Guardian can pause certain actions as a safety mechanism.
 	#[pallet::storage]
 	#[pallet::getter(fn pause_keepers)]
 	pub(crate) type PauseKeepers<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, PauseKeeper, ValueQuery>;
+
+	/// Boolean variable. Protocol operation mode. In whitelist mode, only members
+	/// 'WhitelistCouncil' can work with protocols.
+	#[pallet::storage]
+	#[pallet::getter(fn whitelist_mode)]
+	pub type WhitelistMode<T: Config> = StorageValue<_, bool, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		#[allow(clippy::type_complexity)]
 		pub controller_dates: Vec<(CurrencyId, ControllerData<T::BlockNumber>)>,
 		pub pause_keepers: Vec<(CurrencyId, PauseKeeper)>,
+		pub whitelist_mode: bool,
 	}
 
 	#[cfg(feature = "std")]
@@ -160,6 +167,7 @@ pub mod module {
 			GenesisConfig {
 				controller_dates: vec![],
 				pause_keepers: vec![],
+				whitelist_mode: false,
 			}
 		}
 	}
@@ -190,6 +198,7 @@ pub mod module {
 					},
 				)
 			});
+			WhitelistMode::<T>::put(self.whitelist_mode.clone());
 		}
 	}
 
