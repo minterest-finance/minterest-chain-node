@@ -34,7 +34,8 @@
       "balancing_period": "u32"
     },
     "LiquidationPool": {
-      "deviation_threshold": "Rate"
+      "deviation_threshold": "Rate",
+      "balance_ratio": "Rate"
     },
     "PoolUserData" : {
       "total_borrowed": "Balance",

@@ -451,24 +451,28 @@ fn testnet_genesis(
 					CurrencyId::DOT,
 					LiquidationPool {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
+						balance_ratio: FixedU128::saturating_from_rational(2, 10),
 					},
 				),
 				(
 					CurrencyId::ETH,
 					LiquidationPool {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
+						balance_ratio: FixedU128::saturating_from_rational(2, 10),
 					},
 				),
 				(
 					CurrencyId::BTC,
 					LiquidationPool {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
+						balance_ratio: FixedU128::saturating_from_rational(2, 10),
 					},
 				),
 				(
 					CurrencyId::KSM,
 					LiquidationPool {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
+						balance_ratio: FixedU128::saturating_from_rational(2, 10),
 					},
 				),
 			],
