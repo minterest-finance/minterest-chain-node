@@ -332,6 +332,7 @@ impl minterest_protocol::Config for Runtime {
 	type Event = Event;
 	type Borrowing = LiquidityPools;
 	type ManagerLiquidityPools = LiquidityPools;
+	type OperationOrigin = pallet_collective::EnsureMember<AccountId, WhitelistCouncilInstance>;
 }
 
 parameter_type_with_key! {

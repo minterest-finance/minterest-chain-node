@@ -183,6 +183,7 @@ impl ExtBuilder {
 					},
 				),
 			],
+			whitelist_mode: false,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -237,7 +238,7 @@ impl ExtBuilder {
 		.assimilate_storage::<Runtime>(&mut t)
 		.unwrap();
 
-		pallet_membership::GenesisConfig::<Runtime, pallet_membership::Instance2> {
+		pallet_membership::GenesisConfig::<Runtime, pallet_membership::Instance3> {
 			members: vec![ORACLE1::get().clone(), ORACLE2::get().clone(), ORACLE3::get().clone()],
 			phantom: Default::default(),
 		}

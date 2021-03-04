@@ -8,8 +8,8 @@
 
 #[cfg(test)]
 mod tests {
-	use frame_support::{assert_noop, assert_ok, pallet_prelude::GenesisBuild, parameter_types};
-	use frame_system::{self as system};
+	use frame_support::{assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
+	use frame_system::{self as system, EnsureSignedBy};
 	use liquidity_pools::{Pool, PoolUserData};
 	use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 	use orml_currencies::Currency;
@@ -166,10 +166,15 @@ mod tests {
 		type EnabledWrappedTokensId = EnabledWrappedTokensId;
 	}
 
+	ord_parameter_types! {
+		pub const Four: AccountId = 4;
+	}
+
 	impl minterest_protocol::Config for Test {
 		type Event = Event;
 		type Borrowing = liquidity_pools::Module<Test>;
 		type ManagerLiquidityPools = liquidity_pools::Module<Test>;
+		type OperationOrigin = EnsureSignedBy<Four, AccountId>;
 	}
 
 	impl controller::Config for Test {
@@ -366,6 +371,7 @@ mod tests {
 						},
 					),
 				],
+				whitelist_mode: false,
 			}
 			.assimilate_storage(&mut t)
 			.unwrap();

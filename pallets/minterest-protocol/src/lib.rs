@@ -43,6 +43,10 @@ pub mod module {
 
 		/// The basic liquidity pools.
 		type ManagerLiquidityPools: PoolsManager<Self::AccountId>;
+
+		/// The origin which may call deposit/redeem/borrow/repay in Whitelist mode.
+		/// Root can always do this.
+		type OperationOrigin: EnsureOrigin<Self::Origin>;
 	}
 
 	#[pallet::error]
@@ -141,7 +145,12 @@ pub mod module {
 			underlying_asset_id: CurrencyId,
 			#[pallet::compact] underlying_amount: Balance,
 		) -> DispatchResultWithPostInfo {
+			if controller::WhitelistMode::<T>::get() == true {
+				T::OperationOrigin::ensure_origin(origin.clone())?;
+			}
+
 			let who = ensure_signed(origin)?;
+
 			let (_, wrapped_id, wrapped_amount) = Self::do_deposit(&who, underlying_asset_id, underlying_amount)?;
 			Self::deposit_event(Event::Deposited(
 				who,
@@ -161,6 +170,9 @@ pub mod module {
 		#[pallet::weight(10_000)]
 		#[transactional]
 		pub fn redeem(origin: OriginFor<T>, underlying_asset_id: CurrencyId) -> DispatchResultWithPostInfo {
+			if controller::WhitelistMode::<T>::get() == true {
+				T::OperationOrigin::ensure_origin(origin.clone())?;
+			}
 			let who = ensure_signed(origin)?;
 			let (underlying_amount, wrapped_id, wrapped_amount) =
 				Self::do_redeem(&who, underlying_asset_id, Balance::zero(), Balance::zero(), true)?;
@@ -213,6 +225,9 @@ pub mod module {
 			wrapped_id: CurrencyId,
 			#[pallet::compact] wrapped_amount: Balance,
 		) -> DispatchResultWithPostInfo {
+			if controller::WhitelistMode::<T>::get() == true {
+				T::OperationOrigin::ensure_origin(origin.clone())?;
+			}
 			let who = ensure_signed(origin)?;
 			let underlying_asset_id = <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id)
 				.map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
@@ -240,6 +255,9 @@ pub mod module {
 			underlying_asset_id: CurrencyId,
 			borrow_amount: Balance,
 		) -> DispatchResultWithPostInfo {
+			if controller::WhitelistMode::<T>::get() == true {
+				T::OperationOrigin::ensure_origin(origin.clone())?;
+			}
 			let who = ensure_signed(origin)?;
 			Self::do_borrow(&who, underlying_asset_id, borrow_amount)?;
 			Self::deposit_event(Event::Borrowed(who, underlying_asset_id, borrow_amount));
@@ -257,6 +275,9 @@ pub mod module {
 			underlying_asset_id: CurrencyId,
 			#[pallet::compact] repay_amount: Balance,
 		) -> DispatchResultWithPostInfo {
+			if controller::WhitelistMode::<T>::get() == true {
+				T::OperationOrigin::ensure_origin(origin.clone())?;
+			}
 			let who = ensure_signed(origin)?;
 			Self::do_repay(&who, &who, underlying_asset_id, repay_amount, false)?;
 			Self::deposit_event(Event::Repaid(who, underlying_asset_id, repay_amount));
@@ -269,6 +290,9 @@ pub mod module {
 		#[pallet::weight(10_000)]
 		#[transactional]
 		pub fn repay_all(origin: OriginFor<T>, underlying_asset_id: CurrencyId) -> DispatchResultWithPostInfo {
+			if controller::WhitelistMode::<T>::get() == true {
+				T::OperationOrigin::ensure_origin(origin.clone())?;
+			}
 			let who = ensure_signed(origin)?;
 			let repay_amount = Self::do_repay(&who, &who, underlying_asset_id, Balance::zero(), true)?;
 			Self::deposit_event(Event::Repaid(who, underlying_asset_id, repay_amount));
@@ -288,6 +312,9 @@ pub mod module {
 			borrower: T::AccountId,
 			repay_amount: Balance,
 		) -> DispatchResultWithPostInfo {
+			if controller::WhitelistMode::<T>::get() == true {
+				T::OperationOrigin::ensure_origin(origin.clone())?;
+			}
 			let who = ensure_signed(origin)?;
 			let repay_amount = Self::do_repay(&who, &borrower, underlying_asset_id, repay_amount, false)?;
 			Self::deposit_event(Event::Repaid(who, underlying_asset_id, repay_amount));
@@ -307,6 +334,9 @@ pub mod module {
 			wrapped_id: CurrencyId,
 			transfer_amount: Balance,
 		) -> DispatchResultWithPostInfo {
+			if controller::WhitelistMode::<T>::get() == true {
+				T::OperationOrigin::ensure_origin(origin.clone())?;
+			}
 			let who = ensure_signed(origin)?;
 			Self::do_transfer(&who, &receiver, wrapped_id, transfer_amount)?;
 			Self::deposit_event(Event::Transferred(who, receiver, wrapped_id, transfer_amount));
@@ -317,6 +347,9 @@ pub mod module {
 		#[pallet::weight(10_000)]
 		#[transactional]
 		pub fn enable_as_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
+			if controller::WhitelistMode::<T>::get() == true {
+				T::OperationOrigin::ensure_origin(origin.clone())?;
+			}
 			let sender = ensure_signed(origin)?;
 			ensure!(
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
@@ -342,6 +375,9 @@ pub mod module {
 		#[pallet::weight(10_000)]
 		#[transactional]
 		pub fn disable_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
+			if controller::WhitelistMode::<T>::get() == true {
+				T::OperationOrigin::ensure_origin(origin.clone())?;
+			}
 			let sender = ensure_signed(origin)?;
 			ensure!(
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),

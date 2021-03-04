@@ -4,8 +4,9 @@ use super::*;
 use crate as minterest_protocol;
 use controller::{ControllerData, PauseKeeper};
 use frame_support::pallet_prelude::GenesisBuild;
-use frame_support::parameter_types;
+use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
+use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_currencies::Currency;
@@ -167,10 +168,15 @@ impl minterest_model::Config for Test {
 	type BlocksPerYear = BlocksPerYear;
 }
 
+ord_parameter_types! {
+	pub const Four: AccountId = 4;
+}
+
 impl minterest_protocol::Config for Test {
 	type Event = Event;
 	type Borrowing = liquidity_pools::Module<Test>;
 	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
+	type OperationOrigin = EnsureSignedBy<Four, AccountId>;
 }
 
 pub const ALICE: AccountId = 1;
@@ -400,6 +406,7 @@ impl ExtBuilder {
 					},
 				),
 			],
+			whitelist_mode: false,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

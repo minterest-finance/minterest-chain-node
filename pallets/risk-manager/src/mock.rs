@@ -2,8 +2,9 @@
 use super::*;
 use crate as risk_manager;
 use frame_support::pallet_prelude::GenesisBuild;
-use frame_support::parameter_types;
+use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
+use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_traits::parameter_type_with_key;
@@ -164,10 +165,15 @@ impl liquidation_pools::Config for Test {
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 }
 
+ord_parameter_types! {
+		pub const Four: AccountId = 4;
+}
+
 impl minterest_protocol::Config for Test {
 	type Event = Event;
 	type Borrowing = liquidity_pools::Module<Test>;
 	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
+	type OperationOrigin = EnsureSignedBy<Four, AccountId>;
 }
 
 parameter_types! {
