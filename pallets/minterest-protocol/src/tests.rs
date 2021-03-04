@@ -3,7 +3,7 @@
 use super::*;
 use mock::{Event, *};
 
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 
 fn dollars<T: Into<u128>>(d: T) -> Balance {
 	DOLLARS.saturating_mul(d.into())
@@ -51,6 +51,20 @@ fn deposit_underlying_should_work() {
 			TestProtocol::deposit_underlying(alice(), CurrencyId::KSM, dollars(10_u128)),
 			Error::<Test>::OperationPaused
 		);
+
+		// Whitelist Mode is enabled. In whitelist mode, only members
+		// 'WhitelistCouncil' can work with protocols.
+		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = true);
+		assert_noop!(
+			TestProtocol::deposit_underlying(alice(), CurrencyId::KSM, dollars(10_u128)),
+			BadOrigin
+		);
+		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = false);
+		assert_ok!(TestProtocol::deposit_underlying(
+			alice(),
+			CurrencyId::DOT,
+			dollars(10_u128)
+		));
 	});
 }
 
@@ -100,6 +114,21 @@ fn redeem_should_not_work() {
 				TestProtocol::redeem(alice(), CurrencyId::KSM),
 				Error::<Test>::OperationPaused
 			);
+
+			// Alice deposit 60 DOT; exchange_rate = 1.0
+			assert_ok!(TestProtocol::deposit_underlying(
+				alice(),
+				CurrencyId::DOT,
+				dollars(60_u128)
+			));
+
+			// Whitelist Mode is enabled. In whitelist mode, only members
+			// 'WhitelistCouncil' can work with protocols.
+			controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = true);
+			assert_noop!(TestProtocol::redeem(alice(), CurrencyId::DOT), BadOrigin);
+
+			controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = false);
+			assert_ok!(TestProtocol::redeem(alice(), CurrencyId::DOT,));
 		});
 }
 
@@ -167,6 +196,16 @@ fn redeem_underlying_should_work() {
 				TestProtocol::redeem_underlying(alice(), CurrencyId::KSM, dollars(10_u128)),
 				Error::<Test>::OperationPaused
 			);
+
+			// Whitelist Mode is enabled. In whitelist mode, only members
+			// 'WhitelistCouncil' can work with protocols.
+			controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = true);
+			assert_noop!(
+				TestProtocol::redeem_underlying(alice(), CurrencyId::DOT, dollars(30_u128)),
+				BadOrigin
+			);
+
+			controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = false);
 
 			assert_ok!(TestProtocol::redeem_underlying(
 				alice(),
@@ -247,6 +286,16 @@ fn redeem_wrapped_should_work() {
 				TestProtocol::redeem_wrapped(alice(), CurrencyId::MKSM, dollars(10_u128)),
 				Error::<Test>::OperationPaused
 			);
+
+			// Whitelist Mode is enabled. In whitelist mode, only members
+			// 'WhitelistCouncil' can work with protocols.
+			controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = true);
+			assert_noop!(
+				TestProtocol::redeem_wrapped(alice(), CurrencyId::MDOT, dollars(35_u128)),
+				BadOrigin
+			);
+
+			controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = false);
 
 			assert_ok!(TestProtocol::redeem_wrapped(
 				alice(),
@@ -329,6 +378,16 @@ fn borrow_should_work() {
 			TestProtocol::borrow(alice(), CurrencyId::KSM, dollars(10_u128)),
 			Error::<Test>::OperationPaused
 		);
+
+		// Whitelist Mode is enabled. In whitelist mode, only members
+		// 'WhitelistCouncil' can work with protocols.
+		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = true);
+		assert_noop!(
+			TestProtocol::borrow(alice(), CurrencyId::DOT, dollars(30_u128)),
+			BadOrigin
+		);
+
+		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = false);
 
 		// Alice borrowed 30 DOT
 		assert_ok!(TestProtocol::borrow(alice(), CurrencyId::DOT, dollars(30_u128)));
@@ -423,6 +482,16 @@ fn repay_should_work() {
 			Error::<Test>::OperationPaused
 		);
 
+		// Whitelist Mode is enabled. In whitelist mode, only members
+		// 'WhitelistCouncil' can work with protocols.
+		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = true);
+		assert_noop!(
+			TestProtocol::repay(alice(), CurrencyId::DOT, dollars(20_u128)),
+			BadOrigin
+		);
+
+		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = false);
+
 		// Alice repaid 20 DOT. Her borrow_balance = 10 DOT.
 		assert_ok!(TestProtocol::repay(alice(), CurrencyId::DOT, dollars(20_u128)));
 		let expected_event = Event::minterest_protocol(crate::Event::Repaid(ALICE, CurrencyId::DOT, dollars(20_u128)));
@@ -453,6 +522,13 @@ fn repay_all_should_work() {
 			TestProtocol::repay_all(alice(), CurrencyId::KSM),
 			Error::<Test>::OperationPaused
 		);
+
+		// Whitelist Mode is enabled. In whitelist mode, only members
+		// 'WhitelistCouncil' can work with protocols.
+		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = true);
+		assert_noop!(TestProtocol::repay_all(alice(), CurrencyId::DOT), BadOrigin);
+
+		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = false);
 
 		// Alice repaid all 30 DOT.
 		assert_ok!(TestProtocol::repay_all(alice(), CurrencyId::DOT));
@@ -531,6 +607,16 @@ fn repay_on_behalf_should_work() {
 			Error::<Test>::OperationPaused
 		);
 
+		// Whitelist Mode is enabled. In whitelist mode, only members
+		// 'WhitelistCouncil' can work with protocols.
+		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = true);
+		assert_noop!(
+			TestProtocol::repay_on_behalf(bob(), CurrencyId::DOT, ALICE, dollars(20_u128)),
+			BadOrigin
+		);
+
+		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = false);
+
 		// Bob repaid 20 DOT for Alice.
 		assert_ok!(TestProtocol::repay_on_behalf(
 			bob(),
@@ -558,6 +644,13 @@ fn enable_as_collateral_should_work() {
 			CurrencyId::ETH,
 			dollars(60_u128)
 		));
+
+		// Whitelist Mode is enabled. In whitelist mode, only members
+		// 'WhitelistCouncil' can work with protocols.
+		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = true);
+		assert_noop!(TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH), BadOrigin);
+
+		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = false);
 
 		// Alice enable as collateral her ETH pool.
 		assert_ok!(TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH));
@@ -595,6 +688,13 @@ fn disable_collateral_should_work() {
 
 		// Alice enable as collateral her ETH pool.
 		assert_ok!(TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH));
+
+		// Whitelist Mode is enabled. In whitelist mode, only members
+		// 'WhitelistCouncil' can work with protocols.
+		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = true);
+		assert_noop!(TestProtocol::disable_collateral(alice(), CurrencyId::ETH), BadOrigin);
+
+		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = false);
 
 		// Alice disable collateral her ETH pool.
 		assert_ok!(TestProtocol::disable_collateral(alice(), CurrencyId::ETH));
@@ -709,6 +809,16 @@ fn transfer_wrapped_should_not_work() {
 				TestProtocol::transfer_wrapped(alice(), ALICE, CurrencyId::MDOT, ONE_HUNDRED_DOLLARS),
 				Error::<Test>::CannotTransferToSelf
 			);
+
+			// Whitelist Mode is enabled. In whitelist mode, only members
+			// 'WhitelistCouncil' can work with protocols.
+			controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = true);
+			assert_noop!(
+				TestProtocol::transfer_wrapped(alice(), BOB, CurrencyId::MDOT, ONE_HUNDRED_DOLLARS),
+				BadOrigin
+			);
+
+			controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = false);
 
 			// Alice is unable to transfer more tokens than she has
 			assert_noop!(

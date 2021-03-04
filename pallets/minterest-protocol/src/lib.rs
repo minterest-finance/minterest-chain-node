@@ -199,6 +199,9 @@ pub mod module {
 			underlying_asset_id: CurrencyId,
 			#[pallet::compact] underlying_amount: Balance,
 		) -> DispatchResultWithPostInfo {
+			if controller::WhitelistMode::<T>::get() == true {
+				T::OperationOrigin::ensure_origin(origin.clone())?;
+			}
 			let who = ensure_signed(origin)?;
 			let (_, wrapped_id, wrapped_amount) =
 				Self::do_redeem(&who, underlying_asset_id, underlying_amount, Balance::zero(), false)?;
