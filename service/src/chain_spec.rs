@@ -4,10 +4,10 @@ use liquidation_pools::LiquidationPool;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
-	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId,
-	GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig,
+	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig,
+	GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
 	MinterestModelConfig, MinterestOracleConfig, OperatorMembershipMinterestConfig, RiskManagerConfig, Signature,
-	SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
+	SudoConfig, SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, DOLLARS, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -476,11 +476,16 @@ fn testnet_genesis(
 			],
 		}),
 		pallet_collective_Instance1: Some(Default::default()),
-		pallet_membership_Instance1: Some(GeneralCouncilMembershipConfig {
+		pallet_membership_Instance1: Some(MinterestCouncilMembershipConfig {
+			members: vec![root_key.clone()],
+			phantom: Default::default(),
+		}),
+		pallet_collective_Instance2: Some(Default::default()),
+		pallet_membership_Instance2: Some(WhitelistCouncilMembershipConfig {
 			members: vec![root_key],
 			phantom: Default::default(),
 		}),
-		pallet_membership_Instance2: Some(OperatorMembershipMinterestConfig {
+		pallet_membership_Instance3: Some(OperatorMembershipMinterestConfig {
 			members: endowed_accounts.clone(),
 			phantom: Default::default(),
 		}),

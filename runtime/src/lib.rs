@@ -239,56 +239,86 @@ impl pallet_sudo::Config for Runtime {
 	type Call = Call;
 }
 
-type EnsureRootOrTwoThirdsGeneralCouncil = EnsureOneOf<
+type EnsureRootOrTwoThirdsMinterestCouncil = EnsureOneOf<
 	AccountId,
 	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionMoreThan<_2, _3, AccountId, GeneralCouncilInstance>,
+	pallet_collective::EnsureProportionMoreThan<_2, _3, AccountId, MinterestCouncilInstance>,
 >;
 
-type EnsureRootOrThreeFourthsGeneralCouncil = EnsureOneOf<
+type EnsureRootOrThreeFourthsMinterestCouncil = EnsureOneOf<
 	AccountId,
 	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionMoreThan<_3, _4, AccountId, GeneralCouncilInstance>,
+	pallet_collective::EnsureProportionMoreThan<_3, _4, AccountId, MinterestCouncilInstance>,
 >;
 
 parameter_types! {
-	pub const GeneralCouncilMotionDuration: BlockNumber = 7 * DAYS;
-	pub const GeneralCouncilMaxProposals: u32 = 100;
-	pub const GeneralCouncilMaxMembers: u32 = 100;
+	pub const MinterestCouncilMotionDuration: BlockNumber = 7 * DAYS;
+	pub const MinterestCouncilMaxProposals: u32 = 100;
+	pub const MinterestCouncilMaxMembers: u32 = 100;
 }
 
-type GeneralCouncilInstance = pallet_collective::Instance1;
-impl pallet_collective::Config<GeneralCouncilInstance> for Runtime {
+type MinterestCouncilInstance = pallet_collective::Instance1;
+impl pallet_collective::Config<MinterestCouncilInstance> for Runtime {
 	type Origin = Origin;
 	type Proposal = Call;
 	type Event = Event;
-	type MotionDuration = GeneralCouncilMotionDuration;
-	type MaxProposals = GeneralCouncilMaxProposals;
-	type MaxMembers = GeneralCouncilMaxMembers;
+	type MotionDuration = MinterestCouncilMotionDuration;
+	type MaxProposals = MinterestCouncilMaxProposals;
+	type MaxMembers = MinterestCouncilMaxMembers;
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type WeightInfo = ();
 }
 
-type GeneralCouncilMembershipInstance = pallet_membership::Instance1;
-impl pallet_membership::Config<GeneralCouncilMembershipInstance> for Runtime {
+type MinterestCouncilMembershipInstance = pallet_membership::Instance1;
+impl pallet_membership::Config<MinterestCouncilMembershipInstance> for Runtime {
 	type Event = Event;
-	type AddOrigin = EnsureRootOrThreeFourthsGeneralCouncil;
-	type RemoveOrigin = EnsureRootOrThreeFourthsGeneralCouncil;
-	type SwapOrigin = EnsureRootOrThreeFourthsGeneralCouncil;
-	type ResetOrigin = EnsureRootOrThreeFourthsGeneralCouncil;
-	type PrimeOrigin = EnsureRootOrThreeFourthsGeneralCouncil;
-	type MembershipInitialized = GeneralCouncil;
-	type MembershipChanged = GeneralCouncil;
+	type AddOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type RemoveOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type SwapOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type ResetOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type PrimeOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type MembershipInitialized = MinterestCouncil;
+	type MembershipChanged = MinterestCouncil;
 }
 
-type OperatorMembershipInstanceMinterest = pallet_membership::Instance2;
+parameter_types! {
+	pub const WhitelistCouncilMotionDuration: BlockNumber = 7 * DAYS;
+	pub const WhitelistCouncilMaxProposals: u32 = 100;
+	pub const WhitelistCouncilMaxMembers: u32 = 100;
+}
+
+type WhitelistCouncilInstance = pallet_collective::Instance2;
+impl pallet_collective::Config<WhitelistCouncilInstance> for Runtime {
+	type Origin = Origin;
+	type Proposal = Call;
+	type Event = Event;
+	type MotionDuration = MinterestCouncilMotionDuration;
+	type MaxProposals = MinterestCouncilMaxProposals;
+	type MaxMembers = MinterestCouncilMaxMembers;
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type WeightInfo = ();
+}
+
+type WhitelistCouncilMembershipInstance = pallet_membership::Instance2;
+impl pallet_membership::Config<WhitelistCouncilMembershipInstance> for Runtime {
+	type Event = Event;
+	type AddOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type RemoveOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type SwapOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type ResetOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type PrimeOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type MembershipInitialized = WhitelistCouncil;
+	type MembershipChanged = WhitelistCouncil;
+}
+
+type OperatorMembershipInstanceMinterest = pallet_membership::Instance3;
 impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime {
 	type Event = Event;
-	type AddOrigin = EnsureRootOrTwoThirdsGeneralCouncil;
-	type RemoveOrigin = EnsureRootOrTwoThirdsGeneralCouncil;
-	type SwapOrigin = EnsureRootOrTwoThirdsGeneralCouncil;
-	type ResetOrigin = EnsureRootOrTwoThirdsGeneralCouncil;
-	type PrimeOrigin = EnsureRootOrTwoThirdsGeneralCouncil;
+	type AddOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
+	type RemoveOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
+	type SwapOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
+	type ResetOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
+	type PrimeOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type MembershipInitialized = MinterestOracle;
 	type MembershipChanged = MinterestOracle;
 }
@@ -379,7 +409,7 @@ impl accounts::Config for Runtime {
 impl module_prices::Config for Runtime {
 	type Event = Event;
 	type Source = AggregatedDataProvider;
-	type LockOrigin = EnsureRootOrTwoThirdsGeneralCouncil;
+	type LockOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
 }
 
@@ -477,8 +507,10 @@ construct_runtime!(
 		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
 
 		// Governance
-		GeneralCouncil: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		GeneralCouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
+		MinterestCouncil: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		MinterestCouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
+		WhitelistCouncil: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		WhitelistCouncilMembership: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
 
 		//ORML palletts
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
@@ -489,7 +521,7 @@ construct_runtime!(
 		Prices: module_prices::{Module, Storage, Call, Event<T>},
 
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
-		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
+		OperatorMembershipMinterest: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
 
 		// Minterest pallets
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
