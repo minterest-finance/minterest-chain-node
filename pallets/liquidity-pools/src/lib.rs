@@ -66,7 +66,6 @@ type BalanceResult = result::Result<Balance, DispatchError>;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use pallet_traits::PriceProvider;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {

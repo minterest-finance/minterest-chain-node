@@ -4,8 +4,8 @@ use liquidation_pools::LiquidationPool;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
-	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId,
-	GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig,
+	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig,
+	GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
 	MinterestModelConfig, MinterestOracleConfig, OperatorMembershipMinterestConfig, RiskManagerConfig, Signature,
 	SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
 };
@@ -475,7 +475,7 @@ fn testnet_genesis(
 			],
 		}),
 		pallet_collective_Instance1: Some(Default::default()),
-		pallet_membership_Instance1: Some(GeneralCouncilMembershipConfig {
+		pallet_membership_Instance1: Some(MinterestCouncilMembershipConfig {
 			members: vec![root_key],
 			phantom: Default::default(),
 		}),
