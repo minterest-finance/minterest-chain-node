@@ -84,6 +84,51 @@ fn set_deviation_threshold_should_work() {
 }
 
 #[test]
+fn set_balance_ratio_should_work() {
+	ExternalityBuilder::default().build().execute_with(|| {
+		// Can be set to 0.0
+		assert_ok!(TestLiquidationPools::set_balance_ratio(admin(), CurrencyId::DOT, 0));
+		assert_eq!(
+			TestLiquidationPools::liquidation_pools(CurrencyId::DOT).balance_ratio,
+			Rate::zero()
+		);
+		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(ADMIN, Rate::zero()));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+
+		// Can be set to 1.0
+		assert_ok!(TestLiquidationPools::set_balance_ratio(
+			admin(),
+			CurrencyId::DOT,
+			1_000_000_000_000_000_000u128
+		));
+		assert_eq!(
+			TestLiquidationPools::liquidation_pools(CurrencyId::DOT).balance_ratio,
+			Rate::one()
+		);
+		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(ADMIN, Rate::one()));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+
+		// Can not be set grater than 1.0
+		assert_noop!(
+			TestLiquidationPools::set_balance_ratio(admin(), CurrencyId::DOT, 2_000_000_000_000_000_000u128),
+			Error::<Test>::NotValidBalanceRatioValue
+		);
+
+		// The dispatch origin of this call must be Administrator.
+		assert_noop!(
+			TestLiquidationPools::set_balance_ratio(alice(), CurrencyId::DOT, 10),
+			Error::<Test>::RequireAdmin
+		);
+
+		// MDOT is wrong CurrencyId for underlying assets.
+		assert_noop!(
+			TestLiquidationPools::set_balance_ratio(admin(), CurrencyId::MDOT, 10),
+			Error::<Test>::NotValidUnderlyingAssetId
+		);
+	});
+}
+
+#[test]
 fn balancing_should_work() {
 	ExternalityBuilder::default().build().execute_with(|| {
 		// Origin::signed(Alice) is wrong origin for fn balancing.

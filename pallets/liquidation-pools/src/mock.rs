@@ -184,6 +184,7 @@ impl Default for ExternalityBuilder {
 				CurrencyId::DOT,
 				LiquidationPool {
 					deviation_threshold: Rate::saturating_from_rational(1, 10),
+					balance_ratio: Rate::saturating_from_rational(2, 10),
 				},
 			)],
 			liquidation_pool_params: LiquidationPoolCommonData {

@@ -254,7 +254,7 @@ pub mod module {
 		/// The dispatch origin of this call must be Administrator.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_balancing_ratio(
+		pub fn set_balance_ratio(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			new_balance_ratio: u128,
@@ -277,7 +277,7 @@ pub mod module {
 			// Write new value into storage.
 			LiquidationPools::<T>::mutate(pool_id, |x| x.balance_ratio = new_balance_ratio);
 
-			Self::deposit_event(Event::DeviationThresholdChanged(sender, new_balance_ratio));
+			Self::deposit_event(Event::BalanceRatioChanged(sender, new_balance_ratio));
 
 			Ok(().into())
 		}
