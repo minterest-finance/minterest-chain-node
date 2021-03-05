@@ -1,10 +1,10 @@
 //! RPC interface for the controller pallet.
 
 use codec::Codec;
-pub use controller_rpc_runtime_api::{ControllerApi as ControllerRuntimeApi, PoolState};
+pub use controller_rpc_runtime_api::{ControllerApi as ControllerRuntimeApi, PoolState, UserPoolBalanceData};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use minterest_primitives::CurrencyId;
+use minterest_primitives::{AccountId, CurrencyId};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
@@ -14,6 +14,9 @@ use std::sync::Arc;
 pub trait ControllerApi<BlockHash, AccountId> {
 	#[rpc(name = "controller_liquidityPoolState")]
 	fn liquidity_pool_state(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<PoolState>>;
+
+	#[rpc(name = "controller_userBalanceInfo")]
+	fn get_user_balance(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<UserPoolBalanceData>>;
 
 	#[rpc(name = "controller_isAdmin")]
 	fn is_admin(&self, caller: AccountId, at: Option<BlockHash>) -> Result<Option<bool>>;
@@ -68,6 +71,23 @@ where
 			message: "Unable to get pool state.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})
+	}
+
+	fn get_user_balance(
+		&self,
+		account_id: AccountId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<Option<UserPoolBalanceData>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+            // If the block hash is not supplied assume the best block.
+            self.client.info().best_hash));
+		api.get_total_supply_and_borrowed_usd_balance(&at, account_id)
+			.map_err(|e| RpcError {
+				code: ErrorCode::ServerError(Error::RuntimeError.into()),
+				message: "Unable to get balance info.".into(),
+				data: Some(format!("{:?}", e).into()),
+			})
 	}
 
 	fn is_admin(&self, caller: AccountId, at: Option<<Block as BlockT>::Hash>) -> Result<Option<bool>> {
