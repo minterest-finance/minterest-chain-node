@@ -292,9 +292,9 @@ pub mod module {
 		/// The dispatch origin of this call must be _None_.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn balancing(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
+		pub fn balancing(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
-			Self::balancing_attempt(pool_id)?;
+			Self::balancing_attempt()?;
 			Ok(().into())
 		}
 	}
@@ -334,7 +334,7 @@ impl<T: Config> Pallet<T> {
 		let dead_line = Self::calculate_deadline().map_err(|_| OffchainErr::OffchainLock)?;
 
 		if <frame_system::Module<T>>::block_number() > dead_line {
-			Self::submit_unsigned_tx(currency_id);
+			Self::submit_unsigned_tx();
 		}
 
 		// update to_be_continue record
@@ -378,13 +378,12 @@ impl<T: Config> Pallet<T> {
 		)
 	}
 
-	fn submit_unsigned_tx(pool_id: CurrencyId) {
-		let call = Call::<T>::balancing(pool_id);
+	fn submit_unsigned_tx() {
+		let call = Call::<T>::balancing();
 		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
 			debug::info!(
 				target: "LiquidityPools offchain worker",
-				"submit unsigned balancing attempt for \n CurrencyId {:?} \nfailed!",
-				pool_id,
+				"submit unsigned balancing attempt failed!"
 			);
 		}
 	}
@@ -468,10 +467,8 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Preparing data for pool balancing.
-	///
-	/// - `pool_id`: the CurrencyId of the pool for which automatic balancing is performed.
-	fn balancing_attempt(_pool_id: CurrencyId) -> DispatchResultWithPostInfo {
-		let (mut weak_pools, strong_pools) = Self::collect_pools_vectors()?;
+	fn balancing_attempt() -> DispatchResultWithPostInfo {
+		let (weak_pools, strong_pools) = Self::collect_pools_vectors()?;
 
 		if weak_pools.len().is_zero() {
 			return Ok(().into());
@@ -481,10 +478,13 @@ impl<T: Config> Pallet<T> {
 			return Ok(().into());
 		}
 
-		let (mut weak_sum, strong_sum) = Self::calculate_sum(&weak_pools, &strong_pools)?;
+		let mut sorted_weak_pools = Self::sort_by_balance(weak_pools)?;
+		let sorted_strong_pools = Self::sort_by_balance(strong_pools)?;
+
+		let (mut weak_sum, strong_sum) = Self::calculate_sum(&sorted_weak_pools, &sorted_strong_pools)?;
 
 		while weak_sum > strong_sum {
-			let removed_pool = weak_pools.pop().ok_or(Error::<T>::NumOverflow)?;
+			let removed_pool = sorted_weak_pools.pop().ok_or(Error::<T>::NumOverflow)?;
 			weak_sum -= removed_pool.1
 		}
 
@@ -515,9 +515,9 @@ impl<T: Config> ValidateUnsigned for Pallet<T> {
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		match call {
-			Call::balancing(pool_id) => ValidTransaction::with_tag_prefix("LiquidationPoolsOffchainWorker")
+			Call::balancing() => ValidTransaction::with_tag_prefix("LiquidationPoolsOffchainWorker")
 				.priority(T::UnsignedPriority::get())
-				.and_provides((<frame_system::Module<T>>::block_number(), pool_id))
+				.and_provides(<frame_system::Module<T>>::block_number())
 				.longevity(64_u64)
 				.propagate(true)
 				.build(),
