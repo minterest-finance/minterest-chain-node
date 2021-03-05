@@ -27,10 +27,7 @@ fn set_balancing_period_should_work() {
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Administrator.
-		assert_noop!(
-			TestLiquidationPools::set_balancing_period(alice(), 10),
-			Error::<Test>::RequireAdmin
-		);
+		assert_noop!(TestLiquidationPools::set_balancing_period(alice(), 10), BadOrigin);
 	});
 }
 

@@ -127,8 +127,6 @@ pub mod module {
 		NumOverflow,
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
-		/// The dispatch origin of this call must be Administrator.
-		RequireAdmin,
 		/// The liquidation hasn't been completed.
 		LiquidationRejection,
 		/// Liquidation incentive can't be less than one && greater than 1.5.

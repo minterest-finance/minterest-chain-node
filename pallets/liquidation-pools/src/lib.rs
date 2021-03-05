@@ -97,8 +97,6 @@ pub mod module {
 	pub enum Error<T> {
 		/// Number overflow in calculation.
 		NumOverflow,
-		/// The dispatch origin of this call must be Administrator.
-		RequireAdmin,
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
 		/// Value must be in range [0..1]
@@ -199,7 +197,7 @@ pub mod module {
 			// Write new value into storage.
 			LiquidationPoolParams::<T>::mutate(|x| x.balancing_period = new_period);
 
-			Self::deposit_event(Event::BalancingPeriodChanged(sender, new_period));
+			Self::deposit_event(Event::BalancingPeriodChanged(new_period));
 
 			Ok(().into())
 		}

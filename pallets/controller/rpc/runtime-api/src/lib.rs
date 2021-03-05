@@ -7,7 +7,7 @@
 #![allow(clippy::unnecessary_mut_passed)]
 
 use codec::{Codec, Decode, Encode};
-use minterest_primitives::{AccountId, Balance, CurrencyId, Rate};
+use minterest_primitives::{Balance, CurrencyId, Rate};
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
 

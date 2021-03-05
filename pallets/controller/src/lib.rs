@@ -101,8 +101,6 @@ pub mod module {
 		InsufficientLiquidity,
 		/// Pool not found.
 		PoolNotFound,
-		/// The dispatch origin of this call must be Administrator.
-		RequireAdmin,
 		/// Not enough balance to deposit or withdraw or repay.
 		NotEnoughBalance,
 		/// Balance overflows maximum.
