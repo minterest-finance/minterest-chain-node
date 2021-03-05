@@ -1,6 +1,6 @@
 use controller::{ControllerData, PauseKeeper};
 use hex_literal::hex;
-use liquidation_pools::LiquidationPool;
+use liquidation_pools::{LiquidationPool, LiquidationPoolCommonData};
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
@@ -443,33 +443,33 @@ fn testnet_genesis(
 			],
 		}),
 		liquidation_pools: Some(LiquidationPoolsConfig {
+			liquidation_pool_params: (LiquidationPoolCommonData {
+				timestamp: 1,
+				balancing_period: 600, // Blocks per 10 minutes.
+			}),
 			liquidation_pools: vec![
 				(
 					CurrencyId::DOT,
 					LiquidationPool {
-						timestamp: 1,
-						balancing_period: 600, // Blocks per 10 minutes.
+						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 					},
 				),
 				(
 					CurrencyId::ETH,
 					LiquidationPool {
-						timestamp: 1,
-						balancing_period: 600, // Blocks per 10 minutes.
+						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 					},
 				),
 				(
 					CurrencyId::BTC,
 					LiquidationPool {
-						timestamp: 1,
-						balancing_period: 600, // Blocks per 10 minutes.
+						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 					},
 				),
 				(
 					CurrencyId::KSM,
 					LiquidationPool {
-						timestamp: 1,
-						balancing_period: 600, // Blocks per 10 minutes.
+						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 					},
 				),
 			],
