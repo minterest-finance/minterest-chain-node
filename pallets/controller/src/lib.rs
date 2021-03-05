@@ -92,6 +92,10 @@ pub mod module {
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
 		/// The basic liquidity pools manager.
 		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
+
+		#[pallet::constant]
+		/// Maximum total borrow amount per pool in usd
+		type MaxBorrowCap: Get<Balance>;
 	}
 
 	#[pallet::error]
@@ -123,6 +127,10 @@ pub mod module {
 		CollateralFactorCannotBeZero,
 		/// Borrow cap is reached
 		BorrowCapReached,
+		/// Invalid borrow cap
+		InvalidBorrowCap,
+		/// Borrow cap is zero
+		ZeroBorrowCap,
 	}
 
 	#[pallet::event]
@@ -387,6 +395,36 @@ pub mod module {
 
 			ControllerDates::<T>::mutate(pool_id, |r| r.collateral_factor = new_collateral_factor);
 			Self::deposit_event(Event::CollateralFactorChanged);
+			Ok(().into())
+		}
+
+		/// Enable borrow cap mode.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		/// Borrow cap value must be in range 0..1_000_000_000_000_000_000_000_000
+		#[pallet::weight(0)]
+		#[transactional]
+		fn set_borrow_cap_mode(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			enable: bool,
+			borrow_cap: Option<Balance>
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
+
+			if let Some(new_cap) = borrow_cap {
+				ensure!(new_cap > Balance::zero() && new_cap < T::MaxBorrowCap::get(), Error::<T>::InvalidBorrowCap);
+				ControllerDates::<T>::mutate(pool_id, |r| r.borrow_cap = new_cap);
+			}
+
+			ensure!(!enable || Self::get_borrow_cap(pool_id) > Balance::zero(), Error::<T>::ZeroBorrowCap);
+			ControllerDates::<T>::mutate(pool_id, |r| r.borrow_cap_enabled = enable);
+
 			Ok(().into())
 		}
 	}

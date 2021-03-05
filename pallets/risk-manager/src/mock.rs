@@ -124,9 +124,14 @@ impl liquidity_pools::Config for Test {
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
+parameter_types! {
+	pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
+}
+
 impl controller::Config for Test {
 	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+	type MaxBorrowCap = MaxBorrowCap;
 }
 
 impl oracle::Config for Test {}
@@ -184,6 +189,7 @@ where
 
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
 pub const MAX_MEMBERS: u8 = 16;
+pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
 pub const ONE_HUNDRED: Balance = 100;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ADMIN: AccountId = 0;

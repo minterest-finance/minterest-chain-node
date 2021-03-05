@@ -131,9 +131,14 @@ impl liquidity_pools::Config for Test {
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
+parameter_types! {
+	pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
+}
+
 impl controller::Config for Test {
 	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+	type MaxBorrowCap = MaxBorrowCap;
 }
 
 impl oracle::Config for Test {}
@@ -175,6 +180,7 @@ pub const ONE_MILL_DOLLARS: Balance = 1_000_000 * DOLLARS;
 pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
 pub const TEN_THOUSAND_DOLLARS: Balance = 10_000 * DOLLARS;
 pub const MAX_MEMBERS: u8 = 16;
+pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,

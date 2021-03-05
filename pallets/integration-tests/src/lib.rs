@@ -160,9 +160,14 @@ mod tests {
 		type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 	}
 
+	parameter_types! {
+		pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
+	}
+
 	impl controller::Config for Test {
 		type Event = Event;
 		type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+		type MaxBorrowCap = MaxBorrowCap;
 	}
 
 	impl oracle::Config for Test {}
@@ -193,6 +198,7 @@ mod tests {
 	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 	pub const RATE_ZERO: Rate = Rate::from_inner(0);
 	pub const MAX_MEMBERS: u8 = 16;
+	pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
 
 	pub fn admin() -> Origin {
 		Origin::signed(ADMIN)

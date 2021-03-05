@@ -302,9 +302,14 @@ impl liquidity_pools::Config for Runtime {
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
+parameter_types! {
+	pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
+}
+
 impl controller::Config for Runtime {
 	type Event = Event;
 	type LiquidityPoolsManager = LiquidityPools;
+	type MaxBorrowCap = MaxBorrowCap;
 }
 
 parameter_types! {

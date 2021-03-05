@@ -149,12 +149,18 @@ impl minterest_model::Config for Runtime {
 	type BlocksPerYear = BlocksPerYear;
 }
 
+parameter_types! {
+	pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
+}
+
 impl Config for Runtime {
 	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
+	type MaxBorrowCap = MaxBorrowCap;
 }
 
 pub const MAX_MEMBERS: u8 = 16;
+pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
