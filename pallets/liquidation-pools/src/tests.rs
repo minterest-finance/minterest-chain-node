@@ -18,7 +18,7 @@ fn set_balancing_period_should_work() {
 			TestLiquidationPools::liquidation_pools(CurrencyId::DOT).balancing_period,
 			u32::zero()
 		);
-		let expected_event = Event::liquidation_pools(crate::Event::BalancingPeriodChanged(ADMIN, u32::zero()));
+		let expected_event = Event::liquidation_pools(crate::Event::BalancingPeriodChanged(u32::zero()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Admin set period equal amount of blocks per year.
@@ -31,13 +31,13 @@ fn set_balancing_period_should_work() {
 			TestLiquidationPools::liquidation_pools(CurrencyId::DOT).balancing_period,
 			5256000
 		);
-		let expected_event = Event::liquidation_pools(crate::Event::BalancingPeriodChanged(ADMIN, 5256000));
+		let expected_event = Event::liquidation_pools(crate::Event::BalancingPeriodChanged(5256000));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
 			TestLiquidationPools::set_balancing_period(alice(), CurrencyId::DOT, 10),
-			Error::<Test>::RequireAdmin
+			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.

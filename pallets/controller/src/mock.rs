@@ -168,6 +168,7 @@ parameter_types! {
 impl minterest_model::Config for Runtime {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
+	type ModelUpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
 }
 
 ord_parameter_types! {

@@ -220,6 +220,7 @@ mod tests {
 	impl minterest_model::Config for Test {
 		type Event = Event;
 		type BlocksPerYear = BlocksPerYear;
+		type ModelUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	}
 
 	pub const ADMIN: AccountId = 0;

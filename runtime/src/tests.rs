@@ -2,8 +2,8 @@ use crate::{
 	AccountId, Balance, Block, Controller, Currencies,
 	CurrencyId::{self, DOT, ETH},
 	EnabledUnderlyingAssetId, Event, LiquidationPools, LiquidationPoolsModuleId, LiquidityPools,
-	LiquidityPoolsModuleId, MinterestOracle, MinterestProtocol, Rate, RiskManager, Runtime, System,
-	WhitelistCouncilMembership, DOLLARS,
+	LiquidityPoolsModuleId, MinterestCouncilMembership, MinterestOracle, MinterestProtocol, Rate, RiskManager, Runtime,
+	System, WhitelistCouncilMembership, DOLLARS,
 };
 use accounts_rpc_runtime_api::runtime_decl_for_AccountsApi::AccountsApi;
 use controller::{ControllerData, PauseKeeper};
@@ -867,6 +867,11 @@ fn partial_liquidation_should_not_work() {
 #[test]
 fn is_admin_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
+		assert_eq!(is_admin_rpc(ALICE::get()), Some(false));
+		assert_ok!(MinterestCouncilMembership::add_member(
+			<Runtime as frame_system::Config>::Origin::root(),
+			ALICE::get()
+		));
 		assert_eq!(is_admin_rpc(ALICE::get()), Some(true));
 		assert_eq!(is_admin_rpc(BOB::get()), Some(false));
 	})

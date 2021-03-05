@@ -140,13 +140,13 @@ impl liquidity_pools::Config for Test {
 }
 
 ord_parameter_types! {
-	pub const OneAlice: AccountId = 1;
+	pub const ZeroAdmin: AccountId = 0;
 }
 
 impl controller::Config for Test {
 	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
-	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
+	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 }
 
 parameter_types! {
@@ -156,13 +156,13 @@ parameter_types! {
 impl minterest_model::Config for Test {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
+	type ModelUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 }
 
 parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
-		pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
-
+	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
 }
 
 impl liquidation_pools::Config for Test {
@@ -170,6 +170,7 @@ impl liquidation_pools::Config for Test {
 	type UnsignedPriority = LiquidityPoolsPriority;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
+	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 }
 
 ord_parameter_types! {
@@ -216,6 +217,7 @@ impl risk_manager::Config for Test {
 	type UnsignedPriority = RiskManagerPriority;
 	type LiquidationPoolsManager = liquidation_pools::Module<Test>;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+	type RiskManagerUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 }
 
 /// An extrinsic type used for tests.

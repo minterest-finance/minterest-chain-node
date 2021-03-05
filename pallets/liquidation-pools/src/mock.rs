@@ -1,8 +1,9 @@
 /// Mocks for the liquidation-pools pallet.
 use super::*;
 use crate as liquidation_pools;
-use frame_support::parameter_types;
+use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
+use frame_system::EnsureSignedBy;
 use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_currencies::Currency;
@@ -154,11 +155,16 @@ parameter_types! {
 	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value();
 }
 
+ord_parameter_types! {
+	pub const ZeroAdmin: AccountId = 0;
+}
+
 impl Config for Test {
 	type Event = Event;
 	type UnsignedPriority = LiquidityPoolsPriority;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
+	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 }
 
 /// An extrinsic type used for tests.

@@ -1,8 +1,9 @@
 /// Mocks for the minterest-model pallet.
 use super::*;
 use crate as minterest_model;
-use frame_support::parameter_types;
+use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
+use frame_system::EnsureSignedBy;
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
@@ -137,9 +138,14 @@ parameter_types! {
 	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
 }
 
+ord_parameter_types! {
+	pub const OneAlice: AccountId = 1;
+}
+
 impl minterest_model::Config for Test {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
+	type ModelUpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
 }
 
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;

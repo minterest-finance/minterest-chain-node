@@ -143,14 +143,3 @@ pub mod module {
 		}
 	}
 }
-
-impl<T: Config> Pallet<T> {
-	/// Checks whether the caller is a member of the allow-list.
-	pub fn is_admin_internal(caller: &T::AccountId) -> bool {
-		let members = <AllowedAccounts<T> as IterableStorageMap<T::AccountId, ()>>::iter()
-			.map(|(acct, _)| acct)
-			.collect::<BTreeSet<_>>();
-
-		members.contains(&caller)
-	}
-}

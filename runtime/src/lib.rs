@@ -358,6 +358,22 @@ impl Contains<AccountId> for WhitelistCouncilProvider {
 	}
 }
 
+pub struct MinterestCouncilProvider;
+impl Contains<AccountId> for MinterestCouncilProvider {
+	fn contains(who: &AccountId) -> bool {
+		MinterestCouncil::is_member(who)
+	}
+
+	fn sorted_members() -> Vec<AccountId> {
+		MinterestCouncil::members()
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add(_: &AccountId) {
+		todo!()
+	}
+}
+
 parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		Zero::zero()
@@ -445,6 +461,7 @@ parameter_types! {
 impl minterest_model::Config for Runtime {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
+	type ModelUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 
 parameter_types! {
@@ -457,6 +474,7 @@ impl risk_manager::Config for Runtime {
 	type UnsignedPriority = RiskManagerPriority;
 	type LiquidationPoolsManager = LiquidationPools;
 	type LiquidityPoolsManager = LiquidityPools;
+	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -476,6 +494,7 @@ impl liquidation_pools::Config for Runtime {
 	type UnsignedPriority = LiquidityPoolsPriority;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
+	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 
 parameter_types! {
@@ -752,7 +771,7 @@ impl_runtime_apis! {
 
 	impl accounts_rpc_runtime_api::AccountsApi<Block, AccountId,> for Runtime {
 			fn is_admin(caller: AccountId) -> Option<bool> {
-				Some(Accounts::is_admin_internal(&caller))
+				Some(MinterestCouncilProvider::contains(&caller))
 			}
 		}
 

@@ -172,6 +172,7 @@ parameter_types! {
 impl minterest_model::Config for Test {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
+	type ModelUpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
 }
 
 thread_local! {

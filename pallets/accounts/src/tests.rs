@@ -82,13 +82,3 @@ fn remove_member_should_work() {
 		);
 	})
 }
-
-#[test]
-fn is_admin_internal_should_work() {
-	ExternalityBuilder::build().execute_with(|| {
-		assert_ok!(TestAccounts::add_member(Origin::root(), ALICE));
-
-		assert!(TestAccounts::is_admin_internal(&ALICE));
-		assert!(!TestAccounts::is_admin_internal(&BOB));
-	});
-}

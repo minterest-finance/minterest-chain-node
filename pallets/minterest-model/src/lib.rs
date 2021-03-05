@@ -10,7 +10,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, transactional};
-use frame_system::{ensure_signed, pallet_prelude::*};
+use frame_system::pallet_prelude::*;
 use minterest_primitives::{CurrencyId, Rate};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -43,7 +43,6 @@ pub struct MinterestModelData {
 	pub jump_multiplier_per_block: Rate,
 }
 
-type Accounts<T> = accounts::Module<T>;
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 type RateResult = result::Result<Rate, DispatchError>;
 
@@ -59,6 +58,10 @@ pub mod module {
 		#[pallet::constant]
 		/// The approximate number of blocks per year
 		type BlocksPerYear: Get<u128>;
+
+		/// The origin which may update minterest model parameters. Root can
+		/// always do this.
+		type ModelUpdateOrigin: EnsureOrigin<Self::Origin>;
 	}
 
 	#[pallet::error]
@@ -171,8 +174,7 @@ pub mod module {
 			jump_multiplier_rate_per_year_n: u128,
 			jump_multiplier_rate_per_year_d: u128,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
@@ -211,8 +213,7 @@ pub mod module {
 			base_rate_per_year_n: u128,
 			base_rate_per_year_d: u128,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
@@ -256,8 +257,7 @@ pub mod module {
 			multiplier_rate_per_year_n: u128,
 			multiplier_rate_per_year_d: u128,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
@@ -300,8 +300,7 @@ pub mod module {
 			kink_nominator: u128,
 			kink_divider: u128,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),

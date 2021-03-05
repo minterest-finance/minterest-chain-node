@@ -4,6 +4,7 @@ use super::*;
 use mock::{Event, *};
 
 use frame_support::{assert_noop, assert_ok};
+use sp_runtime::DispatchError::BadOrigin;
 
 fn multiplier_per_block_equal_max_value() -> MinterestModelData {
 	MinterestModelData {
@@ -85,7 +86,7 @@ fn set_base_rate_per_block_should_work() {
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
 			TestMinterestModel::set_base_rate_per_block(bob(), CurrencyId::DOT, 20, 10),
-			Error::<Test>::RequireAdmin
+			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
@@ -164,7 +165,7 @@ fn set_multiplier_per_block_should_work() {
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
 			TestMinterestModel::set_multiplier_per_block(bob(), CurrencyId::DOT, 20, 10),
-			Error::<Test>::RequireAdmin
+			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
@@ -225,7 +226,7 @@ fn set_jump_multiplier_per_block_should_work() {
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
 			TestMinterestModel::set_jump_multiplier_per_block(bob(), CurrencyId::DOT, 20, 10),
-			Error::<Test>::RequireAdmin
+			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
@@ -254,10 +255,7 @@ fn set_kink_should_work() {
 		);
 
 		// The dispatch origin of this call must be Administrator.
-		assert_noop!(
-			TestMinterestModel::set_kink(bob(), CurrencyId::DOT, 8, 10),
-			Error::<Test>::RequireAdmin
-		);
+		assert_noop!(TestMinterestModel::set_kink(bob(), CurrencyId::DOT, 8, 10), BadOrigin);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(

@@ -11,7 +11,7 @@
 use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, traits::Get, transactional};
 use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
-use frame_system::{ensure_signed, pallet_prelude::*};
+use frame_system::pallet_prelude::*;
 use minterest_primitives::{Balance, CurrencyId};
 use orml_traits::MultiCurrency;
 use orml_utilities::OffchainErr;
@@ -55,7 +55,6 @@ pub struct LiquidationPool<BlockNumber> {
 }
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
-type Accounts<T> = accounts::Module<T>;
 
 #[frame_support::pallet]
 pub mod module {
@@ -81,6 +80,10 @@ pub mod module {
 		#[pallet::constant]
 		/// The Liquidation Pool's account id, keep all assets in Pools.
 		type LiquidationPoolAccountId: Get<Self::AccountId>;
+
+		/// The origin which may update liquidation pools parameters. Root can
+		/// always do this.
+		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 	}
 
 	#[pallet::error]
@@ -96,8 +99,8 @@ pub mod module {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		///  Balancing period has been successfully changed: \[who, new_period\]
-		BalancingPeriodChanged(T::AccountId, u32),
+		///  Balancing period has been successfully changed: \[new_period\]
+		BalancingPeriodChanged(u32),
 	}
 
 	#[pallet::storage]
@@ -173,8 +176,7 @@ pub mod module {
 			pool_id: CurrencyId,
 			new_period: u32,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
@@ -184,7 +186,7 @@ pub mod module {
 			// Write new value into storage.
 			LiquidationPools::<T>::mutate(pool_id, |x| x.balancing_period = new_period);
 
-			Self::deposit_event(Event::BalancingPeriodChanged(sender, new_period));
+			Self::deposit_event(Event::BalancingPeriodChanged(new_period));
 
 			Ok(().into())
 		}
