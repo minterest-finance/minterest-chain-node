@@ -389,6 +389,23 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
+	pub fn calculate_sum(
+		weak_pools: Vec<(CurrencyId, Balance)>,
+		strong_pools: Vec<(CurrencyId, Balance)>,
+	) -> result::Result<(Balance, Balance), DispatchError> {
+		let weak_sum = weak_pools.iter().try_fold(
+			Balance::zero(),
+			|current_value, x| -> result::Result<Balance, DispatchError> { Ok(current_value + x.1) },
+		)?;
+
+		let strong_sum = strong_pools.iter().try_fold(
+			Balance::zero(),
+			|current_value, x| -> result::Result<Balance, DispatchError> { Ok(current_value + x.1) },
+		)?;
+
+		Ok((weak_sum, strong_sum))
+	}
+
 	pub fn collect_pools_vectors(
 	) -> result::Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
 		let mut weak_pools: Vec<(CurrencyId, Balance)> = Vec::new();
