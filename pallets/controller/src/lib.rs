@@ -68,7 +68,6 @@ pub struct PauseKeeper {
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 type MinterestModel<T> = minterest_model::Module<T>;
-type Accounts<T> = accounts::Module<T>;
 type RateResult = result::Result<Rate, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 type LiquidityResult = result::Result<(Balance, Balance), DispatchError>;
@@ -83,8 +82,13 @@ pub mod module {
 	{
 		/// The overarching event type.
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
+
 		/// The basic liquidity pools manager.
 		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
+
+		/// The origin which may update controller parameters. Root can
+		/// always do this.
+		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 	}
 
 	#[pallet::error]
@@ -225,8 +229,7 @@ pub mod module {
 			pool_id: CurrencyId,
 			operation: Operation,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -252,8 +255,7 @@ pub mod module {
 			pool_id: CurrencyId,
 			operation: Operation,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -280,7 +282,6 @@ pub mod module {
 			amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 			Self::do_deposit_insurance(&sender, pool_id, amount)?;
 			Self::deposit_event(Event::DepositedInsurance(pool_id, amount));
 			Ok(().into())
@@ -297,7 +298,6 @@ pub mod module {
 			amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 			Self::do_redeem_insurance(&sender, pool_id, amount)?;
 			Self::deposit_event(Event::RedeemedInsurance(pool_id, amount));
 			Ok(().into())
@@ -314,8 +314,7 @@ pub mod module {
 			new_amount_n: u128,
 			new_amount_d: u128,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -340,8 +339,7 @@ pub mod module {
 			new_amount_n: u128,
 			new_amount_d: u128,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -368,8 +366,7 @@ pub mod module {
 			new_amount_n: u128,
 			new_amount_d: u128,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -398,8 +395,7 @@ pub mod module {
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn switch_mode(origin: OriginFor<T>, is_whitelist_mode: bool) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 			WhitelistMode::<T>::try_mutate(|mode| -> DispatchResultWithPostInfo {
 				ensure!(*mode != is_whitelist_mode, Error::<T>::ThisModeIsAlreadySet);
 				*mode = is_whitelist_mode;

@@ -49,7 +49,6 @@ pub mod module {
 		type ManagerLiquidityPools: PoolsManager<Self::AccountId>;
 
 		/// The origin which may call deposit/redeem/borrow/repay in Whitelist mode.
-		/// Root can always do this.
 		type WhitelistMembers: Contains<Self::AccountId>;
 	}
 

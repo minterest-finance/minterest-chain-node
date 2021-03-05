@@ -4,6 +4,7 @@ use super::*;
 use mock::{Event, *};
 
 use frame_support::{assert_err, assert_noop, assert_ok};
+use sp_runtime::DispatchError::BadOrigin;
 
 #[test]
 fn accrue_interest_should_work() {
@@ -661,7 +662,7 @@ fn set_insurance_factor_should_work() {
 			// The dispatch origin of this call must be Administrator.
 			assert_noop!(
 				Controller::set_insurance_factor(bob(), CurrencyId::DOT, 20, 10),
-				Error::<Runtime>::RequireAdmin
+				BadOrigin
 			);
 
 			assert_noop!(
@@ -701,7 +702,7 @@ fn set_max_borrow_rate_should_work() {
 			// The dispatch origin of this call must be Administrator.
 			assert_noop!(
 				Controller::set_max_borrow_rate(bob(), CurrencyId::DOT, 20, 10),
-				Error::<Runtime>::RequireAdmin
+				BadOrigin
 			);
 
 			assert_noop!(
@@ -747,7 +748,7 @@ fn set_collateral_factor_should_work() {
 			// The dispatch origin of this call must be Administrator.
 			assert_noop!(
 				Controller::set_collateral_factor(bob(), CurrencyId::DOT, 20, 10),
-				Error::<Runtime>::RequireAdmin
+				BadOrigin
 			);
 
 			// Unavailable currency id.
@@ -820,7 +821,7 @@ fn pause_specific_operation_should_work() {
 
 			assert_noop!(
 				Controller::pause_specific_operation(bob(), CurrencyId::DOT, Operation::Deposit),
-				Error::<Runtime>::RequireAdmin
+				BadOrigin
 			);
 			assert_noop!(
 				Controller::pause_specific_operation(alice(), CurrencyId::MDOT, Operation::Redeem),
@@ -895,7 +896,7 @@ fn unpause_specific_operation_should_work() {
 
 			assert_noop!(
 				Controller::unpause_specific_operation(bob(), CurrencyId::DOT, Operation::Deposit),
-				Error::<Runtime>::RequireAdmin
+				BadOrigin
 			);
 			assert_noop!(
 				Controller::unpause_specific_operation(alice(), CurrencyId::MDOT, Operation::Redeem),
@@ -915,7 +916,7 @@ fn switch_mode_should_work() {
 		assert_ok!(Controller::switch_mode(alice(), false));
 		assert_eq!(Controller::whitelist_mode(), false);
 
-		assert_noop!(Controller::switch_mode(bob(), true), Error::<Runtime>::RequireAdmin);
+		assert_noop!(Controller::switch_mode(bob(), true), BadOrigin);
 		assert_eq!(Controller::whitelist_mode(), false);
 
 		assert_noop!(
@@ -938,12 +939,6 @@ fn deposit_insurance_should_work() {
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 100);
-
-			// Bob is not added to the allow-list of admins, so this action is not available for him.
-			assert_noop!(
-				Controller::deposit_insurance(bob(), CurrencyId::DOT, 101),
-				Error::<Runtime>::RequireAdmin
-			);
 		});
 }
 
@@ -1010,12 +1005,6 @@ fn redeem_insurance_should_work() {
 			assert_eq!(
 				Currencies::free_balance(CurrencyId::DOT, &TestPools::pools_account_id()),
 				875,
-			);
-
-			// Bob is not added to the allow-list of admins, so this action is not available for him.
-			assert_noop!(
-				Controller::redeem_insurance(bob(), CurrencyId::DOT, 101),
-				Error::<Runtime>::RequireAdmin
 			);
 		});
 }

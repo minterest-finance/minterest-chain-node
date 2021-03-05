@@ -23,7 +23,7 @@ use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{
 	crypto::KeyTypeId,
-	u32_trait::{_2, _3, _4},
+	u32_trait::{_1, _2, _3, _4},
 	OpaqueMetadata,
 };
 use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, Zero};
@@ -252,6 +252,12 @@ type EnsureRootOrThreeFourthsMinterestCouncil = EnsureOneOf<
 	pallet_collective::EnsureProportionMoreThan<_3, _4, AccountId, MinterestCouncilInstance>,
 >;
 
+type EnsureRootOrHalfMinterestCouncil = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, MinterestCouncilInstance>,
+>;
+
 parameter_types! {
 	pub const MinterestCouncilMotionDuration: BlockNumber = 7 * DAYS;
 	pub const MinterestCouncilMaxProposals: u32 = 100;
@@ -413,6 +419,7 @@ impl liquidity_pools::Config for Runtime {
 impl controller::Config for Runtime {
 	type Event = Event;
 	type LiquidityPoolsManager = LiquidityPools;
+	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 
 parameter_types! {

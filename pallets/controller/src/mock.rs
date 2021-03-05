@@ -2,8 +2,9 @@
 
 use super::*;
 use crate as controller;
-use frame_support::{pallet_prelude::GenesisBuild, parameter_types};
+use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
 use frame_system as system;
+use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 pub(crate) use minterest_primitives::Price;
@@ -169,9 +170,14 @@ impl minterest_model::Config for Runtime {
 	type BlocksPerYear = BlocksPerYear;
 }
 
+ord_parameter_types! {
+	pub const OneAlice: AccountId = 1;
+}
+
 impl Config for Runtime {
 	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
+	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
 }
 
 pub const MAX_MEMBERS: u8 = 16;
