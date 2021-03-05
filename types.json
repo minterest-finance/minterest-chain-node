@@ -29,9 +29,12 @@
       "borrow_index": "Rate",
       "total_insurance": "Balance"
     },
-    "LiquidationPool": {
+    "LiquidationPoolCommonData": {
       "timestamp": "BlockNumber",
       "balancing_period": "u32"
+    },
+    "LiquidationPool": {
+      "deviation_threshold": "Rate"
     },
     "PoolUserData" : {
       "total_borrowed": "Balance",
@@ -49,6 +52,7 @@
     "Amount": "i128",
     "AmountOf": "Amount",
     "Rate": "FixedU128",
+    "Price": "FixedU128",
     "ControllerData": {
       "timestamp": "BlockNumber",
       "insurance_factor": "Rate",
@@ -80,7 +84,20 @@
 	"UserPoolBalanceData": {
 		"total_supply": "Balance",
 		"total_borrowed": "Balance"
-	}
+	},
+    "OracleKey": "CurrencyId",
+    "OracleValue": "Price",
+    "DataProviderId": {
+      "_enum": [
+        "Aggregated",
+        "Minterest"
+      ]
+    },
+    "TimestampedValue": {
+      "value": "OracleValue",
+      "timestamp": "Moment"
+    },
+    "TimestampedValueOf": "TimestampedValue"
   },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
 }

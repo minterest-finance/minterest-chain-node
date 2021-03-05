@@ -16,18 +16,22 @@ mod tests;
 pub use controller_rpc_runtime_api::PoolState;
 pub use controller_rpc_runtime_api::UserPoolBalanceData;
 use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::parameter_type_with_key;
+use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_transaction_payment::CurrencyAdapter;
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_core::{
+	crypto::KeyTypeId,
+	u32_trait::{_2, _3, _4},
+	OpaqueMetadata,
+};
 use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, Zero};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, ModuleId,
+	ApplyExtrinsicResult, DispatchResult, ModuleId,
 };
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -35,8 +39,8 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 pub use minterest_primitives::{
-	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, CurrencyPair, DigestItem, Hash, Index, Rate,
-	Signature,
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, CurrencyPair, DataProviderId, DigestItem, Hash,
+	Index, Moment, Price, Rate, Signature,
 };
 
 // A few exports that help ease life for downstream crates.
@@ -56,6 +60,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
 pub use constants::{currency::*, time::*, *};
+use frame_system::{EnsureOneOf, EnsureRoot};
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -196,7 +201,7 @@ parameter_types! {
 
 impl pallet_timestamp::Config for Runtime {
 	/// A timestamp: milliseconds since the unix epoch.
-	type Moment = u64;
+	type Moment = Moment;
 	type OnTimestampSet = Aura;
 	type MinimumPeriod = MinimumPeriod;
 	type WeightInfo = ();
@@ -233,6 +238,60 @@ impl pallet_transaction_payment::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
+}
+
+type EnsureRootOrTwoThirdsMinterestCouncil = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionMoreThan<_2, _3, AccountId, MinterestCouncilInstance>,
+>;
+
+type EnsureRootOrThreeFourthsMinterestCouncil = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionMoreThan<_3, _4, AccountId, MinterestCouncilInstance>,
+>;
+
+parameter_types! {
+	pub const MinterestCouncilMotionDuration: BlockNumber = 7 * DAYS;
+	pub const MinterestCouncilMaxProposals: u32 = 100;
+	pub const MinterestCouncilMaxMembers: u32 = 100;
+}
+
+type MinterestCouncilInstance = pallet_collective::Instance1;
+impl pallet_collective::Config<MinterestCouncilInstance> for Runtime {
+	type Origin = Origin;
+	type Proposal = Call;
+	type Event = Event;
+	type MotionDuration = MinterestCouncilMotionDuration;
+	type MaxProposals = MinterestCouncilMaxProposals;
+	type MaxMembers = MinterestCouncilMaxMembers;
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type WeightInfo = ();
+}
+
+type MinterestCouncilMembershipInstance = pallet_membership::Instance1;
+impl pallet_membership::Config<MinterestCouncilMembershipInstance> for Runtime {
+	type Event = Event;
+	type AddOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type RemoveOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type SwapOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type ResetOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type PrimeOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type MembershipInitialized = MinterestCouncil;
+	type MembershipChanged = MinterestCouncil;
+}
+
+type OperatorMembershipInstanceMinterest = pallet_membership::Instance2;
+impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime {
+	type Event = Event;
+	type AddOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
+	type RemoveOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
+	type SwapOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
+	type ResetOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
+	type PrimeOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
+	type MembershipInitialized = MinterestOracle;
+	type MembershipChanged = MinterestOracle;
 }
 
 impl m_tokens::Config for Runtime {
@@ -295,6 +354,7 @@ parameter_types! {
 
 impl liquidity_pools::Config for Runtime {
 	type MultiCurrency = Currencies;
+	type PriceSource = Prices;
 	type ModuleId = LiquidityPoolsModuleId;
 	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
@@ -317,7 +377,12 @@ impl accounts::Config for Runtime {
 	type MaxMembers = MaxMembers;
 }
 
-impl oracle::Config for Runtime {}
+impl module_prices::Config for Runtime {
+	type Event = Event;
+	type Source = AggregatedDataProvider;
+	type LockOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+}
 
 parameter_types! {
 	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
@@ -359,6 +424,40 @@ impl liquidation_pools::Config for Runtime {
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 }
 
+parameter_types! {
+	pub const MinimumCount: u32 = 1;
+	pub const ExpiresIn: Moment = 1000 * 60 * 60; // 60 mins
+	pub ZeroAccountId: AccountId = AccountId::from([0u8; 32]);
+}
+
+pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, minterest_primitives::Moment>;
+
+type MinterestDataProvider = orml_oracle::Instance1;
+impl orml_oracle::Config<MinterestDataProvider> for Runtime {
+	type Event = Event;
+	type OnNewData = ();
+	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn, MinterestDataProvider>;
+	type Time = Timestamp;
+	type OracleKey = CurrencyId;
+	type OracleValue = Price;
+	type RootOperatorAccountId = ZeroAccountId;
+	type WeightInfo = ();
+}
+
+create_median_value_data_provider!(
+	AggregatedDataProvider,
+	CurrencyId,
+	Price,
+	TimeStampedPrice,
+	[MinterestOracle]
+);
+// Aggregated data provider cannot feed.
+impl DataFeeder<CurrencyId, Price, AccountId> for AggregatedDataProvider {
+	fn feed_value(_: AccountId, _: CurrencyId, _: Price) -> DispatchResult {
+		Err("Not supported".into())
+	}
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -366,18 +465,32 @@ construct_runtime!(
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
+		// Core
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-		Aura: pallet_aura::{Module, Config<T>},
-		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
+
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
-		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
+
+		// Consensus & Staking
+		Aura: pallet_aura::{Module, Config<T>},
+		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
+
+		// Governance
+		MinterestCouncil: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		MinterestCouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
 
 		//ORML palletts
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
+
+		// Oracle and Prices
+		MinterestOracle: orml_oracle::<Instance1>::{Module, Storage, Call, Config<T>, Event<T>},
+		Prices: module_prices::{Module, Storage, Call, Event<T>},
+
+		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
+		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
 
 		// Minterest pallets
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
@@ -385,10 +498,12 @@ construct_runtime!(
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		Accounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
-		Oracle: oracle::{Module},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		RiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
-		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned}
+		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
+
+		// Dev
+		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 	}
 );
 
@@ -562,6 +677,27 @@ impl_runtime_apis! {
 			let (total_supply, total_borrowed) = Controller::get_total_supply_and_borrowed_usd_balance(&account_id).ok()?;
 
 			Some(UserPoolBalanceData {total_supply, total_borrowed})
+		}
+	}
+
+	impl orml_oracle_rpc_runtime_api::OracleApi<
+		Block,
+		DataProviderId,
+		CurrencyId,
+		TimeStampedPrice,
+	> for Runtime {
+		fn get_value(provider_id: DataProviderId ,key: CurrencyId) -> Option<TimeStampedPrice> {
+			match provider_id {
+				DataProviderId::Minterest => MinterestOracle::get_no_op(&key),
+				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_no_op(&key)
+			}
+		}
+
+		fn get_all_values(provider_id: DataProviderId) -> Vec<(CurrencyId, Option<TimeStampedPrice>)> {
+			match provider_id {
+				DataProviderId::Minterest => MinterestOracle::get_all_values(),
+				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_all_values()
+			}
 		}
 	}
 

@@ -1,36 +1,33 @@
 use crate::{
-	AccountId, Balance, Block,
+	AccountId, Balance, Block, Controller, Currencies,
 	CurrencyId::{self, DOT, ETH},
-	Event, LiquidationPoolsModuleId, LiquidityPoolsModuleId, Oracle, Rate, Runtime, DOLLARS,
+	EnabledUnderlyingAssetId, Event, LiquidationPools, LiquidationPoolsModuleId, LiquidityPools,
+	LiquidityPoolsModuleId, MinterestOracle, MinterestProtocol, Prices, Rate, RiskManager, Runtime, System, DOLLARS,
 };
 use accounts_rpc_runtime_api::runtime_decl_for_AccountsApi::AccountsApi;
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
 use controller_rpc_runtime_api::PoolState;
 use controller_rpc_runtime_api::UserPoolBalanceData;
-use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::{assert_err, assert_noop, assert_ok, parameter_types};
+use frame_support::{pallet_prelude::GenesisBuild, traits::OnFinalize};
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 use minterest_primitives::{Operation, Price};
 use orml_traits::MultiCurrency;
-use pallet_traits::PoolsManager;
+use pallet_traits::{PoolsManager, PriceProvider};
 use risk_manager::RiskManagerData;
 use sp_runtime::traits::{AccountIdConversion, One, Zero};
-use sp_runtime::FixedPointNumber;
-
-type MinterestProtocol = minterest_protocol::Module<Runtime>;
-type LiquidityPools = liquidity_pools::Module<Runtime>;
-type LiquidationPools = liquidation_pools::Module<Runtime>;
-type RiskManager = risk_manager::Module<Runtime>;
-type Controller = controller::Module<Runtime>;
-type Currencies = orml_currencies::Module<Runtime>;
-type System = frame_system::Module<Runtime>;
+use sp_runtime::{DispatchResult, FixedPointNumber};
 
 parameter_types! {
 	pub ALICE: AccountId = AccountId::from([1u8; 32]);
 	pub BOB: AccountId = AccountId::from([2u8; 32]);
 	pub CHARLIE: AccountId = AccountId::from([3u8; 32]);
+	pub ORACLE1: AccountId = AccountId::from([4u8; 32]);
+	pub ORACLE2: AccountId = AccountId::from([5u8; 32]);
+	pub ORACLE3: AccountId = AccountId::from([6u8; 32]);
+
 }
 
 struct ExtBuilder {
@@ -241,6 +238,13 @@ impl ExtBuilder {
 		.assimilate_storage::<Runtime>(&mut t)
 		.unwrap();
 
+		pallet_membership::GenesisConfig::<Runtime, pallet_membership::Instance2> {
+			members: vec![ORACLE1::get().clone(), ORACLE2::get().clone(), ORACLE3::get().clone()],
+			phantom: Default::default(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 		accounts::GenesisConfig::<Runtime> {
 			allowed_accounts: vec![(ALICE::get(), ())],
 			member_count: u8::one(),
@@ -286,6 +290,20 @@ fn charlie() -> <Runtime as frame_system::Config>::Origin {
 	<Runtime as frame_system::Config>::Origin::signed((CHARLIE::get()).clone())
 }
 
+fn origin_of(account_id: AccountId) -> <Runtime as frame_system::Config>::Origin {
+	<Runtime as frame_system::Config>::Origin::signed(account_id)
+}
+
+fn set_oracle_price_for_all_pools(price: u128) -> DispatchResult {
+	let prices: Vec<(CurrencyId, Price)> = EnabledUnderlyingAssetId::get()
+		.into_iter()
+		.map(|pool_id| (pool_id, Price::saturating_from_integer(price)))
+		.collect();
+	MinterestOracle::on_finalize(0);
+	assert_ok!(MinterestOracle::feed_values(origin_of(ORACLE1::get().clone()), prices));
+	Ok(())
+}
+
 #[test]
 fn test_rates_using_rpc() {
 	ExtBuilder::default()
@@ -293,6 +311,9 @@ fn test_rates_using_rpc() {
 		.pool_initial(CurrencyId::ETH)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(100_000)));
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
 
@@ -365,6 +386,9 @@ fn demo_scenario_n2_without_insurance_should_work() {
 		.pool_initial(CurrencyId::ETH)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 100_000 * DOLLARS));
 			System::set_block_number(200);
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 100_000 * DOLLARS));
@@ -556,6 +580,9 @@ fn complete_liquidation_one_collateral_should_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
 			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
@@ -610,6 +637,9 @@ fn complete_liquidation_multi_collateral_should_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
 			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
@@ -672,6 +702,9 @@ fn partial_liquidation_one_collateral_should_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
 			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
@@ -726,6 +759,9 @@ fn partial_liquidation_multi_collateral_should_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
 
 			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
@@ -790,6 +826,9 @@ fn complete_liquidation_should_not_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
 			assert_err!(
 				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
 				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingsAssets
@@ -810,6 +849,9 @@ fn partial_liquidation_should_not_work() {
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
 			assert_err!(
 				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
 				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingsAssets
@@ -825,6 +867,9 @@ fn test_user_balance_using_rpc() {
 		.pool_initial(CurrencyId::ETH)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
 			assert_eq!(
 				get_total_supply_and_borrowed_usd_balance_rpc(ALICE::get()),
 				Some(UserPoolBalanceData {
@@ -896,6 +941,9 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 		.pool_initial(CurrencyId::ETH)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
 			System::set_block_number(50);
 			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
@@ -908,7 +956,7 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 			let account_data_before_repay_all =
 				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 
-			let oracle_price = Oracle::get_underlying_price(DOT).unwrap();
+			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
 			let bob_balance_before_repay_all = Currencies::free_balance(DOT, &BOB::get());
 
@@ -934,6 +982,9 @@ fn test_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc
 		.pool_initial(CurrencyId::ETH)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
 			System::set_block_number(50);
 			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
@@ -944,7 +995,7 @@ fn test_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc
 			let account_data_before_repay =
 				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 
-			let oracle_price = Oracle::get_underlying_price(DOT).unwrap();
+			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(10_000)));
 			let account_data_after_repay =
@@ -972,6 +1023,9 @@ fn test_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rp
 		.pool_initial(CurrencyId::ETH)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
 			System::set_block_number(50);
 			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
@@ -980,7 +1034,7 @@ fn test_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rp
 			let account_data_before_borrow =
 				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 
-			let oracle_price = Oracle::get_underlying_price(DOT).unwrap();
+			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(30_000)));
 			let account_data_after_borrow =
@@ -1009,6 +1063,9 @@ fn test_total_borrowed_difference_is_ok_before_and_after_deposit_using_balance_r
 		.pool_initial(CurrencyId::ETH)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
 			System::set_block_number(50);
 			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
@@ -1017,7 +1074,7 @@ fn test_total_borrowed_difference_is_ok_before_and_after_deposit_using_balance_r
 			let account_data_before_deposit =
 				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 
-			let oracle_price = Oracle::get_underlying_price(DOT).unwrap();
+			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(30_000)));
 			let account_data_after_deposit =

@@ -18,7 +18,7 @@ use frame_system::{
 };
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::PoolsManager;
+use pallet_traits::{PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::{CheckedDiv, CheckedMul, One};
@@ -90,7 +90,6 @@ type LiquidityPools<T> = liquidity_pools::Module<T>;
 type Accounts<T> = accounts::Module<T>;
 type Controller<T> = controller::Module<T>;
 type MinterestProtocol<T> = minterest_protocol::Module<T>;
-type Oracle<T> = oracle::Module<T>;
 
 #[frame_support::pallet]
 pub mod module {
@@ -131,6 +130,8 @@ pub mod module {
 		LiquidationRejection,
 		/// Liquidation incentive can't be less than one && greater than 1.5.
 		InvalidLiquidationIncentiveValue,
+		/// Feed price is invalid
+		InvalidFeedPrice,
 	}
 
 	#[pallet::event]
@@ -501,8 +502,9 @@ impl<T: Config> Pallet<T> {
 	pub fn liquidate_unsafe_loan(borrower: T::AccountId, liquidated_pool_id: CurrencyId) -> DispatchResult {
 		<Controller<T>>::accrue_interest_rate(liquidated_pool_id)?;
 
-		// Read oracle price for borrowed pool.
-		let price_borrowed = <Oracle<T>>::get_underlying_price(liquidated_pool_id)?;
+		// Read prices price for borrowed pool.
+		let price_borrowed =
+			T::PriceSource::get_underlying_price(liquidated_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
 		// Get borrower borrow balance and calculate total_repay_amount (in USD):
 		// total_repay_amount = borrow_balance * price_borrowed
@@ -514,12 +516,8 @@ impl<T: Config> Pallet<T> {
 
 		let liquidation_attempts = <LiquidityPools<T>>::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
 
-		let is_partial_liquidation = match total_repay_amount >= RiskManagerDates::<T>::get(liquidated_pool_id).min_sum
-			&& liquidation_attempts < RiskManagerDates::<T>::get(liquidated_pool_id).max_attempts
-		{
-			true => true,
-			false => false,
-		};
+		let is_partial_liquidation = total_repay_amount >= RiskManagerDates::<T>::get(liquidated_pool_id).min_sum
+			&& liquidation_attempts < RiskManagerDates::<T>::get(liquidated_pool_id).max_attempts;
 
 		// Calculate sum required to liquidate.
 		let (seize_amount, repay_amount, repay_assets) =
@@ -579,10 +577,11 @@ impl<T: Config> Pallet<T> {
 				let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&collateral_pool_id)?;
 				let balance_wrapped_token = T::MultiCurrency::free_balance(wrapped_id, &borrower);
 
-				// Get the exchange rate, read oracle price for collateral pool and calculate the number
+				// Get the exchange rate, read prices price for collateral pool and calculate the number
 				// of collateral tokens to seize:
 				// seize_tokens = seize_amount / (price_collateral * exchange_rate)
-				let price_collateral = <Oracle<T>>::get_underlying_price(collateral_pool_id)?;
+				let price_collateral =
+					T::PriceSource::get_underlying_price(collateral_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 				let exchange_rate = <LiquidityPools<T>>::get_exchange_rate(collateral_pool_id)?;
 				let seize_tokens = Rate::from_inner(seize_amount)
 					.checked_div(
@@ -681,7 +680,8 @@ impl<T: Config> Pallet<T> {
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let price_borrowed = <Oracle<T>>::get_underlying_price(liquidated_pool_id)?;
+		let price_borrowed =
+			T::PriceSource::get_underlying_price(liquidated_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
 		// repay_assets = repay_amount / price_borrowed (Tokens)
 		let repay_assets = Rate::from_inner(repay_amount)

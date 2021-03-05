@@ -33,7 +33,7 @@ members = [
     'pallets/minterest-protocol',
     'pallets/controller',
     'pallets/accounts',
-    'pallets/oracle',
+    'pallets/prices',
     'pallets/risk-manager',
     'pallets/liquidation-pools',
 

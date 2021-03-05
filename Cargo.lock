@@ -14,7 +14,7 @@ dependencies = [
 
 [[package]]
 name = "accounts"
-version = "0.5.0"
+version = "0.6.2"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -880,7 +880,6 @@ dependencies = [
  "liquidity-pools",
  "minterest-model",
  "minterest-primitives",
- "oracle",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -2509,7 +2508,6 @@ dependencies = [
  "minterest-model",
  "minterest-primitives",
  "minterest-protocol",
- "oracle",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -3286,14 +3284,13 @@ dependencies = [
 
 [[package]]
 name = "liquidation-pools"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "accounts",
  "frame-support",
  "frame-system",
  "liquidity-pools",
  "minterest-primitives",
- "oracle",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -3314,7 +3311,6 @@ dependencies = [
  "frame-support",
  "frame-system",
  "minterest-primitives",
- "oracle",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -3552,10 +3548,10 @@ dependencies = [
  "frame-system",
  "liquidity-pools",
  "minterest-primitives",
- "oracle",
  "orml-tokens",
  "orml-traits",
  "orml-utilities",
+ "pallet-traits",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -3586,7 +3582,6 @@ dependencies = [
  "liquidity-pools",
  "minterest-model",
  "minterest-primitives",
- "oracle",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -3608,6 +3603,7 @@ dependencies = [
  "controller-rpc",
  "jsonrpc-core",
  "node-minterest-runtime",
+ "orml-oracle-rpc",
  "pallet-transaction-payment-rpc",
  "sc-rpc",
  "sc-rpc-api",
@@ -3631,6 +3627,8 @@ dependencies = [
  "minterest-model",
  "minterest-rpc",
  "node-minterest-runtime",
+ "pallet-collective",
+ "pallet-membership",
  "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
  "risk-manager",
@@ -3743,6 +3741,23 @@ checksum = "5a33c1b55807fbed163481b5ba66db4b2fa6cde694a5027be10fb724206c5897"
 dependencies = [
  "socket2",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "module-prices"
+version = "0.6.2"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "minterest-primitives",
+ "orml-traits",
+ "pallet-traits",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -3883,13 +3898,17 @@ dependencies = [
  "minterest-model",
  "minterest-primitives",
  "minterest-protocol",
- "oracle",
+ "module-prices",
  "orml-currencies",
+ "orml-oracle",
+ "orml-oracle-rpc-runtime-api",
  "orml-tokens",
  "orml-traits",
  "pallet-aura",
  "pallet-balances",
+ "pallet-collective",
  "pallet-grandpa",
+ "pallet-membership",
  "pallet-randomness-collective-flip",
  "pallet-sudo",
  "pallet-timestamp",
@@ -4044,18 +4063,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77af24da69f9d9341038eba93a073b1fdaaa1b788221b00a69bce9e762cb32de"
 
 [[package]]
-name = "oracle"
-version = "0.5.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "minterest-primitives",
- "parity-scale-codec",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "orml-auction"
 version = "0.4.1-dev"
 dependencies = [
@@ -4156,6 +4163,31 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "orml-oracle-rpc"
+version = "0.4.1-dev"
+dependencies = [
+ "funty",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "orml-oracle-rpc-runtime-api",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+]
+
+[[package]]
+name = "orml-oracle-rpc-runtime-api"
+version = "0.4.1-dev"
+dependencies = [
+ "funty",
+ "parity-scale-codec",
+ "sp-api",
  "sp-std",
 ]
 
@@ -4284,6 +4316,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-collective"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe826f3bfb984b3dd8d6675d7d156ba4c0877ee562bf59d86a4e805b7737dcb1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-elections-phragmen"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4317,6 +4365,21 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-staking",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-membership"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "531c600ffd1f92cc510ecfb59a94d0c81af8fc57c8b920d0858f39ea9f8ad060"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-io",
+ "sp-runtime",
  "sp-std",
 ]
 
@@ -5467,7 +5530,6 @@ dependencies = [
  "minterest-model",
  "minterest-primitives",
  "minterest-protocol",
- "oracle",
  "orml-tokens",
  "orml-traits",
  "orml-utilities",
