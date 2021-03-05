@@ -294,7 +294,7 @@ pub mod module {
 		#[transactional]
 		pub fn balancing(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
-			Self::balancing_attempt(pool_id);
+			Self::balancing_attempt(pool_id)?;
 			Ok(().into())
 		}
 	}
@@ -397,8 +397,8 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn calculate_sum(
-		weak_pools: Vec<(CurrencyId, Balance)>,
-		strong_pools: Vec<(CurrencyId, Balance)>,
+		weak_pools: &Vec<(CurrencyId, Balance)>,
+		strong_pools: &Vec<(CurrencyId, Balance)>,
 	) -> result::Result<(Balance, Balance), DispatchError> {
 		let weak_sum = weak_pools.iter().try_fold(
 			Balance::zero(),
@@ -470,8 +470,25 @@ impl<T: Config> Pallet<T> {
 	/// Preparing data for pool balancing.
 	///
 	/// - `pool_id`: the CurrencyId of the pool for which automatic balancing is performed.
-	fn balancing_attempt(_pool_id: CurrencyId) -> () {
-		()
+	fn balancing_attempt(_pool_id: CurrencyId) -> DispatchResultWithPostInfo {
+		let (mut weak_pools, strong_pools) = Self::collect_pools_vectors()?;
+
+		if weak_pools.len().is_zero() {
+			return Ok(().into());
+		}
+
+		if !weak_pools.len().is_zero() && strong_pools.len().is_zero() {
+			return Ok(().into());
+		}
+
+		let (mut weak_sum, strong_sum) = Self::calculate_sum(&weak_pools, &strong_pools)?;
+
+		while weak_sum > strong_sum {
+			let removed_pool = weak_pools.pop().ok_or(Error::<T>::NumOverflow)?;
+			weak_sum -= removed_pool.1
+		}
+
+		Ok(().into())
 	}
 }
 
