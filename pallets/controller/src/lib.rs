@@ -13,7 +13,7 @@ use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, pallet_prelude::*};
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::PoolsManager;
+use pallet_traits::{PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;
@@ -68,7 +68,6 @@ pub struct PauseKeeper {
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 type MinterestModel<T> = minterest_model::Module<T>;
-type Oracle<T> = oracle::Module<T>;
 type Accounts<T> = accounts::Module<T>;
 type RateResult = result::Result<Rate, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
@@ -80,7 +79,7 @@ pub mod module {
 
 	#[pallet::config]
 	pub trait Config:
-		frame_system::Config + liquidity_pools::Config + oracle::Config + accounts::Config + minterest_model::Config
+		frame_system::Config + liquidity_pools::Config + accounts::Config + minterest_model::Config
 	{
 		/// The overarching event type.
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
@@ -94,7 +93,7 @@ pub mod module {
 		NumOverflow,
 		/// Borrow rate is absurdly high.
 		BorrowRateIsTooHight,
-		/// Oracle unavailable or price equal 0ю
+		/// Oracle unavailable or price equal 0.
 		OraclePriceError,
 		/// Insufficient available liquidity.
 		InsufficientLiquidity,
@@ -516,7 +515,7 @@ impl<T: Config> Pallet<T> {
 
 			// Get the normalized price of the asset.
 			let oracle_price =
-				<Oracle<T>>::get_underlying_price(underlying_asset).map_err(|_| Error::<T>::OraclePriceError)?;
+				T::PriceSource::get_underlying_price(underlying_asset).ok_or(Error::<T>::OraclePriceError)?;
 
 			if oracle_price.is_zero() {
 				return Ok((Balance::zero(), Balance::zero()));
@@ -665,6 +664,165 @@ impl<T: Config> Pallet<T> {
 		let supply_rate = Self::calculate_supply_interest_rate(utilization_rate, borrow_rate, insurance_factor).ok()?;
 
 		Some((borrow_rate, supply_rate))
+	}
+
+	/// Calculates total supply and total borrowed balance in usd based on
+	/// total_borrowed, total_insurance, borrow_index values calculated for current block
+	pub fn get_total_supply_and_borrowed_usd_balance(
+		who: &T::AccountId,
+	) -> result::Result<(Balance, Balance), DispatchError> {
+		let (total_supply_balance, total_borrowed_balance) = T::EnabledCurrencyPair::get().iter().try_fold(
+			(Balance::zero(), Balance::zero()),
+			|current_value, currency_pair| -> result::Result<(Balance, Balance), DispatchError> {
+				let pool_id = currency_pair.underlying_id;
+				let wrapped_id = currency_pair.wrapped_id;
+
+				// Check if user has / had borrowed wrapped tokens in the pool
+				let wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &who);
+				let has_balance = wrapped_balance > Balance::zero();
+				let has_borrow_balance = <LiquidityPools<T>>::get_user_total_borrowed(&who, pool_id) > Balance::zero();
+				// Skip this pool if there is nothing to calculate
+				if !has_balance && !has_borrow_balance {
+					return Ok(current_value);
+				}
+
+				let (current_supply_in_usd, current_borrowed_in_usd) = current_value;
+				let (total_borrowed, total_insurance, borrow_index) = Self::calculate_interest_params(pool_id)?;
+				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::OraclePriceError)?;
+
+				let mut supply_in_usd = Balance::zero();
+				let mut borrowed_in_usd = Balance::zero();
+				if has_balance {
+					let current_exchange_rate = <LiquidityPools<T>>::get_exchange_rate_by_interest_params(
+						pool_id,
+						total_insurance,
+						total_borrowed,
+					)?;
+					supply_in_usd += Rate::from_inner(wrapped_balance)
+						.checked_mul(&current_exchange_rate)
+						.and_then(|v| v.checked_mul(&oracle_price))
+						.map(|x| x.into_inner())
+						.ok_or(Error::<T>::NumOverflow)?;
+				}
+				if has_borrow_balance {
+					let borrow_balance = Self::borrow_balance_by_interest_params(&who, pool_id, borrow_index)?;
+					let borrow_balance_in_usd = Rate::from_inner(borrow_balance)
+						.checked_mul(&oracle_price)
+						.map(|x| x.into_inner())
+						.ok_or(Error::<T>::NumOverflow)?;
+					borrowed_in_usd += borrow_balance_in_usd;
+				}
+				Ok((
+					current_supply_in_usd + supply_in_usd,
+					current_borrowed_in_usd + borrowed_in_usd,
+				))
+			},
+		)?;
+		Ok((total_supply_balance, total_borrowed_balance))
+	}
+
+	/// Return the borrow balance of account based on pool_borrow_index calculated beforehand.
+	///
+	/// - `who`: The address whose balance should be calculated.
+	/// - `underlying_asset_id`: ID of the currency, the balance of borrowing of which we calculate.
+	/// - `pool_borrow_index`: borrow index for the pool
+	pub fn borrow_balance_by_interest_params(
+		who: &T::AccountId,
+		underlying_asset_id: CurrencyId,
+		pool_borrow_index: Rate,
+	) -> BalanceResult {
+		let user_borrow_balance = <LiquidityPools<T>>::get_user_total_borrowed(&who, underlying_asset_id);
+
+		// If borrow_balance = 0 then borrow_index is likely also 0.
+		// Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
+		if user_borrow_balance.is_zero() {
+			return Ok(Balance::zero());
+		};
+
+		let user_borrow_index = <LiquidityPools<T>>::get_user_borrow_index(&who, underlying_asset_id);
+
+		// Calculate new borrow balance using the borrow index:
+		// recent_borrow_balance = user_borrow_balance * pool_borrow_index / user_borrow_index
+		let principal_times_index = Rate::from_inner(user_borrow_balance)
+			.checked_mul(&pool_borrow_index)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		let result = Rate::from_inner(principal_times_index)
+			.checked_div(&user_borrow_index)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		Ok(result)
+	}
+
+	/// Calculates total borrows, total insurance and borrow index for given pool.
+	/// Applies accrued interest to total borrows and insurances and calculates interest accrued
+	/// from the last checkpointed block up to the current block and writes new checkpoint to
+	/// storage.
+	///
+	/// - `underlying_asset_id`: ID of the currency to make calculations for.
+	pub fn calculate_interest_params(
+		underlying_asset_id: CurrencyId,
+	) -> result::Result<(Balance, Balance, Rate), DispatchError> {
+		//Remember the initial block number.
+		let current_block_number = <frame_system::Module<T>>::block_number();
+		let accrual_block_number_previous = Self::controller_dates(underlying_asset_id).timestamp;
+
+		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(underlying_asset_id);
+		let current_total_borrowed_balance = <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id);
+		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(underlying_asset_id);
+		let current_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
+
+		//Short-circuit accumulating 0 interest.
+		if current_block_number == accrual_block_number_previous {
+			return Ok((
+				current_total_borrowed_balance,
+				current_total_insurance,
+				current_borrow_index,
+			));
+		}
+
+		let utilization_rate = Self::calculate_utilization_rate(
+			current_total_balance,
+			current_total_borrowed_balance,
+			current_total_insurance,
+		)?;
+
+		// Calculate the current borrow interest rate
+		let current_borrow_interest_rate =
+			<MinterestModel<T>>::calculate_borrow_interest_rate(underlying_asset_id, utilization_rate)?;
+
+		let max_borrow_rate = Self::get_max_borrow_rate(underlying_asset_id);
+		let insurance_factor = Self::get_insurance_factor(underlying_asset_id);
+
+		ensure!(
+			current_borrow_interest_rate <= max_borrow_rate,
+			Error::<T>::BorrowRateIsTooHight
+		);
+
+		// Calculate the number of blocks elapsed since the last accrual
+		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
+
+		/*
+		Calculate the interest accumulated into borrows and insurance and the new index:
+			*  simpleInterestFactor = borrowRate * blockDelta
+			*  interestAccumulated = simpleInterestFactor * totalBorrows
+			*  totalBorrowsNew = interestAccumulated + totalBorrows
+			*  totalInsuranceNew = interestAccumulated * insuranceFactor + totalInsurance
+			*  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
+		*/
+
+		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, block_delta)?;
+		let interest_accumulated =
+			Self::calculate_interest_accumulated(simple_interest_factor, current_total_borrowed_balance)?;
+		let new_total_borrow_balance =
+			Self::calculate_new_total_borrow(interest_accumulated, current_total_borrowed_balance)?;
+		let new_total_insurance =
+			Self::calculate_new_total_insurance(interest_accumulated, insurance_factor, current_total_insurance)?;
+		let new_borrow_index = Self::calculate_new_borrow_index(simple_interest_factor, current_borrow_index)?;
+
+		Ok((new_total_borrow_balance, new_total_insurance, new_borrow_index))
 	}
 }
 
