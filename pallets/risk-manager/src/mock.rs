@@ -5,6 +5,7 @@ use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::traits::Contains;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
+use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_traits::parameter_type_with_key;
@@ -138,9 +139,14 @@ impl liquidity_pools::Config for Test {
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
+ord_parameter_types! {
+	pub const OneAlice: AccountId = 1;
+}
+
 impl controller::Config for Test {
 	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
 }
 
 parameter_types! {

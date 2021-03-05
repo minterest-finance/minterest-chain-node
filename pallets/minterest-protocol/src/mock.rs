@@ -4,8 +4,9 @@ use super::*;
 use crate as minterest_protocol;
 use controller::{ControllerData, PauseKeeper};
 use frame_support::pallet_prelude::GenesisBuild;
-use frame_support::parameter_types;
+use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
+use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_currencies::Currency;
@@ -145,9 +146,14 @@ impl liquidity_pools::Config for Test {
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
+ord_parameter_types! {
+	pub const OneAlice: AccountId = 1;
+}
+
 impl controller::Config for Test {
 	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
 }
 
 parameter_types! {

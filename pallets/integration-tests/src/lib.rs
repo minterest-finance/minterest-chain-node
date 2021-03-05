@@ -8,8 +8,8 @@
 
 #[cfg(test)]
 mod tests {
-	use frame_support::{assert_noop, assert_ok, pallet_prelude::GenesisBuild, parameter_types};
-	use frame_system::{self as system};
+	use frame_support::{assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
+	use frame_system::{self as system, EnsureSignedBy};
 	use liquidity_pools::{Pool, PoolUserData};
 	use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 	use orml_currencies::Currency;
@@ -194,9 +194,14 @@ mod tests {
 		type WhitelistMembers = Four;
 	}
 
+	ord_parameter_types! {
+		pub const ZeroAdmin: AccountId = 0;
+	}
+
 	impl controller::Config for Test {
 		type Event = Event;
 		type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+		type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	}
 
 	parameter_types! {

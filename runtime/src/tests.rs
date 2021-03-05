@@ -408,14 +408,22 @@ fn demo_scenario_n2_without_insurance_should_work() {
 			System::set_block_number(4200);
 			assert_ok!(MinterestProtocol::enable_as_collateral(charlie(), ETH));
 			System::set_block_number(4300);
-			assert_ok!(Controller::pause_specific_operation(alice(), DOT, Operation::Borrow));
+			assert_ok!(Controller::pause_specific_operation(
+				<Runtime as frame_system::Config>::Origin::root(),
+				DOT,
+				Operation::Borrow
+			));
 			System::set_block_number(4400);
 			assert_noop!(
 				MinterestProtocol::borrow(charlie(), DOT, 20_000 * DOLLARS),
 				minterest_protocol::Error::<Runtime>::OperationPaused
 			);
 			System::set_block_number(5000);
-			assert_ok!(Controller::unpause_specific_operation(alice(), DOT, Operation::Borrow));
+			assert_ok!(Controller::unpause_specific_operation(
+				<Runtime as frame_system::Config>::Origin::root(),
+				DOT,
+				Operation::Borrow
+			));
 
 			System::set_block_number(6000);
 			assert_ok!(MinterestProtocol::borrow(charlie(), DOT, 20_000 * DOLLARS));
@@ -873,7 +881,10 @@ fn whitelist_mode_should_work() {
 		assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(10_000)));
 		System::set_block_number(2);
 
-		assert_ok!(Controller::switch_mode(alice(), true));
+		assert_ok!(Controller::switch_mode(
+			<Runtime as frame_system::Config>::Origin::root(),
+			true
+		));
 		System::set_block_number(3);
 		assert_noop!(
 			MinterestProtocol::deposit_underlying(bob(), DOT, dollars(5_000)),
