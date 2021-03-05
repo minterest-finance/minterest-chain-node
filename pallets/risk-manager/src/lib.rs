@@ -516,12 +516,8 @@ impl<T: Config> Pallet<T> {
 
 		let liquidation_attempts = <LiquidityPools<T>>::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
 
-		let is_partial_liquidation = match total_repay_amount >= RiskManagerDates::<T>::get(liquidated_pool_id).min_sum
-			&& liquidation_attempts < RiskManagerDates::<T>::get(liquidated_pool_id).max_attempts
-		{
-			true => true,
-			false => false,
-		};
+		let is_partial_liquidation = total_repay_amount >= RiskManagerDates::<T>::get(liquidated_pool_id).min_sum
+			&& liquidation_attempts < RiskManagerDates::<T>::get(liquidated_pool_id).max_attempts;
 
 		// Calculate sum required to liquidate.
 		let (seize_amount, repay_amount, repay_assets) =
