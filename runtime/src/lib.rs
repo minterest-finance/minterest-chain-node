@@ -356,6 +356,7 @@ impl liquidation_pools::Config for Runtime {
 	type UnsignedPriority = LiquidityPoolsPriority;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
+	type LiquidityPoolsManager = LiquidityPools;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

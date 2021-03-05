@@ -18,7 +18,7 @@ use orml_utilities::OffchainErr;
 use pallet_traits::PoolsManager;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::traits::{AccountIdConversion, Zero};
+use sp_runtime::traits::{AccountIdConversion, CheckedMul, Zero};
 use sp_runtime::{
 	offchain::{
 		storage::StorageValueRef,
@@ -93,6 +93,9 @@ pub mod module {
 		#[pallet::constant]
 		/// The Liquidation Pool's account id, keep all assets in Pools.
 		type LiquidationPoolAccountId: Get<Self::AccountId>;
+
+		/// The basic liquidity pools manager.
+		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -384,6 +387,60 @@ impl<T: Config> Pallet<T> {
 				pool_id,
 			);
 		}
+	}
+
+	pub fn collect_pools_vectors(
+	) -> result::Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
+		let mut weak_pools: Vec<(CurrencyId, Balance)> = Vec::new();
+		let mut strong_pools: Vec<(CurrencyId, Balance)> = Vec::new();
+
+		T::EnabledCurrencyPair::get().iter().for_each(|currency_pair| {
+			let pool_id = currency_pair.underlying_id;
+
+			let (extra_minus, extra_plus) = Self::is_pool_unbalanced(pool_id).unwrap_or_default();
+
+			if !extra_minus.is_zero() {
+				weak_pools.push((pool_id, extra_minus))
+			}
+
+			if !extra_plus.is_zero() {
+				strong_pools.push((pool_id, extra_plus))
+			}
+		});
+
+		Ok((weak_pools, strong_pools))
+	}
+
+	pub fn is_pool_unbalanced(pool_id: CurrencyId) -> result::Result<(Balance, Balance), DispatchError> {
+		let lkp_liquidity = <Pallet<T>>::get_pool_available_liquidity(pool_id);
+		let wp_liquidity = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
+		let threshold = Self::liquidation_pools(pool_id).deviation_threshold;
+		let balance_ratio = Self::liquidation_pools(pool_id).balance_ratio;
+
+		let ideal_value = Rate::from_inner(wp_liquidity)
+			.checked_mul(&balance_ratio)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+		let threshold_step = Rate::from_inner(ideal_value)
+			.checked_mul(&threshold)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		let mut extra_plus = Balance::zero();
+		let mut extra_minus = Balance::zero();
+
+		let upper_threshold = ideal_value.checked_add(threshold_step).ok_or(Error::<T>::NumOverflow)?;
+
+		let lower_threshold = ideal_value.checked_sub(threshold_step).ok_or(Error::<T>::NumOverflow)?;
+
+		if lkp_liquidity > upper_threshold {
+			extra_plus += lkp_liquidity - ideal_value
+		}
+		if lkp_liquidity < lower_threshold {
+			extra_minus += ideal_value - lkp_liquidity
+		}
+
+		Ok((extra_plus, extra_minus))
 	}
 
 	/// Preparing data for pool balancing.
