@@ -150,7 +150,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() == true {
+			if controller::WhitelistMode::<T>::get() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -175,7 +175,7 @@ pub mod module {
 		pub fn redeem(origin: OriginFor<T>, underlying_asset_id: CurrencyId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() == true {
+			if controller::WhitelistMode::<T>::get() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 			let (underlying_amount, wrapped_id, wrapped_amount) =
@@ -205,7 +205,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() == true {
+			if controller::WhitelistMode::<T>::get() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 			let (_, wrapped_id, wrapped_amount) =
@@ -235,7 +235,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() == true {
+			if controller::WhitelistMode::<T>::get() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -267,7 +267,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() == true {
+			if controller::WhitelistMode::<T>::get() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -289,7 +289,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() == true {
+			if controller::WhitelistMode::<T>::get() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -306,7 +306,7 @@ pub mod module {
 		pub fn repay_all(origin: OriginFor<T>, underlying_asset_id: CurrencyId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() == true {
+			if controller::WhitelistMode::<T>::get() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -330,7 +330,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() == true {
+			if controller::WhitelistMode::<T>::get() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -354,7 +354,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() == true {
+			if controller::WhitelistMode::<T>::get() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -369,7 +369,7 @@ pub mod module {
 		pub fn enable_as_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() == true {
+			if controller::WhitelistMode::<T>::get() {
 				ensure!(T::WhitelistMembers::contains(&sender), BadOrigin);
 			}
 
@@ -399,7 +399,7 @@ pub mod module {
 		pub fn disable_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() == true {
+			if controller::WhitelistMode::<T>::get() {
 				ensure!(T::WhitelistMembers::contains(&sender), BadOrigin);
 			}
 

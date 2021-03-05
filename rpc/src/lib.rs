@@ -55,7 +55,7 @@ where
 
 	io.extend_with(ControllerApi::to_delegate(Controller::new(client.clone())));
 
-	io.extend_with(OracleApi::to_delegate(Oracle::new(client.clone())));
+	io.extend_with(OracleApi::to_delegate(Oracle::new(client)));
 
 	// Extend this RPC with a custom API by using the following syntax.
 	// `YourRpcStruct` should have a reference to a client, which is needed

@@ -204,7 +204,7 @@ pub mod module {
 					},
 				)
 			});
-			WhitelistMode::<T>::put(self.whitelist_mode.clone());
+			WhitelistMode::<T>::put(self.whitelist_mode);
 		}
 	}
 
