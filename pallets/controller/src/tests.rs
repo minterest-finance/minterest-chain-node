@@ -1030,3 +1030,55 @@ fn do_redeem_insurance_should_work() {
 			);
 		});
 }
+
+#[test]
+fn set_borrow_cap_mode_should_work() {
+	ExtBuilder::default()
+		.pool_mock(CurrencyId::DOT)
+		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+		.build()
+		.execute_with(|| {
+			// The dispatch origin of this call must be Administrator.
+			assert_noop!(
+				Controller::set_borrow_cap_mode(bob(), CurrencyId::DOT, true, Some(10_u128)),
+				Error::<Runtime>::RequireAdmin
+			);
+
+			// Unable to enable borrow cap mode when borrow cap is zero.
+			assert_noop!(
+				Controller::set_borrow_cap_mode(alice(), CurrencyId::DOT, true, None),
+				Error::<Runtime>::ZeroBorrowCap
+			);
+
+			// ALICE set borrow cap to 10.
+			assert_ok!(Controller::set_borrow_cap_mode(
+				alice(),
+				CurrencyId::DOT,
+				true,
+				Some(10_u128)
+			));
+
+			// ALICE is able to change borrow cap to 9999
+			assert_ok!(Controller::set_borrow_cap_mode(
+				alice(),
+				CurrencyId::DOT,
+				true,
+				Some(9999_u128)
+			));
+
+			// Unable to enable borrow cap mode when borrow cap is zero.
+			assert_noop!(
+				Controller::set_borrow_cap_mode(alice(), CurrencyId::DOT, true, Some(dollars(1_000_001_u128))),
+				Error::<Runtime>::InvalidBorrowCap
+			);
+
+			// Unable to set borrow cap to zero while it is enabled.
+			assert_noop!(
+				Controller::set_borrow_cap_mode(alice(), CurrencyId::DOT, true, Some(Balance::zero())),
+				Error::<Runtime>::InvalidBorrowCap
+			);
+
+			// ALICE is able to disable borrow cap mode
+			assert_ok!(Controller::set_borrow_cap_mode(alice(), CurrencyId::DOT, false, None));
+		});
+}

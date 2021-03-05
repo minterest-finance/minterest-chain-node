@@ -404,7 +404,7 @@ pub mod module {
 		/// Borrow cap value must be in range 0..1_000_000_000_000_000_000_000_000
 		#[pallet::weight(0)]
 		#[transactional]
-		fn set_borrow_cap_mode(
+		pub fn set_borrow_cap_mode(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			enable: bool,
