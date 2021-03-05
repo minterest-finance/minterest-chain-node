@@ -59,6 +59,12 @@ fn deposit_underlying_should_work() {
 			TestProtocol::deposit_underlying(alice(), CurrencyId::KSM, dollars(10_u128)),
 			BadOrigin
 		);
+		// Bob is a whitelist member.
+		assert_ok!(TestProtocol::deposit_underlying(
+			bob(),
+			CurrencyId::DOT,
+			dollars(10_u128)
+		));
 		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = false);
 		assert_ok!(TestProtocol::deposit_underlying(
 			alice(),
@@ -610,12 +616,6 @@ fn repay_on_behalf_should_work() {
 		// Whitelist Mode is enabled. In whitelist mode, only members
 		// 'WhitelistCouncil' can work with protocols.
 		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = true);
-		assert_noop!(
-			TestProtocol::repay_on_behalf(bob(), CurrencyId::DOT, ALICE, dollars(20_u128)),
-			BadOrigin
-		);
-
-		controller::WhitelistMode::<Test>::mutate(|is_mode| *is_mode = false);
 
 		// Bob repaid 20 DOT for Alice.
 		assert_ok!(TestProtocol::repay_on_behalf(

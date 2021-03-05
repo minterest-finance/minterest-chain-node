@@ -292,9 +292,9 @@ impl pallet_collective::Config<WhitelistCouncilInstance> for Runtime {
 	type Origin = Origin;
 	type Proposal = Call;
 	type Event = Event;
-	type MotionDuration = MinterestCouncilMotionDuration;
-	type MaxProposals = MinterestCouncilMaxProposals;
-	type MaxMembers = MinterestCouncilMaxMembers;
+	type MotionDuration = WhitelistCouncilMotionDuration;
+	type MaxProposals = WhitelistCouncilMaxProposals;
+	type MaxMembers = WhitelistCouncilMaxMembers;
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type WeightInfo = ();
 }

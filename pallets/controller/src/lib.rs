@@ -114,6 +114,8 @@ pub mod module {
 		CollateralFactorCannotBeGreaterThanOne,
 		/// Collateral factor cannot be set to 0.
 		CollateralFactorCannotBeZero,
+		/// This operating mode is already set.
+		ThisModeIsAlreadySet,
 	}
 
 	#[pallet::event]
@@ -133,6 +135,8 @@ pub mod module {
 		DepositedInsurance(CurrencyId, Balance),
 		/// Insurance balance redeemed: \[pool_id, amount\]
 		RedeemedInsurance(CurrencyId, Balance),
+		/// Protocol operation mode switched: \[is_whitelist_mode\]
+		ProtocolOperationModeSwitched(bool),
 	}
 
 	/// Controller data information: `(timestamp, insurance_factor, collateral_factor,
@@ -386,6 +390,22 @@ pub mod module {
 			ControllerDates::<T>::mutate(pool_id, |r| r.collateral_factor = new_collateral_factor);
 			Self::deposit_event(Event::CollateralFactorChanged);
 			Ok(().into())
+		}
+
+		/// Enable / disable whitelist mode.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn switch_mode(origin: OriginFor<T>, is_whitelist_mode: bool) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			WhitelistMode::<T>::try_mutate(|mode| -> DispatchResultWithPostInfo {
+				ensure!(*mode != is_whitelist_mode, Error::<T>::ThisModeIsAlreadySet);
+				*mode = is_whitelist_mode;
+				Self::deposit_event(Event::ProtocolOperationModeSwitched(is_whitelist_mode));
+				Ok(().into())
+			})
 		}
 	}
 }

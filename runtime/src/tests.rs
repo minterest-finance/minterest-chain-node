@@ -2,14 +2,15 @@ use crate::{
 	AccountId, Balance, Block, Controller, Currencies,
 	CurrencyId::{self, DOT, ETH},
 	EnabledUnderlyingAssetId, Event, LiquidationPools, LiquidationPoolsModuleId, LiquidityPools,
-	LiquidityPoolsModuleId, MinterestOracle, MinterestProtocol, Rate, RiskManager, Runtime, System, DOLLARS,
+	LiquidityPoolsModuleId, MinterestOracle, MinterestProtocol, Rate, RiskManager, Runtime, System,
+	WhitelistCouncilMembership, DOLLARS,
 };
 use accounts_rpc_runtime_api::runtime_decl_for_AccountsApi::AccountsApi;
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
 use controller_rpc_runtime_api::PoolState;
 use frame_support::{assert_err, assert_noop, assert_ok, parameter_types};
-use frame_support::{pallet_prelude::GenesisBuild, traits::OnFinalize};
+use frame_support::{error::BadOrigin, pallet_prelude::GenesisBuild, traits::OnFinalize};
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 use minterest_primitives::{Operation, Price};
@@ -860,5 +861,30 @@ fn is_admin_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_eq!(is_admin_rpc(ALICE::get()), Some(true));
 		assert_eq!(is_admin_rpc(BOB::get()), Some(false));
+	})
+}
+
+#[test]
+fn whitelist_mode_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// Set price = 2.00 USD for all polls.
+		assert_ok!(set_oracle_price_for_all_pools(2));
+		System::set_block_number(1);
+		assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(10_000)));
+		System::set_block_number(2);
+
+		assert_ok!(Controller::switch_mode(alice(), true));
+		System::set_block_number(3);
+		assert_noop!(
+			MinterestProtocol::deposit_underlying(bob(), DOT, dollars(5_000)),
+			BadOrigin
+		);
+		System::set_block_number(4);
+		assert_ok!(WhitelistCouncilMembership::add_member(
+			<Runtime as frame_system::Config>::Origin::root(),
+			BOB::get()
+		));
+		System::set_block_number(5);
+		assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(10_000)));
 	})
 }

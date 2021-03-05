@@ -169,14 +169,14 @@ impl minterest_model::Config for Test {
 }
 
 ord_parameter_types! {
-	pub const Four: AccountId = 4;
+	pub const Two: AccountId = 2;
 }
 
 impl minterest_protocol::Config for Test {
 	type Event = Event;
 	type Borrowing = liquidity_pools::Module<Test>;
 	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
-	type OperationOrigin = EnsureSignedBy<Four, AccountId>;
+	type OperationOrigin = EnsureSignedBy<Two, AccountId>;
 }
 
 pub const ALICE: AccountId = 1;
