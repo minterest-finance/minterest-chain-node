@@ -389,6 +389,13 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
+	pub fn sort_by_balance(
+		mut vec_to_sort: Vec<(CurrencyId, Balance)>,
+	) -> result::Result<Vec<(CurrencyId, Balance)>, DispatchError> {
+		vec_to_sort.sort_by(|x, y| y.1.cmp(&x.1));
+		Ok(vec_to_sort)
+	}
+
 	pub fn calculate_sum(
 		weak_pools: Vec<(CurrencyId, Balance)>,
 		strong_pools: Vec<(CurrencyId, Balance)>,
