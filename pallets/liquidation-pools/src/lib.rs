@@ -287,8 +287,6 @@ pub mod module {
 
 		/// Make balance the pool.
 		///
-		/// - `pool_id`: PoolID for which balancing is performed.
-		///
 		/// The dispatch origin of this call must be _None_.
 		#[pallet::weight(0)]
 		#[transactional]
@@ -401,12 +399,16 @@ impl<T: Config> Pallet<T> {
 	) -> result::Result<(Balance, Balance), DispatchError> {
 		let weak_sum = weak_pools.iter().try_fold(
 			Balance::zero(),
-			|current_value, x| -> result::Result<Balance, DispatchError> { Ok(current_value + x.1) },
+			|current_value, x| -> result::Result<Balance, DispatchError> {
+				Ok(current_value.checked_add(x.1).ok_or(Error::<T>::NumOverflow)?)
+			},
 		)?;
 
 		let strong_sum = strong_pools.iter().try_fold(
 			Balance::zero(),
-			|current_value, x| -> result::Result<Balance, DispatchError> { Ok(current_value + x.1) },
+			|current_value, x| -> result::Result<Balance, DispatchError> {
+				Ok(current_value.checked_add(x.1).ok_or(Error::<T>::NumOverflow)?)
+			},
 		)?;
 
 		Ok((weak_sum, strong_sum))
@@ -463,7 +465,7 @@ impl<T: Config> Pallet<T> {
 			extra_minus += ideal_value - lkp_liquidity
 		}
 
-		Ok((extra_plus, extra_minus))
+		Ok((extra_minus, extra_plus))
 	}
 
 	/// Preparing data for pool balancing.

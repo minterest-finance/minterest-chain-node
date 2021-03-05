@@ -205,6 +205,7 @@ fn testnet_genesis(
 	endowed_accounts: Vec<AccountId>,
 	_enable_println: bool,
 ) -> GenesisConfig {
+	let mut iter = 0u8;
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
 			// Add Wasm runtime to storage.
@@ -229,12 +230,23 @@ fn testnet_genesis(
 			endowed_accounts: endowed_accounts
 				.iter()
 				.flat_map(|x| {
-					vec![
-						(x.clone(), CurrencyId::DOT, INITIAL_BALANCE),
-						(x.clone(), CurrencyId::ETH, INITIAL_BALANCE),
-						(x.clone(), CurrencyId::KSM, INITIAL_BALANCE),
-						(x.clone(), CurrencyId::BTC, INITIAL_BALANCE),
-					]
+					if iter == 0 {
+						iter += 1;
+						vec![
+							(x.clone(), CurrencyId::DOT, 13_000 * DOLLARS),
+							(x.clone(), CurrencyId::ETH, 16_000 * DOLLARS),
+							(x.clone(), CurrencyId::KSM, 24_000 * DOLLARS),
+							(x.clone(), CurrencyId::BTC, 27_000 * DOLLARS),
+						]
+					} else {
+						iter += 1;
+						vec![
+							(x.clone(), CurrencyId::DOT, INITIAL_BALANCE),
+							(x.clone(), CurrencyId::ETH, INITIAL_BALANCE),
+							(x.clone(), CurrencyId::KSM, INITIAL_BALANCE),
+							(x.clone(), CurrencyId::BTC, INITIAL_BALANCE),
+						]
+					}
 				})
 				.collect(),
 		}),
@@ -444,7 +456,7 @@ fn testnet_genesis(
 		liquidation_pools: Some(LiquidationPoolsConfig {
 			liquidation_pool_params: (LiquidationPoolCommonData {
 				timestamp: 1,
-				balancing_period: 600, // Blocks per 10 minutes.
+				balancing_period: 30, // Blocks per 3 minutes.
 			}),
 			liquidation_pools: vec![
 				(

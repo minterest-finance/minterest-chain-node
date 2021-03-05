@@ -9,6 +9,7 @@ use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
 use controller_rpc_runtime_api::PoolState;
 use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::{assert_err, assert_noop, assert_ok, parameter_types};
+use liquidation_pools::{LiquidationPool, LiquidationPoolCommonData};
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 use minterest_primitives::{Operation, Price};
@@ -243,6 +244,45 @@ impl ExtBuilder {
 		accounts::GenesisConfig::<Runtime> {
 			allowed_accounts: vec![(ALICE::get(), ())],
 			member_count: u8::one(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		liquidation_pools::GenesisConfig::<Runtime> {
+			liquidation_pool_params: (LiquidationPoolCommonData {
+				timestamp: 1,
+				balancing_period: 30, // Blocks per 3 minutes.
+			}),
+			liquidation_pools: vec![
+				(
+					CurrencyId::DOT,
+					LiquidationPool {
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+					},
+				),
+				(
+					CurrencyId::ETH,
+					LiquidationPool {
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+					},
+				),
+				(
+					CurrencyId::BTC,
+					LiquidationPool {
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+					},
+				),
+				(
+					CurrencyId::KSM,
+					LiquidationPool {
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+					},
+				),
+			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -818,4 +858,47 @@ fn is_admin_should_work() {
 		assert_eq!(is_admin_rpc(ALICE::get()), Some(true));
 		assert_eq!(is_admin_rpc(BOB::get()), Some(false));
 	})
+}
+
+#[test]
+fn is_pool_unbalanced_should_work() {
+	ExtBuilder::default()
+		.liquidity_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
+		.liquidity_pool_balance(CurrencyId::BTC, 100_000 * DOLLARS)
+		.liquidation_pool_balance(CurrencyId::DOT, 16_000 * DOLLARS)
+		.liquidation_pool_balance(CurrencyId::BTC, 40_000 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				LiquidationPools::is_pool_unbalanced(CurrencyId::DOT),
+				Ok((4_000 * DOLLARS, Balance::zero()))
+			);
+			assert_eq!(
+				LiquidationPools::is_pool_unbalanced(CurrencyId::BTC),
+				Ok((Balance::zero(), 20_000 * DOLLARS))
+			);
+		});
+}
+
+#[test]
+fn collect_pools_vectors_should_work() {
+	ExtBuilder::default()
+		.liquidity_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
+		.liquidity_pool_balance(CurrencyId::BTC, 100_000 * DOLLARS)
+		.liquidity_pool_balance(CurrencyId::ETH, 100_000 * DOLLARS)
+		.liquidity_pool_balance(CurrencyId::KSM, 50_000 * DOLLARS)
+		.liquidation_pool_balance(CurrencyId::DOT, 16_000 * DOLLARS)
+		.liquidation_pool_balance(CurrencyId::BTC, 40_000 * DOLLARS)
+		.liquidation_pool_balance(CurrencyId::ETH, 21_900 * DOLLARS)
+		.liquidation_pool_balance(CurrencyId::KSM, 4_000 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				LiquidationPools::collect_pools_vectors(),
+				Ok((
+					vec![(CurrencyId::DOT, 4_000 * DOLLARS), (CurrencyId::KSM, 6_000 * DOLLARS)],
+					vec![(CurrencyId::BTC, 20_000 * DOLLARS)]
+				))
+			);
+		});
 }
