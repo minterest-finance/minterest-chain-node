@@ -61,9 +61,7 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config:
-		frame_system::Config + liquidity_pools::Config + accounts::Config + SendTransactionTypes<Call<Self>>
-	{
+	pub trait Config: frame_system::Config + liquidity_pools::Config + SendTransactionTypes<Call<Self>> {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 

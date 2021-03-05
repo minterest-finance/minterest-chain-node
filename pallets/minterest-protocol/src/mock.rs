@@ -15,7 +15,7 @@ use pallet_traits::PriceProvider;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One, Zero},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
 	FixedPointNumber, ModuleId,
 };
 use sp_std::cell::RefCell;
@@ -36,7 +36,6 @@ frame_support::construct_runtime!(
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		TestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
-		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 	}
 );
@@ -157,15 +156,6 @@ impl controller::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxMembers: u8 = MAX_MEMBERS;
-}
-
-impl accounts::Config for Test {
-	type Event = Event;
-	type MaxMembers = MaxMembers;
-}
-
-parameter_types! {
 	pub const BlocksPerYear: u128 = 5256000;
 }
 
@@ -218,7 +208,6 @@ pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ONE_MILL_DOLLARS: Balance = 1_000_000 * DOLLARS;
 pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
 pub const TEN_THOUSAND_DOLLARS: Balance = 10_000 * DOLLARS;
-pub const MAX_MEMBERS: u8 = 16;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -434,13 +423,6 @@ impl ExtBuilder {
 				),
 			],
 			whitelist_mode: false,
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-		accounts::GenesisConfig::<Test> {
-			allowed_accounts: vec![(ALICE, ())],
-			member_count: u8::one(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

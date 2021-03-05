@@ -4,10 +4,10 @@ use liquidation_pools::LiquidationPool;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
-	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig,
-	GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
-	MinterestModelConfig, MinterestOracleConfig, OperatorMembershipMinterestConfig, RiskManagerConfig, Signature,
-	SudoConfig, SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, DOLLARS, WASM_BINARY,
+	AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig, GrandpaConfig,
+	LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig, MinterestModelConfig,
+	MinterestOracleConfig, OperatorMembershipMinterestConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
+	TokensConfig, WhitelistCouncilMembershipConfig, DOLLARS, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -16,7 +16,6 @@ use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
-use sp_runtime::traits::One;
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify, Zero},
 	FixedPointNumber, FixedU128,
@@ -358,10 +357,6 @@ fn testnet_genesis(
 				),
 			],
 			whitelist_mode: false,
-		}),
-		accounts: Some(AccountsConfig {
-			allowed_accounts: vec![(get_account_id_from_seed::<sr25519::Public>("Alice"), ())],
-			member_count: u8::one(),
 		}),
 		minterest_model: Some(MinterestModelConfig {
 			minterest_model_dates: vec![

@@ -27,7 +27,6 @@ mod tests {
 	use minterest_model::MinterestModelData;
 	use minterest_protocol::Error as MinterestProtocolError;
 	use pallet_traits::{PoolsManager, PriceProvider};
-	use sp_runtime::traits::One;
 	use sp_std::cell::RefCell;
 
 	mod controller_tests;
@@ -54,7 +53,6 @@ mod tests {
 			TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 			TestController: controller::{Module, Storage, Call, Event, Config<T>},
 			MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
-			TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		}
 	);
 
@@ -205,15 +203,6 @@ mod tests {
 	}
 
 	parameter_types! {
-		pub const MaxMembers: u8 = MAX_MEMBERS;
-	}
-
-	impl accounts::Config for Test {
-		type Event = Event;
-		type MaxMembers = MaxMembers;
-	}
-
-	parameter_types! {
 		pub const BlocksPerYear: u128 = 5256000;
 	}
 
@@ -230,7 +219,6 @@ mod tests {
 	pub const BALANCE_ZERO: Balance = 0;
 	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 	pub const RATE_ZERO: Rate = Rate::from_inner(0);
-	pub const MAX_MEMBERS: u8 = 16;
 
 	pub fn admin() -> Origin {
 		Origin::signed(ADMIN)
@@ -402,13 +390,6 @@ mod tests {
 			liquidity_pools::GenesisConfig::<Test> {
 				pools: self.pools,
 				pool_user_data: self.pool_user_data,
-			}
-			.assimilate_storage(&mut t)
-			.unwrap();
-
-			accounts::GenesisConfig::<Test> {
-				allowed_accounts: vec![(ADMIN, ())],
-				member_count: u8::one(),
 			}
 			.assimilate_storage(&mut t)
 			.unwrap();

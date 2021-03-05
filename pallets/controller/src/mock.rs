@@ -14,7 +14,7 @@ use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One, Zero},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
 	FixedPointNumber, ModuleId,
 };
 use sp_std::cell::RefCell;
@@ -34,7 +34,6 @@ frame_support::construct_runtime!(
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
-		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 	}
 );
@@ -153,15 +152,6 @@ impl liquidity_pools::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MaxMembers: u8 = MAX_MEMBERS;
-}
-
-impl accounts::Config for Runtime {
-	type Event = Event;
-	type MaxMembers = MaxMembers;
-}
-
-parameter_types! {
 	pub const BlocksPerYear: u128 = 5256000u128;
 }
 
@@ -180,8 +170,6 @@ impl Config for Runtime {
 	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
 	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
 }
-
-pub const MAX_MEMBERS: u8 = 16;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -392,13 +380,6 @@ impl ExtBuilder {
 		liquidity_pools::GenesisConfig::<Runtime> {
 			pools: self.pools,
 			pool_user_data: self.pool_user_data,
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-		accounts::GenesisConfig::<Runtime> {
-			allowed_accounts: vec![(ALICE, ())],
-			member_count: u8::one(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

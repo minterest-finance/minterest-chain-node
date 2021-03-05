@@ -5,7 +5,6 @@ use crate::{
 	LiquidityPoolsModuleId, MinterestCouncilMembership, MinterestOracle, MinterestProtocol, Rate, RiskManager, Runtime,
 	System, WhitelistCouncilMembership, DOLLARS,
 };
-use accounts_rpc_runtime_api::runtime_decl_for_AccountsApi::AccountsApi;
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
 use controller_rpc_runtime_api::PoolState;
@@ -17,7 +16,7 @@ use minterest_primitives::{Operation, Price};
 use orml_traits::MultiCurrency;
 use pallet_traits::PoolsManager;
 use risk_manager::RiskManagerData;
-use sp_runtime::traits::{AccountIdConversion, One, Zero};
+use sp_runtime::traits::{AccountIdConversion, Zero};
 use sp_runtime::{DispatchResult, FixedPointNumber};
 
 parameter_types! {
@@ -246,13 +245,6 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		accounts::GenesisConfig::<Runtime> {
-			allowed_accounts: vec![(ALICE::get(), ())],
-			member_count: u8::one(),
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
 		let mut ext: sp_io::TestExternalities = t.into();
 		ext.execute_with(|| System::set_block_number(1));
 		ext
@@ -264,11 +256,11 @@ fn pool_balance(pool_id: CurrencyId) -> Balance {
 }
 
 fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
-	<Runtime as ControllerApi<Block>>::liquidity_pool_state(currency_id)
+	<Runtime as ControllerApi<Block, AccountId>>::liquidity_pool_state(currency_id)
 }
 
 fn is_admin_rpc(caller: AccountId) -> Option<bool> {
-	<Runtime as AccountsApi<Block, AccountId>>::is_admin(caller)
+	<Runtime as ControllerApi<Block, AccountId>>::is_admin(caller)
 }
 
 fn dollars(amount: u128) -> u128 {

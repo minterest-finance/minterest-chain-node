@@ -438,15 +438,6 @@ impl controller::Config for Runtime {
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 
-parameter_types! {
-	pub const MaxMembers: u8 = MAX_MEMBERS;
-}
-
-impl accounts::Config for Runtime {
-	type Event = Event;
-	type MaxMembers = MaxMembers;
-}
-
 impl module_prices::Config for Runtime {
 	type Event = Event;
 	type Source = AggregatedDataProvider;
@@ -571,7 +562,6 @@ construct_runtime!(
 		MinterestProtocol: minterest_protocol::{Module, Call, Event<T>},
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		Accounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		RiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
@@ -739,13 +729,17 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl controller_rpc_runtime_api::ControllerApi<Block> for Runtime {
+	impl controller_rpc_runtime_api::ControllerApi<Block, AccountId> for Runtime {
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState> {
 			let exchange_rate = Controller::get_liquidity_pool_exchange_rate(pool_id)?;
 			let (borrow_rate, supply_rate) = Controller::get_liquidity_pool_borrow_and_supply_rates(pool_id)?;
 
 			Some(PoolState { exchange_rate, borrow_rate, supply_rate })
 		}
+
+		fn is_admin(caller: AccountId) -> Option<bool> {
+				Some(MinterestCouncilProvider::contains(&caller))
+			}
 	}
 
 	impl orml_oracle_rpc_runtime_api::OracleApi<
@@ -768,12 +762,6 @@ impl_runtime_apis! {
 			}
 		}
 	}
-
-	impl accounts_rpc_runtime_api::AccountsApi<Block, AccountId,> for Runtime {
-			fn is_admin(caller: AccountId) -> Option<bool> {
-				Some(MinterestCouncilProvider::contains(&caller))
-			}
-		}
 
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {

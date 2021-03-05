@@ -14,7 +14,7 @@ use sp_io::TestExternalities;
 use sp_runtime::testing::TestXt;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup, One},
+	traits::{BlakeTwo256, IdentityLookup},
 	FixedPointNumber,
 };
 
@@ -35,7 +35,6 @@ frame_support::construct_runtime!(
 		// Minterest pallets
 		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, ValidateUnsigned},
 		TestLiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
-		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -141,15 +140,6 @@ impl liquidity_pools::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxMembers: u8 = MAX_MEMBERS;
-}
-
-impl accounts::Config for Test {
-	type Event = Event;
-	type MaxMembers = MaxMembers;
-}
-
-parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value();
@@ -181,7 +171,6 @@ where
 type Amount = i128;
 type AccountId = u64;
 pub type BlockNumber = u64;
-pub const MAX_MEMBERS: u8 = 16;
 pub const ADMIN: AccountId = 0;
 pub fn admin() -> Origin {
 	Origin::signed(ADMIN)
@@ -228,13 +217,6 @@ impl ExternalityBuilder {
 
 	pub fn build(self) -> TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-
-		accounts::GenesisConfig::<Test> {
-			allowed_accounts: vec![(ADMIN, ())],
-			member_count: u8::one(),
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
 
 		liquidation_pools::GenesisConfig::<Test> {
 			liquidation_pools: self.liquidation_pools,

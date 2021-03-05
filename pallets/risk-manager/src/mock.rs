@@ -12,7 +12,7 @@ use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	FixedPointNumber, ModuleId,
 };
 use sp_std::cell::RefCell;
@@ -32,7 +32,6 @@ frame_support::construct_runtime!(
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
-		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned}
@@ -87,15 +86,6 @@ impl orml_tokens::Config for Test {
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
-}
-
-parameter_types! {
-	pub const MaxMembers: u8 = MAX_MEMBERS;
-}
-
-impl accounts::Config for Test {
-	type Event = Event;
-	type MaxMembers = MaxMembers;
 }
 
 parameter_types! {
@@ -232,7 +222,6 @@ where
 }
 
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
-pub const MAX_MEMBERS: u8 = 16;
 pub const ONE_HUNDRED: Balance = 100;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ADMIN: AccountId = 0;
@@ -273,13 +262,6 @@ impl ExtBuilder {
 		liquidity_pools::GenesisConfig::<Test> {
 			pools: self.pools,
 			pool_user_data: self.pool_user_data,
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-		accounts::GenesisConfig::<Test> {
-			allowed_accounts: vec![(ADMIN, ())],
-			member_count: u8::one(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
