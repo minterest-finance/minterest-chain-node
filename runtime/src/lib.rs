@@ -59,6 +59,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
 pub use constants::{currency::*, time::*, *};
+use frame_support::traits::Contains;
 use frame_system::{EnsureOneOf, EnsureRoot};
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -332,7 +333,23 @@ impl minterest_protocol::Config for Runtime {
 	type Event = Event;
 	type Borrowing = LiquidityPools;
 	type ManagerLiquidityPools = LiquidityPools;
-	type OperationOrigin = pallet_collective::EnsureMember<AccountId, WhitelistCouncilInstance>;
+	type WhitelistMembers = WhitelistCouncilProvider;
+}
+
+pub struct WhitelistCouncilProvider;
+impl Contains<AccountId> for WhitelistCouncilProvider {
+	fn contains(who: &AccountId) -> bool {
+		WhitelistCouncil::is_member(who)
+	}
+
+	fn sorted_members() -> Vec<AccountId> {
+		WhitelistCouncil::members()
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add(_: &AccountId) {
+		todo!()
+	}
 }
 
 parameter_type_with_key! {

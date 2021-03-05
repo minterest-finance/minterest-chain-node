@@ -885,6 +885,6 @@ fn whitelist_mode_should_work() {
 			BOB::get()
 		));
 		System::set_block_number(5);
-		assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(10_000)));
+		assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(10_000)));
 	})
 }

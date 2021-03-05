@@ -8,12 +8,16 @@
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
 
-use frame_support::{pallet_prelude::*, traits::EnsureOrigin, transactional};
+use frame_support::traits::Contains;
+use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, pallet_prelude::*};
 use minterest_primitives::{Balance, CurrencyId, Operation};
 use orml_traits::MultiCurrency;
 use pallet_traits::{Borrowing, PoolsManager};
-use sp_runtime::{traits::Zero, DispatchError, DispatchResult};
+use sp_runtime::{
+	traits::{BadOrigin, Zero},
+	DispatchError, DispatchResult,
+};
 use sp_std::cmp::Ordering;
 use sp_std::result;
 
@@ -46,7 +50,7 @@ pub mod module {
 
 		/// The origin which may call deposit/redeem/borrow/repay in Whitelist mode.
 		/// Root can always do this.
-		type OperationOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
+		type WhitelistMembers: Contains<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -657,6 +661,7 @@ impl<T: Config> Pallet<T> {
 		let who = if controller::WhitelistMode::<T>::get() == true {
 			let caller = ensure_signed(origin)?;
 			ensure!(T::WhitelistMembers::contains(&caller), BadOrigin);
+			caller
 		// T::OperationOrigin::ensure_origin(origin)?
 		} else {
 			ensure_signed(origin)?
