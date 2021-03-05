@@ -68,6 +68,7 @@ pub struct LiquidationPool {
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 type Accounts<T> = accounts::Module<T>;
+type TwoVectorsResult = result::Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError>;
 
 #[frame_support::pallet]
 pub mod module {
@@ -386,6 +387,7 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
+	/// Sort vector by balance param (DESC)
 	pub fn sort_by_balance(
 		mut vec_to_sort: Vec<(CurrencyId, Balance)>,
 	) -> result::Result<Vec<(CurrencyId, Balance)>, DispatchError> {
@@ -393,9 +395,11 @@ impl<T: Config> Pallet<T> {
 		Ok(vec_to_sort)
 	}
 
+	/// Considers the total amount required for balancing both pool types "strong_pools" &&
+	/// "weak_pools".
 	pub fn calculate_sum(
-		weak_pools: &Vec<(CurrencyId, Balance)>,
-		strong_pools: &Vec<(CurrencyId, Balance)>,
+		weak_pools: &[(CurrencyId, Balance)],
+		strong_pools: &[(CurrencyId, Balance)],
 	) -> result::Result<(Balance, Balance), DispatchError> {
 		let weak_sum = weak_pools.iter().try_fold(
 			Balance::zero(),
@@ -414,8 +418,15 @@ impl<T: Config> Pallet<T> {
 		Ok((weak_sum, strong_sum))
 	}
 
-	pub fn collect_pools_vectors(
-	) -> result::Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
+	/// Collect pools that required to balance.
+	/// Separate them to 2 different vectors.
+	/// `weak_pools` - contains tuples of elements:
+	/// -`pool_id`  Id of unbalanced pool with too low balance,
+	/// -`extra_minus` balance that required to come back to ideal value.
+	/// `strong_pools` - contains tuples of elements:
+	/// -`pool_id`  Id of unbalanced pool with too low balance,
+	/// -`extra_plus` balance that required to come back to ideal value.
+	pub fn collect_pools_vectors() -> TwoVectorsResult {
 		let mut weak_pools: Vec<(CurrencyId, Balance)> = Vec::new();
 		let mut strong_pools: Vec<(CurrencyId, Balance)> = Vec::new();
 
@@ -436,6 +447,13 @@ impl<T: Config> Pallet<T> {
 		Ok((weak_pools, strong_pools))
 	}
 
+	// FIXME: temporary implementation.
+	/// Check if liquidation pool unbalanced.
+	///
+	/// - `pool_id`: the CurrencyId of the liquidation pool that need to check.
+	///
+	/// Returns ( `extra_minus` , `extra_plus` ) - balance required to come back to ideal balance.
+	/// If pool is balanced - returns ( Balance::zero(), Balance::zero() )
 	pub fn is_pool_unbalanced(pool_id: CurrencyId) -> result::Result<(Balance, Balance), DispatchError> {
 		let lkp_liquidity = <Pallet<T>>::get_pool_available_liquidity(pool_id);
 		let wp_liquidity = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);

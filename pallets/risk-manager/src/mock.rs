@@ -152,6 +152,7 @@ impl liquidation_pools::Config for Test {
 	type UnsignedPriority = LiquidityPoolsPriority;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
+	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 }
 
 impl minterest_protocol::Config for Test {
