@@ -905,6 +905,27 @@ fn unpause_specific_operation_should_work() {
 }
 
 #[test]
+fn switch_mode_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(Controller::switch_mode(alice(), true));
+		let expected_event = Event::controller(crate::Event::ProtocolOperationModeSwitched(true));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+		assert_eq!(Controller::whitelist_mode(), true);
+
+		assert_ok!(Controller::switch_mode(alice(), false));
+		assert_eq!(Controller::whitelist_mode(), false);
+
+		assert_noop!(Controller::switch_mode(bob(), true), Error::<Runtime>::RequireAdmin);
+		assert_eq!(Controller::whitelist_mode(), false);
+
+		assert_noop!(
+			Controller::switch_mode(alice(), false),
+			Error::<Runtime>::ThisModeIsAlreadySet
+		);
+	});
+}
+
+#[test]
 fn deposit_insurance_should_work() {
 	ExtBuilder::default()
 		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
