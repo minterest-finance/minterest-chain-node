@@ -659,7 +659,7 @@ fn set_insurance_factor_should_work() {
 				Error::<Runtime>::NumOverflow
 			);
 
-			// The dispatch origin of this call must be Administrator.
+			// The dispatch origin of this call must be Root or half MinterestCouncil.
 			assert_noop!(
 				Controller::set_insurance_factor(bob(), CurrencyId::DOT, 20, 10),
 				BadOrigin
@@ -699,7 +699,7 @@ fn set_max_borrow_rate_should_work() {
 				Error::<Runtime>::NumOverflow
 			);
 
-			// The dispatch origin of this call must be Administrator.
+			// The dispatch origin of this call must be Root or half MinterestCouncil.
 			assert_noop!(
 				Controller::set_max_borrow_rate(bob(), CurrencyId::DOT, 20, 10),
 				BadOrigin
@@ -745,7 +745,7 @@ fn set_collateral_factor_should_work() {
 				Error::<Runtime>::NumOverflow
 			);
 
-			// The dispatch origin of this call must be Administrator.
+			// The dispatch origin of this call must be Root or half MinterestCouncil.
 			assert_noop!(
 				Controller::set_collateral_factor(bob(), CurrencyId::DOT, 20, 10),
 				BadOrigin

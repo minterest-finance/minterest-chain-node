@@ -46,7 +46,7 @@ pub struct ControllerData<BlockNumber> {
 	pub collateral_factor: Rate,
 }
 
-/// The Administrator can pause certain actions as a safety mechanism.
+/// The Root or half MinterestCouncil can pause certain actions as a safety mechanism.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct PauseKeeper {
@@ -215,7 +215,7 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		/// Pause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn pause_specific_operation(
@@ -241,7 +241,7 @@ pub mod module {
 
 		/// Unpause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn unpause_specific_operation(
@@ -267,7 +267,7 @@ pub mod module {
 
 		/// Replenishes the insurance balance.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn deposit_insurance(
@@ -283,7 +283,7 @@ pub mod module {
 
 		/// Redeem the insurance balance.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn redeem_insurance(
@@ -299,7 +299,7 @@ pub mod module {
 
 		/// Set insurance factor.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_insurance_factor(
@@ -324,7 +324,7 @@ pub mod module {
 
 		/// Set Maximum borrow rate.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_max_borrow_rate(
@@ -351,7 +351,7 @@ pub mod module {
 
 		/// Set Collateral factor.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_collateral_factor(
@@ -385,7 +385,7 @@ pub mod module {
 
 		/// Enable / disable whitelist mode.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn switch_mode(origin: OriginFor<T>) -> DispatchResultWithPostInfo {

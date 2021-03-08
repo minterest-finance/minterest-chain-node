@@ -164,7 +164,7 @@ pub mod module {
 		///
 		/// `jump_multiplier_per_block = (jump_multiplier_rate_per_year_n /
 		/// jump_multiplier_rate_per_year_d) / blocks_per_year` The dispatch origin of this call
-		/// must be Administrator.
+		/// must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_jump_multiplier_per_block(
@@ -203,7 +203,7 @@ pub mod module {
 		/// - `base_rate_per_year_d`: divider.
 		///
 		/// `base_rate_per_block = base_rate_per_year_n / base_rate_per_year_d`
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_base_rate_per_block(
@@ -247,7 +247,7 @@ pub mod module {
 		/// - `multiplier_rate_per_year_d`: divider.
 		///
 		/// `multiplier_per_block = (multiplier_rate_per_year_n / multiplier_rate_per_year_d) /
-		/// blocks_per_year` The dispatch origin of this call must be Administrator.
+		/// blocks_per_year` The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_multiplier_per_block(
@@ -290,7 +290,7 @@ pub mod module {
 		/// - `kink_divider`: divider.
 		///
 		/// `kink = kink_nominator / kink_divider`
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_kink(

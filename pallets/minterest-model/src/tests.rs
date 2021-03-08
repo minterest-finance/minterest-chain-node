@@ -83,7 +83,7 @@ fn set_base_rate_per_block_should_work() {
 			Error::<Test>::NumOverflow
 		);
 
-		// The dispatch origin of this call must be Administrator.
+		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(
 			TestMinterestModel::set_base_rate_per_block(bob(), CurrencyId::DOT, 20, 10),
 			BadOrigin
@@ -162,7 +162,7 @@ fn set_multiplier_per_block_should_work() {
 			Error::<Test>::NumOverflow
 		);
 
-		// The dispatch origin of this call must be Administrator.
+		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(
 			TestMinterestModel::set_multiplier_per_block(bob(), CurrencyId::DOT, 20, 10),
 			BadOrigin
@@ -223,7 +223,7 @@ fn set_jump_multiplier_per_block_should_work() {
 			Error::<Test>::NumOverflow
 		);
 
-		// The dispatch origin of this call must be Administrator.
+		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(
 			TestMinterestModel::set_jump_multiplier_per_block(bob(), CurrencyId::DOT, 20, 10),
 			BadOrigin
@@ -254,7 +254,7 @@ fn set_kink_should_work() {
 			Error::<Test>::NumOverflow
 		);
 
-		// The dispatch origin of this call must be Administrator.
+		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(TestMinterestModel::set_kink(bob(), CurrencyId::DOT, 8, 10), BadOrigin);
 
 		// MDOT is wrong CurrencyId for underlying assets.

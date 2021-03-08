@@ -26,7 +26,7 @@ fn set_balancing_period_should_work() {
 		let expected_event = Event::liquidation_pools(crate::Event::BalancingPeriodChanged(5256000));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
-		// The dispatch origin of this call must be Administrator.
+		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(TestLiquidationPools::set_balancing_period(alice(), 10), BadOrigin);
 	});
 }
@@ -66,7 +66,7 @@ fn set_deviation_threshold_should_work() {
 			Error::<Test>::NotValidDeviationThresholdValue
 		);
 
-		// The dispatch origin of this call must be Administrator.
+		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(
 			TestLiquidationPools::set_deviation_threshold(alice(), CurrencyId::DOT, 10),
 			BadOrigin
@@ -111,7 +111,7 @@ fn set_balance_ratio_should_work() {
 			Error::<Test>::NotValidBalanceRatioValue
 		);
 
-		// The dispatch origin of this call must be Administrator.
+		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(
 			TestLiquidationPools::set_balance_ratio(alice(), CurrencyId::DOT, 10),
 			BadOrigin

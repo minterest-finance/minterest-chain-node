@@ -196,7 +196,7 @@ pub mod module {
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `new_period`: New value of balancing period.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_balancing_period(origin: OriginFor<T>, new_period: u32) -> DispatchResultWithPostInfo {
@@ -214,7 +214,7 @@ pub mod module {
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `new_threshold`: New value of deviation threshold.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_deviation_threshold(
@@ -248,7 +248,7 @@ pub mod module {
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `new_balance_ratio`: New value of deviation threshold.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_balance_ratio(

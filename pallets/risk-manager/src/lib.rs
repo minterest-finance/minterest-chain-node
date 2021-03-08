@@ -239,7 +239,7 @@ pub mod module {
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `new_max_value`: New max value of liquidation attempts.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_max_attempts(
@@ -266,7 +266,7 @@ pub mod module {
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `new_min_sum`: New min sum for partial liquidation.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_min_sum(
@@ -295,7 +295,7 @@ pub mod module {
 		/// - `new_threshold_d`: divider.
 		///
 		/// `new_threshold = (new_threshold_n / new_threshold_d)`
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_threshold(
@@ -328,7 +328,7 @@ pub mod module {
 		/// - `new_liquidation_incentive_d`: divider.
 		///
 		/// `new_liquidation_incentive = (new_liquidation_incentive_n /
-		/// new_liquidation_incentive_d)` The dispatch origin of this call must be Administrator.
+		/// new_liquidation_incentive_d)` The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_liquidation_incentive(
