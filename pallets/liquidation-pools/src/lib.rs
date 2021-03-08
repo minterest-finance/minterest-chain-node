@@ -433,7 +433,7 @@ impl<T: Config> Pallet<T> {
 		T::EnabledCurrencyPair::get().iter().for_each(|currency_pair| {
 			let pool_id = currency_pair.underlying_id;
 
-			let (extra_minus, extra_plus) = Self::is_pool_unbalanced(pool_id).unwrap_or_default();
+			let (extra_minus, extra_plus) = Self::get_pool_deviation_value(pool_id).unwrap_or_default();
 
 			if !extra_minus.is_zero() {
 				weak_pools.push((pool_id, extra_minus))
@@ -454,7 +454,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// Returns ( `extra_minus` , `extra_plus` ) - balance required to come back to ideal balance.
 	/// If pool is balanced - returns ( Balance::zero(), Balance::zero() )
-	pub fn is_pool_unbalanced(pool_id: CurrencyId) -> result::Result<(Balance, Balance), DispatchError> {
+	pub fn get_pool_deviation_value(pool_id: CurrencyId) -> result::Result<(Balance, Balance), DispatchError> {
 		let lkp_liquidity = <Pallet<T>>::get_pool_available_liquidity(pool_id);
 		let wp_liquidity = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
 		let threshold = Self::liquidation_pools(pool_id).deviation_threshold;

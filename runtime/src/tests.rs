@@ -1138,7 +1138,7 @@ fn is_admin_should_work() {
 }
 
 #[test]
-fn is_pool_unbalanced_should_work() {
+fn get_pool_deviation_value_should_work() {
 	ExtBuilder::default()
 		.liquidity_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
 		.liquidity_pool_balance(CurrencyId::BTC, 100_000 * DOLLARS)
@@ -1147,11 +1147,11 @@ fn is_pool_unbalanced_should_work() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-				LiquidationPools::is_pool_unbalanced(CurrencyId::DOT),
+				LiquidationPools::get_pool_deviation_value(CurrencyId::DOT),
 				Ok((4_000 * DOLLARS, Balance::zero()))
 			);
 			assert_eq!(
-				LiquidationPools::is_pool_unbalanced(CurrencyId::BTC),
+				LiquidationPools::get_pool_deviation_value(CurrencyId::BTC),
 				Ok((Balance::zero(), 20_000 * DOLLARS))
 			);
 		});
