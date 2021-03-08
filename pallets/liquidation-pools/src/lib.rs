@@ -395,29 +395,6 @@ impl<T: Config> Pallet<T> {
 		Ok(vec_to_sort)
 	}
 
-	/// Considers the total amount required for balancing both pool types "strong_pools" &&
-	/// "weak_pools".
-	pub fn calculate_sum(
-		weak_pools: &[(CurrencyId, Balance)],
-		strong_pools: &[(CurrencyId, Balance)],
-	) -> result::Result<(Balance, Balance), DispatchError> {
-		let weak_sum = weak_pools.iter().try_fold(
-			Balance::zero(),
-			|current_value, x| -> result::Result<Balance, DispatchError> {
-				Ok(current_value.checked_add(x.1).ok_or(Error::<T>::NumOverflow)?)
-			},
-		)?;
-
-		let strong_sum = strong_pools.iter().try_fold(
-			Balance::zero(),
-			|current_value, x| -> result::Result<Balance, DispatchError> {
-				Ok(current_value.checked_add(x.1).ok_or(Error::<T>::NumOverflow)?)
-			},
-		)?;
-
-		Ok((weak_sum, strong_sum))
-	}
-
 	/// Collect pools that required to balance.
 	/// Separate them to 2 different vectors.
 	/// `weak_pools` - contains tuples of elements:
@@ -427,24 +404,21 @@ impl<T: Config> Pallet<T> {
 	/// -`pool_id`  Id of unbalanced pool with too low balance,
 	/// -`extra_plus` balance that required to come back to ideal value.
 	pub fn collect_pools_vectors() -> TwoVectorsResult {
-		let mut weak_pools: Vec<(CurrencyId, Balance)> = Vec::new();
-		let mut strong_pools: Vec<(CurrencyId, Balance)> = Vec::new();
+		Ok(T::EnabledUnderlyingAssetId::get().iter().fold(
+			(Vec::<(CurrencyId, Balance)>::new(), Vec::<(CurrencyId, Balance)>::new()),
+			|mut acc, pool_id| {
+				let (extra_minus, extra_plus) = Self::get_pool_deviation_value(*pool_id).unwrap_or_default();
 
-		T::EnabledCurrencyPair::get().iter().for_each(|currency_pair| {
-			let pool_id = currency_pair.underlying_id;
+				if !extra_minus.is_zero() {
+					acc.0.push((*pool_id, extra_minus))
+				}
 
-			let (extra_minus, extra_plus) = Self::get_pool_deviation_value(pool_id).unwrap_or_default();
-
-			if !extra_minus.is_zero() {
-				weak_pools.push((pool_id, extra_minus))
-			}
-
-			if !extra_plus.is_zero() {
-				strong_pools.push((pool_id, extra_plus))
-			}
-		});
-
-		Ok((weak_pools, strong_pools))
+				if !extra_plus.is_zero() {
+					acc.1.push((*pool_id, extra_plus))
+				}
+				acc
+			},
+		))
 	}
 
 	// FIXME: temporary implementation.
@@ -501,7 +475,10 @@ impl<T: Config> Pallet<T> {
 		let mut sorted_weak_pools = Self::sort_by_balance(weak_pools)?;
 		let sorted_strong_pools = Self::sort_by_balance(strong_pools)?;
 
-		let (mut weak_sum, strong_sum) = Self::calculate_sum(&sorted_weak_pools, &sorted_strong_pools)?;
+		let (mut weak_sum, strong_sum): (Balance, Balance) = (
+			sorted_weak_pools.iter().map(|pool| pool.1).sum(),
+			sorted_strong_pools.iter().map(|pool| pool.1).sum(),
+		);
 
 		while weak_sum > strong_sum {
 			let removed_pool = sorted_weak_pools.pop().ok_or(Error::<T>::NumOverflow)?;
