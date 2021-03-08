@@ -61,6 +61,9 @@ pub struct LiquidationPool {
 	/// Balance Deviation Threshold represents how much current value in a pool may differ from
 	/// ideal value (defined by balance_ratio).
 	pub deviation_threshold: Rate,
+	/// Balance Ration represents the percentage of Working pool value to be covered by value in
+	/// Liquidation Poll.
+	pub balance_ratio: Rate,
 }
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
@@ -101,6 +104,8 @@ pub mod module {
 		NotValidUnderlyingAssetId,
 		/// Value must be in range [0..1]
 		NotValidDeviationThresholdValue,
+		/// Value must be in range [0..1]
+		NotValidBalanceRatioValue,
 	}
 
 	#[pallet::event]
@@ -110,6 +115,8 @@ pub mod module {
 		BalancingPeriodChanged(u32),
 		///  Deviation Threshold has been successfully changed: \[new_threshold_value\]
 		DeviationThresholdChanged(Rate),
+		///  Balance ratio has been successfully changed: \[new_threshold_value\]
+		BalanceRatioChanged(Rate),
 	}
 
 	#[pallet::storage]
@@ -152,6 +159,7 @@ pub mod module {
 					currency_id,
 					LiquidationPool {
 						deviation_threshold: pool_data.deviation_threshold,
+						balance_ratio: pool_data.balance_ratio,
 					},
 				)
 			});
@@ -232,6 +240,40 @@ pub mod module {
 			LiquidationPools::<T>::mutate(pool_id, |x| x.deviation_threshold = new_deviation_threshold);
 
 			Self::deposit_event(Event::DeviationThresholdChanged(new_deviation_threshold));
+
+			Ok(().into())
+		}
+
+		/// Set new value of balance ratio.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `new_balance_ratio`: New value of deviation threshold.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn set_balance_ratio(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			new_balance_ratio: u128,
+		) -> DispatchResultWithPostInfo {
+			T::UpdateOrigin::ensure_origin(origin)?;
+
+			ensure!(
+				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+
+			let new_balance_ratio = Rate::from_inner(new_balance_ratio);
+
+			ensure!(
+				(Rate::zero() <= new_balance_ratio && new_balance_ratio <= Rate::one()),
+				Error::<T>::NotValidBalanceRatioValue
+			);
+
+			// Write new value into storage.
+			LiquidationPools::<T>::mutate(pool_id, |x| x.balance_ratio = new_balance_ratio);
+
+			Self::deposit_event(Event::BalanceRatioChanged(new_balance_ratio));
 
 			Ok(().into())
 		}
