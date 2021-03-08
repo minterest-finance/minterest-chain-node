@@ -32,6 +32,8 @@ frame-system-rpc-runtime-api = { default-features = false, version = '3.0.0' }
 pallet-aura = { default-features = false, version = '3.0.0' }
 pallet-balances = { default-features = false, version = '3.0.0' }
 pallet-grandpa = { default-features = false, version = '3.0.0' }
+pallet-membership = { default-features = false, version = "3.0.0" }
+pallet-collective = { default-features = false, version = "3.0.0" }
 pallet-randomness-collective-flip = { default-features = false, version = '3.0.0' }
 pallet-sudo = { default-features = false, version = '3.0.0' }
 pallet-timestamp = { default-features = false, version = '3.0.0' }
@@ -61,7 +63,7 @@ controller = { path = "../pallets/controller", default-features = false }
 controller-rpc-runtime-api = { path = "../pallets/controller/rpc/runtime-api", default-features = false }
 accounts-rpc-runtime-api = { path = "../pallets/accounts/rpc/runtime-api", default-features = false }
 accounts = { path = "../pallets/accounts", default-features = false }
-oracle = { path = "../pallets/oracle", default-features = false }
+module-prices = { path = "../pallets/prices", default-features = false }
 minterest-model = { path = "../pallets/minterest-model", default-features = false }
 risk-manager = { path = "../pallets/risk-manager", default-features = false }
 liquidation-pools = { path = "../pallets/liquidation-pools", default-features = false }
@@ -70,6 +72,8 @@ liquidation-pools = { path = "../pallets/liquidation-pools", default-features = 
 orml-currencies = { path = "../orml/currencies", default-features = false }
 orml-tokens = { path = "../orml/tokens", default-features = false }
 orml-traits = { path = "../orml/traits", default-features = false }
+orml-oracle = { path = "../orml/oracle", default-features = false }
+orml-oracle-rpc-runtime-api = { path = "../orml/oracle/rpc/runtime-api", default-features = false }
 
 [features]
 default = ['std']
@@ -100,6 +104,8 @@ std = [
     'pallet-aura/std',
     'pallet-balances/std',
     'pallet-grandpa/std',
+    "pallet-membership/std",
+    "pallet-collective/std",
     'pallet-randomness-collective-flip/std',
     'pallet-sudo/std',
     'pallet-timestamp/std',
@@ -116,6 +122,8 @@ std = [
     'orml-currencies/std',
     'orml-tokens/std',
     'orml-traits/std',
+    "orml-oracle-rpc-runtime-api/std",
+    "orml-oracle/std",
 
     'm-tokens/std',
     'minterest-protocol/std',
@@ -127,7 +135,7 @@ std = [
     'controller-rpc-runtime-api/std',
     'accounts-rpc-runtime-api/std',
     'accounts/std',
-    'oracle/std',
+    'module-prices/std',
     'minterest-model/std',
     'risk-manager/std',
     'liquidation-pools/std',

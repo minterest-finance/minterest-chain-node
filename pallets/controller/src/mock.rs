@@ -6,6 +6,7 @@ use frame_support::{pallet_prelude::GenesisBuild, parameter_types};
 use frame_system as system;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
+pub(crate) use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
@@ -15,6 +16,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One, Zero},
 	FixedPointNumber, ModuleId,
 };
+use sp_std::cell::RefCell;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -30,7 +32,6 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		Oracle: oracle::{Module},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
@@ -119,8 +120,29 @@ parameter_types! {
 			.collect();
 }
 
+thread_local! {
+	static UNDERLYING_PRICE: RefCell<Option<Price>> = RefCell::new(Some(Price::one()));
+}
+
+pub struct MockPriceSource;
+impl MockPriceSource {
+	pub fn set_underlying_price(price: Option<Price>) {
+		UNDERLYING_PRICE.with(|v| *v.borrow_mut() = price);
+	}
+}
+impl PriceProvider<CurrencyId> for MockPriceSource {
+	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
+		UNDERLYING_PRICE.with(|v| *v.borrow_mut())
+	}
+
+	fn lock_price(_currency_id: CurrencyId) {}
+
+	fn unlock_price(_currency_id: CurrencyId) {}
+}
+
 impl liquidity_pools::Config for Runtime {
 	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type PriceSource = MockPriceSource;
 	type ModuleId = LiquidityPoolsModuleId;
 	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
@@ -128,8 +150,6 @@ impl liquidity_pools::Config for Runtime {
 	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
-
-impl oracle::Config for Runtime {}
 
 parameter_types! {
 	pub const MaxMembers: u8 = MAX_MEMBERS;

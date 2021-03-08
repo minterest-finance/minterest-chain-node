@@ -3,9 +3,11 @@ use super::*;
 use crate as liquidation_pools;
 use frame_support::parameter_types;
 use frame_system as system;
+use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
+use pallet_traits::PriceProvider;
 use sp_core::H256;
 use sp_io::TestExternalities;
 use sp_runtime::testing::TestXt;
@@ -114,8 +116,21 @@ parameter_types! {
 			.collect();
 }
 
+pub struct MockPriceSource;
+
+impl PriceProvider<CurrencyId> for MockPriceSource {
+	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
+		Some(Price::one())
+	}
+
+	fn lock_price(_currency_id: CurrencyId) {}
+
+	fn unlock_price(_currency_id: CurrencyId) {}
+}
+
 impl liquidity_pools::Config for Test {
 	type MultiCurrency = orml_tokens::Module<Test>;
+	type PriceSource = MockPriceSource;
 	type ModuleId = LiquidityPoolsModuleId;
 	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
@@ -132,8 +147,6 @@ impl accounts::Config for Test {
 	type Event = Event;
 	type MaxMembers = MaxMembers;
 }
-
-impl oracle::Config for Test {}
 
 parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
