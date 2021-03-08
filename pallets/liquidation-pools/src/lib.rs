@@ -155,13 +155,7 @@ pub mod module {
 		fn build(&self) {
 			LiquidationPoolParams::<T>::put(self.liquidation_pool_params.clone());
 			self.liquidation_pools.iter().for_each(|(currency_id, pool_data)| {
-				LiquidationPools::<T>::insert(
-					currency_id,
-					LiquidationPool {
-						deviation_threshold: pool_data.deviation_threshold,
-						balance_ratio: pool_data.balance_ratio,
-					},
-				)
+				LiquidationPools::<T>::insert(currency_id, LiquidationPool { ..*pool_data })
 			});
 		}
 	}

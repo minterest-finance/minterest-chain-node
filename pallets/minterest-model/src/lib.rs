@@ -122,10 +122,7 @@ pub mod module {
 					MinterestModelDates::<T>::insert(
 						currency_id,
 						MinterestModelData {
-							kink: minterest_model_data.kink,
-							base_rate_per_block: minterest_model_data.base_rate_per_block,
-							multiplier_per_block: minterest_model_data.multiplier_per_block,
-							jump_multiplier_per_block: minterest_model_data.jump_multiplier_per_block,
+							..*minterest_model_data
 						},
 					)
 				});

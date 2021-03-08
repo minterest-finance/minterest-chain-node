@@ -176,15 +176,7 @@ pub mod module {
 			self.risk_manager_dates
 				.iter()
 				.for_each(|(currency_id, risk_manager_data)| {
-					RiskManagerDates::<T>::insert(
-						currency_id,
-						RiskManagerData {
-							max_attempts: risk_manager_data.max_attempts,
-							min_sum: risk_manager_data.min_sum,
-							threshold: risk_manager_data.threshold,
-							liquidation_incentive: risk_manager_data.liquidation_incentive,
-						},
-					)
+					RiskManagerDates::<T>::insert(currency_id, RiskManagerData { ..*risk_manager_data })
 				});
 		}
 	}

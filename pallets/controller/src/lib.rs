@@ -178,27 +178,10 @@ pub mod module {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			self.controller_dates.iter().for_each(|(currency_id, controller_data)| {
-				ControllerDates::<T>::insert(
-					currency_id,
-					ControllerData {
-						timestamp: controller_data.timestamp,
-						insurance_factor: controller_data.insurance_factor,
-						max_borrow_rate: controller_data.max_borrow_rate,
-						collateral_factor: controller_data.collateral_factor,
-					},
-				)
+				ControllerDates::<T>::insert(currency_id, ControllerData { ..*controller_data })
 			});
 			self.pause_keepers.iter().for_each(|(currency_id, pause_keeper)| {
-				PauseKeepers::<T>::insert(
-					currency_id,
-					PauseKeeper {
-						deposit_paused: pause_keeper.deposit_paused,
-						redeem_paused: pause_keeper.redeem_paused,
-						borrow_paused: pause_keeper.borrow_paused,
-						repay_paused: pause_keeper.repay_paused,
-						transfer_paused: pause_keeper.transfer_paused,
-					},
-				)
+				PauseKeepers::<T>::insert(currency_id, PauseKeeper { ..*pause_keeper })
 			});
 			WhitelistMode::<T>::put(self.whitelist_mode);
 		}
