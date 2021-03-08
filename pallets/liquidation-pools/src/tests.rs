@@ -89,7 +89,7 @@ fn set_balance_ratio_should_work() {
 			TestLiquidationPools::liquidation_pools(CurrencyId::DOT).balance_ratio,
 			Rate::zero()
 		);
-		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(ADMIN, Rate::zero()));
+		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(Rate::zero()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 1.0
@@ -102,7 +102,7 @@ fn set_balance_ratio_should_work() {
 			TestLiquidationPools::liquidation_pools(CurrencyId::DOT).balance_ratio,
 			Rate::one()
 		);
-		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(ADMIN, Rate::one()));
+		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can not be set grater than 1.0
@@ -114,7 +114,7 @@ fn set_balance_ratio_should_work() {
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
 			TestLiquidationPools::set_balance_ratio(alice(), CurrencyId::DOT, 10),
-			Error::<Test>::RequireAdmin
+			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
