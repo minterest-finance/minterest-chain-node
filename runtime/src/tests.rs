@@ -1114,20 +1114,23 @@ fn whitelist_mode_should_work() {
 		System::set_block_number(2);
 
 		assert_ok!(Controller::switch_mode(
-			<Runtime as frame_system::Config>::Origin::root(),
-			true
+			<Runtime as frame_system::Config>::Origin::root()
 		));
 		System::set_block_number(3);
+
+		// In whitelist mode, only members 'WhitelistCouncil' can work with protocols.
 		assert_noop!(
 			MinterestProtocol::deposit_underlying(bob(), DOT, dollars(5_000)),
 			BadOrigin
 		);
 		System::set_block_number(4);
+
 		assert_ok!(WhitelistCouncilMembership::add_member(
 			<Runtime as frame_system::Config>::Origin::root(),
 			BOB::get()
 		));
 		System::set_block_number(5);
+
 		assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(10_000)));
 	})
 }

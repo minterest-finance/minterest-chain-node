@@ -114,8 +114,6 @@ pub mod module {
 		CollateralFactorCannotBeGreaterThanOne,
 		/// Collateral factor cannot be set to 0.
 		CollateralFactorCannotBeZero,
-		/// This operating mode is already set.
-		ThisModeIsAlreadySet,
 	}
 
 	#[pallet::event]
@@ -390,12 +388,11 @@ pub mod module {
 		/// The dispatch origin of this call must be Administrator.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn switch_mode(origin: OriginFor<T>, is_whitelist_mode: bool) -> DispatchResultWithPostInfo {
+		pub fn switch_mode(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			WhitelistMode::<T>::try_mutate(|mode| -> DispatchResultWithPostInfo {
-				ensure!(*mode != is_whitelist_mode, Error::<T>::ThisModeIsAlreadySet);
-				*mode = is_whitelist_mode;
-				Self::deposit_event(Event::ProtocolOperationModeSwitched(is_whitelist_mode));
+			WhitelistMode::<T>::mutate(|mode| {
+				*mode = !*mode;
+				Self::deposit_event(Event::ProtocolOperationModeSwitched(*mode));
 				Ok(().into())
 			})
 		}
