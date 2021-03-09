@@ -149,7 +149,6 @@ impl ExtBuilder {
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-						borrow_cap_enabled: false,
 						borrow_cap: Balance::zero(),
 					},
 				),
@@ -161,7 +160,6 @@ impl ExtBuilder {
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-						borrow_cap_enabled: false,
 						borrow_cap: Balance::zero(),
 					},
 				),

@@ -1420,11 +1420,10 @@ mod tests {
 				System::set_block_number(2);
 
 				// ADMIN set borrow cap to 30 (in usd).
-				assert_ok!(TestController::set_borrow_cap_mode(
+				assert_ok!(TestController::set_borrow_cap(
 					Origin::signed(ADMIN),
 					CurrencyId::ETH,
-					true,
-					Some(30_000 * DOLLARS)
+					30_000 * DOLLARS
 				));
 
 				System::set_block_number(3);
@@ -1449,11 +1448,10 @@ mod tests {
 				);
 
 				// ADMIN disable borrow cap.
-				assert_ok!(TestController::set_borrow_cap_mode(
+				assert_ok!(TestController::set_borrow_cap(
 					Origin::signed(ADMIN),
 					CurrencyId::ETH,
-					false,
-					None
+					Balance::zero()
 				));
 
 				// Bob try to borrow from ETH pool
