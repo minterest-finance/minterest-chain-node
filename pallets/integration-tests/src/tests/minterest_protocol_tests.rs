@@ -1366,6 +1366,105 @@ mod tests {
 			});
 	}
 
+	// Extrinsic `borrow`, description of scenario #5:
+	// User can borrow up to borrow cap
+	// Initial exchange rate for all assets equal 1.0;
+	// Collateral factor for all assets equal 0.9;
+	// 1. Alice deposit 50 DOT;
+	// 2. Bob deposit 50 DOT;
+	// 3. Admin sets borrow cap to 30 (in usd);
+	// 4. Alice borrows 10 ETH (20 usd);
+	// 5. Bob is unable to borrow 10 ETH
+	// 6. Admin disables borrow cap;
+	// 7. Bob is able to borrow 10 ETH
+	//
+	#[test]
+	fn borrow_with_borrow_cap() {
+		ExtBuilder::default()
+			.pool_initial(CurrencyId::DOT)
+			.pool_initial(CurrencyId::ETH)
+			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
+			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_user_data(CurrencyId::DOT, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.build()
+			.execute_with(|| {
+				// Set initial balance
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::DOT,
+					ONE_HUNDRED
+				));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ADMIN),
+					CurrencyId::ETH,
+					ONE_HUNDRED
+				));
+				// Alice deposit to DOT pool
+				let alice_deposited_amount = 50_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(ALICE),
+					CurrencyId::DOT,
+					alice_deposited_amount
+				));
+				// Bob deposit to DOT pool
+				let bob_deposited_amount = 50_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					Origin::signed(BOB),
+					CurrencyId::DOT,
+					bob_deposited_amount
+				));
+
+				System::set_block_number(2);
+
+				// ADMIN set borrow cap to 30 (in usd).
+				assert_ok!(TestController::set_borrow_cap_mode(
+					Origin::signed(ADMIN),
+					CurrencyId::ETH,
+					true,
+					Some(30_000 * DOLLARS)
+				));
+
+				System::set_block_number(3);
+
+				// Alice borrow from DOT pool
+				let alice_borrowed_amount_in_eth = 10_000 * DOLLARS;
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(ALICE),
+					CurrencyId::ETH,
+					alice_borrowed_amount_in_eth
+				));
+
+				System::set_block_number(4);
+
+				// Bob is unable to borrow
+				// borrow cap = 30
+				// borrowed at the moment = 20
+				let over_borrow_cap_amount_in_eth = 10_000 * DOLLARS;
+				assert_noop!(
+					MinterestProtocol::borrow(Origin::signed(BOB), CurrencyId::ETH, over_borrow_cap_amount_in_eth),
+					MinterestProtocolError::<Test>::BorrowControllerRejection
+				);
+
+				// ADMIN disable borrow cap.
+				assert_ok!(TestController::set_borrow_cap_mode(
+					Origin::signed(ADMIN),
+					CurrencyId::ETH,
+					false,
+					None
+				));
+
+				// Bob try to borrow from ETH pool
+				assert_ok!(MinterestProtocol::borrow(
+					Origin::signed(BOB),
+					CurrencyId::ETH,
+					over_borrow_cap_amount_in_eth
+				));
+			});
+	}
+
 	// Extrinsic `transfer_wrapped`, description of scenario #1:
 	// The user tries to transfer all assets in the first currency. He has loan in the first
 	// currency.

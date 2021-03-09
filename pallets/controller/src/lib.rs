@@ -408,7 +408,7 @@ pub mod module {
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			enable: bool,
-			borrow_cap: Option<Balance>
+			borrow_cap: Option<Balance>,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
@@ -418,11 +418,17 @@ pub mod module {
 			);
 
 			if let Some(new_cap) = borrow_cap {
-				ensure!(new_cap > Balance::zero() && new_cap < T::MaxBorrowCap::get(), Error::<T>::InvalidBorrowCap);
+				ensure!(
+					new_cap > Balance::zero() && new_cap < T::MaxBorrowCap::get(),
+					Error::<T>::InvalidBorrowCap
+				);
 				ControllerDates::<T>::mutate(pool_id, |r| r.borrow_cap = new_cap);
 			}
 
-			ensure!(!enable || Self::get_borrow_cap(pool_id) > Balance::zero(), Error::<T>::ZeroBorrowCap);
+			ensure!(
+				!enable || Self::get_borrow_cap(pool_id) > Balance::zero(),
+				Error::<T>::ZeroBorrowCap
+			);
 			ControllerDates::<T>::mutate(pool_id, |r| r.borrow_cap_enabled = enable);
 
 			Ok(().into())
