@@ -150,7 +150,9 @@ pub mod module {
 		DepositedInsurance(CurrencyId, Balance),
 		/// Insurance balance redeemed: \[pool_id, amount\]
 		RedeemedInsurance(CurrencyId, Balance),
-		/// Borrow cap changed: \[pool_id, new_cap\
+		/// Borrow cap mode changed: \[is_enabled\]
+		BorrowCapModeChanged(bool),
+		/// Borrow cap changed: \[pool_id, new_cap\]
 		BorrowCapChanged(CurrencyId, Balance),
 	}
 
@@ -409,7 +411,7 @@ pub mod module {
 		pub fn set_borrow_cap_mode(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			enable: bool,
+			enabled: bool,
 			borrow_cap: Option<Balance>,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
@@ -429,10 +431,39 @@ pub mod module {
 			}
 
 			ensure!(
-				!enable || Self::get_borrow_cap(pool_id) > Balance::zero(),
+				!enabled || Self::get_borrow_cap(pool_id) > Balance::zero(),
 				Error::<T>::ZeroBorrowCap
 			);
-			ControllerDates::<T>::mutate(pool_id, |r| r.borrow_cap_enabled = enable);
+			ControllerDates::<T>::mutate(pool_id, |r| r.borrow_cap_enabled = enabled);
+			Self::deposit_event(Event::BorrowCapModeChanged(enabled));
+
+			Ok(().into())
+		}
+
+		/// Set borrow cap.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		/// Borrow cap value must be in range 0..1_000_000_000_000_000_000_000_000
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn set_borrow_cap(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			borrow_cap: Balance,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
+
+			ensure!(
+				borrow_cap > Balance::zero() && borrow_cap < T::MaxBorrowCap::get(),
+				Error::<T>::InvalidBorrowCap
+			);
+			ControllerDates::<T>::mutate(pool_id, |r| r.borrow_cap = borrow_cap);
+			Self::deposit_event(Event::BorrowCapChanged(pool_id, borrow_cap));
 
 			Ok(().into())
 		}
