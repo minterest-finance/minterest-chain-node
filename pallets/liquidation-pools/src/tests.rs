@@ -161,39 +161,6 @@ fn balancing_attempt_should_work() {
 }
 
 #[test]
-fn calculate_sum_should_work() {
-	ExternalityBuilder::default().build().execute_with(|| {
-		assert_eq!(
-			TestLiquidationPools::calculate_sum(
-				&vec![(CurrencyId::DOT, 4_000 * DOLLARS), (CurrencyId::KSM, 6_000 * DOLLARS)],
-				&vec![(CurrencyId::BTC, 20_000 * DOLLARS)]
-			),
-			Ok((10_000 * DOLLARS, 20_000 * DOLLARS))
-		);
-		assert_noop!(
-			TestLiquidationPools::calculate_sum(
-				&vec![
-					(CurrencyId::DOT, Balance::max_value()),
-					(CurrencyId::KSM, 6_000 * DOLLARS)
-				],
-				&vec![(CurrencyId::BTC, 20_000 * DOLLARS)]
-			),
-			Error::<Test>::NumOverflow
-		);
-		assert_noop!(
-			TestLiquidationPools::calculate_sum(
-				&vec![(CurrencyId::DOT, 4_000 * DOLLARS), (CurrencyId::KSM, 6_000 * DOLLARS)],
-				&vec![
-					(CurrencyId::BTC, Balance::max_value()),
-					(CurrencyId::ETH, 1_000 * DOLLARS)
-				]
-			),
-			Error::<Test>::NumOverflow
-		);
-	});
-}
-
-#[test]
 fn sort_by_balance_should_work() {
 	ExternalityBuilder::default().build().execute_with(|| {
 		assert_eq!(
