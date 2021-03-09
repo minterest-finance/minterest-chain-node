@@ -703,7 +703,8 @@ impl<T: Config> Pallet<T> {
 		borrow_amount: Balance,
 	) -> DispatchResult {
 		if Self::is_borrow_cap_enabled(underlying_asset_id) {
-			let oracle_price = <Oracle<T>>::get_underlying_price(underlying_asset_id)?;
+			let oracle_price =
+				T::PriceSource::get_underlying_price(underlying_asset_id).ok_or(Error::<T>::OraclePriceError)?;
 			let pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id);
 			let new_total_borrows = pool_total_borrowed
 				.checked_add(borrow_amount)

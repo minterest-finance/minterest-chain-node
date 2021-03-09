@@ -1373,10 +1373,10 @@ mod tests {
 	// 1. Alice deposit 50 DOT;
 	// 2. Bob deposit 50 DOT;
 	// 3. Admin sets borrow cap to 30 (in usd);
-	// 4. Alice borrows 10 ETH (20 usd);
-	// 5. Bob is unable to borrow 10 ETH
+	// 4. Alice borrows 20 ETH (20 usd);
+	// 5. Bob is unable to borrow 20 ETH
 	// 6. Admin disables borrow cap;
-	// 7. Bob is able to borrow 10 ETH
+	// 7. Bob is able to borrow 20 ETH
 	//
 	#[test]
 	fn borrow_with_borrow_cap() {
@@ -1430,7 +1430,7 @@ mod tests {
 				System::set_block_number(3);
 
 				// Alice borrow from DOT pool
-				let alice_borrowed_amount_in_eth = 10_000 * DOLLARS;
+				let alice_borrowed_amount_in_eth = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
 					CurrencyId::ETH,
@@ -1442,7 +1442,7 @@ mod tests {
 				// Bob is unable to borrow
 				// borrow cap = 30
 				// borrowed at the moment = 20
-				let over_borrow_cap_amount_in_eth = 10_000 * DOLLARS;
+				let over_borrow_cap_amount_in_eth = 20_000 * DOLLARS;
 				assert_noop!(
 					MinterestProtocol::borrow(Origin::signed(BOB), CurrencyId::ETH, over_borrow_cap_amount_in_eth),
 					MinterestProtocolError::<Test>::BorrowControllerRejection
