@@ -658,7 +658,8 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		borrow_amount: Balance,
 	) -> DispatchResult {
-		if Self::is_borrow_cap_enabled(underlying_asset_id) {
+		let borrow_cap = Self::get_borrow_cap(underlying_asset_id);
+		if borrow_cap > Balance::zero() {
 			let oracle_price =
 				T::PriceSource::get_underlying_price(underlying_asset_id).ok_or(Error::<T>::OraclePriceError)?;
 			let pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id);
@@ -670,7 +671,6 @@ impl<T: Config> Pallet<T> {
 				.map(|x| x.into_inner())
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			let borrow_cap = Self::get_borrow_cap(underlying_asset_id);
 			ensure!(new_total_borrows_in_usd <= borrow_cap, Error::<T>::BorrowCapReached);
 		}
 
@@ -1075,11 +1075,6 @@ impl<T: Config> Pallet<T> {
 	/// Gets the borrow cap amount
 	fn get_borrow_cap(pool_id: CurrencyId) -> Balance {
 		Self::controller_dates(pool_id).borrow_cap
-	}
-
-	/// Checks if borrow cap is enabled
-	fn is_borrow_cap_enabled(pool_id: CurrencyId) -> bool {
-		Self::controller_dates(pool_id).borrow_cap > Balance::zero()
 	}
 }
 
