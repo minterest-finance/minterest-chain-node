@@ -150,6 +150,8 @@ pub mod module {
 		DepositedInsurance(CurrencyId, Balance),
 		/// Insurance balance redeemed: \[pool_id, amount\]
 		RedeemedInsurance(CurrencyId, Balance),
+		/// Borrow cap changed: \[pool_id, new_cap\
+		BorrowCapChanged(CurrencyId, Balance),
 	}
 
 	/// Controller data information: `(timestamp, insurance_factor, collateral_factor,
@@ -423,6 +425,7 @@ pub mod module {
 					Error::<T>::InvalidBorrowCap
 				);
 				ControllerDates::<T>::mutate(pool_id, |r| r.borrow_cap = new_cap);
+				Self::deposit_event(Event::BorrowCapChanged(pool_id, new_cap));
 			}
 
 			ensure!(
