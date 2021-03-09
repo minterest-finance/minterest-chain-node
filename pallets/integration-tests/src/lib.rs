@@ -11,7 +11,7 @@ mod tests {
 	use frame_support::{assert_noop, assert_ok, pallet_prelude::GenesisBuild, parameter_types};
 	use frame_system::{self as system};
 	use liquidity_pools::{Pool, PoolUserData};
-	use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
+	use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 	use orml_currencies::Currency;
 	use orml_traits::parameter_type_with_key;
 	use orml_traits::MultiCurrency;
@@ -25,7 +25,7 @@ mod tests {
 	use controller::{ControllerData, PauseKeeper};
 	use minterest_model::MinterestModelData;
 	use minterest_protocol::Error as MinterestProtocolError;
-	use pallet_traits::PoolsManager;
+	use pallet_traits::{PoolsManager, PriceProvider};
 	use sp_runtime::traits::One;
 
 	mod controller_tests;
@@ -53,7 +53,6 @@ mod tests {
 			TestController: controller::{Module, Storage, Call, Event, Config<T>},
 			MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 			TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
-			Oracle: oracle::{Module},
 		}
 	);
 
@@ -144,8 +143,21 @@ mod tests {
 				.collect();
 	}
 
+	pub struct MockPriceSource;
+
+	impl PriceProvider<CurrencyId> for MockPriceSource {
+		fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
+			Some(Price::one())
+		}
+
+		fn lock_price(_currency_id: CurrencyId) {}
+
+		fn unlock_price(_currency_id: CurrencyId) {}
+	}
+
 	impl liquidity_pools::Config for Test {
 		type MultiCurrency = orml_tokens::Module<Test>;
+		type PriceSource = MockPriceSource;
 		type ModuleId = LiquidityPoolsModuleId;
 		type LiquidityPoolAccountId = LiquidityPoolAccountId;
 		type InitialExchangeRate = InitialExchangeRate;
@@ -169,8 +181,6 @@ mod tests {
 		type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 		type MaxBorrowCap = MaxBorrowCap;
 	}
-
-	impl oracle::Config for Test {}
 
 	parameter_types! {
 		pub const MaxMembers: u8 = MAX_MEMBERS;

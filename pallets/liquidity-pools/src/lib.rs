@@ -13,7 +13,7 @@ use frame_support::{pallet_prelude::*, traits::Get};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{Borrowing, PoolsManager};
+use pallet_traits::{Borrowing, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -59,7 +59,6 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-type Oracle<T> = oracle::Module<T>;
 type RateResult = result::Result<Rate, DispatchError>;
 type CurrencyIdResult = result::Result<CurrencyId, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
@@ -69,7 +68,7 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + oracle::Config {
+	pub trait Config: frame_system::Config {
 		/// The `MultiCurrency` implementation.
 		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 
@@ -78,6 +77,9 @@ pub mod module {
 
 		/// Enabled currency pairs.
 		type EnabledCurrencyPair: Get<Vec<CurrencyPair>>;
+
+		/// The price source of currencies
+		type PriceSource: PriceProvider<CurrencyId>;
 
 		#[pallet::constant]
 		/// The Liquidity Pool's module id, keep all assets in Pools.
@@ -104,6 +106,8 @@ pub mod module {
 		NotValidUnderlyingAssetId,
 		/// The currency is not enabled in wrapped protocol.
 		NotValidWrappedTokenId,
+		/// Feed price is invalid
+		InvalidFeedPrice,
 	}
 
 	#[pallet::storage]
@@ -299,6 +303,32 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
+// RPC methods
+impl<T: Config> Pallet<T> {
+	/// Gets the exchange rate between a mToken and the underlying asset.
+	/// This function uses total_insurance and total_borrowed values calculated beforehand
+	///
+	/// - `underlying_asset_id`: CurrencyId of underlying assets for which the exchange rate
+	/// is calculated.
+	pub fn get_exchange_rate_by_interest_params(
+		underlying_asset_id: CurrencyId,
+		total_insurance: Balance,
+		total_borrowed: Balance,
+	) -> RateResult {
+		let wrapped_asset_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
+		// Current the total amount of cash the pool has.
+		let total_cash = Self::get_pool_available_liquidity(underlying_asset_id);
+
+		// Current total number of tokens in circulation.
+		let total_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
+
+		let current_exchange_rate =
+			Self::calculate_exchange_rate(total_cash, total_supply, total_insurance, total_borrowed)?;
+
+		Ok(current_exchange_rate)
+	}
+}
+
 // Storage setters for LiquidityPools
 impl<T: Config> Pallet<T> {
 	/// Sets the total borrowed value in the pool.
@@ -434,12 +464,10 @@ impl<T: Config> Pallet<T> {
 				let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
 				let user_balance_underlying_asset =
 					Self::convert_from_wrapped(wrapped_id, user_balance_wrapped_tokens).ok()?;
-				let oracle_price = <Oracle<T>>::get_underlying_price(pool_id).ok()?;
+				let oracle_price = T::PriceSource::get_underlying_price(pool_id)?;
 				let total_deposit_in_usd = Rate::from_inner(user_balance_underlying_asset)
 					.checked_mul(&oracle_price)
-					.map(|x| x.into_inner())
-					.ok_or(Error::<T>::NumOverflow)
-					.ok()?;
+					.map(|x| x.into_inner())?;
 
 				Some((pool_id, total_deposit_in_usd))
 			})

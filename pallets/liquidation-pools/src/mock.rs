@@ -3,9 +3,11 @@ use super::*;
 use crate as liquidation_pools;
 use frame_support::parameter_types;
 use frame_system as system;
+use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
+use pallet_traits::PriceProvider;
 use sp_core::H256;
 use sp_io::TestExternalities;
 use sp_runtime::testing::TestXt;
@@ -114,8 +116,21 @@ parameter_types! {
 			.collect();
 }
 
+pub struct MockPriceSource;
+
+impl PriceProvider<CurrencyId> for MockPriceSource {
+	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
+		Some(Price::one())
+	}
+
+	fn lock_price(_currency_id: CurrencyId) {}
+
+	fn unlock_price(_currency_id: CurrencyId) {}
+}
+
 impl liquidity_pools::Config for Test {
 	type MultiCurrency = orml_tokens::Module<Test>;
+	type PriceSource = MockPriceSource;
 	type ModuleId = LiquidityPoolsModuleId;
 	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
@@ -132,8 +147,6 @@ impl accounts::Config for Test {
 	type Event = Event;
 	type MaxMembers = MaxMembers;
 }
-
-impl oracle::Config for Test {}
 
 parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
@@ -173,7 +186,8 @@ pub fn alice() -> Origin {
 }
 
 pub struct ExternalityBuilder {
-	liquidation_pools: Vec<(CurrencyId, LiquidationPool<BlockNumber>)>,
+	liquidation_pools: Vec<(CurrencyId, LiquidationPool)>,
+	liquidation_pool_params: LiquidationPoolCommonData<BlockNumber>,
 }
 
 impl Default for ExternalityBuilder {
@@ -182,28 +196,24 @@ impl Default for ExternalityBuilder {
 			liquidation_pools: vec![(
 				CurrencyId::DOT,
 				LiquidationPool {
-					timestamp: 1,
-					balancing_period: 600, // Blocks per 10 minutes.
+					deviation_threshold: Rate::saturating_from_rational(1, 10),
+					balance_ratio: Rate::saturating_from_rational(2, 10),
 				},
 			)],
+			liquidation_pool_params: LiquidationPoolCommonData {
+				timestamp: 1,
+				balancing_period: 600, // Blocks per 10 minutes.},
+			},
 		}
 	}
 }
 
 impl ExternalityBuilder {
-	pub fn pool_timestamp_and_period(
-		mut self,
-		pool_id: CurrencyId,
-		timestamp: BlockNumber,
-		balancing_period: u32,
-	) -> Self {
-		self.liquidation_pools.push((
-			pool_id,
-			LiquidationPool {
-				timestamp,
-				balancing_period,
-			},
-		));
+	pub fn pool_timestamp_and_period(mut self, timestamp: BlockNumber, balancing_period: u32) -> Self {
+		self.liquidation_pool_params = LiquidationPoolCommonData {
+			timestamp,
+			balancing_period,
+		};
 		self
 	}
 
@@ -219,6 +229,7 @@ impl ExternalityBuilder {
 
 		liquidation_pools::GenesisConfig::<Test> {
 			liquidation_pools: self.liquidation_pools,
+			liquidation_pool_params: self.liquidation_pool_params,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

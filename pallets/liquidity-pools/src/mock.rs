@@ -5,6 +5,7 @@ use crate as liquidity_pools;
 use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::parameter_types;
 use frame_system as system;
+use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair};
 use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
@@ -27,7 +28,6 @@ frame_support::construct_runtime!(
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
-		Oracle: oracle::{Module},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 	}
 );
@@ -96,8 +96,6 @@ impl orml_currencies::Config for Test {
 	type WeightInfo = ();
 }
 
-impl oracle::Config for Test {}
-
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
@@ -116,8 +114,21 @@ parameter_types! {
 			.collect();
 }
 
+pub struct MockPriceSource;
+
+impl PriceProvider<CurrencyId> for MockPriceSource {
+	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
+		Some(Price::one())
+	}
+
+	fn lock_price(_currency_id: CurrencyId) {}
+
+	fn unlock_price(_currency_id: CurrencyId) {}
+}
+
 impl liquidity_pools::Config for Test {
-	type MultiCurrency = Currencies;
+	type MultiCurrency = orml_tokens::Module<Test>;
+	type PriceSource = MockPriceSource;
 	type ModuleId = LiquidityPoolsModuleId;
 	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;

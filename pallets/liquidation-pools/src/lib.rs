@@ -12,7 +12,7 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, traits::Get, transactional};
 use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
 use frame_system::{ensure_signed, pallet_prelude::*};
-use minterest_primitives::{Balance, CurrencyId};
+use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
 use orml_utilities::OffchainErr;
 use pallet_traits::PoolsManager;
@@ -26,7 +26,7 @@ use sp_runtime::{
 		Duration,
 	},
 	transaction_validity::TransactionPriority,
-	ModuleId, RuntimeDebug,
+	FixedPointNumber, ModuleId, RuntimeDebug,
 };
 use sp_std::{convert::TryInto, prelude::*, result};
 
@@ -46,12 +46,24 @@ mod tests;
 
 /// Liquidation Pool metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct LiquidationPool<BlockNumber> {
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct LiquidationPoolCommonData<BlockNumber> {
 	/// Block number that pool was last balancing attempted at.
 	pub timestamp: BlockNumber,
 	/// Balancing pool frequency.
 	pub balancing_period: u32,
+}
+
+/// Liquidation Pool metadata
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct LiquidationPool {
+	/// Balance Deviation Threshold represents how much current value in a pool may differ from
+	/// ideal value (defined by balance_ratio).
+	pub deviation_threshold: Rate,
+	/// Balance Ration represents the percentage of Working pool value to be covered by value in
+	/// Liquidation Poll.
+	pub balance_ratio: Rate,
 }
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
@@ -91,6 +103,10 @@ pub mod module {
 		RequireAdmin,
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
+		/// Value must be in range [0..1]
+		NotValidDeviationThresholdValue,
+		/// Value must be in range [0..1]
+		NotValidBalanceRatioValue,
 	}
 
 	#[pallet::event]
@@ -98,23 +114,38 @@ pub mod module {
 	pub enum Event<T: Config> {
 		///  Balancing period has been successfully changed: \[who, new_period\]
 		BalancingPeriodChanged(T::AccountId, u32),
+		///  Deviation Threshold has been successfully changed: \[who, new_threshold_value\]
+		DeviationThresholdChanged(T::AccountId, Rate),
+		///  Balance ratio has been successfully changed: \[who, new_threshold_value\]
+		BalanceRatioChanged(T::AccountId, Rate),
 	}
 
 	#[pallet::storage]
+	#[pallet::getter(fn liquidation_pool_params)]
+	pub(crate) type LiquidationPoolParams<T: Config> =
+		StorageValue<_, LiquidationPoolCommonData<T::BlockNumber>, ValueQuery>;
+
+	#[pallet::storage]
 	#[pallet::getter(fn liquidation_pools)]
-	pub(crate) type LiquidationPools<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyId, LiquidationPool<T::BlockNumber>, ValueQuery>;
+	pub(crate) type LiquidationPools<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, LiquidationPool, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
+		pub liquidation_pool_params: LiquidationPoolCommonData<T::BlockNumber>,
 		#[allow(clippy::type_complexity)]
-		pub liquidation_pools: Vec<(CurrencyId, LiquidationPool<T::BlockNumber>)>,
+		pub liquidation_pools: Vec<(CurrencyId, LiquidationPool)>,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			GenesisConfig {
+				liquidation_pool_params: LiquidationPoolCommonData {
+					timestamp: TryInto::<T::BlockNumber>::try_into(1u32)
+						.ok()
+						.expect(" result convert failed"),
+					balancing_period: 600, // Blocks per 10 minutes.
+				},
 				liquidation_pools: vec![],
 			}
 		}
@@ -123,12 +154,13 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
+			LiquidationPoolParams::<T>::put(self.liquidation_pool_params.clone());
 			self.liquidation_pools.iter().for_each(|(currency_id, pool_data)| {
 				LiquidationPools::<T>::insert(
 					currency_id,
 					LiquidationPool {
-						timestamp: pool_data.timestamp,
-						balancing_period: pool_data.balancing_period,
+						deviation_threshold: pool_data.deviation_threshold,
+						balance_ratio: pool_data.balance_ratio,
 					},
 				)
 			});
@@ -168,10 +200,29 @@ pub mod module {
 		/// The dispatch origin of this call must be Administrator.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_balancing_period(
+		pub fn set_balancing_period(origin: OriginFor<T>, new_period: u32) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+
+			// Write new value into storage.
+			LiquidationPoolParams::<T>::mutate(|x| x.balancing_period = new_period);
+
+			Self::deposit_event(Event::BalancingPeriodChanged(sender, new_period));
+
+			Ok(().into())
+		}
+
+		/// Set new value of deviation threshold.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `new_threshold`: New value of deviation threshold.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn set_deviation_threshold(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_period: u32,
+			new_threshold: u128,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
@@ -181,10 +232,52 @@ pub mod module {
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
-			// Write new value into storage.
-			LiquidationPools::<T>::mutate(pool_id, |x| x.balancing_period = new_period);
+			let new_deviation_threshold = Rate::from_inner(new_threshold);
 
-			Self::deposit_event(Event::BalancingPeriodChanged(sender, new_period));
+			ensure!(
+				(Rate::zero() <= new_deviation_threshold && new_deviation_threshold <= Rate::one()),
+				Error::<T>::NotValidDeviationThresholdValue
+			);
+
+			// Write new value into storage.
+			LiquidationPools::<T>::mutate(pool_id, |x| x.deviation_threshold = new_deviation_threshold);
+
+			Self::deposit_event(Event::DeviationThresholdChanged(sender, new_deviation_threshold));
+
+			Ok(().into())
+		}
+
+		/// Set new value of balance ratio.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `new_balance_ratio`: New value of deviation threshold.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn set_balance_ratio(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			new_balance_ratio: u128,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+
+			ensure!(
+				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+
+			let new_balance_ratio = Rate::from_inner(new_balance_ratio);
+
+			ensure!(
+				(Rate::zero() <= new_balance_ratio && new_balance_ratio <= Rate::one()),
+				Error::<T>::NotValidBalanceRatioValue
+			);
+
+			// Write new value into storage.
+			LiquidationPools::<T>::mutate(pool_id, |x| x.balance_ratio = new_balance_ratio);
+
+			Self::deposit_event(Event::BalanceRatioChanged(sender, new_balance_ratio));
 
 			Ok(().into())
 		}
@@ -235,7 +328,7 @@ impl<T: Config> Pallet<T> {
 		let currency_id = underlying_asset_ids[(pool_to_check as usize)];
 		let iteration_start_time = sp_io::offchain::timestamp();
 
-		let dead_line = Self::calculate_deadline(currency_id).map_err(|_| OffchainErr::OffchainLock)?;
+		let dead_line = Self::calculate_deadline().map_err(|_| OffchainErr::OffchainLock)?;
 
 		if <frame_system::Module<T>>::block_number() > dead_line {
 			Self::submit_unsigned_tx(currency_id);
@@ -267,9 +360,9 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	fn calculate_deadline(pool_id: CurrencyId) -> result::Result<T::BlockNumber, DispatchError> {
-		let timestamp = Self::liquidation_pools(pool_id).timestamp;
-		let period = Self::liquidation_pools(pool_id).balancing_period;
+	fn calculate_deadline() -> result::Result<T::BlockNumber, DispatchError> {
+		let timestamp = Self::liquidation_pool_params().timestamp;
+		let period = Self::liquidation_pool_params().balancing_period;
 
 		let timestamp_as_u32 = TryInto::<u32>::try_into(timestamp)
 			.ok()

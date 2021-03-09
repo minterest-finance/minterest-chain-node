@@ -13,6 +13,8 @@ sp-api = { version = "3.0.0" }
 sp-consensus = { version = "0.9.0" }
 sp-consensus-aura = { version = "0.9.0" }
 sp-core = { version = "3.0.0" }
+pallet-membership = { version = "3.0.0" }
+pallet-collective = { version = "3.0.0" }
 sp-finality-grandpa = { version = "3.0.0" }
 sp-runtime = { version = "3.0.0" }
 sp-inherents = { version = "3.0.0" }

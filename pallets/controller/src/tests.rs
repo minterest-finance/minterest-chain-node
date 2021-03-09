@@ -359,6 +359,9 @@ fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work(
 		.pool_user_data(CurrencyId::BTC, BOB, Balance::zero(), Rate::from_inner(0), false, 0)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all assets.
+			MockPriceSource::set_underlying_price(Some(Price::from_inner(2 * DOLLARS)));
+
 			// Checking the function when called from redeem.
 			// The function should return the shortfall to a large zero.
 			assert_eq!(
@@ -383,6 +386,9 @@ fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work(
 #[test]
 fn get_hypothetical_account_liquidity_one_currency_from_redeem_should_work() {
 	ExtBuilder::default().alice_deposit_60_dot().build().execute_with(|| {
+		// Set price = 2.00 USD for all assets.
+		MockPriceSource::set_underlying_price(Some(Price::from_inner(2 * DOLLARS)));
+
 		// Checking the function when called from redeem.
 		// collateral parameter is set to false, user can't redeem.
 		assert_eq!(
@@ -407,6 +413,9 @@ fn get_hypothetical_account_liquidity_two_currencies_from_redeem_should_work() {
 		.alice_deposit_20_eth()
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all assets.
+			MockPriceSource::set_underlying_price(Some(Price::from_inner(2 * DOLLARS)));
+
 			// Checking the function when called from redeem.
 			// collateral parameter is set to false, user can't redeem.
 			assert_eq!(
@@ -443,6 +452,9 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 		)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all assets.
+			MockPriceSource::set_underlying_price(Some(Price::from_inner(2 * DOLLARS)));
+
 			// Checking the function when called from borrow.
 			// collateral parameter for DOT and ETH pool is set to false. User can't borrow.
 			assert_eq!(

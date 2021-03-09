@@ -1,11 +1,12 @@
 use controller::{ControllerData, PauseKeeper};
 use hex_literal::hex;
-use liquidation_pools::LiquidationPool;
+use liquidation_pools::{LiquidationPool, LiquidationPoolCommonData};
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
 	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig,
-	GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestModelConfig, RiskManagerConfig, Signature,
+	GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
+	MinterestModelConfig, MinterestOracleConfig, OperatorMembershipMinterestConfig, RiskManagerConfig, Signature,
 	SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
@@ -223,7 +224,7 @@ fn testnet_genesis(
 		}),
 		pallet_sudo: Some(SudoConfig {
 			// Assign network admin rights.
-			key: root_key,
+			key: root_key.clone(),
 		}),
 		orml_tokens: Some(TokensConfig {
 			endowed_accounts: endowed_accounts
@@ -450,36 +451,53 @@ fn testnet_genesis(
 			],
 		}),
 		liquidation_pools: Some(LiquidationPoolsConfig {
+			liquidation_pool_params: (LiquidationPoolCommonData {
+				timestamp: 1,
+				balancing_period: 600, // Blocks per 10 minutes.
+			}),
 			liquidation_pools: vec![
 				(
 					CurrencyId::DOT,
 					LiquidationPool {
-						timestamp: 1,
-						balancing_period: 600, // Blocks per 10 minutes.
+						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
+						balance_ratio: FixedU128::saturating_from_rational(2, 10),
 					},
 				),
 				(
 					CurrencyId::ETH,
 					LiquidationPool {
-						timestamp: 1,
-						balancing_period: 600, // Blocks per 10 minutes.
+						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
+						balance_ratio: FixedU128::saturating_from_rational(2, 10),
 					},
 				),
 				(
 					CurrencyId::BTC,
 					LiquidationPool {
-						timestamp: 1,
-						balancing_period: 600, // Blocks per 10 minutes.
+						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
+						balance_ratio: FixedU128::saturating_from_rational(2, 10),
 					},
 				),
 				(
 					CurrencyId::KSM,
 					LiquidationPool {
-						timestamp: 1,
-						balancing_period: 600, // Blocks per 10 minutes.
+						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
+						balance_ratio: FixedU128::saturating_from_rational(2, 10),
 					},
 				),
 			],
+		}),
+		pallet_collective_Instance1: Some(Default::default()),
+		pallet_membership_Instance1: Some(MinterestCouncilMembershipConfig {
+			members: vec![root_key],
+			phantom: Default::default(),
+		}),
+		pallet_membership_Instance2: Some(OperatorMembershipMinterestConfig {
+			members: endowed_accounts.clone(),
+			phantom: Default::default(),
+		}),
+		orml_oracle_Instance1: Some(MinterestOracleConfig {
+			members: Default::default(), // initialized by OperatorMembership
+			phantom: Default::default(),
 		}),
 	}
 }
