@@ -248,9 +248,8 @@ pub mod module {
 			Ok(().into())
 		}
 
+		// FIXME: unused functionality
 		/// Replenishes the insurance balance.
-		///
-		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn deposit_insurance(
@@ -265,8 +264,6 @@ pub mod module {
 		}
 
 		/// Redeem the insurance balance.
-		///
-		/// The dispatch origin of this call must be 'UpdateOrigin.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn redeem_insurance(
@@ -373,11 +370,12 @@ pub mod module {
 		#[transactional]
 		pub fn switch_mode(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			WhitelistMode::<T>::mutate(|mode| {
+			let mode = WhitelistMode::<T>::mutate(|mode| {
 				*mode = !*mode;
-				Self::deposit_event(Event::ProtocolOperationModeSwitched(*mode));
-				Ok(().into())
-			})
+				*mode
+			});
+			Self::deposit_event(Event::ProtocolOperationModeSwitched(mode));
+			Ok(().into())
 		}
 	}
 }
