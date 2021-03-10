@@ -487,6 +487,7 @@ impl liquidation_pools::Config for Runtime {
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
+	type LiquidityPoolsManager = LiquidityPools;
 }
 
 parameter_types! {

@@ -129,13 +129,10 @@ fn set_balance_ratio_should_work() {
 fn balancing_should_work() {
 	ExternalityBuilder::default().build().execute_with(|| {
 		// Origin::signed(Alice) is wrong origin for fn balancing.
-		assert_noop!(
-			TestLiquidationPools::balancing(Origin::signed(ALICE), CurrencyId::DOT),
-			BadOrigin
-		);
+		assert_noop!(TestLiquidationPools::balancing(Origin::signed(ALICE)), BadOrigin);
 
 		// Origin::none is available origin for fn balancing.
-		assert_ok!(TestLiquidationPools::balancing(Origin::none(), CurrencyId::DOT));
+		assert_ok!(TestLiquidationPools::balancing(Origin::none()));
 	});
 }
 
@@ -151,4 +148,29 @@ fn calculate_deadline_should_work() {
 
 			assert_noop!(TestLiquidationPools::calculate_deadline(), Error::<Test>::NumOverflow);
 		});
+}
+
+#[test]
+fn balancing_attempt_should_work() {
+	ExternalityBuilder::default().build().execute_with(|| {
+		assert_eq!(TestLiquidationPools::balancing_attempt(), Ok(().into()));
+	});
+}
+
+#[test]
+fn sort_by_balance_should_work() {
+	ExternalityBuilder::default().build().execute_with(|| {
+		assert_eq!(
+			TestLiquidationPools::sort_by_balance(vec![
+				(CurrencyId::DOT, 4_000 * DOLLARS),
+				(CurrencyId::ETH, 12_000 * DOLLARS),
+				(CurrencyId::KSM, 6_000 * DOLLARS)
+			]),
+			Ok(vec![
+				(CurrencyId::ETH, 12_000 * DOLLARS),
+				(CurrencyId::KSM, 6_000 * DOLLARS),
+				(CurrencyId::DOT, 4_000 * DOLLARS)
+			])
+		);
+	});
 }

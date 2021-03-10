@@ -155,6 +155,7 @@ impl Config for Test {
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 }
 
 /// An extrinsic type used for tests.
@@ -171,6 +172,7 @@ where
 type Amount = i128;
 type AccountId = u64;
 pub type BlockNumber = u64;
+pub const DOLLARS: u128 = 1_000_000_000_000_000_000u128;
 pub const ADMIN: AccountId = 0;
 pub fn admin() -> Origin {
 	Origin::signed(ADMIN)
