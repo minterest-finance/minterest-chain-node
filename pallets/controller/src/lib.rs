@@ -700,7 +700,7 @@ impl<T: Config> Pallet<T> {
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		return Ok(new_total_borrows_in_usd >= borrow_cap.unwrap_or(Balance::zero()));
+		Ok(new_total_borrows_in_usd >= borrow_cap.unwrap_or_else(Balance::zero))
 	}
 }
 
