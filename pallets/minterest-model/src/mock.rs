@@ -1,14 +1,14 @@
 /// Mocks for the minterest-model pallet.
 use super::*;
 use crate as minterest_model;
-use frame_support::parameter_types;
+use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
+use frame_system::EnsureSignedBy;
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
-use sp_runtime::traits::One;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -28,7 +28,6 @@ frame_support::construct_runtime!(
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
-		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 	}
 );
@@ -84,15 +83,6 @@ impl orml_tokens::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxMembers: u8 = MAX_MEMBERS;
-}
-
-impl accounts::Config for Test {
-	type Event = Event;
-	type MaxMembers = MaxMembers;
-}
-
-parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
@@ -137,13 +127,17 @@ parameter_types! {
 	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
 }
 
+ord_parameter_types! {
+	pub const OneAlice: AccountId = 1;
+}
+
 impl minterest_model::Config for Test {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
+	type ModelUpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
 }
 
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
-pub const MAX_MEMBERS: u8 = 16;
 pub const ALICE: AccountId = 1;
 pub fn alice() -> Origin {
 	Origin::signed(ALICE)
@@ -188,13 +182,6 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		],
 	}
 	.assimilate_storage::<Test>(&mut t)
-	.unwrap();
-
-	accounts::GenesisConfig::<Test> {
-		allowed_accounts: vec![(ALICE, ())],
-		member_count: u8::one(),
-	}
-	.assimilate_storage(&mut t)
 	.unwrap();
 
 	let mut ext: sp_io::TestExternalities = t.into();

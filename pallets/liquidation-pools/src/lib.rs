@@ -11,7 +11,7 @@
 use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, traits::Get, transactional};
 use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
-use frame_system::{ensure_signed, pallet_prelude::*};
+use frame_system::pallet_prelude::*;
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
 use orml_utilities::OffchainErr;
@@ -67,7 +67,6 @@ pub struct LiquidationPool {
 }
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
-type Accounts<T> = accounts::Module<T>;
 type TwoVectorsResult = result::Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError>;
 
 #[frame_support::pallet]
@@ -75,9 +74,7 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config:
-		frame_system::Config + liquidity_pools::Config + accounts::Config + SendTransactionTypes<Call<Self>>
-	{
+	pub trait Config: frame_system::Config + liquidity_pools::Config + SendTransactionTypes<Call<Self>> {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -97,14 +94,16 @@ pub mod module {
 
 		/// The basic liquidity pools manager.
 		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
+
+		/// The origin which may update liquidation pools parameters. Root can
+		/// always do this.
+		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
 		/// Number overflow in calculation.
 		NumOverflow,
-		/// The dispatch origin of this call must be Administrator.
-		RequireAdmin,
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
 		/// Value must be in range [0..1]
@@ -116,12 +115,12 @@ pub mod module {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		///  Balancing period has been successfully changed: \[who, new_period\]
-		BalancingPeriodChanged(T::AccountId, u32),
-		///  Deviation Threshold has been successfully changed: \[who, new_threshold_value\]
-		DeviationThresholdChanged(T::AccountId, Rate),
-		///  Balance ratio has been successfully changed: \[who, new_threshold_value\]
-		BalanceRatioChanged(T::AccountId, Rate),
+		///  Balancing period has been successfully changed: \[new_period\]
+		BalancingPeriodChanged(u32),
+		///  Deviation Threshold has been successfully changed: \[new_threshold_value\]
+		DeviationThresholdChanged(Rate),
+		///  Balance ratio has been successfully changed: \[new_threshold_value\]
+		BalanceRatioChanged(Rate),
 	}
 
 	#[pallet::storage]
@@ -160,13 +159,7 @@ pub mod module {
 		fn build(&self) {
 			LiquidationPoolParams::<T>::put(self.liquidation_pool_params.clone());
 			self.liquidation_pools.iter().for_each(|(currency_id, pool_data)| {
-				LiquidationPools::<T>::insert(
-					currency_id,
-					LiquidationPool {
-						deviation_threshold: pool_data.deviation_threshold,
-						balance_ratio: pool_data.balance_ratio,
-					},
-				)
+				LiquidationPools::<T>::insert(currency_id, LiquidationPool { ..*pool_data })
 			});
 		}
 	}
@@ -201,17 +194,16 @@ pub mod module {
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `new_period`: New value of balancing period.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_balancing_period(origin: OriginFor<T>, new_period: u32) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			// Write new value into storage.
 			LiquidationPoolParams::<T>::mutate(|x| x.balancing_period = new_period);
 
-			Self::deposit_event(Event::BalancingPeriodChanged(sender, new_period));
+			Self::deposit_event(Event::BalancingPeriodChanged(new_period));
 
 			Ok(().into())
 		}
@@ -220,7 +212,7 @@ pub mod module {
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `new_threshold`: New value of deviation threshold.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_deviation_threshold(
@@ -228,8 +220,7 @@ pub mod module {
 			pool_id: CurrencyId,
 			new_threshold: u128,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
@@ -246,7 +237,7 @@ pub mod module {
 			// Write new value into storage.
 			LiquidationPools::<T>::mutate(pool_id, |x| x.deviation_threshold = new_deviation_threshold);
 
-			Self::deposit_event(Event::DeviationThresholdChanged(sender, new_deviation_threshold));
+			Self::deposit_event(Event::DeviationThresholdChanged(new_deviation_threshold));
 
 			Ok(().into())
 		}
@@ -255,7 +246,7 @@ pub mod module {
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `new_balance_ratio`: New value of deviation threshold.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_balance_ratio(
@@ -263,8 +254,7 @@ pub mod module {
 			pool_id: CurrencyId,
 			new_balance_ratio: u128,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
@@ -281,7 +271,7 @@ pub mod module {
 			// Write new value into storage.
 			LiquidationPools::<T>::mutate(pool_id, |x| x.balance_ratio = new_balance_ratio);
 
-			Self::deposit_event(Event::BalanceRatioChanged(sender, new_balance_ratio));
+			Self::deposit_event(Event::BalanceRatioChanged(new_balance_ratio));
 
 			Ok(().into())
 		}

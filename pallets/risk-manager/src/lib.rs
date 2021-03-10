@@ -13,7 +13,7 @@ use frame_support::{debug, ensure, traits::Get};
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use frame_system::{
-	ensure_none, ensure_signed,
+	ensure_none,
 	offchain::{SendTransactionTypes, SubmitTransaction},
 };
 use minterest_primitives::{Balance, CurrencyId, Rate};
@@ -87,7 +87,6 @@ pub struct RiskManagerData {
 }
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
-type Accounts<T> = accounts::Module<T>;
 type Controller<T> = controller::Module<T>;
 type MinterestProtocol<T> = minterest_protocol::Module<T>;
 
@@ -116,6 +115,10 @@ pub mod module {
 
 		/// Pools are responsible for holding funds for automatic liquidation.
 		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
+
+		/// The origin which may update risk manager parameters. Root can
+		/// always do this.
+		type RiskManagerUpdateOrigin: EnsureOrigin<Self::Origin>;
 	}
 
 	#[pallet::error]
@@ -124,8 +127,6 @@ pub mod module {
 		NumOverflow,
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
-		/// The dispatch origin of this call must be Administrator.
-		RequireAdmin,
 		/// The liquidation hasn't been completed.
 		LiquidationRejection,
 		/// Liquidation incentive can't be less than one && greater than 1.5.
@@ -137,15 +138,14 @@ pub mod module {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Max value of liquidation attempts has been successfully changed: \[who,
-		/// attempts_amount\]
-		MaxValueOFLiquidationAttempsHasChanged(T::AccountId, u8),
-		/// Min sum for partial liquidation has been successfully changed: \[who, min_sum\]
-		MinSumForPartialLiquidationHasChanged(T::AccountId, Balance),
-		/// Threshold has been successfully changed: \[who, threshold\]
-		ValueOfThresholdHasChanged(T::AccountId, Rate),
-		/// Liquidation fee has been successfully changed: \[ who, threshold\]
-		ValueOfLiquidationFeeHasChanged(T::AccountId, Rate),
+		/// Max value of liquidation attempts has been successfully changed: \[attempts_amount\]
+		MaxValueOFLiquidationAttempsHasChanged(u8),
+		/// Min sum for partial liquidation has been successfully changed: \[min_sum\]
+		MinSumForPartialLiquidationHasChanged(Balance),
+		/// Threshold has been successfully changed: \[threshold\]
+		ValueOfThresholdHasChanged(Rate),
+		/// Liquidation fee has been successfully changed: \[threshold\]
+		ValueOfLiquidationFeeHasChanged(Rate),
 		/// Unsafe loan has been successfully liquidated: \[who, liquidate_amount_in_usd,
 		/// liquidated_pool_id, seized_pools, partial_liquidation\]
 		LiquidateUnsafeLoan(T::AccountId, Balance, CurrencyId, Vec<CurrencyId>, bool),
@@ -176,15 +176,7 @@ pub mod module {
 			self.risk_manager_dates
 				.iter()
 				.for_each(|(currency_id, risk_manager_data)| {
-					RiskManagerDates::<T>::insert(
-						currency_id,
-						RiskManagerData {
-							max_attempts: risk_manager_data.max_attempts,
-							min_sum: risk_manager_data.min_sum,
-							threshold: risk_manager_data.threshold,
-							liquidation_incentive: risk_manager_data.liquidation_incentive,
-						},
-					)
+					RiskManagerDates::<T>::insert(currency_id, RiskManagerData { ..*risk_manager_data })
 				});
 		}
 	}
@@ -239,7 +231,7 @@ pub mod module {
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `new_max_value`: New max value of liquidation attempts.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_max_attempts(
@@ -247,8 +239,7 @@ pub mod module {
 			pool_id: CurrencyId,
 			new_max_value: u8,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
@@ -258,7 +249,7 @@ pub mod module {
 			// Write new value into storage.
 			RiskManagerDates::<T>::mutate(pool_id, |r| r.max_attempts = new_max_value);
 
-			Self::deposit_event(Event::MaxValueOFLiquidationAttempsHasChanged(sender, new_max_value));
+			Self::deposit_event(Event::MaxValueOFLiquidationAttempsHasChanged(new_max_value));
 
 			Ok(().into())
 		}
@@ -267,7 +258,7 @@ pub mod module {
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `new_min_sum`: New min sum for partial liquidation.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_min_sum(
@@ -275,8 +266,7 @@ pub mod module {
 			pool_id: CurrencyId,
 			new_min_sum: Balance,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
@@ -286,7 +276,7 @@ pub mod module {
 			// Write new value into storage.
 			RiskManagerDates::<T>::mutate(pool_id, |r| r.min_sum = new_min_sum);
 
-			Self::deposit_event(Event::MinSumForPartialLiquidationHasChanged(sender, new_min_sum));
+			Self::deposit_event(Event::MinSumForPartialLiquidationHasChanged(new_min_sum));
 
 			Ok(().into())
 		}
@@ -297,7 +287,7 @@ pub mod module {
 		/// - `new_threshold_d`: divider.
 		///
 		/// `new_threshold = (new_threshold_n / new_threshold_d)`
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_threshold(
@@ -306,8 +296,7 @@ pub mod module {
 			new_threshold_n: u128,
 			new_threshold_d: u128,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
@@ -320,7 +309,7 @@ pub mod module {
 			// Write new value into storage.
 			RiskManagerDates::<T>::mutate(pool_id, |r| r.threshold = new_threshold);
 
-			Self::deposit_event(Event::ValueOfThresholdHasChanged(sender, new_threshold));
+			Self::deposit_event(Event::ValueOfThresholdHasChanged(new_threshold));
 
 			Ok(().into())
 		}
@@ -331,7 +320,7 @@ pub mod module {
 		/// - `new_liquidation_incentive_d`: divider.
 		///
 		/// `new_liquidation_incentive = (new_liquidation_incentive_n /
-		/// new_liquidation_incentive_d)` The dispatch origin of this call must be Administrator.
+		/// new_liquidation_incentive_d)` The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_liquidation_incentive(
@@ -340,8 +329,7 @@ pub mod module {
 			new_liquidation_incentive_n: u128,
 			new_liquidation_incentive_d: u128,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
@@ -362,10 +350,7 @@ pub mod module {
 			// Write new value into storage.
 			RiskManagerDates::<T>::mutate(pool_id, |r| r.liquidation_incentive = new_liquidation_incentive);
 
-			Self::deposit_event(Event::ValueOfLiquidationFeeHasChanged(
-				sender,
-				new_liquidation_incentive,
-			));
+			Self::deposit_event(Event::ValueOfLiquidationFeeHasChanged(new_liquidation_incentive));
 
 			Ok(().into())
 		}

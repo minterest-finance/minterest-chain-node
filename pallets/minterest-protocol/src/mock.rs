@@ -4,8 +4,9 @@ use super::*;
 use crate as minterest_protocol;
 use controller::{ControllerData, PauseKeeper};
 use frame_support::pallet_prelude::GenesisBuild;
-use frame_support::parameter_types;
+use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
+use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_currencies::Currency;
@@ -14,9 +15,10 @@ use pallet_traits::PriceProvider;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One, Zero},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
 	FixedPointNumber, ModuleId,
 };
+use sp_std::cell::RefCell;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -34,7 +36,6 @@ frame_support::construct_runtime!(
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		TestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
-		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 	}
 );
@@ -144,18 +145,14 @@ impl liquidity_pools::Config for Test {
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
+ord_parameter_types! {
+	pub const OneAlice: AccountId = 1;
+}
+
 impl controller::Config for Test {
 	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
-}
-
-parameter_types! {
-	pub const MaxMembers: u8 = MAX_MEMBERS;
-}
-
-impl accounts::Config for Test {
-	type Event = Event;
-	type MaxMembers = MaxMembers;
+	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
 }
 
 parameter_types! {
@@ -165,12 +162,38 @@ parameter_types! {
 impl minterest_model::Config for Test {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
+	type ModelUpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
+}
+
+thread_local! {
+	static TWO: RefCell<Vec<u64>> = RefCell::new(vec![2]);
+}
+
+pub struct Two;
+impl Contains<u64> for Two {
+	fn contains(who: &AccountId) -> bool {
+		TWO.with(|v| v.borrow().contains(who))
+	}
+
+	fn sorted_members() -> Vec<u64> {
+		TWO.with(|v| v.borrow().clone())
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add(new: &u128) {
+		TWO.with(|v| {
+			let mut members = v.borrow_mut();
+			members.push(*new);
+			members.sort();
+		})
+	}
 }
 
 impl minterest_protocol::Config for Test {
 	type Event = Event;
 	type Borrowing = liquidity_pools::Module<Test>;
 	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
+	type WhitelistMembers = Two;
 }
 
 pub const ALICE: AccountId = 1;
@@ -185,7 +208,6 @@ pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ONE_MILL_DOLLARS: Balance = 1_000_000 * DOLLARS;
 pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
 pub const TEN_THOUSAND_DOLLARS: Balance = 10_000 * DOLLARS;
-pub const MAX_MEMBERS: u8 = 16;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -400,13 +422,7 @@ impl ExtBuilder {
 					},
 				),
 			],
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-		accounts::GenesisConfig::<Test> {
-			allowed_accounts: vec![(ALICE, ())],
-			member_count: u8::one(),
+			whitelist_mode: false,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

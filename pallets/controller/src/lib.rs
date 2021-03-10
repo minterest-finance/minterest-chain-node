@@ -46,7 +46,7 @@ pub struct ControllerData<BlockNumber> {
 	pub collateral_factor: Rate,
 }
 
-/// The Administrator can pause certain actions as a safety mechanism.
+/// The Root or half MinterestCouncil can pause certain actions as a safety mechanism.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct PauseKeeper {
@@ -68,7 +68,6 @@ pub struct PauseKeeper {
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 type MinterestModel<T> = minterest_model::Module<T>;
-type Accounts<T> = accounts::Module<T>;
 type RateResult = result::Result<Rate, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 type LiquidityResult = result::Result<(Balance, Balance), DispatchError>;
@@ -78,13 +77,16 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config:
-		frame_system::Config + liquidity_pools::Config + accounts::Config + minterest_model::Config
-	{
+	pub trait Config: frame_system::Config + liquidity_pools::Config + minterest_model::Config {
 		/// The overarching event type.
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
+
 		/// The basic liquidity pools manager.
 		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
+
+		/// The origin which may update controller parameters. Root can
+		/// always do this.
+		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 	}
 
 	#[pallet::error]
@@ -99,8 +101,6 @@ pub mod module {
 		InsufficientLiquidity,
 		/// Pool not found.
 		PoolNotFound,
-		/// The dispatch origin of this call must be Administrator.
-		RequireAdmin,
 		/// Not enough balance to deposit or withdraw or repay.
 		NotEnoughBalance,
 		/// Balance overflows maximum.
@@ -133,6 +133,8 @@ pub mod module {
 		DepositedInsurance(CurrencyId, Balance),
 		/// Insurance balance redeemed: \[pool_id, amount\]
 		RedeemedInsurance(CurrencyId, Balance),
+		/// Protocol operation mode switched: \[is_whitelist_mode\]
+		ProtocolOperationModeSwitched(bool),
 	}
 
 	/// Controller data information: `(timestamp, insurance_factor, collateral_factor,
@@ -142,16 +144,23 @@ pub mod module {
 	pub(crate) type ControllerDates<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, ControllerData<T::BlockNumber>, ValueQuery>;
 
-	/// The Pause Guardian can pause certain actions as a safety mechanism
+	/// The Pause Guardian can pause certain actions as a safety mechanism.
 	#[pallet::storage]
 	#[pallet::getter(fn pause_keepers)]
 	pub(crate) type PauseKeepers<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, PauseKeeper, ValueQuery>;
+
+	/// Boolean variable. Protocol operation mode. In whitelist mode, only members
+	/// 'WhitelistCouncil' can work with protocols.
+	#[pallet::storage]
+	#[pallet::getter(fn whitelist_mode)]
+	pub type WhitelistMode<T: Config> = StorageValue<_, bool, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		#[allow(clippy::type_complexity)]
 		pub controller_dates: Vec<(CurrencyId, ControllerData<T::BlockNumber>)>,
 		pub pause_keepers: Vec<(CurrencyId, PauseKeeper)>,
+		pub whitelist_mode: bool,
 	}
 
 	#[cfg(feature = "std")]
@@ -160,6 +169,7 @@ pub mod module {
 			GenesisConfig {
 				controller_dates: vec![],
 				pause_keepers: vec![],
+				whitelist_mode: false,
 			}
 		}
 	}
@@ -168,28 +178,12 @@ pub mod module {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			self.controller_dates.iter().for_each(|(currency_id, controller_data)| {
-				ControllerDates::<T>::insert(
-					currency_id,
-					ControllerData {
-						timestamp: controller_data.timestamp,
-						insurance_factor: controller_data.insurance_factor,
-						max_borrow_rate: controller_data.max_borrow_rate,
-						collateral_factor: controller_data.collateral_factor,
-					},
-				)
+				ControllerDates::<T>::insert(currency_id, ControllerData { ..*controller_data })
 			});
 			self.pause_keepers.iter().for_each(|(currency_id, pause_keeper)| {
-				PauseKeepers::<T>::insert(
-					currency_id,
-					PauseKeeper {
-						deposit_paused: pause_keeper.deposit_paused,
-						redeem_paused: pause_keeper.redeem_paused,
-						borrow_paused: pause_keeper.borrow_paused,
-						repay_paused: pause_keeper.repay_paused,
-						transfer_paused: pause_keeper.transfer_paused,
-					},
-				)
+				PauseKeepers::<T>::insert(currency_id, PauseKeeper { ..*pause_keeper })
 			});
+			WhitelistMode::<T>::put(self.whitelist_mode);
 		}
 	}
 
@@ -204,7 +198,7 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		/// Pause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn pause_specific_operation(
@@ -212,8 +206,7 @@ pub mod module {
 			pool_id: CurrencyId,
 			operation: Operation,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -231,7 +224,7 @@ pub mod module {
 
 		/// Unpause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn unpause_specific_operation(
@@ -239,8 +232,7 @@ pub mod module {
 			pool_id: CurrencyId,
 			operation: Operation,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -256,9 +248,8 @@ pub mod module {
 			Ok(().into())
 		}
 
+		// FIXME: unused functionality
 		/// Replenishes the insurance balance.
-		///
-		/// The dispatch origin of this call must be Administrator.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn deposit_insurance(
@@ -267,15 +258,12 @@ pub mod module {
 			amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 			Self::do_deposit_insurance(&sender, pool_id, amount)?;
 			Self::deposit_event(Event::DepositedInsurance(pool_id, amount));
 			Ok(().into())
 		}
 
 		/// Redeem the insurance balance.
-		///
-		/// The dispatch origin of this call must be Administrator.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn redeem_insurance(
@@ -284,7 +272,6 @@ pub mod module {
 			amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 			Self::do_redeem_insurance(&sender, pool_id, amount)?;
 			Self::deposit_event(Event::RedeemedInsurance(pool_id, amount));
 			Ok(().into())
@@ -292,7 +279,7 @@ pub mod module {
 
 		/// Set insurance factor.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_insurance_factor(
@@ -301,8 +288,7 @@ pub mod module {
 			new_amount_n: u128,
 			new_amount_d: u128,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -318,7 +304,7 @@ pub mod module {
 
 		/// Set Maximum borrow rate.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_max_borrow_rate(
@@ -327,8 +313,7 @@ pub mod module {
 			new_amount_n: u128,
 			new_amount_d: u128,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -346,7 +331,7 @@ pub mod module {
 
 		/// Set Collateral factor.
 		///
-		/// The dispatch origin of this call must be Administrator.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_collateral_factor(
@@ -355,8 +340,7 @@ pub mod module {
 			new_amount_n: u128,
 			new_amount_d: u128,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
+			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -376,6 +360,21 @@ pub mod module {
 
 			ControllerDates::<T>::mutate(pool_id, |r| r.collateral_factor = new_collateral_factor);
 			Self::deposit_event(Event::CollateralFactorChanged);
+			Ok(().into())
+		}
+
+		/// Enable / disable whitelist mode.
+		///
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn switch_mode(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+			T::UpdateOrigin::ensure_origin(origin)?;
+			let mode = WhitelistMode::<T>::mutate(|mode| {
+				*mode = !*mode;
+				*mode
+			});
+			Self::deposit_event(Event::ProtocolOperationModeSwitched(mode));
 			Ok(().into())
 		}
 	}

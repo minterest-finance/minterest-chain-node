@@ -28,7 +28,6 @@ orml-currencies = { path = "../../orml/currencies" }
 sp-io = { version = "3.0.0" }
 liquidity-pools = { path = "../liquidity-pools" }
 controller = { path = "../controller" }
-accounts = { path = "../accounts" }
 minterest-model = { path = "../minterest-model" }
 
 [features]

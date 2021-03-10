@@ -20,4 +20,3 @@ orml-oracle-rpc = { path = "../orml/oracle/rpc" }
 # local dependencies
 node-minterest-runtime = { path = '../runtime', version = '0.6.0' }
 controller-rpc = { path = "../pallets/controller/rpc" }
-accounts-rpc = { path = "../pallets/accounts/rpc" }

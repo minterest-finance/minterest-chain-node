@@ -24,7 +24,7 @@ use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{
 	crypto::KeyTypeId,
-	u32_trait::{_2, _3, _4},
+	u32_trait::{_1, _2, _3, _4},
 	OpaqueMetadata,
 };
 use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, Zero};
@@ -60,6 +60,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
 pub use constants::{currency::*, time::*, *};
+use frame_support::traits::Contains;
 use frame_system::{EnsureOneOf, EnsureRoot};
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -252,6 +253,12 @@ type EnsureRootOrThreeFourthsMinterestCouncil = EnsureOneOf<
 	pallet_collective::EnsureProportionMoreThan<_3, _4, AccountId, MinterestCouncilInstance>,
 >;
 
+type EnsureRootOrHalfMinterestCouncil = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, MinterestCouncilInstance>,
+>;
+
 parameter_types! {
 	pub const MinterestCouncilMotionDuration: BlockNumber = 7 * DAYS;
 	pub const MinterestCouncilMaxProposals: u32 = 100;
@@ -282,7 +289,37 @@ impl pallet_membership::Config<MinterestCouncilMembershipInstance> for Runtime {
 	type MembershipChanged = MinterestCouncil;
 }
 
-type OperatorMembershipInstanceMinterest = pallet_membership::Instance2;
+parameter_types! {
+	pub const WhitelistCouncilMotionDuration: BlockNumber = 7 * DAYS;
+	pub const WhitelistCouncilMaxProposals: u32 = 100;
+	pub const WhitelistCouncilMaxMembers: u32 = 100;
+}
+
+type WhitelistCouncilInstance = pallet_collective::Instance2;
+impl pallet_collective::Config<WhitelistCouncilInstance> for Runtime {
+	type Origin = Origin;
+	type Proposal = Call;
+	type Event = Event;
+	type MotionDuration = WhitelistCouncilMotionDuration;
+	type MaxProposals = WhitelistCouncilMaxProposals;
+	type MaxMembers = WhitelistCouncilMaxMembers;
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type WeightInfo = ();
+}
+
+type WhitelistCouncilMembershipInstance = pallet_membership::Instance2;
+impl pallet_membership::Config<WhitelistCouncilMembershipInstance> for Runtime {
+	type Event = Event;
+	type AddOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type RemoveOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type SwapOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type ResetOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type PrimeOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
+	type MembershipInitialized = WhitelistCouncil;
+	type MembershipChanged = WhitelistCouncil;
+}
+
+type OperatorMembershipInstanceMinterest = pallet_membership::Instance3;
 impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime {
 	type Event = Event;
 	type AddOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
@@ -303,6 +340,39 @@ impl minterest_protocol::Config for Runtime {
 	type Event = Event;
 	type Borrowing = LiquidityPools;
 	type ManagerLiquidityPools = LiquidityPools;
+	type WhitelistMembers = WhitelistCouncilProvider;
+}
+
+pub struct WhitelistCouncilProvider;
+impl Contains<AccountId> for WhitelistCouncilProvider {
+	fn contains(who: &AccountId) -> bool {
+		WhitelistCouncil::is_member(who)
+	}
+
+	fn sorted_members() -> Vec<AccountId> {
+		WhitelistCouncil::members()
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add(_: &AccountId) {
+		todo!()
+	}
+}
+
+pub struct MinterestCouncilProvider;
+impl Contains<AccountId> for MinterestCouncilProvider {
+	fn contains(who: &AccountId) -> bool {
+		MinterestCouncil::is_member(who)
+	}
+
+	fn sorted_members() -> Vec<AccountId> {
+		MinterestCouncil::members()
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add(_: &AccountId) {
+		todo!()
+	}
 }
 
 parameter_type_with_key! {
@@ -366,15 +436,7 @@ impl liquidity_pools::Config for Runtime {
 impl controller::Config for Runtime {
 	type Event = Event;
 	type LiquidityPoolsManager = LiquidityPools;
-}
-
-parameter_types! {
-	pub const MaxMembers: u8 = MAX_MEMBERS;
-}
-
-impl accounts::Config for Runtime {
-	type Event = Event;
-	type MaxMembers = MaxMembers;
+	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 
 impl module_prices::Config for Runtime {
@@ -391,6 +453,7 @@ parameter_types! {
 impl minterest_model::Config for Runtime {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
+	type ModelUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 
 parameter_types! {
@@ -403,6 +466,7 @@ impl risk_manager::Config for Runtime {
 	type UnsignedPriority = RiskManagerPriority;
 	type LiquidationPoolsManager = LiquidationPools;
 	type LiquidityPoolsManager = LiquidityPools;
+	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -422,6 +486,7 @@ impl liquidation_pools::Config for Runtime {
 	type UnsignedPriority = LiquidityPoolsPriority;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
+	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type LiquidityPoolsManager = LiquidityPools;
 }
 
@@ -466,7 +531,6 @@ construct_runtime!(
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		// Core
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
@@ -481,6 +545,8 @@ construct_runtime!(
 		// Governance
 		MinterestCouncil: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		MinterestCouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
+		WhitelistCouncil: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		WhitelistCouncilMembership: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
 
 		//ORML palletts
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
@@ -491,14 +557,13 @@ construct_runtime!(
 		Prices: module_prices::{Module, Storage, Call, Event<T>},
 
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
-		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
+		OperatorMembershipMinterest: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
 
 		// Minterest pallets
 		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 		MinterestProtocol: minterest_protocol::{Module, Call, Event<T>},
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		Accounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		RiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
@@ -666,7 +731,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl controller_rpc_runtime_api::ControllerApi<Block> for Runtime {
+	impl controller_rpc_runtime_api::ControllerApi<Block, AccountId> for Runtime {
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState> {
 			let exchange_rate = Controller::get_liquidity_pool_exchange_rate(pool_id)?;
 			let (borrow_rate, supply_rate) = Controller::get_liquidity_pool_borrow_and_supply_rates(pool_id)?;
@@ -678,6 +743,10 @@ impl_runtime_apis! {
 			let (total_supply, total_borrowed) = Controller::get_total_supply_and_borrowed_usd_balance(&account_id).ok()?;
 
 			Some(UserPoolBalanceData {total_supply, total_borrowed})
+		}
+
+		fn is_admin(caller: AccountId) -> Option<bool> {
+				Some(MinterestCouncilProvider::contains(&caller))
 		}
 	}
 
@@ -701,12 +770,6 @@ impl_runtime_apis! {
 			}
 		}
 	}
-
-	impl accounts_rpc_runtime_api::AccountsApi<Block, AccountId,> for Runtime {
-			fn is_admin(caller: AccountId) -> Option<bool> {
-				Some(Accounts::is_admin_internal(&caller))
-			}
-		}
 
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {

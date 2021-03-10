@@ -34,7 +34,6 @@ orml-traits = { path = "../../orml/traits" }
 liquidity-pools = { path = "../liquidity-pools" }
 controller = { path = "../controller" }
 pallet-traits = { path = "../traits" }
-accounts = { path = "../accounts" }
 minterest-model = { path = "../minterest-model" }
 minterest-protocol = { path = "../minterest-protocol" }
 
