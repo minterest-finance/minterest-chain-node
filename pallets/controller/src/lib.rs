@@ -46,7 +46,7 @@ pub struct ControllerData<BlockNumber> {
 	pub collateral_factor: Rate,
 
 	/// Maximum total borrow amount per pool in usd. Zero value means infinite borrow cap
-	pub borrow_cap: Balance,
+	pub borrow_cap: Option<Balance>,
 }
 
 /// The Administrator can pause certain actions as a safety mechanism.
@@ -147,7 +147,7 @@ pub mod module {
 		/// Insurance balance redeemed: \[pool_id, amount\]
 		RedeemedInsurance(CurrencyId, Balance),
 		/// Borrow cap changed: \[pool_id, new_cap\]
-		BorrowCapChanged(CurrencyId, Balance),
+		BorrowCapChanged(CurrencyId, Option<Balance>),
 	}
 
 	/// Controller data information: `(timestamp, insurance_factor, collateral_factor,
@@ -404,19 +404,23 @@ pub mod module {
 		pub fn set_borrow_cap(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			borrow_cap: Balance,
+			borrow_cap: Option<Balance>,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Accounts<T>>::is_admin_internal(&sender), Error::<T>::RequireAdmin);
 			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				T::EnabledUnderlyingAssetId::get()
+					.into_iter()
+					.any(|asset_id| asset_id == pool_id),
 				Error::<T>::PoolNotFound
 			);
 
-			ensure!(
-				borrow_cap >= Balance::zero() && borrow_cap <= T::MaxBorrowCap::get(),
-				Error::<T>::InvalidBorrowCap
-			);
+			if let Some(cap) = borrow_cap {
+				ensure!(
+					cap >= Balance::zero() && cap <= T::MaxBorrowCap::get(),
+					Error::<T>::InvalidBorrowCap
+				);
+			}
 			ControllerDates::<T>::mutate(pool_id, |r| r.borrow_cap = borrow_cap);
 			Self::deposit_event(Event::BorrowCapChanged(pool_id, borrow_cap));
 
@@ -658,21 +662,8 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		borrow_amount: Balance,
 	) -> DispatchResult {
-		let borrow_cap = Self::get_borrow_cap(underlying_asset_id);
-		if borrow_cap > Balance::zero() {
-			let oracle_price =
-				T::PriceSource::get_underlying_price(underlying_asset_id).ok_or(Error::<T>::OraclePriceError)?;
-			let pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id);
-			let new_total_borrows = pool_total_borrowed
-				.checked_add(borrow_amount)
-				.ok_or(Error::<T>::NumOverflow)?;
-			let new_total_borrows_in_usd = Rate::from_inner(new_total_borrows)
-				.checked_mul(&oracle_price)
-				.map(|x| x.into_inner())
-				.ok_or(Error::<T>::NumOverflow)?;
-
-			ensure!(new_total_borrows_in_usd <= borrow_cap, Error::<T>::BorrowCapReached);
-		}
+		let borrow_cap_reached = Self::is_borrow_cap_reached(underlying_asset_id, borrow_amount)?;
+		ensure!(!borrow_cap_reached, Error::<T>::BorrowCapReached);
 
 		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, underlying_asset_id, 0, borrow_amount)?;
 
@@ -692,6 +683,28 @@ impl<T: Config> Pallet<T> {
 			Operation::Repay => !Self::pause_keepers(pool_id).repay_paused,
 			Operation::Transfer => !Self::pause_keepers(pool_id).transfer_paused,
 		}
+	}
+
+	/// Checks if borrow cap is reached
+	///
+	/// Return true if total borrow per pool will will exceed borrow cap, otherwise false
+	pub fn is_borrow_cap_reached(pool_id: CurrencyId, borrow_amount: Balance) -> Result<bool, DispatchError> {
+		let borrow_cap = Self::get_borrow_cap(pool_id);
+		if borrow_cap == None {
+			return Ok(false);
+		}
+
+		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::OraclePriceError)?;
+		let pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(pool_id);
+		let new_total_borrows = pool_total_borrowed
+			.checked_add(borrow_amount)
+			.ok_or(Error::<T>::NumOverflow)?;
+		let new_total_borrows_in_usd = Rate::from_inner(new_total_borrows)
+			.checked_mul(&oracle_price)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		return Ok(new_total_borrows_in_usd >= borrow_cap.unwrap_or(Balance::zero()));
 	}
 }
 
@@ -1073,7 +1086,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Gets the borrow cap amount
-	fn get_borrow_cap(pool_id: CurrencyId) -> Balance {
+	fn get_borrow_cap(pool_id: CurrencyId) -> Option<Balance> {
 		Self::controller_dates(pool_id).borrow_cap
 	}
 }

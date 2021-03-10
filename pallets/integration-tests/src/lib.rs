@@ -309,7 +309,7 @@ mod tests {
 							insurance_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-							borrow_cap: Balance::zero(),
+							borrow_cap: None,
 						},
 					),
 					(
@@ -319,7 +319,7 @@ mod tests {
 							insurance_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-							borrow_cap: Balance::zero(),
+							borrow_cap: None,
 						},
 					),
 					(
@@ -329,7 +329,7 @@ mod tests {
 							insurance_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-							borrow_cap: Balance::zero(),
+							borrow_cap: None,
 						},
 					),
 				],
