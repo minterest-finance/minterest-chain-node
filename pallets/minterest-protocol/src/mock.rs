@@ -145,6 +145,10 @@ impl liquidity_pools::Config for Test {
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
+parameter_types! {
+	pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
+}
+
 ord_parameter_types! {
 	pub const OneAlice: AccountId = 1;
 }
@@ -152,6 +156,7 @@ ord_parameter_types! {
 impl controller::Config for Test {
 	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
 }
 
@@ -208,6 +213,7 @@ pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ONE_MILL_DOLLARS: Balance = 1_000_000 * DOLLARS;
 pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
 pub const TEN_THOUSAND_DOLLARS: Balance = 10_000 * DOLLARS;
+pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -350,6 +356,7 @@ impl ExtBuilder {
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						borrow_cap: None,
 					},
 				),
 				(
@@ -359,6 +366,7 @@ impl ExtBuilder {
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						borrow_cap: None,
 					},
 				),
 				(
@@ -368,6 +376,7 @@ impl ExtBuilder {
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						borrow_cap: None,
 					},
 				),
 				(
@@ -377,6 +386,7 @@ impl ExtBuilder {
 						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						borrow_cap: None,
 					},
 				),
 			],

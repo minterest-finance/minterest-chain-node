@@ -44,6 +44,9 @@ pub struct ControllerData<BlockNumber> {
 
 	/// Determines how much a user can borrow.
 	pub collateral_factor: Rate,
+
+	/// Maximum total borrow amount per pool in usd. Zero value means infinite borrow cap
+	pub borrow_cap: Option<Balance>,
 }
 
 /// The Root or half MinterestCouncil can pause certain actions as a safety mechanism.
@@ -84,6 +87,10 @@ pub mod module {
 		/// The basic liquidity pools manager.
 		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
 
+		#[pallet::constant]
+		/// Maximum total borrow amount per pool in usd
+		type MaxBorrowCap: Get<Balance>;
+
 		/// The origin which may update controller parameters. Root can
 		/// always do this.
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
@@ -114,6 +121,12 @@ pub mod module {
 		CollateralFactorCannotBeGreaterThanOne,
 		/// Collateral factor cannot be set to 0.
 		CollateralFactorCannotBeZero,
+		/// Borrow cap is reached
+		BorrowCapReached,
+		/// Invalid borrow cap
+		InvalidBorrowCap,
+		/// Borrow cap is zero
+		ZeroBorrowCap,
 	}
 
 	#[pallet::event]
@@ -133,6 +146,8 @@ pub mod module {
 		DepositedInsurance(CurrencyId, Balance),
 		/// Insurance balance redeemed: \[pool_id, amount\]
 		RedeemedInsurance(CurrencyId, Balance),
+		/// Borrow cap changed: \[pool_id, new_cap\]
+		BorrowCapChanged(CurrencyId, Option<Balance>),
 		/// Protocol operation mode switched: \[is_whitelist_mode\]
 		ProtocolOperationModeSwitched(bool),
 	}
@@ -360,6 +375,36 @@ pub mod module {
 
 			ControllerDates::<T>::mutate(pool_id, |r| r.collateral_factor = new_collateral_factor);
 			Self::deposit_event(Event::CollateralFactorChanged);
+			Ok(().into())
+		}
+
+		/// Set borrow cap.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		/// Borrow cap value must be in range 0..1_000_000_000_000_000_000_000_000
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn set_borrow_cap(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			borrow_cap: Option<Balance>,
+		) -> DispatchResultWithPostInfo {
+			T::UpdateOrigin::ensure_origin(origin)?;
+			ensure!(
+				T::EnabledUnderlyingAssetId::get()
+					.into_iter()
+					.any(|asset_id| asset_id == pool_id),
+				Error::<T>::PoolNotFound
+			);
+
+			if let Some(cap) = borrow_cap {
+				ensure!(
+					cap >= Balance::zero() && cap <= T::MaxBorrowCap::get(),
+					Error::<T>::InvalidBorrowCap
+				);
+			}
+			ControllerDates::<T>::mutate(pool_id, |r| r.borrow_cap = borrow_cap);
+			Self::deposit_event(Event::BorrowCapChanged(pool_id, borrow_cap));
 			Ok(().into())
 		}
 
@@ -613,7 +658,8 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		borrow_amount: Balance,
 	) -> DispatchResult {
-		//FIXME: add borrowCap checking
+		let borrow_cap_reached = Self::is_borrow_cap_reached(underlying_asset_id, borrow_amount)?;
+		ensure!(!borrow_cap_reached, Error::<T>::BorrowCapReached);
 
 		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, underlying_asset_id, 0, borrow_amount)?;
 
@@ -633,6 +679,28 @@ impl<T: Config> Pallet<T> {
 			Operation::Repay => !Self::pause_keepers(pool_id).repay_paused,
 			Operation::Transfer => !Self::pause_keepers(pool_id).transfer_paused,
 		}
+	}
+
+	/// Checks if borrow cap is reached
+	///
+	/// Return true if total borrow per pool will will exceed borrow cap, otherwise false
+	pub fn is_borrow_cap_reached(pool_id: CurrencyId, borrow_amount: Balance) -> Result<bool, DispatchError> {
+		let borrow_cap = Self::get_borrow_cap(pool_id);
+		if borrow_cap == None {
+			return Ok(false);
+		}
+
+		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::OraclePriceError)?;
+		let pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(pool_id);
+		let new_total_borrows = pool_total_borrowed
+			.checked_add(borrow_amount)
+			.ok_or(Error::<T>::NumOverflow)?;
+		let new_total_borrows_in_usd = Rate::from_inner(new_total_borrows)
+			.checked_mul(&oracle_price)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		Ok(new_total_borrows_in_usd >= borrow_cap.unwrap_or_else(Balance::zero))
 	}
 }
 
@@ -1011,6 +1079,11 @@ impl<T: Config> Pallet<T> {
 	/// Get the insurance factor.
 	fn get_insurance_factor(pool_id: CurrencyId) -> Rate {
 		Self::controller_dates(pool_id).insurance_factor
+	}
+
+	/// Gets the borrow cap amount
+	fn get_borrow_cap(pool_id: CurrencyId) -> Option<Balance> {
+		Self::controller_dates(pool_id).borrow_cap
 	}
 }
 

@@ -165,11 +165,18 @@ ord_parameter_types! {
 	pub const OneAlice: AccountId = 1;
 }
 
+parameter_types! {
+	pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
+}
+
 impl Config for Runtime {
 	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
+	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
 }
+
+pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -309,6 +316,7 @@ impl ExtBuilder {
 						insurance_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						borrow_cap: None,
 					},
 				),
 				(
@@ -317,7 +325,8 @@ impl ExtBuilder {
 						timestamp: 0,
 						insurance_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90
+						borrow_cap: None,
 					},
 				),
 				(
@@ -327,6 +336,7 @@ impl ExtBuilder {
 						insurance_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						borrow_cap: None,
 					},
 				),
 			],

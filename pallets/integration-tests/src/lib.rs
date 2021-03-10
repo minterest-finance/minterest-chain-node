@@ -192,6 +192,10 @@ mod tests {
 		type WhitelistMembers = Four;
 	}
 
+	parameter_types! {
+		pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
+	}
+
 	ord_parameter_types! {
 		pub const ZeroAdmin: AccountId = 0;
 	}
@@ -199,6 +203,7 @@ mod tests {
 	impl controller::Config for Test {
 		type Event = Event;
 		type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+		type MaxBorrowCap = MaxBorrowCap;
 		type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	}
 
@@ -219,6 +224,7 @@ mod tests {
 	pub const BALANCE_ZERO: Balance = 0;
 	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 	pub const RATE_ZERO: Rate = Rate::from_inner(0);
+	pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
 
 	pub fn admin() -> Origin {
 		Origin::signed(ADMIN)
@@ -319,6 +325,7 @@ mod tests {
 							insurance_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+							borrow_cap: None,
 						},
 					),
 					(
@@ -328,6 +335,7 @@ mod tests {
 							insurance_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+							borrow_cap: None,
 						},
 					),
 					(
@@ -337,6 +345,7 @@ mod tests {
 							insurance_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+							borrow_cap: None,
 						},
 					),
 				],

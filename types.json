@@ -58,7 +58,8 @@
       "timestamp": "BlockNumber",
       "insurance_factor": "Rate",
       "max_borrow_rate":  "Rate",
-      "collateral_factor": "Rate"
+      "collateral_factor": "Rate",
+	  "borrow_cap": "Option<Balance>"
     },
     "PauseKeeper": {
       "deposit_paused": "bool",

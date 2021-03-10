@@ -1047,3 +1047,39 @@ fn do_redeem_insurance_should_work() {
 			);
 		});
 }
+
+#[test]
+fn set_borrow_cap_should_work() {
+	ExtBuilder::default()
+		.pool_mock(CurrencyId::DOT)
+		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+		.build()
+		.execute_with(|| {
+			// The dispatch origin of this call must be Administrator.
+			assert_noop!(
+				Controller::set_borrow_cap(bob(), CurrencyId::DOT, Some(10_u128)),
+				BadOrigin
+			);
+
+			// ALICE set borrow cap to 10.
+			assert_ok!(Controller::set_borrow_cap(alice(), CurrencyId::DOT, Some(10_u128)));
+			let expected_event = Event::controller(crate::Event::BorrowCapChanged(CurrencyId::DOT, Some(10_u128)));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
+			// ALICE is able to change borrow cap to 9999
+			assert_ok!(Controller::set_borrow_cap(alice(), CurrencyId::DOT, Some(9999_u128)));
+			let expected_event = Event::controller(crate::Event::BorrowCapChanged(CurrencyId::DOT, Some(9999_u128)));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
+			// Unable to set borrow cap greater than MAX_BORROW_CAP.
+			assert_noop!(
+				Controller::set_borrow_cap(alice(), CurrencyId::DOT, Some(dollars(1_000_001_u128))),
+				Error::<Runtime>::InvalidBorrowCap
+			);
+
+			// Alice is able to set zero borrow cap.
+			assert_ok!(Controller::set_borrow_cap(alice(), CurrencyId::DOT, Some(0_u128)));
+			let expected_event = Event::controller(crate::Event::BorrowCapChanged(CurrencyId::DOT, Some(0_u128)));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+		});
+}
