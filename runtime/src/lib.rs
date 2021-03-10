@@ -422,6 +422,7 @@ impl liquidation_pools::Config for Runtime {
 	type UnsignedPriority = LiquidityPoolsPriority;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
+	type LiquidityPoolsManager = LiquidityPools;
 }
 
 parameter_types! {
