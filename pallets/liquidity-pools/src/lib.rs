@@ -139,29 +139,13 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.pools.iter().for_each(|(currency_id, pool)| {
-				Pools::<T>::insert(
-					currency_id,
-					Pool {
-						total_borrowed: pool.total_borrowed,
-						borrow_index: pool.borrow_index,
-						total_insurance: pool.total_insurance,
-					},
-				)
-			});
+			self.pools
+				.iter()
+				.for_each(|(currency_id, pool)| Pools::<T>::insert(currency_id, Pool { ..*pool }));
 			self.pool_user_data
 				.iter()
 				.for_each(|(currency_id, account_id, pool_user_data)| {
-					PoolUserDates::<T>::insert(
-						currency_id,
-						account_id,
-						PoolUserData {
-							total_borrowed: pool_user_data.total_borrowed,
-							interest_index: pool_user_data.interest_index,
-							collateral: pool_user_data.collateral,
-							liquidation_attempts: pool_user_data.liquidation_attempts,
-						},
-					)
+					PoolUserDates::<T>::insert(currency_id, account_id, PoolUserData { ..*pool_user_data })
 				});
 		}
 	}

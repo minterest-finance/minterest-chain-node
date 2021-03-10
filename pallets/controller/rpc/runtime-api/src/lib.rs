@@ -6,8 +6,8 @@
 // The `unnecessary_mut_passed` warning originates from `decl_runtime_apis` macro.
 #![allow(clippy::unnecessary_mut_passed)]
 
-use codec::{Decode, Encode};
-use minterest_primitives::{AccountId, Balance, CurrencyId, Rate};
+use codec::{Codec, Decode, Encode};
+use minterest_primitives::{Balance, CurrencyId, Rate};
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
 
@@ -48,9 +48,11 @@ fn deserialize_from_string<'de, D: Deserializer<'de>, T: std::str::FromStr>(dese
 // Here we declare the runtime API. It is implemented it the `impl` block in
 // runtime amalgamator file (the `runtime/src/lib.rs`)
 sp_api::decl_runtime_apis! {
-	pub trait ControllerApi {
+	pub trait ControllerApi<AccountId> where AccountId: Codec {
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState>;
 
 		fn get_total_supply_and_borrowed_usd_balance(account_id: AccountId) -> Option<UserPoolBalanceData>;
+
+		fn is_admin(caller: AccountId) -> Option<bool>;
 	}
 }

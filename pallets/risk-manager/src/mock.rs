@@ -2,17 +2,20 @@
 use super::*;
 use crate as risk_manager;
 use frame_support::pallet_prelude::GenesisBuild;
-use frame_support::parameter_types;
+use frame_support::traits::Contains;
+use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
+use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	FixedPointNumber, ModuleId,
 };
+use sp_std::cell::RefCell;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -29,7 +32,6 @@ frame_support::construct_runtime!(
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
-		TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned}
@@ -87,15 +89,6 @@ impl orml_tokens::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxMembers: u8 = MAX_MEMBERS;
-}
-
-impl accounts::Config for Test {
-	type Event = Event;
-	type MaxMembers = MaxMembers;
-}
-
-parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
@@ -140,10 +133,15 @@ parameter_types! {
 	pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
 }
 
+ord_parameter_types! {
+	pub const ZeroAdmin: AccountId = 0;
+}
+
 impl controller::Config for Test {
 	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	type MaxBorrowCap = MaxBorrowCap;
+	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 }
 
 parameter_types! {
@@ -153,13 +151,13 @@ parameter_types! {
 impl minterest_model::Config for Test {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
+	type ModelUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 }
 
 parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
-		pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
-
+	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
 }
 
 impl liquidation_pools::Config for Test {
@@ -167,12 +165,43 @@ impl liquidation_pools::Config for Test {
 	type UnsignedPriority = LiquidityPoolsPriority;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
+	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+}
+
+ord_parameter_types! {
+		pub const Four: AccountId = 4;
+}
+
+thread_local! {
+	static TWO: RefCell<Vec<u64>> = RefCell::new(vec![2]);
+}
+
+pub struct Two;
+impl Contains<u64> for Two {
+	fn contains(who: &AccountId) -> bool {
+		TWO.with(|v| v.borrow().contains(who))
+	}
+
+	fn sorted_members() -> Vec<u64> {
+		TWO.with(|v| v.borrow().clone())
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add(new: &u128) {
+		TWO.with(|v| {
+			let mut members = v.borrow_mut();
+			members.push(*new);
+			members.sort();
+		})
+	}
 }
 
 impl minterest_protocol::Config for Test {
 	type Event = Event;
 	type Borrowing = liquidity_pools::Module<Test>;
 	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
+	type WhitelistMembers = Two;
 }
 
 parameter_types! {
@@ -184,6 +213,7 @@ impl risk_manager::Config for Test {
 	type UnsignedPriority = RiskManagerPriority;
 	type LiquidationPoolsManager = liquidation_pools::Module<Test>;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+	type RiskManagerUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 }
 
 /// An extrinsic type used for tests.
@@ -198,7 +228,6 @@ where
 }
 
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
-pub const MAX_MEMBERS: u8 = 16;
 pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
 pub const ONE_HUNDRED: Balance = 100;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
@@ -240,13 +269,6 @@ impl ExtBuilder {
 		liquidity_pools::GenesisConfig::<Test> {
 			pools: self.pools,
 			pool_user_data: self.pool_user_data,
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-		accounts::GenesisConfig::<Test> {
-			allowed_accounts: vec![(ADMIN, ())],
-			member_count: u8::one(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

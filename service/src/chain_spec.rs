@@ -4,10 +4,10 @@ use liquidation_pools::{LiquidationPool, LiquidationPoolCommonData};
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
-	AccountId, AccountsConfig, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig,
-	GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
-	MinterestModelConfig, MinterestOracleConfig, OperatorMembershipMinterestConfig, RiskManagerConfig, Signature,
-	SudoConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
+	AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig, GrandpaConfig,
+	LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig, MinterestModelConfig,
+	MinterestOracleConfig, OperatorMembershipMinterestConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
+	TokensConfig, WhitelistCouncilMembershipConfig, DOLLARS, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -16,7 +16,6 @@ use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
-use sp_runtime::traits::One;
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify, Zero},
 	FixedPointNumber, FixedU128,
@@ -361,10 +360,7 @@ fn testnet_genesis(
 					},
 				),
 			],
-		}),
-		accounts: Some(AccountsConfig {
-			allowed_accounts: vec![(get_account_id_from_seed::<sr25519::Public>("Alice"), ())],
-			member_count: u8::one(),
+			whitelist_mode: false,
 		}),
 		minterest_model: Some(MinterestModelConfig {
 			minterest_model_dates: vec![
@@ -484,10 +480,15 @@ fn testnet_genesis(
 		}),
 		pallet_collective_Instance1: Some(Default::default()),
 		pallet_membership_Instance1: Some(MinterestCouncilMembershipConfig {
+			members: vec![root_key.clone()],
+			phantom: Default::default(),
+		}),
+		pallet_collective_Instance2: Some(Default::default()),
+		pallet_membership_Instance2: Some(WhitelistCouncilMembershipConfig {
 			members: vec![root_key],
 			phantom: Default::default(),
 		}),
-		pallet_membership_Instance2: Some(OperatorMembershipMinterestConfig {
+		pallet_membership_Instance3: Some(OperatorMembershipMinterestConfig {
 			members: endowed_accounts.clone(),
 			phantom: Default::default(),
 		}),

@@ -13,45 +13,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "accounts"
-version = "0.6.2"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "accounts-rpc"
-version = "0.6.1"
-dependencies = [
- "accounts-rpc-runtime-api",
- "jsonrpc-core",
- "jsonrpc-core-client",
- "jsonrpc-derive",
- "parity-scale-codec",
- "sp-api",
- "sp-blockchain",
- "sp-runtime",
-]
-
-[[package]]
-name = "accounts-rpc-runtime-api"
-version = "0.6.1"
-dependencies = [
- "parity-scale-codec",
- "serde_json",
- "sp-api",
- "sp-core",
- "sp-std",
-]
-
-[[package]]
 name = "addr2line"
 version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -874,7 +835,6 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 name = "controller"
 version = "0.6.2"
 dependencies = [
- "accounts",
  "frame-support",
  "frame-system",
  "liquidity-pools",
@@ -2499,7 +2459,6 @@ checksum = "f65877bf7d44897a473350b1046277941cee20b263397e90869c50b6e766088b"
 name = "integration-tests"
 version = "0.5.0"
 dependencies = [
- "accounts",
  "controller",
  "frame-support",
  "frame-system",
@@ -3286,7 +3245,6 @@ dependencies = [
 name = "liquidation-pools"
 version = "0.6.2"
 dependencies = [
- "accounts",
  "frame-support",
  "frame-system",
  "liquidity-pools",
@@ -3543,7 +3501,6 @@ dependencies = [
 name = "minterest-model"
 version = "0.5.0"
 dependencies = [
- "accounts",
  "frame-support",
  "frame-system",
  "liquidity-pools",
@@ -3575,7 +3532,6 @@ dependencies = [
 name = "minterest-protocol"
 version = "0.5.0"
 dependencies = [
- "accounts",
  "controller",
  "frame-support",
  "frame-system",
@@ -3599,7 +3555,6 @@ dependencies = [
 name = "minterest-rpc"
 version = "0.5.0"
 dependencies = [
- "accounts-rpc",
  "controller-rpc",
  "jsonrpc-core",
  "node-minterest-runtime",
@@ -3880,8 +3835,6 @@ dependencies = [
 name = "node-minterest-runtime"
 version = "0.6.0"
 dependencies = [
- "accounts",
- "accounts-rpc-runtime-api",
  "controller",
  "controller-rpc-runtime-api",
  "frame-benchmarking",
@@ -5521,7 +5474,6 @@ dependencies = [
 name = "risk-manager"
 version = "0.6.0"
 dependencies = [
- "accounts",
  "controller",
  "frame-support",
  "frame-system",

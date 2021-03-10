@@ -12,19 +12,19 @@ fn set_max_attempts_should_work() {
 		// Can be set to 0.0
 		assert_ok!(TestRiskManager::set_max_attempts(admin(), CurrencyId::DOT, 0));
 		assert_eq!(TestRiskManager::risk_manager_dates(CurrencyId::DOT).max_attempts, 0);
-		let expected_event = Event::risk_manager(crate::Event::MaxValueOFLiquidationAttempsHasChanged(ADMIN, 0));
+		let expected_event = Event::risk_manager(crate::Event::MaxValueOFLiquidationAttempsHasChanged(0));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// ALICE set max_attempts equal 2.0
 		assert_ok!(TestRiskManager::set_max_attempts(admin(), CurrencyId::DOT, 2));
 		assert_eq!(TestRiskManager::risk_manager_dates(CurrencyId::DOT).max_attempts, 2);
-		let expected_event = Event::risk_manager(crate::Event::MaxValueOFLiquidationAttempsHasChanged(ADMIN, 2));
+		let expected_event = Event::risk_manager(crate::Event::MaxValueOFLiquidationAttempsHasChanged(2));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
 			TestRiskManager::set_max_attempts(alice(), CurrencyId::DOT, 10),
-			Error::<Test>::RequireAdmin
+			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
@@ -44,10 +44,7 @@ fn set_min_sum_should_work() {
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).min_sum,
 			Balance::zero()
 		);
-		let expected_event = Event::risk_manager(crate::Event::MinSumForPartialLiquidationHasChanged(
-			ADMIN,
-			Balance::zero(),
-		));
+		let expected_event = Event::risk_manager(crate::Event::MinSumForPartialLiquidationHasChanged(Balance::zero()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// ALICE set min_sum equal one hundred.
@@ -61,16 +58,12 @@ fn set_min_sum_should_work() {
 			ONE_HUNDRED * DOLLARS
 		);
 		let expected_event = Event::risk_manager(crate::Event::MinSumForPartialLiquidationHasChanged(
-			ADMIN,
 			ONE_HUNDRED * DOLLARS,
 		));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Administrator.
-		assert_noop!(
-			TestRiskManager::set_min_sum(alice(), CurrencyId::DOT, 10),
-			Error::<Test>::RequireAdmin
-		);
+		assert_noop!(TestRiskManager::set_min_sum(alice(), CurrencyId::DOT, 10), BadOrigin);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
@@ -89,7 +82,7 @@ fn set_threshold_should_work() {
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).threshold,
 			Rate::zero()
 		);
-		let expected_event = Event::risk_manager(crate::Event::ValueOfThresholdHasChanged(ADMIN, Rate::zero()));
+		let expected_event = Event::risk_manager(crate::Event::ValueOfThresholdHasChanged(Rate::zero()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// ALICE set min_sum equal one hundred.
@@ -98,13 +91,13 @@ fn set_threshold_should_work() {
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).threshold,
 			Rate::one()
 		);
-		let expected_event = Event::risk_manager(crate::Event::ValueOfThresholdHasChanged(ADMIN, Rate::one()));
+		let expected_event = Event::risk_manager(crate::Event::ValueOfThresholdHasChanged(Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
 			TestRiskManager::set_threshold(alice(), CurrencyId::DOT, 1, 1),
-			Error::<Test>::RequireAdmin
+			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
@@ -129,7 +122,7 @@ fn set_liquidation_incentive_should_work() {
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).liquidation_incentive,
 			Rate::one()
 		);
-		let expected_event = Event::risk_manager(crate::Event::ValueOfLiquidationFeeHasChanged(ADMIN, Rate::one()));
+		let expected_event = Event::risk_manager(crate::Event::ValueOfLiquidationFeeHasChanged(Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can not be set to 0.0
@@ -147,7 +140,7 @@ fn set_liquidation_incentive_should_work() {
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
 			TestRiskManager::set_liquidation_incentive(alice(), CurrencyId::DOT, 1, 1),
-			Error::<Test>::RequireAdmin
+			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.

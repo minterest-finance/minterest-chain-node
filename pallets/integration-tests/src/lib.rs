@@ -8,8 +8,8 @@
 
 #[cfg(test)]
 mod tests {
-	use frame_support::{assert_noop, assert_ok, pallet_prelude::GenesisBuild, parameter_types};
-	use frame_system::{self as system};
+	use frame_support::{assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
+	use frame_system::{self as system, EnsureSignedBy};
 	use liquidity_pools::{Pool, PoolUserData};
 	use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 	use orml_currencies::Currency;
@@ -23,10 +23,11 @@ mod tests {
 	};
 
 	use controller::{ControllerData, PauseKeeper};
+	use frame_support::traits::Contains;
 	use minterest_model::MinterestModelData;
 	use minterest_protocol::Error as MinterestProtocolError;
 	use pallet_traits::{PoolsManager, PriceProvider};
-	use sp_runtime::traits::One;
+	use sp_std::cell::RefCell;
 
 	mod controller_tests;
 	mod liquidity_pools_tests;
@@ -52,7 +53,6 @@ mod tests {
 			TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 			TestController: controller::{Module, Storage, Call, Event, Config<T>},
 			MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
-			TestAccounts: accounts::{Module, Storage, Call, Event<T>, Config<T>},
 		}
 	);
 
@@ -166,29 +166,45 @@ mod tests {
 		type EnabledWrappedTokensId = EnabledWrappedTokensId;
 	}
 
+	thread_local! {
+		static FOUR: RefCell<Vec<u64>> = RefCell::new(vec![4]);
+	}
+
+	pub struct Four;
+	impl Contains<u64> for Four {
+		fn sorted_members() -> Vec<u64> {
+			FOUR.with(|v| v.borrow().clone())
+		}
+		#[cfg(feature = "runtime-benchmarks")]
+		fn add(new: &u128) {
+			TEN_TO_FOURTEEN.with(|v| {
+				let mut members = v.borrow_mut();
+				members.push(*new);
+				members.sort();
+			})
+		}
+	}
+
 	impl minterest_protocol::Config for Test {
 		type Event = Event;
 		type Borrowing = liquidity_pools::Module<Test>;
 		type ManagerLiquidityPools = liquidity_pools::Module<Test>;
+		type WhitelistMembers = Four;
 	}
 
 	parameter_types! {
 		pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
 	}
 
+	ord_parameter_types! {
+		pub const ZeroAdmin: AccountId = 0;
+	}
+
 	impl controller::Config for Test {
 		type Event = Event;
 		type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 		type MaxBorrowCap = MaxBorrowCap;
-	}
-
-	parameter_types! {
-		pub const MaxMembers: u8 = MAX_MEMBERS;
-	}
-
-	impl accounts::Config for Test {
-		type Event = Event;
-		type MaxMembers = MaxMembers;
+		type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	}
 
 	parameter_types! {
@@ -198,6 +214,7 @@ mod tests {
 	impl minterest_model::Config for Test {
 		type Event = Event;
 		type BlocksPerYear = BlocksPerYear;
+		type ModelUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	}
 
 	pub const ADMIN: AccountId = 0;
@@ -207,7 +224,6 @@ mod tests {
 	pub const BALANCE_ZERO: Balance = 0;
 	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 	pub const RATE_ZERO: Rate = Rate::from_inner(0);
-	pub const MAX_MEMBERS: u8 = 16;
 	pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
 
 	pub fn admin() -> Origin {
@@ -375,6 +391,7 @@ mod tests {
 						},
 					),
 				],
+				whitelist_mode: false,
 			}
 			.assimilate_storage(&mut t)
 			.unwrap();
@@ -382,13 +399,6 @@ mod tests {
 			liquidity_pools::GenesisConfig::<Test> {
 				pools: self.pools,
 				pool_user_data: self.pool_user_data,
-			}
-			.assimilate_storage(&mut t)
-			.unwrap();
-
-			accounts::GenesisConfig::<Test> {
-				allowed_accounts: vec![(ADMIN, ())],
-				member_count: u8::one(),
 			}
 			.assimilate_storage(&mut t)
 			.unwrap();

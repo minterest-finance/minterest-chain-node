@@ -8,12 +8,16 @@
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
 
+use frame_support::traits::Contains;
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, pallet_prelude::*};
 use minterest_primitives::{Balance, CurrencyId, Operation};
 use orml_traits::MultiCurrency;
 use pallet_traits::{Borrowing, PoolsManager};
-use sp_runtime::{traits::Zero, DispatchError, DispatchResult};
+use sp_runtime::{
+	traits::{BadOrigin, Zero},
+	DispatchError, DispatchResult,
+};
 use sp_std::cmp::Ordering;
 use sp_std::result;
 
@@ -43,6 +47,9 @@ pub mod module {
 
 		/// The basic liquidity pools.
 		type ManagerLiquidityPools: PoolsManager<Self::AccountId>;
+
+		/// The origin which may call deposit/redeem/borrow/repay in Whitelist mode.
+		type WhitelistMembers: Contains<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -142,6 +149,11 @@ pub mod module {
 			#[pallet::compact] underlying_amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+
+			if controller::WhitelistMode::<T>::get() {
+				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
+			}
+
 			let (_, wrapped_id, wrapped_amount) = Self::do_deposit(&who, underlying_asset_id, underlying_amount)?;
 			Self::deposit_event(Event::Deposited(
 				who,
@@ -162,6 +174,10 @@ pub mod module {
 		#[transactional]
 		pub fn redeem(origin: OriginFor<T>, underlying_asset_id: CurrencyId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+
+			if controller::WhitelistMode::<T>::get() {
+				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
+			}
 			let (underlying_amount, wrapped_id, wrapped_amount) =
 				Self::do_redeem(&who, underlying_asset_id, Balance::zero(), Balance::zero(), true)?;
 			Self::deposit_event(Event::Redeemed(
@@ -188,6 +204,10 @@ pub mod module {
 			#[pallet::compact] underlying_amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+
+			if controller::WhitelistMode::<T>::get() {
+				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
+			}
 			let (_, wrapped_id, wrapped_amount) =
 				Self::do_redeem(&who, underlying_asset_id, underlying_amount, Balance::zero(), false)?;
 			Self::deposit_event(Event::Redeemed(
@@ -214,6 +234,11 @@ pub mod module {
 			#[pallet::compact] wrapped_amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+
+			if controller::WhitelistMode::<T>::get() {
+				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
+			}
+
 			let underlying_asset_id = <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id)
 				.map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
 			let (underlying_amount, wrapped_id, _) =
@@ -241,6 +266,11 @@ pub mod module {
 			borrow_amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+
+			if controller::WhitelistMode::<T>::get() {
+				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
+			}
+
 			Self::do_borrow(&who, underlying_asset_id, borrow_amount)?;
 			Self::deposit_event(Event::Borrowed(who, underlying_asset_id, borrow_amount));
 			Ok(().into())
@@ -258,6 +288,11 @@ pub mod module {
 			#[pallet::compact] repay_amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+
+			if controller::WhitelistMode::<T>::get() {
+				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
+			}
+
 			Self::do_repay(&who, &who, underlying_asset_id, repay_amount, false)?;
 			Self::deposit_event(Event::Repaid(who, underlying_asset_id, repay_amount));
 			Ok(().into())
@@ -270,6 +305,11 @@ pub mod module {
 		#[transactional]
 		pub fn repay_all(origin: OriginFor<T>, underlying_asset_id: CurrencyId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+
+			if controller::WhitelistMode::<T>::get() {
+				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
+			}
+
 			let repay_amount = Self::do_repay(&who, &who, underlying_asset_id, Balance::zero(), true)?;
 			Self::deposit_event(Event::Repaid(who, underlying_asset_id, repay_amount));
 			Ok(().into())
@@ -289,6 +329,11 @@ pub mod module {
 			repay_amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+
+			if controller::WhitelistMode::<T>::get() {
+				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
+			}
+
 			let repay_amount = Self::do_repay(&who, &borrower, underlying_asset_id, repay_amount, false)?;
 			Self::deposit_event(Event::Repaid(who, underlying_asset_id, repay_amount));
 			Ok(().into())
@@ -308,6 +353,11 @@ pub mod module {
 			transfer_amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+
+			if controller::WhitelistMode::<T>::get() {
+				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
+			}
+
 			Self::do_transfer(&who, &receiver, wrapped_id, transfer_amount)?;
 			Self::deposit_event(Event::Transferred(who, receiver, wrapped_id, transfer_amount));
 			Ok(().into())
@@ -318,6 +368,11 @@ pub mod module {
 		#[transactional]
 		pub fn enable_as_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
+
+			if controller::WhitelistMode::<T>::get() {
+				ensure!(T::WhitelistMembers::contains(&sender), BadOrigin);
+			}
+
 			ensure!(
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
@@ -343,6 +398,11 @@ pub mod module {
 		#[transactional]
 		pub fn disable_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
+
+			if controller::WhitelistMode::<T>::get() {
+				ensure!(T::WhitelistMembers::contains(&sender), BadOrigin);
+			}
+
 			ensure!(
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
