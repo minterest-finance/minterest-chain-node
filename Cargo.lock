@@ -3852,6 +3852,7 @@ dependencies = [
  "minterest-primitives",
  "minterest-protocol",
  "module-prices",
+ "orml-benchmarking",
  "orml-currencies",
  "orml-oracle",
  "orml-oracle-rpc-runtime-api",
