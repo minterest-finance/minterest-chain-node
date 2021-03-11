@@ -315,6 +315,21 @@ impl<T: Config> Pallet<T> {
 
 // Storage setters for LiquidityPools
 impl<T: Config> Pallet<T> {
+	/// Sets pool data
+	pub fn set_pool_data(
+		pool_id: CurrencyId,
+		total_borrowed: Balance,
+		borrow_index: Rate,
+		total_insurance: Balance,
+	) -> DispatchResult {
+		Pools::<T>::mutate(pool_id, |pool| {
+			pool.total_borrowed = total_borrowed;
+			pool.borrow_index = borrow_index;
+			pool.total_insurance = total_insurance;
+		});
+		Ok(())
+	}
+
 	/// Sets the total borrowed value in the pool.
 	pub fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) -> DispatchResult {
 		Pools::<T>::mutate(pool_id, |pool| pool.total_borrowed = new_total_borrows);
@@ -381,6 +396,11 @@ impl<T: Config> Pallet<T> {
 
 // Storage getters for LiquidityPools
 impl<T: Config> Pallet<T> {
+	/// Gets pool associated data
+	pub fn get_pool_data(pool_id: CurrencyId) -> Pool {
+		Self::pools(pool_id)
+	}
+
 	/// Gets current the amount of underlying currently loaned out by the pool.
 	pub fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance {
 		Self::pools(pool_id).total_borrowed
