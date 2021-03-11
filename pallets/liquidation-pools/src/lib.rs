@@ -19,23 +19,8 @@ use pallet_traits::PoolsManager;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::{AccountIdConversion, CheckedMul, Zero};
-use sp_runtime::{
-	offchain::{
-		storage::StorageValueRef,
-		storage_lock::{StorageLock, Time},
-		Duration,
-	},
-	transaction_validity::TransactionPriority,
-	FixedPointNumber, ModuleId, RuntimeDebug,
-};
-use sp_std::{convert::TryInto, prelude::*, result};
-
-pub const OFFCHAIN_WORKER_DATA: &[u8] = b"pallets/liquidation-pools/data/";
-pub const OFFCHAIN_WORKER_LOCK: &[u8] = b"pallets/liquidation-pools/lock/";
-pub const OFFCHAIN_WORKER_MAX_ITERATIONS: &[u8] = b"pallets/liquidation-pools/max-iterations/";
-
-pub const LOCK_DURATION: u64 = 100;
-pub const DEFAULT_MAX_ITERATIONS: u32 = 1000;
+use sp_runtime::{transaction_validity::TransactionPriority, FixedPointNumber, ModuleId, RuntimeDebug};
+use sp_std::{prelude::*, result};
 
 pub use module::*;
 
@@ -43,16 +28,6 @@ pub use module::*;
 mod mock;
 #[cfg(test)]
 mod tests;
-
-/// Liquidation Pool metadata
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct LiquidationPoolCommonData<BlockNumber> {
-	/// Block number that pool was last balancing attempted at.
-	pub timestamp: BlockNumber,
-	/// Balancing pool frequency.
-	pub balancing_period: u32,
-}
 
 /// Liquidation Pool metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -116,17 +91,17 @@ pub mod module {
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
 		///  Balancing period has been successfully changed: \[new_period\]
-		BalancingPeriodChanged(u32),
+		BalancingPeriodChanged(T::BlockNumber),
 		///  Deviation Threshold has been successfully changed: \[new_threshold_value\]
 		DeviationThresholdChanged(Rate),
 		///  Balance ratio has been successfully changed: \[new_threshold_value\]
 		BalanceRatioChanged(Rate),
 	}
 
+	/// Balancing pool frequency.
 	#[pallet::storage]
-	#[pallet::getter(fn liquidation_pool_params)]
-	pub(crate) type LiquidationPoolParams<T: Config> =
-		StorageValue<_, LiquidationPoolCommonData<T::BlockNumber>, ValueQuery>;
+	#[pallet::getter(fn balancing_period)]
+	pub(crate) type BalancingPeriod<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_pools)]
@@ -134,7 +109,7 @@ pub mod module {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub liquidation_pool_params: LiquidationPoolCommonData<T::BlockNumber>,
+		pub balancing_period: T::BlockNumber,
 		#[allow(clippy::type_complexity)]
 		pub liquidation_pools: Vec<(CurrencyId, LiquidationPool)>,
 	}
@@ -143,12 +118,7 @@ pub mod module {
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			GenesisConfig {
-				liquidation_pool_params: LiquidationPoolCommonData {
-					timestamp: TryInto::<T::BlockNumber>::try_into(1u32)
-						.ok()
-						.expect(" result convert failed"),
-					balancing_period: 600, // Blocks per 10 minutes.
-				},
+				balancing_period: Default::default(),
 				liquidation_pools: vec![],
 			}
 		}
@@ -157,7 +127,7 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			LiquidationPoolParams::<T>::put(self.liquidation_pool_params.clone());
+			BalancingPeriod::<T>::put(self.balancing_period);
 			self.liquidation_pools.iter().for_each(|(currency_id, pool_data)| {
 				LiquidationPools::<T>::insert(currency_id, LiquidationPool { ..*pool_data })
 			});
@@ -169,21 +139,23 @@ pub mod module {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		/// Runs after every block. Start offchain worker to check if balancing needed.
+		/// Runs balancing liquidation pools every 'balancing_period' blocks.
 		fn offchain_worker(now: T::BlockNumber) {
-			if let Err(e) = Self::_offchain_worker() {
-				debug::info!(
-					target: "LiquidationPool offchain worker",
-					"cannot run offchain worker at {:?}: {:?}",
-					now,
-					e,
-				);
-			} else {
-				debug::debug!(
-					target: "LiquidationPool offchain worker",
-					" LiquidationPool offchain worker start at block: {:?} already done!",
-					now,
-				);
+			if now % Self::balancing_period() == T::BlockNumber::zero() {
+				if let Err(error) = Self::offchain_unsigned_tx() {
+					debug::info!(
+						target: "LiquidationPool offchain worker",
+						"cannot run offchain worker at {:?}: {:?}",
+						now,
+						error,
+					);
+				} else {
+					debug::debug!(
+						target: "LiquidationPool offchain worker",
+						" LiquidationPool offchain worker start at block: {:?} already done!",
+						now,
+					);
+				}
 			}
 		}
 	}
@@ -197,14 +169,11 @@ pub mod module {
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_balancing_period(origin: OriginFor<T>, new_period: u32) -> DispatchResultWithPostInfo {
+		pub fn set_balancing_period(origin: OriginFor<T>, new_period: T::BlockNumber) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-
 			// Write new value into storage.
-			LiquidationPoolParams::<T>::mutate(|x| x.balancing_period = new_period);
-
+			BalancingPeriod::<T>::put(new_period);
 			Self::deposit_event(Event::BalancingPeriodChanged(new_period));
-
 			Ok(().into())
 		}
 
@@ -283,200 +252,121 @@ pub mod module {
 		#[transactional]
 		pub fn balancing(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
-			Self::balancing_attempt()?;
+			// Self::balancing_attempt()?;
 			Ok(().into())
 		}
 	}
 }
 
 impl<T: Config> Pallet<T> {
-	fn _offchain_worker() -> Result<(), OffchainErr> {
-		// Get available assets list
-		let underlying_asset_ids: Vec<CurrencyId> = <T as liquidity_pools::Config>::EnabledCurrencyPair::get()
-			.iter()
-			.map(|currency_pair| currency_pair.underlying_id)
-			.collect();
-
-		if underlying_asset_ids.len().is_zero() {
-			return Ok(());
-		}
-
-		// acquire offchain worker lock.
-		let lock_expiration = Duration::from_millis(LOCK_DURATION);
-		let mut lock = StorageLock::<'_, Time>::with_deadline(&OFFCHAIN_WORKER_LOCK, lock_expiration);
-		let guard = lock.try_lock().map_err(|_| OffchainErr::OffchainLock)?;
-
-		let to_be_continue = StorageValueRef::persistent(&OFFCHAIN_WORKER_DATA);
-
-		// Get to_be_continue record
-		let (pool_to_check, start_key) = if let Some(Some((last_pool_to_check, maybe_last_iterator_previous_key))) =
-			to_be_continue.get::<(u32, Option<Vec<u8>>)>()
-		{
-			(last_pool_to_check, maybe_last_iterator_previous_key)
-		} else {
-			(0, None)
-		};
-
-		let currency_id = underlying_asset_ids[(pool_to_check as usize)];
-		let iteration_start_time = sp_io::offchain::timestamp();
-
-		let dead_line = Self::calculate_deadline().map_err(|_| OffchainErr::OffchainLock)?;
-
-		if <frame_system::Module<T>>::block_number() > dead_line {
-			Self::submit_unsigned_tx();
-		}
-
-		// update to_be_continue record
-		let nex_pool_id = if pool_to_check < underlying_asset_ids.len().saturating_sub(1) as u32 {
-			pool_to_check + 1
-		} else {
-			0
-		};
-		to_be_continue.set(&(nex_pool_id, Option::<Vec<u8>>::None));
-
-		let iteration_end_time = sp_io::offchain::timestamp();
-
-		debug::info!(
-			target: "LiquidationPools offchain worker",
-			"iteration info:\n currency id: {:?}, start key: {:?},\n iteration start at: {:?}, end at: {:?}, execution time: {:?}\n",
-			currency_id,
-			start_key,
-			iteration_start_time,
-			iteration_end_time,
-			iteration_end_time.diff(&iteration_start_time)
-		);
-
-		// Consume the guard but **do not** unlock the underlying lock.
-		guard.forget();
-
-		Ok(())
-	}
-
-	fn calculate_deadline() -> result::Result<T::BlockNumber, DispatchError> {
-		let timestamp = Self::liquidation_pool_params().timestamp;
-		let period = Self::liquidation_pool_params().balancing_period;
-
-		let timestamp_as_u32 = TryInto::<u32>::try_into(timestamp)
-			.ok()
-			.expect("blockchain will not exceed 2^32 blocks; qed");
-
-		Ok(
-			TryInto::<T::BlockNumber>::try_into(period.checked_add(timestamp_as_u32).ok_or(Error::<T>::NumOverflow)?)
-				.ok()
-				.expect(" result convert failed"),
-		)
-	}
-
-	fn submit_unsigned_tx() {
+	fn offchain_unsigned_tx() -> Result<(), OffchainErr> {
 		let call = Call::<T>::balancing();
-		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
-			debug::info!(
-				target: "LiquidityPools offchain worker",
-				"submit unsigned balancing attempt failed!"
-			);
-		}
+		SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).map_err(|_| {
+			debug::error!("Failed in offchain_unsigned_tx");
+			OffchainErr::SubmitTransaction
+		})
 	}
 
-	/// Sort vector by balance param (DESC)
-	pub fn sort_by_balance(
-		mut vec_to_sort: Vec<(CurrencyId, Balance)>,
-	) -> result::Result<Vec<(CurrencyId, Balance)>, DispatchError> {
-		vec_to_sort.sort_by(|x, y| y.1.cmp(&x.1));
-		Ok(vec_to_sort)
-	}
+	// /// Sort vector by balance param (DESC)
+	// pub fn sort_by_balance(
+	// 	mut vec_to_sort: Vec<(CurrencyId, Balance)>,
+	// ) -> result::Result<Vec<(CurrencyId, Balance)>, DispatchError> {
+	// 	vec_to_sort.sort_by(|x, y| y.1.cmp(&x.1));
+	// 	Ok(vec_to_sort)
+	// }
 
-	/// Collect pools that required to balance.
-	/// Separate them to 2 different vectors.
-	/// `weak_pools` - contains tuples of elements:
-	/// -`pool_id`  Id of unbalanced pool with too low balance,
-	/// -`extra_minus` balance that required to come back to ideal value.
-	/// `strong_pools` - contains tuples of elements:
-	/// -`pool_id`  Id of unbalanced pool with too low balance,
-	/// -`extra_plus` balance that required to come back to ideal value.
-	pub fn collect_pools_vectors() -> TwoVectorsResult {
-		Ok(T::EnabledUnderlyingAssetId::get().iter().fold(
-			(Vec::<(CurrencyId, Balance)>::new(), Vec::<(CurrencyId, Balance)>::new()),
-			|mut acc, pool_id| {
-				let (extra_minus, extra_plus) = Self::get_pool_deviation_value(*pool_id).unwrap_or_default();
+	// /// Collect pools that required to balance.
+	// /// Separate them to 2 different vectors.
+	// /// `weak_pools` - contains tuples of elements:
+	// /// -`pool_id`  Id of unbalanced pool with too low balance,
+	// /// -`extra_minus` balance that required to come back to ideal value.
+	// /// `strong_pools` - contains tuples of elements:
+	// /// -`pool_id`  Id of unbalanced pool with too low balance,
+	// /// -`extra_plus` balance that required to come back to ideal value.
+	// pub fn collect_pools_vectors() -> TwoVectorsResult {
+	// 	Ok(T::EnabledUnderlyingAssetId::get().iter().fold(
+	// 		(Vec::<(CurrencyId, Balance)>::new(), Vec::<(CurrencyId, Balance)>::new()),
+	// 		|mut acc, pool_id| {
+	// 			let (extra_minus, extra_plus) = Self::get_pool_deviation_value(*pool_id).unwrap_or_default();
+	//
+	// 			if !extra_minus.is_zero() {
+	// 				acc.0.push((*pool_id, extra_minus))
+	// 			}
+	//
+	// 			if !extra_plus.is_zero() {
+	// 				acc.1.push((*pool_id, extra_plus))
+	// 			}
+	// 			acc
+	// 		},
+	// 	))
+	// }
 
-				if !extra_minus.is_zero() {
-					acc.0.push((*pool_id, extra_minus))
-				}
+	// // FIXME: temporary implementation.
+	// /// Check if liquidation pool unbalanced.
+	// ///
+	// /// - `pool_id`: the CurrencyId of the liquidation pool that need to check.
+	// ///
+	// /// Returns ( `extra_minus` , `extra_plus` ) - balance required to come back to ideal balance.
+	// /// If pool is balanced - returns ( Balance::zero(), Balance::zero() )
+	// pub fn get_pool_deviation_value(pool_id: CurrencyId) -> result::Result<(Balance, Balance),
+	// DispatchError> { 	let lkp_liquidity = <Pallet<T>>::get_pool_available_liquidity(pool_id);
+	// 	let wp_liquidity = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
+	// 	let threshold = Self::liquidation_pools(pool_id).deviation_threshold;
+	// 	let balance_ratio = Self::liquidation_pools(pool_id).balance_ratio;
+	//
+	// 	let ideal_value = Rate::from_inner(wp_liquidity)
+	// 		.checked_mul(&balance_ratio)
+	// 		.map(|x| x.into_inner())
+	// 		.ok_or(Error::<T>::NumOverflow)?;
+	// 	let threshold_step = Rate::from_inner(ideal_value)
+	// 		.checked_mul(&threshold)
+	// 		.map(|x| x.into_inner())
+	// 		.ok_or(Error::<T>::NumOverflow)?;
+	//
+	// 	let mut extra_plus = Balance::zero();
+	// 	let mut extra_minus = Balance::zero();
+	//
+	// 	let upper_threshold = ideal_value.checked_add(threshold_step).ok_or(Error::<T>::NumOverflow)?;
+	//
+	// 	let lower_threshold = ideal_value.checked_sub(threshold_step).ok_or(Error::<T>::NumOverflow)?;
+	//
+	// 	if lkp_liquidity > upper_threshold {
+	// 		extra_plus += lkp_liquidity - ideal_value
+	// 	}
+	// 	if lkp_liquidity < lower_threshold {
+	// 		extra_minus += ideal_value - lkp_liquidity
+	// 	}
+	//
+	// 	Ok((extra_minus, extra_plus))
+	// }
 
-				if !extra_plus.is_zero() {
-					acc.1.push((*pool_id, extra_plus))
-				}
-				acc
-			},
-		))
-	}
-
-	// FIXME: temporary implementation.
-	/// Check if liquidation pool unbalanced.
-	///
-	/// - `pool_id`: the CurrencyId of the liquidation pool that need to check.
-	///
-	/// Returns ( `extra_minus` , `extra_plus` ) - balance required to come back to ideal balance.
-	/// If pool is balanced - returns ( Balance::zero(), Balance::zero() )
-	pub fn get_pool_deviation_value(pool_id: CurrencyId) -> result::Result<(Balance, Balance), DispatchError> {
-		let lkp_liquidity = <Pallet<T>>::get_pool_available_liquidity(pool_id);
-		let wp_liquidity = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
-		let threshold = Self::liquidation_pools(pool_id).deviation_threshold;
-		let balance_ratio = Self::liquidation_pools(pool_id).balance_ratio;
-
-		let ideal_value = Rate::from_inner(wp_liquidity)
-			.checked_mul(&balance_ratio)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-		let threshold_step = Rate::from_inner(ideal_value)
-			.checked_mul(&threshold)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		let mut extra_plus = Balance::zero();
-		let mut extra_minus = Balance::zero();
-
-		let upper_threshold = ideal_value.checked_add(threshold_step).ok_or(Error::<T>::NumOverflow)?;
-
-		let lower_threshold = ideal_value.checked_sub(threshold_step).ok_or(Error::<T>::NumOverflow)?;
-
-		if lkp_liquidity > upper_threshold {
-			extra_plus += lkp_liquidity - ideal_value
-		}
-		if lkp_liquidity < lower_threshold {
-			extra_minus += ideal_value - lkp_liquidity
-		}
-
-		Ok((extra_minus, extra_plus))
-	}
-
-	/// Preparing data for pool balancing.
-	fn balancing_attempt() -> DispatchResultWithPostInfo {
-		let (weak_pools, strong_pools) = Self::collect_pools_vectors()?;
-
-		if weak_pools.len().is_zero() {
-			return Ok(().into());
-		}
-
-		if !weak_pools.len().is_zero() && strong_pools.len().is_zero() {
-			return Ok(().into());
-		}
-
-		let mut sorted_weak_pools = Self::sort_by_balance(weak_pools)?;
-		let sorted_strong_pools = Self::sort_by_balance(strong_pools)?;
-
-		let (mut weak_sum, strong_sum): (Balance, Balance) = (
-			sorted_weak_pools.iter().map(|pool| pool.1).sum(),
-			sorted_strong_pools.iter().map(|pool| pool.1).sum(),
-		);
-
-		while weak_sum > strong_sum {
-			let removed_pool = sorted_weak_pools.pop().ok_or(Error::<T>::NumOverflow)?;
-			weak_sum -= removed_pool.1
-		}
-
-		Ok(().into())
-	}
+	// /// Preparing data for pool balancing.
+	// fn balancing_attempt() -> DispatchResultWithPostInfo {
+	// 	let (weak_pools, strong_pools) = Self::collect_pools_vectors()?;
+	//
+	// 	if weak_pools.len().is_zero() {
+	// 		return Ok(().into());
+	// 	}
+	//
+	// 	if !weak_pools.len().is_zero() && strong_pools.len().is_zero() {
+	// 		return Ok(().into());
+	// 	}
+	//
+	// 	let mut sorted_weak_pools = Self::sort_by_balance(weak_pools)?;
+	// 	let sorted_strong_pools = Self::sort_by_balance(strong_pools)?;
+	//
+	// 	let (mut weak_sum, strong_sum): (Balance, Balance) = (
+	// 		sorted_weak_pools.iter().map(|pool| pool.1).sum(),
+	// 		sorted_strong_pools.iter().map(|pool| pool.1).sum(),
+	// 	);
+	//
+	// 	while weak_sum > strong_sum {
+	// 		let removed_pool = sorted_weak_pools.pop().ok_or(Error::<T>::NumOverflow)?;
+	// 		weak_sum -= removed_pool.1
+	// 	}
+	//
+	// 	Ok(().into())
+	// }
 }
 
 impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {

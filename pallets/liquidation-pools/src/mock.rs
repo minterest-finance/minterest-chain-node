@@ -184,7 +184,7 @@ pub fn alice() -> Origin {
 
 pub struct ExternalityBuilder {
 	liquidation_pools: Vec<(CurrencyId, LiquidationPool)>,
-	liquidation_pool_params: LiquidationPoolCommonData<BlockNumber>,
+	balancing_period: BlockNumber,
 }
 
 impl Default for ExternalityBuilder {
@@ -197,20 +197,14 @@ impl Default for ExternalityBuilder {
 					balance_ratio: Rate::saturating_from_rational(2, 10),
 				},
 			)],
-			liquidation_pool_params: LiquidationPoolCommonData {
-				timestamp: 1,
-				balancing_period: 600, // Blocks per 10 minutes.},
-			},
+			balancing_period: 600, // Blocks per 10 minutes
 		}
 	}
 }
 
 impl ExternalityBuilder {
-	pub fn pool_timestamp_and_period(mut self, timestamp: BlockNumber, balancing_period: u32) -> Self {
-		self.liquidation_pool_params = LiquidationPoolCommonData {
-			timestamp,
-			balancing_period,
-		};
+	pub fn pool_period(mut self, balancing_period: BlockNumber) -> Self {
+		self.balancing_period = balancing_period;
 		self
 	}
 
@@ -219,7 +213,7 @@ impl ExternalityBuilder {
 
 		liquidation_pools::GenesisConfig::<Test> {
 			liquidation_pools: self.liquidation_pools,
-			liquidation_pool_params: self.liquidation_pool_params,
+			balancing_period: self.balancing_period,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

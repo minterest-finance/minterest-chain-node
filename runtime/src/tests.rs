@@ -11,7 +11,7 @@ use controller_rpc_runtime_api::PoolState;
 use controller_rpc_runtime_api::UserPoolBalanceData;
 use frame_support::{assert_err, assert_noop, assert_ok, parameter_types};
 use frame_support::{error::BadOrigin, pallet_prelude::GenesisBuild, traits::OnFinalize};
-use liquidation_pools::{LiquidationPool, LiquidationPoolCommonData};
+use liquidation_pools::LiquidationPool;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 use minterest_primitives::{Operation, Price};
@@ -250,10 +250,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		liquidation_pools::GenesisConfig::<Runtime> {
-			liquidation_pool_params: (LiquidationPoolCommonData {
-				timestamp: 1,
-				balancing_period: 30, // Blocks per 3 minutes.
-			}),
+			balancing_period: 30, // Blocks per 3 minutes.
 			liquidation_pools: vec![
 				(
 					CurrencyId::DOT,
@@ -1178,45 +1175,45 @@ fn partial_liquidation_should_not_work() {
 		})
 }
 
-#[test]
-fn get_pool_deviation_value_should_work() {
-	ExtBuilder::default()
-		.liquidity_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
-		.liquidity_pool_balance(CurrencyId::BTC, 100_000 * DOLLARS)
-		.liquidation_pool_balance(CurrencyId::DOT, 16_000 * DOLLARS)
-		.liquidation_pool_balance(CurrencyId::BTC, 40_000 * DOLLARS)
-		.build()
-		.execute_with(|| {
-			assert_eq!(
-				LiquidationPools::get_pool_deviation_value(CurrencyId::DOT),
-				Ok((4_000 * DOLLARS, Balance::zero()))
-			);
-			assert_eq!(
-				LiquidationPools::get_pool_deviation_value(CurrencyId::BTC),
-				Ok((Balance::zero(), 20_000 * DOLLARS))
-			);
-		});
-}
-
-#[test]
-fn collect_pools_vectors_should_work() {
-	ExtBuilder::default()
-		.liquidity_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
-		.liquidity_pool_balance(CurrencyId::BTC, 100_000 * DOLLARS)
-		.liquidity_pool_balance(CurrencyId::ETH, 100_000 * DOLLARS)
-		.liquidity_pool_balance(CurrencyId::KSM, 50_000 * DOLLARS)
-		.liquidation_pool_balance(CurrencyId::DOT, 16_000 * DOLLARS)
-		.liquidation_pool_balance(CurrencyId::BTC, 40_000 * DOLLARS)
-		.liquidation_pool_balance(CurrencyId::ETH, 21_900 * DOLLARS)
-		.liquidation_pool_balance(CurrencyId::KSM, 4_000 * DOLLARS)
-		.build()
-		.execute_with(|| {
-			assert_eq!(
-				LiquidationPools::collect_pools_vectors(),
-				Ok((
-					vec![(CurrencyId::DOT, 4_000 * DOLLARS), (CurrencyId::KSM, 6_000 * DOLLARS)],
-					vec![(CurrencyId::BTC, 20_000 * DOLLARS)]
-				))
-			);
-		});
-}
+// #[test]
+// fn get_pool_deviation_value_should_work() {
+// 	ExtBuilder::default()
+// 		.liquidity_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
+// 		.liquidity_pool_balance(CurrencyId::BTC, 100_000 * DOLLARS)
+// 		.liquidation_pool_balance(CurrencyId::DOT, 16_000 * DOLLARS)
+// 		.liquidation_pool_balance(CurrencyId::BTC, 40_000 * DOLLARS)
+// 		.build()
+// 		.execute_with(|| {
+// 			assert_eq!(
+// 				LiquidationPools::get_pool_deviation_value(CurrencyId::DOT),
+// 				Ok((4_000 * DOLLARS, Balance::zero()))
+// 			);
+// 			assert_eq!(
+// 				LiquidationPools::get_pool_deviation_value(CurrencyId::BTC),
+// 				Ok((Balance::zero(), 20_000 * DOLLARS))
+// 			);
+// 		});
+// }
+//
+// #[test]
+// fn collect_pools_vectors_should_work() {
+// 	ExtBuilder::default()
+// 		.liquidity_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
+// 		.liquidity_pool_balance(CurrencyId::BTC, 100_000 * DOLLARS)
+// 		.liquidity_pool_balance(CurrencyId::ETH, 100_000 * DOLLARS)
+// 		.liquidity_pool_balance(CurrencyId::KSM, 50_000 * DOLLARS)
+// 		.liquidation_pool_balance(CurrencyId::DOT, 16_000 * DOLLARS)
+// 		.liquidation_pool_balance(CurrencyId::BTC, 40_000 * DOLLARS)
+// 		.liquidation_pool_balance(CurrencyId::ETH, 21_900 * DOLLARS)
+// 		.liquidation_pool_balance(CurrencyId::KSM, 4_000 * DOLLARS)
+// 		.build()
+// 		.execute_with(|| {
+// 			assert_eq!(
+// 				LiquidationPools::collect_pools_vectors(),
+// 				Ok((
+// 					vec![(CurrencyId::DOT, 4_000 * DOLLARS), (CurrencyId::KSM, 6_000 * DOLLARS)],
+// 					vec![(CurrencyId::BTC, 20_000 * DOLLARS)]
+// 				))
+// 			);
+// 		});
+// }

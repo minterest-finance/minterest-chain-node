@@ -1,6 +1,6 @@
 use controller::{ControllerData, PauseKeeper};
 use hex_literal::hex;
-use liquidation_pools::{LiquidationPool, LiquidationPoolCommonData};
+use liquidation_pools::LiquidationPool;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
@@ -443,10 +443,7 @@ fn testnet_genesis(
 			],
 		}),
 		liquidation_pools: Some(LiquidationPoolsConfig {
-			liquidation_pool_params: (LiquidationPoolCommonData {
-				timestamp: 1,
-				balancing_period: 600, // Blocks per 10 minutes.
-			}),
+			balancing_period: 5, // FIXME: temporary value.
 			liquidation_pools: vec![
 				(
 					CurrencyId::DOT,
