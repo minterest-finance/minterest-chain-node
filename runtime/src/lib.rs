@@ -340,6 +340,10 @@ impl m_tokens::Config for Runtime {
 	type MultiCurrency = Currencies;
 }
 
+impl mnt_token::Config for Runtime {
+	type Event = Event;
+}
+
 impl minterest_protocol::Config for Runtime {
 	type Event = Event;
 	type Borrowing = LiquidityPools;
@@ -577,7 +581,7 @@ construct_runtime!(
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		RiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
-
+		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config},
 		// Dev
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 	}

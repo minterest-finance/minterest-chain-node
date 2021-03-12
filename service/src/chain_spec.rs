@@ -493,5 +493,6 @@ fn testnet_genesis(
 			members: Default::default(), // initialized by OperatorMembership
 			phantom: Default::default(),
 		}),
+		mnt_token: Some(Default::default()),
 	}
 }
