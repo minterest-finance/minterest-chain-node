@@ -56,7 +56,6 @@ pub fn authority_keys_from_seed(seed: &str) -> (AuraId, GrandpaId) {
 
 pub fn development_config() -> Result<ChainSpec, String> {
 	let mut properties = Map::new();
-	properties.insert("tokenSymbol".into(), "MNT".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
@@ -102,7 +101,6 @@ pub fn development_config() -> Result<ChainSpec, String> {
 
 pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	let mut properties = Map::new();
-	properties.insert("tokenSymbol".into(), "MNT".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
@@ -153,7 +151,6 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 
 pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
 	let mut properties = Map::new();
-	properties.insert("tokenSymbol".into(), "MNT".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
