@@ -174,6 +174,7 @@ impl Config for Runtime {
 	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
+	type WeightInfo = ();
 }
 
 pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
