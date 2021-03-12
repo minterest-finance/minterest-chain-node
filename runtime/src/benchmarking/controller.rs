@@ -1,11 +1,8 @@
-use crate::{AccountId, CurrencyId, Operation, Runtime};
+use crate::{CurrencyId, Operation, Runtime};
 
-use frame_benchmarking::account;
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
 use sp_std::prelude::*;
-
-const SEED: u32 = 0;
 
 runtime_benchmarks! {
 	{ Runtime, controller }
