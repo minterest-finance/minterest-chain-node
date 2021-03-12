@@ -14,6 +14,7 @@ mod constants;
 #[cfg(test)]
 mod tests;
 mod weights;
+mod weights_test;
 
 pub use controller_rpc_runtime_api::PoolState;
 pub use controller_rpc_runtime_api::UserPoolBalanceData;
