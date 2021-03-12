@@ -674,14 +674,13 @@ impl<T: Config> Pallet<T> {
 	/// Gets borrow interest rate and supply interest rate.
 	pub fn get_liquidity_pool_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
 		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
-		let current_total_borrowed_balance = <LiquidityPools<T>>::get_pool_total_borrowed(pool_id);
-		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
+		let pool_data = <LiquidityPools<T>>::get_pool_data(pool_id);
 		let insurance_factor = Self::get_insurance_factor(pool_id);
 
 		let utilization_rate = Self::calculate_utilization_rate(
 			current_total_balance,
-			current_total_borrowed_balance,
-			current_total_insurance,
+			pool_data.total_borrowed,
+			pool_data.total_insurance,
 		)
 		.ok()?;
 
@@ -799,14 +798,12 @@ impl<T: Config> Pallet<T> {
 		block_delta: T::BlockNumber,
 	) -> result::Result<Pool, DispatchError> {
 		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(underlying_asset_id);
-		let current_total_borrowed_balance = <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id);
-		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(underlying_asset_id);
-		let current_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
+		let pool_data = <LiquidityPools<T>>::get_pool_data(underlying_asset_id);
 
 		let utilization_rate = Self::calculate_utilization_rate(
 			current_total_balance,
-			current_total_borrowed_balance,
-			current_total_insurance,
+			pool_data.total_borrowed,
+			pool_data.total_insurance,
 		)?;
 
 		// Calculate the current borrow interest rate
@@ -832,12 +829,12 @@ impl<T: Config> Pallet<T> {
 
 		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, block_delta)?;
 		let interest_accumulated =
-			Self::calculate_interest_accumulated(simple_interest_factor, current_total_borrowed_balance)?;
+			Self::calculate_interest_accumulated(simple_interest_factor, pool_data.total_borrowed)?;
 		let new_total_borrow_balance =
-			Self::calculate_new_total_borrow(interest_accumulated, current_total_borrowed_balance)?;
+			Self::calculate_new_total_borrow(interest_accumulated, pool_data.total_borrowed)?;
 		let new_total_insurance =
-			Self::calculate_new_total_insurance(interest_accumulated, insurance_factor, current_total_insurance)?;
-		let new_borrow_index = Self::calculate_new_borrow_index(simple_interest_factor, current_borrow_index)?;
+			Self::calculate_new_total_insurance(interest_accumulated, insurance_factor, pool_data.total_insurance)?;
+		let new_borrow_index = Self::calculate_new_borrow_index(simple_interest_factor, pool_data.borrow_index)?;
 
 		Ok(Pool {
 			total_borrowed: new_total_borrow_balance,

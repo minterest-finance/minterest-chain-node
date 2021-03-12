@@ -212,14 +212,15 @@ impl<T: Config> Pallet<T> {
 		// Current total number of tokens in circulation.
 		let total_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
 
-		// Current total amount of insurance of the underlying held in this pool.
-		let total_insurance = Self::get_pool_total_insurance(underlying_asset_id);
+		// Current pool data.
+		let pool_data = Self::get_pool_data(underlying_asset_id);
 
-		// Current the amount of underlying currently loaned out by the pool.
-		let total_borrowed = Self::get_pool_total_borrowed(underlying_asset_id);
-
-		let current_exchange_rate =
-			Self::calculate_exchange_rate(total_cash, total_supply, total_insurance, total_borrowed)?;
+		let current_exchange_rate = Self::calculate_exchange_rate(
+			total_cash,
+			total_supply,
+			pool_data.total_insurance,
+			pool_data.total_borrowed,
+		)?;
 
 		Ok(current_exchange_rate)
 	}
@@ -501,8 +502,7 @@ impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 		borrow_amount: Balance,
 		account_borrows: Balance,
 	) -> DispatchResult {
-		let pool_borrow_index = Self::get_pool_borrow_index(pool_id);
-		let pool_total_borrowed = Self::get_pool_total_borrowed(pool_id);
+		let pool_data = Self::get_pool_data(pool_id);
 
 		// Calculate the new borrower and total borrow balances, failing on overflow:
 		// account_borrows_new = account_borrows + borrow_amount
@@ -510,14 +510,15 @@ impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 		let account_borrow_new = account_borrows
 			.checked_add(borrow_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
-		let new_total_borrows = pool_total_borrowed
+		let new_total_borrows = pool_data
+			.total_borrowed
 			.checked_add(borrow_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		// Write the previously calculated values into storage.
 		Self::set_pool_total_borrowed(pool_id, new_total_borrows)?;
 
-		Self::set_user_total_borrowed_and_interest_index(&who, pool_id, account_borrow_new, pool_borrow_index)?;
+		Self::set_user_total_borrowed_and_interest_index(&who, pool_id, account_borrow_new, pool_data.borrow_index)?;
 
 		Ok(())
 	}
@@ -537,7 +538,7 @@ impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 		repay_amount: Balance,
 		account_borrows: Balance,
 	) -> DispatchResult {
-		let pool_borrow_index = Self::get_pool_borrow_index(pool_id);
+		let pool_data = Self::get_pool_data(pool_id);
 
 		// Calculate the new borrower and total borrow balances, failing on overflow:
 		// account_borrows_new = account_borrows - repay_amount
@@ -545,13 +546,14 @@ impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 		let account_borrow_new = account_borrows
 			.checked_sub(repay_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
-		let total_borrows_new = Self::get_pool_total_borrowed(pool_id)
+		let total_borrows_new = pool_data
+			.total_borrowed
 			.checked_sub(repay_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		// Write the previously calculated values into storage.
 		Self::set_pool_total_borrowed(pool_id, total_borrows_new)?;
-		Self::set_user_total_borrowed_and_interest_index(&who, pool_id, account_borrow_new, pool_borrow_index)?;
+		Self::set_user_total_borrowed_and_interest_index(&who, pool_id, account_borrow_new, pool_data.borrow_index)?;
 
 		Ok(())
 	}
