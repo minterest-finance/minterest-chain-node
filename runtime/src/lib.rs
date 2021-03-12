@@ -13,6 +13,7 @@ mod benchmarking;
 mod constants;
 #[cfg(test)]
 mod tests;
+mod weights;
 
 pub use controller_rpc_runtime_api::PoolState;
 pub use controller_rpc_runtime_api::UserPoolBalanceData;
@@ -444,6 +445,7 @@ impl controller::Config for Runtime {
 	type LiquidityPoolsManager = LiquidityPools;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
+	type WeightInfo = weights::controller::WeightInfo<Runtime>;
 }
 
 impl module_prices::Config for Runtime {

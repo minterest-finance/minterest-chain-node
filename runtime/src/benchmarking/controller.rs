@@ -1,4 +1,4 @@
-use crate::{AccountId, Controller, CurrencyId, Operation, Runtime};
+use crate::{AccountId, CurrencyId, Operation, Runtime};
 
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
@@ -13,7 +13,6 @@ runtime_benchmarks! {
 	_ {}
 
 	pause_specific_operation {
-	let owner: AccountId = account("owner", 0, SEED);
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
