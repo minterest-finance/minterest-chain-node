@@ -23,6 +23,7 @@
 //! some sort of indicator that calls we consider important (e.g
 //! Balances::transfer) have not suddenly changed from under us.
 
+#![allow(unused_imports)]
 use frame_support::weights::constants::*;
 
 #[test]
