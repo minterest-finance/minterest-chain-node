@@ -459,30 +459,10 @@ impl<T: Config> Pallet<T> {
 	/// - `who`: The address whose balance should be calculated.
 	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
 	pub fn borrow_balance_stored(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
-		let user_borrow_balance = <LiquidityPools<T>>::get_user_total_borrowed(&who, underlying_asset_id);
-
-		// If borrow_balance = 0 then borrow_index is likely also 0.
-		// Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
-		if user_borrow_balance.is_zero() {
-			return Ok(Balance::zero());
-		};
-
 		let pool_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
-		let user_borrow_index = <LiquidityPools<T>>::get_user_borrow_index(&who, underlying_asset_id);
+		let borrow_balance = Self::calculate_borrow_balance(who, underlying_asset_id, pool_borrow_index)?;
 
-		// Calculate new borrow balance using the borrow index:
-		// recent_borrow_balance = user_borrow_balance * pool_borrow_index / user_borrow_index
-		let principal_times_index = Rate::from_inner(user_borrow_balance)
-			.checked_mul(&pool_borrow_index)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		let result = Rate::from_inner(principal_times_index)
-			.checked_div(&user_borrow_index)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		Ok(result)
+		Ok(borrow_balance)
 	}
 
 	/// Determine what the account liquidity would be if the given amounts were redeemed/borrowed.
@@ -734,8 +714,7 @@ impl<T: Config> Pallet<T> {
 						.ok_or(Error::<T>::NumOverflow)?;
 				}
 				if has_borrow_balance {
-					let borrow_balance =
-						Self::borrow_balance_by_interest_params(&who, pool_id, pool_data.borrow_index)?;
+					let borrow_balance = Self::calculate_borrow_balance(&who, pool_id, pool_data.borrow_index)?;
 					let borrow_balance_in_usd = Rate::from_inner(borrow_balance)
 						.checked_mul(&oracle_price)
 						.map(|x| x.into_inner())
@@ -756,7 +735,7 @@ impl<T: Config> Pallet<T> {
 	/// - `who`: The address whose balance should be calculated.
 	/// - `underlying_asset_id`: ID of the currency, the balance of borrowing of which we calculate.
 	/// - `pool_borrow_index`: borrow index for the pool
-	pub fn borrow_balance_by_interest_params(
+	pub fn calculate_borrow_balance(
 		who: &T::AccountId,
 		underlying_asset_id: CurrencyId,
 		pool_borrow_index: Rate,
