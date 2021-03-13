@@ -20,7 +20,7 @@ use pallet_traits::PoolsManager;
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::{AccountIdConversion, CheckedMul, Zero};
 use sp_runtime::{transaction_validity::TransactionPriority, FixedPointNumber, ModuleId, RuntimeDebug};
-use sp_std::{prelude::*, result};
+use sp_std::prelude::*;
 
 pub use module::*;
 
@@ -42,7 +42,6 @@ pub struct LiquidationPool {
 }
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
-type TwoVectorsResult = result::Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError>;
 
 #[frame_support::pallet]
 pub mod module {
@@ -90,6 +89,8 @@ pub mod module {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
+		/// Liquidation pools are balanced
+		LiquidationPoolsBalanced,
 		///  Balancing period has been successfully changed: \[new_period\]
 		BalancingPeriodChanged(T::BlockNumber),
 		///  Deviation Threshold has been successfully changed: \[new_threshold_value\]
@@ -245,128 +246,164 @@ pub mod module {
 			Ok(().into())
 		}
 
-		/// Make balance the pool.
+		/// Make balance the liquidation pools.
 		///
 		/// The dispatch origin of this call must be _None_.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn balancing(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-			ensure_none(origin)?;
-			// Self::balancing_attempt()?;
+		pub fn balance_liquidation_pools(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+			let _ = ensure_none(origin)?;
+			Self::do_balance()?;
+			Self::deposit_event(Event::LiquidationPoolsBalanced);
 			Ok(().into())
 		}
 	}
 }
 
+#[derive(Debug, Clone)]
+struct LiquidationInformation {
+	/// CurrencyId
+	pool_id: CurrencyId,
+	/// Pool current balance in USD
+	balance: Balance,
+	/// Ideal pool balance when no balancing is required.
+	ideal_balance: Balance,
+	/// Pool balance above ideal value.
+	extra: Balance,
+	/// Pool balance below ideal value.
+	shortfall: Balance,
+}
+
 impl<T: Config> Pallet<T> {
 	fn offchain_unsigned_tx() -> Result<(), OffchainErr> {
-		let call = Call::<T>::balancing();
+		let call = Call::<T>::balance_liquidation_pools();
 		SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).map_err(|_| {
 			debug::error!("Failed in offchain_unsigned_tx");
 			OffchainErr::SubmitTransaction
 		})
 	}
 
-	// /// Sort vector by balance param (DESC)
-	// pub fn sort_by_balance(
-	// 	mut vec_to_sort: Vec<(CurrencyId, Balance)>,
-	// ) -> result::Result<Vec<(CurrencyId, Balance)>, DispatchError> {
-	// 	vec_to_sort.sort_by(|x, y| y.1.cmp(&x.1));
-	// 	Ok(vec_to_sort)
-	// }
+	fn do_balance() -> DispatchResultWithPostInfo {
+		// Collecting information about the current state of liquidation pools: (id, balance, ideal_balance,
+		// extra, shortfall).
+		let mut information_vec: Vec<LiquidationInformation> = T::EnabledUnderlyingAssetId::get().iter().try_fold(
+			Vec::<LiquidationInformation>::new(),
+			|mut acc, pool_id| -> sp_std::result::Result<Vec<LiquidationInformation>, DispatchError> {
+				let liquidation_pool_balance = Self::get_pool_available_liquidity(*pool_id);
+				let balance_ratio = Self::liquidation_pools(pool_id).balance_ratio;
+				let ideal_balance = Rate::from_inner(T::LiquidityPoolsManager::get_pool_available_liquidity(*pool_id))
+					.checked_mul(&balance_ratio)
+					.map(|x| x.into_inner())
+					.ok_or(Error::<T>::NumOverflow)?;
 
-	// /// Collect pools that required to balance.
-	// /// Separate them to 2 different vectors.
-	// /// `weak_pools` - contains tuples of elements:
-	// /// -`pool_id`  Id of unbalanced pool with too low balance,
-	// /// -`extra_minus` balance that required to come back to ideal value.
-	// /// `strong_pools` - contains tuples of elements:
-	// /// -`pool_id`  Id of unbalanced pool with too low balance,
-	// /// -`extra_plus` balance that required to come back to ideal value.
-	// pub fn collect_pools_vectors() -> TwoVectorsResult {
-	// 	Ok(T::EnabledUnderlyingAssetId::get().iter().fold(
-	// 		(Vec::<(CurrencyId, Balance)>::new(), Vec::<(CurrencyId, Balance)>::new()),
-	// 		|mut acc, pool_id| {
-	// 			let (extra_minus, extra_plus) = Self::get_pool_deviation_value(*pool_id).unwrap_or_default();
-	//
-	// 			if !extra_minus.is_zero() {
-	// 				acc.0.push((*pool_id, extra_minus))
-	// 			}
-	//
-	// 			if !extra_plus.is_zero() {
-	// 				acc.1.push((*pool_id, extra_plus))
-	// 			}
-	// 			acc
-	// 		},
-	// 	))
-	// }
+				// FIXME: refactor
+				let extra = if liquidation_pool_balance > ideal_balance {
+					liquidation_pool_balance
+						.checked_sub(ideal_balance)
+						.ok_or(Error::<T>::NumOverflow)?
+				} else {
+					Balance::zero()
+				};
+				let shortfall = if liquidation_pool_balance < ideal_balance {
+					ideal_balance
+						.checked_sub(liquidation_pool_balance)
+						.ok_or(Error::<T>::NumOverflow)?
+				} else {
+					Balance::zero()
+				};
 
-	// // FIXME: temporary implementation.
-	// /// Check if liquidation pool unbalanced.
-	// ///
-	// /// - `pool_id`: the CurrencyId of the liquidation pool that need to check.
-	// ///
-	// /// Returns ( `extra_minus` , `extra_plus` ) - balance required to come back to ideal balance.
-	// /// If pool is balanced - returns ( Balance::zero(), Balance::zero() )
-	// pub fn get_pool_deviation_value(pool_id: CurrencyId) -> result::Result<(Balance, Balance),
-	// DispatchError> { 	let lkp_liquidity = <Pallet<T>>::get_pool_available_liquidity(pool_id);
-	// 	let wp_liquidity = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
-	// 	let threshold = Self::liquidation_pools(pool_id).deviation_threshold;
-	// 	let balance_ratio = Self::liquidation_pools(pool_id).balance_ratio;
-	//
-	// 	let ideal_value = Rate::from_inner(wp_liquidity)
-	// 		.checked_mul(&balance_ratio)
-	// 		.map(|x| x.into_inner())
-	// 		.ok_or(Error::<T>::NumOverflow)?;
-	// 	let threshold_step = Rate::from_inner(ideal_value)
-	// 		.checked_mul(&threshold)
-	// 		.map(|x| x.into_inner())
-	// 		.ok_or(Error::<T>::NumOverflow)?;
-	//
-	// 	let mut extra_plus = Balance::zero();
-	// 	let mut extra_minus = Balance::zero();
-	//
-	// 	let upper_threshold = ideal_value.checked_add(threshold_step).ok_or(Error::<T>::NumOverflow)?;
-	//
-	// 	let lower_threshold = ideal_value.checked_sub(threshold_step).ok_or(Error::<T>::NumOverflow)?;
-	//
-	// 	if lkp_liquidity > upper_threshold {
-	// 		extra_plus += lkp_liquidity - ideal_value
-	// 	}
-	// 	if lkp_liquidity < lower_threshold {
-	// 		extra_minus += ideal_value - lkp_liquidity
-	// 	}
-	//
-	// 	Ok((extra_minus, extra_plus))
-	// }
+				acc.push(LiquidationInformation {
+					pool_id: *pool_id,
+					balance: liquidation_pool_balance,
+					ideal_balance,
+					extra,
+					shortfall,
+				});
+				Ok(acc)
+			},
+		)?;
 
-	// /// Preparing data for pool balancing.
-	// fn balancing_attempt() -> DispatchResultWithPostInfo {
-	// 	let (weak_pools, strong_pools) = Self::collect_pools_vectors()?;
-	//
-	// 	if weak_pools.len().is_zero() {
-	// 		return Ok(().into());
-	// 	}
-	//
-	// 	if !weak_pools.len().is_zero() && strong_pools.len().is_zero() {
-	// 		return Ok(().into());
-	// 	}
-	//
-	// 	let mut sorted_weak_pools = Self::sort_by_balance(weak_pools)?;
-	// 	let sorted_strong_pools = Self::sort_by_balance(strong_pools)?;
-	//
-	// 	let (mut weak_sum, strong_sum): (Balance, Balance) = (
-	// 		sorted_weak_pools.iter().map(|pool| pool.1).sum(),
-	// 		sorted_strong_pools.iter().map(|pool| pool.1).sum(),
-	// 	);
-	//
-	// 	while weak_sum > strong_sum {
-	// 		let removed_pool = sorted_weak_pools.pop().ok_or(Error::<T>::NumOverflow)?;
-	// 		weak_sum -= removed_pool.1
-	// 	}
-	//
-	// 	Ok(().into())
-	// }
+		// Calculate sum_extra and sum_shortfall for all pools
+		let (mut sum_extra, mut sum_shortfall) = information_vec.iter().try_fold(
+			(Balance::zero(), Balance::zero()),
+			|mut acc, pool| -> sp_std::result::Result<(Balance, Balance), DispatchError> {
+				let deviation_threshold = Self::liquidation_pools(pool.pool_id).deviation_threshold;
+
+				// right_border = ideal_balance + ideal_balance * deviation_threshold)
+				let right_border = Rate::from_inner(pool.ideal_balance)
+					.checked_mul(&deviation_threshold)
+					.map(|x| x.into_inner())
+					.and_then(|v| v.checked_add(pool.ideal_balance))
+					.ok_or(Error::<T>::NumOverflow)?;
+
+				// left_border = ideal_balance - ideal_balance * deviation_threshold)
+				let left_border = pool
+					.ideal_balance
+					.checked_sub(
+						Rate::from_inner(pool.ideal_balance)
+							.checked_mul(&deviation_threshold)
+							.map(|x| x.into_inner())
+							.ok_or(Error::<T>::NumOverflow)?,
+					)
+					.ok_or(Error::<T>::NumOverflow)?;
+
+				if pool.balance > right_border {
+					acc.0 = acc.0.checked_add(pool.extra).ok_or(Error::<T>::NumOverflow)?;
+				}
+				if pool.balance < left_border {
+					acc.1 += acc.1.checked_add(pool.shortfall).ok_or(Error::<T>::NumOverflow)?;
+				}
+				Ok(acc)
+			},
+		)?;
+
+		while sum_shortfall > Balance::zero() && sum_extra > Balance::zero() {
+			let (max_extra_index, max_extra) = information_vec
+				.iter()
+				.enumerate()
+				.max_by(|(_, a), (_, b)| a.extra.cmp(&b.extra))
+				.map(|(index, pool)| (index, pool.extra))
+				.ok_or(Error::<T>::NumOverflow)?;
+
+			let (max_shortfall_index, max_shortfall) = information_vec
+				.iter()
+				.enumerate()
+				.max_by(|(_, a), (_, b)| a.shortfall.cmp(&b.shortfall))
+				.map(|(index, pool)| (index, pool.shortfall))
+				.ok_or(Error::<T>::NumOverflow)?;
+
+			let bite = max_shortfall.min(max_extra);
+
+			information_vec[max_extra_index] = LiquidationInformation {
+				balance: information_vec[max_extra_index]
+					.balance
+					.checked_sub(bite)
+					.ok_or(Error::<T>::NumOverflow)?,
+				extra: information_vec[max_extra_index]
+					.extra
+					.checked_sub(bite)
+					.ok_or(Error::<T>::NumOverflow)?,
+				..information_vec[max_extra_index]
+			};
+
+			information_vec[max_shortfall_index] = LiquidationInformation {
+				balance: information_vec[max_shortfall_index]
+					.balance
+					.checked_add(bite)
+					.ok_or(Error::<T>::NumOverflow)?,
+				shortfall: information_vec[max_shortfall_index]
+					.shortfall
+					.checked_sub(bite)
+					.ok_or(Error::<T>::NumOverflow)?,
+				..information_vec[max_shortfall_index]
+			};
+
+			sum_extra = sum_extra.checked_sub(bite).ok_or(Error::<T>::NumOverflow)?;
+			sum_shortfall = sum_shortfall.checked_sub(bite).ok_or(Error::<T>::NumOverflow)?;
+		}
+
+		Ok(().into())
+	}
 }
 
 impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
@@ -392,7 +429,7 @@ impl<T: Config> ValidateUnsigned for Pallet<T> {
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		match call {
-			Call::balancing() => ValidTransaction::with_tag_prefix("LiquidationPoolsOffchainWorker")
+			Call::balance_liquidation_pools() => ValidTransaction::with_tag_prefix("LiquidationPoolsOffchainWorker")
 				.priority(T::UnsignedPriority::get())
 				.and_provides(<frame_system::Module<T>>::block_number())
 				.longevity(64_u64)
