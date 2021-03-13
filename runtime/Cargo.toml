@@ -65,6 +65,7 @@ module-prices = { path = "../pallets/prices", default-features = false }
 minterest-model = { path = "../pallets/minterest-model", default-features = false }
 risk-manager = { path = "../pallets/risk-manager", default-features = false }
 liquidation-pools = { path = "../pallets/liquidation-pools", default-features = false }
+dex = { path = "../pallets/dex", default-features = false }
 
 # ORML dependencies
 orml-currencies = { path = "../orml/currencies", default-features = false }
@@ -135,4 +136,5 @@ std = [
     'minterest-model/std',
     'risk-manager/std',
     'liquidation-pools/std',
+    'dex/std',
 ]

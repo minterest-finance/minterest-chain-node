@@ -405,6 +405,10 @@ impl<T: Config> Pallet<T> {
 
 		Ok(().into())
 	}
+
+	fn fetch_from_dex() -> DispatchResultWithPostInfo {
+		Ok(().into())
+	}
 }
 
 impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {

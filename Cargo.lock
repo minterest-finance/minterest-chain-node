@@ -1227,6 +1227,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "dex"
+version = "0.6.2"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "minterest-primitives",
+ "pallet-traits",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "digest"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3837,6 +3853,7 @@ version = "0.6.0"
 dependencies = [
  "controller",
  "controller-rpc-runtime-api",
+ "dex",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
