@@ -1,6 +1,6 @@
 use controller::{ControllerData, PauseKeeper};
 use hex_literal::hex;
-use liquidation_pools::LiquidationPool;
+use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
@@ -447,28 +447,28 @@ fn testnet_genesis(
 			liquidation_pools: vec![
 				(
 					CurrencyId::DOT,
-					LiquidationPool {
+					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
 					},
 				),
 				(
 					CurrencyId::ETH,
-					LiquidationPool {
+					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
 					},
 				),
 				(
 					CurrencyId::BTC,
-					LiquidationPool {
+					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
 					},
 				),
 				(
 					CurrencyId::KSM,
-					LiquidationPool {
+					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
 					},

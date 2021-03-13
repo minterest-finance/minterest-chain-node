@@ -69,7 +69,7 @@ impl system::Config for Test {
 }
 
 parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
 		Default::default()
 	};
 }
@@ -172,7 +172,6 @@ where
 type Amount = i128;
 type AccountId = u64;
 pub type BlockNumber = u64;
-pub const DOLLARS: u128 = 1_000_000_000_000_000_000u128;
 pub const ADMIN: AccountId = 0;
 pub fn admin() -> Origin {
 	Origin::signed(ADMIN)
@@ -183,7 +182,7 @@ pub fn alice() -> Origin {
 }
 
 pub struct ExternalityBuilder {
-	liquidation_pools: Vec<(CurrencyId, LiquidationPool)>,
+	liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
 	balancing_period: BlockNumber,
 }
 
@@ -192,7 +191,7 @@ impl Default for ExternalityBuilder {
 		Self {
 			liquidation_pools: vec![(
 				CurrencyId::DOT,
-				LiquidationPool {
+				LiquidationPoolData {
 					deviation_threshold: Rate::saturating_from_rational(1, 10),
 					balance_ratio: Rate::saturating_from_rational(2, 10),
 				},
@@ -203,11 +202,6 @@ impl Default for ExternalityBuilder {
 }
 
 impl ExternalityBuilder {
-	pub fn pool_period(mut self, balancing_period: BlockNumber) -> Self {
-		self.balancing_period = balancing_period;
-		self
-	}
-
 	pub fn build(self) -> TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 

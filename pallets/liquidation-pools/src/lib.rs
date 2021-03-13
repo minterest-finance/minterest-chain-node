@@ -32,7 +32,7 @@ mod tests;
 /// Liquidation Pool metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct LiquidationPool {
+pub struct LiquidationPoolData {
 	/// Balance Deviation Threshold represents how much current value in a pool may differ from
 	/// ideal value (defined by balance_ratio).
 	pub deviation_threshold: Rate,
@@ -105,14 +105,15 @@ pub mod module {
 	pub(crate) type BalancingPeriod<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn liquidation_pools)]
-	pub(crate) type LiquidationPools<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, LiquidationPool, ValueQuery>;
+	#[pallet::getter(fn liquidation_pools_data)]
+	pub(crate) type LiquidationPoolsData<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyId, LiquidationPoolData, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub balancing_period: T::BlockNumber,
 		#[allow(clippy::type_complexity)]
-		pub liquidation_pools: Vec<(CurrencyId, LiquidationPool)>,
+		pub liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
 	}
 
 	#[cfg(feature = "std")]
@@ -130,7 +131,7 @@ pub mod module {
 		fn build(&self) {
 			BalancingPeriod::<T>::put(self.balancing_period);
 			self.liquidation_pools.iter().for_each(|(currency_id, pool_data)| {
-				LiquidationPools::<T>::insert(currency_id, LiquidationPool { ..*pool_data })
+				LiquidationPoolsData::<T>::insert(currency_id, LiquidationPoolData { ..*pool_data })
 			});
 		}
 	}
@@ -205,7 +206,7 @@ pub mod module {
 			);
 
 			// Write new value into storage.
-			LiquidationPools::<T>::mutate(pool_id, |x| x.deviation_threshold = new_deviation_threshold);
+			LiquidationPoolsData::<T>::mutate(pool_id, |x| x.deviation_threshold = new_deviation_threshold);
 
 			Self::deposit_event(Event::DeviationThresholdChanged(new_deviation_threshold));
 
@@ -239,7 +240,7 @@ pub mod module {
 			);
 
 			// Write new value into storage.
-			LiquidationPools::<T>::mutate(pool_id, |x| x.balance_ratio = new_balance_ratio);
+			LiquidationPoolsData::<T>::mutate(pool_id, |x| x.balance_ratio = new_balance_ratio);
 
 			Self::deposit_event(Event::BalanceRatioChanged(new_balance_ratio));
 
@@ -290,7 +291,7 @@ impl<T: Config> Pallet<T> {
 			Vec::<LiquidationInformation>::new(),
 			|mut acc, pool_id| -> sp_std::result::Result<Vec<LiquidationInformation>, DispatchError> {
 				let liquidation_pool_balance = Self::get_pool_available_liquidity(*pool_id);
-				let balance_ratio = Self::liquidation_pools(pool_id).balance_ratio;
+				let balance_ratio = Self::liquidation_pools_data(pool_id).balance_ratio;
 				let ideal_balance = Rate::from_inner(T::LiquidityPoolsManager::get_pool_available_liquidity(*pool_id))
 					.checked_mul(&balance_ratio)
 					.map(|x| x.into_inner())
@@ -327,7 +328,7 @@ impl<T: Config> Pallet<T> {
 		let (mut sum_extra, mut sum_shortfall) = information_vec.iter().try_fold(
 			(Balance::zero(), Balance::zero()),
 			|mut acc, pool| -> sp_std::result::Result<(Balance, Balance), DispatchError> {
-				let deviation_threshold = Self::liquidation_pools(pool.pool_id).deviation_threshold;
+				let deviation_threshold = Self::liquidation_pools_data(pool.pool_id).deviation_threshold;
 
 				// right_border = ideal_balance + ideal_balance * deviation_threshold)
 				let right_border = Rate::from_inner(pool.ideal_balance)
@@ -420,7 +421,7 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 
 	/// Check if pool exists
 	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
-		LiquidationPools::<T>::contains_key(underlying_asset_id)
+		LiquidationPoolsData::<T>::contains_key(underlying_asset_id)
 	}
 }
 

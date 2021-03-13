@@ -35,7 +35,7 @@ fn set_deviation_threshold_should_work() {
 			0
 		));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pools(CurrencyId::DOT).deviation_threshold,
+			TestLiquidationPools::liquidation_pools_data(CurrencyId::DOT).deviation_threshold,
 			Rate::zero()
 		);
 		let expected_event = Event::liquidation_pools(crate::Event::DeviationThresholdChanged(Rate::zero()));
@@ -48,7 +48,7 @@ fn set_deviation_threshold_should_work() {
 			1_000_000_000_000_000_000u128
 		));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pools(CurrencyId::DOT).deviation_threshold,
+			TestLiquidationPools::liquidation_pools_data(CurrencyId::DOT).deviation_threshold,
 			Rate::one()
 		);
 		let expected_event = Event::liquidation_pools(crate::Event::DeviationThresholdChanged(Rate::one()));
@@ -80,7 +80,7 @@ fn set_balance_ratio_should_work() {
 		// Can be set to 0.0
 		assert_ok!(TestLiquidationPools::set_balance_ratio(admin(), CurrencyId::DOT, 0));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pools(CurrencyId::DOT).balance_ratio,
+			TestLiquidationPools::liquidation_pools_data(CurrencyId::DOT).balance_ratio,
 			Rate::zero()
 		);
 		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(Rate::zero()));
@@ -93,7 +93,7 @@ fn set_balance_ratio_should_work() {
 			1_000_000_000_000_000_000u128
 		));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pools(CurrencyId::DOT).balance_ratio,
+			TestLiquidationPools::liquidation_pools_data(CurrencyId::DOT).balance_ratio,
 			Rate::one()
 		);
 		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(Rate::one()));
@@ -118,53 +118,3 @@ fn set_balance_ratio_should_work() {
 		);
 	});
 }
-
-// #[test]
-// fn balancing_should_work() {
-// 	ExternalityBuilder::default().build().execute_with(|| {
-// 		// Origin::signed(Alice) is wrong origin for fn balancing.
-// 		assert_noop!(TestLiquidationPools::balancing(Origin::signed(ALICE)), BadOrigin);
-//
-// 		// Origin::none is available origin for fn balancing.
-// 		assert_ok!(TestLiquidationPools::balancing(Origin::none()));
-// 	});
-// }
-//
-// #[test]
-// fn calculate_deadline_should_work() {
-// 	ExternalityBuilder::default()
-// 		.pool_timestamp_and_period(1, 600)
-// 		.build()
-// 		.execute_with(|| {
-// 			assert_eq!(TestLiquidationPools::calculate_deadline(), Ok(601));
-//
-// 			TestLiquidationPools::set_balancing_period(admin(), u64::MAX).unwrap_or_default();
-//
-// 			assert_noop!(TestLiquidationPools::calculate_deadline(), Error::<Test>::NumOverflow);
-// 		});
-// }
-//
-// #[test]
-// fn balancing_attempt_should_work() {
-// 	ExternalityBuilder::default().build().execute_with(|| {
-// 		assert_eq!(TestLiquidationPools::balancing_attempt(), Ok(().into()));
-// 	});
-// }
-//
-// #[test]
-// fn sort_by_balance_should_work() {
-// 	ExternalityBuilder::default().build().execute_with(|| {
-// 		assert_eq!(
-// 			TestLiquidationPools::sort_by_balance(vec![
-// 				(CurrencyId::DOT, 4_000 * DOLLARS),
-// 				(CurrencyId::ETH, 12_000 * DOLLARS),
-// 				(CurrencyId::KSM, 6_000 * DOLLARS)
-// 			]),
-// 			Ok(vec![
-// 				(CurrencyId::ETH, 12_000 * DOLLARS),
-// 				(CurrencyId::KSM, 6_000 * DOLLARS),
-// 				(CurrencyId::DOT, 4_000 * DOLLARS)
-// 			])
-// 		);
-// 	});
-// }
