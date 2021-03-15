@@ -7,7 +7,8 @@
 
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
-use minterest_primitives::Rate;
+use minterest_primitives::{CurrencyId, Rate};
+use pallet_traits::PriceProvider;
 use sp_runtime::FixedPointNumber;
 
 mod mock;
@@ -21,6 +22,9 @@ pub mod module {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
+		/// The price source of currencies
+		type PriceSource: PriceProvider<CurrencyId>;
+
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 	}
 
@@ -66,15 +70,18 @@ pub mod module {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(10_000)]
-		#[transactional] // TODO ask about this
+		#[transactional]
 		pub fn set_mnt_rate(origin: OriginFor<T>, new_rate: Rate) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let old_rate = MntRate::<T>::get();
 			MntRate::<T>::put(new_rate);
+			Pallet::<T>::refresh_mnt_speeds();
 			Self::deposit_event(Event::NewMntRate(old_rate, new_rate));
 			Ok(().into())
 		}
 	}
 }
 
-impl<T: Config> Pallet<T> {}
+impl<T: Config> Pallet<T> {
+	pub fn refresh_mnt_speeds() {}
+}

@@ -12,6 +12,7 @@ frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 minterest-primitives = { path = "../../primitives", default-features = false }
 sp-arithmetic = { version = "3.0.0", default-features = false }
+pallet-traits = { path = "../traits", default-features = false }
 
 [dev-dependencies]
 sp-core = "3.0.0"

@@ -3987,6 +3987,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "minterest-primitives",
+ "pallet-traits",
  "parity-scale-codec",
  "serde",
  "sp-arithmetic",

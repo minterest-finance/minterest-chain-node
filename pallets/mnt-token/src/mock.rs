@@ -2,6 +2,9 @@
 
 use crate as mnt_token;
 use frame_support::{construct_runtime, parameter_types};
+use minterest_primitives::{CurrencyId, Price};
+use pallet_traits::PriceProvider;
+use sp_runtime::FixedPointNumber;
 
 parameter_types!(
 	pub const BlockHashCount: u32 = 250;
@@ -32,8 +35,21 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = ();
 }
 
+pub struct MockPriceSource;
+
+impl PriceProvider<CurrencyId> for MockPriceSource {
+	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
+		Some(Price::one())
+	}
+
+	fn lock_price(_currency_id: CurrencyId) {}
+
+	fn unlock_price(_currency_id: CurrencyId) {}
+}
+
 impl mnt_token::Config for Runtime {
 	type Event = Event;
+	type PriceSource = MockPriceSource;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;

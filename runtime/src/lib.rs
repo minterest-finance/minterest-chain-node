@@ -342,6 +342,7 @@ impl m_tokens::Config for Runtime {
 
 impl mnt_token::Config for Runtime {
 	type Event = Event;
+	type PriceSource = Prices;
 }
 
 impl minterest_protocol::Config for Runtime {
