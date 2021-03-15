@@ -56,8 +56,8 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		supply_currency_id: CurrencyId,
 		target_currency_id: CurrencyId,
-		supply_amount: Balance,
-		min_target_amount: Balance,
+		_supply_amount: Balance,
+		_min_target_amount: Balance,
 	) -> sp_std::result::Result<Balance, DispatchError> {
 		let actual_supply_amount = Balance::zero();
 		let actual_target_amount = Balance::zero();
@@ -79,8 +79,8 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		supply_currency_id: CurrencyId,
 		target_currency_id: CurrencyId,
-		target_amount: Balance,
-		max_supply_amount: Balance,
+		_target_amount: Balance,
+		_max_supply_amount: Balance,
 	) -> sp_std::result::Result<Balance, DispatchError> {
 		let actual_supply_amount = Balance::zero();
 		let actual_target_amount = Balance::zero();

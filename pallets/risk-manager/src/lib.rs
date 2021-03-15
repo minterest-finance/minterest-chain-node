@@ -16,7 +16,7 @@ use frame_system::{
 	ensure_none,
 	offchain::{SendTransactionTypes, SubmitTransaction},
 };
-use minterest_primitives::{Balance, CurrencyId, Rate};
+use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
@@ -49,24 +49,6 @@ pub use module::*;
 mod mock;
 #[cfg(test)]
 mod tests;
-
-/// Error which may occur while executing the off-chain code.
-#[cfg_attr(test, derive(PartialEq))]
-enum OffchainErr {
-	OffchainLock,
-	NotValidator,
-	CheckFail,
-}
-
-impl sp_std::fmt::Debug for OffchainErr {
-	fn fmt(&self, fmt: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
-		match *self {
-			OffchainErr::OffchainLock => write!(fmt, "Failed to get or extend lock"),
-			OffchainErr::NotValidator => write!(fmt, "Not validator"),
-			OffchainErr::CheckFail => write!(fmt, "Check fail"),
-		}
-	}
-}
 
 /// RiskManager metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]

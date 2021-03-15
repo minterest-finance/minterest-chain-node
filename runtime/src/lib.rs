@@ -493,6 +493,7 @@ impl liquidation_pools::Config for Runtime {
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type LiquidityPoolsManager = LiquidityPools;
+	type DEX = Dex;
 }
 
 parameter_types! {

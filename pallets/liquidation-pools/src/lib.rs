@@ -12,9 +12,8 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, traits::Get, transactional};
 use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
 use frame_system::pallet_prelude::*;
-use minterest_primitives::{Balance, CurrencyId, Rate};
+use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
-use orml_utilities::OffchainErr;
 use pallet_traits::PoolsManager;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -46,6 +45,7 @@ type LiquidityPools<T> = liquidity_pools::Module<T>;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
+	use pallet_traits::DEXManager;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + liquidity_pools::Config + SendTransactionTypes<Call<Self>> {
@@ -72,6 +72,9 @@ pub mod module {
 		/// The origin which may update liquidation pools parameters. Root can
 		/// always do this.
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
+
+		/// The DEX participating in balancing
+		type DEX: DEXManager<Self::AccountId, CurrencyId, Balance>;
 	}
 
 	#[pallet::error]
@@ -143,21 +146,19 @@ pub mod module {
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		/// Runs balancing liquidation pools every 'balancing_period' blocks.
 		fn offchain_worker(now: T::BlockNumber) {
-			if now % Self::balancing_period() == T::BlockNumber::zero() {
-				if let Err(error) = Self::offchain_unsigned_tx() {
-					debug::info!(
-						target: "LiquidationPool offchain worker",
-						"cannot run offchain worker at {:?}: {:?}",
-						now,
-						error,
-					);
-				} else {
-					debug::debug!(
-						target: "LiquidationPool offchain worker",
-						" LiquidationPool offchain worker start at block: {:?} already done!",
-						now,
-					);
-				}
+			if let Err(error) = Self::_offchain_worker(now) {
+				debug::info!(
+					target: "LiquidationPool offchain worker",
+					"cannot run offchain worker at {:?}: {:?}",
+					now,
+					error,
+				);
+			} else {
+				debug::debug!(
+					target: "LiquidationPool offchain worker",
+					" LiquidationPool offchain worker start at block: {:?} already done!",
+					now,
+				);
 			}
 		}
 	}
@@ -252,15 +253,22 @@ pub mod module {
 		/// The dispatch origin of this call must be _None_.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn balance_liquidation_pools(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn balance_liquidation_pools(
+			origin: OriginFor<T>,
+			extra_pool_id: CurrencyId,
+			shortfall_pool_id: CurrencyId,
+			amount: Balance,
+		) -> DispatchResultWithPostInfo {
 			let _ = ensure_none(origin)?;
-			Self::do_balance()?;
+			let module_id = Self::pools_account_id();
+			T::DEX::swap_with_exact_target(&module_id, extra_pool_id, shortfall_pool_id, amount, amount)?;
 			Self::deposit_event(Event::LiquidationPoolsBalanced);
 			Ok(().into())
 		}
 	}
 }
 
+// TODO fix comments
 #[derive(Debug, Clone)]
 struct LiquidationInformation {
 	/// CurrencyId
@@ -275,18 +283,51 @@ struct LiquidationInformation {
 	shortfall: Balance,
 }
 
+// TODO fix comments
+#[derive(Debug, Clone)]
+struct Sales {
+	/// CurrencyId
+	supply_pool_id: CurrencyId,
+	/// CurrencyId
+	target_pool_id: CurrencyId,
+	/// Bite
+	bite: Balance,
+}
+
 impl<T: Config> Pallet<T> {
-	fn offchain_unsigned_tx() -> Result<(), OffchainErr> {
-		let call = Call::<T>::balance_liquidation_pools();
-		SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).map_err(|_| {
-			debug::error!("Failed in offchain_unsigned_tx");
-			OffchainErr::SubmitTransaction
-		})
+	fn submit_unsigned_tx(supply_pool_id: CurrencyId, target_pool_id: CurrencyId, amount: Balance) {
+		let call = Call::<T>::balance_liquidation_pools(supply_pool_id, target_pool_id, amount);
+		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
+			debug::info!(
+				target: "liquidation-pools offchain worker",
+				"submit unsigned balancing tx for \n CurrencyId {:?} and CurrencyId {:?} \nfailed!",
+				supply_pool_id, target_pool_id,
+			);
+		}
 	}
 
-	fn do_balance() -> DispatchResultWithPostInfo {
-		// Collecting information about the current state of liquidation pools: (id, balance, ideal_balance,
-		// extra, shortfall).
+	fn _offchain_worker(now: T::BlockNumber) -> Result<(), OffchainErr> {
+		if now % Self::balancing_period() == T::BlockNumber::zero() {
+			return Ok(());
+		}
+
+		// check if we are a potential validator
+		if !sp_io::offchain::is_validator() {
+			return Err(OffchainErr::NotValidator);
+		}
+
+		let sales_list = Self::collects_sales_list().map_err(|_| OffchainErr::CheckFail)?;
+
+		sales_list
+			.iter()
+			.for_each(|sale| Self::submit_unsigned_tx(sale.supply_pool_id, sale.target_pool_id, sale.bite));
+
+		Ok(())
+	}
+
+	fn collects_sales_list() -> sp_std::result::Result<Vec<Sales>, DispatchError> {
+		// Collecting information about the current state of liquidation pools: (id, balance,
+		//	ideal_balance, 	// extra, shortfall).
 		let mut information_vec: Vec<LiquidationInformation> = T::EnabledUnderlyingAssetId::get().iter().try_fold(
 			Vec::<LiquidationInformation>::new(),
 			|mut acc, pool_id| -> sp_std::result::Result<Vec<LiquidationInformation>, DispatchError> {
@@ -358,6 +399,8 @@ impl<T: Config> Pallet<T> {
 			},
 		)?;
 
+		let mut to_sell_list: Vec<Sales> = Vec::new();
+
 		while sum_shortfall > Balance::zero() && sum_extra > Balance::zero() {
 			let (max_extra_index, max_extra) = information_vec
 				.iter()
@@ -401,13 +444,15 @@ impl<T: Config> Pallet<T> {
 
 			sum_extra = sum_extra.checked_sub(bite).ok_or(Error::<T>::NumOverflow)?;
 			sum_shortfall = sum_shortfall.checked_sub(bite).ok_or(Error::<T>::NumOverflow)?;
+
+			to_sell_list.push(Sales {
+				supply_pool_id: information_vec[max_extra_index].pool_id,
+				target_pool_id: information_vec[max_extra_index].pool_id,
+				bite,
+			});
 		}
 
-		Ok(().into())
-	}
-
-	fn fetch_from_dex() -> DispatchResultWithPostInfo {
-		Ok(().into())
+		Ok(to_sell_list)
 	}
 }
 
@@ -434,12 +479,14 @@ impl<T: Config> ValidateUnsigned for Pallet<T> {
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		match call {
-			Call::balance_liquidation_pools() => ValidTransaction::with_tag_prefix("LiquidationPoolsOffchainWorker")
-				.priority(T::UnsignedPriority::get())
-				.and_provides(<frame_system::Module<T>>::block_number())
-				.longevity(64_u64)
-				.propagate(true)
-				.build(),
+			Call::balance_liquidation_pools(_supply_pool_id, _target_pool_id, _amount) => {
+				ValidTransaction::with_tag_prefix("LiquidationPoolsOffchainWorker")
+					.priority(T::UnsignedPriority::get())
+					.and_provides(<frame_system::Module<T>>::block_number())
+					.longevity(64_u64)
+					.propagate(true)
+					.build()
+			}
 			_ => InvalidTransaction::Call.into(),
 		}
 	}
