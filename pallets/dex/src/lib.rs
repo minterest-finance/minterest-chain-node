@@ -9,7 +9,6 @@
 #![allow(clippy::unused_unit)]
 
 use frame_support::{pallet_prelude::*, transactional};
-use frame_system::pallet_prelude::*;
 use minterest_primitives::{Balance, CurrencyId};
 use pallet_traits::DEXManager;
 

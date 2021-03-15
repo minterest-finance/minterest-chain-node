@@ -11,7 +11,7 @@ use controller_rpc_runtime_api::PoolState;
 use controller_rpc_runtime_api::UserPoolBalanceData;
 use frame_support::{assert_err, assert_noop, assert_ok, parameter_types};
 use frame_support::{error::BadOrigin, pallet_prelude::GenesisBuild, traits::OnFinalize};
-use liquidation_pools::LiquidationPoolData;
+use liquidation_pools::{LiquidationPoolData, Sales};
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 use minterest_primitives::{Operation, Price};
@@ -1175,41 +1175,53 @@ fn partial_liquidation_should_not_work() {
 		})
 }
 
+//------------ Liquidation Pools Balancing tests ---------------------------
 #[test]
-fn balance_liquidation_pools_should_work() {
+fn collects_sales_list_should_work() {
 	ExtBuilder::default()
-		.liquidity_pool_balance(CurrencyId::DOT, 1_000_000 * DOLLARS)
-		.liquidity_pool_balance(CurrencyId::KSM, 2_000_000 * DOLLARS)
-		.liquidity_pool_balance(CurrencyId::ETH, 3_000_000 * DOLLARS)
-		.liquidity_pool_balance(CurrencyId::BTC, 4_000_000 * DOLLARS)
+		.liquidity_pool_balance(CurrencyId::DOT, 500_000 * DOLLARS)
+		.liquidity_pool_balance(CurrencyId::KSM, 1_000_000 * DOLLARS)
+		.liquidity_pool_balance(CurrencyId::ETH, 1_500_000 * DOLLARS)
+		.liquidity_pool_balance(CurrencyId::BTC, 2_000_000 * DOLLARS)
 		.liquidation_pool_balance(CurrencyId::DOT, 400_000 * DOLLARS)
 		.liquidation_pool_balance(CurrencyId::KSM, 300_000 * DOLLARS)
 		.liquidation_pool_balance(CurrencyId::ETH, 200_000 * DOLLARS)
 		.liquidation_pool_balance(CurrencyId::BTC, 100_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			assert_ok!(LiquidationPools::balance_liquidation_pools(
-				<Runtime as frame_system::Config>::Origin::none()
-			));
+			let prices: Vec<(CurrencyId, Price)> = vec![
+				(CurrencyId::DOT, Price::saturating_from_integer(1)),
+				(CurrencyId::KSM, Price::saturating_from_integer(2)),
+				(CurrencyId::ETH, Price::saturating_from_integer(5)),
+				(CurrencyId::BTC, Price::saturating_from_integer(10)),
+			];
 
-			let expected_event = Event::liquidation_pools(liquidation_pools::Event::LiquidationPoolsBalanced);
-			assert!(System::events().iter().any(|record| record.event == expected_event));
+			MinterestOracle::on_finalize(0);
 
-			assert_eq!(
-				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
-				100_000 * DOLLARS
-			);
-			assert_eq!(
-				LiquidationPools::get_pool_available_liquidity(CurrencyId::KSM),
-				200_000 * DOLLARS
-			);
-			assert_eq!(
-				LiquidationPools::get_pool_available_liquidity(CurrencyId::ETH),
-				300_000 * DOLLARS
-			);
-			assert_eq!(
-				LiquidationPools::get_pool_available_liquidity(CurrencyId::BTC),
-				400_000 * DOLLARS
-			);
+			assert_ok!(MinterestOracle::feed_values(origin_of(ORACLE1::get().clone()), prices));
+
+			// Liquidity Pools balances (in assets): [500_000, 1_000_000, 1_500_000, 2_000_000]
+			// Liquidity Pools balances (in USD): [500_000, 2_000_000, 7_500_000, 20_000_000]
+			// Ideal balances 0.2 * liquidity_pool_balance (in USD): [100_000, 400_000, 1_500_000, 4_000_000]
+
+			// Liquidation Pools balances (in assets): [400_000, 300_000, 200_000, 100_000]
+			// Liquidation Pools balances (in USD): [400_000, 600_000, 1_000_000, 1_000_000]
+
+			// Sales list (in assets): [(DOT, BTC, 300_000), (KSM, BTC, 100_000)]
+
+			let expected_sales_list = vec![
+				Sales {
+					supply_pool_id: CurrencyId::DOT,
+					target_pool_id: CurrencyId::BTC,
+					amount: 300_000 * DOLLARS,
+				},
+				Sales {
+					supply_pool_id: CurrencyId::KSM,
+					target_pool_id: CurrencyId::BTC,
+					amount: 100_000 * DOLLARS,
+				},
+			];
+
+			assert_eq!(LiquidationPools::collects_sales_list(), Ok(expected_sales_list));
 		});
 }

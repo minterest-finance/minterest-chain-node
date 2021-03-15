@@ -14,14 +14,15 @@ use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
 use frame_system::pallet_prelude::*;
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::PoolsManager;
+use pallet_traits::{PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::traits::{AccountIdConversion, CheckedMul, Zero};
+use sp_runtime::traits::{AccountIdConversion, CheckedDiv, CheckedMul, Zero};
 use sp_runtime::{transaction_validity::TransactionPriority, FixedPointNumber, ModuleId, RuntimeDebug};
 use sp_std::prelude::*;
 
 pub use module::*;
+use sp_std::cmp::Ordering;
 
 #[cfg(test)]
 mod mock;
@@ -87,6 +88,8 @@ pub mod module {
 		NotValidDeviationThresholdValue,
 		/// Value must be in range [0..1]
 		NotValidBalanceRatioValue,
+		/// Feed price is invalid
+		InvalidFeedPrice,
 	}
 
 	#[pallet::event]
@@ -268,30 +271,30 @@ pub mod module {
 	}
 }
 
-// TODO fix comments
+/// Used in the liquidation pools balancing algorithm.
 #[derive(Debug, Clone)]
 struct LiquidationInformation {
 	/// CurrencyId
 	pool_id: CurrencyId,
-	/// Pool current balance in USD
+	/// Pool current balance in USD.
 	balance: Balance,
-	/// Ideal pool balance when no balancing is required.
+	/// Ideal pool balance when no balancing is required (USD).
 	ideal_balance: Balance,
-	/// Pool balance above ideal value.
-	extra: Balance,
-	/// Pool balance below ideal value.
+	/// Pool balance above ideal value (USD).
+	oversupply: Balance,
+	/// Pool balance below ideal value (USD).
 	shortfall: Balance,
 }
 
-// TODO fix comments
-#[derive(Debug, Clone)]
-struct Sales {
-	/// CurrencyId
-	supply_pool_id: CurrencyId,
-	/// CurrencyId
-	target_pool_id: CurrencyId,
-	/// Bite
-	bite: Balance,
+/// Information about the operations required for balancing Liquidation Pools.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Sales {
+	/// Liquidation pool CurrencyId with oversupply.
+	pub supply_pool_id: CurrencyId,
+	/// Liquidation pool CurrencyId with shortfall.
+	pub target_pool_id: CurrencyId,
+	/// The amount of underlying asset to transfer from the oversupply pool to the shortfall pool.
+	pub amount: Balance,
 }
 
 impl<T: Config> Pallet<T> {
@@ -307,39 +310,47 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn _offchain_worker(now: T::BlockNumber) -> Result<(), OffchainErr> {
+		// Call a offchain_worker every `balancing_period` blocks
 		if now % Self::balancing_period() == T::BlockNumber::zero() {
 			return Ok(());
 		}
-
-		// check if we are a potential validator
+		// Check if we are a potential validator
 		if !sp_io::offchain::is_validator() {
 			return Err(OffchainErr::NotValidator);
 		}
-
-		let sales_list = Self::collects_sales_list().map_err(|_| OffchainErr::CheckFail)?;
-
-		sales_list
+		// Sending transactions to DEX.
+		Self::collects_sales_list()
+			.map_err(|_| OffchainErr::CheckFail)?
 			.iter()
-			.for_each(|sale| Self::submit_unsigned_tx(sale.supply_pool_id, sale.target_pool_id, sale.bite));
+			.for_each(|sale| Self::submit_unsigned_tx(sale.supply_pool_id, sale.target_pool_id, sale.amount));
 
 		Ok(())
 	}
 
-	fn collects_sales_list() -> sp_std::result::Result<Vec<Sales>, DispatchError> {
-		// Collecting information about the current state of liquidation pools: (id, balance,
-		//	ideal_balance, 	// extra, shortfall).
+	/// Collects information about required transactions on DEX.
+	pub fn collects_sales_list() -> sp_std::result::Result<Vec<Sales>, DispatchError> {
+		// Collecting information about the current state of liquidation pools.
 		let mut information_vec: Vec<LiquidationInformation> = T::EnabledUnderlyingAssetId::get().iter().try_fold(
 			Vec::<LiquidationInformation>::new(),
 			|mut acc, pool_id| -> sp_std::result::Result<Vec<LiquidationInformation>, DispatchError> {
-				let liquidation_pool_balance = Self::get_pool_available_liquidity(*pool_id);
+				let oracle_price =
+					T::PriceSource::get_underlying_price(*pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 				let balance_ratio = Self::liquidation_pools_data(pool_id).balance_ratio;
-				let ideal_balance = Rate::from_inner(T::LiquidityPoolsManager::get_pool_available_liquidity(*pool_id))
-					.checked_mul(&balance_ratio)
+
+				// Liquidation pool balance in USD: balance * oracle_price
+				let liquidation_pool_balance = Rate::from_inner(Self::get_pool_available_liquidity(*pool_id))
+					.checked_mul(&oracle_price)
 					.map(|x| x.into_inner())
 					.ok_or(Error::<T>::NumOverflow)?;
 
-				// FIXME: refactor
-				let extra = if liquidation_pool_balance > ideal_balance {
+				// Liquidation pool ideal balance in USD: liquidity_pool_balance * balance_ratio * oracle_price
+				let ideal_balance = Rate::from_inner(T::LiquidityPoolsManager::get_pool_available_liquidity(*pool_id))
+					.checked_mul(&balance_ratio)
+					.and_then(|v| v.checked_mul(&oracle_price))
+					.map(|x| x.into_inner())
+					.ok_or(Error::<T>::NumOverflow)?;
+
+				let oversupply = if liquidation_pool_balance > ideal_balance {
 					liquidation_pool_balance
 						.checked_sub(ideal_balance)
 						.ok_or(Error::<T>::NumOverflow)?
@@ -358,27 +369,27 @@ impl<T: Config> Pallet<T> {
 					pool_id: *pool_id,
 					balance: liquidation_pool_balance,
 					ideal_balance,
-					extra,
+					oversupply,
 					shortfall,
 				});
 				Ok(acc)
 			},
 		)?;
 
-		// Calculate sum_extra and sum_shortfall for all pools
-		let (mut sum_extra, mut sum_shortfall) = information_vec.iter().try_fold(
+		// Calculate sum_extra and sum_shortfall for all pools.
+		let (mut sum_oversupply, mut sum_shortfall) = information_vec.iter().try_fold(
 			(Balance::zero(), Balance::zero()),
 			|mut acc, pool| -> sp_std::result::Result<(Balance, Balance), DispatchError> {
 				let deviation_threshold = Self::liquidation_pools_data(pool.pool_id).deviation_threshold;
 
-				// right_border = ideal_balance + ideal_balance * deviation_threshold)
+				// right_border = ideal_balance + ideal_balance * deviation_threshold
 				let right_border = Rate::from_inner(pool.ideal_balance)
 					.checked_mul(&deviation_threshold)
 					.map(|x| x.into_inner())
 					.and_then(|v| v.checked_add(pool.ideal_balance))
 					.ok_or(Error::<T>::NumOverflow)?;
 
-				// left_border = ideal_balance - ideal_balance * deviation_threshold)
+				// left_border = ideal_balance - ideal_balance * deviation_threshold
 				let left_border = pool
 					.ideal_balance
 					.checked_sub(
@@ -390,66 +401,90 @@ impl<T: Config> Pallet<T> {
 					.ok_or(Error::<T>::NumOverflow)?;
 
 				if pool.balance > right_border {
-					acc.0 = acc.0.checked_add(pool.extra).ok_or(Error::<T>::NumOverflow)?;
+					acc.0 = acc.0.checked_add(pool.oversupply).ok_or(Error::<T>::NumOverflow)?;
 				}
 				if pool.balance < left_border {
-					acc.1 += acc.1.checked_add(pool.shortfall).ok_or(Error::<T>::NumOverflow)?;
+					acc.1 = acc.1.checked_add(pool.shortfall).ok_or(Error::<T>::NumOverflow)?;
 				}
 				Ok(acc)
 			},
 		)?;
 
+		// Contains information about the necessary transactions on the DEX
 		let mut to_sell_list: Vec<Sales> = Vec::new();
 
-		while sum_shortfall > Balance::zero() && sum_extra > Balance::zero() {
-			let (max_extra_index, max_extra) = information_vec
+		while sum_shortfall > Balance::zero() && sum_oversupply > Balance::zero() {
+			let (max_oversupply_index, max_oversupply_pool_id, max_oversupply) = information_vec
 				.iter()
 				.enumerate()
-				.max_by(|(_, a), (_, b)| a.extra.cmp(&b.extra))
-				.map(|(index, pool)| (index, pool.extra))
+				.max_by(|(_, a), (_, b)| a.oversupply.cmp(&b.oversupply))
+				.map(|(index, pool)| (index, pool.pool_id, pool.oversupply))
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			let (max_shortfall_index, max_shortfall) = information_vec
+			let (max_shortfall_index, max_shortfall_pool_id, max_shortfall) = information_vec
 				.iter()
 				.enumerate()
 				.max_by(|(_, a), (_, b)| a.shortfall.cmp(&b.shortfall))
-				.map(|(index, pool)| (index, pool.shortfall))
+				.map(|(index, pool)| (index, pool.pool_id, pool.shortfall))
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			let bite = max_shortfall.min(max_extra);
+			let (bite, bite_in_usd) = match max_shortfall.cmp(&max_oversupply) {
+				Ordering::Greater => {
+					let oracle_price = T::PriceSource::get_underlying_price(max_oversupply_pool_id)
+						.ok_or(Error::<T>::InvalidFeedPrice)?;
+					(
+						Rate::from_inner(max_oversupply)
+							.checked_div(&oracle_price)
+							.map(|x| x.into_inner())
+							.ok_or(Error::<T>::NumOverflow)?,
+						max_oversupply,
+					)
+				}
+				_ => {
+					let oracle_price = T::PriceSource::get_underlying_price(max_shortfall_pool_id)
+						.ok_or(Error::<T>::InvalidFeedPrice)?;
+					(
+						Rate::from_inner(max_shortfall)
+							.checked_div(&oracle_price)
+							.map(|x| x.into_inner())
+							.ok_or(Error::<T>::NumOverflow)?,
+						max_shortfall,
+					)
+				}
+			};
 
-			information_vec[max_extra_index] = LiquidationInformation {
-				balance: information_vec[max_extra_index]
+			to_sell_list.push(Sales {
+				supply_pool_id: max_oversupply_pool_id,
+				target_pool_id: max_shortfall_pool_id,
+				amount: bite,
+			});
+
+			information_vec[max_oversupply_index] = LiquidationInformation {
+				balance: information_vec[max_oversupply_index]
 					.balance
-					.checked_sub(bite)
+					.checked_sub(bite_in_usd)
 					.ok_or(Error::<T>::NumOverflow)?,
-				extra: information_vec[max_extra_index]
-					.extra
-					.checked_sub(bite)
+				oversupply: information_vec[max_oversupply_index]
+					.oversupply
+					.checked_sub(bite_in_usd)
 					.ok_or(Error::<T>::NumOverflow)?,
-				..information_vec[max_extra_index]
+				..information_vec[max_oversupply_index]
 			};
 
 			information_vec[max_shortfall_index] = LiquidationInformation {
 				balance: information_vec[max_shortfall_index]
 					.balance
-					.checked_add(bite)
+					.checked_add(bite_in_usd)
 					.ok_or(Error::<T>::NumOverflow)?,
 				shortfall: information_vec[max_shortfall_index]
 					.shortfall
-					.checked_sub(bite)
+					.checked_sub(bite_in_usd)
 					.ok_or(Error::<T>::NumOverflow)?,
 				..information_vec[max_shortfall_index]
 			};
 
-			sum_extra = sum_extra.checked_sub(bite).ok_or(Error::<T>::NumOverflow)?;
-			sum_shortfall = sum_shortfall.checked_sub(bite).ok_or(Error::<T>::NumOverflow)?;
-
-			to_sell_list.push(Sales {
-				supply_pool_id: information_vec[max_extra_index].pool_id,
-				target_pool_id: information_vec[max_extra_index].pool_id,
-				bite,
-			});
+			sum_oversupply = sum_oversupply.checked_sub(bite_in_usd).ok_or(Error::<T>::NumOverflow)?;
+			sum_shortfall = sum_shortfall.checked_sub(bite_in_usd).ok_or(Error::<T>::NumOverflow)?;
 		}
 
 		Ok(to_sell_list)
