@@ -32,7 +32,7 @@ mod tests {
 	#[test]
 	fn test_pause_specific_operation() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_collateral_params());
+			assert_ok!(test_benchmark_pause_specific_operation());
 		})
 	}
 }
