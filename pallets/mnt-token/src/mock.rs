@@ -6,6 +6,7 @@ use minterest_primitives::{CurrencyId, Price};
 use pallet_traits::PriceProvider;
 use sp_runtime::FixedPointNumber;
 
+use frame_support::pallet_prelude::GenesisBuild;
 parameter_types!(
 	pub const BlockHashCount: u32 = 250;
 );
@@ -62,16 +63,24 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
 		System: frame_system::{Module, Call, Event<T>},
-		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config},
+		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = frame_system::GenesisConfig::default()
+	let mut t = frame_system::GenesisConfig::default()
 		.build_storage::<Runtime>()
 		.unwrap();
-	mnt_token::GenesisConfig { ..Default::default() };
+	mnt_token::GenesisConfig::<Runtime> { ..Default::default() }
+		.assimilate_storage(&mut t)
+		.unwrap();
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| System::set_block_number(1));
 	ext
 }
+// let currency_pairs: Vec<CurrencyPair> = vec![
+// 			CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
+// 			CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
+// 			CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
+// 			CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
+// 		]
