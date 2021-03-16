@@ -340,12 +340,6 @@ impl m_tokens::Config for Runtime {
 	type MultiCurrency = Currencies;
 }
 
-impl mnt_token::Config for Runtime {
-	type Event = Event;
-	type PriceSource = Prices;
-	type UpdateOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
-}
-
 impl minterest_protocol::Config for Runtime {
 	type Event = Event;
 	type Borrowing = LiquidityPools;
@@ -483,6 +477,13 @@ impl risk_manager::Config for Runtime {
 	type LiquidationPoolsManager = LiquidationPools;
 	type LiquidityPoolsManager = LiquidityPools;
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
+}
+
+impl mnt_token::Config for Runtime {
+	type Event = Event;
+	type PriceSource = Prices;
+	type UpdateOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
+	type LiquidityPoolsManager = LiquidityPools;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime

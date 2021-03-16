@@ -3986,7 +3986,10 @@ version = "0.6.2"
 dependencies = [
  "frame-support",
  "frame-system",
+ "liquidity-pools",
  "minterest-primitives",
+ "orml-tokens",
+ "orml-traits",
  "pallet-traits",
  "parity-scale-codec",
  "serde",

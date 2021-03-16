@@ -7,15 +7,16 @@
 
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
-use minterest_primitives::{CurrencyId, CurrencyPair, Rate};
-use pallet_traits::PriceProvider;
-use sp_runtime::FixedPointNumber;
-use sp_std::prelude::Vec;
-
-mod mock;
-mod tests;
-
+use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 pub use module::*;
+use pallet_traits::{PoolsManager, PriceProvider};
+use sp_runtime::FixedPointNumber;
+use sp_std::{result, vec::Vec};
+
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
 
 type Market = CurrencyPair;
 
@@ -25,14 +26,17 @@ pub mod module {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		/// The price source of currencies
-		type PriceSource: PriceProvider<CurrencyId>;
-
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		/// The basic liquidity pools.
+		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
 
 		/// The origin which may update MNT token parameters. Root can
 		/// always do this.
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
+
+		/// The price source of currencies
+		type PriceSource: PriceProvider<CurrencyId>;
 	}
 
 	#[pallet::error]
@@ -42,6 +46,9 @@ pub mod module {
 
 		/// Try to ramove market that is not presented in ListedMarkets
 		MarketNotExists,
+
+		/// Pool not found.
+		PoolNotFound,
 	}
 
 	#[pallet::event]
@@ -61,11 +68,15 @@ pub mod module {
 	#[pallet::getter(fn mnt_rate)]
 	type MntRate<T: Config> = StorageValue<_, Rate, ValueQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn mnt_speeds)]
+	type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, Market, Rate, OptionQuery>;
+
 	/// Markets that allowed to earn MNT token
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_markets)]
 	// TODO Add MAXIMUM value for Vec<Market>
-	type ListedMarkets<T: Config> = StorageValue<_, Vec<Market>, ValueQuery>;
+	pub(crate) type ListedMarkets<T: Config> = StorageValue<_, Vec<Market>, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -103,6 +114,10 @@ pub mod module {
 		/// Add market to MNT markets list to allow earn MNT tokens
 		pub fn add_market(origin: OriginFor<T>, market: Market) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
+			ensure!(
+				!T::LiquidityPoolsManager::pool_exists(&market.underlying_id),
+				Error::<T>::PoolNotFound
+			);
 			let mut markets = ListedMarkets::<T>::get();
 			ensure!(!markets.contains(&market), Error::<T>::MarketAlreadyExists);
 			markets.push(market);
@@ -131,6 +146,7 @@ pub mod module {
 
 		#[pallet::weight(10_000)]
 		#[transactional]
+		/// Set MNT rate and recalculate MNT speed distribution for all markets
 		pub fn set_mnt_rate(origin: OriginFor<T>, new_rate: Rate) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			let old_rate = MntRate::<T>::get();
@@ -143,6 +159,24 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
+	// TODO
+	// fn get_all_listed_market_utilities() -> result::Result<Vec<(Market, Balance)>, DispatchError> {
+	// 	// get underlying price
+	// 	// get total borrow
+	// 	// utility = total borrow * underlying price
+	// 	let markets = ListedMarkets::<T>::get();
+	// 	let result: Vec<(Market, Balance)> = Vec::new();
+	// 	for market in markets.iter() {
+	// 		ensure!(
+	// 			T::LiquidityPoolsManager::pool_exists(&market.underlying_id),
+	// 			Error::<T>::PoolNotFound
+	// 		);
+	// 		let underlying_price = T::PriceSource::get_underlying_price(market.underlying_id);
+	// 		// <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id);
+	// 	}
+	// 	Ok(result)
+	// }
+
 	fn refresh_mnt_speeds() {}
 	fn update_mnt_supply_index() {
 		// TODO Update only if comp_speed > 0

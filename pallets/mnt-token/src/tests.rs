@@ -6,6 +6,7 @@ use crate::mock::*;
 use frame_support::{assert_noop, assert_ok};
 use minterest_primitives::{CurrencyId, CurrencyPair, Rate};
 use sp_arithmetic::FixedPointNumber;
+
 #[test]
 fn test_set_mnt_rate() {
 	new_test_ext().execute_with(|| {
