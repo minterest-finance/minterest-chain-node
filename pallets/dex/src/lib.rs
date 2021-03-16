@@ -10,13 +10,14 @@
 
 use frame_support::{pallet_prelude::*, transactional};
 use minterest_primitives::{Balance, CurrencyId};
+use orml_traits::MultiCurrency;
 use pallet_traits::DEXManager;
 
 mod mock;
 mod tests;
 
 pub use module::*;
-use sp_runtime::traits::Zero;
+use sp_runtime::traits::{AccountIdConversion, Zero};
 use sp_runtime::ModuleId;
 
 #[frame_support::pallet]
@@ -26,6 +27,9 @@ pub mod module {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		/// The `MultiCurrency` implementation.
+		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 
 		#[pallet::constant]
 		/// The Dex module id.
@@ -37,7 +41,10 @@ pub mod module {
 	}
 
 	#[pallet::error]
-	pub enum Error<T> {}
+	pub enum Error<T> {
+		/// Insufficient available dex balance.
+		InsufficientDexBalance,
+	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
@@ -87,21 +94,39 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		supply_currency_id: CurrencyId,
 		target_currency_id: CurrencyId,
-		_target_amount: Balance,
-		_max_supply_amount: Balance,
+		target_amount: Balance,
+		max_supply_amount: Balance,
 	) -> sp_std::result::Result<Balance, DispatchError> {
-		let actual_supply_amount = Balance::zero();
-		let actual_target_amount = Balance::zero();
+		let target_dex_balance = Self::get_dex_available_liquidity(target_currency_id);
+		let module_account_id = Self::dex_account_id();
+
+		ensure!(target_dex_balance >= target_amount, Error::<T>::InsufficientDexBalance);
+
+		T::MultiCurrency::transfer(supply_currency_id, &who, &module_account_id, target_amount)?;
+		T::MultiCurrency::transfer(target_currency_id, &module_account_id, &who, target_amount)?;
 
 		Self::deposit_event(Event::Swap(
 			who.clone(),
 			supply_currency_id,
 			target_currency_id,
-			actual_supply_amount,
-			actual_target_amount,
+			target_amount,
+			max_supply_amount,
 		));
 
-		Ok(actual_supply_amount)
+		Ok(target_amount)
+	}
+}
+
+impl<T: Config> Pallet<T> {
+	/// Gets module account id.
+	fn dex_account_id() -> T::AccountId {
+		T::DexModuleId::get().into_account()
+	}
+
+	/// Gets current the total amount of cash the dex has.
+	fn get_dex_available_liquidity(dex_id: CurrencyId) -> Balance {
+		let module_account_id = Self::dex_account_id();
+		T::MultiCurrency::free_balance(dex_id, &module_account_id)
 	}
 }
 

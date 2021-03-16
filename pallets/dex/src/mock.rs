@@ -5,6 +5,7 @@
 use super::*;
 use crate as dex;
 use frame_support::{construct_runtime, parameter_types};
+use orml_traits::parameter_type_with_key;
 use sp_runtime::traits::AccountIdConversion;
 
 parameter_types!(
@@ -39,6 +40,24 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = ();
 }
 
+type Amount = i128;
+
+parameter_type_with_key! {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+		Default::default()
+	};
+}
+
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = Amount;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = ();
+}
+
 parameter_types! {
 	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
 	pub DexAccountId: AccountId = DexModuleId::get().into_account();
@@ -46,6 +65,7 @@ parameter_types! {
 
 impl dex::Config for Runtime {
 	type Event = Event;
+	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type DexModuleId = DexModuleId;
 	type DexAccountId = DexAccountId;
 }
@@ -60,6 +80,7 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
 		System: frame_system::{Module, Call, Event<T>},
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Module, Storage, Call, Event<T>},
 	}
 );

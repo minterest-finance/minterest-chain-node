@@ -225,6 +225,7 @@ parameter_types! {
 
 impl dex::Config for Test {
 	type Event = Event;
+	type MultiCurrency = orml_tokens::Module<Test>;
 	type DexModuleId = DexModuleId;
 	type DexAccountId = DexAccountId;
 }

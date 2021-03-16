@@ -1233,6 +1233,8 @@ dependencies = [
  "frame-support",
  "frame-system",
  "minterest-primitives",
+ "orml-tokens",
+ "orml-traits",
  "pallet-traits",
  "parity-scale-codec",
  "serde",

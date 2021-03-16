@@ -537,6 +537,7 @@ parameter_types! {
 
 impl dex::Config for Runtime {
 	type Event = Event;
+	type MultiCurrency = Currencies;
 	type DexModuleId = DexModuleId;
 	type DexAccountId = DexAccountId;
 }
