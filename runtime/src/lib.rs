@@ -110,6 +110,7 @@ pub fn native_version() -> NativeVersion {
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
 }
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -493,7 +494,7 @@ impl liquidation_pools::Config for Runtime {
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type LiquidityPoolsManager = LiquidityPools;
-	type DEX = Dex;
+	type Dex = Dex;
 }
 
 parameter_types! {
@@ -530,8 +531,14 @@ impl DataFeeder<CurrencyId, Price, AccountId> for AggregatedDataProvider {
 	}
 }
 
+parameter_types! {
+	pub DexAccountId: AccountId = DexModuleId::get().into_account();
+}
+
 impl dex::Config for Runtime {
 	type Event = Event;
+	type DexModuleId = DexModuleId;
+	type DexAccountId = DexAccountId;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

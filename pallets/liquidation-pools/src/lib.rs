@@ -14,6 +14,7 @@ use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
 use frame_system::pallet_prelude::*;
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
+use pallet_traits::DEXManager;
 use pallet_traits::{PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -46,7 +47,6 @@ type LiquidityPools<T> = liquidity_pools::Module<T>;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use pallet_traits::DEXManager;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + liquidity_pools::Config + SendTransactionTypes<Call<Self>> {
@@ -75,7 +75,7 @@ pub mod module {
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		/// The DEX participating in balancing
-		type DEX: DEXManager<Self::AccountId, CurrencyId, Balance>;
+		type Dex: DEXManager<Self::AccountId, CurrencyId, Balance>;
 	}
 
 	#[pallet::error]
@@ -264,7 +264,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let _ = ensure_none(origin)?;
 			let module_id = Self::pools_account_id();
-			T::DEX::swap_with_exact_target(&module_id, extra_pool_id, shortfall_pool_id, amount, amount)?;
+			T::Dex::swap_with_exact_target(&module_id, extra_pool_id, shortfall_pool_id, amount, amount)?;
 			Self::deposit_event(Event::LiquidationPoolsBalanced);
 			Ok(().into())
 		}

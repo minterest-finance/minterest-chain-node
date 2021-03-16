@@ -2,14 +2,17 @@
 
 #![cfg(test)]
 
+use super::*;
 use crate as dex;
-use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::{construct_runtime, parameter_types};
+use sp_runtime::traits::AccountIdConversion;
 
 parameter_types!(
 	pub const SomeConst: u64 = 10;
 	pub const BlockHashCount: u32 = 250;
 );
+
+pub type AccountId = u64;
 
 impl frame_system::Config for Runtime {
 	type BaseCallFilter = ();
@@ -36,8 +39,15 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = ();
 }
 
+parameter_types! {
+	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
+	pub DexAccountId: AccountId = DexModuleId::get().into_account();
+}
+
 impl dex::Config for Runtime {
 	type Event = Event;
+	type DexModuleId = DexModuleId;
+	type DexAccountId = DexAccountId;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;

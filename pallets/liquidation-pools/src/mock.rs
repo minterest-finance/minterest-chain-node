@@ -35,6 +35,7 @@ frame_support::construct_runtime!(
 		// Minterest pallets
 		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, ValidateUnsigned},
 		TestLiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
+		TestDex: dex::{Module, Storage, Call, Event<T>}
 	}
 );
 
@@ -140,6 +141,17 @@ impl liquidity_pools::Config for Test {
 }
 
 parameter_types! {
+	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
+	pub DexAccountId: AccountId = DexModuleId::get().into_account();
+}
+
+impl dex::Config for Test {
+	type Event = Event;
+	type DexModuleId = DexModuleId;
+	type DexAccountId = DexAccountId;
+}
+
+parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value();
@@ -156,6 +168,7 @@ impl Config for Test {
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+	type Dex = dex::Module<Test>;
 }
 
 /// An extrinsic type used for tests.

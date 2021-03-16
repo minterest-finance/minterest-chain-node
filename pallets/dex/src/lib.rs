@@ -17,6 +17,7 @@ mod tests;
 
 pub use module::*;
 use sp_runtime::traits::Zero;
+use sp_runtime::ModuleId;
 
 #[frame_support::pallet]
 pub mod module {
@@ -25,6 +26,14 @@ pub mod module {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		#[pallet::constant]
+		/// The Dex module id.
+		type DexModuleId: Get<ModuleId>;
+
+		#[pallet::constant]
+		/// The Dex account id.
+		type DexAccountId: Get<Self::AccountId>;
 	}
 
 	#[pallet::error]

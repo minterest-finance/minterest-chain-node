@@ -3261,6 +3261,7 @@ dependencies = [
 name = "liquidation-pools"
 version = "0.6.2"
 dependencies = [
+ "dex",
  "frame-support",
  "frame-system",
  "liquidity-pools",
@@ -5492,6 +5493,7 @@ name = "risk-manager"
 version = "0.6.0"
 dependencies = [
  "controller",
+ "dex",
  "frame-support",
  "frame-system",
  "liquidation-pools",

@@ -34,7 +34,8 @@ frame_support::construct_runtime!(
 		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
-		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned}
+		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
+		TestDex: dex::{Module, Storage, Call, Event<T>}
 	}
 );
 
@@ -167,6 +168,7 @@ impl liquidation_pools::Config for Test {
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	type Dex = dex::Module<Test>;
 }
 
 ord_parameter_types! {
@@ -214,6 +216,17 @@ impl risk_manager::Config for Test {
 	type LiquidationPoolsManager = liquidation_pools::Module<Test>;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	type RiskManagerUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+}
+
+parameter_types! {
+	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
+	pub DexAccountId: AccountId = DexModuleId::get().into_account();
+}
+
+impl dex::Config for Test {
+	type Event = Event;
+	type DexModuleId = DexModuleId;
+	type DexAccountId = DexAccountId;
 }
 
 /// An extrinsic type used for tests.
