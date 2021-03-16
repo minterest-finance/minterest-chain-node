@@ -1,4 +1,4 @@
-use crate::{CurrencyId, MinterestModel, Runtime};
+use crate::{CurrencyId, Runtime};
 
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;

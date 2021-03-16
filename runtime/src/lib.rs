@@ -454,6 +454,7 @@ impl module_prices::Config for Runtime {
 	type Source = AggregatedDataProvider;
 	type LockOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type WeightInfo = weights::prices::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -808,6 +809,7 @@ impl_runtime_apis! {
 
 			add_benchmark!(params, batches, controller, benchmarking::controller);
 			add_benchmark!(params, batches, minterest_model, benchmarking::minterest_model);
+			add_benchmark!(params, batches, module_prices, benchmarking::prices);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

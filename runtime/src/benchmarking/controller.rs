@@ -1,6 +1,5 @@
-use crate::{Balance, Controller, CurrencyId, Operation, Runtime};
+use crate::{CurrencyId, Operation, Runtime};
 
-use frame_benchmarking::account;
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
 use sp_std::prelude::*;
@@ -64,6 +63,7 @@ mod tests {
 	use frame_support::assert_ok;
 	use frame_support::pallet_prelude::GenesisBuild;
 	use liquidity_pools::Pool;
+	use minterest_primitives::Balance;
 	use sp_runtime::traits::Zero;
 	use sp_runtime::{FixedPointNumber, FixedU128};
 
