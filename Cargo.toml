@@ -12,6 +12,7 @@ name = "minterest"
 path = "src/main.rs"
 
 [dependencies]
+cargo-audit = "0.14.0"
 minterest-cli = { path = "cli" }
 minterest-service = { path = "service" }
 
