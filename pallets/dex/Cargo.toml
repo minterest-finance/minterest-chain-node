@@ -22,6 +22,7 @@ sp-core = "3.0.0"
 sp-io = "3.0.0"
 
 orml-tokens = { path = "../../orml/tokens" }
+minterest-primitives = { path = "../../primitives" }
 
 [features]
 default = ["std"]

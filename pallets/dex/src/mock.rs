@@ -5,6 +5,7 @@
 use super::*;
 use crate as dex;
 use frame_support::{construct_runtime, parameter_types};
+pub use minterest_primitives::CurrencyId;
 use orml_traits::parameter_type_with_key;
 use sp_runtime::traits::AccountIdConversion;
 
@@ -81,16 +82,47 @@ construct_runtime!(
 	{
 		System: frame_system::{Module, Call, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
-		Dex: dex::{Module, Storage, Call, Event<T>},
+		TestDex: dex::{Module, Storage, Call, Event<T>},
 	}
 );
 
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = frame_system::GenesisConfig::default()
-		.build_storage::<Runtime>()
+pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
+pub fn dollars<T: Into<u128>>(d: T) -> Balance {
+	DOLLARS.saturating_mul(d.into())
+}
+
+pub struct ExtBuilder {
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+}
+
+impl Default for ExtBuilder {
+	fn default() -> Self {
+		Self {
+			endowed_accounts: vec![],
+		}
+	}
+}
+
+impl ExtBuilder {
+	pub fn dex_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts
+			.push((TestDex::dex_account_id(), currency_id, balance));
+		self
+	}
+
+	pub fn build(self) -> sp_io::TestExternalities {
+		let mut t = frame_system::GenesisConfig::default()
+			.build_storage::<Runtime>()
+			.unwrap();
+
+		orml_tokens::GenesisConfig::<Runtime> {
+			endowed_accounts: self.endowed_accounts,
+		}
+		.assimilate_storage(&mut t)
 		.unwrap();
 
-	let mut ext = sp_io::TestExternalities::new(t);
-	ext.execute_with(|| System::set_block_number(1));
-	ext
+		let mut ext = sp_io::TestExternalities::new(t);
+		ext.execute_with(|| System::set_block_number(1));
+		ext
+	}
 }

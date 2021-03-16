@@ -5,8 +5,11 @@
 use crate::mock::*;
 
 #[test]
-fn set_dummy_work() {
-	new_test_ext().execute_with(|| {
-		assert!(true);
-	});
+fn accrue_interest_should_work() {
+	ExtBuilder::default()
+		.dex_balance(CurrencyId::DOT, dollars(20_u128))
+		.build()
+		.execute_with(|| {
+			assert!(true);
+		});
 }
