@@ -62,12 +62,30 @@ runtime_benchmarks! {
 mod tests {
 	use super::*;
 	use frame_support::assert_ok;
+	use frame_support::pallet_prelude::GenesisBuild;
+	use liquidity_pools::Pool;
+	use sp_runtime::traits::Zero;
+	use sp_runtime::{FixedPointNumber, FixedU128};
 
 	fn new_test_ext() -> sp_io::TestExternalities {
-		frame_system::GenesisConfig::default()
+		let mut t = frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
-			.unwrap()
-			.into()
+			.unwrap();
+		liquidity_pools::GenesisConfig::<Runtime> {
+			pools: vec![(
+				CurrencyId::DOT,
+				Pool {
+					total_borrowed: Balance::zero(),
+					borrow_index: FixedU128::one(),
+					total_insurance: Balance::zero(),
+				},
+			)],
+			pool_user_data: vec![],
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		t.into()
 	}
 
 	#[test]
@@ -80,7 +98,7 @@ mod tests {
 	#[test]
 	fn test_unpause_specific_operation() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_upause_specific_operation());
+			assert_ok!(test_benchmark_unpause_specific_operation());
 		})
 	}
 

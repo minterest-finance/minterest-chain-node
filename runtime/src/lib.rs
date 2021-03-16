@@ -446,7 +446,7 @@ impl controller::Config for Runtime {
 	type LiquidityPoolsManager = LiquidityPools;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
-	type WeightInfo = weights::controller::WeightInfo<Runtime>;
+	type ControllerWeightInfo = weights::controller::WeightInfo<Runtime>;
 }
 
 impl module_prices::Config for Runtime {
@@ -464,6 +464,7 @@ impl minterest_model::Config for Runtime {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
 	type ModelUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
+	type WeightInfo = weights::minterest_model::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -806,6 +807,7 @@ impl_runtime_apis! {
 			let params = (&config, &whitelist);
 
 			add_benchmark!(params, batches, controller, benchmarking::controller);
+			add_benchmark!(params, batches, minterest_model, benchmarking::minterest_model);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

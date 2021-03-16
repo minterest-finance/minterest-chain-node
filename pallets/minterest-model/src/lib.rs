@@ -27,6 +27,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub mod weights;
+pub use weights::WeightInfo;
+
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct MinterestModelData {
@@ -62,6 +65,9 @@ pub mod module {
 		/// The origin which may update minterest model parameters. Root can
 		/// always do this.
 		type ModelUpdateOrigin: EnsureOrigin<Self::Origin>;
+
+		/// Weight information for the extrinsics.
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::error]
