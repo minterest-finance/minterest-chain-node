@@ -311,7 +311,6 @@ impl<T: Config> Pallet<T> {
 
 	fn _offchain_worker(now: T::BlockNumber) -> Result<(), OffchainErr> {
 		// Call a offchain_worker every `balancing_period` blocks
-		let help = now % Self::balancing_period();
 		if now % Self::balancing_period() == T::BlockNumber::zero() {
 			// Check if we are a potential validator
 			if !sp_io::offchain::is_validator() {
