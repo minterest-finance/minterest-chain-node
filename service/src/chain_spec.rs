@@ -6,8 +6,8 @@ use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
 	AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig, GrandpaConfig,
 	LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig, MinterestModelConfig,
-	MinterestOracleConfig, OperatorMembershipMinterestConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
-	TokensConfig, WhitelistCouncilMembershipConfig, DOLLARS, WASM_BINARY,
+	MinterestOracleConfig, OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature, SudoConfig,
+	SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, DOLLARS, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -78,6 +78,9 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				vec![
 					// liquidation pool
 					hex!["6d6f646c6d696e2f6c71646e0000000000000000000000000000000000000000"].into(),
+					// DEXes
+					hex!["6d6f646c6d696e2f646578730000000000000000000000000000000000000000"].into(),
+					// Eugene
 					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -443,7 +446,7 @@ fn testnet_genesis(
 			],
 		}),
 		liquidation_pools: Some(LiquidationPoolsConfig {
-			balancing_period: 5, // FIXME: temporary value.
+			balancing_period: 10, // FIXME: temporary value.
 			liquidation_pools: vec![
 				(
 					CurrencyId::DOT,
@@ -473,6 +476,14 @@ fn testnet_genesis(
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
 					},
 				),
+			],
+		}),
+		module_prices: Some(PricesConfig {
+			locked_price: vec![
+				(CurrencyId::DOT, FixedU128::saturating_from_integer(2)),
+				(CurrencyId::KSM, FixedU128::saturating_from_integer(2)),
+				(CurrencyId::ETH, FixedU128::saturating_from_integer(2)),
+				(CurrencyId::BTC, FixedU128::saturating_from_integer(2)),
 			],
 		}),
 		pallet_collective_Instance1: Some(Default::default()),
