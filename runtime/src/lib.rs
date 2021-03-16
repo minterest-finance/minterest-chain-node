@@ -9,9 +9,12 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+mod benchmarking;
 mod constants;
 #[cfg(test)]
 mod tests;
+mod weights;
+mod weights_test;
 
 pub use controller_rpc_runtime_api::PoolState;
 pub use controller_rpc_runtime_api::UserPoolBalanceData;
@@ -40,10 +43,11 @@ use sp_version::RuntimeVersion;
 
 pub use minterest_primitives::{
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, CurrencyPair, DataProviderId, DigestItem, Hash,
-	Index, Moment, Price, Rate, Signature,
+	Index, Moment, Operation, Price, Rate, Signature,
 };
 
 // A few exports that help ease life for downstream crates.
+pub use controller::Call as ControllerCall;
 pub use frame_support::{
 	construct_runtime, debug, parameter_types,
 	traits::{KeyOwnerProofSystem, Randomness},
@@ -442,6 +446,7 @@ impl controller::Config for Runtime {
 	type LiquidityPoolsManager = LiquidityPools;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
+	type WeightInfo = weights::controller::WeightInfo<Runtime>;
 }
 
 impl module_prices::Config for Runtime {
@@ -781,10 +786,8 @@ impl_runtime_apis! {
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
-
-			use frame_system_benchmarking::Module as SystemBench;
-			impl frame_system_benchmarking::Config for Runtime {}
+			use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
+			use orml_benchmarking::add_benchmark;
 
 			let whitelist: Vec<TrackedStorageKey> = vec![
 				// Block Number
@@ -802,9 +805,7 @@ impl_runtime_apis! {
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
 
-			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_balances, Balances);
-			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
+			add_benchmark!(params, batches, controller, benchmarking::controller);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

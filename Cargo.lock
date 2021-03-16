@@ -4271,6 +4271,7 @@ dependencies = [
  "minterest-primitives",
  "minterest-protocol",
  "module-prices",
+ "orml-benchmarking",
  "orml-currencies",
  "orml-oracle",
  "orml-oracle-rpc-runtime-api",
@@ -4721,8 +4722,9 @@ version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe826f3bfb984b3dd8d6675d7d156ba4c0877ee562bf59d86a4e805b7737dcb1"
 dependencies = [
- "frame-support 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-system 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
  "parity-scale-codec",
  "serde",
  "sp-core 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
