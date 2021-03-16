@@ -40,6 +40,14 @@ purge: target/debug/node-minterest
 .PHONY: restart
 restart: purge run
 
+.PHONY: cargo-audit
+cargo-audit:
+	cargo audit
+
+.PHONY: cargo-dups
+cargo-dups:
+	cargo tree --duplicate
+
 update-orml:
 	cd orml && git checkout master && git pull
 	git add orml
