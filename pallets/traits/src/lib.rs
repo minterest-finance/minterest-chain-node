@@ -1,4 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::upper_case_acronyms)]
 
 use minterest_primitives::{Balance, CurrencyId, Price};
 use sp_runtime::{DispatchError, DispatchResult};
