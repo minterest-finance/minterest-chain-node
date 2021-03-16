@@ -359,7 +359,7 @@ impl<T: Config> Pallet<T> {
 						Balance::zero(),
 					),
 					Ordering::Less => (
-						0,
+						Balance::zero(),
 						ideal_balance
 							.checked_sub(liquidation_pool_balance)
 							.ok_or(Error::<T>::NumOverflow)?,
