@@ -29,6 +29,10 @@ pub mod module {
 		type PriceSource: PriceProvider<CurrencyId>;
 
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		/// The origin which may update MNT token parameters. Root can
+		/// always do this.
+		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 	}
 
 	#[pallet::error]
@@ -98,7 +102,7 @@ pub mod module {
 		#[transactional]
 		/// Add market to MNT markets list to allow earn MNT tokens
 		pub fn add_market(origin: OriginFor<T>, market: Market) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 			let mut markets = ListedMarkets::<T>::get();
 			ensure!(!markets.contains(&market), Error::<T>::MarketAlreadyExists);
 			markets.push(market);
@@ -111,7 +115,7 @@ pub mod module {
 		#[pallet::weight(10_000)]
 		#[transactional]
 		pub fn remove_market(origin: OriginFor<T>, market: Market) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 			let mut markets = ListedMarkets::<T>::get();
 			ensure!(markets.contains(&market), Error::<T>::MarketNotExists);
 			markets.remove(
@@ -128,7 +132,7 @@ pub mod module {
 		#[pallet::weight(10_000)]
 		#[transactional]
 		pub fn set_mnt_rate(origin: OriginFor<T>, new_rate: Rate) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 			let old_rate = MntRate::<T>::get();
 			MntRate::<T>::put(new_rate);
 			Pallet::<T>::refresh_mnt_speeds();

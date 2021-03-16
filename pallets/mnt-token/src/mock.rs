@@ -1,15 +1,22 @@
 #![cfg(test)]
 
 use crate as mnt_token;
-use frame_support::{construct_runtime, parameter_types};
+use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
+use frame_system::EnsureSignedBy;
 use minterest_primitives::{CurrencyId, Price};
 use pallet_traits::PriceProvider;
 use sp_runtime::FixedPointNumber;
 
-use frame_support::pallet_prelude::GenesisBuild;
 parameter_types!(
 	pub const BlockHashCount: u32 = 250;
 );
+
+pub type AccountId = u64;
+
+pub const ADMIN: AccountId = 0;
+pub fn admin() -> Origin {
+	Origin::signed(ADMIN)
+}
 
 impl frame_system::Config for Runtime {
 	type BaseCallFilter = ();
@@ -48,9 +55,14 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
+ord_parameter_types! {
+	pub const ZeroAdmin: AccountId = 0;
+}
+
 impl mnt_token::Config for Runtime {
 	type Event = Event;
 	type PriceSource = MockPriceSource;
+	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
