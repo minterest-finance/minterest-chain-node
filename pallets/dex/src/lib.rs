@@ -89,6 +89,9 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Ensured atomic.
+	///
+	/// TODO Temporary implementation. Makes an exchange at the rate of 1:1
+	/// (for example: 1 ETH = 1 BTC)
 	#[transactional]
 	pub fn do_swap_with_exact_target(
 		who: &T::AccountId,
