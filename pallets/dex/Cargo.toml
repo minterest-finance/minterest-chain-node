@@ -23,6 +23,8 @@ sp-io = "3.0.0"
 
 orml-tokens = { path = "../../orml/tokens" }
 minterest-primitives = { path = "../../primitives" }
+liquidity-pools = { path = "../liquidity-pools" }
+liquidation-pools = { path = "../liquidation-pools" }
 
 [features]
 default = ["std"]

@@ -1232,6 +1232,8 @@ version = "0.6.2"
 dependencies = [
  "frame-support",
  "frame-system",
+ "liquidation-pools",
+ "liquidity-pools",
  "minterest-primitives",
  "orml-tokens",
  "orml-traits",

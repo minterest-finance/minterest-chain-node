@@ -5,11 +5,11 @@
 use crate::mock::*;
 
 #[test]
-fn accrue_interest_should_work() {
+fn do_swap_with_exact_target_should_work() {
 	ExtBuilder::default()
-		.dex_balance(CurrencyId::DOT, dollars(20_u128))
+		.dex_balance(CurrencyId::DOT, dollars(10_u128))
 		.build()
 		.execute_with(|| {
-			assert!(true);
+			assert_eq!(TestDex::get_dex_available_liquidity(CurrencyId::DOT), dollars(10_u128));
 		});
 }
