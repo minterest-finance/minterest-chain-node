@@ -335,7 +335,7 @@ impl<T: Config> Pallet<T> {
 					T::PriceSource::get_underlying_price(*pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 				let balance_ratio = Self::liquidation_pools_data(pool_id).balance_ratio;
 
-				// Liquidation pool balance in USD: balance * oracle_price
+				// Liquidation pool balance in USD: liquidation_pool_balance * oracle_price
 				let liquidation_pool_balance = Rate::from_inner(Self::get_pool_available_liquidity(*pool_id))
 					.checked_mul(&oracle_price)
 					.map(|x| x.into_inner())
@@ -348,19 +348,23 @@ impl<T: Config> Pallet<T> {
 					.map(|x| x.into_inner())
 					.ok_or(Error::<T>::NumOverflow)?;
 
-				let oversupply = if liquidation_pool_balance > ideal_balance {
-					liquidation_pool_balance
-						.checked_sub(ideal_balance)
-						.ok_or(Error::<T>::NumOverflow)?
-				} else {
-					Balance::zero()
-				};
-				let shortfall = if liquidation_pool_balance < ideal_balance {
-					ideal_balance
-						.checked_sub(liquidation_pool_balance)
-						.ok_or(Error::<T>::NumOverflow)?
-				} else {
-					Balance::zero()
+				// If the pool is not balanced:
+				// oversupply = liquidation_pool_balance - ideal_balance
+				// shortfall = ideal_balance - liquidation_pool_balance
+				let (oversupply, shortfall) = match liquidation_pool_balance.cmp(&ideal_balance) {
+					Ordering::Greater => (
+						liquidation_pool_balance
+							.checked_sub(ideal_balance)
+							.ok_or(Error::<T>::NumOverflow)?,
+						Balance::zero(),
+					),
+					Ordering::Less => (
+						0,
+						ideal_balance
+							.checked_sub(liquidation_pool_balance)
+							.ok_or(Error::<T>::NumOverflow)?,
+					),
+					Ordering::Equal => (Balance::zero(), Balance::zero()),
 				};
 
 				acc.push(LiquidationInformation {
@@ -408,10 +412,11 @@ impl<T: Config> Pallet<T> {
 			},
 		)?;
 
-		// Contains information about the necessary transactions on the DEX
+		// Contains information about the necessary transactions on the DEX.
 		let mut to_sell_list: Vec<Sales> = Vec::new();
 
 		while sum_shortfall > Balance::zero() && sum_oversupply > Balance::zero() {
+			// Find the pool with the maximum oversupply and the pool with the maximum shortfall.
 			let (max_oversupply_index, max_oversupply_pool_id, max_oversupply) = information_vec
 				.iter()
 				.enumerate()
@@ -426,6 +431,8 @@ impl<T: Config> Pallet<T> {
 				.map(|(index, pool)| (index, pool.pool_id, pool.shortfall))
 				.ok_or(Error::<T>::NumOverflow)?;
 
+			// The number of assets (and USD equivalent) to be sent to the DEX will be equal to
+			// the minimum value between (max_shortfall, max_oversupply).
 			let (bite, bite_in_usd) = match max_shortfall.cmp(&max_oversupply) {
 				Ordering::Greater => {
 					let oracle_price = T::PriceSource::get_underlying_price(max_oversupply_pool_id)
@@ -451,12 +458,14 @@ impl<T: Config> Pallet<T> {
 				}
 			};
 
+			// Add "sale" to the sales list.
 			to_sell_list.push(Sales {
 				supply_pool_id: max_oversupply_pool_id,
 				target_pool_id: max_shortfall_pool_id,
 				amount: bite,
 			});
 
+			// Updating the information vector.
 			information_vec[max_oversupply_index] = LiquidationInformation {
 				balance: information_vec[max_oversupply_index]
 					.balance

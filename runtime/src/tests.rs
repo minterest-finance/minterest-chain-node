@@ -1270,8 +1270,11 @@ fn do_swap_with_exact_target_should_work() {
 }
 
 //------------ Liquidation Pools Balancing tests ---------------------------
+// Description of the test:
+// Two liquidation pools have oversupply and two liquidation pools have shortfall.
+// Two "sales" are required for balancing.
 #[test]
-fn collects_sales_list_should_work() {
+fn collects_sales_list_should_work_2_2() {
 	ExtBuilder::default()
 		.liquidity_pool_balance(CurrencyId::DOT, 2_700_000 * DOLLARS)
 		.liquidity_pool_balance(CurrencyId::KSM, 1_000_000 * DOLLARS)
