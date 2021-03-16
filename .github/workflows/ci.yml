@@ -25,22 +25,22 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
-  audit:
-    name: Cargo audit
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly-2021-02-17
-          target: wasm32-unknown-unknown
-          default: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: audit
+  #audit:
+    #name: Cargo audit
+    #runs-on: ubuntu-20.04
+    #steps:
+      #- uses: actions/checkout@v2
+      #  with:
+      #    submodules: recursive
+      #- uses: actions-rs/toolchain@v1
+      #  with:
+      #    profile: minimal
+      #    toolchain: nightly-2021-02-17
+      #    target: wasm32-unknown-unknown
+      #    default: true
+      #- uses: actions-rs/cargo@v1
+      #  with:
+      #    command: audit
   test:
     name: Test Suite
     runs-on: ubuntu-20.04
