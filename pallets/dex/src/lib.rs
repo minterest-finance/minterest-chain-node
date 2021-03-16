@@ -90,7 +90,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Ensured atomic.
 	#[transactional]
-	fn do_swap_with_exact_target(
+	pub fn do_swap_with_exact_target(
 		who: &T::AccountId,
 		supply_currency_id: CurrencyId,
 		target_currency_id: CurrencyId,
@@ -119,7 +119,7 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config> Pallet<T> {
 	/// Gets module account id.
-	fn dex_account_id() -> T::AccountId {
+	pub fn dex_account_id() -> T::AccountId {
 		T::DexModuleId::get().into_account()
 	}
 
