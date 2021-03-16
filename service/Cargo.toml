@@ -61,5 +61,5 @@ node-minterest-runtime = { path = '../runtime' }
 default = ["std"]
 std = []
 runtime-benchmarks = [
-    'sp-runtime/runtime-benchmarks',
+    'node-minterest-runtime/runtime-benchmarks',
 ]

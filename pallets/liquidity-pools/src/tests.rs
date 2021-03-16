@@ -11,6 +11,24 @@ fn dollars<T: Into<u128>>(d: T) -> Balance {
 }
 
 #[test]
+fn set_pool_data_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(TestPools::set_pool_data(
+			CurrencyId::DOT,
+			ONE_HUNDRED_DOLLARS,
+			Rate::saturating_from_rational(125, 100),
+			ONE_HUNDRED_DOLLARS,
+		));
+		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_borrowed, ONE_HUNDRED_DOLLARS);
+		assert_eq!(
+			<Pools<Test>>::get(CurrencyId::DOT).borrow_index,
+			Rate::saturating_from_rational(125, 100)
+		);
+		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_insurance, ONE_HUNDRED_DOLLARS);
+	});
+}
+
+#[test]
 fn set_pool_total_borrowed_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Set pool_total_borrowed eq 100 DOT
@@ -108,6 +126,28 @@ fn get_pool_available_liquidity_should_work() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), TEN_THOUSAND);
+		});
+}
+
+#[test]
+fn get_pool_data_should_work() {
+	ExtBuilder::default()
+		.pool_with_params(
+			CurrencyId::DOT,
+			TEN_THOUSAND,
+			Rate::saturating_from_rational(125, 100),
+			TEN_THOUSAND,
+		)
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				TestPools::get_pool_data(CurrencyId::DOT),
+				Pool {
+					total_borrowed: TEN_THOUSAND,
+					borrow_index: Rate::saturating_from_rational(125, 100),
+					total_insurance: TEN_THOUSAND,
+				}
+			);
 		});
 }
 

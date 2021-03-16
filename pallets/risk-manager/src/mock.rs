@@ -143,6 +143,7 @@ impl controller::Config for Test {
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	type WeightInfo = ();
 }
 
 parameter_types! {
