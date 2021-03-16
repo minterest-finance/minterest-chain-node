@@ -311,19 +311,18 @@ impl<T: Config> Pallet<T> {
 
 	fn _offchain_worker(now: T::BlockNumber) -> Result<(), OffchainErr> {
 		// Call a offchain_worker every `balancing_period` blocks
+		let help = now % Self::balancing_period();
 		if now % Self::balancing_period() == T::BlockNumber::zero() {
-			return Ok(());
+			// Check if we are a potential validator
+			if !sp_io::offchain::is_validator() {
+				return Err(OffchainErr::NotValidator);
+			}
+			// Sending transactions to DEX.
+			Self::collects_sales_list()
+				.map_err(|_| OffchainErr::CheckFail)?
+				.iter()
+				.for_each(|sale| Self::submit_unsigned_tx(sale.supply_pool_id, sale.target_pool_id, sale.amount));
 		}
-		// Check if we are a potential validator
-		if !sp_io::offchain::is_validator() {
-			return Err(OffchainErr::NotValidator);
-		}
-		// Sending transactions to DEX.
-		Self::collects_sales_list()
-			.map_err(|_| OffchainErr::CheckFail)?
-			.iter()
-			.for_each(|sale| Self::submit_unsigned_tx(sale.supply_pool_id, sale.target_pool_id, sale.amount));
-
 		Ok(())
 	}
 
