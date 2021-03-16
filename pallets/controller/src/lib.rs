@@ -31,6 +31,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub mod weights;
+pub use weights::WeightInfo;
+
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct ControllerData<BlockNumber> {
@@ -95,6 +98,9 @@ pub mod module {
 		/// The origin which may update controller parameters. Root can
 		/// always do this.
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
+
+		/// Weight information for the extrinsics.
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::error]
@@ -215,7 +221,7 @@ pub mod module {
 		/// Pause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::pause_specific_operation())]
 		#[transactional]
 		pub fn pause_specific_operation(
 			origin: OriginFor<T>,
