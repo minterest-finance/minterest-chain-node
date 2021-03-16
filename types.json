@@ -29,7 +29,7 @@
       "borrow_index": "Rate",
       "total_insurance": "Balance"
     },
-    "LiquidationPoolsData": {
+    "LiquidationPoolData": {
       "deviation_threshold": "Rate",
       "balance_ratio": "Rate"
     },
