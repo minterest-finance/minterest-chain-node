@@ -267,19 +267,12 @@ pub mod module {
 
 		/// Set parameter `kink`.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `kink_nominator`: numerator.
-		/// - `kink_divider`: divider.
+		/// - `kink`: new kink value, must be less or equal to 1.
 		///
-		/// `kink = kink_nominator / kink_divider`
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_kink(
-			origin: OriginFor<T>,
-			pool_id: CurrencyId,
-			kink_nominator: u128,
-			kink_divider: u128,
-		) -> DispatchResultWithPostInfo {
+		pub fn set_kink(origin: OriginFor<T>, pool_id: CurrencyId, kink: Rate) -> DispatchResultWithPostInfo {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
@@ -287,12 +280,10 @@ pub mod module {
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
-			ensure!(kink_nominator <= kink_divider, Error::<T>::KinkCannotBeMoreThanOne);
-
-			let new_kink = Rate::checked_from_rational(kink_nominator, kink_divider).ok_or(Error::<T>::NumOverflow)?;
+			ensure!(kink <= Rate::one(), Error::<T>::KinkCannotBeMoreThanOne);
 
 			// Write the previously calculated values into storage.
-			MinterestModelDates::<T>::mutate(pool_id, |r| r.kink = new_kink);
+			MinterestModelDates::<T>::mutate(pool_id, |r| r.kink = kink);
 			Self::deposit_event(Event::KinkHasChanged);
 
 			Ok(().into())
