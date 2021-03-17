@@ -94,3 +94,17 @@ fn test_get_listed_market_utilities() {
 		assert_eq!(result[3], (btc_market, 150));
 	});
 }
+
+#[test]
+fn get_get_listed_market_utilities_fail() {
+	new_test_ext().execute_with(|| {
+		// Not listed in liquidity pool market.
+		// get_underlying_price should fail
+		let not_listed_market = CurrencyPair::new(CurrencyId::MNT, CurrencyId::MDOT);
+		assert_ok!(MntToken::add_market(admin(), not_listed_market));
+		assert_noop!(
+			MntToken::get_listed_markets_utilities(),
+			Error::<Runtime>::GetUnderlyingPriceFail
+		);
+	});
+}
