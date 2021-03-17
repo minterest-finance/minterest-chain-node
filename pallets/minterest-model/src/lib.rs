@@ -156,19 +156,16 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		/// Set JumpMultiplierPerBlock from JumpMultiplierPerYear.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `jump_multiplier_rate_per_year_n`: numerator.
-		/// - `jump_multiplier_rate_per_year_d`: divider.
+		/// - `jump_multiplier_rate_per_year`: used to calculate multiplier per block.
 		///
-		/// `jump_multiplier_per_block = (jump_multiplier_rate_per_year_n /
-		/// jump_multiplier_rate_per_year_d) / blocks_per_year` The dispatch origin of this call
-		/// must be 'ModelUpdateOrigin'.
+		/// `jump_multiplier_per_block = jump_multiplier_rate_per_year / blocks_per_year`
+		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_jump_multiplier_per_block(
+		pub fn set_jump_multiplier_per_year(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			jump_multiplier_rate_per_year_n: u128,
-			jump_multiplier_rate_per_year_d: u128,
+			jump_multiplier_rate_per_year: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
@@ -177,12 +174,8 @@ pub mod module {
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
-			// jump_multiplier_per_block = (jump_multiplier_rate_per_year_n / jump_multiplier_rate_per_year_d) /
-			// blocks_per_year
-			let new_jump_multiplier_per_year =
-				Rate::checked_from_rational(jump_multiplier_rate_per_year_n, jump_multiplier_rate_per_year_d)
-					.ok_or(Error::<T>::NumOverflow)?;
-			let new_jump_multiplier_per_block = new_jump_multiplier_per_year
+			// jump_multiplier_per_block = jump_multiplier_rate_per_year / blocks_per_year
+			let new_jump_multiplier_per_block = jump_multiplier_rate_per_year
 				.checked_div(&Rate::saturating_from_rational(T::BlocksPerYear::get(), 1))
 				.ok_or(Error::<T>::NumOverflow)?;
 
@@ -196,18 +189,16 @@ pub mod module {
 
 		/// Set BaseRatePerBlock from BaseRatePerYear.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `base_rate_per_year_n`: numerator.
-		/// - `base_rate_per_year_d`: divider.
+		/// - `base_rate_per_year`: used to calculate rate per block.
 		///
-		/// `base_rate_per_block = base_rate_per_year_n / base_rate_per_year_d`
+		/// `base_rate_per_block = base_rate_per_year / blocks_per_year`
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_base_rate_per_block(
+		pub fn set_base_rate_per_year(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			base_rate_per_year_n: u128,
-			base_rate_per_year_d: u128,
+			base_rate_per_year: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
@@ -216,9 +207,7 @@ pub mod module {
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
-			let new_base_rate_per_year = Rate::checked_from_rational(base_rate_per_year_n, base_rate_per_year_d)
-				.ok_or(Error::<T>::NumOverflow)?;
-			let new_base_rate_per_block = new_base_rate_per_year
+			let new_base_rate_per_block = base_rate_per_year
 				.checked_div(&Rate::saturating_from_rational(T::BlocksPerYear::get(), 1))
 				.ok_or(Error::<T>::NumOverflow)?;
 
@@ -240,18 +229,16 @@ pub mod module {
 
 		/// Set MultiplierPerBlock from MultiplierPerYear.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `multiplier_rate_per_year_n`: numerator.
-		/// - `multiplier_rate_per_year_d`: divider.
+		/// - `multiplier_per_year`: used to calculate multiplier per block.
 		///
-		/// `multiplier_per_block = (multiplier_rate_per_year_n / multiplier_rate_per_year_d) /
-		/// blocks_per_year` The dispatch origin of this call must be 'ModelUpdateOrigin'.
+		/// `multiplier_per_block = multiplier_per_year / blocks_per_year`
+		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_multiplier_per_block(
+		pub fn set_multiplier_per_year(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			multiplier_rate_per_year_n: u128,
-			multiplier_rate_per_year_d: u128,
+			multiplier_per_year: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
@@ -260,10 +247,7 @@ pub mod module {
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
-			let new_multiplier_per_year =
-				Rate::checked_from_rational(multiplier_rate_per_year_n, multiplier_rate_per_year_d)
-					.ok_or(Error::<T>::NumOverflow)?;
-			let new_multiplier_per_block = new_multiplier_per_year
+			let new_multiplier_per_block = multiplier_per_year
 				.checked_div(&Rate::saturating_from_rational(T::BlocksPerYear::get(), 1))
 				.ok_or(Error::<T>::NumOverflow)?;
 
