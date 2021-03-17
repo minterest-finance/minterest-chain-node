@@ -7,10 +7,10 @@
 
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
-use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
+use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 pub use module::*;
-use pallet_traits::{PoolsManager, PriceProvider};
-use sp_runtime::FixedPointNumber;
+use pallet_traits::{LiquidityPoolsTotalProvider, PoolsManager, PriceProvider};
+use sp_runtime::{traits::CheckedMul, FixedPointNumber};
 use sp_std::{result, vec::Vec};
 
 #[cfg(test)]
@@ -31,6 +31,9 @@ pub mod module {
 		/// The basic liquidity pools.
 		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
 
+		/// Provides total functions
+		type LiquidityPoolsTotalProvider: LiquidityPoolsTotalProvider;
+
 		/// The origin which may update MNT token parameters. Root can
 		/// always do this.
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
@@ -49,6 +52,12 @@ pub mod module {
 
 		/// Pool not found.
 		PoolNotFound,
+
+		/// Arithmetic calculation overflow
+		NumOverflow,
+
+		/// Get underlying currency price is failed
+		GetUnderlyingPriceFail,
 	}
 
 	#[pallet::event]
@@ -115,7 +124,7 @@ pub mod module {
 		pub fn add_market(origin: OriginFor<T>, market: Market) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
-				!T::LiquidityPoolsManager::pool_exists(&market.underlying_id),
+				T::LiquidityPoolsManager::pool_exists(&market.underlying_id),
 				Error::<T>::PoolNotFound
 			);
 			let mut markets = ListedMarkets::<T>::get();
@@ -159,23 +168,30 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
-	// TODO
-	// fn get_all_listed_market_utilities() -> result::Result<Vec<(Market, Balance)>, DispatchError> {
-	// 	// get underlying price
-	// 	// get total borrow
-	// 	// utility = total borrow * underlying price
-	// 	let markets = ListedMarkets::<T>::get();
-	// 	let result: Vec<(Market, Balance)> = Vec::new();
-	// 	for market in markets.iter() {
-	// 		ensure!(
-	// 			T::LiquidityPoolsManager::pool_exists(&market.underlying_id),
-	// 			Error::<T>::PoolNotFound
-	// 		);
-	// 		let underlying_price = T::PriceSource::get_underlying_price(market.underlying_id);
-	// 		// <LiquidityPools<T>>::get_pool_total_borrowed(underlying_asset_id);
-	// 	}
-	// 	Ok(result)
-	// }
+	/// Calculates utilities for all listed markets
+	fn get_listed_markets_utilities() -> result::Result<Vec<(Market, Balance)>, DispatchError> {
+		// utility = total borrow * underlying price
+		let markets = ListedMarkets::<T>::get();
+		let mut result: Vec<(Market, Balance)> = Vec::new();
+		for market in markets.iter() {
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&market.underlying_id),
+				Error::<T>::PoolNotFound
+			);
+			let underlying_price =
+				T::PriceSource::get_underlying_price(market.underlying_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
+			let total_borrow = T::LiquidityPoolsTotalProvider::get_pool_total_borrowed(market.underlying_id);
+
+			// Should we add wrapper for such cases?
+			let utility = Price::from_inner(total_borrow)
+				.checked_mul(&underlying_price)
+				.map(|x| x.into_inner())
+				.ok_or(Error::<T>::NumOverflow)?;
+
+			result.push((*market, utility));
+		}
+		Ok(result)
+	}
 
 	fn refresh_mnt_speeds() {}
 	fn update_mnt_supply_index() {

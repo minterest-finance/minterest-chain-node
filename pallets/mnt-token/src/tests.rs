@@ -61,11 +61,36 @@ fn test_market_list_manipulation() {
 			.any(|record| record.event == remove_market_event));
 		assert_eq!(MntToken::mnt_markets().len(), 1);
 
-		// Try to remove not exist market (already removed)
+		// Try to remove not exist market (that already removed)
 		assert_noop!(
 			MntToken::remove_market(admin(), new_market),
 			Error::<Runtime>::MarketNotExists
 		);
 		assert_eq!(MntToken::mnt_markets().len(), 1);
+	});
+}
+
+#[test]
+fn test_get_listed_market_utilities() {
+	new_test_ext().execute_with(|| {
+		let dot_market = CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT);
+		assert_ok!(MntToken::add_market(admin(), dot_market));
+		let eth_market = CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH);
+		assert_ok!(MntToken::add_market(admin(), eth_market));
+		let ksm_market = CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM);
+		assert_ok!(MntToken::add_market(admin(), ksm_market));
+		let btc_market = CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC);
+		assert_ok!(MntToken::add_market(admin(), btc_market));
+		assert_eq!(MntToken::mnt_markets().len(), 4);
+
+		// Amount tokens: 50 for each market
+		// Prices: DOT[0] = 0.5 USD, ETH[1] = 1.5 USD, KSM[2] = 2 USD, BTC[3] = 3 USD
+		// Expected utilities results: DOT = 25, ETH = 75, KSM = 100, BTC = 150
+		let result = MntToken::get_listed_markets_utilities().unwrap();
+		assert_eq!(result.len(), MntToken::mnt_markets().len());
+		assert_eq!(result[0], (dot_market, 25));
+		assert_eq!(result[1], (eth_market, 75));
+		assert_eq!(result[2], (ksm_market, 100));
+		assert_eq!(result[3], (btc_market, 150));
 	});
 }
