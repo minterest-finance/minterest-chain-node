@@ -364,22 +364,6 @@ impl Contains<AccountId> for WhitelistCouncilProvider {
 	}
 }
 
-pub struct MinterestCouncilProvider;
-impl Contains<AccountId> for MinterestCouncilProvider {
-	fn contains(who: &AccountId) -> bool {
-		MinterestCouncil::is_member(who)
-	}
-
-	fn sorted_members() -> Vec<AccountId> {
-		MinterestCouncil::members()
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn add(_: &AccountId) {
-		todo!()
-	}
-}
-
 parameter_type_with_key! {
 	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
 		Zero::zero()
@@ -770,7 +754,7 @@ impl_runtime_apis! {
 		}
 
 		fn is_admin(caller: AccountId) -> Option<bool> {
-				Some(MinterestCouncilProvider::contains(&caller))
+				Some(MinterestCouncil::is_member(&caller))
 		}
 	}
 
