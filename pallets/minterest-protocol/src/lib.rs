@@ -74,10 +74,6 @@ pub mod module {
 		DepositControllerRejection,
 		/// Redeem was blocked due to Controller rejection.
 		RedeemControllerRejection,
-		/// Borrow was blocked due to Controller rejection.
-		BorrowControllerRejection,
-		/// Repay was blocked due to Controller rejection.
-		RepayBorrowControllerRejection,
 		/// Transaction with zero balance is not allowed.
 		ZeroBalanceTransaction,
 		/// User is trying repay more than he borrowed.
@@ -567,8 +563,7 @@ impl<T: Config> Pallet<T> {
 			<Controller<T>>::is_operation_allowed(underlying_asset_id, Operation::Borrow),
 			Error::<T>::OperationPaused
 		);
-		<Controller<T>>::borrow_allowed(underlying_asset_id, &who, borrow_amount)
-			.map_err(|_| Error::<T>::BorrowControllerRejection)?;
+		<Controller<T>>::borrow_allowed(underlying_asset_id, &who, borrow_amount)?;
 
 		// Fetch the amount the borrower owes, with accumulated interest.
 		let account_borrows =

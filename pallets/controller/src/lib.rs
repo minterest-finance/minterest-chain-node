@@ -506,10 +506,6 @@ impl<T: Config> Pallet<T> {
 			let oracle_price =
 				T::PriceSource::get_underlying_price(underlying_asset).ok_or(Error::<T>::OraclePriceError)?;
 
-			if oracle_price.is_zero() {
-				return Ok((Balance::zero(), Balance::zero()));
-			}
-
 			// Pre-compute a conversion factor from tokens -> dollars (normalized price value)
 			// tokens_to_denom = collateral_factor * exchange_rate * oracle_price
 			let tokens_to_denom = collateral_factor

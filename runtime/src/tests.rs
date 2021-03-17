@@ -455,7 +455,7 @@ fn demo_scenario_n2_without_insurance_should_work() {
 
 			assert_noop!(
 				MinterestProtocol::borrow(charlie(), DOT, 20_000 * DOLLARS),
-				minterest_protocol::Error::<Runtime>::BorrowControllerRejection
+				controller::Error::<Runtime>::InsufficientLiquidity
 			);
 			System::set_block_number(4100);
 			assert_ok!(MinterestProtocol::enable_as_collateral(charlie(), DOT));
