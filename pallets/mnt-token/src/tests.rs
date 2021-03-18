@@ -4,8 +4,67 @@ use super::Error;
 use crate::mock::*;
 
 use frame_support::{assert_noop, assert_ok};
-use minterest_primitives::{CurrencyId, CurrencyPair, Rate};
+use minterest_primitives::{CurrencyId, Rate};
 use sp_arithmetic::FixedPointNumber;
+
+const KSM: CurrencyId = CurrencyId::KSM;
+const DOT: CurrencyId = CurrencyId::DOT;
+const ETH: CurrencyId = CurrencyId::ETH;
+const BTC: CurrencyId = CurrencyId::BTC;
+
+const MAX_RATE_ACCURACY: i64 = 100000000000000000;
+
+#[test]
+fn test_mnt_speed_calculation() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(MntToken::enable_mnt_minting(admin(), DOT));
+		assert_ok!(MntToken::enable_mnt_minting(admin(), KSM));
+		assert_ok!(MntToken::enable_mnt_minting(admin(), ETH));
+		assert_ok!(MntToken::enable_mnt_minting(admin(), BTC));
+		let mnt_rate = Rate::saturating_from_integer(10);
+		assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
+
+		// Formula:
+		// asset_price = oracle.get_underlying_price(mtoken)});
+		// utility = m_tokens_total_borrows * asset_price
+		// utility_fraction = utility / sum_of_all_pools_utilities
+		// pool_mnt_speed = mnt_rate * utility_fraction
+
+		// Input parameters:
+		// mnt_rate: 10
+		// Amount total borrowed tokens: 50 for each pool
+		// Prices: DOT[0] = 0.5 USD, ETH[1] = 1.5 USD, KSM[2] = 2 USD, BTC[3] = 3 USD
+		// utilities: DOT = 25, ETH = 75, KSM = 100, BTC = 150
+		// sum_of_all_pools_utilities = 350
+
+		// DOT
+		// utility_fraction = 25 / 350 = 0.071428571428571428
+		// mnt_speed = utility_fraction * mnt_rate = 0.714285714285714280
+		let expected_dot_mnt_speed = Rate::saturating_from_rational(71428571428571428_i64, MAX_RATE_ACCURACY);
+		assert_eq!(MntToken::mnt_speeds(DOT), Some(expected_dot_mnt_speed));
+
+		// KSM
+		// utility_ftaction = 100 / 350 = 0.285714285714285714
+		// mnt_speed = utility_fraction * mnt_rate = 2.85714285714285714
+		let expected_ksm_mnt_speed = Rate::saturating_from_rational(285714285714285714_i64, MAX_RATE_ACCURACY);
+		assert_eq!(MntToken::mnt_speeds(KSM), Some(expected_ksm_mnt_speed));
+
+		// ETH
+		// utility_ftaction = 75 / 350 = 0.214285714285714285
+		// mnt_speed = utility_fraction * mnt_rate = 2.14285714285714285
+		let expected_eth_mnt_speed = Rate::saturating_from_rational(214285714285714285_i64, MAX_RATE_ACCURACY);
+		assert_eq!(MntToken::mnt_speeds(ETH), Some(expected_eth_mnt_speed));
+
+		// BTC
+		// utility_ftaction = 75 / 350 = 0.428571428571428571
+		// mnt_speed = utility_fraction * mnt_rate = 4.28571428571428571
+		let expected_btc_mnt_speed = Rate::saturating_from_rational(428571428571428571_i64, MAX_RATE_ACCURACY);
+		assert_eq!(MntToken::mnt_speeds(BTC), Some(expected_btc_mnt_speed));
+
+		let sum = expected_dot_mnt_speed + expected_btc_mnt_speed + expected_eth_mnt_speed + expected_ksm_mnt_speed;
+		assert_eq!(sum.round(), mnt_rate);
+	});
+}
 
 #[test]
 fn test_set_mnt_rate() {
@@ -30,81 +89,71 @@ fn test_set_mnt_rate() {
 }
 
 #[test]
-fn test_market_list_manipulation() {
+fn test_minting_enable_disable() {
 	new_test_ext().execute_with(|| {
-		// Add new market
-		let new_market = CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT);
-		assert_ok!(MntToken::add_market(admin(), new_market));
-		let new_market_event = Event::mnt_token(crate::Event::NewMarketListed(new_market));
-		assert!(System::events().iter().any(|record| record.event == new_market_event));
-		assert_eq!(MntToken::mnt_markets().len(), 1);
-
-		// Try to add the same market
+		// Add new mnt minting
+		assert_ok!(MntToken::enable_mnt_minting(admin(), DOT));
+		let new_minting_event = Event::mnt_token(crate::Event::MntMintingEnabled(DOT));
+		assert!(System::events().iter().any(|record| record.event == new_minting_event));
+		assert_ne!(MntToken::mnt_speeds(DOT), None);
+		// Try to add the same pool
 		assert_noop!(
-			MntToken::add_market(admin(), new_market),
-			Error::<Runtime>::MarketAlreadyExists
+			MntToken::enable_mnt_minting(admin(), DOT),
+			Error::<Runtime>::MntMintingAlreadyEnabled
 		);
-		assert_eq!(MntToken::mnt_markets().len(), 1);
 
-		// Add second market
-		let new_market2 = CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM);
-		assert_ok!(MntToken::add_market(admin(), new_market2));
-		let new_market_event = Event::mnt_token(crate::Event::NewMarketListed(new_market2));
-		assert!(System::events().iter().any(|record| record.event == new_market_event));
-		assert_eq!(MntToken::mnt_markets().len(), 2);
+		// Add minting for another one pool
+		assert_ok!(MntToken::enable_mnt_minting(admin(), KSM));
+		let new_minting_event = Event::mnt_token(crate::Event::MntMintingEnabled(KSM));
+		assert!(System::events().iter().any(|record| record.event == new_minting_event));
+		assert_ne!(MntToken::mnt_speeds(KSM), None);
 
-		// Remove first market
-		assert_ok!(MntToken::remove_market(admin(), new_market));
-		let remove_market_event = Event::mnt_token(crate::Event::MarketRemoved(new_market));
+		// Disable MNT minting for DOT
+		assert_ok!(MntToken::disable_mnt_minting(admin(), DOT));
+		let disable_mnt_minting_event = Event::mnt_token(crate::Event::MntMintingDisabled(DOT));
 		assert!(System::events()
 			.iter()
-			.any(|record| record.event == remove_market_event));
-		assert_eq!(MntToken::mnt_markets().len(), 1);
+			.any(|record| record.event == disable_mnt_minting_event));
+		assert_eq!(MntToken::mnt_speeds(DOT), None);
 
-		// Try to remove not exist market (that already removed)
+		// Try to disable minting that wasn't enabled
 		assert_noop!(
-			MntToken::remove_market(admin(), new_market),
-			Error::<Runtime>::MarketNotExists
+			MntToken::disable_mnt_minting(admin(), DOT),
+			Error::<Runtime>::MntMintingNotEnabled,
 		);
-		assert_eq!(MntToken::mnt_markets().len(), 1);
 	});
 }
 
 #[test]
-fn test_get_listed_market_utilities() {
+fn test_calculate_enabled_pools_utilities() {
 	new_test_ext().execute_with(|| {
-		let dot_market = CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT);
-		assert_ok!(MntToken::add_market(admin(), dot_market));
-		let eth_market = CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH);
-		assert_ok!(MntToken::add_market(admin(), eth_market));
-		let ksm_market = CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM);
-		assert_ok!(MntToken::add_market(admin(), ksm_market));
-		let btc_market = CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC);
-		assert_ok!(MntToken::add_market(admin(), btc_market));
-		assert_eq!(MntToken::mnt_markets().len(), 4);
+		assert_ok!(MntToken::enable_mnt_minting(admin(), DOT));
+		assert_ok!(MntToken::enable_mnt_minting(admin(), ETH));
+		assert_ok!(MntToken::enable_mnt_minting(admin(), KSM));
+		assert_ok!(MntToken::enable_mnt_minting(admin(), BTC));
+		assert_ne!(MntToken::mnt_speeds(DOT), None);
+		assert_ne!(MntToken::mnt_speeds(ETH), None);
+		assert_ne!(MntToken::mnt_speeds(KSM), None);
+		assert_ne!(MntToken::mnt_speeds(BTC), None);
 
-		// Amount tokens: 50 for each market
+		// Amount tokens: 50 for each currency
 		// Prices: DOT[0] = 0.5 USD, ETH[1] = 1.5 USD, KSM[2] = 2 USD, BTC[3] = 3 USD
 		// Expected utilities results: DOT = 25, ETH = 75, KSM = 100, BTC = 150
-		let (markets_result, total_utility) = MntToken::get_listed_markets_utilities().unwrap();
-		assert_eq!(markets_result.len(), MntToken::mnt_markets().len());
-		assert_eq!(markets_result[0], (dot_market, 25));
-		assert_eq!(markets_result[1], (eth_market, 75));
-		assert_eq!(markets_result[2], (ksm_market, 100));
-		assert_eq!(markets_result[3], (btc_market, 150));
+		let (currency_utilities, total_utility) = MntToken::calculate_enabled_pools_utilities().unwrap();
+		assert!(currency_utilities.contains(&(DOT, 25)));
+		assert!(currency_utilities.contains(&(ETH, 75)));
+		assert!(currency_utilities.contains(&(KSM, 100)));
+		assert!(currency_utilities.contains(&(BTC, 150)));
 		assert_eq!(total_utility, 350);
 	});
 }
 
 #[test]
-fn get_get_listed_market_utilities_fail() {
+fn test_calculate_enabled_pools_utilities_fail() {
 	new_test_ext().execute_with(|| {
-		// Not listed in liquidity pool market.
-		// get_underlying_price should fail
-		let not_listed_market = CurrencyPair::new(CurrencyId::MNT, CurrencyId::MDOT);
-		assert_ok!(MntToken::add_market(admin(), not_listed_market));
+		let non_existent_liquidity_pool = CurrencyId::MNT;
 		assert_noop!(
-			MntToken::get_listed_markets_utilities(),
+			MntToken::enable_mnt_minting(admin(), non_existent_liquidity_pool),
 			Error::<Runtime>::GetUnderlyingPriceFail
 		);
 	});

@@ -7,11 +7,11 @@
 
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
-use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
+use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 pub use module::*;
 use pallet_traits::{LiquidityPoolsTotalProvider, PoolsManager, PriceProvider};
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedMul, Zero},
+	traits::{CheckedDiv, CheckedMul, Zero},
 	FixedPointNumber,
 };
 use sp_std::{result, vec::Vec};
@@ -20,8 +20,6 @@ use sp_std::{result, vec::Vec};
 mod mock;
 #[cfg(test)]
 mod tests;
-
-type Market = CurrencyPair;
 
 #[frame_support::pallet]
 pub mod module {
@@ -47,11 +45,11 @@ pub mod module {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Try to add market that already presented in ListedMarkets
-		MarketAlreadyExists,
+		/// Trying to enable already enabled minting for Liquidity Pool
+		MntMintingAlreadyEnabled,
 
-		/// Try to ramove market that is not presented in ListedMarkets
-		MarketNotExists,
+		/// Trying to disable MNT minting that wasn't enable
+		MntMintingNotEnabled,
 
 		/// Pool not found.
 		PoolNotFound,
@@ -69,11 +67,11 @@ pub mod module {
 		/// Change rate event (old_rate, new_rate)
 		NewMntRate(Rate, Rate),
 
-		/// New market was added to listing
-		NewMarketListed(Market),
+		/// MNT minting enabled for Liquidity pool
+		MntMintingEnabled(CurrencyId),
 
-		/// Market was removed from listring
-		MarketRemoved(Market),
+		/// MNT minting disabled for Liquidity pool
+		MntMintingDisabled(CurrencyId),
 	}
 
 	#[pallet::storage]
@@ -82,13 +80,7 @@ pub mod module {
 
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_speeds)]
-	type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, Market, Rate, OptionQuery>;
-
-	/// Markets that allowed to earn MNT token
-	#[pallet::storage]
-	#[pallet::getter(fn mnt_markets)]
-	// TODO Add MAXIMUM value for Vec<Market>
-	pub(crate) type ListedMarkets<T: Config> = StorageValue<_, Vec<Market>, ValueQuery>;
+	pub(crate) type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Rate, OptionQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -123,47 +115,46 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(10_000)]
 		#[transactional]
-		/// Add market to MNT markets list to allow earn MNT tokens
-		pub fn add_market(origin: OriginFor<T>, market: Market) -> DispatchResultWithPostInfo {
+		/// Enable MNT minting for pool and recalculate MntSpeeds
+		pub fn enable_mnt_minting(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&market.underlying_id),
+				T::LiquidityPoolsManager::pool_exists(&currency_id),
 				Error::<T>::PoolNotFound
 			);
-			let mut markets = ListedMarkets::<T>::get();
-			ensure!(!markets.contains(&market), Error::<T>::MarketAlreadyExists);
-			markets.push(market);
-			ListedMarkets::<T>::put(markets);
-			Self::deposit_event(Event::NewMarketListed(market));
-			Ok(().into())
-		}
-
-		/// Stop earning MNT tokens for market
-		#[pallet::weight(10_000)]
-		#[transactional]
-		pub fn remove_market(origin: OriginFor<T>, market: Market) -> DispatchResultWithPostInfo {
-			T::UpdateOrigin::ensure_origin(origin)?;
-			let mut markets = ListedMarkets::<T>::get();
-			ensure!(markets.contains(&market), Error::<T>::MarketNotExists);
-			markets.remove(
-				markets
-					.iter()
-					.position(|x| *x == market)
-					.expect("Market not found" /* should never be here */),
+			ensure!(
+				!MntSpeeds::<T>::contains_key(currency_id),
+				Error::<T>::MntMintingAlreadyEnabled
 			);
-			ListedMarkets::<T>::put(markets);
-			Self::deposit_event(Event::MarketRemoved(market));
+			MntSpeeds::<T>::insert(currency_id, Rate::zero());
+			Pallet::<T>::refresh_mnt_speeds()?;
+			Self::deposit_event(Event::MntMintingEnabled(currency_id));
 			Ok(().into())
 		}
 
 		#[pallet::weight(10_000)]
 		#[transactional]
-		/// Set MNT rate and recalculate MNT speed distribution for all markets
+		/// Disable MNT minting for pool and recalculate MntSpeeds
+		pub fn disable_mnt_minting(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
+			T::UpdateOrigin::ensure_origin(origin)?;
+			ensure!(
+				MntSpeeds::<T>::contains_key(currency_id),
+				Error::<T>::MntMintingNotEnabled
+			);
+			MntSpeeds::<T>::remove(currency_id);
+			Pallet::<T>::refresh_mnt_speeds()?;
+			Self::deposit_event(Event::MntMintingDisabled(currency_id));
+			Ok(().into())
+		}
+
+		#[pallet::weight(10_000)]
+		#[transactional]
+		/// Set MNT rate and recalculate MntSpeeds distribution for all currencies
 		pub fn set_mnt_rate(origin: OriginFor<T>, new_rate: Rate) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			let old_rate = MntRate::<T>::get();
 			MntRate::<T>::put(new_rate);
-			Pallet::<T>::refresh_mnt_speeds();
+			Pallet::<T>::refresh_mnt_speeds()?;
 			Self::deposit_event(Event::NewMntRate(old_rate, new_rate));
 			Ok(().into())
 		}
@@ -171,22 +162,20 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
-	/// Calculates utilities for all listed markets and total sum of them
-	fn get_listed_markets_utilities() -> result::Result<(Vec<(Market, Balance)>, Balance), DispatchError> {
-		// utility = total borrow * underlying price
-		let markets = ListedMarkets::<T>::get();
-		let mut result: Vec<(Market, Balance)> = Vec::new();
+	/// Calculate utilities for enabled pools and sum of all pools utilities
+	fn calculate_enabled_pools_utilities() -> result::Result<(Vec<(CurrencyId, Balance)>, Balance), DispatchError> {
+		let minted_pools = MntSpeeds::<T>::iter();
+		let mut result: Vec<(CurrencyId, Balance)> = Vec::new();
 		let mut total_utility: Balance = Balance::zero();
-		for market in markets.iter() {
+		for (currency_id, _) in minted_pools {
 			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&market.underlying_id),
+				T::LiquidityPoolsManager::pool_exists(&currency_id),
 				Error::<T>::PoolNotFound
 			);
 			let underlying_price =
-				T::PriceSource::get_underlying_price(market.underlying_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
-			let total_borrow = T::LiquidityPoolsTotalProvider::get_pool_total_borrowed(market.underlying_id);
+				T::PriceSource::get_underlying_price(currency_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
+			let total_borrow = T::LiquidityPoolsTotalProvider::get_pool_total_borrowed(currency_id);
 
-			// Should we add wrapper for such cases?
 			let utility = Price::from_inner(total_borrow)
 				.checked_mul(&underlying_price)
 				.map(|x| x.into_inner())
@@ -194,20 +183,23 @@ impl<T: Config> Pallet<T> {
 
 			total_utility = total_utility.checked_add(utility).ok_or(Error::<T>::NumOverflow)?;
 
-			result.push((*market, utility));
+			result.push((currency_id, utility));
 		}
 		Ok((result, total_utility))
 	}
 
 	fn refresh_mnt_speeds() -> result::Result<(), DispatchError> {
-		let utilities = Pallet::<T>::get_listed_markets_utilities()?;
+		let (pool_utilities, sum_of_all_utilities) = Pallet::<T>::calculate_enabled_pools_utilities()?;
+		let mnt_rate = Pallet::<T>::mnt_rate();
+		for (currency_id, utility) in pool_utilities {
+			let utility = Rate::from_inner(utility);
+			let sum_of_all_utilities = Rate::from_inner(sum_of_all_utilities);
+			let utility_fraction = utility
+				.checked_div(&sum_of_all_utilities)
+				.ok_or(Error::<T>::NumOverflow)?;
+			let pool_mnt_speed = mnt_rate.checked_mul(&utility_fraction).ok_or(Error::<T>::NumOverflow)?;
+			MntSpeeds::<T>::insert(currency_id, pool_mnt_speed);
+		}
 		Ok(())
-	}
-
-	fn update_mnt_supply_index() {
-		// TODO Update only if comp_speed > 0
-	}
-	fn update_mnt_borrow_index() {
-		// TODO Update only if comp_speed > 0
 	}
 }
