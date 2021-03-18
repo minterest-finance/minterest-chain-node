@@ -158,7 +158,7 @@ impl controller::Config for Test {
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
-	type WeightInfo = ();
+	type ControllerWeightInfo = ();
 }
 
 parameter_types! {
@@ -169,6 +169,7 @@ impl minterest_model::Config for Test {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
 	type ModelUpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
+	type WeightInfo = ();
 }
 
 thread_local! {

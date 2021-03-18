@@ -135,6 +135,7 @@ impl minterest_model::Config for Test {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
 	type ModelUpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
+	type WeightInfo = ();
 }
 
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;

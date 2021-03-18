@@ -1133,6 +1133,82 @@ fn partial_liquidation_multi_collateral_should_work() {
 }
 
 #[test]
+fn partial_liquidation_multi_collateral_should_work_test() {
+	ExtBuilder::default()
+		.liquidity_pool_balance(CurrencyId::DOT, 5_000 * DOLLARS)
+		.liquidity_pool_balance(CurrencyId::ETH, 10_000 * DOLLARS)
+		.liquidity_pool_balance(CurrencyId::KSM, 10_000 * DOLLARS)
+		.liquidity_pool_balance(CurrencyId::BTC, 10_000 * DOLLARS)
+		.liquidation_pool_balance(CurrencyId::DOT, 40_000 * DOLLARS)
+		.user_balance(ALICE::get(), CurrencyId::MDOT, 10_000 * DOLLARS)
+		.user_balance(BOB::get(), CurrencyId::MDOT, 30_000 * DOLLARS)
+		.user_balance(ALICE::get(), CurrencyId::METH, 10_000 * DOLLARS)
+		.user_balance(ALICE::get(), CurrencyId::MKSM, 10_000 * DOLLARS)
+		.user_balance(ALICE::get(), CurrencyId::MBTC, 10_000 * DOLLARS)
+		.pool_user_data(CurrencyId::DOT, ALICE::get(), 36_000 * DOLLARS, Rate::one(), true, 0)
+		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Rate::one(), true, 0)
+		.pool_user_data(CurrencyId::KSM, ALICE::get(), 0, Rate::one(), true, 0)
+		.pool_user_data(CurrencyId::BTC, ALICE::get(), 0, Rate::one(), true, 0)
+		.pool_total_borrowed(CurrencyId::DOT, 36_000 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
+			System::set_block_number(2);
+
+			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT));
+
+			// let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
+			// 	ALICE::get(),
+			// 	54_000 * DOLLARS,
+			// 	CurrencyId::DOT,
+			// 	vec![CurrencyId::ETH],
+			// 	true,
+			// ));
+			// assert!(System::events().iter().any(|record| record.event == expected_event));
+			//
+			// assert_eq!(
+			// 	Currencies::free_balance(CurrencyId::MDOT, &ALICE::get()),
+			// 	20_000 * DOLLARS
+			// );
+			// assert_eq!(
+			// 	Currencies::free_balance(CurrencyId::METH, &ALICE::get()),
+			// 	51_650 * DOLLARS
+			// );
+			//
+			// assert_eq!(
+			// 	LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
+			// 	157_000 * DOLLARS
+			// );
+			// assert_eq!(
+			// 	LiquidityPools::get_pool_available_liquidity(CurrencyId::ETH),
+			// 	51_650 * DOLLARS
+			// );
+			//
+			// assert_eq!(
+			// 	LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
+			// 	73_000 * DOLLARS
+			// );
+			// assert_eq!(
+			// 	LiquidationPools::get_pool_available_liquidity(CurrencyId::ETH),
+			// 	128_350 * DOLLARS
+			// );
+			//
+			// assert_eq!(LiquidityPools::pools(CurrencyId::DOT).total_borrowed, 63_000 * DOLLARS);
+			// assert_eq!(
+			// 	LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).total_borrowed,
+			// 	63_000 * DOLLARS
+			// );
+			//
+			// assert_eq!(
+			// 	LiquidityPools::pool_user_data(CurrencyId::DOT, ALICE::get()).liquidation_attempts,
+			// 	1
+			// );
+		})
+}
+
+#[test]
 fn complete_liquidation_should_not_work() {
 	ExtBuilder::default()
 		.liquidity_pool_balance(CurrencyId::DOT, 60_000 * DOLLARS)

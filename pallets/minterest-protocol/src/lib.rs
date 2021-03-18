@@ -544,7 +544,7 @@ impl<T: Config> Pallet<T> {
 	/// - `who`: the address of the user who borrows.
 	/// - `underlying_asset_id`: the currency ID of the underlying asset to borrow.
 	/// - `underlying_amount`: the amount of the underlying asset to borrow.
-	fn do_borrow(who: &T::AccountId, underlying_asset_id: CurrencyId, borrow_amount: Balance) -> DispatchResult {
+	pub fn do_borrow(who: &T::AccountId, underlying_asset_id: CurrencyId, borrow_amount: Balance) -> DispatchResult {
 		ensure!(
 			<LiquidityPools<T>>::is_enabled_underlying_asset_id(underlying_asset_id),
 			Error::<T>::NotValidUnderlyingAssetId

@@ -479,6 +479,7 @@ impl risk_manager::Config for Runtime {
 	type LiquidationPoolsManager = LiquidationPools;
 	type LiquidityPoolsManager = LiquidityPools;
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
+	type RiskManagerWeightInfo = weights::risk_manager::WeightInfo<Runtime>;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -810,6 +811,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, controller, benchmarking::controller);
 			add_benchmark!(params, batches, minterest_model, benchmarking::minterest_model);
 			add_benchmark!(params, batches, module_prices, benchmarking::prices);
+			add_benchmark!(params, batches, risk_manager, benchmarking::risk_manager);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

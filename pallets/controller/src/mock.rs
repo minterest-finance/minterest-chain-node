@@ -159,6 +159,7 @@ impl minterest_model::Config for Runtime {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
 	type ModelUpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
+	type WeightInfo = ();
 }
 
 ord_parameter_types! {
@@ -174,7 +175,7 @@ impl Config for Runtime {
 	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
-	type WeightInfo = ();
+	type ControllerWeightInfo = ();
 }
 
 pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
