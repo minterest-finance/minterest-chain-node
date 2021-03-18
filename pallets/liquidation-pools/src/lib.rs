@@ -433,30 +433,15 @@ impl<T: Config> Pallet<T> {
 
 			// The number of assets (and USD equivalent) to be sent to the DEX will be equal to
 			// the minimum value between (max_shortfall, max_oversupply).
-			let (bite, bite_in_usd) = match max_shortfall.cmp(&max_oversupply) {
-				Ordering::Greater => {
-					let oracle_price = T::PriceSource::get_underlying_price(max_oversupply_pool_id)
-						.ok_or(Error::<T>::InvalidFeedPrice)?;
-					(
-						Rate::from_inner(max_oversupply)
-							.checked_div(&oracle_price)
-							.map(|x| x.into_inner())
-							.ok_or(Error::<T>::NumOverflow)?,
-						max_oversupply,
-					)
-				}
-				_ => {
-					let oracle_price = T::PriceSource::get_underlying_price(max_shortfall_pool_id)
-						.ok_or(Error::<T>::InvalidFeedPrice)?;
-					(
-						Rate::from_inner(max_shortfall)
-							.checked_div(&oracle_price)
-							.map(|x| x.into_inner())
-							.ok_or(Error::<T>::NumOverflow)?,
-						max_shortfall,
-					)
-				}
+			let (bite_in_usd, pool_id) = match max_shortfall.cmp(&max_oversupply) {
+				Ordering::Greater => (max_oversupply, max_oversupply_pool_id),
+				_ => (max_shortfall, max_shortfall_pool_id),
 			};
+			let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+			let bite = Rate::from_inner(bite_in_usd)
+				.checked_div(&oracle_price)
+				.map(|x| x.into_inner())
+				.ok_or(Error::<T>::NumOverflow)?;
 
 			// Add "sale" to the sales list.
 			to_sell_list.push(Sales {
@@ -466,29 +451,25 @@ impl<T: Config> Pallet<T> {
 			});
 
 			// Updating the information vector.
-			information_vec[max_oversupply_index] = LiquidationInformation {
-				balance: information_vec[max_oversupply_index]
-					.balance
-					.checked_sub(bite_in_usd)
-					.ok_or(Error::<T>::NumOverflow)?,
-				oversupply: information_vec[max_oversupply_index]
-					.oversupply
-					.checked_sub(bite_in_usd)
-					.ok_or(Error::<T>::NumOverflow)?,
-				..information_vec[max_oversupply_index]
-			};
+			let pool_with_max_oversupply = &mut information_vec[max_oversupply_index];
+			pool_with_max_oversupply.balance = pool_with_max_oversupply
+				.balance
+				.checked_sub(bite_in_usd)
+				.ok_or(Error::<T>::NumOverflow)?;
+			pool_with_max_oversupply.oversupply = pool_with_max_oversupply
+				.oversupply
+				.checked_sub(bite_in_usd)
+				.ok_or(Error::<T>::NumOverflow)?;
 
-			information_vec[max_shortfall_index] = LiquidationInformation {
-				balance: information_vec[max_shortfall_index]
-					.balance
-					.checked_add(bite_in_usd)
-					.ok_or(Error::<T>::NumOverflow)?,
-				shortfall: information_vec[max_shortfall_index]
-					.shortfall
-					.checked_sub(bite_in_usd)
-					.ok_or(Error::<T>::NumOverflow)?,
-				..information_vec[max_shortfall_index]
-			};
+			let pool_with_max_shortfall = &mut information_vec[max_shortfall_index];
+			pool_with_max_shortfall.balance = pool_with_max_shortfall
+				.balance
+				.checked_add(bite_in_usd)
+				.ok_or(Error::<T>::NumOverflow)?;
+			pool_with_max_shortfall.shortfall = pool_with_max_shortfall
+				.shortfall
+				.checked_sub(bite_in_usd)
+				.ok_or(Error::<T>::NumOverflow)?;
 
 			sum_oversupply = sum_oversupply.checked_sub(bite_in_usd).ok_or(Error::<T>::NumOverflow)?;
 			sum_shortfall = sum_shortfall.checked_sub(bite_in_usd).ok_or(Error::<T>::NumOverflow)?;
