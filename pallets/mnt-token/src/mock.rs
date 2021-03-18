@@ -71,7 +71,7 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 			CurrencyId::DOT => return Some(Price::saturating_from_rational(5, 10)), // 0.5 USD
 			CurrencyId::ETH => return Some(Price::saturating_from_rational(15, 10)), // 1.5 USD
 			CurrencyId::KSM => return Some(Price::saturating_from_integer(2)),      // 2 USD
-			CurrencyId::BTC => return Some(Price::saturating_from_integer(3)),      // 2 USD
+			CurrencyId::BTC => return Some(Price::saturating_from_integer(3)),      // 3 USD
 			_ => return None,
 		}
 	}

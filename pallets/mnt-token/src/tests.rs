@@ -86,12 +86,13 @@ fn test_get_listed_market_utilities() {
 		// Amount tokens: 50 for each market
 		// Prices: DOT[0] = 0.5 USD, ETH[1] = 1.5 USD, KSM[2] = 2 USD, BTC[3] = 3 USD
 		// Expected utilities results: DOT = 25, ETH = 75, KSM = 100, BTC = 150
-		let result = MntToken::get_listed_markets_utilities().unwrap();
-		assert_eq!(result.len(), MntToken::mnt_markets().len());
-		assert_eq!(result[0], (dot_market, 25));
-		assert_eq!(result[1], (eth_market, 75));
-		assert_eq!(result[2], (ksm_market, 100));
-		assert_eq!(result[3], (btc_market, 150));
+		let (markets_result, total_utility) = MntToken::get_listed_markets_utilities().unwrap();
+		assert_eq!(markets_result.len(), MntToken::mnt_markets().len());
+		assert_eq!(markets_result[0], (dot_market, 25));
+		assert_eq!(markets_result[1], (eth_market, 75));
+		assert_eq!(markets_result[2], (ksm_market, 100));
+		assert_eq!(markets_result[3], (btc_market, 150));
+		assert_eq!(total_utility, 350);
 	});
 }
 

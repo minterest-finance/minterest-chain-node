@@ -10,7 +10,10 @@ use frame_system::pallet_prelude::*;
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 pub use module::*;
 use pallet_traits::{LiquidityPoolsTotalProvider, PoolsManager, PriceProvider};
-use sp_runtime::{traits::CheckedMul, FixedPointNumber};
+use sp_runtime::{
+	traits::{CheckedAdd, CheckedMul, Zero},
+	FixedPointNumber,
+};
 use sp_std::{result, vec::Vec};
 
 #[cfg(test)]
@@ -168,11 +171,12 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
-	/// Calculates utilities for all listed markets
-	fn get_listed_markets_utilities() -> result::Result<Vec<(Market, Balance)>, DispatchError> {
+	/// Calculates utilities for all listed markets and total sum of them
+	fn get_listed_markets_utilities() -> result::Result<(Vec<(Market, Balance)>, Balance), DispatchError> {
 		// utility = total borrow * underlying price
 		let markets = ListedMarkets::<T>::get();
 		let mut result: Vec<(Market, Balance)> = Vec::new();
+		let mut total_utility: Balance = Balance::zero();
 		for market in markets.iter() {
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&market.underlying_id),
@@ -188,12 +192,18 @@ impl<T: Config> Pallet<T> {
 				.map(|x| x.into_inner())
 				.ok_or(Error::<T>::NumOverflow)?;
 
+			total_utility = total_utility.checked_add(utility).ok_or(Error::<T>::NumOverflow)?;
+
 			result.push((*market, utility));
 		}
-		Ok(result)
+		Ok((result, total_utility))
 	}
 
-	fn refresh_mnt_speeds() {}
+	fn refresh_mnt_speeds() -> result::Result<(), DispatchError> {
+		let utilities = Pallet::<T>::get_listed_markets_utilities()?;
+		Ok(())
+	}
+
 	fn update_mnt_supply_index() {
 		// TODO Update only if comp_speed > 0
 	}
