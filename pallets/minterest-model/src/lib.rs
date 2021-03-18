@@ -208,7 +208,7 @@ pub mod module {
 			);
 
 			let new_base_rate_per_block = base_rate_per_year
-				.checked_div(&Rate::saturating_from_rational(T::BlocksPerYear::get(), 1))
+				.checked_div(&Rate::saturating_from_integer(T::BlocksPerYear::get()))
 				.ok_or(Error::<T>::NumOverflow)?;
 
 			// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
