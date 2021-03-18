@@ -47,7 +47,6 @@ pub use minterest_primitives::{
 };
 
 // A few exports that help ease life for downstream crates.
-pub use controller::Call as ControllerCall;
 pub use frame_support::{
 	construct_runtime, debug, parameter_types,
 	traits::{KeyOwnerProofSystem, Randomness},
