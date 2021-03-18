@@ -176,7 +176,7 @@ pub mod module {
 
 			// jump_multiplier_per_block = jump_multiplier_rate_per_year / blocks_per_year
 			let new_jump_multiplier_per_block = jump_multiplier_rate_per_year
-				.checked_div(&Rate::saturating_from_rational(T::BlocksPerYear::get(), 1))
+				.checked_div(&Rate::saturating_from_integer(T::BlocksPerYear::get()))
 				.ok_or(Error::<T>::NumOverflow)?;
 
 			// Write the previously calculated values into storage.
@@ -248,7 +248,7 @@ pub mod module {
 			);
 
 			let new_multiplier_per_block = multiplier_per_year
-				.checked_div(&Rate::saturating_from_rational(T::BlocksPerYear::get(), 1))
+				.checked_div(&Rate::saturating_from_integer(T::BlocksPerYear::get()))
 				.ok_or(Error::<T>::NumOverflow)?;
 
 			// Multiplier per block cannot be set to 0 at the same time as Base rate per block .
