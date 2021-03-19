@@ -52,9 +52,9 @@ pub trait DEXManager<AccountId, CurrencyId, Balance> {
 
 	fn swap_with_exact_target(
 		who: &AccountId,
-		target_currency_id: CurrencyId,
 		supply_currency_id: CurrencyId,
-		target_amount: Balance,
+		target_currency_id: CurrencyId,
 		max_supply_amount: Balance,
+		target_amount: Balance,
 	) -> sp_std::result::Result<Balance, DispatchError>;
 }

@@ -258,13 +258,13 @@ pub mod module {
 		#[transactional]
 		pub fn balance_liquidation_pools(
 			origin: OriginFor<T>,
-			extra_pool_id: CurrencyId,
-			shortfall_pool_id: CurrencyId,
+			supply_pool_id: CurrencyId,
+			target_pool_id: CurrencyId,
 			amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let _ = ensure_none(origin)?;
 			let module_id = Self::pools_account_id();
-			T::Dex::swap_with_exact_target(&module_id, extra_pool_id, shortfall_pool_id, amount, amount)?;
+			T::Dex::swap_with_exact_target(&module_id, supply_pool_id, target_pool_id, amount, amount)?;
 			Self::deposit_event(Event::LiquidationPoolsBalanced);
 			Ok(().into())
 		}

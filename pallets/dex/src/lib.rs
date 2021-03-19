@@ -96,8 +96,8 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		supply_currency_id: CurrencyId,
 		target_currency_id: CurrencyId,
-		target_amount: Balance,
 		max_supply_amount: Balance,
+		target_amount: Balance,
 	) -> sp_std::result::Result<Balance, DispatchError> {
 		let target_dex_balance = Self::get_dex_available_liquidity(target_currency_id);
 		let module_account_id = Self::dex_account_id();
@@ -111,8 +111,8 @@ impl<T: Config> Pallet<T> {
 			who.clone(),
 			supply_currency_id,
 			target_currency_id,
-			target_amount,
 			max_supply_amount,
+			target_amount,
 		));
 
 		Ok(target_amount)
@@ -153,15 +153,15 @@ impl<T: Config> DEXManager<T::AccountId, CurrencyId, Balance> for Pallet<T> {
 		who: &T::AccountId,
 		supply_currency_id: CurrencyId,
 		target_currency_id: CurrencyId,
-		target_amount: Balance,
 		max_supply_amount: Balance,
+		target_amount: Balance,
 	) -> sp_std::result::Result<Balance, DispatchError> {
 		Self::do_swap_with_exact_target(
 			who,
 			supply_currency_id,
 			target_currency_id,
-			target_amount,
 			max_supply_amount,
+			target_amount,
 		)
 	}
 }

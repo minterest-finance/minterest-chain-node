@@ -1418,3 +1418,65 @@ fn balance_liquidation_pools_should_work() {
 			assert_eq!(liquidation_pool_balance(CurrencyId::BTC), 500_000 * DOLLARS);
 		});
 }
+
+#[test]
+fn balance_liquidation_pools_two_pools_should_work_test() {
+	ExtBuilder::default()
+		.liquidity_pool_balance(CurrencyId::DOT, 500_000 * DOLLARS)
+		.liquidity_pool_balance(CurrencyId::ETH, 300_000 * DOLLARS)
+		.liquidation_pool_balance(CurrencyId::DOT, 170_000 * DOLLARS) // + 140 000$
+		.liquidation_pool_balance(CurrencyId::ETH, 30_000 * DOLLARS) //
+		// - 120 000$
+		.dex_balance(CurrencyId::DOT, 500_000 * DOLLARS)
+		.dex_balance(CurrencyId::ETH, 500_000 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			let prices: Vec<(CurrencyId, Price)> = vec![
+				(CurrencyId::DOT, Price::saturating_from_integer(2)),
+				(CurrencyId::ETH, Price::saturating_from_integer(4)),
+				(CurrencyId::BTC, Price::saturating_from_integer(0)), // unused
+				(CurrencyId::KSM, Price::saturating_from_integer(0)), // unused
+			];
+			MinterestOracle::on_finalize(0);
+			assert_ok!(MinterestOracle::feed_values(origin_of(ORACLE1::get().clone()), prices));
+			/*
+			Liquidity Pools balances (in assets): [500_000, 300_000]
+			Liquidity Pools balances (in USD): [1_000_000, 1_200_000]
+			Liquidation Pools balances (in assets): [170_000, 30_000]
+			Liquidation Pools balances (in USD):                  [340_000 (+ 140 000$), 120_000 (- 120 000$)]
+			Ideal balances 0.2 * liquidity_pool_balance (in USD): [200_000, 240_000]
+			Sales list (in assets): [(DOT, ETH, 30 (ETH!))
+			*/
+			let expected_sales_list = vec![Sales {
+				supply_pool_id: CurrencyId::DOT,
+				target_pool_id: CurrencyId::ETH,
+				amount: 30_000 * DOLLARS, //ETH
+			}];
+			assert_eq!(LiquidationPools::collects_sales_list(), Ok(expected_sales_list.clone()));
+			expected_sales_list.iter().for_each(|sale| {
+				let _ = LiquidationPools::balance_liquidation_pools(
+					origin_none(),
+					sale.supply_pool_id,
+					sale.target_pool_id,
+					sale.amount,
+				);
+			});
+			// Test that the expected events were emitted
+			let our_events = System::events()
+				.into_iter()
+				.map(|r| r.event)
+				.filter_map(|e| if let Event::dex(inner) = e { Some(inner) } else { None })
+				.collect::<Vec<_>>();
+			let expected_events = vec![dex::Event::Swap(
+				LiquidationPools::pools_account_id(),
+				CurrencyId::DOT,
+				CurrencyId::ETH,
+				30_000 * DOLLARS,
+				30_000 * DOLLARS,
+			)];
+			assert_eq!(our_events, expected_events);
+			// Liquidation Pool balances in assets
+			assert_eq!(liquidation_pool_balance(CurrencyId::DOT), 140_000 * DOLLARS);
+			assert_eq!(liquidation_pool_balance(CurrencyId::ETH), 60_000 * DOLLARS);
+		});
+}
