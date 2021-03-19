@@ -1,7 +1,8 @@
-use crate::{CurrencyId, Operation, Runtime};
+use crate::{CurrencyId, Operation, Rate, Runtime};
 
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
+use sp_runtime::FixedPointNumber;
 use sp_std::prelude::*;
 
 runtime_benchmarks! {
@@ -27,23 +28,20 @@ runtime_benchmarks! {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
-		10u128,
-		10u128
+		Rate::one()
 	)
 
 	set_max_borrow_rate {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
-		10u128,
-		10u128
+		Rate::one()
 	)
 
 	set_collateral_factor {}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
-		10u128,
-		10u128
+		Rate::one()
 	)
 
 	set_borrow_cap {}: _(

@@ -1,7 +1,7 @@
 use super::utils::{enable_as_collateral, lookup_of_account, set_balance, set_oracle_price_for_all_pools};
 use crate::{
-	AccountId, Balance, CurrencyId, LiquidationPoolsModuleId, LiquidityPools, LiquidityPoolsModuleId, Origin, Rate,
-	Runtime, System, DOLLARS,
+	AccountId, CurrencyId, LiquidationPoolsModuleId, LiquidityPools, LiquidityPoolsModuleId, Origin, Rate, Runtime,
+	System, DOLLARS,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
@@ -35,16 +35,14 @@ runtime_benchmarks! {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
-		10u128,
-		10u128
+		Rate::one()
 	)
 
 	set_liquidation_incentive {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
-		10u128,
-		10u128
+		Rate::one()
 	)
 
 	liquidate {
@@ -107,6 +105,7 @@ mod tests {
 	use frame_support::traits::GenesisBuild;
 	use liquidity_pools::Pool;
 	use minterest_model::MinterestModelData;
+	use minterest_primitives::Balance;
 	use risk_manager::RiskManagerData;
 	use sp_runtime::traits::Zero;
 
