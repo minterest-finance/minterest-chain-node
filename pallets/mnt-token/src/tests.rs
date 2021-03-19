@@ -224,7 +224,7 @@ fn test_calculate_enabled_pools_utilities_fail() {
 		let non_existent_liquidity_pool = CurrencyId::MNT;
 		assert_noop!(
 			MntToken::enable_mnt_minting(admin(), non_existent_liquidity_pool),
-			Error::<Runtime>::GetUnderlyingPriceFail
+			Error::<Runtime>::NotValidUnderlyingAssetId
 		);
 	});
 }

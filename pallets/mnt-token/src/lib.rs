@@ -9,7 +9,7 @@ use frame_support::{pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 pub use module::*;
-use pallet_traits::{LiquidityPoolsTotalProvider, PoolsManager, PriceProvider};
+use pallet_traits::{LiquidityPoolsTotalProvider, PriceProvider};
 use sp_runtime::{
 	traits::{CheckedDiv, CheckedMul, Zero},
 	FixedPointNumber,
@@ -29,9 +29,6 @@ pub mod module {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// The basic liquidity pools.
-		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
-
 		/// Provides total functions
 		type LiquidityPoolsTotalProvider: LiquidityPoolsTotalProvider;
 
@@ -41,6 +38,9 @@ pub mod module {
 
 		/// The price source of currencies
 		type PriceSource: PriceProvider<CurrencyId>;
+
+		/// Enabled underlying asset IDs.
+		type EnabledUnderlyingAssetId: Get<Vec<CurrencyId>>;
 	}
 
 	#[pallet::error]
@@ -51,14 +51,14 @@ pub mod module {
 		/// Trying to disable MNT minting that wasn't enable
 		MntMintingNotEnabled,
 
-		/// Pool not found.
-		PoolNotFound,
-
 		/// Arithmetic calculation overflow
 		NumOverflow,
 
 		/// Get underlying currency price is failed
 		GetUnderlyingPriceFail,
+
+		/// The currency is not enabled in protocol.
+		NotValidUnderlyingAssetId,
 	}
 
 	#[pallet::event]
@@ -121,8 +121,10 @@ pub mod module {
 		pub fn enable_mnt_minting(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&currency_id),
-				Error::<T>::PoolNotFound
+				T::EnabledUnderlyingAssetId::get()
+					.into_iter()
+					.any(|asset_id| asset_id == currency_id),
+				Error::<T>::NotValidUnderlyingAssetId
 			);
 			ensure!(
 				!MntSpeeds::<T>::contains_key(currency_id),
@@ -140,11 +142,17 @@ pub mod module {
 		pub fn disable_mnt_minting(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
+				T::EnabledUnderlyingAssetId::get()
+					.into_iter()
+					.any(|asset_id| asset_id == currency_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+			ensure!(
 				MntSpeeds::<T>::contains_key(currency_id),
 				Error::<T>::MntMintingNotEnabled
 			);
 			MntSpeeds::<T>::remove(currency_id);
-			Pallet::<T>::refresh_mnt_speeds()?;
+			Self::refresh_mnt_speeds()?;
 			Self::deposit_event(Event::MntMintingDisabled(currency_id));
 			Ok(().into())
 		}
@@ -156,7 +164,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			let old_rate = MntRate::<T>::get();
 			MntRate::<T>::put(new_rate);
-			Pallet::<T>::refresh_mnt_speeds()?;
+			Self::refresh_mnt_speeds()?;
 			Self::deposit_event(Event::NewMntRate(old_rate, new_rate));
 			Ok(().into())
 		}
@@ -173,8 +181,10 @@ impl<T: Config> Pallet<T> {
 		let mut total_utility: Balance = Balance::zero();
 		for (currency_id, _) in minted_pools {
 			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&currency_id),
-				Error::<T>::PoolNotFound
+				T::EnabledUnderlyingAssetId::get()
+					.into_iter()
+					.any(|asset_id| asset_id == currency_id),
+				Error::<T>::NotValidUnderlyingAssetId
 			);
 			let underlying_price =
 				T::PriceSource::get_underlying_price(currency_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;

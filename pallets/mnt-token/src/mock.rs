@@ -3,9 +3,9 @@
 use crate as mnt_token;
 use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
 use frame_system::EnsureSignedBy;
-use minterest_primitives::{Balance, CurrencyId, Price, Rate};
+use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_traits::parameter_type_with_key;
-use pallet_traits::{LiquidityPoolsTotalProvider, PoolsManager, PriceProvider};
+use pallet_traits::{LiquidityPoolsTotalProvider, PriceProvider};
 use sp_runtime::{DispatchError, FixedPointNumber};
 use sp_std::result;
 
@@ -19,6 +19,15 @@ parameter_type_with_key! {
 
 parameter_types! {
 	pub const BlockHashCount: u32 = 250;
+	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
+		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
+		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
+		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
+		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
+	];
+	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+			.map(|currency_pair| currency_pair.underlying_id)
+			.collect();
 }
 
 pub type AccountId = u64;
@@ -86,22 +95,6 @@ ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
 }
 
-pub struct MockLiquidityPoolManager;
-
-impl<AccountId> PoolsManager<AccountId> for MockLiquidityPoolManager {
-	fn pools_account_id() -> AccountId {
-		unimplemented!()
-	}
-
-	fn get_pool_available_liquidity(_pool_id: CurrencyId) -> Balance {
-		unimplemented!()
-	}
-
-	fn pool_exists(_underlying_asset_id: &CurrencyId) -> bool {
-		true
-	}
-}
-
 pub struct MockLiquidityPoolsTotalProvider;
 
 impl LiquidityPoolsTotalProvider for MockLiquidityPoolsTotalProvider {
@@ -118,8 +111,8 @@ impl mnt_token::Config for Runtime {
 	type Event = Event;
 	type PriceSource = MockPriceSource;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-	type LiquidityPoolsManager = MockLiquidityPoolManager;
 	type LiquidityPoolsTotalProvider = MockLiquidityPoolsTotalProvider;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
