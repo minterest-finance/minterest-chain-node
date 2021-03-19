@@ -1,6 +1,6 @@
 //! # MNT token Module
 //!
-//! TODO: Add overview
+//! Provides functionality for minting MNT tokens.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
@@ -74,10 +74,12 @@ pub mod module {
 		MntMintingDisabled(CurrencyId),
 	}
 
+	/// MNT minting rate per block
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_rate)]
 	type MntRate<T: Config> = StorageValue<_, Rate, ValueQuery>;
 
+	/// Mnt minting speed for each pool
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_speeds)]
 	pub(crate) type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Rate, OptionQuery>;
