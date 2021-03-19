@@ -300,6 +300,8 @@ pub mod module {
 		}
 
 		/// Set insurance factor.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `new_insurance_factor`: new value for insurance factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::set_insurance_factor())]
@@ -307,17 +309,13 @@ pub mod module {
 		pub fn set_insurance_factor(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_amount_n: u128,
-			new_amount_d: u128,
+			new_insurance_factor: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
 			);
-
-			let new_insurance_factor =
-				Rate::checked_from_rational(new_amount_n, new_amount_d).ok_or(Error::<T>::NumOverflow)?;
 
 			ControllerDates::<T>::mutate(pool_id, |r| r.insurance_factor = new_insurance_factor);
 			Self::deposit_event(Event::InsuranceFactorChanged);
@@ -325,6 +323,8 @@ pub mod module {
 		}
 
 		/// Set Maximum borrow rate.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `new_max_borow_rate`: new value for maximum borrow rate.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::set_max_borrow_rate())]
@@ -332,17 +332,13 @@ pub mod module {
 		pub fn set_max_borrow_rate(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_amount_n: u128,
-			new_amount_d: u128,
+			new_max_borow_rate: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
 			);
-
-			let new_max_borow_rate =
-				Rate::checked_from_rational(new_amount_n, new_amount_d).ok_or(Error::<T>::NumOverflow)?;
 
 			ensure!(!new_max_borow_rate.is_zero(), Error::<T>::MaxBorrowRateCannotBeZero);
 
@@ -352,6 +348,8 @@ pub mod module {
 		}
 
 		/// Set Collateral factor.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `new_collateral_factor`: new value for collateral factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::set_collateral_factor())]
@@ -359,17 +357,13 @@ pub mod module {
 		pub fn set_collateral_factor(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_amount_n: u128,
-			new_amount_d: u128,
+			new_collateral_factor: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
 			);
-
-			let new_collateral_factor =
-				Rate::checked_from_rational(new_amount_n, new_amount_d).ok_or(Error::<T>::NumOverflow)?;
 
 			ensure!(
 				new_collateral_factor <= Rate::one(),

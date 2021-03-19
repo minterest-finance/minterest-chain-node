@@ -119,7 +119,11 @@ mod tests {
 				System::set_block_number(10);
 
 				// Set insurance factor equal 0.5.
-				assert_ok!(TestController::set_insurance_factor(admin(), CurrencyId::DOT, 1, 2));
+				assert_ok!(TestController::set_insurance_factor(
+					admin(),
+					CurrencyId::DOT,
+					Rate::saturating_from_rational(1, 2)
+				));
 
 				// Alice repay full loan in DOTs.
 				assert_ok!(MinterestProtocol::repay_all(Origin::signed(ALICE), CurrencyId::DOT));
@@ -181,7 +185,11 @@ mod tests {
 				System::set_block_number(10);
 
 				// Set insurance factor equal to zero.
-				assert_ok!(TestController::set_insurance_factor(admin(), CurrencyId::DOT, 0, 1));
+				assert_ok!(TestController::set_insurance_factor(
+					admin(),
+					CurrencyId::DOT,
+					RATE_ZERO
+				));
 
 				// Alice repay full loan in DOTs.
 				assert_ok!(MinterestProtocol::repay_all(Origin::signed(ALICE), CurrencyId::DOT));
