@@ -176,7 +176,7 @@ impl<T: Config> Pallet<T> {
 			);
 			let underlying_price =
 				T::PriceSource::get_underlying_price(currency_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
-			let total_borrow = T::LiquidityPoolsTotalProvider::get_pool_total_borrowed(currency_id);
+			let total_borrow = T::LiquidityPoolsTotalProvider::get_pool_total_borrowed(currency_id)?;
 
 			// utility = m_tokens_total_borrows * asset_price
 			let utility = Price::from_inner(total_borrow)

@@ -6,7 +6,8 @@ use frame_system::EnsureSignedBy;
 use minterest_primitives::{Balance, CurrencyId, Price};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::{LiquidityPoolsTotalProvider, PoolsManager, PriceProvider};
-use sp_runtime::FixedPointNumber;
+use sp_runtime::{DispatchError, FixedPointNumber};
+use sp_std::result;
 
 const POOL_TOTAL_BORROWED: Balance = 50;
 
@@ -104,11 +105,11 @@ impl<AccountId> PoolsManager<AccountId> for MockLiquidityPoolManager {
 pub struct MockLiquidityPoolsTotalProvider;
 
 impl LiquidityPoolsTotalProvider for MockLiquidityPoolsTotalProvider {
-	fn get_pool_total_borrowed(_pool_id: CurrencyId) -> Balance {
-		POOL_TOTAL_BORROWED
+	fn get_pool_total_borrowed(_pool_id: CurrencyId) -> result::Result<Balance, DispatchError> {
+		Ok(POOL_TOTAL_BORROWED)
 	}
 
-	fn get_pool_total_insurance(_pool_id: CurrencyId) -> Balance {
+	fn get_pool_total_insurance(_pool_id: CurrencyId) -> result::Result<Balance, DispatchError> {
 		unimplemented!()
 	}
 }
