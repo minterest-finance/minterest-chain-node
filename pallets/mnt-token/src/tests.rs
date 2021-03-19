@@ -88,6 +88,60 @@ fn test_mnt_speed_calculation() {
 }
 
 #[test]
+fn test_disable_mnt_minting() {
+	// 1. Disable MNT minting for one pool and check mnt speeds recalculation
+	// 2. Enable MNT minting for disabled pool
+	new_test_ext_with_prepared_mnt_speeds().execute_with(|| {
+		// Make sure that speeds were precalculated
+		// mnt_rate == 10
+		let expected_dot_mnt_speed = Rate::saturating_from_rational(71428571428571428_i64, MAX_RATE_ACCURACY);
+		assert_eq!(MntToken::mnt_speeds(DOT), Some(expected_dot_mnt_speed));
+
+		// Disable MNT minting for BTC
+		assert_ok!(MntToken::disable_mnt_minting(admin(), BTC));
+		assert_eq!(MntToken::mnt_speeds(BTC), None);
+		// Now utilities: DOT = 25, ETH = 75, KSM = 100
+		// sum_of_all_pools_utilities = 200
+
+		// DOT mnt_speed = 25 / 200 * 10 = 1.25
+		let expected_dot_mnt_speed = Rate::saturating_from_rational(125, 100);
+		assert_eq!(MntToken::mnt_speeds(DOT), Some(expected_dot_mnt_speed));
+
+		// ETH mnt_speed 75 / 200 * 10 = 3.75
+		let expected_eth_mnt_speed = Rate::saturating_from_rational(375, 100);
+		assert_eq!(MntToken::mnt_speeds(ETH), Some(expected_eth_mnt_speed));
+
+		// KSM mnt_speed = 100 / 200 * 10 = 5
+		let expected_ksm_mnt_speed = Rate::saturating_from_integer(5);
+		assert_eq!(MntToken::mnt_speeds(KSM), Some(expected_ksm_mnt_speed));
+
+		// Enable MNT minting for BTC.
+		// MNT speeds should be recalculated again
+		assert_ok!(MntToken::enable_mnt_minting(admin(), BTC));
+		let expected_dot_mnt_speed = Rate::saturating_from_rational(71428571428571428_i64, MAX_RATE_ACCURACY);
+		assert_eq!(MntToken::mnt_speeds(DOT), Some(expected_dot_mnt_speed));
+		let expected_ksm_mnt_speed = Rate::saturating_from_rational(285714285714285714_i64, MAX_RATE_ACCURACY);
+		assert_eq!(MntToken::mnt_speeds(KSM), Some(expected_ksm_mnt_speed));
+		let expected_eth_mnt_speed = Rate::saturating_from_rational(214285714285714285_i64, MAX_RATE_ACCURACY);
+		assert_eq!(MntToken::mnt_speeds(ETH), Some(expected_eth_mnt_speed));
+		let expected_btc_mnt_speed = Rate::saturating_from_rational(428571428571428571_i64, MAX_RATE_ACCURACY);
+		assert_eq!(MntToken::mnt_speeds(BTC), Some(expected_btc_mnt_speed));
+	});
+}
+
+#[test]
+fn test_disable_generating_all_mnt_tokens() {
+	new_test_ext_with_prepared_mnt_speeds().execute_with(|| {
+		let zero = Rate::zero();
+		assert_ok!(MntToken::set_mnt_rate(admin(), zero));
+		assert_eq!(MntToken::mnt_speeds(DOT), Some(zero));
+		assert_eq!(MntToken::mnt_speeds(KSM), Some(zero));
+		assert_eq!(MntToken::mnt_speeds(ETH), Some(zero));
+		assert_eq!(MntToken::mnt_speeds(BTC), Some(zero));
+	});
+}
+
+#[test]
 fn test_set_mnt_rate() {
 	new_test_ext().execute_with(|| {
 		let test = |new_rate: Rate| {

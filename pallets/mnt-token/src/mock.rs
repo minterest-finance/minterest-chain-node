@@ -3,7 +3,7 @@
 use crate as mnt_token;
 use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
 use frame_system::EnsureSignedBy;
-use minterest_primitives::{Balance, CurrencyId, Price};
+use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::{LiquidityPoolsTotalProvider, PoolsManager, PriceProvider};
 use sp_runtime::{DispatchError, FixedPointNumber};
@@ -146,5 +146,25 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		.unwrap();
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| System::set_block_number(1));
+	ext
+}
+
+pub fn new_test_ext_with_prepared_mnt_speeds() -> sp_io::TestExternalities {
+	let mut t = frame_system::GenesisConfig::default()
+		.build_storage::<Runtime>()
+		.unwrap();
+	mnt_token::GenesisConfig::<Runtime> { ..Default::default() }
+		.assimilate_storage(&mut t)
+		.unwrap();
+	let mut ext = sp_io::TestExternalities::new(t);
+	ext.execute_with(|| {
+		System::set_block_number(1);
+		MntToken::enable_mnt_minting(admin(), CurrencyId::DOT).unwrap();
+		MntToken::enable_mnt_minting(admin(), CurrencyId::KSM).unwrap();
+		MntToken::enable_mnt_minting(admin(), CurrencyId::ETH).unwrap();
+		MntToken::enable_mnt_minting(admin(), CurrencyId::BTC).unwrap();
+		let mnt_rate = Rate::saturating_from_integer(10);
+		MntToken::set_mnt_rate(admin(), mnt_rate).unwrap();
+	});
 	ext
 }
