@@ -50,8 +50,7 @@ fn accrue_interest_should_not_work() {
 			assert_ok!(Controller::set_max_borrow_rate(
 				alice(),
 				CurrencyId::DOT,
-				1,
-				1_000_000_000
+				Rate::saturating_from_rational(1, 1_000_000_000)
 			));
 
 			System::set_block_number(20);
@@ -61,7 +60,11 @@ fn accrue_interest_should_not_work() {
 				Error::<Runtime>::BorrowRateIsTooHight
 			);
 
-			assert_ok!(Controller::set_max_borrow_rate(alice(), CurrencyId::DOT, 2, 1));
+			assert_ok!(Controller::set_max_borrow_rate(
+				alice(),
+				CurrencyId::DOT,
+				Rate::saturating_from_integer(2)
+			));
 
 			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
 		});
@@ -636,7 +639,11 @@ fn set_insurance_factor_should_work() {
 		.build()
 		.execute_with(|| {
 			// ALICE set insurance factor equal 2.0
-			assert_ok!(Controller::set_insurance_factor(alice(), CurrencyId::DOT, 20, 10));
+			assert_ok!(Controller::set_insurance_factor(
+				alice(),
+				CurrencyId::DOT,
+				Rate::saturating_from_integer(2)
+			));
 			let expected_event = Event::controller(crate::Event::InsuranceFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
@@ -645,7 +652,7 @@ fn set_insurance_factor_should_work() {
 			);
 
 			// ALICE set insurance factor equal 0.0
-			assert_ok!(Controller::set_insurance_factor(alice(), CurrencyId::DOT, 0, 1));
+			assert_ok!(Controller::set_insurance_factor(alice(), CurrencyId::DOT, Rate::zero()));
 			let expected_event = Event::controller(crate::Event::InsuranceFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
@@ -653,20 +660,14 @@ fn set_insurance_factor_should_work() {
 				Rate::from_inner(0)
 			);
 
-			// Overflow in calculation: 20 / 0
-			assert_noop!(
-				Controller::set_insurance_factor(alice(), CurrencyId::DOT, 20, 0),
-				Error::<Runtime>::NumOverflow
-			);
-
 			// The dispatch origin of this call must be Root or half MinterestCouncil.
 			assert_noop!(
-				Controller::set_insurance_factor(bob(), CurrencyId::DOT, 20, 10),
+				Controller::set_insurance_factor(bob(), CurrencyId::DOT, Rate::saturating_from_integer(2)),
 				BadOrigin
 			);
 
 			assert_noop!(
-				Controller::set_insurance_factor(alice(), CurrencyId::MDOT, 20, 10),
+				Controller::set_insurance_factor(alice(), CurrencyId::MDOT, Rate::saturating_from_integer(2)),
 				Error::<Runtime>::PoolNotFound
 			);
 		});
@@ -679,7 +680,11 @@ fn set_max_borrow_rate_should_work() {
 		.build()
 		.execute_with(|| {
 			// ALICE set max borrow rate equal 2.0
-			assert_ok!(Controller::set_max_borrow_rate(alice(), CurrencyId::DOT, 20, 10));
+			assert_ok!(Controller::set_max_borrow_rate(
+				alice(),
+				CurrencyId::DOT,
+				Rate::saturating_from_integer(2)
+			));
 			let expected_event = Event::controller(crate::Event::MaxBorrowRateChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
@@ -689,24 +694,18 @@ fn set_max_borrow_rate_should_work() {
 
 			// ALICE can't set max borrow rate equal 0.0
 			assert_noop!(
-				Controller::set_max_borrow_rate(alice(), CurrencyId::DOT, 0, 1),
+				Controller::set_max_borrow_rate(alice(), CurrencyId::DOT, Rate::zero()),
 				Error::<Runtime>::MaxBorrowRateCannotBeZero
-			);
-
-			// Overflow in calculation: 20 / 0
-			assert_noop!(
-				Controller::set_max_borrow_rate(alice(), CurrencyId::DOT, 20, 0),
-				Error::<Runtime>::NumOverflow
 			);
 
 			// The dispatch origin of this call must be Root or half MinterestCouncil.
 			assert_noop!(
-				Controller::set_max_borrow_rate(bob(), CurrencyId::DOT, 20, 10),
+				Controller::set_max_borrow_rate(bob(), CurrencyId::DOT, Rate::saturating_from_integer(2)),
 				BadOrigin
 			);
 
 			assert_noop!(
-				Controller::set_max_borrow_rate(alice(), CurrencyId::MDOT, 20, 10),
+				Controller::set_max_borrow_rate(alice(), CurrencyId::MDOT, Rate::saturating_from_integer(2)),
 				Error::<Runtime>::PoolNotFound
 			);
 		});
@@ -719,7 +718,11 @@ fn set_collateral_factor_should_work() {
 		.build()
 		.execute_with(|| {
 			// ALICE set collateral factor equal 0.5.
-			assert_ok!(Controller::set_collateral_factor(alice(), CurrencyId::DOT, 1, 2));
+			assert_ok!(Controller::set_collateral_factor(
+				alice(),
+				CurrencyId::DOT,
+				Rate::saturating_from_rational(1, 2)
+			));
 			let expected_event = Event::controller(crate::Event::CollateralFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
@@ -729,31 +732,25 @@ fn set_collateral_factor_should_work() {
 
 			// ALICE can't set collateral factor equal 0.0
 			assert_noop!(
-				Controller::set_collateral_factor(alice(), CurrencyId::DOT, 0, 1),
+				Controller::set_collateral_factor(alice(), CurrencyId::DOT, Rate::zero()),
 				Error::<Runtime>::CollateralFactorCannotBeZero
 			);
 
 			// ALICE can't set collateral factor grater than one.
 			assert_noop!(
-				Controller::set_collateral_factor(alice(), CurrencyId::DOT, 11, 10),
+				Controller::set_collateral_factor(alice(), CurrencyId::DOT, Rate::saturating_from_rational(11, 10)),
 				Error::<Runtime>::CollateralFactorCannotBeGreaterThanOne
-			);
-
-			// Overflow in calculation: 20 / 0
-			assert_noop!(
-				Controller::set_collateral_factor(alice(), CurrencyId::DOT, 20, 0),
-				Error::<Runtime>::NumOverflow
 			);
 
 			// The dispatch origin of this call must be Root or half MinterestCouncil.
 			assert_noop!(
-				Controller::set_collateral_factor(bob(), CurrencyId::DOT, 20, 10),
+				Controller::set_collateral_factor(bob(), CurrencyId::DOT, Rate::saturating_from_integer(2)),
 				BadOrigin
 			);
 
 			// Unavailable currency id.
 			assert_noop!(
-				Controller::set_collateral_factor(alice(), CurrencyId::MDOT, 20, 10),
+				Controller::set_collateral_factor(alice(), CurrencyId::MDOT, Rate::saturating_from_integer(2)),
 				Error::<Runtime>::PoolNotFound
 			);
 		});

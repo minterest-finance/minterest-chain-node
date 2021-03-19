@@ -77,7 +77,7 @@ fn set_min_sum_should_work() {
 fn set_threshold_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Can be set to 0.0
-		assert_ok!(TestRiskManager::set_threshold(admin(), CurrencyId::DOT, 0, 1));
+		assert_ok!(TestRiskManager::set_threshold(admin(), CurrencyId::DOT, Rate::zero()));
 		assert_eq!(
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).threshold,
 			Rate::zero()
@@ -86,7 +86,7 @@ fn set_threshold_should_work() {
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// ALICE set min_sum equal one hundred.
-		assert_ok!(TestRiskManager::set_threshold(admin(), CurrencyId::DOT, 1, 1));
+		assert_ok!(TestRiskManager::set_threshold(admin(), CurrencyId::DOT, Rate::one()));
 		assert_eq!(
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).threshold,
 			Rate::one()
@@ -96,13 +96,13 @@ fn set_threshold_should_work() {
 
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
-			TestRiskManager::set_threshold(alice(), CurrencyId::DOT, 1, 1),
+			TestRiskManager::set_threshold(alice(), CurrencyId::DOT, Rate::one()),
 			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestRiskManager::set_threshold(admin(), CurrencyId::MDOT, 1, 1),
+			TestRiskManager::set_threshold(admin(), CurrencyId::MDOT, Rate::one()),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
@@ -115,8 +115,7 @@ fn set_liquidation_incentive_should_work() {
 		assert_ok!(TestRiskManager::set_liquidation_incentive(
 			admin(),
 			CurrencyId::DOT,
-			1,
-			1
+			Rate::one()
 		));
 		assert_eq!(
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).liquidation_incentive,
@@ -127,25 +126,25 @@ fn set_liquidation_incentive_should_work() {
 
 		// Can not be set to 0.0
 		assert_noop!(
-			TestRiskManager::set_liquidation_incentive(admin(), CurrencyId::DOT, 0, 1),
+			TestRiskManager::set_liquidation_incentive(admin(), CurrencyId::DOT, Rate::zero()),
 			Error::<Test>::InvalidLiquidationIncentiveValue
 		);
 
 		// Can not be set to 2.0
 		assert_noop!(
-			TestRiskManager::set_liquidation_incentive(admin(), CurrencyId::DOT, 2, 1),
+			TestRiskManager::set_liquidation_incentive(admin(), CurrencyId::DOT, Rate::saturating_from_integer(2)),
 			Error::<Test>::InvalidLiquidationIncentiveValue
 		);
 
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
-			TestRiskManager::set_liquidation_incentive(alice(), CurrencyId::DOT, 1, 1),
+			TestRiskManager::set_liquidation_incentive(alice(), CurrencyId::DOT, Rate::one()),
 			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestRiskManager::set_liquidation_incentive(admin(), CurrencyId::MDOT, 1, 1),
+			TestRiskManager::set_liquidation_incentive(admin(), CurrencyId::MDOT, Rate::one()),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});

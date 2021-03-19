@@ -283,18 +283,15 @@ pub mod module {
 
 		/// Set threshold which used in liquidation to protect the user from micro liquidations..
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_threshold_n`: numerator.
-		/// - `new_threshold_d`: divider.
+		/// - `new_threshold`: new threshold.
 		///
-		/// `new_threshold = (new_threshold_n / new_threshold_d)`
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_threshold(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_threshold_n: u128,
-			new_threshold_d: u128,
+			new_threshold: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -302,9 +299,6 @@ pub mod module {
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
-
-			let new_threshold =
-				Rate::checked_from_rational(new_threshold_n, new_threshold_d).ok_or(Error::<T>::NumOverflow)?;
 
 			// Write new value into storage.
 			RiskManagerDates::<T>::mutate(pool_id, |r| r.threshold = new_threshold);
@@ -316,18 +310,15 @@ pub mod module {
 
 		/// Set Liquidation fee that covers liquidation costs.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_liquidation_incentive_n`: numerator.
-		/// - `new_liquidation_incentive_d`: divider.
+		/// - `new_liquidation_incentive`: new liquidation incentive.
 		///
-		/// `new_liquidation_incentive = (new_liquidation_incentive_n /
-		/// new_liquidation_incentive_d)` The dispatch origin of this call must be 'UpdateOrigin'.
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_liquidation_incentive(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_liquidation_incentive_n: u128,
-			new_liquidation_incentive_d: u128,
+			new_liquidation_incentive: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -335,10 +326,6 @@ pub mod module {
 				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
-
-			let new_liquidation_incentive =
-				Rate::checked_from_rational(new_liquidation_incentive_n, new_liquidation_incentive_d)
-					.ok_or(Error::<T>::NumOverflow)?;
 
 			// Check if 1 <= new_liquidation_incentive <= 1.5
 			ensure!(
