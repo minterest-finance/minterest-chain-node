@@ -56,35 +56,51 @@ fn test_mnt_speed_calculation() {
 		assert_eq!(MntToken::mnt_speeds(ETH), Some(expected_eth_mnt_speed));
 
 		// BTC
-		// utility_ftaction = 75 / 350 = 0.428571428571428571
+		// utility_ftaction = 150 / 350 = 0.428571428571428571
 		// mnt_speed = utility_fraction * mnt_rate = 4.28571428571428571
 		let expected_btc_mnt_speed = Rate::saturating_from_rational(428571428571428571_i64, MAX_RATE_ACCURACY);
 		assert_eq!(MntToken::mnt_speeds(BTC), Some(expected_btc_mnt_speed));
 
 		let sum = expected_dot_mnt_speed + expected_btc_mnt_speed + expected_eth_mnt_speed + expected_ksm_mnt_speed;
+		// Sum of all mnt_speeds is equal to mnt_rate
 		assert_eq!(sum.round(), mnt_rate);
+
+		// Multiply mnt rate in twice. Expected mnt speeds should double up
+		let mnt_rate = Rate::saturating_from_integer(20);
+		assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
+		assert_eq!(
+			MntToken::mnt_speeds(DOT),
+			Some(expected_dot_mnt_speed * Rate::saturating_from_integer(2))
+		);
+		assert_eq!(
+			MntToken::mnt_speeds(KSM),
+			Some(expected_ksm_mnt_speed * Rate::saturating_from_integer(2))
+		);
+		assert_eq!(
+			MntToken::mnt_speeds(ETH),
+			Some(expected_eth_mnt_speed * Rate::saturating_from_integer(2))
+		);
+		assert_eq!(
+			MntToken::mnt_speeds(BTC),
+			Some(expected_btc_mnt_speed * Rate::saturating_from_integer(2))
+		);
 	});
 }
 
 #[test]
 fn test_set_mnt_rate() {
 	new_test_ext().execute_with(|| {
-		// TODO remove code duplication
-		let old_rate = Rate::zero();
-		let new_rate = Rate::saturating_from_rational(11, 10);
-		assert_eq!(MntToken::mnt_rate(), old_rate);
-		assert_ok!(MntToken::set_mnt_rate(admin(), new_rate));
-		assert_eq!(MntToken::mnt_rate(), new_rate);
-		let new_mnt_rate_event = Event::mnt_token(crate::Event::NewMntRate(old_rate, new_rate));
-		assert!(System::events().iter().any(|record| record.event == new_mnt_rate_event));
+		let test = |new_rate: Rate| {
+			let old_rate = MntToken::mnt_rate();
+			assert_eq!(MntToken::mnt_rate(), old_rate);
+			assert_ok!(MntToken::set_mnt_rate(admin(), new_rate));
+			assert_eq!(MntToken::mnt_rate(), new_rate);
+			let new_mnt_rate_event = Event::mnt_token(crate::Event::NewMntRate(old_rate, new_rate));
+			assert!(System::events().iter().any(|record| record.event == new_mnt_rate_event));
+		};
 
-		let old_rate = new_rate;
-		let new_rate = Rate::saturating_from_rational(12, 10);
-		assert_eq!(MntToken::mnt_rate(), old_rate);
-		assert_ok!(MntToken::set_mnt_rate(admin(), new_rate));
-		assert_eq!(MntToken::mnt_rate(), new_rate);
-		let new_mnt_rate_event = Event::mnt_token(crate::Event::NewMntRate(old_rate, new_rate));
-		assert!(System::events().iter().any(|record| record.event == new_mnt_rate_event));
+		test(Rate::saturating_from_rational(11, 10));
+		test(Rate::saturating_from_rational(12, 10));
 	});
 }
 

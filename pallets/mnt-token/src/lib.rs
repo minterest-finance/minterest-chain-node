@@ -45,7 +45,7 @@ pub mod module {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Trying to enable already enabled minting for Liquidity Pool
+		/// Trying to enable already enabled minting for pool
 		MntMintingAlreadyEnabled,
 
 		/// Trying to disable MNT minting that wasn't enable
@@ -67,10 +67,10 @@ pub mod module {
 		/// Change rate event (old_rate, new_rate)
 		NewMntRate(Rate, Rate),
 
-		/// MNT minting enabled for Liquidity pool
+		/// MNT minting enabled for pool
 		MntMintingEnabled(CurrencyId),
 
-		/// MNT minting disabled for Liquidity pool
+		/// MNT minting disabled for pool
 		MntMintingDisabled(CurrencyId),
 	}
 
@@ -149,7 +149,7 @@ pub mod module {
 
 		#[pallet::weight(10_000)]
 		#[transactional]
-		/// Set MNT rate and recalculate MntSpeeds distribution for all currencies
+		/// Set MNT rate and recalculate MntSpeeds distribution
 		pub fn set_mnt_rate(origin: OriginFor<T>, new_rate: Rate) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			let old_rate = MntRate::<T>::get();
@@ -163,6 +163,8 @@ pub mod module {
 
 impl<T: Config> Pallet<T> {
 	/// Calculate utilities for enabled pools and sum of all pools utilities
+	///
+	/// returns (Vector<CurrencyId, pool_utility>, sum_of_all_pools_utilities)
 	fn calculate_enabled_pools_utilities() -> result::Result<(Vec<(CurrencyId, Balance)>, Balance), DispatchError> {
 		let minted_pools = MntSpeeds::<T>::iter();
 		let mut result: Vec<(CurrencyId, Balance)> = Vec::new();
@@ -176,6 +178,7 @@ impl<T: Config> Pallet<T> {
 				T::PriceSource::get_underlying_price(currency_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
 			let total_borrow = T::LiquidityPoolsTotalProvider::get_pool_total_borrowed(currency_id);
 
+			// utility = m_tokens_total_borrows * asset_price
 			let utility = Price::from_inner(total_borrow)
 				.checked_mul(&underlying_price)
 				.map(|x| x.into_inner())
@@ -188,12 +191,14 @@ impl<T: Config> Pallet<T> {
 		Ok((result, total_utility))
 	}
 
+	/// Recalculate MNT speeds
 	fn refresh_mnt_speeds() -> result::Result<(), DispatchError> {
+		// TODO Add update indexes here when it will be implemented
 		let (pool_utilities, sum_of_all_utilities) = Pallet::<T>::calculate_enabled_pools_utilities()?;
+		let sum_of_all_utilities = Rate::from_inner(sum_of_all_utilities);
 		let mnt_rate = Pallet::<T>::mnt_rate();
 		for (currency_id, utility) in pool_utilities {
 			let utility = Rate::from_inner(utility);
-			let sum_of_all_utilities = Rate::from_inner(sum_of_all_utilities);
 			let utility_fraction = utility
 				.checked_div(&sum_of_all_utilities)
 				.ok_or(Error::<T>::NumOverflow)?;
