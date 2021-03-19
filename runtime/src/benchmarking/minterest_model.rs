@@ -54,28 +54,28 @@ mod tests {
 	#[test]
 	fn test_set_jump_multiplier_per_block() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_jump_multiplier_per_block());
+			assert_ok!(test_benchmark_set_jump_multiplier_per_year());
 		})
 	}
 
 	#[test]
 	fn test_set_base_rate_per_block() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_base_rate_per_block());
+			assert_ok!(test_benchmark_set_base_rate_per_year());
 		})
 	}
 
 	#[test]
 	fn test_set_multiplier_per_block() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_multiplier_per_block());
+			assert_ok!(test_benchmark_set_multiplier_per_year());
 		})
 	}
 
 	#[test]
 	fn test_set_kink() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_multiplier_per_block());
+			assert_ok!(test_benchmark_set_multiplier_per_year());
 		})
 	}
 }
