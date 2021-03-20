@@ -104,7 +104,7 @@ impl<T: Config> Pallet<T> {
 
 		ensure!(target_dex_balance >= target_amount, Error::<T>::InsufficientDexBalance);
 
-		T::MultiCurrency::transfer(supply_currency_id, &who, &module_account_id, target_amount)?;
+		T::MultiCurrency::transfer(supply_currency_id, &who, &module_account_id, max_supply_amount)?;
 		T::MultiCurrency::transfer(target_currency_id, &module_account_id, &who, target_amount)?;
 
 		Self::deposit_event(Event::Swap(

@@ -1312,12 +1312,12 @@ fn collects_sales_list_should_work_2_2() {
 				Sales {
 					supply_pool_id: CurrencyId::ETH,
 					target_pool_id: CurrencyId::BTC,
-					amount: 140_000 * DOLLARS,
+					amount: 7_000_000_000 * DOLLARS, // USD equivalent
 				},
 				Sales {
 					supply_pool_id: CurrencyId::ETH,
 					target_pool_id: CurrencyId::DOT,
-					amount: 140_000 * DOLLARS,
+					amount: 4_200_000 * DOLLARS, // USD equivalent
 				},
 			];
 
@@ -1360,31 +1360,36 @@ fn balance_liquidation_pools_should_work() {
 			Liquidation Pools balances (in assets): [400_000, 300_000, 200_000, 100_000]
 			Liquidation Pools balances (in USD): [400_000, 600_000, 1_000_000, 1_000_000]
 
-			Sales list (in assets): [(DOT, BTC, 300_000), (KSM, BTC, 100_000)]
+			Sales list (in assets): [(DOT, BTC, 300_000$), (KSM, BTC, 200_000$)]
 
 			*/
 			let expected_sales_list = vec![
 				Sales {
 					supply_pool_id: CurrencyId::DOT,
 					target_pool_id: CurrencyId::BTC,
-					amount: 300_000 * DOLLARS,
+					amount: 300_000 * DOLLARS, // USD equivalent
 				},
 				Sales {
 					supply_pool_id: CurrencyId::KSM,
 					target_pool_id: CurrencyId::BTC,
-					amount: 100_000 * DOLLARS,
+					amount: 200_000 * DOLLARS, // USD equivalent
 				},
 			];
 
 			assert_eq!(LiquidationPools::collects_sales_list(), Ok(expected_sales_list.clone()));
 
 			expected_sales_list.iter().for_each(|sale| {
-				let _ = LiquidationPools::balance_liquidation_pools(
-					origin_none(),
-					sale.supply_pool_id,
-					sale.target_pool_id,
-					sale.amount,
-				);
+				if let Some((max_supply_amount, target_amount)) =
+					LiquidationPools::get_amounts(sale.supply_pool_id, sale.target_pool_id, sale.amount).ok()
+				{
+					let _ = LiquidationPools::balance_liquidation_pools(
+						origin_none(),
+						sale.supply_pool_id,
+						sale.target_pool_id,
+						max_supply_amount,
+						target_amount,
+					);
+				};
 			});
 
 			// Test that the expected events were emitted
@@ -1398,15 +1403,15 @@ fn balance_liquidation_pools_should_work() {
 					LiquidationPools::pools_account_id(),
 					CurrencyId::DOT,
 					CurrencyId::BTC,
-					300_000 * DOLLARS,
-					300_000 * DOLLARS,
+					300_000 * DOLLARS, // max_supply_amount = 300_000 DOT
+					30_000 * DOLLARS,  // target_amount = 30_000 BTC
 				),
 				dex::Event::Swap(
 					LiquidationPools::pools_account_id(),
 					CurrencyId::KSM,
 					CurrencyId::BTC,
-					100_000 * DOLLARS,
-					100_000 * DOLLARS,
+					100_000 * DOLLARS, // max_supply_amount = 100_000 DOT
+					20_000 * DOLLARS,  // target_amount = 20_000 BTC
 				),
 			];
 			assert_eq!(our_events, expected_events);
@@ -1415,7 +1420,7 @@ fn balance_liquidation_pools_should_work() {
 			assert_eq!(liquidation_pool_balance(CurrencyId::DOT), 100_000 * DOLLARS);
 			assert_eq!(liquidation_pool_balance(CurrencyId::KSM), 200_000 * DOLLARS);
 			assert_eq!(liquidation_pool_balance(CurrencyId::ETH), 200_000 * DOLLARS);
-			assert_eq!(liquidation_pool_balance(CurrencyId::BTC), 500_000 * DOLLARS);
+			assert_eq!(liquidation_pool_balance(CurrencyId::BTC), 150_000 * DOLLARS);
 		});
 }
 
@@ -1443,24 +1448,32 @@ fn balance_liquidation_pools_two_pools_should_work_test() {
 			Liquidity Pools balances (in assets): [500_000, 300_000]
 			Liquidity Pools balances (in USD): [1_000_000, 1_200_000]
 			Liquidation Pools balances (in assets): [170_000, 30_000]
-			Liquidation Pools balances (in USD):                  [340_000 (+ 140 000$), 120_000 (- 120 000$)]
+			Liquidation Pools balances (in USD):                  [340_000 (+140_000$), 120_000 (-120_000$)]
 			Ideal balances 0.2 * liquidity_pool_balance (in USD): [200_000, 240_000]
-			Sales list (in assets): [(DOT, ETH, 30 (ETH!))
+			Sales list (in assets): [(DOT, ETH, 120_000$)
 			*/
 			let expected_sales_list = vec![Sales {
 				supply_pool_id: CurrencyId::DOT,
 				target_pool_id: CurrencyId::ETH,
-				amount: 30_000 * DOLLARS, //ETH
+				amount: 120_000 * DOLLARS, // USD equivalent
 			}];
+
 			assert_eq!(LiquidationPools::collects_sales_list(), Ok(expected_sales_list.clone()));
+
 			expected_sales_list.iter().for_each(|sale| {
-				let _ = LiquidationPools::balance_liquidation_pools(
-					origin_none(),
-					sale.supply_pool_id,
-					sale.target_pool_id,
-					sale.amount,
-				);
+				if let Some((max_supply_amount, target_amount)) =
+					LiquidationPools::get_amounts(sale.supply_pool_id, sale.target_pool_id, sale.amount).ok()
+				{
+					let _ = LiquidationPools::balance_liquidation_pools(
+						origin_none(),
+						sale.supply_pool_id,
+						sale.target_pool_id,
+						max_supply_amount,
+						target_amount,
+					);
+				};
 			});
+
 			// Test that the expected events were emitted
 			let our_events = System::events()
 				.into_iter()
@@ -1471,12 +1484,14 @@ fn balance_liquidation_pools_two_pools_should_work_test() {
 				LiquidationPools::pools_account_id(),
 				CurrencyId::DOT,
 				CurrencyId::ETH,
-				30_000 * DOLLARS,
-				30_000 * DOLLARS,
+				60_000 * DOLLARS, // max_supply_amount = 60_000 DOT
+				30_000 * DOLLARS, // target_amount = 30_000 ETH
 			)];
+
 			assert_eq!(our_events, expected_events);
+
 			// Liquidation Pool balances in assets
-			assert_eq!(liquidation_pool_balance(CurrencyId::DOT), 140_000 * DOLLARS);
+			assert_eq!(liquidation_pool_balance(CurrencyId::DOT), 110_000 * DOLLARS);
 			assert_eq!(liquidation_pool_balance(CurrencyId::ETH), 60_000 * DOLLARS);
 		});
 }

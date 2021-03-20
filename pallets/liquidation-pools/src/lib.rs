@@ -260,11 +260,18 @@ pub mod module {
 			origin: OriginFor<T>,
 			supply_pool_id: CurrencyId,
 			target_pool_id: CurrencyId,
-			amount: Balance,
+			max_supply_amount: Balance,
+			target_amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let _ = ensure_none(origin)?;
 			let module_id = Self::pools_account_id();
-			T::Dex::swap_with_exact_target(&module_id, supply_pool_id, target_pool_id, amount, amount)?;
+			T::Dex::swap_with_exact_target(
+				&module_id,
+				supply_pool_id,
+				target_pool_id,
+				max_supply_amount,
+				target_amount,
+			)?;
 			Self::deposit_event(Event::LiquidationPoolsBalanced);
 			Ok(().into())
 		}
@@ -296,8 +303,14 @@ pub struct Sales {
 }
 
 impl<T: Config> Pallet<T> {
-	fn submit_unsigned_tx(supply_pool_id: CurrencyId, target_pool_id: CurrencyId, amount: Balance) {
-		let call = Call::<T>::balance_liquidation_pools(supply_pool_id, target_pool_id, amount);
+	fn submit_unsigned_tx(
+		supply_pool_id: CurrencyId,
+		target_pool_id: CurrencyId,
+		max_supply_amount: Balance,
+		target_amount: Balance,
+	) {
+		let call =
+			Call::<T>::balance_liquidation_pools(supply_pool_id, target_pool_id, max_supply_amount, target_amount);
 		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
 			debug::info!(
 				target: "liquidation-pools offchain worker",
@@ -315,10 +328,21 @@ impl<T: Config> Pallet<T> {
 				return Err(OffchainErr::NotValidator);
 			}
 			// Sending transactions to DEX.
-			Self::collects_sales_list()
+			let _ = Self::collects_sales_list()
 				.map_err(|_| OffchainErr::CheckFail)?
 				.iter()
-				.for_each(|sale| Self::submit_unsigned_tx(sale.supply_pool_id, sale.target_pool_id, sale.amount));
+				.try_for_each(|sale: &Sales| -> Result<(), OffchainErr> {
+					let (max_supply_amount, target_amount) =
+						Self::get_amounts(sale.supply_pool_id, sale.target_pool_id, sale.amount)
+							.map_err(|_| OffchainErr::CheckFail)?;
+					Self::submit_unsigned_tx(
+						sale.supply_pool_id,
+						sale.target_pool_id,
+						max_supply_amount,
+						target_amount,
+					);
+					Ok(())
+				});
 		}
 		Ok(())
 	}
@@ -429,23 +453,15 @@ impl<T: Config> Pallet<T> {
 				.map(|(index, pool)| (index, pool.pool_id, pool.shortfall))
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			// The number of assets (and USD equivalent) to be sent to the DEX will be equal to
+			// The number USD equivalent to be sent to the DEX will be equal to
 			// the minimum value between (max_shortfall, max_oversupply).
-			let (bite_in_usd, pool_id) = match max_shortfall.cmp(&max_oversupply) {
-				Ordering::Greater => (max_oversupply, max_oversupply_pool_id),
-				_ => (max_shortfall, max_shortfall_pool_id),
-			};
-			let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-			let bite = Rate::from_inner(bite_in_usd)
-				.checked_div(&oracle_price)
-				.map(|x| x.into_inner())
-				.ok_or(Error::<T>::NumOverflow)?;
+			let bite_in_usd = max_oversupply.min(max_shortfall);
 
 			// Add "sale" to the sales list.
 			to_sell_list.push(Sales {
 				supply_pool_id: max_oversupply_pool_id,
 				target_pool_id: max_shortfall_pool_id,
-				amount: bite,
+				amount: bite_in_usd,
 			});
 
 			// Updating the information vector.
@@ -475,6 +491,27 @@ impl<T: Config> Pallet<T> {
 
 		Ok(to_sell_list)
 	}
+
+	/// Temporary function
+	pub fn get_amounts(
+		supply_pool_id: CurrencyId,
+		target_pool_id: CurrencyId,
+		amount: Balance,
+	) -> sp_std::result::Result<(Balance, Balance), DispatchError> {
+		let supply_oracle_price =
+			T::PriceSource::get_underlying_price(supply_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+		let target_oracle_price =
+			T::PriceSource::get_underlying_price(target_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+		let max_supply_amount = Rate::from_inner(amount)
+			.checked_div(&supply_oracle_price)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+		let target_amount = Rate::from_inner(amount)
+			.checked_div(&target_oracle_price)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+		Ok((max_supply_amount, target_amount))
+	}
 }
 
 impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
@@ -500,7 +537,7 @@ impl<T: Config> ValidateUnsigned for Pallet<T> {
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		match call {
-			Call::balance_liquidation_pools(_supply_pool_id, _target_pool_id, _amount) => {
+			Call::balance_liquidation_pools(_supply_pool_id, _target_pool_id, _max_supply_amount, _target_amount) => {
 				ValidTransaction::with_tag_prefix("LiquidationPoolsOffchainWorker")
 					.priority(T::UnsignedPriority::get())
 					.and_provides(<frame_system::Module<T>>::block_number())
