@@ -47,7 +47,6 @@ pub use minterest_primitives::{
 };
 
 // A few exports that help ease life for downstream crates.
-pub use controller::Call as ControllerCall;
 pub use frame_support::{
 	construct_runtime, debug, parameter_types,
 	traits::{KeyOwnerProofSystem, Randomness},
@@ -431,7 +430,7 @@ impl controller::Config for Runtime {
 	type LiquidityPoolsManager = LiquidityPools;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
-	type WeightInfo = weights::controller::WeightInfo<Runtime>;
+	type ControllerWeightInfo = weights::controller::WeightInfo<Runtime>;
 }
 
 impl module_prices::Config for Runtime {
@@ -439,6 +438,7 @@ impl module_prices::Config for Runtime {
 	type Source = AggregatedDataProvider;
 	type LockOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type WeightInfo = weights::prices::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -449,6 +449,7 @@ impl minterest_model::Config for Runtime {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
 	type ModelUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
+	type WeightInfo = weights::minterest_model::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -462,6 +463,7 @@ impl risk_manager::Config for Runtime {
 	type LiquidationPoolsManager = LiquidationPools;
 	type LiquidityPoolsManager = LiquidityPools;
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
+	type RiskManagerWeightInfo = weights::risk_manager::WeightInfo<Runtime>;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -804,6 +806,9 @@ impl_runtime_apis! {
 			let params = (&config, &whitelist);
 
 			add_benchmark!(params, batches, controller, benchmarking::controller);
+			add_benchmark!(params, batches, minterest_model, benchmarking::minterest_model);
+			add_benchmark!(params, batches, module_prices, benchmarking::prices);
+			add_benchmark!(params, batches, risk_manager, benchmarking::risk_manager);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

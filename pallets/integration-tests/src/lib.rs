@@ -205,7 +205,7 @@ mod tests {
 		type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 		type MaxBorrowCap = MaxBorrowCap;
 		type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-		type WeightInfo = ();
+		type ControllerWeightInfo = ();
 	}
 
 	parameter_types! {
@@ -216,6 +216,7 @@ mod tests {
 		type Event = Event;
 		type BlocksPerYear = BlocksPerYear;
 		type ModelUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+		type WeightInfo = ();
 	}
 
 	pub const ADMIN: AccountId = 0;

@@ -96,6 +96,7 @@ impl module_prices::Config for Test {
 	type Source = MockDataProvider;
 	type LockOrigin = EnsureSignedBy<One, AccountId>;
 	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type WeightInfo = ();
 }
 
 type AccountId = u64;

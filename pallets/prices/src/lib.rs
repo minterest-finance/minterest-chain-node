@@ -25,6 +25,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub mod weights;
+pub use weights::WeightInfo;
+
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
@@ -43,6 +46,9 @@ pub mod module {
 
 		/// Enabled underlying asset IDs.
 		type EnabledUnderlyingAssetId: Get<Vec<CurrencyId>>;
+
+		/// Weight information for the extrinsics.
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::error]
@@ -100,7 +106,7 @@ pub mod module {
 		/// The dispatch origin of this call must be `LockOrigin`.
 		///
 		/// - `currency_id`: currency type.
-		#[pallet::weight((10_000, DispatchClass::Operational))]
+		#[pallet::weight((T::WeightInfo::lock_price(), DispatchClass::Operational))]
 		#[transactional]
 		pub fn lock_price(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 			T::LockOrigin::ensure_origin(origin)?;
@@ -121,7 +127,7 @@ pub mod module {
 		/// The dispatch origin of this call must be `LockOrigin`.
 		///
 		/// - `currency_id`: currency type.
-		#[pallet::weight((10_000, DispatchClass::Operational))]
+		#[pallet::weight((T::WeightInfo::unlock_price(), DispatchClass::Operational))]
 		#[transactional]
 		pub fn unlock_price(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 			T::LockOrigin::ensure_origin(origin)?;

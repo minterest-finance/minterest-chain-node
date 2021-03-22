@@ -100,7 +100,7 @@ pub mod module {
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		/// Weight information for the extrinsics.
-		type WeightInfo: WeightInfo;
+		type ControllerWeightInfo: WeightInfo;
 	}
 
 	#[pallet::error]
@@ -221,7 +221,7 @@ pub mod module {
 		/// Pause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(T::WeightInfo::pause_specific_operation())]
+		#[pallet::weight(T::ControllerWeightInfo::pause_specific_operation())]
 		#[transactional]
 		pub fn pause_specific_operation(
 			origin: OriginFor<T>,
@@ -247,7 +247,7 @@ pub mod module {
 		/// Unpause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::ControllerWeightInfo::unpause_specific_operation())]
 		#[transactional]
 		pub fn unpause_specific_operation(
 			origin: OriginFor<T>,
@@ -304,7 +304,7 @@ pub mod module {
 		/// - `new_insurance_factor`: new value for insurance factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::ControllerWeightInfo::set_insurance_factor())]
 		#[transactional]
 		pub fn set_insurance_factor(
 			origin: OriginFor<T>,
@@ -327,7 +327,7 @@ pub mod module {
 		/// - `new_max_borow_rate`: new value for maximum borrow rate.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::ControllerWeightInfo::set_max_borrow_rate())]
 		#[transactional]
 		pub fn set_max_borrow_rate(
 			origin: OriginFor<T>,
@@ -352,7 +352,7 @@ pub mod module {
 		/// - `new_collateral_factor`: new value for collateral factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::ControllerWeightInfo::set_collateral_factor())]
 		#[transactional]
 		pub fn set_collateral_factor(
 			origin: OriginFor<T>,
@@ -383,7 +383,7 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be Administrator.
 		/// Borrow cap value must be in range 0..1_000_000_000_000_000_000_000_000
-		#[pallet::weight(0)]
+		#[pallet::weight(T::ControllerWeightInfo::set_borrow_cap())]
 		#[transactional]
 		pub fn set_borrow_cap(
 			origin: OriginFor<T>,
@@ -412,7 +412,7 @@ pub mod module {
 		/// Enable / disable whitelist mode.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::ControllerWeightInfo::switch_mode())]
 		#[transactional]
 		pub fn switch_mode(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;

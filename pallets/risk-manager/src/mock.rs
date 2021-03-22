@@ -143,7 +143,7 @@ impl controller::Config for Test {
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-	type WeightInfo = ();
+	type ControllerWeightInfo = ();
 }
 
 parameter_types! {
@@ -154,6 +154,7 @@ impl minterest_model::Config for Test {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
 	type ModelUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -217,6 +218,7 @@ impl risk_manager::Config for Test {
 	type LiquidationPoolsManager = liquidation_pools::Module<Test>;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	type RiskManagerUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	type RiskManagerWeightInfo = ();
 }
 
 parameter_types! {

@@ -50,6 +50,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub mod weights;
+pub use weights::WeightInfo;
+
 /// RiskManager metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
@@ -101,6 +104,8 @@ pub mod module {
 		/// The origin which may update risk manager parameters. Root can
 		/// always do this.
 		type RiskManagerUpdateOrigin: EnsureOrigin<Self::Origin>;
+
+		type RiskManagerWeightInfo: WeightInfo;
 	}
 
 	#[pallet::error]
@@ -214,7 +219,7 @@ pub mod module {
 		/// - `new_max_value`: New max value of liquidation attempts.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::RiskManagerWeightInfo::set_max_attempts())]
 		#[transactional]
 		pub fn set_max_attempts(
 			origin: OriginFor<T>,
@@ -241,7 +246,7 @@ pub mod module {
 		/// - `new_min_sum`: New min sum for partial liquidation.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::RiskManagerWeightInfo::set_min_sum())]
 		#[transactional]
 		pub fn set_min_sum(
 			origin: OriginFor<T>,
@@ -268,7 +273,7 @@ pub mod module {
 		/// - `new_threshold`: new threshold.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::RiskManagerWeightInfo::set_threshold())]
 		#[transactional]
 		pub fn set_threshold(
 			origin: OriginFor<T>,
@@ -330,7 +335,7 @@ pub mod module {
 		///
 		/// - `currency_id`: PoolID for which the loan is being liquidate
 		/// - `who`: loan's owner.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::RiskManagerWeightInfo::liquidate())]
 		#[transactional]
 		pub fn liquidate(
 			origin: OriginFor<T>,
