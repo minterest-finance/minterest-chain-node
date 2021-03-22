@@ -16,7 +16,7 @@ use frame_system::{
 	ensure_none,
 	offchain::{SendTransactionTypes, SubmitTransaction},
 };
-use minterest_primitives::{Balance, CurrencyId, Rate};
+use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{PoolsManager, PriceProvider};
 #[cfg(feature = "std")]

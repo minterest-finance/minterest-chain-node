@@ -23,7 +23,8 @@ test:
 
 .PHONY: run
 run:
-	cargo run -- --dev -lruntime=debug
+	cargo build --release
+	./target/release/minterest --dev --tmp
 
 .PHONY: check-tests
 check-tests:

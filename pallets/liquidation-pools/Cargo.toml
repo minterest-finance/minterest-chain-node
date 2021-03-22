@@ -28,6 +28,7 @@ orml-currencies = { path = "../../orml/currencies" }
 orml-tokens = { path = "../../orml/tokens" }
 
 liquidity-pools = { path = "../liquidity-pools" }
+dex = { path = "../dex" }
 
 [features]
 default = ['std']

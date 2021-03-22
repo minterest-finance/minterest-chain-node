@@ -1,7 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::upper_case_acronyms)]
 
 use minterest_primitives::{Balance, CurrencyId, Price};
-use sp_runtime::DispatchResult;
+use sp_runtime::{DispatchError, DispatchResult};
 
 /// An abstraction of basic borrowing functions
 pub trait Borrowing<AccountId> {
@@ -38,4 +39,22 @@ pub trait PriceProvider<CurrencyId> {
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price>;
 	fn lock_price(currency_id: CurrencyId);
 	fn unlock_price(currency_id: CurrencyId);
+}
+
+pub trait DEXManager<AccountId, CurrencyId, Balance> {
+	fn swap_with_exact_supply(
+		who: &AccountId,
+		target_currency_id: CurrencyId,
+		supply_currency_id: CurrencyId,
+		supply_amount: Balance,
+		min_target_amount: Balance,
+	) -> sp_std::result::Result<Balance, DispatchError>;
+
+	fn swap_with_exact_target(
+		who: &AccountId,
+		supply_currency_id: CurrencyId,
+		target_currency_id: CurrencyId,
+		max_supply_amount: Balance,
+		target_amount: Balance,
+	) -> sp_std::result::Result<Balance, DispatchError>;
 }

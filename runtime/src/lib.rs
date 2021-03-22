@@ -113,6 +113,7 @@ pub fn native_version() -> NativeVersion {
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
 }
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -362,24 +363,8 @@ impl Contains<AccountId> for WhitelistCouncilProvider {
 	}
 }
 
-pub struct MinterestCouncilProvider;
-impl Contains<AccountId> for MinterestCouncilProvider {
-	fn contains(who: &AccountId) -> bool {
-		MinterestCouncil::is_member(who)
-	}
-
-	fn sorted_members() -> Vec<AccountId> {
-		MinterestCouncil::members()
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn add(_: &AccountId) {
-		todo!()
-	}
-}
-
 parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
 		Zero::zero()
 	};
 }
@@ -500,6 +485,7 @@ impl liquidation_pools::Config for Runtime {
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type LiquidityPoolsManager = LiquidityPools;
+	type Dex = Dex;
 }
 
 parameter_types! {
@@ -536,6 +522,17 @@ impl DataFeeder<CurrencyId, Price, AccountId> for AggregatedDataProvider {
 	}
 }
 
+parameter_types! {
+	pub DexAccountId: AccountId = DexModuleId::get().into_account();
+}
+
+impl dex::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type DexModuleId = DexModuleId;
+	type DexAccountId = DexAccountId;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -566,7 +563,7 @@ construct_runtime!(
 
 		// Oracle and Prices
 		MinterestOracle: orml_oracle::<Instance1>::{Module, Storage, Call, Config<T>, Event<T>},
-		Prices: module_prices::{Module, Storage, Call, Event<T>},
+		Prices: module_prices::{Module, Storage, Call, Event<T>, Config},
 
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		OperatorMembershipMinterest: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
@@ -579,6 +576,7 @@ construct_runtime!(
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		RiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
+		Dex: dex::{Module, Storage, Call, Event<T>},
 
 		// Dev
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
@@ -758,7 +756,7 @@ impl_runtime_apis! {
 		}
 
 		fn is_admin(caller: AccountId) -> Option<bool> {
-				Some(MinterestCouncilProvider::contains(&caller))
+				Some(MinterestCouncil::is_member(&caller))
 		}
 	}
 

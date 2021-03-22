@@ -1184,7 +1184,7 @@ mod tests {
 				let alice_borrowed_amount_in_dot = 50_000 * DOLLARS;
 				assert_noop!(
 					MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::DOT, alice_borrowed_amount_in_dot),
-					MinterestProtocolError::<Test>::BorrowControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				// Checking pool available liquidity
@@ -1234,7 +1234,7 @@ mod tests {
 				let alice_borrowed_amount = 50_000 * DOLLARS;
 				assert_noop!(
 					MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::ETH, alice_borrowed_amount),
-					MinterestProtocolError::<Test>::BorrowControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				// Checking pool available liquidity
@@ -1287,7 +1287,7 @@ mod tests {
 				let alice_borrowed_amount = 50_000 * DOLLARS;
 				assert_noop!(
 					MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::ETH, alice_borrowed_amount),
-					MinterestProtocolError::<Test>::BorrowControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				// Checking pool available liquidity
@@ -1444,7 +1444,7 @@ mod tests {
 				let over_borrow_cap_amount_in_eth = 20_000 * DOLLARS;
 				assert_noop!(
 					MinterestProtocol::borrow(Origin::signed(BOB), CurrencyId::ETH, over_borrow_cap_amount_in_eth),
-					MinterestProtocolError::<Test>::BorrowControllerRejection
+					controller::Error::<Test>::BorrowCapReached
 				);
 
 				// ADMIN disable borrow cap.
