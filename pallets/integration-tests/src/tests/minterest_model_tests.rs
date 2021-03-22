@@ -10,7 +10,7 @@ mod tests {
 	fn calculate_borrow_interest_rate_deposit() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				// Alice deposit 40 DOT in pool
@@ -36,7 +36,7 @@ mod tests {
 	fn calculate_borrow_interest_rate_deposit_and_borrow() {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
@@ -75,8 +75,8 @@ mod tests {
 		ExtBuilder::default()
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_user_data(CurrencyId::DOT, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_user_data(CurrencyId::DOT, BOB, BALANCE_ZERO, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool

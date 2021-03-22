@@ -44,6 +44,8 @@ pub struct PoolUserData {
 	/// recent balance-changing action.
 	pub total_borrowed: Balance,
 
+	pub protocol_interest: Balance,
+
 	/// Global borrow_index as of the most recent balance-changing action.
 	pub interest_index: Rate,
 
