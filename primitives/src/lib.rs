@@ -111,3 +111,21 @@ pub enum DataProviderId {
 	Aggregated = 0,
 	Minterest = 1,
 }
+
+/// Error which may occur while executing the off-chain code.
+#[cfg_attr(test, derive(PartialEq))]
+pub enum OffchainErr {
+	OffchainLock,
+	NotValidator,
+	CheckFail,
+}
+
+impl sp_std::fmt::Debug for OffchainErr {
+	fn fmt(&self, fmt: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
+		match *self {
+			OffchainErr::OffchainLock => write!(fmt, "Failed to get or extend lock"),
+			OffchainErr::NotValidator => write!(fmt, "Not validator"),
+			OffchainErr::CheckFail => write!(fmt, "Check fail"),
+		}
+	}
+}

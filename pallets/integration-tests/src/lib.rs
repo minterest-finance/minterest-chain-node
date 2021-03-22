@@ -91,7 +91,7 @@ mod tests {
 	type Amount = i128;
 
 	parameter_type_with_key! {
-		pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
 			Default::default()
 		};
 	}

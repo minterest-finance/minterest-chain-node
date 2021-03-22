@@ -65,6 +65,28 @@ pub mod module {
 	#[pallet::getter(fn locked_price)]
 	pub type LockedPrice<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Price, OptionQuery>;
 
+	#[pallet::genesis_config]
+	pub struct GenesisConfig {
+		#[allow(clippy::type_complexity)]
+		pub locked_price: Vec<(CurrencyId, Price)>,
+	}
+
+	#[cfg(feature = "std")]
+	impl Default for GenesisConfig {
+		fn default() -> Self {
+			GenesisConfig { locked_price: vec![] }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+		fn build(&self) {
+			self.locked_price
+				.iter()
+				.for_each(|(currency_id, price)| LockedPrice::<T>::insert(currency_id, price));
+		}
+	}
+
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
 
