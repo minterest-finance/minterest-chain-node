@@ -1,8 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use minterest_primitives::{Balance, CurrencyId, Price};
-use sp_runtime::{DispatchError, DispatchResult};
-use sp_std::result;
+use sp_runtime::DispatchResult;
 
 /// An abstraction of basic borrowing functions
 pub trait Borrowing<AccountId> {
@@ -35,12 +34,13 @@ pub trait PoolsManager<AccountId> {
 	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool;
 }
 
-pub trait LiquidityPoolsTotalProvider {
+/// TODO Describe
+pub trait LiquidityPoolsManager {
 	/// Gets current the amount of underlying currently loaned out by the pool.
-	fn get_pool_total_borrowed(pool_id: CurrencyId) -> result::Result<Balance, DispatchError>;
+	fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance;
 
 	/// Gets current total amount of insurance of the underlying held in this pool.
-	fn get_pool_total_insurance(pool_id: CurrencyId) -> result::Result<Balance, DispatchError>;
+	fn get_pool_total_insurance(pool_id: CurrencyId) -> Balance;
 }
 
 pub trait PriceProvider<CurrencyId> {

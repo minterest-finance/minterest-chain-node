@@ -1,15 +1,17 @@
 #![cfg(test)]
 
 use crate as mnt_token;
-use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
+use frame_support::pallet_prelude::*;
+use frame_support::{construct_runtime, ord_parameter_types, parameter_types};
 use frame_system::EnsureSignedBy;
+use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_traits::parameter_type_with_key;
-use pallet_traits::{LiquidityPoolsTotalProvider, PriceProvider};
-use sp_runtime::{DispatchError, FixedPointNumber};
-use sp_std::result;
-
-const POOL_TOTAL_BORROWED: Balance = 50;
+use pallet_traits::PriceProvider;
+use sp_runtime::{
+	traits::{AccountIdConversion, Zero},
+	FixedPointNumber, ModuleId,
+};
 
 parameter_type_with_key! {
 	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
@@ -18,7 +20,10 @@ parameter_type_with_key! {
 }
 
 parameter_types! {
-	pub const BlockHashCount: u32 = 250;
+	pub const BlockHashCount: u64 = 250;
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
+	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
 		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
@@ -27,6 +32,9 @@ parameter_types! {
 	];
 	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
 			.map(|currency_pair| currency_pair.underlying_id)
+			.collect();
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+			.map(|currency_pair| currency_pair.wrapped_id)
 			.collect();
 }
 
@@ -75,6 +83,17 @@ impl orml_tokens::Config for Runtime {
 
 pub struct MockPriceSource;
 
+impl liquidity_pools::Config for Runtime {
+	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type PriceSource = MockPriceSource;
+	type ModuleId = LiquidityPoolsModuleId;
+	type LiquidityPoolAccountId = LiquidityPoolAccountId;
+	type InitialExchangeRate = InitialExchangeRate;
+	type EnabledCurrencyPair = EnabledCurrencyPair;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledWrappedTokensId = EnabledWrappedTokensId;
+}
+
 impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
 		match currency_id {
@@ -95,23 +114,11 @@ ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
 }
 
-pub struct MockLiquidityPoolsTotalProvider;
-
-impl LiquidityPoolsTotalProvider for MockLiquidityPoolsTotalProvider {
-	fn get_pool_total_borrowed(_pool_id: CurrencyId) -> result::Result<Balance, DispatchError> {
-		Ok(POOL_TOTAL_BORROWED)
-	}
-
-	fn get_pool_total_insurance(_pool_id: CurrencyId) -> result::Result<Balance, DispatchError> {
-		unimplemented!()
-	}
-}
-
 impl mnt_token::Config for Runtime {
 	type Event = Event;
 	type PriceSource = MockPriceSource;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-	type LiquidityPoolsTotalProvider = MockLiquidityPoolsTotalProvider;
+	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
 	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
 }
 
@@ -127,37 +134,71 @@ construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		System: frame_system::{Module, Call, Event<T>},
 		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
+		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 	}
 );
+pub struct ExtBuilder {
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+	pools: Vec<(CurrencyId, Pool)>,
+	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
+	minted_pools: Vec<CurrencyId>,
+}
+pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default()
-		.build_storage::<Runtime>()
-		.unwrap();
-	mnt_token::GenesisConfig::<Runtime> { ..Default::default() }
-		.assimilate_storage(&mut t)
-		.unwrap();
-	let mut ext = sp_io::TestExternalities::new(t);
-	ext.execute_with(|| System::set_block_number(1));
-	ext
+impl Default for ExtBuilder {
+	fn default() -> Self {
+		Self {
+			endowed_accounts: vec![],
+			pools: vec![],
+			minted_pools: vec![],
+			pool_user_data: vec![],
+		}
+	}
 }
 
-pub fn new_test_ext_with_prepared_mnt_speeds() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default()
-		.build_storage::<Runtime>()
-		.unwrap();
-	mnt_token::GenesisConfig::<Runtime> { ..Default::default() }
+impl ExtBuilder {
+	pub fn enable_minting_for_all_pools(mut self) -> Self {
+		self.minted_pools = vec![CurrencyId::KSM, CurrencyId::DOT, CurrencyId::ETH, CurrencyId::BTC];
+		self
+	}
+
+	pub fn pool_total_borrowed(mut self, pool_id: CurrencyId, total_borrowed: Balance) -> Self {
+		self.pools.push((
+			pool_id,
+			Pool {
+				total_borrowed,
+				borrow_index: Rate::one(),
+				total_insurance: Balance::zero(),
+			},
+		));
+		self
+	}
+	pub fn build(self) -> sp_io::TestExternalities {
+		let mut t = frame_system::GenesisConfig::default()
+			.build_storage::<Runtime>()
+			.unwrap();
+		orml_tokens::GenesisConfig::<Runtime> {
+			endowed_accounts: self.endowed_accounts,
+		}
 		.assimilate_storage(&mut t)
 		.unwrap();
-	let mut ext = sp_io::TestExternalities::new(t);
-	ext.execute_with(|| {
-		System::set_block_number(1);
-		MntToken::enable_mnt_minting(admin(), CurrencyId::DOT).unwrap();
-		MntToken::enable_mnt_minting(admin(), CurrencyId::KSM).unwrap();
-		MntToken::enable_mnt_minting(admin(), CurrencyId::ETH).unwrap();
-		MntToken::enable_mnt_minting(admin(), CurrencyId::BTC).unwrap();
-		let mnt_rate = Rate::saturating_from_integer(10);
-		MntToken::set_mnt_rate(admin(), mnt_rate).unwrap();
-	});
-	ext
+		liquidity_pools::GenesisConfig::<Runtime> {
+			pools: self.pools,
+			pool_user_data: self.pool_user_data,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		mnt_token::GenesisConfig::<Runtime> {
+			mnt_rate: Rate::zero(),
+			minted_pools: self.minted_pools,
+			_marker: PhantomData,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		let mut ext = sp_io::TestExternalities::new(t);
+		ext.execute_with(|| System::set_block_number(1));
+		ext
+	}
 }

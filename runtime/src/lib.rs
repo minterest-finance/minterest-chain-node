@@ -483,7 +483,7 @@ impl mnt_token::Config for Runtime {
 	type Event = Event;
 	type PriceSource = Prices;
 	type UpdateOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
-	type LiquidityPoolsTotalProvider = LiquidityPools;
+	type LiquidityPoolsManager = LiquidityPools;
 	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
 }
 

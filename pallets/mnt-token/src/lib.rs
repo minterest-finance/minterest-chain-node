@@ -9,7 +9,7 @@ use frame_support::{pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 pub use module::*;
-use pallet_traits::{LiquidityPoolsTotalProvider, PriceProvider};
+use pallet_traits::{LiquidityPoolsManager, PriceProvider};
 use sp_runtime::{
 	traits::{CheckedDiv, CheckedMul, Zero},
 	DispatchResult, FixedPointNumber,
@@ -29,8 +29,8 @@ pub mod module {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// Provides total functions
-		type LiquidityPoolsTotalProvider: LiquidityPoolsTotalProvider;
+		/// Provides Liquidity Pool functionality
+		type LiquidityPoolsManager: LiquidityPoolsManager;
 
 		/// The origin which may update MNT token parameters. Root can
 		/// always do this.
@@ -87,6 +87,7 @@ pub mod module {
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub mnt_rate: Rate,
+		pub minted_pools: Vec<CurrencyId>,
 		pub _marker: PhantomData<T>,
 	}
 
@@ -95,6 +96,7 @@ pub mod module {
 		fn default() -> Self {
 			GenesisConfig {
 				mnt_rate: Rate::zero(),
+				minted_pools: vec![],
 				_marker: PhantomData,
 			}
 		}
@@ -104,6 +106,12 @@ pub mod module {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			MntRate::<T>::put(&self.mnt_rate);
+			for currency_id in &self.minted_pools {
+				MntSpeeds::<T>::insert(currency_id, Rate::zero());
+			}
+			if !self.minted_pools.is_empty() {
+				Pallet::<T>::refresh_mnt_speeds().expect("Calculate MntSpeeds is failed");
+			}
 		}
 	}
 
@@ -180,15 +188,9 @@ impl<T: Config> Pallet<T> {
 		let mut result: Vec<(CurrencyId, Balance)> = Vec::new();
 		let mut total_utility: Balance = Balance::zero();
 		for (currency_id, _) in minted_pools {
-			ensure!(
-				T::EnabledUnderlyingAssetId::get()
-					.into_iter()
-					.any(|asset_id| asset_id == currency_id),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
 			let underlying_price =
 				T::PriceSource::get_underlying_price(currency_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
-			let total_borrow = T::LiquidityPoolsTotalProvider::get_pool_total_borrowed(currency_id)?;
+			let total_borrow = T::LiquidityPoolsManager::get_pool_total_borrowed(currency_id);
 
 			// utility = m_tokens_total_borrows * asset_price
 			let utility = Price::from_inner(total_borrow)
@@ -208,6 +210,10 @@ impl<T: Config> Pallet<T> {
 		// TODO Add update indexes here when it will be implemented
 		let (pool_utilities, sum_of_all_utilities) = Self::calculate_enabled_pools_utilities()?;
 		let sum_of_all_utilities = Rate::from_inner(sum_of_all_utilities);
+		if sum_of_all_utilities == Rate::zero() {
+			// There is nothing to calculate.
+			return Ok(());
+		}
 		let mnt_rate = Self::mnt_rate();
 		for (currency_id, utility) in pool_utilities {
 			let utility = Rate::from_inner(utility);

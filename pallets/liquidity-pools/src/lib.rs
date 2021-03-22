@@ -13,7 +13,7 @@ use frame_support::{pallet_prelude::*, traits::Get};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{Borrowing, LiquidityPoolsTotalProvider, PoolsManager, PriceProvider};
+use pallet_traits::{Borrowing, LiquidityPoolsManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -579,16 +579,14 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	}
 }
 
-impl<T: Config> LiquidityPoolsTotalProvider for Pallet<T> {
+impl<T: Config> LiquidityPoolsManager for Pallet<T> {
 	/// Gets current the amount of underlying currently loaned out by the pool.
-	fn get_pool_total_borrowed(pool_id: CurrencyId) -> BalanceResult {
-		ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExists);
-		Ok(Self::pools(pool_id).total_borrowed)
+	fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance {
+		Self::pools(pool_id).total_borrowed
 	}
 
 	/// Gets current total amount of insurance of the underlying held in this pool.
-	fn get_pool_total_insurance(pool_id: CurrencyId) -> BalanceResult {
-		ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExists);
-		Ok(Self::pools(pool_id).total_insurance)
+	fn get_pool_total_insurance(pool_id: CurrencyId) -> Balance {
+		Self::pools(pool_id).total_insurance
 	}
 }
