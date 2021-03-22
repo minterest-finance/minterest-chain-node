@@ -12,7 +12,7 @@ pub use module::*;
 use pallet_traits::{LiquidityPoolsTotalProvider, PriceProvider};
 use sp_runtime::{
 	traits::{CheckedDiv, CheckedMul, Zero},
-	FixedPointNumber,
+	DispatchResult, FixedPointNumber,
 };
 use sp_std::{result, vec::Vec};
 
@@ -87,7 +87,7 @@ pub mod module {
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub mnt_rate: Rate,
-		pub marker: PhantomData<T>,
+		pub _marker: PhantomData<T>,
 	}
 
 	#[cfg(feature = "std")]
@@ -95,7 +95,7 @@ pub mod module {
 		fn default() -> Self {
 			GenesisConfig {
 				mnt_rate: Rate::zero(),
-				marker: PhantomData,
+				_marker: PhantomData,
 			}
 		}
 	}
@@ -131,7 +131,7 @@ pub mod module {
 				Error::<T>::MntMintingAlreadyEnabled
 			);
 			MntSpeeds::<T>::insert(currency_id, Rate::zero());
-			Pallet::<T>::refresh_mnt_speeds()?;
+			Self::refresh_mnt_speeds()?;
 			Self::deposit_event(Event::MntMintingEnabled(currency_id));
 			Ok(().into())
 		}
@@ -204,11 +204,11 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Recalculate MNT speeds
-	fn refresh_mnt_speeds() -> result::Result<(), DispatchError> {
+	fn refresh_mnt_speeds() -> DispatchResult {
 		// TODO Add update indexes here when it will be implemented
-		let (pool_utilities, sum_of_all_utilities) = Pallet::<T>::calculate_enabled_pools_utilities()?;
+		let (pool_utilities, sum_of_all_utilities) = Self::calculate_enabled_pools_utilities()?;
 		let sum_of_all_utilities = Rate::from_inner(sum_of_all_utilities);
-		let mnt_rate = Pallet::<T>::mnt_rate();
+		let mnt_rate = Self::mnt_rate();
 		for (currency_id, utility) in pool_utilities {
 			let utility = Rate::from_inner(utility);
 			let utility_fraction = utility
