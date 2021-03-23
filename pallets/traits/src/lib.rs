@@ -35,7 +35,7 @@ pub trait PoolsManager<AccountId> {
 	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool;
 }
 
-/// TODO Describe
+/// Provides liquidity pool functionality
 pub trait LiquidityPoolsManager {
 	/// Gets current the amount of underlying currently loaned out by the pool.
 	fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance;

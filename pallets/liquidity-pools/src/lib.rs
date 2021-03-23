@@ -404,16 +404,6 @@ impl<T: Config> Pallet<T> {
 		Self::pools(pool_id)
 	}
 
-	/// Gets current the amount of underlying currently loaned out by the pool.
-	pub fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance {
-		Self::pools(pool_id).total_borrowed
-	}
-
-	/// Gets current total amount of insurance of the underlying held in this pool.
-	pub fn get_pool_total_insurance(pool_id: CurrencyId) -> Balance {
-		Self::pools(pool_id).total_insurance
-	}
-
 	/// Accumulator of the total earned interest rate since the opening of the pool
 	pub fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate {
 		Self::pools(pool_id).borrow_index

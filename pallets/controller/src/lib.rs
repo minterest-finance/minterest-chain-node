@@ -14,7 +14,7 @@ use frame_system::{ensure_signed, pallet_prelude::*};
 use liquidity_pools::Pool;
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{PoolsManager, PriceProvider};
+use pallet_traits::{LiquidityPoolsManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;
@@ -88,8 +88,11 @@ pub mod module {
 		/// The overarching event type.
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// The basic liquidity pools manager.
-		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
+		/// The basic pools manager.
+		type PoolsManager: PoolsManager<Self::AccountId>;
+
+		/// Provides liquidity pool functionality
+		type LiquidityPoolsManager: LiquidityPoolsManager;
 
 		#[pallet::constant]
 		/// Maximum total borrow amount per pool in usd
@@ -229,10 +232,7 @@ pub mod module {
 			operation: Operation,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::PoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 			match operation {
 				Operation::Deposit => PauseKeepers::<T>::mutate(pool_id, |pool| pool.deposit_paused = true),
 				Operation::Redeem => PauseKeepers::<T>::mutate(pool_id, |pool| pool.redeem_paused = true),
@@ -255,10 +255,7 @@ pub mod module {
 			operation: Operation,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::PoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 			match operation {
 				Operation::Deposit => PauseKeepers::<T>::mutate(pool_id, |pool| pool.deposit_paused = false),
 				Operation::Redeem => PauseKeepers::<T>::mutate(pool_id, |pool| pool.redeem_paused = false),
@@ -312,10 +309,7 @@ pub mod module {
 			new_insurance_factor: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::PoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 
 			ControllerDates::<T>::mutate(pool_id, |r| r.insurance_factor = new_insurance_factor);
 			Self::deposit_event(Event::InsuranceFactorChanged);
@@ -335,10 +329,7 @@ pub mod module {
 			new_max_borow_rate: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::PoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 
 			ensure!(!new_max_borow_rate.is_zero(), Error::<T>::MaxBorrowRateCannotBeZero);
 
@@ -360,10 +351,7 @@ pub mod module {
 			new_collateral_factor: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::PoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 
 			ensure!(
 				new_collateral_factor <= Rate::one(),
@@ -626,7 +614,7 @@ impl<T: Config> Pallet<T> {
 		}
 
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::OraclePriceError)?;
-		let pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(pool_id);
+		let pool_total_borrowed = T::LiquidityPoolsManager::get_pool_total_borrowed(pool_id);
 		let new_total_borrows = pool_total_borrowed
 			.checked_add(borrow_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
@@ -649,7 +637,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Gets borrow interest rate and supply interest rate.
 	pub fn get_liquidity_pool_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
-		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
+		let current_total_balance = T::PoolsManager::get_pool_available_liquidity(pool_id);
 		let pool_data = <LiquidityPools<T>>::get_pool_data(pool_id);
 		let insurance_factor = Self::get_insurance_factor(pool_id);
 
@@ -772,7 +760,7 @@ impl<T: Config> Pallet<T> {
 		underlying_asset_id: CurrencyId,
 		block_delta: T::BlockNumber,
 	) -> result::Result<Pool, DispatchError> {
-		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(underlying_asset_id);
+		let current_total_balance = T::PoolsManager::get_pool_available_liquidity(underlying_asset_id);
 		let pool_data = <LiquidityPools<T>>::get_pool_data(underlying_asset_id);
 
 		let utilization_rate = Self::calculate_utilization_rate(
@@ -1021,10 +1009,7 @@ impl<T: Config> Pallet<T> {
 	/// - `pool_id`: Pool ID of the replenishing pool.
 	/// - `amount`: Amount to replenish insurance in the pool.
 	fn do_deposit_insurance(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
-		ensure!(
-			T::LiquidityPoolsManager::pool_exists(&pool_id),
-			Error::<T>::PoolNotFound
-		);
+		ensure!(T::PoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 
 		ensure!(
 			amount <= T::MultiCurrency::free_balance(pool_id, &who),
@@ -1032,10 +1017,10 @@ impl<T: Config> Pallet<T> {
 		);
 
 		// transfer amount to this pool
-		T::MultiCurrency::transfer(pool_id, &who, &T::LiquidityPoolsManager::pools_account_id(), amount)?;
+		T::MultiCurrency::transfer(pool_id, &who, &T::PoolsManager::pools_account_id(), amount)?;
 
 		// calculate new insurance balance
-		let current_insurance_balance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
+		let current_insurance_balance = T::LiquidityPoolsManager::get_pool_total_insurance(pool_id);
 
 		let new_insurance_balance = current_insurance_balance
 			.checked_add(amount)
@@ -1051,18 +1036,15 @@ impl<T: Config> Pallet<T> {
 	/// - `pool_id`: Pool ID in which the insurance is decreasing.
 	/// - `amount`: Amount to redeem insurance in the pool.
 	fn do_redeem_insurance(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
-		ensure!(
-			T::LiquidityPoolsManager::pool_exists(&pool_id),
-			Error::<T>::PoolNotFound
-		);
+		ensure!(T::PoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 
 		ensure!(
-			amount <= T::MultiCurrency::free_balance(pool_id, &T::LiquidityPoolsManager::pools_account_id()),
+			amount <= T::MultiCurrency::free_balance(pool_id, &T::PoolsManager::pools_account_id()),
 			Error::<T>::NotEnoughBalance
 		);
 
 		// calculate new insurance balance
-		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
+		let current_total_insurance = T::LiquidityPoolsManager::get_pool_total_insurance(pool_id);
 		ensure!(amount <= current_total_insurance, Error::<T>::NotEnoughBalance);
 
 		let new_insurance_balance = current_total_insurance
@@ -1072,7 +1054,7 @@ impl<T: Config> Pallet<T> {
 		<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_insurance_balance)?;
 
 		// transfer amount from this pool
-		T::MultiCurrency::transfer(pool_id, &T::LiquidityPoolsManager::pools_account_id(), &who, amount)?;
+		T::MultiCurrency::transfer(pool_id, &T::PoolsManager::pools_account_id(), &who, amount)?;
 
 		Ok(())
 	}

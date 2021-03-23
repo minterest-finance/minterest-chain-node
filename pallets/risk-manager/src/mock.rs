@@ -141,6 +141,7 @@ ord_parameter_types! {
 impl controller::Config for Test {
 	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+	type PoolsManager = liquidity_pools::Module<Test>;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	type WeightInfo = ();

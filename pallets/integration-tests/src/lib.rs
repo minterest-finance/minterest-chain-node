@@ -202,6 +202,7 @@ mod tests {
 
 	impl controller::Config for Test {
 		type Event = Event;
+		type PoolsManager = liquidity_pools::Module<Test>;
 		type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 		type MaxBorrowCap = MaxBorrowCap;
 		type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
