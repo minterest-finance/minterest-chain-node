@@ -1372,6 +1372,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "dex"
+version = "0.6.2"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "liquidation-pools",
+ "liquidity-pools",
+ "minterest-primitives",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-traits",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "digest"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3524,6 +3544,7 @@ dependencies = [
 name = "liquidation-pools"
 version = "0.6.2"
 dependencies = [
+ "dex",
  "frame-support",
  "frame-system",
  "liquidity-pools",
@@ -4139,6 +4160,7 @@ version = "0.6.0"
 dependencies = [
  "controller",
  "controller-rpc-runtime-api",
+ "dex",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
@@ -5795,6 +5817,7 @@ name = "risk-manager"
 version = "0.6.0"
 dependencies = [
  "controller",
+ "dex",
  "frame-support",
  "frame-system",
  "liquidation-pools",

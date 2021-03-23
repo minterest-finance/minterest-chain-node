@@ -364,7 +364,7 @@ fn borrow_should_work() {
 		// Alice cannot borrow 100 DOT because she deposited 60 DOT.
 		assert_noop!(
 			TestProtocol::borrow(alice(), CurrencyId::DOT, dollars(100_u128)),
-			Error::<Test>::BorrowControllerRejection
+			controller::Error::<Test>::InsufficientLiquidity
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
