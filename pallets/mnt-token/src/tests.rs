@@ -89,6 +89,53 @@ fn test_mnt_speed_calculation() {
 }
 
 #[test]
+fn test_mnt_speed_calculaction_with_zero_borrowed() {
+	ExtBuilder::default()
+		.enable_minting_for_all_pools()
+		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
+		.pool_total_borrowed(CurrencyId::ETH, 0 * DOLLARS)
+		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
+		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			let mnt_rate = Rate::saturating_from_integer(10);
+			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
+			// Input parameters:
+			// mnt_rate: 10
+			// Prices: DOT[0] = 0.5 USD, ETH[1] = 1.5 USD, KSM[2] = 2 USD, BTC[3] = 3 USD
+			// utilities: DOT = 25, ETH = 0, KSM = 100, BTC = 150
+			// sum_of_all_pools_utilities = 275
+			let (currency_utilities, total_utility) = MntToken::calculate_enabled_pools_utilities().unwrap();
+			assert!(currency_utilities.contains(&(DOT, 25 * DOLLARS)));
+			assert!(currency_utilities.contains(&(ETH, 0 * DOLLARS)));
+			assert!(currency_utilities.contains(&(KSM, 100 * DOLLARS)));
+			assert!(currency_utilities.contains(&(BTC, 150 * DOLLARS)));
+			assert_eq!(total_utility, 275 * DOLLARS);
+
+			// MntSpeed for ETH is 0 because total_borrowed is 0
+			assert_eq!(MntToken::mnt_speeds(ETH), Some(Rate::zero()));
+
+			// DOT
+			// utility_fraction = 25 / 275 = 0.071428571428571428
+			// mnt_speed = utility_fraction * mnt_rate = 0.909090909090909090
+			let expected_dot_mnt_speed = Rate::from_inner(909090909090909090);
+			assert_eq!(MntToken::mnt_speeds(DOT), Some(expected_dot_mnt_speed));
+
+			// KSM
+			// utility_ftaction = 100 / 275 = 0.363636363636363636
+			// mnt_speed = utility_fraction * mnt_rate = 3.636363636363636360
+			let expected_ksm_mnt_speed = Rate::from_inner(3636363636363636360);
+			assert_eq!(MntToken::mnt_speeds(KSM), Some(expected_ksm_mnt_speed));
+
+			// BTC
+			// utility_ftaction = 150 / 275 = 0.545454545454545454
+			// mnt_speed = utility_fraction * mnt_rate = 5.454545454545454540
+			let expected_btc_mnt_speed = Rate::from_inner(5454545454545454540);
+			assert_eq!(MntToken::mnt_speeds(BTC), Some(expected_btc_mnt_speed));
+		});
+}
+
+#[test]
 fn test_disable_mnt_minting() {
 	// 1. Disable MNT minting for one pool and check mnt speeds recalculation
 	// 2. Enable MNT minting for disabled pool
