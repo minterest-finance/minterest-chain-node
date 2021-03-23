@@ -108,8 +108,6 @@ pub mod module {
 		NotValidWrappedTokenId,
 		/// Feed price is invalid
 		InvalidFeedPrice,
-		/// Pool not exists
-		PoolNotExists,
 	}
 
 	#[pallet::storage]

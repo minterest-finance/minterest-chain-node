@@ -1,8 +1,7 @@
 #![cfg(test)]
 
 use crate as mnt_token;
-use frame_support::pallet_prelude::*;
-use frame_support::{construct_runtime, ord_parameter_types, parameter_types};
+use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::*, parameter_types};
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
@@ -138,7 +137,6 @@ construct_runtime!(
 	}
 );
 pub struct ExtBuilder {
-	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	minted_pools: Vec<CurrencyId>,
@@ -148,7 +146,6 @@ pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
-			endowed_accounts: vec![],
 			pools: vec![],
 			minted_pools: vec![],
 			pool_user_data: vec![],
@@ -177,11 +174,7 @@ impl ExtBuilder {
 		let mut t = frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
 			.unwrap();
-		orml_tokens::GenesisConfig::<Runtime> {
-			endowed_accounts: self.endowed_accounts,
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
+
 		liquidity_pools::GenesisConfig::<Runtime> {
 			pools: self.pools,
 			pool_user_data: self.pool_user_data,
