@@ -106,7 +106,7 @@ fn redeem_should_not_work() {
 			// Bob has 0 MDOT on her account, so she cannot make a redeem.
 			assert_noop!(
 				TestProtocol::redeem(bob(), CurrencyId::DOT),
-				Error::<Test>::NumberOfWrappedTokensIsZero
+				Error::<Test>::NotEnoughWrappedTokens
 			);
 
 			// MDOT is wrong CurrencyId for underlying assets.
@@ -278,7 +278,7 @@ fn redeem_wrapped_should_work() {
 			// MDOT is wrong CurrencyId for underlying assets.
 			assert_noop!(
 				TestProtocol::redeem_wrapped(alice(), CurrencyId::DOT, dollars(20_u128)),
-				Error::<Test>::NotValidWrappedTokenId
+				liquidity_pools::Error::<Test>::NotValidWrappedTokenId
 			);
 
 			// Transaction with zero balance is not allowed.
@@ -473,7 +473,7 @@ fn repay_should_work() {
 		// Alice cannot repay 70 DOT, because she only borrowed 60 DOT.
 		assert_noop!(
 			TestProtocol::repay(alice(), CurrencyId::DOT, dollars(70_u128)),
-			Error::<Test>::RepayAmountToBig
+			liquidity_pools::Error::<Test>::RepayAmountToBig
 		);
 
 		// Transaction with zero balance is not allowed.
@@ -598,7 +598,7 @@ fn repay_on_behalf_should_work() {
 		// Bob cannot repay 100 DOT, because Alice only borrowed 60 DOT.
 		assert_noop!(
 			TestProtocol::repay_on_behalf(bob(), CurrencyId::DOT, ALICE, dollars(100_u128)),
-			Error::<Test>::RepayAmountToBig
+			liquidity_pools::Error::<Test>::RepayAmountToBig
 		);
 
 		// Transaction with zero balance is not allowed.
@@ -801,7 +801,7 @@ fn transfer_wrapped_should_not_work() {
 			// Alice is unable to transfer more tokens tan she has
 			assert_noop!(
 				TestProtocol::transfer_wrapped(alice(), BOB, CurrencyId::MNT, ONE_HUNDRED_DOLLARS),
-				Error::<Test>::NotValidWrappedTokenId
+				liquidity_pools::Error::<Test>::NotValidWrappedTokenId
 			);
 
 			// Alice is unable to transfer tokens to self

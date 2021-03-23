@@ -56,24 +56,14 @@ pub mod module {
 	pub enum Error<T> {
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
-		/// The currency is not enabled in wrapped protocol.
-		NotValidWrappedTokenId,
-		/// There is not enough liquidity available in the pool.
+		/// There is not enough liquidity available in the liquidity pool.
 		NotEnoughLiquidityAvailable,
 		/// Insufficient wrapped tokens in the user account.
 		NotEnoughWrappedTokens,
-		/// User did not make deposit (no mTokens).
-		NumberOfWrappedTokensIsZero,
 		/// Insufficient underlying assets in the user account.
 		NotEnoughUnderlyingsAssets,
-		/// Number overflow in calculation.
-		NumOverflow,
 		/// An internal failure occurred in the execution of the Accrue Interest function.
 		AccrueInterestFailed,
-		/// Deposit was blocked due to Controller rejection.
-		DepositControllerRejection,
-		/// Redeem was blocked due to Controller rejection.
-		RedeemControllerRejection,
 		/// Transaction with zero balance is not allowed.
 		ZeroBalanceTransaction,
 		/// User is trying repay more than he borrowed.
@@ -235,8 +225,7 @@ pub mod module {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
-			let underlying_asset_id = <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id)
-				.map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
+			let underlying_asset_id = <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
 			let (underlying_amount, wrapped_id, _) =
 				Self::do_redeem(&who, underlying_asset_id, Balance::zero(), wrapped_amount, false)?;
 			Self::deposit_event(Event::Redeemed(
@@ -382,7 +371,7 @@ pub mod module {
 			// If user does not have assets in the pool, then he cannot enable as collateral the pool.
 			let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
 			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &sender);
-			ensure!(user_wrapped_balance > 0, Error::<T>::CanotBeEnabledAsCollateral);
+			ensure!(!user_wrapped_balance.is_zero(), Error::<T>::CanotBeEnabledAsCollateral);
 
 			<LiquidityPools<T>>::enable_as_collateral_internal(&sender, pool_id)?;
 			Self::deposit_event(Event::PoolEnabledAsCollateral(sender, pool_id));
@@ -417,7 +406,7 @@ pub mod module {
 			// Check if the user will have enough collateral if he removes one of the collaterals.
 			let (_, shortfall) =
 				<Controller<T>>::get_hypothetical_account_liquidity(&sender, pool_id, user_balance_disabled_asset, 0)?;
-			ensure!(!(shortfall > 0), Error::<T>::CanotBeDisabledAsCollateral);
+			ensure!(shortfall == 0, Error::<T>::CanotBeDisabledAsCollateral);
 
 			<LiquidityPools<T>>::disable_collateral_internal(&sender, pool_id)?;
 			Self::deposit_event(Event::PoolDisabledCollateral(sender, pool_id));
@@ -449,11 +438,9 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::OperationPaused
 		);
 
-		let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)
-			.map_err(|_| Error::<T>::NotValidUnderlyingAssetId)?;
+		let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
-		let wrapped_amount = <LiquidityPools<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
-			.map_err(|_| Error::<T>::NumOverflow)?;
+		let wrapped_amount = <LiquidityPools<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)?;
 
 		T::MultiCurrency::transfer(
 			underlying_asset_id,
@@ -481,26 +468,22 @@ impl<T: Config> Pallet<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
-		let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)
-			.map_err(|_| Error::<T>::NotValidUnderlyingAssetId)?;
+		let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
 
 		let wrapped_amount = match (underlying_amount, wrapped_amount, all_assets) {
 			(0, 0, true) => {
 				let total_wrapped_amount = T::MultiCurrency::free_balance(wrapped_id, &who);
-				ensure!(!total_wrapped_amount.is_zero(), Error::<T>::NumberOfWrappedTokensIsZero);
-				underlying_amount = <LiquidityPools<T>>::convert_from_wrapped(wrapped_id, total_wrapped_amount)
-					.map_err(|_| Error::<T>::NumOverflow)?;
+				ensure!(total_wrapped_amount > 0, Error::<T>::NotEnoughWrappedTokens);
+				underlying_amount = <LiquidityPools<T>>::convert_from_wrapped(wrapped_id, total_wrapped_amount)?;
 				total_wrapped_amount
 			}
 			(_, 0, false) => {
 				ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
-				<LiquidityPools<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)
-					.map_err(|_| Error::<T>::NumOverflow)?
+				<LiquidityPools<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)?
 			}
 			_ => {
 				ensure!(wrapped_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
-				underlying_amount = <LiquidityPools<T>>::convert_from_wrapped(wrapped_id, wrapped_amount)
-					.map_err(|_| Error::<T>::NumOverflow)?;
+				underlying_amount = <LiquidityPools<T>>::convert_from_wrapped(wrapped_id, wrapped_amount)?;
 				wrapped_amount
 			}
 		};
@@ -520,8 +503,7 @@ impl<T: Config> Pallet<T> {
 			<Controller<T>>::is_operation_allowed(underlying_asset_id, Operation::Redeem),
 			Error::<T>::OperationPaused
 		);
-		<Controller<T>>::redeem_allowed(underlying_asset_id, &who, wrapped_amount)
-			.map_err(|_| Error::<T>::RedeemControllerRejection)?;
+		<Controller<T>>::redeem_allowed(underlying_asset_id, &who, wrapped_amount)?;
 
 		T::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount)?;
 
@@ -566,11 +548,9 @@ impl<T: Config> Pallet<T> {
 		<Controller<T>>::borrow_allowed(underlying_asset_id, &who, borrow_amount)?;
 
 		// Fetch the amount the borrower owes, with accumulated interest.
-		let account_borrows =
-			<Controller<T>>::borrow_balance_stored(&who, underlying_asset_id).map_err(|_| Error::<T>::NumOverflow)?;
+		let account_borrows = <Controller<T>>::borrow_balance_stored(&who, underlying_asset_id)?;
 
-		<LiquidityPools<T>>::update_state_on_borrow(&who, underlying_asset_id, borrow_amount, account_borrows)
-			.map_err(|_| Error::<T>::NumOverflow)?;
+		<LiquidityPools<T>>::update_state_on_borrow(&who, underlying_asset_id, borrow_amount, account_borrows)?;
 
 		// Transfer the borrow_amount from the protocol account to the borrower's account.
 		T::MultiCurrency::transfer(
@@ -619,7 +599,7 @@ impl<T: Config> Pallet<T> {
 		all_assets: bool,
 	) -> BalanceResult {
 		if !all_assets {
-			ensure!(repay_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
+			ensure!(!repay_amount.is_zero(), Error::<T>::ZeroBalanceTransaction);
 		}
 
 		// Fail if repay_borrow not allowed
@@ -629,21 +609,18 @@ impl<T: Config> Pallet<T> {
 		);
 
 		// Fetch the amount the borrower owes, with accumulated interest
-		let account_borrows = <Controller<T>>::borrow_balance_stored(&borrower, underlying_asset_id)
-			.map_err(|_| Error::<T>::NumOverflow)?;
+		let account_borrows = <Controller<T>>::borrow_balance_stored(&borrower, underlying_asset_id)?;
 
-		repay_amount = match repay_amount.cmp(&Balance::zero()) {
-			Ordering::Equal => account_borrows,
-			_ => repay_amount,
-		};
+		if repay_amount.is_zero() {
+			repay_amount = account_borrows
+		}
 
 		ensure!(
 			repay_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
 			Error::<T>::NotEnoughUnderlyingsAssets
 		);
 
-		<LiquidityPools<T>>::update_state_on_repay(&borrower, underlying_asset_id, repay_amount, account_borrows)
-			.map_err(|_| Error::<T>::RepayAmountToBig)?;
+		<LiquidityPools<T>>::update_state_on_repay(&borrower, underlying_asset_id, repay_amount, account_borrows)?;
 
 		// Transfer the repay_amount from the borrower's account to the protocol account.
 		T::MultiCurrency::transfer(
@@ -672,8 +649,7 @@ impl<T: Config> Pallet<T> {
 		ensure!(who != receiver, Error::<T>::CannotTransferToSelf);
 
 		// Fail if invalid token id
-		let underlying_asset_id = <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id)
-			.map_err(|_| Error::<T>::NotValidWrappedTokenId)?;
+		let underlying_asset_id = <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
 
 		// Fail if transfer is not allowed
 		ensure!(
@@ -682,8 +658,7 @@ impl<T: Config> Pallet<T> {
 		);
 
 		// Fail if transfer_amount is not available for redeem
-		<Controller<T>>::redeem_allowed(underlying_asset_id, &who, transfer_amount)
-			.map_err(|_| Error::<T>::RedeemControllerRejection)?;
+		<Controller<T>>::redeem_allowed(underlying_asset_id, &who, transfer_amount)?;
 
 		// Fail if not enough free balance
 		ensure!(

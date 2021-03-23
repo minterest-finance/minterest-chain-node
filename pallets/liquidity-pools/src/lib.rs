@@ -108,6 +108,8 @@ pub mod module {
 		NotValidWrappedTokenId,
 		/// Feed price is invalid
 		InvalidFeedPrice,
+		/// User is trying repay more than he borrowed.
+		RepayAmountToBig,
 	}
 
 	#[pallet::storage]
@@ -545,11 +547,11 @@ impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 		// total_borrows_new = total_borrows - repay_amount
 		let account_borrow_new = account_borrows
 			.checked_sub(repay_amount)
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::RepayAmountToBig)?;
 		let total_borrows_new = pool_data
 			.total_borrowed
 			.checked_sub(repay_amount)
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::RepayAmountToBig)?;
 
 		// Write the previously calculated values into storage.
 		Self::set_pool_total_borrowed(pool_id, total_borrows_new)?;
