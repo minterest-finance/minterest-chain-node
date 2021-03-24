@@ -136,6 +136,10 @@ pub mod module {
 		BorrowCapReached,
 		/// Invalid borrow cap. Borrow cap must be in range [0..1].
 		InvalidBorrowCap,
+		/// Borrow interest rate calculation error.
+		BorrowRateCalculationError,
+		/// Utilization rate calculation error.
+		UtilizationRateCalculationError,
 	}
 
 	#[pallet::event]
@@ -776,11 +780,13 @@ impl<T: Config> Pallet<T> {
 			current_total_balance,
 			pool_data.total_borrowed,
 			pool_data.total_insurance,
-		)?;
+		)
+		.map_err(|_| Error::<T>::UtilizationRateCalculationError)?;
 
 		// Calculate the current borrow interest rate
 		let current_borrow_interest_rate =
-			<MinterestModel<T>>::calculate_borrow_interest_rate(underlying_asset_id, utilization_rate)?;
+			<MinterestModel<T>>::calculate_borrow_interest_rate(underlying_asset_id, utilization_rate)
+				.map_err(|_| Error::<T>::BorrowRateCalculationError)?;
 
 		let ControllerData {
 			max_borrow_rate,
