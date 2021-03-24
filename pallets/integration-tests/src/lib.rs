@@ -279,7 +279,6 @@ mod tests {
 			pool_id: CurrencyId,
 			user: AccountId,
 			total_borrowed: Balance,
-			protocol_interest: Balance,
 			interest_index: Rate,
 			collateral: bool,
 			liquidation_attempts: u8,
@@ -289,7 +288,6 @@ mod tests {
 				user,
 				PoolUserData {
 					total_borrowed,
-					protocol_interest,
 					interest_index,
 					collateral,
 					liquidation_attempts,

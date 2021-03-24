@@ -105,7 +105,6 @@ impl ExtBuilder {
 		pool_id: CurrencyId,
 		user: AccountId,
 		total_borrowed: Balance,
-		protocol_interest: Balance,
 		interest_index: Rate,
 		collateral: bool,
 		liquidation_attempts: u8,
@@ -115,7 +114,6 @@ impl ExtBuilder {
 			user,
 			PoolUserData {
 				total_borrowed,
-				protocol_interest,
 				interest_index,
 				collateral,
 				liquidation_attempts,
@@ -897,7 +895,7 @@ fn complete_liquidation_one_collateral_should_work() {
 		.liquidation_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
 		.user_balance(ALICE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
 		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Balance::zero(), Rate::one(), true, 3)
+		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 3)
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
@@ -953,8 +951,8 @@ fn complete_liquidation_multi_collateral_should_work() {
 		.user_balance(ALICE::get(), CurrencyId::METH, 50_000 * DOLLARS)
 		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
 		.user_balance(CHARLIE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Balance::zero(), Rate::one(), true, 3)
-		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Balance::zero(), Rate::one(), true, 0)
+		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 3)
+		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Rate::one(), true, 0)
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
@@ -1019,7 +1017,7 @@ fn partial_liquidation_one_collateral_should_work() {
 		.liquidation_pool_balance(CurrencyId::DOT, 100_000 * DOLLARS)
 		.user_balance(ALICE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
 		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Balance::zero(), Rate::one(), true, 0)
+		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 0)
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
@@ -1075,8 +1073,8 @@ fn partial_liquidation_multi_collateral_should_work() {
 		.user_balance(ALICE::get(), CurrencyId::METH, 80_000 * DOLLARS)
 		.user_balance(BOB::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
 		.user_balance(CHARLIE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Balance::zero(), Rate::one(), true, 0)
-		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Balance::zero(), Rate::one(), true, 0)
+		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 0)
+		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Rate::one(), true, 0)
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
@@ -1142,8 +1140,8 @@ fn complete_liquidation_should_not_work() {
 		.user_balance(ALICE::get(), CurrencyId::MDOT, 50_000 * DOLLARS)
 		.user_balance(ALICE::get(), CurrencyId::METH, 50_000 * DOLLARS)
 		.user_balance(CHARLIE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Balance::zero(), Rate::one(), true, 3)
-		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Balance::zero(), Rate::one(), false, 0)
+		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 3)
+		.pool_user_data(CurrencyId::ETH, ALICE::get(), 0, Rate::one(), false, 0)
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
@@ -1165,8 +1163,8 @@ fn partial_liquidation_should_not_work() {
 		.user_balance(ALICE::get(), CurrencyId::MDOT, 10_000 * DOLLARS)
 		.user_balance(ALICE::get(), CurrencyId::METH, 15_000 * DOLLARS)
 		.user_balance(CHARLIE::get(), CurrencyId::MDOT, 100_000 * DOLLARS)
-		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Balance::zero(), Rate::one(), true, 2)
-		.pool_user_data(CurrencyId::BTC, ALICE::get(), 0, Balance::zero(), Rate::one(), true, 0)
+		.pool_user_data(CurrencyId::DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 2)
+		.pool_user_data(CurrencyId::BTC, ALICE::get(), 0, Rate::one(), true, 0)
 		.pool_total_borrowed(CurrencyId::DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {

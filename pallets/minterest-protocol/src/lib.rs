@@ -11,12 +11,12 @@
 use frame_support::traits::Contains;
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, pallet_prelude::*};
-use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
+use minterest_primitives::{Balance, CurrencyId, Operation};
 use orml_traits::MultiCurrency;
 use pallet_traits::{Borrowing, PoolsManager};
 use sp_runtime::{
-	traits::{BadOrigin, CheckedDiv, CheckedMul, Zero},
-	DispatchError, DispatchResult, FixedPointNumber
+	traits::{BadOrigin, Zero},
+	DispatchError, DispatchResult,
 };
 use sp_std::cmp::Ordering;
 use sp_std::result;
@@ -647,22 +647,8 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::NotEnoughUnderlyingsAssets
 		);
 
-		let pool_data = <LiquidityPools<T>>::get_pool_data(underlying_asset_id);
-
 		<LiquidityPools<T>>::update_state_on_repay(&borrower, underlying_asset_id, repay_amount, account_borrows)
 			.map_err(|_| Error::<T>::RepayAmountToBig)?;
-
-		// let repay_factor = Rate::from_inner(repay_amount)
-		// 	.checked_div(&Rate::from_inner(pool_data.total_borrowed))
-		// 	.ok_or(Error::<T>::NumOverflow)?;
-		// let to_liquidation_pool = Rate::from_inner(pool_data.total_insurance)
-		// 	.checked_mul(&repay_factor)
-		// 	.map(|x| x.into_inner())
-		// 	.ok_or(Error::<T>::NumOverflow)?;
-
-		// let to_liquidity_pool = repay_amount
-		// 	.checked_sub(to_liquidation_pool)
-		// 	.ok_or(Error::<T>::NumOverflow)?;
 
 		// Transfer the repay_amount from the borrower's account to the protocol account.
 		T::MultiCurrency::transfer(

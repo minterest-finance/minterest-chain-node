@@ -288,7 +288,6 @@ impl ExtBuilder {
 					ALICE,
 					PoolUserData {
 						total_borrowed: 0,
-						protocol_interest: 0,
 						interest_index: Rate::from_inner(0),
 						collateral: true,
 						liquidation_attempts: 0,
@@ -299,7 +298,6 @@ impl ExtBuilder {
 					ALICE,
 					PoolUserData {
 						total_borrowed: 0,
-						protocol_interest: 0,
 						interest_index: Rate::from_inner(0),
 						collateral: false,
 						liquidation_attempts: 0,
@@ -310,7 +308,6 @@ impl ExtBuilder {
 					ALICE,
 					PoolUserData {
 						total_borrowed: 0,
-						protocol_interest: 0,
 						interest_index: Rate::from_inner(0),
 						collateral: true,
 						liquidation_attempts: 0,
@@ -321,7 +318,6 @@ impl ExtBuilder {
 					ALICE,
 					PoolUserData {
 						total_borrowed: 0,
-						protocol_interest: 0,
 						interest_index: Rate::from_inner(0),
 						collateral: true,
 						liquidation_attempts: 0,
@@ -332,7 +328,6 @@ impl ExtBuilder {
 					BOB,
 					PoolUserData {
 						total_borrowed: 0,
-						protocol_interest: 0,
 						interest_index: Rate::from_inner(0),
 						collateral: true,
 						liquidation_attempts: 0,
@@ -343,7 +338,6 @@ impl ExtBuilder {
 					BOB,
 					PoolUserData {
 						total_borrowed: 0,
-						protocol_interest: 0,
 						interest_index: Rate::from_inner(0),
 						collateral: true,
 						liquidation_attempts: 0,

@@ -162,7 +162,7 @@ fn calculate_new_total_insurance_should_work() {
 #[test]
 fn borrow_balance_stored_with_zero_balance_should_work() {
 	ExtBuilder::default()
-		.pool_user_data(CurrencyId::DOT, ALICE, Balance::zero(), Balance::zero(), Rate::from_inner(0), true, 0)
+		.pool_user_data(CurrencyId::DOT, ALICE, Balance::zero(), Rate::from_inner(0), true, 0)
 		.build()
 		.execute_with(|| {
 			// If borrow_balance = 0 then borrow_index is likely also 0, return Ok(0)
@@ -181,7 +181,6 @@ fn borrow_balance_stored_should_work() {
 			CurrencyId::DOT,
 			ALICE,
 			100,
-			Balance::zero(),
 			Rate::saturating_from_rational(4, 1),
 			true,
 			0,
@@ -201,13 +200,12 @@ fn borrow_balance_stored_fails_if_num_overflow() {
 			CurrencyId::DOT,
 			ALICE,
 			Balance::max_value(),
-			Balance::zero(),
 			Rate::saturating_from_rational(2, 1),
 			true,
 			0,
 		)
 		.pool_mock(CurrencyId::BTC)
-		.pool_user_data(CurrencyId::DOT, ALICE, 100, Balance::zero(), Rate::from_inner(0), true, 0)
+		.pool_user_data(CurrencyId::DOT, ALICE, 100, Rate::from_inner(0), true, 0)
 		.build()
 		.execute_with(|| {
 			assert_noop!(
@@ -361,8 +359,8 @@ fn mul_price_and_balance_add_to_prev_value_should_work() {
 #[test]
 fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work() {
 	ExtBuilder::default()
-		.pool_user_data(CurrencyId::DOT, ALICE, Balance::zero(), Balance::zero(), Rate::from_inner(0), true, 0)
-		.pool_user_data(CurrencyId::BTC, BOB, Balance::zero(), Balance::zero(), Rate::from_inner(0), false, 0)
+		.pool_user_data(CurrencyId::DOT, ALICE, Balance::zero(), Rate::from_inner(0), true, 0)
+		.pool_user_data(CurrencyId::BTC, BOB, Balance::zero(), Rate::from_inner(0), false, 0)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all assets.
@@ -452,7 +450,6 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 			CurrencyId::DOT,
 			ALICE,
 			30,
-			Balance::zero(),
 			Rate::saturating_from_rational(1, 1),
 			false,
 			0,
