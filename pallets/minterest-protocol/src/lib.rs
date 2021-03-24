@@ -370,7 +370,7 @@ pub mod module {
 			// If user does not have assets in the pool, then he cannot enable as collateral the pool.
 			let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
 			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &sender);
-			ensure!(!user_wrapped_balance.is_zero(), Error::<T>::CanotBeEnabledAsCollateral);
+			ensure!(!user_wrapped_balance.is_zero(), Error::<T>::CannotBeEnabledAsCollateral);
 
 			<LiquidityPools<T>>::enable_as_collateral_internal(&sender, pool_id);
 			Self::deposit_event(Event::PoolEnabledAsCollateral(sender, pool_id));
@@ -405,7 +405,7 @@ pub mod module {
 			// Check if the user will have enough collateral if he removes one of the collaterals.
 			let (_, shortfall) =
 				<Controller<T>>::get_hypothetical_account_liquidity(&sender, pool_id, user_balance_disabled_asset, 0)?;
-			ensure!(shortfall == 0, Error::<T>::CanotBeDisabledAsCollateral);
+			ensure!(shortfall == 0, Error::<T>::CannotBeDisabledAsCollateral);
 
 			<LiquidityPools<T>>::disable_collateral_internal(&sender, pool_id);
 			Self::deposit_event(Event::PoolDisabledCollateral(sender, pool_id));
@@ -616,7 +616,7 @@ impl<T: Config> Pallet<T> {
 
 		ensure!(
 			repay_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
-			Error::<T>::NotEnoughUnderlyingsAssets
+			Error::<T>::NotEnoughUnderlyingAssets
 		);
 
 		<LiquidityPools<T>>::update_state_on_repay(&borrower, underlying_asset_id, repay_amount, account_borrows)?;
