@@ -190,6 +190,7 @@ mod tests {
 		type Borrowing = liquidity_pools::Module<Test>;
 		type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 		type WhitelistMembers = Four;
+		type ProtocolWeightInfo = ();
 	}
 
 	parameter_types! {

@@ -121,6 +121,7 @@ impl liquidation_pools::Config for Runtime {
 	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	type Dex = dex::Module<Runtime>;
+	type LiquidationPoolsWeightInfo = ();
 }
 
 parameter_types! {

@@ -171,6 +171,7 @@ impl liquidation_pools::Config for Test {
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	type Dex = dex::Module<Test>;
+	type LiquidationPoolsWeightInfo = ();
 }
 
 ord_parameter_types! {
@@ -206,6 +207,7 @@ impl minterest_protocol::Config for Test {
 	type Borrowing = liquidity_pools::Module<Test>;
 	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 	type WhitelistMembers = Two;
+	type ProtocolWeightInfo = ();
 }
 
 parameter_types! {

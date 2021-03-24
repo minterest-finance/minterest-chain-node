@@ -345,6 +345,7 @@ impl minterest_protocol::Config for Runtime {
 	type Borrowing = LiquidityPools;
 	type ManagerLiquidityPools = LiquidityPools;
 	type WhitelistMembers = WhitelistCouncilProvider;
+	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
 }
 
 pub struct WhitelistCouncilProvider;
@@ -811,6 +812,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, module_prices, benchmarking::prices);
 			add_benchmark!(params, batches, risk_manager, benchmarking::risk_manager);
 			add_benchmark!(params, batches, liquidation_pools, benchmarking::liquidation_pools);
+			add_benchmark!(params, batches, minterest_protocol, benchmarking::minterest_protocol);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

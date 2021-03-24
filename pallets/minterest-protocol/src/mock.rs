@@ -201,6 +201,7 @@ impl minterest_protocol::Config for Test {
 	type Borrowing = liquidity_pools::Module<Test>;
 	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 	type WhitelistMembers = Two;
+	type ProtocolWeightInfo = ();
 }
 
 pub const ALICE: AccountId = 1;

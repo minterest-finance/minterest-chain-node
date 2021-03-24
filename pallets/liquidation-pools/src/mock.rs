@@ -170,6 +170,7 @@ impl Config for Test {
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	type Dex = dex::Module<Test>;
+	type LiquidationPoolsWeightInfo = ();
 }
 
 /// An extrinsic type used for tests.

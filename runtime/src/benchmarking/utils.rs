@@ -1,11 +1,12 @@
 use crate::{
 	AccountId, Balance, Currencies, CurrencyId, EnabledUnderlyingAssetId, MinterestOracle, MinterestProtocol, Origin,
-	Price, Runtime, Vec,
+	Price, Runtime, Vec, WhitelistCouncilMembership,
 };
 
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 use frame_support::traits::OnFinalize;
 use frame_system::pallet_prelude::OriginFor;
+use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::StaticLookup, FixedPointNumber};
 
@@ -37,5 +38,11 @@ pub fn enable_as_collateral<T: frame_system::Config<Origin = Origin>>(
 	currency_id: CurrencyId,
 ) -> DispatchResultWithPostInfo {
 	MinterestProtocol::enable_as_collateral(origin.into(), currency_id)?;
+	Ok(().into())
+}
+
+pub fn enable_whitelist_mode_a_add_member(who: AccountId) -> DispatchResultWithPostInfo {
+	controller::WhitelistMode::<Runtime>::put(true);
+	WhitelistCouncilMembership::add_member(RawOrigin::Root.into(), who.clone())?;
 	Ok(().into())
 }
