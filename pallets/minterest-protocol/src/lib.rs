@@ -60,7 +60,7 @@ pub mod module {
 		/// Insufficient wrapped tokens in the user account.
 		NotEnoughWrappedTokens,
 		/// Insufficient underlying assets in the user account.
-		NotEnoughUnderlyingsAssets,
+		NotEnoughUnderlyingAssets,
 		/// An internal failure occurred in the execution of the Accrue Interest function.
 		AccrueInterestFailed,
 		/// Transaction with zero balance is not allowed.
@@ -72,9 +72,9 @@ pub mod module {
 		/// This pool has already been disabled as a collateral.
 		AlreadyDisabledCollateral,
 		/// The user has an outstanding borrow. Cannot be disabled as collateral.
-		CanotBeDisabledAsCollateral,
+		CannotBeDisabledAsCollateral,
 		/// The user has not deposited funds into the pool.
-		CanotBeEnabledAsCollateral,
+		CannotBeEnabledAsCollateral,
 		/// Operation (deposit, redeem, borrow, repay) is paused.
 		OperationPaused,
 		/// The user is trying to transfer tokens to self

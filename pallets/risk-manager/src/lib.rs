@@ -484,7 +484,7 @@ impl<T: Config> Pallet<T> {
 
 		let seized_pools = Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, repay_assets, seize_amount)?;
 
-		Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation)?;
+		Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation);
 
 		Self::deposit_event(Event::LiquidateUnsafeLoan(
 			borrower,
@@ -660,7 +660,7 @@ impl<T: Config> Pallet<T> {
 		liquidated_pool_id: CurrencyId,
 		borrower: &T::AccountId,
 		is_partial_liquidation: bool,
-	) -> DispatchResult {
+	) {
 		// partial_liquidation -> liquidation_attempts += 1
 		// complete_liquidation -> liquidation_attempts = 0
 		liquidity_pools::PoolUserDates::<T>::mutate(liquidated_pool_id, &borrower, |p| {
@@ -669,8 +669,7 @@ impl<T: Config> Pallet<T> {
 			} else {
 				p.liquidation_attempts = u8::zero();
 			}
-		});
-		Ok(())
+		})
 	}
 }
 
