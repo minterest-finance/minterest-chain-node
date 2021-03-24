@@ -362,7 +362,7 @@ mod tests {
 						CurrencyId::DOT,
 						alice_deposited_amount_in_dot
 					),
-					controller::Error::<Test>::NumOverflow
+					controller::Error::<Test>::BorrowBalanceOverflow
 				);
 
 				// Checking free balance DOT && ETH for user.
@@ -894,7 +894,7 @@ mod tests {
 				// Alice redeem all DOTs
 				assert_noop!(
 					MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT),
-					controller::Error::<Test>::NumOverflow
+					controller::Error::<Test>::BorrowBalanceOverflow
 				);
 
 				// Checking free balance DOT && ETH for user.

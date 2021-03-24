@@ -121,7 +121,13 @@ pub mod module {
 		NotEnoughBalance,
 		/// Balance overflows maximum.
 		/// Only happened when the balance went wrong and balance overflows the integer type.
-		BalanceOverflowed,
+		BalanceOverflow,
+		/// Collateral balance overflows maximum.
+		CollateralBalanceOverflow,
+		/// Borrow balance overflows maximum.
+		BorrowBalanceOverflow,
+		/// Insurance balance overflows maximum.
+		InsuranceBalanceOverflow,
 		/// Maximum borrow rate cannot be set to 0.
 		MaxBorrowRateCannotBeZero,
 		/// Collateral factor must be between 0 and 1 (above zero).
@@ -502,12 +508,12 @@ impl<T: Config> Pallet<T> {
 
 				// sum_collateral += tokens_to_denom * m_token_balance
 				sum_collateral = checked_acc_and_add_mul(sum_collateral, m_token_balance, tokens_to_denom)
-					.ok_or(Error::<T>::NumOverflow)?;
+					.ok_or(Error::<T>::CollateralBalanceOverflow)?;
 			}
 
 			// sum_borrow_plus_effects += oracle_price * borrow_balance
 			sum_borrow_plus_effects = checked_acc_and_add_mul(sum_borrow_plus_effects, borrow_balance, oracle_price)
-				.ok_or(Error::<T>::NumOverflow)?;
+				.ok_or(Error::<T>::BalanceOverflow)?;
 
 			// Calculate effects of interacting with Underlying Asset Modify.
 			if underlying_to_borrow == underlying_asset {
@@ -516,14 +522,14 @@ impl<T: Config> Pallet<T> {
 					// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
 					sum_borrow_plus_effects =
 						checked_acc_and_add_mul(sum_borrow_plus_effects, redeem_amount, tokens_to_denom)
-							.ok_or(Error::<T>::NumOverflow)?;
+							.ok_or(Error::<T>::BalanceOverflow)?;
 				};
 				// borrow effect
 				if borrow_amount > 0 {
 					// sum_borrow_plus_effects += oracle_price * borrow_amount
 					sum_borrow_plus_effects =
 						checked_acc_and_add_mul(sum_borrow_plus_effects, borrow_amount, oracle_price)
-							.ok_or(Error::<T>::NumOverflow)?;
+							.ok_or(Error::<T>::BalanceOverflow)?;
 				}
 			}
 		}
@@ -612,12 +618,12 @@ impl<T: Config> Pallet<T> {
 			// new_total_borrows_in_usd = (pool_total_borrowed + borrow_amount) * oracle_price
 			let new_total_borrows = pool_total_borrowed
 				.checked_add(borrow_amount)
-				.ok_or(Error::<T>::NumOverflow)?;
+				.ok_or(Error::<T>::BalanceOverflow)?;
 
 			let new_total_borrows_in_usd = Rate::from_inner(new_total_borrows)
 				.checked_mul(&oracle_price)
 				.map(|x| x.into_inner())
-				.ok_or(Error::<T>::NumOverflow)?;
+				.ok_or(Error::<T>::BalanceOverflow)?;
 
 			Ok(new_total_borrows_in_usd >= borrow_cap)
 		} else {
@@ -699,14 +705,14 @@ impl<T: Config> Pallet<T> {
 						.checked_mul(&current_exchange_rate)
 						.and_then(|v| v.checked_mul(&oracle_price))
 						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?;
+						.ok_or(Error::<T>::BalanceOverflow)?;
 				}
 				if has_borrow_balance {
 					let borrow_balance = Self::calculate_borrow_balance(&who, pool_id, pool_data.borrow_index)?;
 					let borrow_balance_in_usd = Rate::from_inner(borrow_balance)
 						.checked_mul(&oracle_price)
 						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?;
+						.ok_or(Error::<T>::BalanceOverflow)?;
 					borrowed_in_usd += borrow_balance_in_usd;
 				}
 				Ok((
@@ -747,7 +753,7 @@ impl<T: Config> Pallet<T> {
 			.checked_mul(&pool_borrow_index)
 			.and_then(|v| v.checked_div(&user_borrow_index))
 			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::BorrowBalanceOverflow)?;
 
 		Ok(recent_borrow_balance)
 	}
@@ -801,15 +807,15 @@ impl<T: Config> Pallet<T> {
 		let interest_accumulated = Rate::from_inner(pool_data.total_borrowed)
 			.checked_mul(&simple_interest_factor)
 			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::BalanceOverflow)?;
 
 		let new_total_borrow_balance = interest_accumulated
 			.checked_add(pool_data.total_borrowed)
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::BorrowBalanceOverflow)?;
 
 		let new_total_insurance =
 			checked_acc_and_add_mul(pool_data.total_insurance, interest_accumulated, insurance_factor)
-				.ok_or(Error::<T>::NumOverflow)?;
+				.ok_or(Error::<T>::InsuranceBalanceOverflow)?;
 
 		let new_borrow_index = simple_interest_factor
 			.checked_mul(&pool_data.borrow_index)
@@ -846,7 +852,7 @@ impl<T: Config> Pallet<T> {
 			current_total_balance
 				.checked_add(current_total_borrowed_balance)
 				.and_then(|v| v.checked_sub(current_total_insurance))
-				.ok_or(Error::<T>::NumOverflow)?,
+				.ok_or(Error::<T>::BalanceOverflow)?,
 		)
 		.ok_or(Error::<T>::NumOverflow)?;
 
@@ -914,7 +920,7 @@ impl<T: Config> Pallet<T> {
 
 		let new_insurance_balance = current_insurance_balance
 			.checked_add(amount)
-			.ok_or(Error::<T>::BalanceOverflowed)?;
+			.ok_or(Error::<T>::BalanceOverflow)?;
 
 		<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_insurance_balance)?;
 

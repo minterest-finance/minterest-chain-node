@@ -149,7 +149,7 @@ fn borrow_balance_stored_fails_if_num_overflow() {
 		.execute_with(|| {
 			assert_noop!(
 				Controller::borrow_balance_stored(&ALICE, CurrencyId::DOT),
-				Error::<Runtime>::NumOverflow
+				Error::<Runtime>::BorrowBalanceOverflow
 			);
 		});
 }
@@ -171,13 +171,13 @@ fn calculate_utilization_rate_should_work() {
 		// Overflow in calculation: total_balance + total_borrowed = max_value() + 80
 		assert_noop!(
 			Controller::calculate_utilization_rate(Balance::max_value(), 80, 2),
-			Error::<Runtime>::NumOverflow
+			Error::<Runtime>::BalanceOverflow
 		);
 
 		// Overflow in calculation: total_balance_total_borrowed_sum - total_insurance = ... - max_value()
 		assert_noop!(
 			Controller::calculate_utilization_rate(22, 80, Balance::max_value()),
-			Error::<Runtime>::NumOverflow
+			Error::<Runtime>::BalanceOverflow
 		);
 
 		// Overflow in calculation: total_borrows / 0
@@ -808,7 +808,7 @@ fn do_deposit_insurance_should_work() {
 			// Overflow in calculation: total_insurance = max_value() + 50
 			assert_err!(
 				Controller::do_deposit_insurance(&BOB, CurrencyId::BTC, 50),
-				Error::<Runtime>::BalanceOverflowed
+				Error::<Runtime>::BalanceOverflow
 			);
 		});
 }
@@ -872,7 +872,7 @@ fn do_redeem_insurance_should_work() {
 			// Overflow in calculation: total_insurance = max_value() + 50
 			assert_err!(
 				Controller::do_deposit_insurance(&ALICE, CurrencyId::DOT, 50),
-				Error::<Runtime>::BalanceOverflowed
+				Error::<Runtime>::BalanceOverflow
 			);
 		});
 }
