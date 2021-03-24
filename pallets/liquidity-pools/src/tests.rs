@@ -320,7 +320,7 @@ fn convert_to_wrapped_should_work() {
 			// when exchange_rate < 1
 			assert_err!(
 				TestPools::convert_to_wrapped(CurrencyId::DOT, Balance::max_value()),
-				Error::<Test>::NumOverflow
+				Error::<Test>::ConversionError
 			);
 		});
 }
@@ -341,7 +341,7 @@ fn convert_from_wrapped_should_work() {
 			// Overflow in calculation: underlying_amount = max_value() * exchange_rate
 			assert_err!(
 				TestPools::convert_from_wrapped(CurrencyId::MBTC, Balance::max_value()),
-				Error::<Test>::NumOverflow
+				Error::<Test>::ConversionError
 			);
 		});
 }

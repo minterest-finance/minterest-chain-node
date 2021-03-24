@@ -101,7 +101,7 @@ mod tests {
 				// Alice try to deposit ONE_HUNDRED to DOT pool
 				assert_noop!(
 					MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::DOT, ONE_HUNDRED),
-					liquidity_pools::Error::<Test>::NumOverflow
+					liquidity_pools::Error::<Test>::ConversionError
 				);
 
 				// Alice deposit to DOT pool.

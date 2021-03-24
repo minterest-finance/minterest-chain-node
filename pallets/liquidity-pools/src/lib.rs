@@ -100,8 +100,6 @@ pub mod module {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Number overflow in calculation.
-		NumOverflow,
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
 		/// The currency is not enabled in wrapped protocol.
@@ -112,6 +110,8 @@ pub mod module {
 		BorrowBalanceOverflow,
 		/// Exchange rate calculation error.
 		ExchangeRateCalculationError,
+		/// Conversion error between underlying assets and wrapped tokens.
+		ConversionError,
 	}
 
 	#[pallet::storage]
@@ -178,7 +178,7 @@ impl<T: Config> Pallet<T> {
 		let wrapped_amount = Rate::from_inner(underlying_amount)
 			.checked_div(&exchange_rate)
 			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::ConversionError)?;
 
 		Ok(wrapped_amount)
 	}
@@ -197,7 +197,7 @@ impl<T: Config> Pallet<T> {
 		let underlying_amount = Rate::from_inner(wrapped_amount)
 			.checked_mul(&exchange_rate)
 			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::ConversionError)?;
 
 		Ok(underlying_amount)
 	}
