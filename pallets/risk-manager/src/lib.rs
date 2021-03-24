@@ -663,17 +663,13 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		// partial_liquidation -> liquidation_attempts += 1
 		// complete_liquidation -> liquidation_attempts = 0
-		liquidity_pools::PoolUserDates::<T>::try_mutate(liquidated_pool_id, &borrower, |p| -> DispatchResult {
+		liquidity_pools::PoolUserDates::<T>::mutate(liquidated_pool_id, &borrower, |p| {
 			if is_partial_liquidation {
-				p.liquidation_attempts = p
-					.liquidation_attempts
-					.checked_add(u8::one())
-					.ok_or(Error::<T>::NumOverflow)?;
+				p.liquidation_attempts += u8::one();
 			} else {
 				p.liquidation_attempts = u8::zero();
 			}
-			Ok(())
-		})?;
+		});
 		Ok(())
 	}
 }

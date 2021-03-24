@@ -299,10 +299,7 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 			);
 
 			// Alice set collateral parameter value to true for DOT pool. Alice can borrow.
-			assert_ok!(<LiquidityPools<Runtime>>::enable_as_collateral_internal(
-				&ALICE,
-				CurrencyId::DOT
-			));
+			<LiquidityPools<Runtime>>::enable_as_collateral_internal(&ALICE, CurrencyId::DOT);
 
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 50),
@@ -371,10 +368,7 @@ fn redeem_allowed_should_work() {
 		assert_ok!(Controller::redeem_allowed(CurrencyId::DOT, &ALICE, dollars(40_u128)));
 
 		// collateral parameter is set to true.
-		assert_ok!(<LiquidityPools<Runtime>>::enable_as_collateral_internal(
-			&ALICE,
-			CurrencyId::DOT
-		));
+		<LiquidityPools<Runtime>>::enable_as_collateral_internal(&ALICE, CurrencyId::DOT);
 
 		assert_err!(
 			Controller::redeem_allowed(CurrencyId::DOT, &ALICE, dollars(100_u128)),
@@ -393,10 +387,7 @@ fn borrow_allowed_should_work() {
 		);
 
 		// collateral parameter is set to true. User can borrow.
-		assert_ok!(<LiquidityPools<Runtime>>::enable_as_collateral_internal(
-			&ALICE,
-			CurrencyId::DOT
-		));
+		<LiquidityPools<Runtime>>::enable_as_collateral_internal(&ALICE, CurrencyId::DOT);
 
 		assert_ok!(Controller::borrow_allowed(CurrencyId::DOT, &ALICE, dollars(10_u128)));
 
@@ -800,10 +791,7 @@ fn do_deposit_insurance_should_work() {
 			);
 
 			// Set BTC pool total insurance = max_value()
-			assert_ok!(TestPools::set_pool_total_insurance(
-				CurrencyId::BTC,
-				Balance::max_value()
-			));
+			TestPools::set_pool_total_insurance(CurrencyId::BTC, Balance::max_value());
 
 			// Overflow in calculation: total_insurance = max_value() + 50
 			assert_err!(
@@ -865,10 +853,7 @@ fn do_redeem_insurance_should_work() {
 			);
 
 			// Set DOT pool total insurance = max_value()
-			assert_ok!(TestPools::set_pool_total_insurance(
-				CurrencyId::DOT,
-				Balance::max_value()
-			));
+			TestPools::set_pool_total_insurance(CurrencyId::DOT, Balance::max_value());
 			// Overflow in calculation: total_insurance = max_value() + 50
 			assert_err!(
 				Controller::do_deposit_insurance(&ALICE, CurrencyId::DOT, 50),

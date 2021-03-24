@@ -336,21 +336,13 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Sets the total borrowed value in the pool.
-	pub fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) -> DispatchResult {
+	pub fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) {
 		Pools::<T>::mutate(pool_id, |pool| pool.total_borrowed = new_total_borrows);
-		Ok(())
-	}
-
-	/// Sets the borrow index in the pool.
-	pub fn set_pool_borrow_index(pool_id: CurrencyId, new_borrow_index: Rate) -> DispatchResult {
-		Pools::<T>::mutate(pool_id, |pool| pool.borrow_index = new_borrow_index);
-		Ok(())
 	}
 
 	/// Sets the total insurance in the pool.
-	pub fn set_pool_total_insurance(pool_id: CurrencyId, new_total_insurance: Balance) -> DispatchResult {
-		Pools::<T>::mutate(pool_id, |r| r.total_insurance = new_total_insurance);
-		Ok(())
+	pub fn set_pool_total_insurance(pool_id: CurrencyId, new_total_insurance: Balance) {
+		Pools::<T>::mutate(pool_id, |r| r.total_insurance = new_total_insurance)
 	}
 
 	/// Sets the total borrowed and interest index for user.
@@ -359,43 +351,21 @@ impl<T: Config> Pallet<T> {
 		pool_id: CurrencyId,
 		new_total_borrows: Balance,
 		new_interest_index: Rate,
-	) -> DispatchResult {
+	) {
 		PoolUserDates::<T>::mutate(pool_id, who, |p| {
 			p.total_borrowed = new_total_borrows;
 			p.interest_index = new_interest_index;
-		});
-		Ok(())
-	}
-
-	/// Sets the total borrowed and the total insurance in the pool.
-	pub fn set_accrual_interest_params(
-		underlying_asset_id: CurrencyId,
-		new_total_borrow_balance: Balance,
-		new_total_insurance: Balance,
-	) -> DispatchResult {
-		Pools::<T>::mutate(underlying_asset_id, |r| {
-			r.total_borrowed = new_total_borrow_balance;
-			r.total_insurance = new_total_insurance;
-		});
-		Ok(())
+		})
 	}
 
 	/// Sets the parameter `collateral` to `true`.
-	pub fn enable_as_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) -> DispatchResult {
-		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = true);
-		Ok(())
+	pub fn enable_as_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
+		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = true)
 	}
 
 	/// Sets the parameter `collateral` to `false`.
-	pub fn disable_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) -> DispatchResult {
+	pub fn disable_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
 		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = false);
-		Ok(())
-	}
-
-	/// Sets the parameter `liquidation_attempts`.
-	pub fn set_user_liquidation_attempts(who: &T::AccountId, pool_id: CurrencyId, new_count: u8) -> DispatchResult {
-		PoolUserDates::<T>::mutate(pool_id, who, |p| p.liquidation_attempts = new_count);
-		Ok(())
 	}
 }
 
@@ -520,9 +490,9 @@ impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 			.ok_or(Error::<T>::BorrowBalanceOverflow)?;
 
 		// Write the previously calculated values into storage.
-		Self::set_pool_total_borrowed(pool_id, new_total_borrows)?;
+		Self::set_pool_total_borrowed(pool_id, new_total_borrows);
 
-		Self::set_user_total_borrowed_and_interest_index(&who, pool_id, account_borrow_new, pool_data.borrow_index)?;
+		Self::set_user_total_borrowed_and_interest_index(&who, pool_id, account_borrow_new, pool_data.borrow_index);
 
 		Ok(())
 	}
@@ -556,8 +526,8 @@ impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 			.ok_or(Error::<T>::RepayAmountToBig)?;
 
 		// Write the previously calculated values into storage.
-		Self::set_pool_total_borrowed(pool_id, total_borrows_new)?;
-		Self::set_user_total_borrowed_and_interest_index(&who, pool_id, account_borrow_new, pool_data.borrow_index)?;
+		Self::set_pool_total_borrowed(pool_id, total_borrows_new);
+		Self::set_user_total_borrowed_and_interest_index(&who, pool_id, account_borrow_new, pool_data.borrow_index);
 
 		Ok(())
 	}

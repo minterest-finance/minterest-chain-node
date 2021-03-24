@@ -111,8 +111,8 @@ pub mod module {
 		NumOverflow,
 		/// Borrow rate is absurdly high.
 		BorrowRateIsTooHigh,
-		/// Oracle unavailable or price equal 0.
-		OraclePriceError,
+		/// Feed price is invalid
+		InvalidFeedPrice,
 		/// Insufficient available liquidity.
 		InsufficientLiquidity,
 		/// Pool not found.
@@ -498,7 +498,7 @@ impl<T: Config> Pallet<T> {
 
 			// Get the normalized price of the asset.
 			let oracle_price =
-				T::PriceSource::get_underlying_price(underlying_asset).ok_or(Error::<T>::OraclePriceError)?;
+				T::PriceSource::get_underlying_price(underlying_asset).ok_or(Error::<T>::InvalidFeedPrice)?;
 
 			// Pre-compute a conversion factor from tokens -> dollars (normalized price value)
 			// tokens_to_denom = collateral_factor * exchange_rate * oracle_price
@@ -616,7 +616,7 @@ impl<T: Config> Pallet<T> {
 	/// Return true if total borrow per pool will exceed borrow cap, otherwise false.
 	pub fn is_borrow_cap_reached(pool_id: CurrencyId, borrow_amount: Balance) -> Result<bool, DispatchError> {
 		if let Some(borrow_cap) = Self::controller_dates(pool_id).borrow_cap {
-			let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::OraclePriceError)?;
+			let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 			let pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(pool_id);
 
 			// new_total_borrows_in_usd = (pool_total_borrowed + borrow_amount) * oracle_price
@@ -695,7 +695,7 @@ impl<T: Config> Pallet<T> {
 				// Calculate the number of blocks elapsed since the last accrual
 				let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
 				let pool_data = Self::calculate_interest_params(pool_id, block_delta)?;
-				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::OraclePriceError)?;
+				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
 				let mut supply_in_usd = Balance::zero();
 				let mut borrowed_in_usd = Balance::zero();
@@ -928,7 +928,7 @@ impl<T: Config> Pallet<T> {
 			.checked_add(amount)
 			.ok_or(Error::<T>::BalanceOverflow)?;
 
-		<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_insurance_balance)?;
+		<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_insurance_balance);
 
 		Ok(())
 	}
@@ -956,7 +956,7 @@ impl<T: Config> Pallet<T> {
 			.checked_sub(amount)
 			.ok_or(Error::<T>::NotEnoughBalance)?;
 
-		<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_insurance_balance)?;
+		<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_insurance_balance);
 
 		// transfer amount from this pool
 		T::MultiCurrency::transfer(pool_id, &T::LiquidityPoolsManager::pools_account_id(), &who, amount)?;

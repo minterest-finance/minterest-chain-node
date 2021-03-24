@@ -372,7 +372,7 @@ pub mod module {
 			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &sender);
 			ensure!(!user_wrapped_balance.is_zero(), Error::<T>::CanotBeEnabledAsCollateral);
 
-			<LiquidityPools<T>>::enable_as_collateral_internal(&sender, pool_id)?;
+			<LiquidityPools<T>>::enable_as_collateral_internal(&sender, pool_id);
 			Self::deposit_event(Event::PoolEnabledAsCollateral(sender, pool_id));
 			Ok(().into())
 		}
@@ -407,7 +407,7 @@ pub mod module {
 				<Controller<T>>::get_hypothetical_account_liquidity(&sender, pool_id, user_balance_disabled_asset, 0)?;
 			ensure!(shortfall == 0, Error::<T>::CanotBeDisabledAsCollateral);
 
-			<LiquidityPools<T>>::disable_collateral_internal(&sender, pool_id)?;
+			<LiquidityPools<T>>::disable_collateral_internal(&sender, pool_id);
 			Self::deposit_event(Event::PoolDisabledCollateral(sender, pool_id));
 			Ok(().into())
 		}

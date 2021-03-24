@@ -81,8 +81,8 @@ runtime_benchmarks! {
 		enable_as_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::BTC)?;
 
 		// set borrow params
-		LiquidityPools::set_pool_total_borrowed(CurrencyId::DOT, 35_000 * DOLLARS)?;
-		LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), CurrencyId::DOT, 35_000 * DOLLARS, Rate::one())?;
+		LiquidityPools::set_pool_total_borrowed(CurrencyId::DOT, 35_000 * DOLLARS);
+		LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), CurrencyId::DOT, 35_000 * DOLLARS, Rate::one());
 
 		// check if borrow params have been set.
 		assert_eq!(LiquidityPools::pool_user_data(CurrencyId::DOT, borrower.clone()).total_borrowed, 35_000 * DOLLARS);
