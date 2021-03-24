@@ -486,6 +486,7 @@ impl liquidation_pools::Config for Runtime {
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type LiquidityPoolsManager = LiquidityPools;
 	type Dex = Dex;
+	type LiquidationPoolsWeightInfo = weights::liquidation_pools::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -809,6 +810,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, minterest_model, benchmarking::minterest_model);
 			add_benchmark!(params, batches, module_prices, benchmarking::prices);
 			add_benchmark!(params, batches, risk_manager, benchmarking::risk_manager);
+			add_benchmark!(params, batches, liquidation_pools, benchmarking::liquidation_pools);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

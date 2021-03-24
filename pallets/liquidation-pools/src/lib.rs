@@ -30,6 +30,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub mod weights;
+pub use weights::WeightInfo;
+
 /// Liquidation Pool metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
@@ -76,6 +79,8 @@ pub mod module {
 
 		/// The DEX participating in balancing
 		type Dex: DEXManager<Self::AccountId, CurrencyId, Balance>;
+
+		type LiquidationPoolsWeightInfo: WeightInfo;
 	}
 
 	#[pallet::error]
@@ -173,7 +178,7 @@ pub mod module {
 		/// - `new_period`: New value of balancing period.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_balancing_period())]
 		#[transactional]
 		pub fn set_balancing_period(origin: OriginFor<T>, new_period: T::BlockNumber) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
@@ -188,7 +193,7 @@ pub mod module {
 		/// - `new_threshold`: New value of deviation threshold.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_deviation_threshold())]
 		#[transactional]
 		pub fn set_deviation_threshold(
 			origin: OriginFor<T>,
@@ -222,7 +227,7 @@ pub mod module {
 		/// - `new_balance_ratio`: New value of deviation threshold.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_balance_ratio())]
 		#[transactional]
 		pub fn set_balance_ratio(
 			origin: OriginFor<T>,
@@ -254,7 +259,7 @@ pub mod module {
 		/// Make balance the liquidation pools.
 		///
 		/// The dispatch origin of this call must be _None_.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::LiquidationPoolsWeightInfo::balance_liquidation_pools())]
 		#[transactional]
 		pub fn balance_liquidation_pools(
 			origin: OriginFor<T>,
