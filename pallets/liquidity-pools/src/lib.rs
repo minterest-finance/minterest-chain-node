@@ -106,10 +106,12 @@ pub mod module {
 		NotValidUnderlyingAssetId,
 		/// The currency is not enabled in wrapped protocol.
 		NotValidWrappedTokenId,
-		/// Feed price is invalid
-		InvalidFeedPrice,
 		/// User is trying repay more than he borrowed.
 		RepayAmountToBig,
+		/// Borrow balance overflows maximum.
+		BorrowBalanceOverflow,
+		/// Exchange rate calculation error.
+		ExchangeRateCalculationError,
 	}
 
 	#[pallet::storage]
@@ -250,7 +252,7 @@ impl<T: Config> Pallet<T> {
 				total_cash
 					.checked_add(total_borrowed)
 					.and_then(|v| v.checked_sub(total_insurance))
-					.ok_or(Error::<T>::NumOverflow)?,
+					.ok_or(Error::<T>::ExchangeRateCalculationError)?,
 				total_supply,
 			),
 		};
@@ -511,11 +513,11 @@ impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 		// total_borrows_new = total_borrows + borrow_amount
 		let account_borrow_new = account_borrows
 			.checked_add(borrow_amount)
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::BorrowBalanceOverflow)?;
 		let new_total_borrows = pool_data
 			.total_borrowed
 			.checked_add(borrow_amount)
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::BorrowBalanceOverflow)?;
 
 		// Write the previously calculated values into storage.
 		Self::set_pool_total_borrowed(pool_id, new_total_borrows)?;

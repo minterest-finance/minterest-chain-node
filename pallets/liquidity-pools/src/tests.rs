@@ -267,7 +267,7 @@ fn update_state_on_borrow_should_work() {
 			// Overflow in calculation: account_borrow_new = 90 + max_value()
 			assert_noop!(
 				TestPools::update_state_on_borrow(&ALICE, CurrencyId::DOT, Balance::max_value(), 90),
-				Error::<Test>::NumOverflow
+				Error::<Test>::BorrowBalanceOverflow
 			);
 		});
 }
@@ -363,13 +363,13 @@ fn calculate_exchange_rate_should_work() {
 		// Overflow in calculation: total_cash + total_borrowed
 		assert_noop!(
 			TestPools::calculate_exchange_rate(Balance::max_value(), 100, 100, 100),
-			Error::<Test>::NumOverflow
+			Error::<Test>::ExchangeRateCalculationError
 		);
 
 		// Overflow in calculation: cash_plus_borrows - total_insurance
 		assert_noop!(
 			TestPools::calculate_exchange_rate(100, 100, Balance::max_value(), 100),
-			Error::<Test>::NumOverflow
+			Error::<Test>::ExchangeRateCalculationError
 		);
 	});
 }
