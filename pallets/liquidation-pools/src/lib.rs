@@ -80,6 +80,7 @@ pub mod module {
 		/// The DEX participating in balancing
 		type Dex: DEXManager<Self::AccountId, CurrencyId, Balance>;
 
+		/// Weight information for the extrinsics.
 		type LiquidationPoolsWeightInfo: WeightInfo;
 	}
 

@@ -12,13 +12,13 @@ runtime_benchmarks! {
 	_ {}
 
 	set_balancing_period {}: _(RawOrigin::Root, 100)
-	verify { assert_eq!(LiquidationPools::balancing_period(), 100)}
+	verify { assert_eq!(LiquidationPools::balancing_period(), 100) }
 
 	set_deviation_threshold {}: _(RawOrigin::Root, CurrencyId::DOT, 1 * DOLLARS)
-	verify { assert_eq!(LiquidationPools::liquidation_pools_data(CurrencyId::DOT).deviation_threshold, Rate::one())}
+	verify { assert_eq!(LiquidationPools::liquidation_pools_data(CurrencyId::DOT).deviation_threshold, Rate::one()) }
 
-	set_balance_ratio {}: _(RawOrigin::Root,CurrencyId::DOT,  1 * DOLLARS)
-	verify { assert_eq!(LiquidationPools::liquidation_pools_data(CurrencyId::DOT).balance_ratio, Rate::one())}
+	set_balance_ratio {}: _(RawOrigin::Root, CurrencyId::DOT,  1 * DOLLARS)
+	verify { assert_eq!(LiquidationPools::liquidation_pools_data(CurrencyId::DOT).balance_ratio, Rate::one()) }
 
 	balance_liquidation_pools {
 		set_balance(

@@ -54,6 +54,7 @@ pub mod module {
 		/// The origin which may call deposit/redeem/borrow/repay in Whitelist mode.
 		type WhitelistMembers: Contains<Self::AccountId>;
 
+		/// Weight information for the extrinsics.
 		type ProtocolWeightInfo: WeightInfo;
 	}
 
