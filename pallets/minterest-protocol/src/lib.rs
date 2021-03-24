@@ -18,7 +18,6 @@ use sp_runtime::{
 	traits::{BadOrigin, Zero},
 	DispatchError, DispatchResult,
 };
-use sp_std::cmp::Ordering;
 use sp_std::result;
 
 pub use module::*;

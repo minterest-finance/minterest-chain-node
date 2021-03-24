@@ -80,7 +80,6 @@ pub mod module {
 		BaseRatePerBlockCannotBeZero,
 		/// Multiplier per block cannot be set to 0 at the same time as Base rate per block.
 		MultiplierPerBlockCannotBeZero,
-
 		/// Parameter `kink` cannot be more than one.
 		KinkCannotBeMoreThanOne,
 	}

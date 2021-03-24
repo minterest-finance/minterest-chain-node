@@ -22,6 +22,7 @@ use sp_runtime::traits::{AccountIdConversion, CheckedDiv, CheckedMul, Zero};
 use sp_runtime::{transaction_validity::TransactionPriority, FixedPointNumber, ModuleId, RuntimeDebug};
 use sp_std::prelude::*;
 
+use minterest_primitives::arithmetic::checked_acc_and_add_mul;
 pub use module::*;
 use sp_std::cmp::Ordering;
 
@@ -403,10 +404,7 @@ impl<T: Config> Pallet<T> {
 					// Calculate sum_extra and sum_shortfall for all pools.
 					let deviation_threshold = Self::liquidation_pools_data(*pool_id).deviation_threshold;
 					// right_border = ideal_balance + ideal_balance * deviation_threshold
-					let right_border = Rate::from_inner(ideal_balance)
-						.checked_mul(&deviation_threshold)
-						.map(|x| x.into_inner())
-						.and_then(|v| v.checked_add(ideal_balance))
+					let right_border = checked_acc_and_add_mul(ideal_balance, ideal_balance, deviation_threshold)
 						.ok_or(Error::<T>::NumOverflow)?;
 
 					// left_border = ideal_balance - ideal_balance * deviation_threshold

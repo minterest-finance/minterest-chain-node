@@ -57,7 +57,7 @@ fn accrue_interest_should_not_work() {
 
 			assert_noop!(
 				Controller::accrue_interest_rate(CurrencyId::DOT),
-				Error::<Runtime>::BorrowRateIsTooHight
+				Error::<Runtime>::BorrowRateIsTooHigh
 			);
 
 			assert_ok!(Controller::set_max_borrow_rate(
@@ -93,67 +93,6 @@ fn calculate_interest_factor_should_work() {
 		// Overflow in calculation: block_delta * borrow_interest_rate
 		assert_noop!(
 			Controller::calculate_interest_factor(Rate::from_inner(u128::max_value()), 20),
-			Error::<Runtime>::NumOverflow
-		);
-	});
-}
-
-#[test]
-fn calculate_interest_accumulated_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// interest_accumulated = 0 * 100 = 0
-		assert_eq!(
-			Controller::calculate_interest_accumulated(Rate::from_inner(0), 100),
-			Ok(0)
-		);
-
-		// interest_accumulated = 0.03 * 200 = 6
-		assert_eq!(
-			Controller::calculate_interest_accumulated(
-				Rate::saturating_from_rational(3, 100), // eq 0.03 == 3%
-				200
-			),
-			Ok(6)
-		);
-
-		// Overflow in calculation: 1.1 * max_value()
-		assert_noop!(
-			Controller::calculate_interest_accumulated(Rate::saturating_from_rational(11, 10), Balance::max_value()),
-			Error::<Runtime>::NumOverflow
-		);
-	});
-}
-
-#[test]
-fn calculate_new_total_borrow_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// new_total_borrows = 15 + 100 = 115
-		assert_eq!(Controller::calculate_new_total_borrow(15, 100), Ok(115));
-
-		// Overflow in calculation: 1 + max_value()
-		assert_noop!(
-			Controller::calculate_new_total_borrow(1, Balance::max_value()),
-			Error::<Runtime>::NumOverflow
-		);
-	});
-}
-
-#[test]
-fn calculate_new_total_insurance_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// total_insurance_new = 100 * 1.2 + 250 = 370
-		assert_eq!(
-			Controller::calculate_new_total_insurance(100, Rate::saturating_from_rational(12, 10), 250),
-			Ok(370)
-		);
-		// Overflow in calculation: max_value() * 1.1
-		assert_noop!(
-			Controller::calculate_new_total_insurance(Balance::max_value(), Rate::saturating_from_rational(11, 10), 1),
-			Error::<Runtime>::NumOverflow
-		);
-		// Overflow in calculation: 100 * 1.1 + max_value()
-		assert_noop!(
-			Controller::calculate_new_total_insurance(100, Rate::saturating_from_rational(1, 1), Balance::max_value()),
 			Error::<Runtime>::NumOverflow
 		);
 	});
@@ -244,113 +183,6 @@ fn calculate_utilization_rate_should_work() {
 		// Overflow in calculation: total_borrows / 0
 		assert_noop!(
 			Controller::calculate_utilization_rate(100, 70, 170),
-			Error::<Runtime>::NumOverflow
-		);
-	});
-}
-
-#[test]
-fn calculate_supply_rate_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// supply_rate = 0.75 * 0.23 * (1 - 0.1) = 0.15525
-		assert_eq!(
-			Controller::calculate_supply_interest_rate(
-				Rate::saturating_from_rational(75, 100),
-				Rate::saturating_from_rational(23, 100),
-				Rate::saturating_from_rational(1, 10)
-			),
-			Ok(Rate::saturating_from_rational(15525, 100_000))
-		);
-
-		// Overflow in calculation: one_minus_insurance_factor = 1 - 2
-		assert_noop!(
-			Controller::calculate_supply_interest_rate(
-				Rate::saturating_from_rational(75, 100),
-				Rate::saturating_from_rational(23, 100),
-				Rate::saturating_from_rational(2, 1)
-			),
-			Error::<Runtime>::NumOverflow
-		);
-
-		// Overflow in calculation: max_value() * 2.3 * (1 - 0.1)
-		assert_noop!(
-			Controller::calculate_supply_interest_rate(
-				Rate::from_inner(u128::max_value()),
-				Rate::saturating_from_rational(23, 10),
-				Rate::saturating_from_rational(1, 10)
-			),
-			Error::<Runtime>::NumOverflow
-		);
-	});
-}
-
-#[test]
-fn calculate_new_borrow_index_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// new_borrow_index = 0.0000063 * 1.28 + 1.28 = 1.280000008064
-		assert_eq!(
-			Controller::calculate_new_borrow_index(
-				Rate::saturating_from_rational(63u128, 10_000_000_000u128),
-				Rate::saturating_from_rational(128, 100)
-			),
-			Ok(Rate::from_inner(1_280_000_008_064_000_000))
-		);
-
-		// Overflow in calculation: simple_interest_factor * max_value()
-		assert_noop!(
-			Controller::calculate_new_borrow_index(
-				Rate::saturating_from_rational(12, 10),
-				Rate::from_inner(u128::max_value())
-			),
-			Error::<Runtime>::NumOverflow
-		);
-
-		// Overflow in calculation: simple_interest_factor_mul_borrow_index + max_value()
-		assert_noop!(
-			Controller::calculate_new_borrow_index(
-				Rate::saturating_from_rational(1, 1),
-				Rate::from_inner(u128::max_value())
-			),
-			Error::<Runtime>::NumOverflow
-		);
-	});
-}
-
-#[test]
-fn mul_price_and_balance_add_to_prev_value_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// 20 + 20 * 0.9 = 38
-		assert_eq!(
-			Controller::mul_price_and_balance_add_to_prev_value(20, 20, Rate::saturating_from_rational(9, 10)),
-			Ok(38)
-		);
-		// 120_000 + 85_000 * 0.87 = 193_950
-		assert_eq!(
-			Controller::mul_price_and_balance_add_to_prev_value(
-				120_000,
-				85_000,
-				Rate::saturating_from_rational(87, 100)
-			),
-			Ok(193950)
-		);
-
-		// Overflow in calculation: max_value() * 1.9
-		assert_noop!(
-			Controller::mul_price_and_balance_add_to_prev_value(
-				100,
-				Balance::max_value(),
-				Rate::saturating_from_rational(19, 10)
-			),
-			Error::<Runtime>::NumOverflow
-		);
-
-		// Overflow in calculation: max_value() + 100 * 1.9
-		assert_noop!(
-			Controller::mul_price_and_balance_add_to_prev_value(
-				Balance::max_value(),
-				100,
-				Rate::saturating_from_rational(19, 10)
-			),
 			Error::<Runtime>::NumOverflow
 		);
 	});
@@ -733,13 +565,13 @@ fn set_collateral_factor_should_work() {
 			// ALICE can't set collateral factor equal 0.0
 			assert_noop!(
 				Controller::set_collateral_factor(alice(), CurrencyId::DOT, Rate::zero()),
-				Error::<Runtime>::CollateralFactorCannotBeZero
+				Error::<Runtime>::CollateralFactorIncorrectValue
 			);
 
 			// ALICE can't set collateral factor grater than one.
 			assert_noop!(
 				Controller::set_collateral_factor(alice(), CurrencyId::DOT, Rate::saturating_from_rational(11, 10)),
-				Error::<Runtime>::CollateralFactorCannotBeGreaterThanOne
+				Error::<Runtime>::CollateralFactorIncorrectValue
 			);
 
 			// The dispatch origin of this call must be Root or half MinterestCouncil.
