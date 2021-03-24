@@ -4002,6 +4002,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "mnt-token"
+version = "0.6.2"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "liquidity-pools",
+ "minterest-primitives",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-traits",
+ "parity-scale-codec",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "module-prices"
 version = "0.6.2"
 dependencies = [
@@ -4155,6 +4175,7 @@ dependencies = [
  "minterest-model",
  "minterest-primitives",
  "minterest-protocol",
+ "mnt-token",
  "module-prices",
  "orml-benchmarking",
  "orml-currencies",

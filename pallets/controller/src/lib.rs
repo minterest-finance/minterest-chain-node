@@ -14,7 +14,7 @@ use frame_system::{ensure_signed, pallet_prelude::*};
 use liquidity_pools::Pool;
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{PoolsManager, PriceProvider};
+use pallet_traits::{LiquidityPoolsManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;
@@ -88,8 +88,8 @@ pub mod module {
 		/// The overarching event type.
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// The basic liquidity pools manager.
-		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
+		/// Provides the basic liquidity pools manager and liquidity pool functionality
+		type LiquidityPoolsManager: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
 
 		#[pallet::constant]
 		/// Maximum total borrow amount per pool in usd
@@ -626,7 +626,7 @@ impl<T: Config> Pallet<T> {
 		}
 
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::OraclePriceError)?;
-		let pool_total_borrowed = <LiquidityPools<T>>::get_pool_total_borrowed(pool_id);
+		let pool_total_borrowed = T::LiquidityPoolsManager::get_pool_total_borrowed(pool_id);
 		let new_total_borrows = pool_total_borrowed
 			.checked_add(borrow_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
@@ -1035,7 +1035,7 @@ impl<T: Config> Pallet<T> {
 		T::MultiCurrency::transfer(pool_id, &who, &T::LiquidityPoolsManager::pools_account_id(), amount)?;
 
 		// calculate new insurance balance
-		let current_insurance_balance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
+		let current_insurance_balance = T::LiquidityPoolsManager::get_pool_total_insurance(pool_id);
 
 		let new_insurance_balance = current_insurance_balance
 			.checked_add(amount)
@@ -1062,7 +1062,7 @@ impl<T: Config> Pallet<T> {
 		);
 
 		// calculate new insurance balance
-		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
+		let current_total_insurance = T::LiquidityPoolsManager::get_pool_total_insurance(pool_id);
 		ensure!(amount <= current_total_insurance, Error::<T>::NotEnoughBalance);
 
 		let new_insurance_balance = current_total_insurance

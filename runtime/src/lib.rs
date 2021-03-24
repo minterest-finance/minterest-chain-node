@@ -466,6 +466,14 @@ impl risk_manager::Config for Runtime {
 	type RiskManagerWeightInfo = weights::risk_manager::WeightInfo<Runtime>;
 }
 
+impl mnt_token::Config for Runtime {
+	type Event = Event;
+	type PriceSource = Prices;
+	type UpdateOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
+	type LiquidityPoolsManager = LiquidityPools;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+}
+
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
 where
 	Call: From<C>,
@@ -576,6 +584,7 @@ construct_runtime!(
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		RiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
+		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Module, Storage, Call, Event<T>},
 
 		// Dev

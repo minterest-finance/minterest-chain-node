@@ -35,6 +35,15 @@ pub trait PoolsManager<AccountId> {
 	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool;
 }
 
+/// Provides liquidity pool functionality
+pub trait LiquidityPoolsManager {
+	/// Gets total amount borrowed from the pool.
+	fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance;
+
+	/// Gets current total amount of insurance of the underlying held in this pool.
+	fn get_pool_total_insurance(pool_id: CurrencyId) -> Balance;
+}
+
 pub trait PriceProvider<CurrencyId> {
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price>;
 	fn lock_price(currency_id: CurrencyId);
