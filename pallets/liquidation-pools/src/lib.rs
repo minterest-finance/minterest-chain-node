@@ -83,6 +83,8 @@ pub mod module {
 	pub enum Error<T> {
 		/// Number overflow in calculation.
 		NumOverflow,
+		/// Balance overflows maximum.
+		BalanceOverflow,
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
 		/// Value must be in range [0..1]
@@ -91,6 +93,10 @@ pub mod module {
 		NotValidBalanceRatioValue,
 		/// Feed price is invalid
 		InvalidFeedPrice,
+		/// Could not find a pool with required parameters
+		PoolNotFound,
+		/// Not enough liquidation pool balance.
+		NotEnoughBalance,
 	}
 
 	#[pallet::event]
@@ -365,7 +371,7 @@ impl<T: Config> Pallet<T> {
 					let liquidation_pool_balance = Rate::from_inner(Self::get_pool_available_liquidity(*pool_id))
 						.checked_mul(&oracle_price)
 						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?;
+						.ok_or(Error::<T>::BalanceOverflow)?;
 
 					// Liquidation pool ideal balance in USD: liquidity_pool_balance * balance_ratio * oracle_price
 					let ideal_balance =
@@ -373,24 +379,14 @@ impl<T: Config> Pallet<T> {
 							.checked_mul(&balance_ratio)
 							.and_then(|v| v.checked_mul(&oracle_price))
 							.map(|x| x.into_inner())
-							.ok_or(Error::<T>::NumOverflow)?;
+							.ok_or(Error::<T>::BalanceOverflow)?;
 
 					// If the pool is not balanced:
 					// oversupply = liquidation_pool_balance - ideal_balance
 					// shortfall = ideal_balance - liquidation_pool_balance
 					let (oversupply, shortfall) = match liquidation_pool_balance.cmp(&ideal_balance) {
-						Ordering::Greater => (
-							liquidation_pool_balance
-								.checked_sub(ideal_balance)
-								.ok_or(Error::<T>::NumOverflow)?,
-							Balance::zero(),
-						),
-						Ordering::Less => (
-							Balance::zero(),
-							ideal_balance
-								.checked_sub(liquidation_pool_balance)
-								.ok_or(Error::<T>::NumOverflow)?,
-						),
+						Ordering::Greater => (liquidation_pool_balance - ideal_balance, Balance::zero()),
+						Ordering::Less => (Balance::zero(), ideal_balance - liquidation_pool_balance),
 						Ordering::Equal => (Balance::zero(), Balance::zero()),
 					};
 
@@ -405,7 +401,7 @@ impl<T: Config> Pallet<T> {
 					let deviation_threshold = Self::liquidation_pools_data(*pool_id).deviation_threshold;
 					// right_border = ideal_balance + ideal_balance * deviation_threshold
 					let right_border = checked_acc_and_add_mul(ideal_balance, ideal_balance, deviation_threshold)
-						.ok_or(Error::<T>::NumOverflow)?;
+						.ok_or(Error::<T>::BalanceOverflow)?;
 
 					// left_border = ideal_balance - ideal_balance * deviation_threshold
 					let left_border = ideal_balance
@@ -420,12 +416,12 @@ impl<T: Config> Pallet<T> {
 					if liquidation_pool_balance > right_border {
 						current_sum_oversupply = current_sum_oversupply
 							.checked_add(oversupply)
-							.ok_or(Error::<T>::NumOverflow)?;
+							.ok_or(Error::<T>::BalanceOverflow)?;
 					}
 					if liquidation_pool_balance < left_border {
 						current_sum_shortfall = current_sum_shortfall
 							.checked_add(shortfall)
-							.ok_or(Error::<T>::NumOverflow)?;
+							.ok_or(Error::<T>::BalanceOverflow)?;
 					}
 
 					Ok((current_vec, current_sum_oversupply, current_sum_shortfall))
@@ -442,14 +438,14 @@ impl<T: Config> Pallet<T> {
 				.enumerate()
 				.max_by(|(_, a), (_, b)| a.oversupply.cmp(&b.oversupply))
 				.map(|(index, pool)| (index, pool.pool_id, pool.oversupply))
-				.ok_or(Error::<T>::NumOverflow)?;
+				.ok_or(Error::<T>::PoolNotFound)?;
 
 			let (max_shortfall_index, max_shortfall_pool_id, max_shortfall) = information_vec
 				.iter()
 				.enumerate()
 				.max_by(|(_, a), (_, b)| a.shortfall.cmp(&b.shortfall))
 				.map(|(index, pool)| (index, pool.pool_id, pool.shortfall))
-				.ok_or(Error::<T>::NumOverflow)?;
+				.ok_or(Error::<T>::PoolNotFound)?;
 
 			// The number USD equivalent to be sent to the DEX will be equal to
 			// the minimum value between (max_shortfall, max_oversupply).
@@ -467,21 +463,21 @@ impl<T: Config> Pallet<T> {
 			pool_with_max_oversupply.balance = pool_with_max_oversupply
 				.balance
 				.checked_sub(bite_in_usd)
-				.ok_or(Error::<T>::NumOverflow)?;
+				.ok_or(Error::<T>::NotEnoughBalance)?;
 			pool_with_max_oversupply.oversupply = pool_with_max_oversupply
 				.oversupply
 				.checked_sub(bite_in_usd)
-				.ok_or(Error::<T>::NumOverflow)?;
+				.ok_or(Error::<T>::NotEnoughBalance)?;
 
 			let pool_with_max_shortfall = &mut information_vec[max_shortfall_index];
 			pool_with_max_shortfall.balance = pool_with_max_shortfall
 				.balance
 				.checked_add(bite_in_usd)
-				.ok_or(Error::<T>::NumOverflow)?;
+				.ok_or(Error::<T>::NotEnoughBalance)?;
 			pool_with_max_shortfall.shortfall = pool_with_max_shortfall
 				.shortfall
 				.checked_sub(bite_in_usd)
-				.ok_or(Error::<T>::NumOverflow)?;
+				.ok_or(Error::<T>::NotEnoughBalance)?;
 
 			sum_oversupply = sum_oversupply.checked_sub(bite_in_usd).ok_or(Error::<T>::NumOverflow)?;
 			sum_shortfall = sum_shortfall.checked_sub(bite_in_usd).ok_or(Error::<T>::NumOverflow)?;

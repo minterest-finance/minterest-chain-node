@@ -130,11 +130,11 @@ pub mod module {
 		InsuranceBalanceOverflow,
 		/// Maximum borrow rate cannot be set to 0.
 		MaxBorrowRateCannotBeZero,
-		/// Collateral factor must be between 0 and 1 (above zero).
+		/// Collateral factor must be in range (0..1].
 		CollateralFactorIncorrectValue,
 		/// Borrow cap is reached
 		BorrowCapReached,
-		/// Invalid borrow cap. Borrow cap mut be between 0 and 1.
+		/// Invalid borrow cap. Borrow cap must be in range [0..1].
 		InvalidBorrowCap,
 	}
 
