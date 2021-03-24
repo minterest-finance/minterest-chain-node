@@ -37,7 +37,7 @@ pub trait PoolsManager<AccountId> {
 
 /// Provides liquidity pool functionality
 pub trait LiquidityPoolsManager {
-	/// Gets current the amount of underlying currently loaned out by the pool.
+	/// Gets total amount borrowed from the pool.
 	fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance;
 
 	/// Gets current total amount of insurance of the underlying held in this pool.

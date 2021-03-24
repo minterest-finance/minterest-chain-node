@@ -172,7 +172,6 @@ parameter_types! {
 impl Config for Runtime {
 	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
-	type PoolsManager = liquidity_pools::Module<Runtime>;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
 	type WeightInfo = ();

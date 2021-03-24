@@ -428,7 +428,6 @@ parameter_types! {
 
 impl controller::Config for Runtime {
 	type Event = Event;
-	type PoolsManager = LiquidityPools;
 	type LiquidityPoolsManager = LiquidityPools;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;

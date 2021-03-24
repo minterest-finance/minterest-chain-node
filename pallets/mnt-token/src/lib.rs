@@ -48,7 +48,7 @@ pub mod module {
 		/// Trying to enable already enabled minting for pool
 		MntMintingAlreadyEnabled,
 
-		/// Trying to disable MNT minting that wasn't enable
+		/// Trying to disable MNT minting that wasn't enabled
 		MntMintingNotEnabled,
 
 		/// Arithmetic calculation overflow

@@ -568,7 +568,7 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> LiquidityPoolsManager for Pallet<T> {
-	/// Gets current the amount of underlying currently loaned out by the pool.
+	/// Gets total amount borrowed from the pool.
 	fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance {
 		Self::pools(pool_id).total_borrowed
 	}
