@@ -36,6 +36,7 @@ members = [
     'pallets/prices',
     'pallets/risk-manager',
     'pallets/liquidation-pools',
+    'pallets/mnt-token',
     'pallets/dex',
 
     "orml/auction",
