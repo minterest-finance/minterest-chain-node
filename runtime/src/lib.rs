@@ -343,6 +343,7 @@ impl m_tokens::Config for Runtime {
 impl minterest_protocol::Config for Runtime {
 	type Event = Event;
 	type Borrowing = LiquidityPools;
+	type ManagerLiquidationPools = LiquidationPools;
 	type ManagerLiquidityPools = LiquidityPools;
 	type WhitelistMembers = WhitelistCouncilProvider;
 }

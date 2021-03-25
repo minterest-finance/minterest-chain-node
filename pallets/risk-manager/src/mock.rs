@@ -201,6 +201,7 @@ impl Contains<u64> for Two {
 impl minterest_protocol::Config for Test {
 	type Event = Event;
 	type Borrowing = liquidity_pools::Module<Test>;
+	type ManagerLiquidationPools = liquidation_pools::Module<Test>;
 	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 	type WhitelistMembers = Two;
 }

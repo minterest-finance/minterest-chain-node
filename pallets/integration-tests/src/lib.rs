@@ -9,7 +9,7 @@
 #[cfg(test)]
 mod tests {
 	use frame_support::{assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
-	use frame_system::{self as system, EnsureSignedBy};
+	use frame_system::{self as system, EnsureSignedBy, offchain::SendTransactionTypes};
 	use liquidity_pools::{Pool, PoolUserData};
 	use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 	use orml_currencies::Currency;
@@ -17,13 +17,14 @@ mod tests {
 	use orml_traits::MultiCurrency;
 	use sp_core::H256;
 	use sp_runtime::{
-		testing::Header,
+		testing::{Header, TestXt},
 		traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
+		transaction_validity::TransactionPriority,
 		FixedPointNumber, ModuleId,
 	};
 
 	use controller::{ControllerData, PauseKeeper};
-	use frame_support::traits::Contains;
+	use frame_support::traits::{Contains, OnFinalize};
 	use minterest_model::MinterestModelData;
 	use minterest_protocol::Error as MinterestProtocolError;
 	use pallet_traits::{PoolsManager, PriceProvider};
@@ -51,6 +52,7 @@ mod tests {
 			MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 			MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 			TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
+			TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
 			TestController: controller::{Module, Storage, Call, Event, Config<T>},
 			MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		}
@@ -188,6 +190,7 @@ mod tests {
 	impl minterest_protocol::Config for Test {
 		type Event = Event;
 		type Borrowing = liquidity_pools::Module<Test>;
+		type ManagerLiquidationPools = liquidation_pools::Module<Test>;
 		type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 		type WhitelistMembers = Four;
 	}
@@ -198,6 +201,32 @@ mod tests {
 
 	ord_parameter_types! {
 		pub const ZeroAdmin: AccountId = 0;
+	}
+
+	parameter_types! {
+		pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+		pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
+		pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
+	}
+
+	impl liquidation_pools::Config for Test {
+		type Event = Event;
+		type UnsignedPriority = LiquidityPoolsPriority;
+		type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
+		type LiquidationPoolAccountId = LiquidationPoolAccountId;
+		type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+		type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	}
+
+	/// An extrinsic type used for tests.
+	pub type Extrinsic = TestXt<Call, ()>;
+
+	impl<LocalCall> SendTransactionTypes<LocalCall> for Test
+		where
+			Call: From<LocalCall>,
+	{
+		type OverarchingCall = Call;
+		type Extrinsic = Extrinsic;
 	}
 
 	impl controller::Config for Test {

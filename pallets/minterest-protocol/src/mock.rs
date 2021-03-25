@@ -14,7 +14,7 @@ use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
+	testing::{Header, TestXt},
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
 	FixedPointNumber, ModuleId,
 };
@@ -37,6 +37,7 @@ frame_support::construct_runtime!(
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		TestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
+		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -198,8 +199,39 @@ impl Contains<u64> for Two {
 impl minterest_protocol::Config for Test {
 	type Event = Event;
 	type Borrowing = liquidity_pools::Module<Test>;
+	type ManagerLiquidationPools = liquidation_pools::Module<Test>;
 	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 	type WhitelistMembers = Two;
+}
+
+ord_parameter_types! {
+	pub const ZeroAdmin: AccountId = 0;
+}
+
+parameter_types! {
+	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
+	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
+}
+
+impl liquidation_pools::Config for Test {
+	type Event = Event;
+	type UnsignedPriority = LiquidityPoolsPriority;
+	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
+	type LiquidationPoolAccountId = LiquidationPoolAccountId;
+	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+}
+
+/// An extrinsic type used for tests.
+pub type Extrinsic = TestXt<Call, ()>;
+
+impl<LocalCall> SendTransactionTypes<LocalCall> for Test
+	where
+		Call: From<LocalCall>,
+{
+	type OverarchingCall = Call;
+	type Extrinsic = Extrinsic;
 }
 
 pub const ALICE: AccountId = 1;

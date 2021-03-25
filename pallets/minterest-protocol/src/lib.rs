@@ -10,7 +10,7 @@
 
 use frame_support::traits::Contains;
 use frame_support::{pallet_prelude::*, transactional};
-use frame_system::{ensure_signed, pallet_prelude::*};
+use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
 use minterest_primitives::{Balance, CurrencyId, Operation};
 use orml_traits::MultiCurrency;
 use pallet_traits::{Borrowing, PoolsManager};
@@ -38,12 +38,16 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + liquidity_pools::Config + controller::Config {
+	pub trait Config: frame_system::Config + liquidity_pools::Config + controller::Config
+	+ SendTransactionTypes<Call<Self>> {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Basic borrowing functions
 		type Borrowing: Borrowing<Self::AccountId>;
+
+		/// The basic liquidity pools.
+		type ManagerLiquidationPools: PoolsManager<Self::AccountId>;
 
 		/// The basic liquidity pools.
 		type ManagerLiquidityPools: PoolsManager<Self::AccountId>;
@@ -130,7 +134,35 @@ pub mod module {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+		fn on_finalize(block_number: T::BlockNumber) {
+			T::EnabledCurrencyPair::get().iter().for_each(|currency_pair| {
+				let pool_id = currency_pair.underlying_id;
+				let total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
+				if total_insurance < /*threshold*/1 {
+					return;
+				}
+
+				let total_balance = T::ManagerLiquidityPools::get_pool_available_liquidity(pool_id);
+				let to_liquidation_pool = match total_balance.cmp(&total_insurance) {
+					Ordering::Less => total_balance,
+					_ => total_insurance,
+				};
+
+				let result = T::MultiCurrency::transfer(
+					pool_id,
+					&T::ManagerLiquidityPools::pools_account_id(),
+					&T::ManagerLiquidationPools::pools_account_id(),
+					to_liquidation_pool,
+				);
+				if let Ok(result) = result {
+					if let Some(new_total_insurance) = total_insurance.checked_sub(to_liquidation_pool) {
+						<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_total_insurance);
+					}
+				}
+			});
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
