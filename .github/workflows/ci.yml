@@ -22,6 +22,7 @@ jobs:
           toolchain: nightly-2021-02-17
           target: wasm32-unknown-unknown
           default: true
+      - uses: Swatinem/rust-cache@v1.2.0
       - uses: actions-rs/cargo@v1
         with:
           command: check
@@ -96,6 +97,7 @@ jobs:
           toolchain: nightly-2021-02-17
           target: wasm32-unknown-unknown
           default: true
+      - uses: Swatinem/rust-cache@v1.2.0
       - run: rustup component add clippy
       - uses: actions-rs/cargo@v1
         with:
