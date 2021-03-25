@@ -26,23 +26,6 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
-  audit:
-    name: Cargo Audit
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly-2021-02-17
-          target: wasm32-unknown-unknown
-          default: true
-      - uses: Swatinem/rust-cache@v1.2.0
-      - uses: actions-rs/cargo@v1
-        with:
-          command: audit --ignore RUSTSEC-2021-0020 --ignore RUSTSEC-2021-0013
   test:
     name: Test Suite
     runs-on: ubuntu-20.04
