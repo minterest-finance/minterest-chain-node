@@ -401,7 +401,7 @@ impl<T: Config> Pallet<T> {
 					let deviation_threshold = Self::liquidation_pools_data(*pool_id).deviation_threshold;
 					// right_border = ideal_balance + ideal_balance * deviation_threshold
 					let right_border = checked_acc_and_add_mul(ideal_balance, ideal_balance, deviation_threshold)
-						.ok_or(Error::<T>::BalanceOverflow)?;
+						.map_err(|_| Error::<T>::BalanceOverflow)?;
 
 					// left_border = ideal_balance - ideal_balance * deviation_threshold
 					let left_border = ideal_balance

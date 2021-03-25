@@ -514,12 +514,12 @@ impl<T: Config> Pallet<T> {
 
 				// sum_collateral += tokens_to_denom * m_token_balance
 				sum_collateral = checked_acc_and_add_mul(sum_collateral, m_token_balance, tokens_to_denom)
-					.ok_or(Error::<T>::CollateralBalanceOverflow)?;
+					.map_err(|_| Error::<T>::CollateralBalanceOverflow)?;
 			}
 
 			// sum_borrow_plus_effects += oracle_price * borrow_balance
 			sum_borrow_plus_effects = checked_acc_and_add_mul(sum_borrow_plus_effects, borrow_balance, oracle_price)
-				.ok_or(Error::<T>::BalanceOverflow)?;
+				.map_err(|_| Error::<T>::BalanceOverflow)?;
 
 			// Calculate effects of interacting with Underlying Asset Modify.
 			if underlying_to_borrow == underlying_asset {
@@ -528,14 +528,14 @@ impl<T: Config> Pallet<T> {
 					// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
 					sum_borrow_plus_effects =
 						checked_acc_and_add_mul(sum_borrow_plus_effects, redeem_amount, tokens_to_denom)
-							.ok_or(Error::<T>::BalanceOverflow)?;
+							.map_err(|_| Error::<T>::BalanceOverflow)?;
 				};
 				// borrow effect
 				if borrow_amount > 0 {
 					// sum_borrow_plus_effects += oracle_price * borrow_amount
 					sum_borrow_plus_effects =
 						checked_acc_and_add_mul(sum_borrow_plus_effects, borrow_amount, oracle_price)
-							.ok_or(Error::<T>::BalanceOverflow)?;
+							.map_err(|_| Error::<T>::BalanceOverflow)?;
 				}
 			}
 		}
@@ -825,7 +825,7 @@ impl<T: Config> Pallet<T> {
 
 		let new_total_insurance =
 			checked_acc_and_add_mul(pool_data.total_insurance, interest_accumulated, insurance_factor)
-				.ok_or(Error::<T>::InsuranceBalanceOverflow)?;
+				.map_err(|_| Error::<T>::InsuranceBalanceOverflow)?;
 
 		let new_borrow_index = simple_interest_factor
 			.checked_mul(&pool_data.borrow_index)
