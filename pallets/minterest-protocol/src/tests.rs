@@ -467,7 +467,7 @@ fn repay_should_work() {
 		// Alice cannot repay 100 DOT, because she only have 70 DOT.
 		assert_noop!(
 			TestProtocol::repay(alice(), CurrencyId::DOT, dollars(100_u128)),
-			Error::<Test>::NotEnoughUnderlyingAssets
+			Error::<Test>::NotEnoughUnderlyingAsset
 		);
 
 		// Alice cannot repay 70 DOT, because she only borrowed 60 DOT.
@@ -565,7 +565,7 @@ fn repay_all_fails_if_not_enough_underlying_assets() {
 		// Insufficient DOT in the ALICE account for repay 30 DOT.
 		assert_noop!(
 			TestProtocol::repay_all(alice(), CurrencyId::DOT),
-			Error::<Test>::NotEnoughUnderlyingAssets
+			Error::<Test>::NotEnoughUnderlyingAsset
 		);
 	});
 }
@@ -592,7 +592,7 @@ fn repay_on_behalf_should_work() {
 		// Bob can't pay off the 120 DOT debt for Alice, because he has 100 DOT in his account.
 		assert_noop!(
 			TestProtocol::repay_on_behalf(bob(), CurrencyId::DOT, ALICE, dollars(120_u128)),
-			Error::<Test>::NotEnoughUnderlyingAssets
+			Error::<Test>::NotEnoughUnderlyingAsset
 		);
 
 		// Bob cannot repay 100 DOT, because Alice only borrowed 60 DOT.

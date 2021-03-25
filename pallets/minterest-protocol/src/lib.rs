@@ -60,7 +60,7 @@ pub mod module {
 		/// Insufficient wrapped tokens in the user account.
 		NotEnoughWrappedTokens,
 		/// Insufficient underlying assets in the user account.
-		NotEnoughUnderlyingAssets,
+		NotEnoughUnderlyingAsset,
 		/// An internal failure occurred in the execution of the Accrue Interest function.
 		AccrueInterestFailed,
 		/// Transaction with zero balance is not allowed.
@@ -619,7 +619,7 @@ impl<T: Config> Pallet<T> {
 
 		ensure!(
 			repay_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
-			Error::<T>::NotEnoughUnderlyingAssets
+			Error::<T>::NotEnoughUnderlyingAsset
 		);
 
 		<LiquidityPools<T>>::update_state_on_repay(&borrower, underlying_asset_id, repay_amount, account_borrows)?;

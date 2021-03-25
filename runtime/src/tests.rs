@@ -1165,7 +1165,7 @@ fn complete_liquidation_should_not_work() {
 
 			assert_err!(
 				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
-				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingAssets
+				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingAsset
 			);
 		})
 }
@@ -1188,7 +1188,7 @@ fn partial_liquidation_should_not_work() {
 
 			assert_err!(
 				RiskManager::liquidate_unsafe_loan(ALICE::get(), CurrencyId::DOT),
-				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingAssets
+				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingAsset
 			);
 		})
 }
