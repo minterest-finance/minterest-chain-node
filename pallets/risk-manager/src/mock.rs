@@ -198,12 +198,17 @@ impl Contains<u64> for Two {
 	}
 }
 
+parameter_types! {
+	pub const ProtocolInterestTransferThreshold: Balance = PROTOCOL_INTEREST_TRANSFER_THRESHOLD;
+}
+
 impl minterest_protocol::Config for Test {
 	type Event = Event;
 	type Borrowing = liquidity_pools::Module<Test>;
 	type ManagerLiquidationPools = liquidation_pools::Module<Test>;
 	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 	type WhitelistMembers = Two;
+	type ProtocolInterestTransferThreshold = ProtocolInterestTransferThreshold;
 }
 
 parameter_types! {
@@ -231,6 +236,7 @@ where
 
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
 pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
+pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000;
 pub const ONE_HUNDRED: Balance = 100;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ADMIN: AccountId = 0;

@@ -340,12 +340,17 @@ impl m_tokens::Config for Runtime {
 	type MultiCurrency = Currencies;
 }
 
+parameter_types! {
+	pub const ProtocolInterestTransferThreshold: Balance = PROTOCOL_INTEREST_TRANSFER_THRESHOLD;
+}
+
 impl minterest_protocol::Config for Runtime {
 	type Event = Event;
 	type Borrowing = LiquidityPools;
 	type ManagerLiquidationPools = LiquidationPools;
 	type ManagerLiquidityPools = LiquidityPools;
 	type WhitelistMembers = WhitelistCouncilProvider;
+	type ProtocolInterestTransferThreshold = ProtocolInterestTransferThreshold;
 }
 
 pub struct WhitelistCouncilProvider;

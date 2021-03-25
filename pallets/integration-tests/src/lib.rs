@@ -187,12 +187,17 @@ mod tests {
 		}
 	}
 
+	parameter_types! {
+		pub const ProtocolInterestTransferThreshold: Balance = PROTOCOL_INTEREST_TRANSFER_THRESHOLD;
+	}
+
 	impl minterest_protocol::Config for Test {
 		type Event = Event;
 		type Borrowing = liquidity_pools::Module<Test>;
 		type ManagerLiquidationPools = liquidation_pools::Module<Test>;
 		type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 		type WhitelistMembers = Four;
+		type ProtocolInterestTransferThreshold = ProtocolInterestTransferThreshold;
 	}
 
 	parameter_types! {
@@ -255,6 +260,7 @@ mod tests {
 	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 	pub const RATE_ZERO: Rate = Rate::from_inner(0);
 	pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
+	pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000;
 
 	pub fn admin() -> Origin {
 		Origin::signed(ADMIN)

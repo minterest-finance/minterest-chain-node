@@ -55,6 +55,10 @@ pub mod module {
 
 		/// The origin which may call deposit/redeem/borrow/repay in Whitelist mode.
 		type WhitelistMembers: Contains<Self::AccountId>;
+
+		#[pallet::constant]
+		/// Maximum total borrow amount per pool in usd
+		type ProtocolInterestTransferThreshold: Get<Balance>;
 	}
 
 	#[pallet::error]
@@ -136,11 +140,11 @@ pub mod module {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		fn on_finalize(block_number: T::BlockNumber) {
+		fn on_finalize(_block_number: T::BlockNumber) {
 			T::EnabledCurrencyPair::get().iter().for_each(|currency_pair| {
 				let pool_id = currency_pair.underlying_id;
 				let total_protocol_interest = <LiquidityPools<T>>::get_pool_total_protocol_interest(pool_id);
-				if total_protocol_interest < /*threshold*/1 {
+				if total_protocol_interest < T::ProtocolInterestTransferThreshold::get() {
 					return;
 				}
 
