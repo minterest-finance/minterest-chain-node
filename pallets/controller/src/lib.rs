@@ -140,6 +140,8 @@ pub mod module {
 		BorrowRateCalculationError,
 		/// Utilization rate calculation error.
 		UtilizationRateCalculationError,
+		/// Hypothetical account liquidity calculation error.
+		HypotheticalLiquidityCalculationError,
 	}
 
 	#[pallet::event]
@@ -569,7 +571,8 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		if LiquidityPools::<T>::check_user_available_collateral(&redeemer, underlying_asset_id) {
 			let (_, shortfall) =
-				Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset_id, redeem_amount, 0)?;
+				Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset_id, redeem_amount, 0)
+					.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 
 			ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
 		}
@@ -591,7 +594,8 @@ impl<T: Config> Pallet<T> {
 		let borrow_cap_reached = Self::is_borrow_cap_reached(underlying_asset_id, borrow_amount)?;
 		ensure!(!borrow_cap_reached, Error::<T>::BorrowCapReached);
 
-		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, underlying_asset_id, 0, borrow_amount)?;
+		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, underlying_asset_id, 0, borrow_amount)
+			.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 
 		ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
 

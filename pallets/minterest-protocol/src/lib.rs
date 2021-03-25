@@ -79,6 +79,8 @@ pub mod module {
 		OperationPaused,
 		/// The user is trying to transfer tokens to self
 		CannotTransferToSelf,
+		/// Hypothetical account liquidity calculation error.
+		HypotheticalLiquidityCalculationError,
 	}
 
 	#[pallet::event]
@@ -404,7 +406,8 @@ pub mod module {
 
 			// Check if the user will have enough collateral if he removes one of the collaterals.
 			let (_, shortfall) =
-				<Controller<T>>::get_hypothetical_account_liquidity(&sender, pool_id, user_balance_disabled_asset, 0)?;
+				<Controller<T>>::get_hypothetical_account_liquidity(&sender, pool_id, user_balance_disabled_asset, 0)
+					.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 			ensure!(shortfall == 0, Error::<T>::CannotBeDisabledAsCollateral);
 
 			<LiquidityPools<T>>::disable_collateral_internal(&sender, pool_id);
