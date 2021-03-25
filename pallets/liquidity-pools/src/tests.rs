@@ -24,7 +24,7 @@ fn set_pool_data_should_work() {
 			<Pools<Test>>::get(CurrencyId::DOT).borrow_index,
 			Rate::saturating_from_rational(125, 100)
 		);
-		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_insurance, ONE_HUNDRED_DOLLARS);
+		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_protocol_interest, ONE_HUNDRED_DOLLARS);
 	});
 }
 
@@ -53,14 +53,14 @@ fn set_pool_borrow_index_should_work() {
 }
 
 #[test]
-fn set_pool_total_insurance_should_work() {
+fn set_pool_total_protocol_interest_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		// Set pool_total_insurance eq 100 DOT.
-		assert_ok!(TestPools::set_pool_total_insurance(
+		// Set pool_total_protocol_interest eq 100 DOT.
+		assert_ok!(TestPools::set_pool_total_protocol_interest(
 			CurrencyId::DOT,
 			ONE_HUNDRED_DOLLARS
 		));
-		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_insurance, ONE_HUNDRED_DOLLARS);
+		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_protocol_interest, ONE_HUNDRED_DOLLARS);
 	});
 }
 
@@ -88,14 +88,14 @@ fn set_user_total_borrowed_and_interest_index_should_work() {
 #[test]
 fn set_accrual_interest_params_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		// Set pool total_borrowed eq 100 DOT and pool total_insurance eq 10_000 DOT.
+		// Set pool total_borrowed eq 100 DOT and pool total_protocol_interest eq 10_000 DOT.
 		assert_ok!(TestPools::set_accrual_interest_params(
 			CurrencyId::DOT,
 			ONE_HUNDRED_DOLLARS,
 			TEN_THOUSAND
 		));
 		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_borrowed, ONE_HUNDRED_DOLLARS);
-		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_insurance, TEN_THOUSAND);
+		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_protocol_interest, TEN_THOUSAND);
 	});
 }
 
@@ -145,7 +145,7 @@ fn get_pool_data_should_work() {
 				Pool {
 					total_borrowed: TEN_THOUSAND,
 					borrow_index: Rate::saturating_from_rational(125, 100),
-					total_insurance: TEN_THOUSAND,
+					total_protocol_interest: TEN_THOUSAND,
 				}
 			);
 		});
@@ -162,12 +162,12 @@ fn get_pool_total_borrowed_should_work() {
 }
 
 #[test]
-fn get_pool_total_insurance_should_work() {
+fn get_pool_total_protocol_interest_should_work() {
 	ExtBuilder::default()
 		.pool_with_params(CurrencyId::DOT, Balance::default(), Rate::default(), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
-			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), TEN_THOUSAND);
+			assert_eq!(TestPools::get_pool_total_protocol_interest(CurrencyId::DOT), TEN_THOUSAND);
 		});
 }
 
@@ -366,7 +366,7 @@ fn calculate_exchange_rate_should_work() {
 			Error::<Test>::NumOverflow
 		);
 
-		// Overflow in calculation: cash_plus_borrows - total_insurance
+		// Overflow in calculation: cash_plus_borrows - total_protocol_interest
 		assert_noop!(
 			TestPools::calculate_exchange_rate(100, 100, Balance::max_value(), 100),
 			Error::<Test>::NumOverflow

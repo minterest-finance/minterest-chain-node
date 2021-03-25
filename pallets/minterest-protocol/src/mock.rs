@@ -263,10 +263,10 @@ impl Default for ExtBuilder {
 				(ALICE, CurrencyId::KSM, ONE_HUNDRED_DOLLARS),
 				(BOB, CurrencyId::MNT, ONE_MILL_DOLLARS),
 				(BOB, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
-				// seed: initial insurance, equal 10_000$
+				// seed: initial interest, equal 10_000$
 				(TestPools::pools_account_id(), CurrencyId::ETH, TEN_THOUSAND_DOLLARS),
 				(TestPools::pools_account_id(), CurrencyId::DOT, TEN_THOUSAND_DOLLARS),
-				// seed: initial insurance = 10_000$, initial pool balance = 1_000_000$
+				// seed: initial interest = 10_000$, initial pool balance = 1_000_000$
 				(TestPools::pools_account_id(), CurrencyId::KSM, ONE_MILL_DOLLARS),
 			],
 		}
@@ -294,7 +294,7 @@ impl ExtBuilder {
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
-						total_insurance: TEN_THOUSAND_DOLLARS,
+						total_protocol_interest: TEN_THOUSAND_DOLLARS,
 					},
 				),
 				(
@@ -302,7 +302,7 @@ impl ExtBuilder {
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
-						total_insurance: TEN_THOUSAND_DOLLARS,
+						total_protocol_interest: TEN_THOUSAND_DOLLARS,
 					},
 				),
 				(
@@ -310,7 +310,7 @@ impl ExtBuilder {
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::saturating_from_rational(1, 1),
-						total_insurance: TEN_THOUSAND_DOLLARS,
+						total_protocol_interest: TEN_THOUSAND_DOLLARS,
 					},
 				),
 			],
@@ -386,7 +386,7 @@ impl ExtBuilder {
 					CurrencyId::ETH,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
@@ -396,7 +396,7 @@ impl ExtBuilder {
 					CurrencyId::DOT,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
@@ -406,7 +406,7 @@ impl ExtBuilder {
 					CurrencyId::KSM,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
@@ -416,7 +416,7 @@ impl ExtBuilder {
 					CurrencyId::BTC,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),  // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,

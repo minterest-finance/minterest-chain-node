@@ -40,8 +40,8 @@ pub struct ControllerData<BlockNumber> {
 	/// Block number that interest was last accrued at.
 	pub timestamp: BlockNumber,
 
-	/// Defines the portion of borrower interest that is converted into insurance.
-	pub insurance_factor: Rate,
+	/// Defines the portion of borrower interest that is converted into protocol interest.
+	pub protocol_interest_factor: Rate,
 
 	/// Maximum borrow rate.
 	pub max_borrow_rate: Rate,
@@ -139,8 +139,8 @@ pub mod module {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event {
-		/// InsuranceFactor has been successfully changed
-		InsuranceFactorChanged,
+		/// IntarestFactor has been successfully changed
+		InterestFactorChanged,
 		/// Max Borrow Rate has been successfully changed
 		MaxBorrowRateChanged,
 		/// Collateral factor has been successfully changed
@@ -149,17 +149,17 @@ pub mod module {
 		OperationIsPaused(CurrencyId, Operation),
 		/// The operation is unpaused: \[pool_id, operation\]
 		OperationIsUnPaused(CurrencyId, Operation),
-		/// Insurance balance replenished: \[pool_id, amount\]
-		DepositedInsurance(CurrencyId, Balance),
-		/// Insurance balance redeemed: \[pool_id, amount\]
-		RedeemedInsurance(CurrencyId, Balance),
+		/// Interest balance replenished: \[pool_id, amount\]
+		DepositedInterest(CurrencyId, Balance),
+		/// Interest balance redeemed: \[pool_id, amount\]
+		RedeemedInterest(CurrencyId, Balance),
 		/// Borrow cap changed: \[pool_id, new_cap\]
 		BorrowCapChanged(CurrencyId, Option<Balance>),
 		/// Protocol operation mode switched: \[is_whitelist_mode\]
 		ProtocolOperationModeSwitched(bool),
 	}
 
-	/// Controller data information: `(timestamp, insurance_factor, collateral_factor,
+	/// Controller data information: `(timestamp, protocol_interest_factor, collateral_factor,
 	/// max_borrow_rate)`.
 	#[pallet::storage]
 	#[pallet::getter(fn controller_dates)]
@@ -271,45 +271,45 @@ pub mod module {
 		}
 
 		// FIXME: unused functionality
-		/// Replenishes the insurance balance.
+		/// Replenishes the interest balance.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn deposit_insurance(
+		pub fn deposit_interest(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
-			Self::do_deposit_insurance(&sender, pool_id, amount)?;
-			Self::deposit_event(Event::DepositedInsurance(pool_id, amount));
+			Self::do_deposit_interest(&sender, pool_id, amount)?;
+			Self::deposit_event(Event::DepositedInterest(pool_id, amount));
 			Ok(().into())
 		}
 
-		/// Redeem the insurance balance.
+		/// Redeem the interest balance.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn redeem_insurance(
+		pub fn redeem_interest(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
-			Self::do_redeem_insurance(&sender, pool_id, amount)?;
-			Self::deposit_event(Event::RedeemedInsurance(pool_id, amount));
+			Self::do_redeem_interest(&sender, pool_id, amount)?;
+			Self::deposit_event(Event::RedeemedInterest(pool_id, amount));
 			Ok(().into())
 		}
 
-		/// Set insurance factor.
+		/// Set interest factor.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_insurance_factor`: new value for insurance factor.
+		/// - `new_protocol_interest_factor`: new value for interest factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_insurance_factor(
+		pub fn set_protocol_interest_factor(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_insurance_factor: Rate,
+			new_protocol_interest_factor: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
@@ -317,8 +317,8 @@ pub mod module {
 				Error::<T>::PoolNotFound
 			);
 
-			ControllerDates::<T>::mutate(pool_id, |r| r.insurance_factor = new_insurance_factor);
-			Self::deposit_event(Event::InsuranceFactorChanged);
+			ControllerDates::<T>::mutate(pool_id, |r| r.protocol_interest_factor = new_protocol_interest_factor);
+			Self::deposit_event(Event::InterestFactorChanged);
 			Ok(().into())
 		}
 
@@ -427,7 +427,7 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
-	/// Applies accrued interest to total borrows and insurances.
+	/// Applies accrued interest to total borrows and interests.
 	/// This calculates interest accrued from the last checkpointed block
 	/// up to the current block and writes new checkpoint to storage.
 	pub fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult {
@@ -448,7 +448,7 @@ impl<T: Config> Pallet<T> {
 			underlying_asset_id,
 			pool_data.total_borrowed,
 			pool_data.borrow_index,
-			pool_data.total_insurance,
+			pool_data.total_protocol_interest,
 		)?;
 
 		Ok(())
@@ -655,24 +655,24 @@ impl<T: Config> Pallet<T> {
 	pub fn get_liquidity_pool_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
 		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
 		let pool_data = <LiquidityPools<T>>::get_pool_data(pool_id);
-		let insurance_factor = Self::get_insurance_factor(pool_id);
+		let protocol_interest_factor = Self::get_protocol_interest_factor(pool_id);
 
 		let utilization_rate = Self::calculate_utilization_rate(
 			current_total_balance,
 			pool_data.total_borrowed,
-			pool_data.total_insurance,
+			pool_data.total_protocol_interest,
 		)
 		.ok()?;
 
 		let borrow_rate = <MinterestModel<T>>::calculate_borrow_interest_rate(pool_id, utilization_rate).ok()?;
 
-		let supply_rate = Self::calculate_supply_interest_rate(utilization_rate, borrow_rate, insurance_factor).ok()?;
+		let supply_rate = Self::calculate_supply_interest_rate(utilization_rate, borrow_rate, protocol_interest_factor).ok()?;
 
 		Some((borrow_rate, supply_rate))
 	}
 
 	/// Calculates total supply and total borrowed balance in usd based on
-	/// total_borrowed, total_insurance, borrow_index values calculated for current block
+	/// total_borrowed, total_protocol_interest, borrow_index values calculated for current block
 	pub fn get_total_supply_and_borrowed_usd_balance(
 		who: &T::AccountId,
 	) -> result::Result<(Balance, Balance), DispatchError> {
@@ -704,7 +704,7 @@ impl<T: Config> Pallet<T> {
 				if has_balance {
 					let current_exchange_rate = <LiquidityPools<T>>::get_exchange_rate_by_interest_params(
 						pool_id,
-						pool_data.total_insurance,
+						pool_data.total_protocol_interest,
 						pool_data.total_borrowed,
 					)?;
 					supply_in_usd += Rate::from_inner(wrapped_balance)
@@ -765,8 +765,8 @@ impl<T: Config> Pallet<T> {
 		Ok(result)
 	}
 
-	/// Calculates total borrows, total insurance and borrow index for given pool.
-	/// Applies accrued interest to total borrows and insurances and calculates interest accrued
+	/// Calculates total borrows, total interest and borrow index for given pool.
+	/// Applies accrued interest to total borrows and interests and calculates interest accrued
 	/// from the last checkpointed block up to the current block and writes new checkpoint to
 	/// storage.
 	///
@@ -782,7 +782,7 @@ impl<T: Config> Pallet<T> {
 		let utilization_rate = Self::calculate_utilization_rate(
 			current_total_balance,
 			pool_data.total_borrowed,
-			pool_data.total_insurance,
+			pool_data.total_protocol_interest,
 		)?;
 
 		// Calculate the current borrow interest rate
@@ -790,7 +790,7 @@ impl<T: Config> Pallet<T> {
 			<MinterestModel<T>>::calculate_borrow_interest_rate(underlying_asset_id, utilization_rate)?;
 
 		let max_borrow_rate = Self::get_max_borrow_rate(underlying_asset_id);
-		let insurance_factor = Self::get_insurance_factor(underlying_asset_id);
+		let protocol_interest_factor = Self::get_protocol_interest_factor(underlying_asset_id);
 
 		ensure!(
 			current_borrow_interest_rate <= max_borrow_rate,
@@ -798,11 +798,11 @@ impl<T: Config> Pallet<T> {
 		);
 
 		/*
-		Calculate the interest accumulated into borrows and insurance and the new index:
+		Calculate the interest accumulated into borrows and interest and the new index:
 			*  simpleInterestFactor = borrowRate * blockDelta
 			*  interestAccumulated = simpleInterestFactor * totalBorrows
 			*  totalBorrowsNew = interestAccumulated + totalBorrows
-			*  totalInsuranceNew = interestAccumulated * insuranceFactor + totalInsurance
+			*  totalInterestNew = interestAccumulated * interestFactor + totalInterest
 			*  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
 		*/
 
@@ -811,13 +811,13 @@ impl<T: Config> Pallet<T> {
 			Self::calculate_interest_accumulated(simple_interest_factor, pool_data.total_borrowed)?;
 		let new_total_borrow_balance =
 			Self::calculate_new_total_borrow(interest_accumulated, pool_data.total_borrowed)?;
-		let new_total_insurance =
-			Self::calculate_new_total_insurance(interest_accumulated, insurance_factor, pool_data.total_insurance)?;
+		let new_total_protocol_interest =
+			Self::calculate_new_total_protocol_interest(interest_accumulated, protocol_interest_factor, pool_data.total_protocol_interest)?;
 		let new_borrow_index = Self::calculate_new_borrow_index(simple_interest_factor, pool_data.borrow_index)?;
 
 		Ok(Pool {
 			total_borrowed: new_total_borrow_balance,
-			total_insurance: new_total_insurance,
+			total_protocol_interest: new_total_protocol_interest,
 			borrow_index: new_borrow_index,
 		})
 	}
@@ -828,13 +828,13 @@ impl<T: Config> Pallet<T> {
 	/// Calculates the utilization rate of the pool.
 	/// - `current_total_balance`: The amount of cash in the pool.
 	/// - `current_total_borrowed_balance`: The amount of borrows in the pool.
-	/// - `current_total_insurance`: The amount of insurance in the pool (currently unused).
+	/// - `current_total_protocol_interest`: The amount of interest in the pool (currently unused).
 	///
-	/// returns `utilization_rate = total_borrows / (total_cash + total_borrows - total_insurance)`
+	/// returns `utilization_rate = total_borrows / (total_cash + total_borrows - total_protocol_interest)`
 	fn calculate_utilization_rate(
 		current_total_balance: Balance,
 		current_total_borrowed_balance: Balance,
-		current_total_insurance: Balance,
+		current_total_protocol_interest: Balance,
 	) -> RateResult {
 		// Utilization rate is 0 when there are no borrows
 		if current_total_borrowed_balance.is_zero() {
@@ -842,12 +842,12 @@ impl<T: Config> Pallet<T> {
 		}
 
 		// utilization_rate = current_total_borrowed_balance / (current_total_balance +
-		// + current_total_borrowed_balance - current_total_insurance)
+		// + current_total_borrowed_balance - current_total_protocol_interest)
 		let utilization_rate = Rate::checked_from_rational(
 			current_total_borrowed_balance,
 			current_total_balance
 				.checked_add(current_total_borrowed_balance)
-				.and_then(|v| v.checked_sub(current_total_insurance))
+				.and_then(|v| v.checked_sub(current_total_protocol_interest))
 				.ok_or(Error::<T>::NumOverflow)?,
 		)
 		.ok_or(Error::<T>::NumOverflow)?;
@@ -858,12 +858,12 @@ impl<T: Config> Pallet<T> {
 	/// Calculates the current supply interest rate of the pool.
 	/// - `utilization_rate`: Current utilization rate.
 	/// - `borrow_rate`: Current interest rate that users pay for lending assets.
-	/// - `insurance_factor`: Current insurance factor.
+	/// - `protocol_interest_factor`: Current interest factor.
 	///
-	/// returns `supply_interest_rate = utilization_rate * (borrow_rate * (1 - insurance_factor))`
-	fn calculate_supply_interest_rate(utilization_rate: Rate, borrow_rate: Rate, insurance_factor: Rate) -> RateResult {
+	/// returns `supply_interest_rate = utilization_rate * (borrow_rate * (1 - protocol_interest_factor))`
+	fn calculate_supply_interest_rate(utilization_rate: Rate, borrow_rate: Rate, protocol_interest_factor: Rate) -> RateResult {
 		let supply_interest_rate = Rate::one()
-			.checked_sub(&insurance_factor)
+			.checked_sub(&protocol_interest_factor)
 			.and_then(|v| v.checked_mul(&borrow_rate))
 			.and_then(|v| v.checked_mul(&utilization_rate))
 			.ok_or(Error::<T>::NumOverflow)?;
@@ -936,29 +936,29 @@ impl<T: Config> Pallet<T> {
 		Ok(new_total_borrows)
 	}
 
-	/// Calculates new total insurance.
+	/// Calculates new total interest.
 	/// - `interest_accumulated`: Accrued interest on the borrower's loan.
-	/// - `insurance_factor`: The portion of borrower interest that is converted into insurance
-	/// - `current_total_insurance`: The amount of insurance in the pool (currently unused).
+	/// - `protocol_interest_factor`: The portion of borrower interest that is converted into interest
+	/// - `current_total_protocol_interest`: The amount of interest in the pool (currently unused).
 	///
-	/// returns `total_insurance_new = interest_accumulated * insurance_factor + total_insurance`
-	fn calculate_new_total_insurance(
+	/// returns `total_protocol_interest_new = interest_accumulated * protocol_interest_factor + total_protocol_interest`
+	fn calculate_new_total_protocol_interest(
 		interest_accumulated: Balance,
-		insurance_factor: Rate,
-		current_total_insurance: Balance,
+		protocol_interest_factor: Rate,
+		current_total_protocol_interest: Balance,
 	) -> BalanceResult {
-		// insurance_accumulated = interest_accumulated * insurance_factor
-		let insurance_accumulated = Rate::from_inner(interest_accumulated)
-			.checked_mul(&insurance_factor)
+		// protocol_interest_accumulated = interest_accumulated * protocol_interest_factor
+		let protocol_interest_accumulated = Rate::from_inner(interest_accumulated)
+			.checked_mul(&protocol_interest_factor)
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		// total_insurance_new = insurance_accumulated + current_total_insurance
-		let total_insurance_new = insurance_accumulated
-			.checked_add(current_total_insurance)
+		// total_protocol_interest_new = interest_accumulated + current_total_protocol_interest
+		let total_protocol_interest_new = protocol_interest_accumulated
+			.checked_add(current_total_protocol_interest)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		Ok(total_insurance_new)
+		Ok(total_protocol_interest_new)
 	}
 
 	/// Calculates new borrow index.
@@ -1006,9 +1006,9 @@ impl<T: Config> Pallet<T> {
 		Self::controller_dates(pool_id).max_borrow_rate
 	}
 
-	/// Get the insurance factor.
-	fn get_insurance_factor(pool_id: CurrencyId) -> Rate {
-		Self::controller_dates(pool_id).insurance_factor
+	/// Get the interest factor.
+	fn get_protocol_interest_factor(pool_id: CurrencyId) -> Rate {
+		Self::controller_dates(pool_id).protocol_interest_factor
 	}
 
 	/// Gets the borrow cap amount
@@ -1020,11 +1020,11 @@ impl<T: Config> Pallet<T> {
 // Admin functions
 impl<T: Config> Pallet<T> {
 	// FIXME It is possible to remove this function
-	/// Replenishes the insurance balance.
-	/// - `who`: Account ID of the administrator who replenishes the insurance.
+	/// Replenishes the interest balance.
+	/// - `who`: Account ID of the administrator who replenishes the interest.
 	/// - `pool_id`: Pool ID of the replenishing pool.
-	/// - `amount`: Amount to replenish insurance in the pool.
-	fn do_deposit_insurance(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
+	/// - `amount`: Amount to replenish interest in the pool.
+	fn do_deposit_interest(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
 		ensure!(
 			T::LiquidityPoolsManager::pool_exists(&pool_id),
 			Error::<T>::PoolNotFound
@@ -1038,23 +1038,23 @@ impl<T: Config> Pallet<T> {
 		// transfer amount to this pool
 		T::MultiCurrency::transfer(pool_id, &who, &T::LiquidityPoolsManager::pools_account_id(), amount)?;
 
-		// calculate new insurance balance
-		let current_insurance_balance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
+		// calculate new interest balance
+		let current_interest_balance = <LiquidityPools<T>>::get_pool_total_protocol_interest(pool_id);
 
-		let new_insurance_balance = current_insurance_balance
+		let new_interest_balance = current_interest_balance
 			.checked_add(amount)
 			.ok_or(Error::<T>::BalanceOverflowed)?;
 
-		<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_insurance_balance)?;
+		<LiquidityPools<T>>::set_pool_total_protocol_interest(pool_id, new_interest_balance)?;
 
 		Ok(())
 	}
 
-	/// Burns the insurance balance.
-	/// - `who`: Account ID of the administrator who burns the insurance.
-	/// - `pool_id`: Pool ID in which the insurance is decreasing.
-	/// - `amount`: Amount to redeem insurance in the pool.
-	fn do_redeem_insurance(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
+	/// Burns the interest balance.
+	/// - `who`: Account ID of the administrator who burns the interest.
+	/// - `pool_id`: Pool ID in which the interest is decreasing.
+	/// - `amount`: Amount to redeem interest in the pool.
+	fn do_redeem_interest(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
 		ensure!(
 			T::LiquidityPoolsManager::pool_exists(&pool_id),
 			Error::<T>::PoolNotFound
@@ -1065,15 +1065,15 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::NotEnoughBalance
 		);
 
-		// calculate new insurance balance
-		let current_total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
-		ensure!(amount <= current_total_insurance, Error::<T>::NotEnoughBalance);
+		// calculate new interest balance
+		let current_total_protocol_interest = <LiquidityPools<T>>::get_pool_total_protocol_interest(pool_id);
+		ensure!(amount <= current_total_protocol_interest, Error::<T>::NotEnoughBalance);
 
-		let new_insurance_balance = current_total_insurance
+		let new_interest_balance = current_total_protocol_interest
 			.checked_sub(amount)
 			.ok_or(Error::<T>::NotEnoughBalance)?;
 
-		<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_insurance_balance)?;
+		<LiquidityPools<T>>::set_pool_total_protocol_interest(pool_id, new_interest_balance)?;
 
 		// transfer amount from this pool
 		T::MultiCurrency::transfer(pool_id, &T::LiquidityPoolsManager::pools_account_id(), &who, amount)?;

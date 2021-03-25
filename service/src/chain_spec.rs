@@ -245,7 +245,7 @@ fn testnet_genesis(
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_insurance: Balance::zero(),
+						total_protocol_interest: Balance::zero(),
 					},
 				),
 				(
@@ -253,7 +253,7 @@ fn testnet_genesis(
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_insurance: Balance::zero(),
+						total_protocol_interest: Balance::zero(),
 					},
 				),
 				(
@@ -261,7 +261,7 @@ fn testnet_genesis(
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_insurance: Balance::zero(),
+						total_protocol_interest: Balance::zero(),
 					},
 				),
 				(
@@ -269,7 +269,7 @@ fn testnet_genesis(
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_insurance: Balance::zero(),
+						total_protocol_interest: Balance::zero(),
 					},
 				),
 			],
@@ -281,7 +281,7 @@ fn testnet_genesis(
 					CurrencyId::ETH,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
@@ -291,7 +291,7 @@ fn testnet_genesis(
 					CurrencyId::DOT,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
@@ -301,7 +301,7 @@ fn testnet_genesis(
 					CurrencyId::KSM,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
@@ -311,7 +311,7 @@ fn testnet_genesis(
 					CurrencyId::BTC,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,

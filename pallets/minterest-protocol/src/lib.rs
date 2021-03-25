@@ -138,15 +138,15 @@ pub mod module {
 		fn on_finalize(block_number: T::BlockNumber) {
 			T::EnabledCurrencyPair::get().iter().for_each(|currency_pair| {
 				let pool_id = currency_pair.underlying_id;
-				let total_insurance = <LiquidityPools<T>>::get_pool_total_insurance(pool_id);
-				if total_insurance < /*threshold*/1 {
+				let total_protocol_interest = <LiquidityPools<T>>::get_pool_total_protocol_interest(pool_id);
+				if total_protocol_interest < /*threshold*/1 {
 					return;
 				}
 
 				let total_balance = T::ManagerLiquidityPools::get_pool_available_liquidity(pool_id);
-				let to_liquidation_pool = match total_balance.cmp(&total_insurance) {
+				let to_liquidation_pool = match total_balance.cmp(&total_protocol_interest) {
 					Ordering::Less => total_balance,
-					_ => total_insurance,
+					_ => total_protocol_interest,
 				};
 
 				let result = T::MultiCurrency::transfer(
@@ -156,8 +156,8 @@ pub mod module {
 					to_liquidation_pool,
 				);
 				if let Ok(result) = result {
-					if let Some(new_total_insurance) = total_insurance.checked_sub(to_liquidation_pool) {
-						<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_total_insurance);
+					if let Some(new_total_protocol_interest) = total_protocol_interest.checked_sub(to_liquidation_pool) {
+						<LiquidityPools<T>>::set_pool_total_protocol_interest(pool_id, new_total_protocol_interest);
 					}
 				}
 			});

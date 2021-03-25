@@ -19,7 +19,7 @@ fn accrue_interest_should_work() {
 			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
 
 			assert_eq!(Controller::controller_dates(CurrencyId::DOT).timestamp, 1);
-			assert_eq!(TestPools::pools(CurrencyId::DOT).total_insurance, 57_600_000_000);
+			assert_eq!(TestPools::pools(CurrencyId::DOT).total_protocol_interest, 57_600_000_000);
 			assert_eq!(
 				Controller::get_liquidity_pool_borrow_and_supply_rates(CurrencyId::DOT),
 				Some((Rate::from_inner(139_680_000_267), Rate::from_inner(100_569_600_394)))
@@ -139,21 +139,21 @@ fn calculate_new_total_borrow_should_work() {
 }
 
 #[test]
-fn calculate_new_total_insurance_should_work() {
+fn calculate_new_total_protocol_interest_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		// total_insurance_new = 100 * 1.2 + 250 = 370
+		// total_protocol_interest_new = 100 * 1.2 + 250 = 370
 		assert_eq!(
-			Controller::calculate_new_total_insurance(100, Rate::saturating_from_rational(12, 10), 250),
+			Controller::calculate_new_total_protocol_interest(100, Rate::saturating_from_rational(12, 10), 250),
 			Ok(370)
 		);
 		// Overflow in calculation: max_value() * 1.1
 		assert_noop!(
-			Controller::calculate_new_total_insurance(Balance::max_value(), Rate::saturating_from_rational(11, 10), 1),
+			Controller::calculate_new_total_protocol_interest(Balance::max_value(), Rate::saturating_from_rational(11, 10), 1),
 			Error::<Runtime>::NumOverflow
 		);
 		// Overflow in calculation: 100 * 1.1 + max_value()
 		assert_noop!(
-			Controller::calculate_new_total_insurance(100, Rate::saturating_from_rational(1, 1), Balance::max_value()),
+			Controller::calculate_new_total_protocol_interest(100, Rate::saturating_from_rational(1, 1), Balance::max_value()),
 			Error::<Runtime>::NumOverflow
 		);
 	});
@@ -235,7 +235,7 @@ fn calculate_utilization_rate_should_work() {
 			Error::<Runtime>::NumOverflow
 		);
 
-		// Overflow in calculation: total_balance_total_borrowed_sum - total_insurance = ... - max_value()
+		// Overflow in calculation: total_balance_total_borrowed_sum - total_protocol_interest = ... - max_value()
 		assert_noop!(
 			Controller::calculate_utilization_rate(22, 80, Balance::max_value()),
 			Error::<Runtime>::NumOverflow
@@ -262,7 +262,7 @@ fn calculate_supply_rate_should_work() {
 			Ok(Rate::saturating_from_rational(15525, 100_000))
 		);
 
-		// Overflow in calculation: one_minus_insurance_factor = 1 - 2
+		// Overflow in calculation: one_minus_protocol_interest_factor = 1 - 2
 		assert_noop!(
 			Controller::calculate_supply_interest_rate(
 				Rate::saturating_from_rational(75, 100),
@@ -633,41 +633,41 @@ fn is_operation_allowed_should_work() {
 // Admin functions
 
 #[test]
-fn set_insurance_factor_should_work() {
+fn set_protocol_interest_factor_should_work() {
 	ExtBuilder::default()
 		.pool_mock(CurrencyId::DOT)
 		.build()
 		.execute_with(|| {
-			// ALICE set insurance factor equal 2.0
-			assert_ok!(Controller::set_insurance_factor(
+			// ALICE set protocol interest factor equal 2.0
+			assert_ok!(Controller::set_protocol_interest_factor(
 				alice(),
 				CurrencyId::DOT,
 				Rate::saturating_from_integer(2)
 			));
-			let expected_event = Event::controller(crate::Event::InsuranceFactorChanged);
+			let expected_event = Event::controller(crate::Event::InterestFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
-				Controller::controller_dates(CurrencyId::DOT).insurance_factor,
+				Controller::controller_dates(CurrencyId::DOT).protocol_interest_factor,
 				Rate::saturating_from_rational(20, 10)
 			);
 
-			// ALICE set insurance factor equal 0.0
-			assert_ok!(Controller::set_insurance_factor(alice(), CurrencyId::DOT, Rate::zero()));
-			let expected_event = Event::controller(crate::Event::InsuranceFactorChanged);
+			// ALICE set protocol interest factor equal 0.0
+			assert_ok!(Controller::set_protocol_interest_factor(alice(), CurrencyId::DOT, Rate::zero()));
+			let expected_event = Event::controller(crate::Event::InterestFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
-				Controller::controller_dates(CurrencyId::DOT).insurance_factor,
+				Controller::controller_dates(CurrencyId::DOT).protocol_interest_factor,
 				Rate::from_inner(0)
 			);
 
 			// The dispatch origin of this call must be Root or half MinterestCouncil.
 			assert_noop!(
-				Controller::set_insurance_factor(bob(), CurrencyId::DOT, Rate::saturating_from_integer(2)),
+				Controller::set_protocol_interest_factor(bob(), CurrencyId::DOT, Rate::saturating_from_integer(2)),
 				BadOrigin
 			);
 
 			assert_noop!(
-				Controller::set_insurance_factor(alice(), CurrencyId::MDOT, Rate::saturating_from_integer(2)),
+				Controller::set_protocol_interest_factor(alice(), CurrencyId::MDOT, Rate::saturating_from_integer(2)),
 				Error::<Runtime>::PoolNotFound
 			);
 		});
@@ -919,23 +919,23 @@ fn switch_mode_should_work() {
 }
 
 #[test]
-fn deposit_insurance_should_work() {
+fn deposit_interest_should_work() {
 	ExtBuilder::default()
 		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 		.pool_mock(CurrencyId::DOT)
 		.build()
 		.execute_with(|| {
-			// ALICE deposit 100 DOT in pool insurance
-			assert_ok!(Controller::deposit_insurance(alice(), CurrencyId::DOT, 100));
-			let expected_event = Event::controller(crate::Event::DepositedInsurance(CurrencyId::DOT, 100));
+			// ALICE deposit 100 DOT in pool interest
+			assert_ok!(Controller::deposit_interest(alice(), CurrencyId::DOT, 100));
+			let expected_event = Event::controller(crate::Event::DepositedInterest(CurrencyId::DOT, 100));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 100);
+			assert_eq!(TestPools::get_pool_total_protocol_interest(CurrencyId::DOT), 100);
 		});
 }
 
 #[test]
-fn do_deposit_insurance_should_work() {
+fn do_deposit_interest_should_work() {
 	ExtBuilder::default()
 		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
 		.user_balance(BOB, CurrencyId::BTC, ONE_HUNDRED)
@@ -943,57 +943,57 @@ fn do_deposit_insurance_should_work() {
 		.pool_mock(CurrencyId::BTC)
 		.build()
 		.execute_with(|| {
-			// ALICE deposit 60 DOT in pool insurance
-			assert_ok!(Controller::do_deposit_insurance(&ALICE, CurrencyId::DOT, 60));
-			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 60);
+			// ALICE deposit 60 DOT in pool interest
+			assert_ok!(Controller::do_deposit_interest(&ALICE, CurrencyId::DOT, 60));
+			assert_eq!(TestPools::get_pool_total_protocol_interest(CurrencyId::DOT), 60);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40);
 			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 60);
 
-			// ALICE deposit 5 DOT in pool insurance
-			assert_ok!(Controller::do_deposit_insurance(&ALICE, CurrencyId::DOT, 5));
-			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 65);
+			// ALICE deposit 5 DOT in pool interest
+			assert_ok!(Controller::do_deposit_interest(&ALICE, CurrencyId::DOT, 5));
+			assert_eq!(TestPools::get_pool_total_protocol_interest(CurrencyId::DOT), 65);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 35);
 			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 65);
 
-			// Not enough balance to deposit insurance.
+			// Not enough balance to deposit interest.
 			assert_noop!(
-				Controller::do_deposit_insurance(&ALICE, CurrencyId::DOT, 101),
+				Controller::do_deposit_interest(&ALICE, CurrencyId::DOT, 101),
 				Error::<Runtime>::NotEnoughBalance
 			);
 
 			// There is no pool 'MDOT'.
 			assert_noop!(
-				Controller::do_deposit_insurance(&ALICE, CurrencyId::MDOT, 5),
+				Controller::do_deposit_interest(&ALICE, CurrencyId::MDOT, 5),
 				Error::<Runtime>::PoolNotFound
 			);
 
-			// Set BTC pool total insurance = max_value()
-			assert_ok!(TestPools::set_pool_total_insurance(
+			// Set BTC pool total interest = max_value()
+			assert_ok!(TestPools::set_pool_total_protocol_interest(
 				CurrencyId::BTC,
 				Balance::max_value()
 			));
 
-			// Overflow in calculation: total_insurance = max_value() + 50
+			// Overflow in calculation: total_protocol_interest = max_value() + 50
 			assert_err!(
-				Controller::do_deposit_insurance(&BOB, CurrencyId::BTC, 50),
+				Controller::do_deposit_interest(&BOB, CurrencyId::BTC, 50),
 				Error::<Runtime>::BalanceOverflowed
 			);
 		});
 }
 
 #[test]
-fn redeem_insurance_should_work() {
+fn redeem_interest_should_work() {
 	ExtBuilder::default()
 		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-		.pool_total_insurance(CurrencyId::DOT, 1000)
+		.pool_total_protocol_interest(CurrencyId::DOT, 1000)
 		.build()
 		.execute_with(|| {
-			// ALICE redeem 100 DOT from pool insurance.
-			assert_ok!(Controller::redeem_insurance(alice(), CurrencyId::DOT, 125));
-			let expected_event = Event::controller(crate::Event::RedeemedInsurance(CurrencyId::DOT, 125));
+			// ALICE redeem 100 DOT from pool interest.
+			assert_ok!(Controller::redeem_interest(alice(), CurrencyId::DOT, 125));
+			let expected_event = Event::controller(crate::Event::RedeemedInterest(CurrencyId::DOT, 125));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 875);
+			assert_eq!(TestPools::get_pool_total_protocol_interest(CurrencyId::DOT), 875);
 			assert_eq!(
 				Currencies::free_balance(CurrencyId::DOT, &TestPools::pools_account_id()),
 				875,
@@ -1002,44 +1002,44 @@ fn redeem_insurance_should_work() {
 }
 
 #[test]
-fn do_redeem_insurance_should_work() {
+fn do_redeem_interest_should_work() {
 	ExtBuilder::default()
 		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-		.pool_total_insurance(CurrencyId::DOT, 1000)
+		.pool_total_protocol_interest(CurrencyId::DOT, 1000)
 		.build()
 		.execute_with(|| {
-			// ALICE redeem 150 DOT from pool insurance
-			assert_ok!(Controller::do_redeem_insurance(&ALICE, CurrencyId::DOT, 150));
-			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 850);
+			// ALICE redeem 150 DOT from pool interest
+			assert_ok!(Controller::do_redeem_interest(&ALICE, CurrencyId::DOT, 150));
+			assert_eq!(TestPools::get_pool_total_protocol_interest(CurrencyId::DOT), 850);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 250);
 			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 850);
 
-			// ALICE redeem 300 DOT from pool insurance
-			assert_ok!(Controller::do_redeem_insurance(&ALICE, CurrencyId::DOT, 300));
-			assert_eq!(TestPools::get_pool_total_insurance(CurrencyId::DOT), 550);
+			// ALICE redeem 300 DOT from pool interest
+			assert_ok!(Controller::do_redeem_interest(&ALICE, CurrencyId::DOT, 300));
+			assert_eq!(TestPools::get_pool_total_protocol_interest(CurrencyId::DOT), 550);
 			assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 550);
 			assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), 550);
 
-			// Not enough balance to redeem insurance: 550 - 600 < 0
+			// Not enough balance to redeem interest: 550 - 600 < 0
 			assert_noop!(
-				Controller::do_redeem_insurance(&ALICE, CurrencyId::DOT, 600),
+				Controller::do_redeem_interest(&ALICE, CurrencyId::DOT, 600),
 				Error::<Runtime>::NotEnoughBalance
 			);
 
 			// There is no pool 'MDOT'.
 			assert_noop!(
-				Controller::do_redeem_insurance(&ALICE, CurrencyId::MDOT, 5),
+				Controller::do_redeem_interest(&ALICE, CurrencyId::MDOT, 5),
 				Error::<Runtime>::PoolNotFound
 			);
 
-			// Set DOT pool total insurance = max_value()
-			assert_ok!(TestPools::set_pool_total_insurance(
+			// Set DOT pool total interest = max_value()
+			assert_ok!(TestPools::set_pool_total_protocol_interest(
 				CurrencyId::DOT,
 				Balance::max_value()
 			));
-			// Overflow in calculation: total_insurance = max_value() + 50
+			// Overflow in calculation: total_protocol_interest = max_value() + 50
 			assert_err!(
-				Controller::do_deposit_insurance(&ALICE, CurrencyId::DOT, 50),
+				Controller::do_deposit_interest(&ALICE, CurrencyId::DOT, 50),
 				Error::<Runtime>::BalanceOverflowed
 			);
 		});

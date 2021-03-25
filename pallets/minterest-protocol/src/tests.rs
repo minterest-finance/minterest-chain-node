@@ -355,7 +355,7 @@ fn borrow_should_work() {
 			CurrencyId::DOT,
 			dollars(60_u128)
 		));
-		// total_pool_liquidity = 10_000 (insurance) + 60 = 10_060
+		// total_pool_liquidity = 10_000 (interest) + 60 = 10_060
 		assert_eq!(
 			TestPools::get_pool_available_liquidity(CurrencyId::DOT),
 			dollars(10_060_u128)

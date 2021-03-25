@@ -27,7 +27,7 @@
     "Pool": {
       "total_borrowed": "Balance",
       "borrow_index": "Rate",
-      "total_insurance": "Balance"
+      "total_protocol_interest": "Balance"
     },
     "LiquidationPoolCommonData": {
       "timestamp": "BlockNumber",
@@ -56,7 +56,7 @@
     "Price": "FixedU128",
     "ControllerData": {
       "timestamp": "BlockNumber",
-      "insurance_factor": "Rate",
+      "protocol_interest_factor": "Rate",
       "max_borrow_rate":  "Rate",
       "collateral_factor": "Rate",
 	  "borrow_cap": "Option<Balance>"

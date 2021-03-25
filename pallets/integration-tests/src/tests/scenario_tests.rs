@@ -27,7 +27,7 @@ mod tests {
 
 				let pool_available_liquidity_start: Balance = BALANCE_ZERO;
 				let pool_m_dot_total_issuance_start: Balance = BALANCE_ZERO;
-				let pool_total_insurance_start: Balance = BALANCE_ZERO;
+				let pool_total_protocol_interest_start: Balance = BALANCE_ZERO;
 				let pool_dot_total_borrow_start: Balance = BALANCE_ZERO;
 
 				// ACTION: DEPOSIT UNDERLYING
@@ -70,10 +70,10 @@ mod tests {
 
 				// Checking DOT pool Storage params
 				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, Rate::one());
-				// Total insurance didn't changed.
+				// Total interest didn't changed.
 				assert_eq!(
-					TestPools::pools(CurrencyId::DOT).total_insurance,
-					pool_total_insurance_start
+					TestPools::pools(CurrencyId::DOT).total_protocol_interest,
+					pool_total_protocol_interest_start
 				);
 				assert_eq!(
 					TestPools::pools(CurrencyId::DOT).total_borrowed,
@@ -159,8 +159,8 @@ mod tests {
 				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, Rate::one());
 				// Expected start value: 0.0
 				assert_eq!(
-					TestPools::pools(CurrencyId::DOT).total_insurance,
-					pool_total_insurance_start
+					TestPools::pools(CurrencyId::DOT).total_protocol_interest,
+					pool_total_protocol_interest_start
 				);
 				assert_eq!(TestPools::pools(CurrencyId::DOT).total_borrowed, BALANCE_ZERO);
 
@@ -248,8 +248,8 @@ mod tests {
 				assert_eq!(TestPools::pools(CurrencyId::DOT).borrow_index, Rate::one());
 				// Expected: 0
 				assert_eq!(
-					TestPools::pools(CurrencyId::DOT).total_insurance,
-					pool_total_insurance_start
+					TestPools::pools(CurrencyId::DOT).total_protocol_interest,
+					pool_total_protocol_interest_start
 				);
 				// Total borrowed amount changed 0 -> 30 000
 				let pool_dot_total_borrow_block_number_2: Balance =
@@ -354,12 +354,12 @@ mod tests {
 					pool_borrow_index_block_number_3
 				);
 				// Expected: 0,0000050625
-				let insurance_accumulated_block_number_3: Balance = 5_062_500_000_000;
-				let pool_total_insurance_block_number_3: Balance =
-					pool_total_insurance_start + insurance_accumulated_block_number_3;
+				let interest_accumulated_block_number_3: Balance = 5_062_500_000_000;
+				let pool_total_protocol_interest_block_number_3: Balance =
+					pool_total_protocol_interest_start + interest_accumulated_block_number_3;
 				assert_eq!(
-					TestPools::pools(CurrencyId::DOT).total_insurance,
-					pool_total_insurance_block_number_3
+					TestPools::pools(CurrencyId::DOT).total_protocol_interest,
+					pool_total_protocol_interest_block_number_3
 				);
 				// Expected: 15_000,000050625
 				let borrow_accumulated_block_number_3: Balance = 50_625_000_000_000;
@@ -468,12 +468,12 @@ mod tests {
 					TestPools::pools(CurrencyId::DOT).borrow_index,
 					pool_borrow_index_block_number_4
 				);
-				let insurance_accumulated_block_number_4: Balance = 1_265_625_007_271;
-				let pool_total_insurance_block_number_4: Balance =
-					pool_total_insurance_block_number_3 + insurance_accumulated_block_number_4;
+				let interest_accumulated_block_number_4: Balance = 1_265_625_007_271;
+				let pool_total_protocol_interest_block_number_4: Balance =
+					pool_total_protocol_interest_block_number_3 + interest_accumulated_block_number_4;
 				assert_eq!(
-					TestPools::pools(CurrencyId::DOT).total_insurance,
-					pool_total_insurance_block_number_4
+					TestPools::pools(CurrencyId::DOT).total_protocol_interest,
+					pool_total_protocol_interest_block_number_4
 				);
 
 				// FIXME: unavailable behavior.
@@ -574,8 +574,8 @@ mod tests {
 				);
 				// Expected: 0,000006328125007271
 				assert_eq!(
-					TestPools::pools(CurrencyId::DOT).total_insurance,
-					pool_total_insurance_block_number_4
+					TestPools::pools(CurrencyId::DOT).total_protocol_interest,
+					pool_total_protocol_interest_block_number_4
 				);
 				//FIXME: something went wrong.....
 				//TODO: should be fixed

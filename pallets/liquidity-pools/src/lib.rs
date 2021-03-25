@@ -33,8 +33,8 @@ pub struct Pool {
 	/// Accumulator of the total earned interest rate since the opening of the pool.
 	pub borrow_index: Rate,
 
-	/// Total amount of insurance of the underlying held in this pool.
-	pub total_insurance: Balance,
+	/// Total amount of interest of the underlying held in this pool.
+	pub total_protocol_interest: Balance,
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -218,7 +218,7 @@ impl<T: Config> Pallet<T> {
 		let current_exchange_rate = Self::calculate_exchange_rate(
 			total_cash,
 			total_supply,
-			pool_data.total_insurance,
+			pool_data.total_protocol_interest,
 			pool_data.total_borrowed,
 		)?;
 
@@ -228,26 +228,26 @@ impl<T: Config> Pallet<T> {
 	/// Calculates the exchange rate from the underlying to the mToken.
 	/// - `total_cash`: The total amount of cash the pool has.
 	/// - `total_supply`: Total number of tokens in circulation.
-	/// - `total_insurance`: Total amount of insurance of the underlying held in the pool.
+	/// - `total_protocol_interest`: Total amount of interest of the underlying held in the pool.
 	/// - `total_borrowed`: Total amount of outstanding borrows of the underlying in this pool.
 	///
-	/// returns `exchange_rate = (total_cash + total_borrowed - total_insurance) /
+	/// returns `exchange_rate = (total_cash + total_borrowed - total_protocol_interest) /
 	/// total_supply`.
 	fn calculate_exchange_rate(
 		total_cash: Balance,
 		total_supply: Balance,
-		total_insurance: Balance,
+		total_protocol_interest: Balance,
 		total_borrowed: Balance,
 	) -> RateResult {
 		let rate = match total_supply.cmp(&Balance::zero()) {
 			// If there are no tokens minted: exchangeRate = InitialExchangeRate.
 			Ordering::Equal => T::InitialExchangeRate::get(),
 
-			// Otherwise: exchange_rate = (total_cash + total_borrowed - total_insurance) / total_supply
+			// Otherwise: exchange_rate = (total_cash + total_borrowed - total_protocol_interest) / total_supply
 			_ => Rate::saturating_from_rational(
 				total_cash
 					.checked_add(total_borrowed)
-					.and_then(|v| v.checked_sub(total_insurance))
+					.and_then(|v| v.checked_sub(total_protocol_interest))
 					.ok_or(Error::<T>::NumOverflow)?,
 				total_supply,
 			),
@@ -291,13 +291,13 @@ impl<T: Config> Pallet<T> {
 // RPC methods
 impl<T: Config> Pallet<T> {
 	/// Gets the exchange rate between a mToken and the underlying asset.
-	/// This function uses total_insurance and total_borrowed values calculated beforehand
+	/// This function uses total_protocol_interest and total_borrowed values calculated beforehand
 	///
 	/// - `underlying_asset_id`: CurrencyId of underlying assets for which the exchange rate
 	/// is calculated.
 	pub fn get_exchange_rate_by_interest_params(
 		underlying_asset_id: CurrencyId,
-		total_insurance: Balance,
+		total_protocol_interest: Balance,
 		total_borrowed: Balance,
 	) -> RateResult {
 		let wrapped_asset_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
@@ -308,7 +308,7 @@ impl<T: Config> Pallet<T> {
 		let total_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
 
 		let current_exchange_rate =
-			Self::calculate_exchange_rate(total_cash, total_supply, total_insurance, total_borrowed)?;
+			Self::calculate_exchange_rate(total_cash, total_supply, total_protocol_interest, total_borrowed)?;
 
 		Ok(current_exchange_rate)
 	}
@@ -321,12 +321,12 @@ impl<T: Config> Pallet<T> {
 		pool_id: CurrencyId,
 		total_borrowed: Balance,
 		borrow_index: Rate,
-		total_insurance: Balance,
+		total_protocol_interest: Balance,
 	) -> DispatchResult {
 		Pools::<T>::mutate(pool_id, |pool| {
 			pool.total_borrowed = total_borrowed;
 			pool.borrow_index = borrow_index;
-			pool.total_insurance = total_insurance;
+			pool.total_protocol_interest = total_protocol_interest;
 		});
 		Ok(())
 	}
@@ -343,9 +343,9 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	/// Sets the total insurance in the pool.
-	pub fn set_pool_total_insurance(pool_id: CurrencyId, new_total_insurance: Balance) -> DispatchResult {
-		Pools::<T>::mutate(pool_id, |r| r.total_insurance = new_total_insurance);
+	/// Sets the total interest in the pool.
+	pub fn set_pool_total_protocol_interest(pool_id: CurrencyId, new_total_protocol_interest: Balance) -> DispatchResult {
+		Pools::<T>::mutate(pool_id, |r| r.total_protocol_interest = new_total_protocol_interest);
 		Ok(())
 	}
 
@@ -363,15 +363,15 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	/// Sets the total borrowed and the total insurance in the pool.
+	/// Sets the total borrowed and the total interest in the pool.
 	pub fn set_accrual_interest_params(
 		underlying_asset_id: CurrencyId,
 		new_total_borrow_balance: Balance,
-		new_total_insurance: Balance,
+		new_total_protocol_interest: Balance,
 	) -> DispatchResult {
 		Pools::<T>::mutate(underlying_asset_id, |r| {
 			r.total_borrowed = new_total_borrow_balance;
-			r.total_insurance = new_total_insurance;
+			r.total_protocol_interest = new_total_protocol_interest;
 		});
 		Ok(())
 	}
@@ -407,9 +407,9 @@ impl<T: Config> Pallet<T> {
 		Self::pools(pool_id).total_borrowed
 	}
 
-	/// Gets current total amount of insurance of the underlying held in this pool.
-	pub fn get_pool_total_insurance(pool_id: CurrencyId) -> Balance {
-		Self::pools(pool_id).total_insurance
+	/// Gets current total amount of interest of the underlying held in this pool.
+	pub fn get_pool_total_protocol_interest(pool_id: CurrencyId) -> Balance {
+		Self::pools(pool_id).total_protocol_interest
 	}
 
 	/// Accumulator of the total earned interest rate since the opening of the pool

@@ -297,7 +297,7 @@ mod tests {
 				Pool {
 					total_borrowed,
 					borrow_index: Rate::one(),
-					total_insurance: Balance::zero(),
+					total_protocol_interest: Balance::zero(),
 				},
 			));
 			self
@@ -331,7 +331,7 @@ mod tests {
 				Pool {
 					total_borrowed: Balance::zero(),
 					borrow_index: Rate::one(),
-					total_insurance: Balance::zero(),
+					total_protocol_interest: Balance::zero(),
 				},
 			));
 			self
@@ -352,7 +352,7 @@ mod tests {
 						CurrencyId::DOT,
 						ControllerData {
 							timestamp: 0,
-							insurance_factor: Rate::saturating_from_rational(1, 10),
+							protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 							borrow_cap: None,
@@ -362,7 +362,7 @@ mod tests {
 						CurrencyId::ETH,
 						ControllerData {
 							timestamp: 0,
-							insurance_factor: Rate::saturating_from_rational(1, 10),
+							protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 							borrow_cap: None,
@@ -372,7 +372,7 @@ mod tests {
 						CurrencyId::BTC,
 						ControllerData {
 							timestamp: 0,
-							insurance_factor: Rate::saturating_from_rational(1, 10),
+							protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 							borrow_cap: None,
