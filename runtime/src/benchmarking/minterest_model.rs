@@ -42,14 +42,8 @@ runtime_benchmarks! {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::benchmarking::utils::tests::new_test_ext;
 	use frame_support::assert_ok;
-
-	fn new_test_ext() -> sp_io::TestExternalities {
-		frame_system::GenesisConfig::default()
-			.build_storage::<Runtime>()
-			.unwrap()
-			.into()
-	}
 
 	#[test]
 	fn test_set_jump_multiplier_per_block() {

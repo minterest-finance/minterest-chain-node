@@ -14,10 +14,10 @@ runtime_benchmarks! {
 	set_balancing_period {}: _(RawOrigin::Root, 100)
 	verify { assert_eq!(LiquidationPools::balancing_period(), 100) }
 
-	set_deviation_threshold {}: _(RawOrigin::Root, CurrencyId::DOT, 1 * DOLLARS)
+	set_deviation_threshold {}: _(RawOrigin::Root, CurrencyId::DOT, 10u128.pow(18))
 	verify { assert_eq!(LiquidationPools::liquidation_pools_data(CurrencyId::DOT).deviation_threshold, Rate::one()) }
 
-	set_balance_ratio {}: _(RawOrigin::Root, CurrencyId::DOT,  1 * DOLLARS)
+	set_balance_ratio {}: _(RawOrigin::Root, CurrencyId::DOT,  10u128.pow(18))
 	verify { assert_eq!(LiquidationPools::liquidation_pools_data(CurrencyId::DOT).balance_ratio, Rate::one()) }
 
 	balance_liquidation_pools {
@@ -37,14 +37,8 @@ runtime_benchmarks! {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::benchmarking::utils::tests::new_test_ext;
 	use frame_support::assert_ok;
-
-	fn new_test_ext() -> sp_io::TestExternalities {
-		frame_system::GenesisConfig::default()
-			.build_storage::<Runtime>()
-			.unwrap()
-			.into()
-	}
 
 	#[test]
 	fn test_set_balancing_period() {
