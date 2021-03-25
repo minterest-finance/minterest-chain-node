@@ -9,7 +9,7 @@
 #[cfg(test)]
 mod tests {
 	use frame_support::{assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
-	use frame_system::{self as system, EnsureSignedBy, offchain::SendTransactionTypes};
+	use frame_system::{self as system, offchain::SendTransactionTypes, EnsureSignedBy};
 	use liquidity_pools::{Pool, PoolUserData};
 	use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 	use orml_currencies::Currency;
@@ -222,8 +222,8 @@ mod tests {
 	pub type Extrinsic = TestXt<Call, ()>;
 
 	impl<LocalCall> SendTransactionTypes<LocalCall> for Test
-		where
-			Call: From<LocalCall>,
+	where
+		Call: From<LocalCall>,
 	{
 		type OverarchingCall = Call;
 		type Extrinsic = Extrinsic;

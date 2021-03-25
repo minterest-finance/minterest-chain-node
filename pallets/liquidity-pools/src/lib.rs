@@ -344,7 +344,10 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Sets the total interest in the pool.
-	pub fn set_pool_total_protocol_interest(pool_id: CurrencyId, new_total_protocol_interest: Balance) -> DispatchResult {
+	pub fn set_pool_total_protocol_interest(
+		pool_id: CurrencyId,
+		new_total_protocol_interest: Balance,
+	) -> DispatchResult {
 		Pools::<T>::mutate(pool_id, |r| r.total_protocol_interest = new_total_protocol_interest);
 		Ok(())
 	}

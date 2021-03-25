@@ -227,8 +227,8 @@ impl liquidation_pools::Config for Test {
 pub type Extrinsic = TestXt<Call, ()>;
 
 impl<LocalCall> SendTransactionTypes<LocalCall> for Test
-	where
-		Call: From<LocalCall>,
+where
+	Call: From<LocalCall>,
 {
 	type OverarchingCall = Call;
 	type Extrinsic = Extrinsic;
@@ -386,9 +386,9 @@ impl ExtBuilder {
 					CurrencyId::ETH,
 					ControllerData {
 						timestamp: 0,
-						protocol_interest_factor: Rate::saturating_from_rational(1, 10),  // 10%
-						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
+						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
 					},
 				),
@@ -396,9 +396,9 @@ impl ExtBuilder {
 					CurrencyId::DOT,
 					ControllerData {
 						timestamp: 0,
-						protocol_interest_factor: Rate::saturating_from_rational(1, 10),  // 10%
-						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
+						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
 					},
 				),
@@ -406,9 +406,9 @@ impl ExtBuilder {
 					CurrencyId::KSM,
 					ControllerData {
 						timestamp: 0,
-						protocol_interest_factor: Rate::saturating_from_rational(1, 10),  // 10%
-						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
+						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
 					},
 				),
@@ -416,9 +416,9 @@ impl ExtBuilder {
 					CurrencyId::BTC,
 					ControllerData {
 						timestamp: 0,
-						protocol_interest_factor: Rate::saturating_from_rational(1, 10),  // 10%
-						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
+						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
 					},
 				),

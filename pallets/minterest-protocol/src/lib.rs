@@ -38,8 +38,9 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + liquidity_pools::Config + controller::Config
-	+ SendTransactionTypes<Call<Self>> {
+	pub trait Config:
+		frame_system::Config + liquidity_pools::Config + controller::Config + SendTransactionTypes<Call<Self>>
+	{
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -156,7 +157,8 @@ pub mod module {
 					to_liquidation_pool,
 				);
 				if let Ok(result) = result {
-					if let Some(new_total_protocol_interest) = total_protocol_interest.checked_sub(to_liquidation_pool) {
+					if let Some(new_total_protocol_interest) = total_protocol_interest.checked_sub(to_liquidation_pool)
+					{
 						<LiquidityPools<T>>::set_pool_total_protocol_interest(pool_id, new_total_protocol_interest);
 					}
 				}

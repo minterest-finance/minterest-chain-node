@@ -139,7 +139,7 @@ pub mod module {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event {
-		/// IntarestFactor has been successfully changed
+		/// InterestFactor has been successfully changed
 		InterestFactorChanged,
 		/// Max Borrow Rate has been successfully changed
 		MaxBorrowRateChanged,
@@ -427,7 +427,7 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
-	/// Applies accrued interest to total borrows and interests.
+	/// Applies accrued interest to total borrows and protocol interest.
 	/// This calculates interest accrued from the last checkpointed block
 	/// up to the current block and writes new checkpoint to storage.
 	pub fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult {
@@ -666,7 +666,8 @@ impl<T: Config> Pallet<T> {
 
 		let borrow_rate = <MinterestModel<T>>::calculate_borrow_interest_rate(pool_id, utilization_rate).ok()?;
 
-		let supply_rate = Self::calculate_supply_interest_rate(utilization_rate, borrow_rate, protocol_interest_factor).ok()?;
+		let supply_rate =
+			Self::calculate_supply_interest_rate(utilization_rate, borrow_rate, protocol_interest_factor).ok()?;
 
 		Some((borrow_rate, supply_rate))
 	}
@@ -765,10 +766,10 @@ impl<T: Config> Pallet<T> {
 		Ok(result)
 	}
 
-	/// Calculates total borrows, total interest and borrow index for given pool.
-	/// Applies accrued interest to total borrows and interests and calculates interest accrued
-	/// from the last checkpointed block up to the current block and writes new checkpoint to
-	/// storage.
+	/// Calculates total borrows, total protocol interest and borrow index for given pool.
+	/// Applies accrued interest to total borrows and protocol interest and calculates interest
+	/// accrued from the last checkpointed block up to the current block and writes new checkpoint
+	/// to storage.
 	///
 	/// - `underlying_asset_id`: ID of the currency to make calculations for.
 	/// - `block_delta`: number of blocks passed since last accrue interest
@@ -798,11 +799,11 @@ impl<T: Config> Pallet<T> {
 		);
 
 		/*
-		Calculate the interest accumulated into borrows and interest and the new index:
+		Calculate the interest accumulated into borrows and protocol interest and the new index:
 			*  simpleInterestFactor = borrowRate * blockDelta
 			*  interestAccumulated = simpleInterestFactor * totalBorrows
 			*  totalBorrowsNew = interestAccumulated + totalBorrows
-			*  totalInterestNew = interestAccumulated * interestFactor + totalInterest
+			*  totalProtocolInterestNew = interestAccumulated * protocolInterestFactor + totalProtocolInterest
 			*  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
 		*/
 
@@ -811,8 +812,11 @@ impl<T: Config> Pallet<T> {
 			Self::calculate_interest_accumulated(simple_interest_factor, pool_data.total_borrowed)?;
 		let new_total_borrow_balance =
 			Self::calculate_new_total_borrow(interest_accumulated, pool_data.total_borrowed)?;
-		let new_total_protocol_interest =
-			Self::calculate_new_total_protocol_interest(interest_accumulated, protocol_interest_factor, pool_data.total_protocol_interest)?;
+		let new_total_protocol_interest = Self::calculate_new_total_protocol_interest(
+			interest_accumulated,
+			protocol_interest_factor,
+			pool_data.total_protocol_interest,
+		)?;
 		let new_borrow_index = Self::calculate_new_borrow_index(simple_interest_factor, pool_data.borrow_index)?;
 
 		Ok(Pool {
@@ -830,7 +834,8 @@ impl<T: Config> Pallet<T> {
 	/// - `current_total_borrowed_balance`: The amount of borrows in the pool.
 	/// - `current_total_protocol_interest`: The amount of interest in the pool (currently unused).
 	///
-	/// returns `utilization_rate = total_borrows / (total_cash + total_borrows - total_protocol_interest)`
+	/// returns `utilization_rate =
+	///  total_borrows / (total_cash + total_borrows - total_protocol_interest)`
 	fn calculate_utilization_rate(
 		current_total_balance: Balance,
 		current_total_borrowed_balance: Balance,
@@ -860,8 +865,13 @@ impl<T: Config> Pallet<T> {
 	/// - `borrow_rate`: Current interest rate that users pay for lending assets.
 	/// - `protocol_interest_factor`: Current interest factor.
 	///
-	/// returns `supply_interest_rate = utilization_rate * (borrow_rate * (1 - protocol_interest_factor))`
-	fn calculate_supply_interest_rate(utilization_rate: Rate, borrow_rate: Rate, protocol_interest_factor: Rate) -> RateResult {
+	/// returns `supply_interest_rate =
+	///  utilization_rate * (borrow_rate * (1 - protocol_interest_factor))`
+	fn calculate_supply_interest_rate(
+		utilization_rate: Rate,
+		borrow_rate: Rate,
+		protocol_interest_factor: Rate,
+	) -> RateResult {
 		let supply_interest_rate = Rate::one()
 			.checked_sub(&protocol_interest_factor)
 			.and_then(|v| v.checked_mul(&borrow_rate))
@@ -936,12 +946,15 @@ impl<T: Config> Pallet<T> {
 		Ok(new_total_borrows)
 	}
 
-	/// Calculates new total interest.
+	/// Calculates new total protocol interest.
 	/// - `interest_accumulated`: Accrued interest on the borrower's loan.
-	/// - `protocol_interest_factor`: The portion of borrower interest that is converted into interest
-	/// - `current_total_protocol_interest`: The amount of interest in the pool (currently unused).
+	/// - `protocol_interest_factor`: The portion of borrower interest that is converted into
+	/// protocol interest
+	/// - `current_total_protocol_interest`: The amount of protocol interest in the pool (currently
+	/// unused).
 	///
-	/// returns `total_protocol_interest_new = interest_accumulated * protocol_interest_factor + total_protocol_interest`
+	/// returns `total_protocol_interest_new =
+	///  interest_accumulated * protocol_interest_factor + total_protocol_interest`
 	fn calculate_new_total_protocol_interest(
 		interest_accumulated: Balance,
 		protocol_interest_factor: Rate,
@@ -1006,7 +1019,7 @@ impl<T: Config> Pallet<T> {
 		Self::controller_dates(pool_id).max_borrow_rate
 	}
 
-	/// Get the interest factor.
+	/// Get the protocol interest factor.
 	fn get_protocol_interest_factor(pool_id: CurrencyId) -> Rate {
 		Self::controller_dates(pool_id).protocol_interest_factor
 	}
@@ -1020,10 +1033,10 @@ impl<T: Config> Pallet<T> {
 // Admin functions
 impl<T: Config> Pallet<T> {
 	// FIXME It is possible to remove this function
-	/// Replenishes the interest balance.
+	/// Replenishes the protocol interest balance.
 	/// - `who`: Account ID of the administrator who replenishes the interest.
 	/// - `pool_id`: Pool ID of the replenishing pool.
-	/// - `amount`: Amount to replenish interest in the pool.
+	/// - `amount`: Amount to replenish protocol interest in the pool.
 	fn do_deposit_interest(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
 		ensure!(
 			T::LiquidityPoolsManager::pool_exists(&pool_id),
@@ -1038,7 +1051,7 @@ impl<T: Config> Pallet<T> {
 		// transfer amount to this pool
 		T::MultiCurrency::transfer(pool_id, &who, &T::LiquidityPoolsManager::pools_account_id(), amount)?;
 
-		// calculate new interest balance
+		// calculate new protocol interest balance
 		let current_interest_balance = <LiquidityPools<T>>::get_pool_total_protocol_interest(pool_id);
 
 		let new_interest_balance = current_interest_balance
@@ -1050,10 +1063,10 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	/// Burns the interest balance.
+	/// Burns the protocol interest balance.
 	/// - `who`: Account ID of the administrator who burns the interest.
 	/// - `pool_id`: Pool ID in which the interest is decreasing.
-	/// - `amount`: Amount to redeem interest in the pool.
+	/// - `amount`: Amount to redeem protocol interest in the pool.
 	fn do_redeem_interest(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
 		ensure!(
 			T::LiquidityPoolsManager::pool_exists(&pool_id),
@@ -1065,7 +1078,7 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::NotEnoughBalance
 		);
 
-		// calculate new interest balance
+		// calculate new protocol interest balance
 		let current_total_protocol_interest = <LiquidityPools<T>>::get_pool_total_protocol_interest(pool_id);
 		ensure!(amount <= current_total_protocol_interest, Error::<T>::NotEnoughBalance);
 

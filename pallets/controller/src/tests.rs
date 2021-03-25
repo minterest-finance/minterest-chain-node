@@ -19,7 +19,10 @@ fn accrue_interest_should_work() {
 			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
 
 			assert_eq!(Controller::controller_dates(CurrencyId::DOT).timestamp, 1);
-			assert_eq!(TestPools::pools(CurrencyId::DOT).total_protocol_interest, 57_600_000_000);
+			assert_eq!(
+				TestPools::pools(CurrencyId::DOT).total_protocol_interest,
+				57_600_000_000
+			);
 			assert_eq!(
 				Controller::get_liquidity_pool_borrow_and_supply_rates(CurrencyId::DOT),
 				Some((Rate::from_inner(139_680_000_267), Rate::from_inner(100_569_600_394)))
@@ -148,12 +151,20 @@ fn calculate_new_total_protocol_interest_should_work() {
 		);
 		// Overflow in calculation: max_value() * 1.1
 		assert_noop!(
-			Controller::calculate_new_total_protocol_interest(Balance::max_value(), Rate::saturating_from_rational(11, 10), 1),
+			Controller::calculate_new_total_protocol_interest(
+				Balance::max_value(),
+				Rate::saturating_from_rational(11, 10),
+				1
+			),
 			Error::<Runtime>::NumOverflow
 		);
 		// Overflow in calculation: 100 * 1.1 + max_value()
 		assert_noop!(
-			Controller::calculate_new_total_protocol_interest(100, Rate::saturating_from_rational(1, 1), Balance::max_value()),
+			Controller::calculate_new_total_protocol_interest(
+				100,
+				Rate::saturating_from_rational(1, 1),
+				Balance::max_value()
+			),
 			Error::<Runtime>::NumOverflow
 		);
 	});
@@ -235,7 +246,8 @@ fn calculate_utilization_rate_should_work() {
 			Error::<Runtime>::NumOverflow
 		);
 
-		// Overflow in calculation: total_balance_total_borrowed_sum - total_protocol_interest = ... - max_value()
+		// Overflow in calculation:
+		// total_balance_total_borrowed_sum - total_protocol_interest = ... - max_value()
 		assert_noop!(
 			Controller::calculate_utilization_rate(22, 80, Balance::max_value()),
 			Error::<Runtime>::NumOverflow
@@ -652,7 +664,11 @@ fn set_protocol_interest_factor_should_work() {
 			);
 
 			// ALICE set protocol interest factor equal 0.0
-			assert_ok!(Controller::set_protocol_interest_factor(alice(), CurrencyId::DOT, Rate::zero()));
+			assert_ok!(Controller::set_protocol_interest_factor(
+				alice(),
+				CurrencyId::DOT,
+				Rate::zero()
+			));
 			let expected_event = Event::controller(crate::Event::InterestFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(

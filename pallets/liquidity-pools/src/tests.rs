@@ -24,7 +24,10 @@ fn set_pool_data_should_work() {
 			<Pools<Test>>::get(CurrencyId::DOT).borrow_index,
 			Rate::saturating_from_rational(125, 100)
 		);
-		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_protocol_interest, ONE_HUNDRED_DOLLARS);
+		assert_eq!(
+			<Pools<Test>>::get(CurrencyId::DOT).total_protocol_interest,
+			ONE_HUNDRED_DOLLARS
+		);
 	});
 }
 
@@ -60,7 +63,10 @@ fn set_pool_total_protocol_interest_should_work() {
 			CurrencyId::DOT,
 			ONE_HUNDRED_DOLLARS
 		));
-		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_protocol_interest, ONE_HUNDRED_DOLLARS);
+		assert_eq!(
+			<Pools<Test>>::get(CurrencyId::DOT).total_protocol_interest,
+			ONE_HUNDRED_DOLLARS
+		);
 	});
 }
 
@@ -95,7 +101,10 @@ fn set_accrual_interest_params_should_work() {
 			TEN_THOUSAND
 		));
 		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_borrowed, ONE_HUNDRED_DOLLARS);
-		assert_eq!(<Pools<Test>>::get(CurrencyId::DOT).total_protocol_interest, TEN_THOUSAND);
+		assert_eq!(
+			<Pools<Test>>::get(CurrencyId::DOT).total_protocol_interest,
+			TEN_THOUSAND
+		);
 	});
 }
 
@@ -167,7 +176,10 @@ fn get_pool_total_protocol_interest_should_work() {
 		.pool_with_params(CurrencyId::DOT, Balance::default(), Rate::default(), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
-			assert_eq!(TestPools::get_pool_total_protocol_interest(CurrencyId::DOT), TEN_THOUSAND);
+			assert_eq!(
+				TestPools::get_pool_total_protocol_interest(CurrencyId::DOT),
+				TEN_THOUSAND
+			);
 		});
 }
 
