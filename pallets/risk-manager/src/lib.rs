@@ -80,13 +80,7 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config:
-		frame_system::Config
-		+ liquidity_pools::Config
-		+ minterest_protocol::Config
-		+ controller::Config
-		+ SendTransactionTypes<Call<Self>>
-	{
+	pub trait Config: frame_system::Config + minterest_protocol::Config + SendTransactionTypes<Call<Self>> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// A configuration for base priority of unsigned transactions.
