@@ -87,3 +87,12 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+  security_audit:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - uses: actions-rs/audit-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

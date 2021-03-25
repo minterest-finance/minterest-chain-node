@@ -1,0 +1,7 @@
+# Example `~/.cargo/audit.toml` file
+# All of the options which can be passed via CLI arguments can also be
+# permanently specified in this file.
+
+[advisories]
+ignore = ["RUSTSEC-2021-0020", "RUSTSEC-2021-0013"]
+
