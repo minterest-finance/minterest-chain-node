@@ -57,7 +57,7 @@ fn accrue_interest_should_not_work() {
 
 			assert_noop!(
 				Controller::accrue_interest_rate(CurrencyId::DOT),
-				Error::<Runtime>::BorrowRateIsTooHigh
+				Error::<Runtime>::BorrowRateTooHigh
 			);
 
 			assert_ok!(Controller::set_max_borrow_rate(

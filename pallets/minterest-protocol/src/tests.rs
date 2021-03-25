@@ -473,7 +473,7 @@ fn repay_should_work() {
 		// Alice cannot repay 70 DOT, because she only borrowed 60 DOT.
 		assert_noop!(
 			TestProtocol::repay(alice(), CurrencyId::DOT, dollars(70_u128)),
-			liquidity_pools::Error::<Test>::RepayAmountToBig
+			liquidity_pools::Error::<Test>::RepayAmountTooBig
 		);
 
 		// Transaction with zero balance is not allowed.
@@ -598,7 +598,7 @@ fn repay_on_behalf_should_work() {
 		// Bob cannot repay 100 DOT, because Alice only borrowed 60 DOT.
 		assert_noop!(
 			TestProtocol::repay_on_behalf(bob(), CurrencyId::DOT, ALICE, dollars(100_u128)),
-			liquidity_pools::Error::<Test>::RepayAmountToBig
+			liquidity_pools::Error::<Test>::RepayAmountTooBig
 		);
 
 		// Transaction with zero balance is not allowed.

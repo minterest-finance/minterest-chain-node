@@ -83,7 +83,7 @@ pub mod module {
 	pub enum Error<T> {
 		/// Number overflow in calculation.
 		NumOverflow,
-		/// Balance overflows maximum.
+		/// Balance exceeds maximum value.
 		BalanceOverflow,
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,

@@ -104,13 +104,13 @@ pub mod module {
 		NotValidUnderlyingAssetId,
 		/// The currency is not enabled in wrapped protocol.
 		NotValidWrappedTokenId,
-		/// User is trying repay more than he borrowed.
-		RepayAmountToBig,
-		/// Borrow balance overflows maximum.
+		/// User is trying to repay more than he borrowed.
+		RepayAmountTooBig,
+		/// Borrow balance exceeds maximum value.
 		BorrowBalanceOverflow,
 		/// Exchange rate calculation error.
 		ExchangeRateCalculationError,
-		/// Conversion error between underlying assets and wrapped tokens.
+		/// Conversion error between underlying asset and wrapped token.
 		ConversionError,
 	}
 
@@ -509,11 +509,11 @@ impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 		// total_borrows_new = total_borrows - repay_amount
 		let account_borrow_new = account_borrows
 			.checked_sub(repay_amount)
-			.ok_or(Error::<T>::RepayAmountToBig)?;
+			.ok_or(Error::<T>::RepayAmountTooBig)?;
 		let total_borrows_new = pool_data
 			.total_borrowed
 			.checked_sub(repay_amount)
-			.ok_or(Error::<T>::RepayAmountToBig)?;
+			.ok_or(Error::<T>::RepayAmountTooBig)?;
 
 		// Write the previously calculated values into storage.
 		Self::set_pool_total_borrowed(pool_id, total_borrows_new);

@@ -267,7 +267,7 @@ fn update_state_on_repay_should_work() {
 
 			assert_noop!(
 				TestPools::update_state_on_repay(&ALICE, CurrencyId::DOT, 100, 20),
-				Error::<Test>::RepayAmountToBig
+				Error::<Test>::RepayAmountTooBig
 			);
 		});
 }

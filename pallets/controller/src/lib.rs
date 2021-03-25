@@ -47,11 +47,12 @@ pub struct ControllerData<BlockNumber> {
 	/// Maximum borrow rate.
 	pub max_borrow_rate: Rate,
 
-	/// Multiplier representing the most one can borrow against their collateral in this market.
-	/// For instance, 0.9 to allow borrowing 90% of collateral value. Must be between 0 and 1.
+	/// This multiplier represents which share of the supplied value can be used as a collateral for
+	/// loans. For instance, 0.9 allows 90% of total pool value to be used as a collaterae. Must be
+	/// between 0 and 1.
 	pub collateral_factor: Rate,
 
-	/// Maximum total borrow amount per pool in usd. None value means infinite borrow cap.
+	/// Maximum total borrow amount per pool in usd. No value means infinite borrow cap.
 	pub borrow_cap: Option<Balance>,
 }
 
@@ -110,7 +111,7 @@ pub mod module {
 		/// Number overflow in calculation.
 		NumOverflow,
 		/// Borrow rate is absurdly high.
-		BorrowRateIsTooHigh,
+		BorrowRateTooHigh,
 		/// Feed price is invalid
 		InvalidFeedPrice,
 		/// Insufficient available liquidity.
@@ -119,14 +120,14 @@ pub mod module {
 		PoolNotFound,
 		/// Not enough balance to deposit or withdraw or repay.
 		NotEnoughBalance,
-		/// Balance overflows maximum.
-		/// Only happened when the balance went wrong and balance overflows the integer type.
+		/// Balance exceeds maximum value.
+		/// Only happened when the balance went wrong and balance exceeds the integer type.
 		BalanceOverflow,
-		/// Collateral balance overflows maximum.
+		/// Collateral balance exceeds maximum value.
 		CollateralBalanceOverflow,
-		/// Borrow balance overflows maximum.
+		/// Borrow balance exceeds maximum value.
 		BorrowBalanceOverflow,
-		/// Insurance balance overflows maximum.
+		/// Insurance balance exceeds maximum value.
 		InsuranceBalanceOverflow,
 		/// Maximum borrow rate cannot be set to 0.
 		MaxBorrowRateCannotBeZero,
@@ -800,7 +801,7 @@ impl<T: Config> Pallet<T> {
 
 		ensure!(
 			current_borrow_interest_rate <= max_borrow_rate,
-			Error::<T>::BorrowRateIsTooHigh
+			Error::<T>::BorrowRateTooHigh
 		);
 
 		/*
