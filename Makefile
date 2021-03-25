@@ -45,10 +45,6 @@ restart: purge run
 cargo-audit:
 	cargo audit
 
-.PHONY: cargo-dups
-cargo-dups:
-	cargo tree --duplicate
-
 update-orml:
 	cd orml && git checkout master && git pull
 	git add orml
