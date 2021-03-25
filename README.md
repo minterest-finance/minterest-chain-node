@@ -124,28 +124,11 @@ This repo supports versioning system organized in the next way:
 
 3. Major version (1.0.0, 2.0.0) represents release of a scope of features within a stable build which is ready for production.
 
-The project has current under development version set up in [cargo.toml](cargo.toml) file. This version should be upgraded once a tag for the previous version is released and the team starts a new version under development. As said - **the first commit** after the release is a commit to [cargo.toml](cargo.toml) with the next under development version number.
-
-Each pallet and module has its own version which is not greater than the main one. Pallet version is upgraded once a significant change is made or a new feature is developed upon that pallet. **Pallet version should be upgraded in the same commit where the change was performed.**
-
-## Example:
-
-New version under development should be 0.6.0. The first commit in master branch after the previous version was cut is a cahnge of version to 0.6.0 in cargo.toml.
-
-The pallets versions for pallet A and B are 0.5.11 and 0.5.12. 
-
-During development the team changes pallet B and increases it's version to 0.6.0. Pallet A remains with 0.5.11.
-
-Ongoing development causes pallet B version to grow to 0.6.21.
-
-To form a release, last commit in master should be marked with 0.6.0.
-
-Next commit to master is a cargo.toml file change with version 0.7.0, and the process repeats.
+The project has latest cut version in [Cargo.toml](cargo.toml) file in the project root. This means that current version in development is later then the one in Cargo.toml
 
 ## Release process
 
-To form a relase, follow the steps:
-* Tag the last commit with a version tag from [cargo.toml](cargo.toml). This marks the end of previous version development.
-* Push a new version in Cargo.toml and this readme to mark the beginning of development of a new version.
-
-In case of hot fixes create a separate branch from tagged commit and work there. Merge the fixes branch back to master too.
+To form a release, follow the steps:
+* Update Cargo.toml in the project root and all internal pallets. The versions should be the same across the files.
+* Commit the changes as a separate MR. 
+* Tag this commit with the same version.
