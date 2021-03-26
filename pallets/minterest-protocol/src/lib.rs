@@ -154,16 +154,15 @@ pub mod module {
 					_ => total_protocol_interest,
 				};
 
-				let result = T::MultiCurrency::transfer(
-					pool_id,
-					&T::ManagerLiquidityPools::pools_account_id(),
-					&T::ManagerLiquidationPools::pools_account_id(),
-					to_liquidation_pool,
-				);
-				if let Ok(result) = result {
-					if let Some(new_total_protocol_interest) = total_protocol_interest.checked_sub(to_liquidation_pool)
-					{
-						<LiquidityPools<T>>::set_pool_total_protocol_interest(pool_id, new_total_protocol_interest);
+				// If no overflow and transfer is successful update pool state
+				if let Some(new_protocol_interest) = total_protocol_interest.checked_sub(to_liquidation_pool) {
+					if let Ok(_) = T::MultiCurrency::transfer(
+						pool_id,
+						&T::ManagerLiquidityPools::pools_account_id(),
+						&T::ManagerLiquidationPools::pools_account_id(),
+						to_liquidation_pool,
+					) {
+						let _ = <LiquidityPools<T>>::set_pool_total_protocol_interest(pool_id, new_protocol_interest);
 					}
 				}
 			});

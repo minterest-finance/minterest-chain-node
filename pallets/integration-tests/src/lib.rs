@@ -24,7 +24,7 @@ mod tests {
 	};
 
 	use controller::{ControllerData, PauseKeeper};
-	use frame_support::traits::{Contains, OnFinalize};
+	use frame_support::traits::Contains;
 	use minterest_model::MinterestModelData;
 	use minterest_protocol::Error as MinterestProtocolError;
 	use pallet_traits::{PoolsManager, PriceProvider};
