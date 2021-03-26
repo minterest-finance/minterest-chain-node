@@ -2,13 +2,12 @@
 
 Describe in brief, what was done.
 
-**Changes in storage:**
+**Changes in storage or API:**
 
-Describe storage structure changes
+Describe storage structure changes or API changes. Make sure to update the [API docs](https://minterestfinance.atlassian.net/wiki/spaces/MINTEREST/pages/134807557/Minterest+API).
 
-**Test scenarios/Use cases:**
+**Checklist**
 
-If applicable, describe new use cases and leave @DenisRomanovsky  mention. 
-
-The info will go to the Protocol documentation.
-
+- [ ] Code is covered with tests
+- [ ] Code is covered with benchmarks
+- [ ] Fresh benchmark results included

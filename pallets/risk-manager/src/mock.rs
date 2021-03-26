@@ -34,7 +34,8 @@ frame_support::construct_runtime!(
 		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
-		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned}
+		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
+		TestDex: dex::{Module, Storage, Call, Event<T>}
 	}
 );
 
@@ -73,7 +74,7 @@ impl system::Config for Test {
 type Amount = i128;
 
 parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
 		Default::default()
 	};
 }
@@ -142,7 +143,7 @@ impl controller::Config for Test {
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-	type WeightInfo = ();
+	type ControllerWeightInfo = ();
 }
 
 parameter_types! {
@@ -153,6 +154,7 @@ impl minterest_model::Config for Test {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
 	type ModelUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -168,6 +170,8 @@ impl liquidation_pools::Config for Test {
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	type Dex = dex::Module<Test>;
+	type LiquidationPoolsWeightInfo = ();
 }
 
 ord_parameter_types! {
@@ -208,6 +212,7 @@ impl minterest_protocol::Config for Test {
 	type ManagerLiquidationPools = liquidation_pools::Module<Test>;
 	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 	type WhitelistMembers = Two;
+	type ProtocolWeightInfo = ();
 	type ProtocolInterestTransferThreshold = ProtocolInterestTransferThreshold;
 }
 
@@ -221,6 +226,19 @@ impl risk_manager::Config for Test {
 	type LiquidationPoolsManager = liquidation_pools::Module<Test>;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	type RiskManagerUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	type RiskManagerWeightInfo = ();
+}
+
+parameter_types! {
+	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
+	pub DexAccountId: AccountId = DexModuleId::get().into_account();
+}
+
+impl dex::Config for Test {
+	type Event = Event;
+	type MultiCurrency = orml_tokens::Module<Test>;
+	type DexModuleId = DexModuleId;
+	type DexAccountId = DexAccountId;
 }
 
 /// An extrinsic type used for tests.

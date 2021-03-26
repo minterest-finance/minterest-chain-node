@@ -1,0 +1,43 @@
+[package]
+name = "dex"
+version = "0.6.2"
+authors = ["Minterest Developers"]
+edition = "2018"
+
+[dependencies]
+serde = { version = "1.0.101", optional = true }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
+sp-runtime = { version = "3.0.0", default-features = false }
+frame-support = { version = "3.0.0", default-features = false }
+frame-system = { version = "3.0.0", default-features = false }
+sp-std = { version = "3.0.0", default-features = false }
+
+orml-traits = { path = "../../orml/traits", default-features = false }
+
+minterest-primitives = { path = "../../primitives", default-features = false }
+pallet-traits = { path = "../traits", default-features = false }
+
+[dev-dependencies]
+sp-core = "3.0.0"
+sp-io = "3.0.0"
+
+orml-tokens = { path = "../../orml/tokens" }
+minterest-primitives = { path = "../../primitives" }
+liquidity-pools = { path = "../liquidity-pools" }
+liquidation-pools = { path = "../liquidation-pools" }
+
+[features]
+default = ["std"]
+std = [
+	"serde",
+	"codec/std",
+	"sp-runtime/std",
+	"sp-std/std",
+	"frame-support/std",
+	"frame-system/std",
+
+	"orml-traits/std",
+
+	"minterest-primitives/std",
+	"pallet-traits/std",
+]

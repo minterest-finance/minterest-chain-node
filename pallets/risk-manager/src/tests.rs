@@ -170,29 +170,17 @@ fn liquidate_should_work() {
 #[test]
 fn mutate_liquidation_attempts_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(TestRiskManager::mutate_liquidation_attempts(
-			CurrencyId::DOT,
-			&ALICE,
-			true
-		));
+		TestRiskManager::mutate_liquidation_attempts(CurrencyId::DOT, &ALICE, true);
 		assert_eq!(
 			liquidity_pools::PoolUserDates::<Test>::get(CurrencyId::DOT, ALICE).liquidation_attempts,
 			u8::one()
 		);
-		assert_ok!(TestRiskManager::mutate_liquidation_attempts(
-			CurrencyId::DOT,
-			&ALICE,
-			true
-		));
+		TestRiskManager::mutate_liquidation_attempts(CurrencyId::DOT, &ALICE, true);
 		assert_eq!(
 			liquidity_pools::PoolUserDates::<Test>::get(CurrencyId::DOT, ALICE).liquidation_attempts,
 			2_u8
 		);
-		assert_ok!(TestRiskManager::mutate_liquidation_attempts(
-			CurrencyId::DOT,
-			&ALICE,
-			false
-		));
+		TestRiskManager::mutate_liquidation_attempts(CurrencyId::DOT, &ALICE, false);
 		assert_eq!(
 			liquidity_pools::PoolUserDates::<Test>::get(CurrencyId::DOT, ALICE).liquidation_attempts,
 			u8::zero()

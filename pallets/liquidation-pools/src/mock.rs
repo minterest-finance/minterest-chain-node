@@ -35,6 +35,7 @@ frame_support::construct_runtime!(
 		// Minterest pallets
 		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, ValidateUnsigned},
 		TestLiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
+		TestDex: dex::{Module, Storage, Call, Event<T>}
 	}
 );
 
@@ -69,7 +70,7 @@ impl system::Config for Test {
 }
 
 parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
 		Default::default()
 	};
 }
@@ -140,6 +141,18 @@ impl liquidity_pools::Config for Test {
 }
 
 parameter_types! {
+	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
+	pub DexAccountId: AccountId = DexModuleId::get().into_account();
+}
+
+impl dex::Config for Test {
+	type Event = Event;
+	type MultiCurrency = orml_tokens::Module<Test>;
+	type DexModuleId = DexModuleId;
+	type DexAccountId = DexAccountId;
+}
+
+parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value();
@@ -156,6 +169,8 @@ impl Config for Test {
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+	type Dex = dex::Module<Test>;
+	type LiquidationPoolsWeightInfo = ();
 }
 
 /// An extrinsic type used for tests.
@@ -172,7 +187,6 @@ where
 type Amount = i128;
 type AccountId = u64;
 pub type BlockNumber = u64;
-pub const DOLLARS: u128 = 1_000_000_000_000_000_000u128;
 pub const ADMIN: AccountId = 0;
 pub fn admin() -> Origin {
 	Origin::signed(ADMIN)
@@ -183,8 +197,8 @@ pub fn alice() -> Origin {
 }
 
 pub struct ExternalityBuilder {
-	liquidation_pools: Vec<(CurrencyId, LiquidationPool)>,
-	liquidation_pool_params: LiquidationPoolCommonData<BlockNumber>,
+	liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
+	balancing_period: BlockNumber,
 }
 
 impl Default for ExternalityBuilder {
@@ -192,34 +206,23 @@ impl Default for ExternalityBuilder {
 		Self {
 			liquidation_pools: vec![(
 				CurrencyId::DOT,
-				LiquidationPool {
+				LiquidationPoolData {
 					deviation_threshold: Rate::saturating_from_rational(1, 10),
 					balance_ratio: Rate::saturating_from_rational(2, 10),
 				},
 			)],
-			liquidation_pool_params: LiquidationPoolCommonData {
-				timestamp: 1,
-				balancing_period: 600, // Blocks per 10 minutes.},
-			},
+			balancing_period: 600, // Blocks per 10 minutes
 		}
 	}
 }
 
 impl ExternalityBuilder {
-	pub fn pool_timestamp_and_period(mut self, timestamp: BlockNumber, balancing_period: u32) -> Self {
-		self.liquidation_pool_params = LiquidationPoolCommonData {
-			timestamp,
-			balancing_period,
-		};
-		self
-	}
-
 	pub fn build(self) -> TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 		liquidation_pools::GenesisConfig::<Test> {
 			liquidation_pools: self.liquidation_pools,
-			liquidation_pool_params: self.liquidation_pool_params,
+			balancing_period: self.balancing_period,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

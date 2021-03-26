@@ -16,7 +16,7 @@ use frame_system::{
 	ensure_none,
 	offchain::{SendTransactionTypes, SubmitTransaction},
 };
-use minterest_primitives::{Balance, CurrencyId, Rate};
+use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
@@ -50,23 +50,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-/// Error which may occur while executing the off-chain code.
-#[cfg_attr(test, derive(PartialEq))]
-enum OffchainErr {
-	OffchainLock,
-	NotValidator,
-	CheckFail,
-}
-
-impl sp_std::fmt::Debug for OffchainErr {
-	fn fmt(&self, fmt: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
-		match *self {
-			OffchainErr::OffchainLock => write!(fmt, "Failed to get or extend lock"),
-			OffchainErr::NotValidator => write!(fmt, "Not validator"),
-			OffchainErr::CheckFail => write!(fmt, "Check fail"),
-		}
-	}
-}
+pub mod weights;
+pub use weights::WeightInfo;
 
 /// RiskManager metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -95,13 +80,7 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config:
-		frame_system::Config
-		+ liquidity_pools::Config
-		+ minterest_protocol::Config
-		+ controller::Config
-		+ SendTransactionTypes<Call<Self>>
-	{
+	pub trait Config: frame_system::Config + minterest_protocol::Config + SendTransactionTypes<Call<Self>> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// A configuration for base priority of unsigned transactions.
@@ -119,6 +98,8 @@ pub mod module {
 		/// The origin which may update risk manager parameters. Root can
 		/// always do this.
 		type RiskManagerUpdateOrigin: EnsureOrigin<Self::Origin>;
+
+		type RiskManagerWeightInfo: WeightInfo;
 	}
 
 	#[pallet::error]
@@ -232,7 +213,7 @@ pub mod module {
 		/// - `new_max_value`: New max value of liquidation attempts.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::RiskManagerWeightInfo::set_max_attempts())]
 		#[transactional]
 		pub fn set_max_attempts(
 			origin: OriginFor<T>,
@@ -259,7 +240,7 @@ pub mod module {
 		/// - `new_min_sum`: New min sum for partial liquidation.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::RiskManagerWeightInfo::set_min_sum())]
 		#[transactional]
 		pub fn set_min_sum(
 			origin: OriginFor<T>,
@@ -286,7 +267,7 @@ pub mod module {
 		/// - `new_threshold`: new threshold.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::RiskManagerWeightInfo::set_threshold())]
 		#[transactional]
 		pub fn set_threshold(
 			origin: OriginFor<T>,
@@ -348,7 +329,7 @@ pub mod module {
 		///
 		/// - `currency_id`: PoolID for which the loan is being liquidate
 		/// - `who`: loan's owner.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::RiskManagerWeightInfo::liquidate())]
 		#[transactional]
 		pub fn liquidate(
 			origin: OriginFor<T>,
@@ -497,7 +478,7 @@ impl<T: Config> Pallet<T> {
 
 		let seized_pools = Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, repay_assets, seize_amount)?;
 
-		Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation)?;
+		Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation);
 
 		Self::deposit_event(Event::LiquidateUnsafeLoan(
 			borrower,
@@ -673,21 +654,16 @@ impl<T: Config> Pallet<T> {
 		liquidated_pool_id: CurrencyId,
 		borrower: &T::AccountId,
 		is_partial_liquidation: bool,
-	) -> DispatchResult {
+	) {
 		// partial_liquidation -> liquidation_attempts += 1
 		// complete_liquidation -> liquidation_attempts = 0
-		liquidity_pools::PoolUserDates::<T>::try_mutate(liquidated_pool_id, &borrower, |p| -> DispatchResult {
+		liquidity_pools::PoolUserDates::<T>::mutate(liquidated_pool_id, &borrower, |p| {
 			if is_partial_liquidation {
-				p.liquidation_attempts = p
-					.liquidation_attempts
-					.checked_add(u8::one())
-					.ok_or(Error::<T>::NumOverflow)?;
+				p.liquidation_attempts += u8::one();
 			} else {
 				p.liquidation_attempts = u8::zero();
 			}
-			Ok(())
-		})?;
-		Ok(())
+		})
 	}
 }
 

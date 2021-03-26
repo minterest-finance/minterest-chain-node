@@ -54,6 +54,7 @@ sp-version = { default-features = false, version = '3.0.0' }
 
 # local dependencies
 m-tokens = { path = "../pallets/m-tokens", default-features = false }
+mnt-token = { path = "../pallets/mnt-token", default-features = false }
 minterest-protocol = { path = "../pallets/minterest-protocol", default-features = false }
 minterest-primitives = { path = "../primitives", default-features = false }
 liquidity-pools = { path = "../pallets/liquidity-pools", default-features = false }
@@ -65,6 +66,7 @@ module-prices = { path = "../pallets/prices", default-features = false }
 minterest-model = { path = "../pallets/minterest-model", default-features = false }
 risk-manager = { path = "../pallets/risk-manager", default-features = false }
 liquidation-pools = { path = "../pallets/liquidation-pools", default-features = false }
+dex = { path = "../pallets/dex", default-features = false }
 
 # ORML dependencies
 orml-currencies = { path = "../orml/currencies", default-features = false }
@@ -128,6 +130,7 @@ std = [
     "orml-benchmarking/std",
 
     'm-tokens/std',
+    'mnt-token/std',
     'minterest-protocol/std',
     'minterest-primitives/std',
     'liquidity-pools/std',
@@ -139,4 +142,5 @@ std = [
     'minterest-model/std',
     'risk-manager/std',
     'liquidation-pools/std',
+    'dex/std',
 ]

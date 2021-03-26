@@ -23,7 +23,8 @@ test:
 
 .PHONY: run
 run:
-	cargo run -- --dev -lruntime=debug
+	cargo build --release
+	./target/release/minterest --dev --tmp
 
 .PHONY: check-tests
 check-tests:
@@ -43,10 +44,6 @@ restart: purge run
 .PHONY: cargo-audit
 cargo-audit:
 	cargo audit
-
-.PHONY: cargo-dups
-cargo-dups:
-	cargo tree --duplicate
 
 update-orml:
 	cd orml && git checkout master && git pull

@@ -47,7 +47,6 @@ pub use minterest_primitives::{
 };
 
 // A few exports that help ease life for downstream crates.
-pub use controller::Call as ControllerCall;
 pub use frame_support::{
 	construct_runtime, debug, parameter_types,
 	traits::{KeyOwnerProofSystem, Randomness},
@@ -114,6 +113,7 @@ pub fn native_version() -> NativeVersion {
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
 }
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -350,6 +350,7 @@ impl minterest_protocol::Config for Runtime {
 	type ManagerLiquidationPools = LiquidationPools;
 	type ManagerLiquidityPools = LiquidityPools;
 	type WhitelistMembers = WhitelistCouncilProvider;
+	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
 	type ProtocolInterestTransferThreshold = ProtocolInterestTransferThreshold;
 }
 
@@ -369,24 +370,8 @@ impl Contains<AccountId> for WhitelistCouncilProvider {
 	}
 }
 
-pub struct MinterestCouncilProvider;
-impl Contains<AccountId> for MinterestCouncilProvider {
-	fn contains(who: &AccountId) -> bool {
-		MinterestCouncil::is_member(who)
-	}
-
-	fn sorted_members() -> Vec<AccountId> {
-		MinterestCouncil::members()
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn add(_: &AccountId) {
-		todo!()
-	}
-}
-
 parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
 		Zero::zero()
 	};
 }
@@ -452,7 +437,7 @@ impl controller::Config for Runtime {
 	type LiquidityPoolsManager = LiquidityPools;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
-	type WeightInfo = weights::controller::WeightInfo<Runtime>;
+	type ControllerWeightInfo = weights::controller::WeightInfo<Runtime>;
 }
 
 impl module_prices::Config for Runtime {
@@ -460,6 +445,7 @@ impl module_prices::Config for Runtime {
 	type Source = AggregatedDataProvider;
 	type LockOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type WeightInfo = weights::prices::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -470,6 +456,7 @@ impl minterest_model::Config for Runtime {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
 	type ModelUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
+	type WeightInfo = weights::minterest_model::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -483,6 +470,15 @@ impl risk_manager::Config for Runtime {
 	type LiquidationPoolsManager = LiquidationPools;
 	type LiquidityPoolsManager = LiquidityPools;
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
+	type RiskManagerWeightInfo = weights::risk_manager::WeightInfo<Runtime>;
+}
+
+impl mnt_token::Config for Runtime {
+	type Event = Event;
+	type PriceSource = Prices;
+	type UpdateOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
+	type LiquidityPoolsManager = LiquidityPools;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -504,6 +500,8 @@ impl liquidation_pools::Config for Runtime {
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type LiquidityPoolsManager = LiquidityPools;
+	type Dex = Dex;
+	type LiquidationPoolsWeightInfo = weights::liquidation_pools::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -540,6 +538,17 @@ impl DataFeeder<CurrencyId, Price, AccountId> for AggregatedDataProvider {
 	}
 }
 
+parameter_types! {
+	pub DexAccountId: AccountId = DexModuleId::get().into_account();
+}
+
+impl dex::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type DexModuleId = DexModuleId;
+	type DexAccountId = DexAccountId;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -570,7 +579,7 @@ construct_runtime!(
 
 		// Oracle and Prices
 		MinterestOracle: orml_oracle::<Instance1>::{Module, Storage, Call, Config<T>, Event<T>},
-		Prices: module_prices::{Module, Storage, Call, Event<T>},
+		Prices: module_prices::{Module, Storage, Call, Event<T>, Config},
 
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		OperatorMembershipMinterest: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
@@ -583,6 +592,8 @@ construct_runtime!(
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		RiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
+		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
+		Dex: dex::{Module, Storage, Call, Event<T>},
 
 		// Dev
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
@@ -762,7 +773,7 @@ impl_runtime_apis! {
 		}
 
 		fn is_admin(caller: AccountId) -> Option<bool> {
-				Some(MinterestCouncilProvider::contains(&caller))
+				Some(MinterestCouncil::is_member(&caller))
 		}
 	}
 
@@ -812,6 +823,11 @@ impl_runtime_apis! {
 			let params = (&config, &whitelist);
 
 			add_benchmark!(params, batches, controller, benchmarking::controller);
+			add_benchmark!(params, batches, minterest_model, benchmarking::minterest_model);
+			add_benchmark!(params, batches, module_prices, benchmarking::prices);
+			add_benchmark!(params, batches, risk_manager, benchmarking::risk_manager);
+			add_benchmark!(params, batches, liquidation_pools, benchmarking::liquidation_pools);
+			add_benchmark!(params, batches, minterest_protocol, benchmarking::minterest_protocol);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

@@ -38,6 +38,7 @@ frame_support::construct_runtime!(
 		TestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
+		TestDex: dex::{Module, Storage, Call, Event<T>},
 	}
 );
 
@@ -76,7 +77,7 @@ impl system::Config for Test {
 type Amount = i128;
 
 parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
 		Default::default()
 	};
 }
@@ -159,7 +160,7 @@ impl controller::Config for Test {
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
-	type WeightInfo = ();
+	type ControllerWeightInfo = ();
 }
 
 parameter_types! {
@@ -170,6 +171,7 @@ impl minterest_model::Config for Test {
 	type Event = Event;
 	type BlocksPerYear = BlocksPerYear;
 	type ModelUpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
+	type WeightInfo = ();
 }
 
 thread_local! {
@@ -206,6 +208,7 @@ impl minterest_protocol::Config for Test {
 	type ManagerLiquidationPools = liquidation_pools::Module<Test>;
 	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 	type WhitelistMembers = Two;
+	type ProtocolWeightInfo = ();
 	type ProtocolInterestTransferThreshold = ProtocolInterestTransferThreshold;
 }
 
@@ -226,6 +229,8 @@ impl liquidation_pools::Config for Test {
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	type Dex = dex::Module<Test>;
+	type LiquidationPoolsWeightInfo = ();
 }
 
 /// An extrinsic type used for tests.
@@ -237,6 +242,18 @@ where
 {
 	type OverarchingCall = Call;
 	type Extrinsic = Extrinsic;
+}
+
+parameter_types! {
+	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
+	pub DexAccountId: AccountId = DexModuleId::get().into_account();
+}
+
+impl dex::Config for Test {
+	type Event = Event;
+	type MultiCurrency = orml_tokens::Module<Test>;
+	type DexModuleId = DexModuleId;
+	type DexAccountId = DexAccountId;
 }
 
 pub const ALICE: AccountId = 1;

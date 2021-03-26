@@ -13,7 +13,7 @@ use frame_support::{pallet_prelude::*, traits::Get};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{Borrowing, PoolsManager, PriceProvider};
+use pallet_traits::{Borrowing, LiquidityPoolsManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -100,14 +100,18 @@ pub mod module {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Number overflow in calculation.
-		NumOverflow,
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
 		/// The currency is not enabled in wrapped protocol.
 		NotValidWrappedTokenId,
-		/// Feed price is invalid
-		InvalidFeedPrice,
+		/// User is trying to repay more than he borrowed.
+		RepayAmountTooBig,
+		/// Borrow balance exceeds maximum value.
+		BorrowBalanceOverflow,
+		/// Exchange rate calculation error.
+		ExchangeRateCalculationError,
+		/// Conversion error between underlying asset and wrapped token.
+		ConversionError,
 	}
 
 	#[pallet::storage]
@@ -174,7 +178,7 @@ impl<T: Config> Pallet<T> {
 		let wrapped_amount = Rate::from_inner(underlying_amount)
 			.checked_div(&exchange_rate)
 			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::ConversionError)?;
 
 		Ok(wrapped_amount)
 	}
@@ -193,7 +197,7 @@ impl<T: Config> Pallet<T> {
 		let underlying_amount = Rate::from_inner(wrapped_amount)
 			.checked_mul(&exchange_rate)
 			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::ConversionError)?;
 
 		Ok(underlying_amount)
 	}
@@ -248,7 +252,7 @@ impl<T: Config> Pallet<T> {
 				total_cash
 					.checked_add(total_borrowed)
 					.and_then(|v| v.checked_sub(total_protocol_interest))
-					.ok_or(Error::<T>::NumOverflow)?,
+					.ok_or(Error::<T>::ExchangeRateCalculationError)?,
 				total_supply,
 			),
 		};
@@ -332,24 +336,13 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Sets the total borrowed value in the pool.
-	pub fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) -> DispatchResult {
+	pub fn set_pool_total_borrowed(pool_id: CurrencyId, new_total_borrows: Balance) {
 		Pools::<T>::mutate(pool_id, |pool| pool.total_borrowed = new_total_borrows);
-		Ok(())
-	}
-
-	/// Sets the borrow index in the pool.
-	pub fn set_pool_borrow_index(pool_id: CurrencyId, new_borrow_index: Rate) -> DispatchResult {
-		Pools::<T>::mutate(pool_id, |pool| pool.borrow_index = new_borrow_index);
-		Ok(())
 	}
 
 	/// Sets the total interest in the pool.
-	pub fn set_pool_total_protocol_interest(
-		pool_id: CurrencyId,
-		new_total_protocol_interest: Balance,
-	) -> DispatchResult {
-		Pools::<T>::mutate(pool_id, |r| r.total_protocol_interest = new_total_protocol_interest);
-		Ok(())
+	pub fn set_pool_total_protocol_interest(pool_id: CurrencyId, new_total_protocol_interest: Balance) {
+		Pools::<T>::mutate(pool_id, |r| r.total_protocol_interest = new_total_protocol_interest)
 	}
 
 	/// Sets the total borrowed and interest index for user.
@@ -358,43 +351,21 @@ impl<T: Config> Pallet<T> {
 		pool_id: CurrencyId,
 		new_total_borrows: Balance,
 		new_interest_index: Rate,
-	) -> DispatchResult {
+	) {
 		PoolUserDates::<T>::mutate(pool_id, who, |p| {
 			p.total_borrowed = new_total_borrows;
 			p.interest_index = new_interest_index;
-		});
-		Ok(())
-	}
-
-	/// Sets the total borrowed and the total interest in the pool.
-	pub fn set_accrual_interest_params(
-		underlying_asset_id: CurrencyId,
-		new_total_borrow_balance: Balance,
-		new_total_protocol_interest: Balance,
-	) -> DispatchResult {
-		Pools::<T>::mutate(underlying_asset_id, |r| {
-			r.total_borrowed = new_total_borrow_balance;
-			r.total_protocol_interest = new_total_protocol_interest;
-		});
-		Ok(())
+		})
 	}
 
 	/// Sets the parameter `collateral` to `true`.
-	pub fn enable_as_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) -> DispatchResult {
-		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = true);
-		Ok(())
+	pub fn enable_as_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
+		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = true)
 	}
 
 	/// Sets the parameter `collateral` to `false`.
-	pub fn disable_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) -> DispatchResult {
+	pub fn disable_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
 		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = false);
-		Ok(())
-	}
-
-	/// Sets the parameter `liquidation_attempts`.
-	pub fn set_user_liquidation_attempts(who: &T::AccountId, pool_id: CurrencyId, new_count: u8) -> DispatchResult {
-		PoolUserDates::<T>::mutate(pool_id, who, |p| p.liquidation_attempts = new_count);
-		Ok(())
 	}
 }
 
@@ -403,16 +374,6 @@ impl<T: Config> Pallet<T> {
 	/// Gets pool associated data
 	pub fn get_pool_data(pool_id: CurrencyId) -> Pool {
 		Self::pools(pool_id)
-	}
-
-	/// Gets current the amount of underlying currently loaned out by the pool.
-	pub fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance {
-		Self::pools(pool_id).total_borrowed
-	}
-
-	/// Gets current total amount of interest of the underlying held in this pool.
-	pub fn get_pool_total_protocol_interest(pool_id: CurrencyId) -> Balance {
-		Self::pools(pool_id).total_protocol_interest
 	}
 
 	/// Accumulator of the total earned interest rate since the opening of the pool
@@ -512,16 +473,16 @@ impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 		// total_borrows_new = total_borrows + borrow_amount
 		let account_borrow_new = account_borrows
 			.checked_add(borrow_amount)
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::BorrowBalanceOverflow)?;
 		let new_total_borrows = pool_data
 			.total_borrowed
 			.checked_add(borrow_amount)
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::BorrowBalanceOverflow)?;
 
 		// Write the previously calculated values into storage.
-		Self::set_pool_total_borrowed(pool_id, new_total_borrows)?;
+		Self::set_pool_total_borrowed(pool_id, new_total_borrows);
 
-		Self::set_user_total_borrowed_and_interest_index(&who, pool_id, account_borrow_new, pool_data.borrow_index)?;
+		Self::set_user_total_borrowed_and_interest_index(&who, pool_id, account_borrow_new, pool_data.borrow_index);
 
 		Ok(())
 	}
@@ -548,15 +509,15 @@ impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 		// total_borrows_new = total_borrows - repay_amount
 		let account_borrow_new = account_borrows
 			.checked_sub(repay_amount)
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::RepayAmountTooBig)?;
 		let total_borrows_new = pool_data
 			.total_borrowed
 			.checked_sub(repay_amount)
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::RepayAmountTooBig)?;
 
 		// Write the previously calculated values into storage.
-		Self::set_pool_total_borrowed(pool_id, total_borrows_new)?;
-		Self::set_user_total_borrowed_and_interest_index(&who, pool_id, account_borrow_new, pool_data.borrow_index)?;
+		Self::set_pool_total_borrowed(pool_id, total_borrows_new);
+		Self::set_user_total_borrowed_and_interest_index(&who, pool_id, account_borrow_new, pool_data.borrow_index);
 
 		Ok(())
 	}
@@ -577,5 +538,17 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	/// Check if pool exists
 	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
 		Pools::<T>::contains_key(underlying_asset_id)
+	}
+}
+
+impl<T: Config> LiquidityPoolsManager for Pallet<T> {
+	/// Gets total amount borrowed from the pool.
+	fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance {
+		Self::pools(pool_id).total_borrowed
+	}
+
+	/// Gets current total amount of protocol interest of the underlying held in this pool.
+	fn get_pool_total_protocol_interest(pool_id: CurrencyId) -> Balance {
+		Self::pools(pool_id).total_protocol_interest
 	}
 }
