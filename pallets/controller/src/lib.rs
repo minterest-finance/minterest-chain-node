@@ -163,7 +163,7 @@ pub mod module {
 	/// max_borrow_rate)`.
 	#[pallet::storage]
 	#[pallet::getter(fn controller_dates)]
-	pub(crate) type ControllerDates<T: Config> =
+	pub type ControllerDates<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, ControllerData<T::BlockNumber>, ValueQuery>;
 
 	/// The Pause Guardian can pause certain actions as a safety mechanism.
