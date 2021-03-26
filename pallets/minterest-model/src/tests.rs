@@ -279,7 +279,7 @@ fn calculate_borrow_interest_rate_fails_if_overflow_kink_mul_multiplier() {
 				CurrencyId::KSM,
 				Rate::saturating_from_rational(101, 100)
 			),
-			Error::<Test>::NumOverflow
+			Error::<Test>::BorrowRateCalculationError
 		);
 	});
 }
@@ -293,7 +293,7 @@ fn calculate_borrow_interest_rate_fails_if_overflow_add_base_rate_per_block() {
 		// Overflow in calculation: kink_mul_multiplier + base_rate_per_block = ... + max_value()
 		assert_noop!(
 			TestMinterestModel::calculate_borrow_interest_rate(CurrencyId::KSM, Rate::saturating_from_rational(9, 10)),
-			Error::<Test>::NumOverflow
+			Error::<Test>::BorrowRateCalculationError
 		);
 	});
 }

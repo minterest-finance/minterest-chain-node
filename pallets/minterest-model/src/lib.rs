@@ -82,6 +82,8 @@ pub mod module {
 		MultiplierPerBlockCannotBeZero,
 		/// Parameter `kink` cannot be more than one.
 		KinkCannotBeMoreThanOne,
+		/// Borrow interest rate calculation error.
+		BorrowRateCalculationError,
 	}
 
 	#[pallet::event]
@@ -322,18 +324,20 @@ impl<T: Config> Pallet<T> {
 				let normal_rate = kink
 					.checked_mul(&multiplier_per_block)
 					.and_then(|v| v.checked_add(&base_rate_per_block))
-					.ok_or(Error::<T>::NumOverflow)?;
-				let excess_util = utilization_rate.checked_mul(&kink).ok_or(Error::<T>::NumOverflow)?;
+					.ok_or(Error::<T>::BorrowRateCalculationError)?;
+				let excess_util = utilization_rate
+					.checked_mul(&kink)
+					.ok_or(Error::<T>::BorrowRateCalculationError)?;
 
 				excess_util
 					.checked_mul(&jump_multiplier_per_block)
 					.and_then(|v| v.checked_add(&normal_rate))
-					.ok_or(Error::<T>::NumOverflow)?
+					.ok_or(Error::<T>::BorrowRateCalculationError)?
 			}
 			_ => utilization_rate
 				.checked_mul(&multiplier_per_block)
 				.and_then(|v| v.checked_add(&base_rate_per_block))
-				.ok_or(Error::<T>::NumOverflow)?,
+				.ok_or(Error::<T>::BorrowRateCalculationError)?,
 		};
 
 		Ok(borrow_interest_rate)

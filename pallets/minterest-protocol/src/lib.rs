@@ -475,7 +475,10 @@ impl<T: Config> Pallet<T> {
 		let wrapped_amount = match (underlying_amount, wrapped_amount, all_assets) {
 			(0, 0, true) => {
 				let total_wrapped_amount = T::MultiCurrency::free_balance(wrapped_id, &who);
-				ensure!(total_wrapped_amount > 0, Error::<T>::NotEnoughWrappedTokens);
+				ensure!(
+					total_wrapped_amount > Balance::zero(),
+					Error::<T>::NotEnoughWrappedTokens
+				);
 				underlying_amount = <LiquidityPools<T>>::convert_from_wrapped(wrapped_id, total_wrapped_amount)?;
 				total_wrapped_amount
 			}

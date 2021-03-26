@@ -135,10 +135,8 @@ pub mod module {
 		CollateralFactorIncorrectValue,
 		/// Borrow cap is reached
 		BorrowCapReached,
-		/// Invalid borrow cap. Borrow cap must be in range [0..1].
+		/// Invalid borrow cap. Borrow cap must be in range [0..MAX_BORROW_CAP].
 		InvalidBorrowCap,
-		/// Borrow interest rate calculation error.
-		BorrowRateCalculationError,
 		/// Utilization rate calculation error.
 		UtilizationRateCalculationError,
 		/// Hypothetical account liquidity calculation error.
@@ -785,13 +783,11 @@ impl<T: Config> Pallet<T> {
 			current_total_balance,
 			pool_data.total_borrowed,
 			pool_data.total_insurance,
-		)
-		.map_err(|_| Error::<T>::UtilizationRateCalculationError)?;
+		)?;
 
 		// Calculate the current borrow interest rate
 		let current_borrow_interest_rate =
-			<MinterestModel<T>>::calculate_borrow_interest_rate(underlying_asset_id, utilization_rate)
-				.map_err(|_| Error::<T>::BorrowRateCalculationError)?;
+			<MinterestModel<T>>::calculate_borrow_interest_rate(underlying_asset_id, utilization_rate)?;
 
 		let ControllerData {
 			max_borrow_rate,
@@ -863,9 +859,9 @@ impl<T: Config> Pallet<T> {
 			current_total_balance
 				.checked_add(current_total_borrowed_balance)
 				.and_then(|v| v.checked_sub(current_total_insurance))
-				.ok_or(Error::<T>::BalanceOverflow)?,
+				.ok_or(Error::<T>::UtilizationRateCalculationError)?,
 		)
-		.ok_or(Error::<T>::NumOverflow)?;
+		.ok_or(Error::<T>::UtilizationRateCalculationError)?;
 
 		Ok(utilization_rate)
 	}

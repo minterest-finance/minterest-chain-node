@@ -171,19 +171,19 @@ fn calculate_utilization_rate_should_work() {
 		// Overflow in calculation: total_balance + total_borrowed = max_value() + 80
 		assert_noop!(
 			Controller::calculate_utilization_rate(Balance::max_value(), 80, 2),
-			Error::<Runtime>::BalanceOverflow
+			Error::<Runtime>::UtilizationRateCalculationError
 		);
 
 		// Overflow in calculation: total_balance_total_borrowed_sum - total_insurance = ... - max_value()
 		assert_noop!(
 			Controller::calculate_utilization_rate(22, 80, Balance::max_value()),
-			Error::<Runtime>::BalanceOverflow
+			Error::<Runtime>::UtilizationRateCalculationError
 		);
 
 		// Overflow in calculation: total_borrows / 0
 		assert_noop!(
 			Controller::calculate_utilization_rate(100, 70, 170),
-			Error::<Runtime>::NumOverflow
+			Error::<Runtime>::UtilizationRateCalculationError
 		);
 	});
 }
