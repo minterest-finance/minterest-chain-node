@@ -66,7 +66,7 @@ mod tests {
 				// Alice can't disable DOT as collateral (because ETH won't cover the borrowing).
 				assert_noop!(
 					MinterestProtocol::disable_collateral(alice(), CurrencyId::DOT),
-					MinterestProtocolError::<Test>::CanotBeDisabledAsCollateral
+					MinterestProtocolError::<Test>::CannotBeDisabledAsCollateral
 				);
 
 				System::set_block_number(51);

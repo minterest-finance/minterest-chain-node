@@ -80,13 +80,7 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config:
-		frame_system::Config
-		+ liquidity_pools::Config
-		+ minterest_protocol::Config
-		+ controller::Config
-		+ SendTransactionTypes<Call<Self>>
-	{
+	pub trait Config: frame_system::Config + minterest_protocol::Config + SendTransactionTypes<Call<Self>> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// A configuration for base priority of unsigned transactions.
@@ -484,7 +478,7 @@ impl<T: Config> Pallet<T> {
 
 		let seized_pools = Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, repay_assets, seize_amount)?;
 
-		Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation)?;
+		Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation);
 
 		Self::deposit_event(Event::LiquidateUnsafeLoan(
 			borrower,
@@ -660,21 +654,16 @@ impl<T: Config> Pallet<T> {
 		liquidated_pool_id: CurrencyId,
 		borrower: &T::AccountId,
 		is_partial_liquidation: bool,
-	) -> DispatchResult {
+	) {
 		// partial_liquidation -> liquidation_attempts += 1
 		// complete_liquidation -> liquidation_attempts = 0
-		liquidity_pools::PoolUserDates::<T>::try_mutate(liquidated_pool_id, &borrower, |p| -> DispatchResult {
+		liquidity_pools::PoolUserDates::<T>::mutate(liquidated_pool_id, &borrower, |p| {
 			if is_partial_liquidation {
-				p.liquidation_attempts = p
-					.liquidation_attempts
-					.checked_add(u8::one())
-					.ok_or(Error::<T>::NumOverflow)?;
+				p.liquidation_attempts += u8::one();
 			} else {
 				p.liquidation_attempts = u8::zero();
 			}
-			Ok(())
-		})?;
-		Ok(())
+		})
 	}
 }
 

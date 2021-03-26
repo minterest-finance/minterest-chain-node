@@ -106,7 +106,7 @@ fn redeem_should_not_work() {
 			// Bob has 0 MDOT on her account, so she cannot make a redeem.
 			assert_noop!(
 				TestProtocol::redeem(bob(), CurrencyId::DOT),
-				Error::<Test>::NumberOfWrappedTokensIsZero
+				Error::<Test>::NotEnoughWrappedTokens
 			);
 
 			// MDOT is wrong CurrencyId for underlying assets.
@@ -278,7 +278,7 @@ fn redeem_wrapped_should_work() {
 			// MDOT is wrong CurrencyId for underlying assets.
 			assert_noop!(
 				TestProtocol::redeem_wrapped(alice(), CurrencyId::DOT, dollars(20_u128)),
-				Error::<Test>::NotValidWrappedTokenId
+				liquidity_pools::Error::<Test>::NotValidWrappedTokenId
 			);
 
 			// Transaction with zero balance is not allowed.
@@ -467,13 +467,13 @@ fn repay_should_work() {
 		// Alice cannot repay 100 DOT, because she only have 70 DOT.
 		assert_noop!(
 			TestProtocol::repay(alice(), CurrencyId::DOT, dollars(100_u128)),
-			Error::<Test>::NotEnoughUnderlyingsAssets
+			Error::<Test>::NotEnoughUnderlyingAsset
 		);
 
 		// Alice cannot repay 70 DOT, because she only borrowed 60 DOT.
 		assert_noop!(
 			TestProtocol::repay(alice(), CurrencyId::DOT, dollars(70_u128)),
-			Error::<Test>::RepayAmountToBig
+			liquidity_pools::Error::<Test>::RepayAmountTooBig
 		);
 
 		// Transaction with zero balance is not allowed.
@@ -565,7 +565,7 @@ fn repay_all_fails_if_not_enough_underlying_assets() {
 		// Insufficient DOT in the ALICE account for repay 30 DOT.
 		assert_noop!(
 			TestProtocol::repay_all(alice(), CurrencyId::DOT),
-			Error::<Test>::NotEnoughUnderlyingsAssets
+			Error::<Test>::NotEnoughUnderlyingAsset
 		);
 	});
 }
@@ -592,13 +592,13 @@ fn repay_on_behalf_should_work() {
 		// Bob can't pay off the 120 DOT debt for Alice, because he has 100 DOT in his account.
 		assert_noop!(
 			TestProtocol::repay_on_behalf(bob(), CurrencyId::DOT, ALICE, dollars(120_u128)),
-			Error::<Test>::NotEnoughUnderlyingsAssets
+			Error::<Test>::NotEnoughUnderlyingAsset
 		);
 
 		// Bob cannot repay 100 DOT, because Alice only borrowed 60 DOT.
 		assert_noop!(
 			TestProtocol::repay_on_behalf(bob(), CurrencyId::DOT, ALICE, dollars(100_u128)),
-			Error::<Test>::RepayAmountToBig
+			liquidity_pools::Error::<Test>::RepayAmountTooBig
 		);
 
 		// Transaction with zero balance is not allowed.
@@ -635,7 +635,7 @@ fn enable_as_collateral_should_work() {
 		// Alice cannot enable as collateral ETH pool, because she has not deposited funds into the pool.
 		assert_noop!(
 			TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH),
-			Error::<Test>::CanotBeEnabledAsCollateral
+			Error::<Test>::CannotBeEnabledAsCollateral
 		);
 
 		// Alice deposit 60 ETH
@@ -801,7 +801,7 @@ fn transfer_wrapped_should_not_work() {
 			// Alice is unable to transfer more tokens tan she has
 			assert_noop!(
 				TestProtocol::transfer_wrapped(alice(), BOB, CurrencyId::MNT, ONE_HUNDRED_DOLLARS),
-				Error::<Test>::NotValidWrappedTokenId
+				liquidity_pools::Error::<Test>::NotValidWrappedTokenId
 			);
 
 			// Alice is unable to transfer tokens to self

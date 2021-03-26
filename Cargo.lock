@@ -3829,6 +3829,7 @@ dependencies = [
 name = "minterest-primitives"
 version = "0.5.0"
 dependencies = [
+ "frame-support",
  "parity-scale-codec",
  "serde",
  "sp-core",

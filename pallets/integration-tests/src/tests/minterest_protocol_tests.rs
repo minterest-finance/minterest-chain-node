@@ -101,7 +101,7 @@ mod tests {
 				// Alice try to deposit ONE_HUNDRED to DOT pool
 				assert_noop!(
 					MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::DOT, ONE_HUNDRED),
-					MinterestProtocolError::<Test>::NumOverflow
+					liquidity_pools::Error::<Test>::ConversionError
 				);
 
 				// Alice deposit to DOT pool.
@@ -219,7 +219,7 @@ mod tests {
 						CurrencyId::DOT,
 						alice_deposited_amount_in_dot
 					),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				System::set_block_number(5);
@@ -282,7 +282,7 @@ mod tests {
 						CurrencyId::ETH,
 						alice_deposited_amount_in_eth + alice_deposited_amount_in_eth_secondary
 					),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 			});
 	}
@@ -362,7 +362,7 @@ mod tests {
 						CurrencyId::DOT,
 						alice_deposited_amount_in_dot
 					),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::HypotheticalLiquidityCalculationError
 				);
 
 				// Checking free balance DOT && ETH for user.
@@ -481,7 +481,7 @@ mod tests {
 						CurrencyId::DOT,
 						alice_deposited_amount_in_dot
 					),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				System::set_block_number(5);
@@ -544,7 +544,7 @@ mod tests {
 						CurrencyId::BTC,
 						alice_deposited_amount_in_btc_secondary
 					),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 			});
 	}
@@ -754,7 +754,7 @@ mod tests {
 				// Alice try to redeem all from DOT pool
 				assert_noop!(
 					MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				System::set_block_number(5);
@@ -818,7 +818,7 @@ mod tests {
 				// Alice try to redeem all from ETH pool
 				assert_noop!(
 					MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::ETH),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 			});
 	}
@@ -894,7 +894,7 @@ mod tests {
 				// Alice redeem all DOTs
 				assert_noop!(
 					MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::HypotheticalLiquidityCalculationError
 				);
 
 				// Checking free balance DOT && ETH for user.
@@ -1009,7 +1009,7 @@ mod tests {
 				// Alice try to redeem all DOTs
 				assert_noop!(
 					MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				System::set_block_number(5);
@@ -1059,7 +1059,7 @@ mod tests {
 				// Alice try to redeem all BTC.
 				assert_noop!(
 					MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::BTC),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 			});
 	}
@@ -1569,7 +1569,7 @@ mod tests {
 						CurrencyId::MDOT,
 						expected_amount_wrapped_tokens_in_dot
 					),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				System::set_block_number(5);
@@ -1630,7 +1630,7 @@ mod tests {
 						CurrencyId::METH,
 						expected_amount_wrapped_tokens_in_eth_summary
 					),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 			});
 	}
@@ -1717,7 +1717,7 @@ mod tests {
 						CurrencyId::MDOT,
 						expected_amount_wrapped_tokens_in_dot
 					),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				// Checking free balance DOT && ETH for user.
@@ -1847,7 +1847,7 @@ mod tests {
 						CurrencyId::MDOT,
 						expected_amount_wrapped_tokens_in_dot
 					),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				System::set_block_number(5);
@@ -1870,7 +1870,7 @@ mod tests {
 						CurrencyId::MDOT,
 						expected_amount_wrapped_tokens_in_dot
 					),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				// Alice transfer 30 MDOTs
@@ -1935,7 +1935,7 @@ mod tests {
 						CurrencyId::MBTC,
 						expected_amount_wrapped_tokens_in_btc
 					),
-					MinterestProtocolError::<Test>::RedeemControllerRejection
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 			});
 	}

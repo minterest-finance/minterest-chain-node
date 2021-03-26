@@ -32,6 +32,7 @@ mod mock;
 mod tests;
 
 pub mod weights;
+use minterest_primitives::arithmetic::checked_acc_and_add_mul;
 pub use weights::WeightInfo;
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -46,10 +47,12 @@ pub struct ControllerData<BlockNumber> {
 	/// Maximum borrow rate.
 	pub max_borrow_rate: Rate,
 
-	/// Determines how much a user can borrow.
+	/// This multiplier represents which share of the supplied value can be used as a collateral for
+	/// loans. For instance, 0.9 allows 90% of total pool value to be used as a collaterae. Must be
+	/// between 0 and 1.
 	pub collateral_factor: Rate,
 
-	/// Maximum total borrow amount per pool in usd. Zero value means infinite borrow cap
+	/// Maximum total borrow amount per pool in usd. No value means infinite borrow cap.
 	pub borrow_cap: Option<Balance>,
 }
 
@@ -108,32 +111,36 @@ pub mod module {
 		/// Number overflow in calculation.
 		NumOverflow,
 		/// Borrow rate is absurdly high.
-		BorrowRateIsTooHight,
-		/// Oracle unavailable or price equal 0.
-		OraclePriceError,
+		BorrowRateTooHigh,
+		/// Feed price is invalid
+		InvalidFeedPrice,
 		/// Insufficient available liquidity.
 		InsufficientLiquidity,
 		/// Pool not found.
 		PoolNotFound,
 		/// Not enough balance to deposit or withdraw or repay.
 		NotEnoughBalance,
-		/// Balance overflows maximum.
-		/// Only happened when the balance went wrong and balance overflows the integer type.
-		BalanceOverflowed,
+		/// Balance exceeds maximum value.
+		/// Only happened when the balance went wrong and balance exceeds the integer type.
+		BalanceOverflow,
+		/// Collateral balance exceeds maximum value.
+		CollateralBalanceOverflow,
+		/// Borrow balance exceeds maximum value.
+		BorrowBalanceOverflow,
+		/// Insurance balance exceeds maximum value.
+		InsuranceBalanceOverflow,
 		/// Maximum borrow rate cannot be set to 0.
 		MaxBorrowRateCannotBeZero,
-		/// An error occurred in the parameters that were passed to the function.
-		ParametersError,
-		/// Collateral factor cannot be greater than one.
-		CollateralFactorCannotBeGreaterThanOne,
-		/// Collateral factor cannot be set to 0.
-		CollateralFactorCannotBeZero,
+		/// Collateral factor must be in range (0..1].
+		CollateralFactorIncorrectValue,
 		/// Borrow cap is reached
 		BorrowCapReached,
-		/// Invalid borrow cap
+		/// Invalid borrow cap. Borrow cap must be in range [0..MAX_BORROW_CAP].
 		InvalidBorrowCap,
-		/// Borrow cap is zero
-		ZeroBorrowCap,
+		/// Utilization rate calculation error.
+		UtilizationRateCalculationError,
+		/// Hypothetical account liquidity calculation error.
+		HypotheticalLiquidityCalculationError,
 	}
 
 	#[pallet::event]
@@ -233,13 +240,15 @@ pub mod module {
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
 			);
-			match operation {
-				Operation::Deposit => PauseKeepers::<T>::mutate(pool_id, |pool| pool.deposit_paused = true),
-				Operation::Redeem => PauseKeepers::<T>::mutate(pool_id, |pool| pool.redeem_paused = true),
-				Operation::Borrow => PauseKeepers::<T>::mutate(pool_id, |pool| pool.borrow_paused = true),
-				Operation::Repay => PauseKeepers::<T>::mutate(pool_id, |pool| pool.repay_paused = true),
-				Operation::Transfer => PauseKeepers::<T>::mutate(pool_id, |pool| pool.transfer_paused = true),
-			};
+
+			PauseKeepers::<T>::mutate(pool_id, |pool| match operation {
+				Operation::Deposit => pool.deposit_paused = true,
+				Operation::Redeem => pool.redeem_paused = true,
+				Operation::Borrow => pool.borrow_paused = true,
+				Operation::Repay => pool.repay_paused = true,
+				Operation::Transfer => pool.transfer_paused = true,
+			});
+
 			Self::deposit_event(Event::OperationIsPaused(pool_id, operation));
 			Ok(().into())
 		}
@@ -259,13 +268,15 @@ pub mod module {
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
 			);
-			match operation {
-				Operation::Deposit => PauseKeepers::<T>::mutate(pool_id, |pool| pool.deposit_paused = false),
-				Operation::Redeem => PauseKeepers::<T>::mutate(pool_id, |pool| pool.redeem_paused = false),
-				Operation::Borrow => PauseKeepers::<T>::mutate(pool_id, |pool| pool.borrow_paused = false),
-				Operation::Repay => PauseKeepers::<T>::mutate(pool_id, |pool| pool.repay_paused = false),
-				Operation::Transfer => PauseKeepers::<T>::mutate(pool_id, |pool| pool.transfer_paused = false),
-			};
+
+			PauseKeepers::<T>::mutate(pool_id, |pool| match operation {
+				Operation::Deposit => pool.deposit_paused = false,
+				Operation::Redeem => pool.redeem_paused = false,
+				Operation::Borrow => pool.borrow_paused = false,
+				Operation::Repay => pool.repay_paused = false,
+				Operation::Transfer => pool.transfer_paused = false,
+			});
+
 			Self::deposit_event(Event::OperationIsUnPaused(pool_id, operation));
 			Ok(().into())
 		}
@@ -316,15 +327,14 @@ pub mod module {
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
 			);
-
-			ControllerDates::<T>::mutate(pool_id, |r| r.insurance_factor = new_insurance_factor);
+			ControllerDates::<T>::mutate(pool_id, |data| data.insurance_factor = new_insurance_factor);
 			Self::deposit_event(Event::InsuranceFactorChanged);
 			Ok(().into())
 		}
 
 		/// Set Maximum borrow rate.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_max_borow_rate`: new value for maximum borrow rate.
+		/// - `new_max_borrow_rate`: new value for maximum borrow rate.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::set_max_borrow_rate())]
@@ -332,17 +342,15 @@ pub mod module {
 		pub fn set_max_borrow_rate(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_max_borow_rate: Rate,
+			new_max_borrow_rate: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
 			);
-
-			ensure!(!new_max_borow_rate.is_zero(), Error::<T>::MaxBorrowRateCannotBeZero);
-
-			ControllerDates::<T>::mutate(pool_id, |r| r.max_borrow_rate = new_max_borow_rate);
+			ensure!(!new_max_borrow_rate.is_zero(), Error::<T>::MaxBorrowRateCannotBeZero);
+			ControllerDates::<T>::mutate(pool_id, |data| data.max_borrow_rate = new_max_borrow_rate);
 			Self::deposit_event(Event::MaxBorrowRateChanged);
 			Ok(().into())
 		}
@@ -364,17 +372,11 @@ pub mod module {
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
 			);
-
 			ensure!(
-				new_collateral_factor <= Rate::one(),
-				Error::<T>::CollateralFactorCannotBeGreaterThanOne
+				!new_collateral_factor.is_zero() && new_collateral_factor <= Rate::one(),
+				Error::<T>::CollateralFactorIncorrectValue
 			);
-			ensure!(
-				!new_collateral_factor.is_zero(),
-				Error::<T>::CollateralFactorCannotBeZero
-			);
-
-			ControllerDates::<T>::mutate(pool_id, |r| r.collateral_factor = new_collateral_factor);
+			ControllerDates::<T>::mutate(pool_id, |data| data.collateral_factor = new_collateral_factor);
 			Self::deposit_event(Event::CollateralFactorChanged);
 			Ok(().into())
 		}
@@ -404,7 +406,7 @@ pub mod module {
 					Error::<T>::InvalidBorrowCap
 				);
 			}
-			ControllerDates::<T>::mutate(pool_id, |r| r.borrow_cap = borrow_cap);
+			ControllerDates::<T>::mutate(pool_id, |data| data.borrow_cap = borrow_cap);
 			Self::deposit_event(Event::BorrowCapChanged(pool_id, borrow_cap));
 			Ok(().into())
 		}
@@ -443,7 +445,7 @@ impl<T: Config> Pallet<T> {
 
 		let pool_data = Self::calculate_interest_params(underlying_asset_id, block_delta)?;
 		// Save new params
-		ControllerDates::<T>::mutate(underlying_asset_id, |x| x.timestamp = current_block_number);
+		ControllerDates::<T>::mutate(underlying_asset_id, |data| data.timestamp = current_block_number);
 		<LiquidityPools<T>>::set_pool_data(
 			underlying_asset_id,
 			pool_data.total_borrowed,
@@ -461,7 +463,6 @@ impl<T: Config> Pallet<T> {
 	pub fn borrow_balance_stored(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
 		let pool_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset_id);
 		let borrow_balance = Self::calculate_borrow_balance(who, underlying_asset_id, pool_borrow_index)?;
-
 		Ok(borrow_balance)
 	}
 
@@ -494,11 +495,11 @@ impl<T: Config> Pallet<T> {
 			// Read the balances and exchange rate from the cToken
 			let borrow_balance = Self::borrow_balance_stored(account, underlying_asset)?;
 			let exchange_rate = <LiquidityPools<T>>::get_exchange_rate(underlying_asset)?;
-			let collateral_factor = Self::get_collateral_factor(underlying_asset);
+			let collateral_factor = Self::controller_dates(underlying_asset).collateral_factor;
 
 			// Get the normalized price of the asset.
 			let oracle_price =
-				T::PriceSource::get_underlying_price(underlying_asset).ok_or(Error::<T>::OraclePriceError)?;
+				T::PriceSource::get_underlying_price(underlying_asset).ok_or(Error::<T>::InvalidFeedPrice)?;
 
 			// Pre-compute a conversion factor from tokens -> dollars (normalized price value)
 			// tokens_to_denom = collateral_factor * exchange_rate * oracle_price
@@ -511,33 +512,29 @@ impl<T: Config> Pallet<T> {
 				let m_token_balance = T::MultiCurrency::free_balance(asset, account);
 
 				// sum_collateral += tokens_to_denom * m_token_balance
-				sum_collateral =
-					Self::mul_price_and_balance_add_to_prev_value(sum_collateral, m_token_balance, tokens_to_denom)?;
+				sum_collateral = checked_acc_and_add_mul(sum_collateral, m_token_balance, tokens_to_denom)
+					.map_err(|_| Error::<T>::CollateralBalanceOverflow)?;
 			}
 
 			// sum_borrow_plus_effects += oracle_price * borrow_balance
-			sum_borrow_plus_effects =
-				Self::mul_price_and_balance_add_to_prev_value(sum_borrow_plus_effects, borrow_balance, oracle_price)?;
+			sum_borrow_plus_effects = checked_acc_and_add_mul(sum_borrow_plus_effects, borrow_balance, oracle_price)
+				.map_err(|_| Error::<T>::BalanceOverflow)?;
 
 			// Calculate effects of interacting with Underlying Asset Modify.
 			if underlying_to_borrow == underlying_asset {
 				// redeem effect
 				if redeem_amount > 0 {
 					// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
-					sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
-						sum_borrow_plus_effects,
-						redeem_amount,
-						tokens_to_denom,
-					)?;
+					sum_borrow_plus_effects =
+						checked_acc_and_add_mul(sum_borrow_plus_effects, redeem_amount, tokens_to_denom)
+							.map_err(|_| Error::<T>::BalanceOverflow)?;
 				};
 				// borrow effect
 				if borrow_amount > 0 {
 					// sum_borrow_plus_effects += oracle_price * borrow_amount
-					sum_borrow_plus_effects = Self::mul_price_and_balance_add_to_prev_value(
-						sum_borrow_plus_effects,
-						borrow_amount,
-						oracle_price,
-					)?;
+					sum_borrow_plus_effects =
+						checked_acc_and_add_mul(sum_borrow_plus_effects, borrow_amount, oracle_price)
+							.map_err(|_| Error::<T>::BalanceOverflow)?;
 				}
 			}
 		}
@@ -573,11 +570,11 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		if LiquidityPools::<T>::check_user_available_collateral(&redeemer, underlying_asset_id) {
 			let (_, shortfall) =
-				Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset_id, redeem_amount, 0)?;
+				Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset_id, redeem_amount, 0)
+					.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 
-			ensure!(!(shortfall > 0), Error::<T>::InsufficientLiquidity);
+			ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
 		}
-
 		Ok(())
 	}
 
@@ -596,9 +593,10 @@ impl<T: Config> Pallet<T> {
 		let borrow_cap_reached = Self::is_borrow_cap_reached(underlying_asset_id, borrow_amount)?;
 		ensure!(!borrow_cap_reached, Error::<T>::BorrowCapReached);
 
-		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, underlying_asset_id, 0, borrow_amount)?;
+		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, underlying_asset_id, 0, borrow_amount)
+			.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 
-		ensure!(!(shortfall > 0), Error::<T>::InsufficientLiquidity);
+		ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
 
 		Ok(())
 	}
@@ -616,26 +614,28 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	/// Checks if borrow cap is reached
+	/// Checks if borrow cap is reached.
 	///
-	/// Return true if total borrow per pool will will exceed borrow cap, otherwise false
+	/// Return true if total borrow per pool will exceed borrow cap, otherwise false.
 	pub fn is_borrow_cap_reached(pool_id: CurrencyId, borrow_amount: Balance) -> Result<bool, DispatchError> {
-		let borrow_cap = Self::get_borrow_cap(pool_id);
-		if borrow_cap == None {
-			return Ok(false);
+		if let Some(borrow_cap) = Self::controller_dates(pool_id).borrow_cap {
+			let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+			let pool_total_borrowed = T::LiquidityPoolsManager::get_pool_total_borrowed(pool_id);
+
+			// new_total_borrows_in_usd = (pool_total_borrowed + borrow_amount) * oracle_price
+			let new_total_borrows = pool_total_borrowed
+				.checked_add(borrow_amount)
+				.ok_or(Error::<T>::BalanceOverflow)?;
+
+			let new_total_borrows_in_usd = Rate::from_inner(new_total_borrows)
+				.checked_mul(&oracle_price)
+				.map(|x| x.into_inner())
+				.ok_or(Error::<T>::BalanceOverflow)?;
+
+			Ok(new_total_borrows_in_usd >= borrow_cap)
+		} else {
+			Ok(false)
 		}
-
-		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::OraclePriceError)?;
-		let pool_total_borrowed = T::LiquidityPoolsManager::get_pool_total_borrowed(pool_id);
-		let new_total_borrows = pool_total_borrowed
-			.checked_add(borrow_amount)
-			.ok_or(Error::<T>::NumOverflow)?;
-		let new_total_borrows_in_usd = Rate::from_inner(new_total_borrows)
-			.checked_mul(&oracle_price)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		Ok(new_total_borrows_in_usd >= borrow_cap.unwrap_or_else(Balance::zero))
 	}
 }
 
@@ -643,15 +643,14 @@ impl<T: Config> Pallet<T> {
 impl<T: Config> Pallet<T> {
 	/// Gets the exchange rate between a mToken and the underlying asset.
 	pub fn get_liquidity_pool_exchange_rate(pool_id: CurrencyId) -> Option<Rate> {
-		let exchange_rate = <LiquidityPools<T>>::get_exchange_rate(pool_id).ok()?;
-		Some(exchange_rate)
+		<LiquidityPools<T>>::get_exchange_rate(pool_id).ok()
 	}
 
 	/// Gets borrow interest rate and supply interest rate.
 	pub fn get_liquidity_pool_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
 		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
 		let pool_data = <LiquidityPools<T>>::get_pool_data(pool_id);
-		let insurance_factor = Self::get_insurance_factor(pool_id);
+		let insurance_factor = Self::controller_dates(pool_id).insurance_factor;
 
 		let utilization_rate = Self::calculate_utilization_rate(
 			current_total_balance,
@@ -662,7 +661,13 @@ impl<T: Config> Pallet<T> {
 
 		let borrow_rate = <MinterestModel<T>>::calculate_borrow_interest_rate(pool_id, utilization_rate).ok()?;
 
-		let supply_rate = Self::calculate_supply_interest_rate(utilization_rate, borrow_rate, insurance_factor).ok()?;
+		// supply_interest_rate = utilization_rate * borrow_rate * (1 - insurance_factor)
+		let supply_rate = Rate::one()
+			.checked_sub(&insurance_factor)
+			.and_then(|v| v.checked_mul(&borrow_rate))
+			.and_then(|v| v.checked_mul(&utilization_rate))
+			.ok_or(Error::<T>::NumOverflow)
+			.ok()?;
 
 		Some((borrow_rate, supply_rate))
 	}
@@ -693,7 +698,7 @@ impl<T: Config> Pallet<T> {
 				// Calculate the number of blocks elapsed since the last accrual
 				let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
 				let pool_data = Self::calculate_interest_params(pool_id, block_delta)?;
-				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::OraclePriceError)?;
+				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
 				let mut supply_in_usd = Balance::zero();
 				let mut borrowed_in_usd = Balance::zero();
@@ -707,14 +712,14 @@ impl<T: Config> Pallet<T> {
 						.checked_mul(&current_exchange_rate)
 						.and_then(|v| v.checked_mul(&oracle_price))
 						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?;
+						.ok_or(Error::<T>::BalanceOverflow)?;
 				}
 				if has_borrow_balance {
 					let borrow_balance = Self::calculate_borrow_balance(&who, pool_id, pool_data.borrow_index)?;
 					let borrow_balance_in_usd = Rate::from_inner(borrow_balance)
 						.checked_mul(&oracle_price)
 						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?;
+						.ok_or(Error::<T>::BalanceOverflow)?;
 					borrowed_in_usd += borrow_balance_in_usd;
 				}
 				Ok((
@@ -725,7 +730,10 @@ impl<T: Config> Pallet<T> {
 		)?;
 		Ok((total_supply_balance, total_borrowed_balance))
 	}
+}
 
+// Private methods
+impl<T: Config> Pallet<T> {
 	/// Return the borrow balance of account based on pool_borrow_index calculated beforehand.
 	///
 	/// - `who`: The address whose balance should be calculated.
@@ -748,17 +756,13 @@ impl<T: Config> Pallet<T> {
 
 		// Calculate new borrow balance using the borrow index:
 		// recent_borrow_balance = user_borrow_balance * pool_borrow_index / user_borrow_index
-		let principal_times_index = Rate::from_inner(user_borrow_balance)
+		let recent_borrow_balance = Rate::from_inner(user_borrow_balance)
 			.checked_mul(&pool_borrow_index)
+			.and_then(|v| v.checked_div(&user_borrow_index))
 			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::BorrowBalanceOverflow)?;
 
-		let result = Rate::from_inner(principal_times_index)
-			.checked_div(&user_borrow_index)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		Ok(result)
+		Ok(recent_borrow_balance)
 	}
 
 	/// Calculates total borrows, total insurance and borrow index for given pool.
@@ -785,12 +789,15 @@ impl<T: Config> Pallet<T> {
 		let current_borrow_interest_rate =
 			<MinterestModel<T>>::calculate_borrow_interest_rate(underlying_asset_id, utilization_rate)?;
 
-		let max_borrow_rate = Self::get_max_borrow_rate(underlying_asset_id);
-		let insurance_factor = Self::get_insurance_factor(underlying_asset_id);
+		let ControllerData {
+			max_borrow_rate,
+			insurance_factor,
+			..
+		} = Self::controller_dates(underlying_asset_id);
 
 		ensure!(
 			current_borrow_interest_rate <= max_borrow_rate,
-			Error::<T>::BorrowRateIsTooHight
+			Error::<T>::BorrowRateTooHigh
 		);
 
 		/*
@@ -803,13 +810,24 @@ impl<T: Config> Pallet<T> {
 		*/
 
 		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, block_delta)?;
-		let interest_accumulated =
-			Self::calculate_interest_accumulated(simple_interest_factor, pool_data.total_borrowed)?;
-		let new_total_borrow_balance =
-			Self::calculate_new_total_borrow(interest_accumulated, pool_data.total_borrowed)?;
+
+		let interest_accumulated = Rate::from_inner(pool_data.total_borrowed)
+			.checked_mul(&simple_interest_factor)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::BalanceOverflow)?;
+
+		let new_total_borrow_balance = interest_accumulated
+			.checked_add(pool_data.total_borrowed)
+			.ok_or(Error::<T>::BorrowBalanceOverflow)?;
+
 		let new_total_insurance =
-			Self::calculate_new_total_insurance(interest_accumulated, insurance_factor, pool_data.total_insurance)?;
-		let new_borrow_index = Self::calculate_new_borrow_index(simple_interest_factor, pool_data.borrow_index)?;
+			checked_acc_and_add_mul(pool_data.total_insurance, interest_accumulated, insurance_factor)
+				.map_err(|_| Error::<T>::InsuranceBalanceOverflow)?;
+
+		let new_borrow_index = simple_interest_factor
+			.checked_mul(&pool_data.borrow_index)
+			.and_then(|v| v.checked_add(&pool_data.borrow_index))
+			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(Pool {
 			total_borrowed: new_total_borrow_balance,
@@ -817,10 +835,7 @@ impl<T: Config> Pallet<T> {
 			borrow_index: new_borrow_index,
 		})
 	}
-}
 
-// Private methods
-impl<T: Config> Pallet<T> {
 	/// Calculates the utilization rate of the pool.
 	/// - `current_total_balance`: The amount of cash in the pool.
 	/// - `current_total_borrowed_balance`: The amount of borrows in the pool.
@@ -844,27 +859,11 @@ impl<T: Config> Pallet<T> {
 			current_total_balance
 				.checked_add(current_total_borrowed_balance)
 				.and_then(|v| v.checked_sub(current_total_insurance))
-				.ok_or(Error::<T>::NumOverflow)?,
+				.ok_or(Error::<T>::UtilizationRateCalculationError)?,
 		)
-		.ok_or(Error::<T>::NumOverflow)?;
+		.ok_or(Error::<T>::UtilizationRateCalculationError)?;
 
 		Ok(utilization_rate)
-	}
-
-	/// Calculates the current supply interest rate of the pool.
-	/// - `utilization_rate`: Current utilization rate.
-	/// - `borrow_rate`: Current interest rate that users pay for lending assets.
-	/// - `insurance_factor`: Current insurance factor.
-	///
-	/// returns `supply_interest_rate = utilization_rate * (borrow_rate * (1 - insurance_factor))`
-	fn calculate_supply_interest_rate(utilization_rate: Rate, borrow_rate: Rate, insurance_factor: Rate) -> RateResult {
-		let supply_interest_rate = Rate::one()
-			.checked_sub(&insurance_factor)
-			.and_then(|v| v.checked_mul(&borrow_rate))
-			.and_then(|v| v.checked_mul(&utilization_rate))
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		Ok(supply_interest_rate)
 	}
 
 	/// Calculates the number of blocks elapsed since the last accrual.
@@ -894,122 +893,11 @@ impl<T: Config> Pallet<T> {
 			.ok()
 			.expect("blockchain will not exceed 2^32 blocks; qed");
 
-		let interest_factor: FixedU128 = Rate::saturating_from_rational(block_delta_as_usize as u128, 1)
+		let interest_factor: FixedU128 = Rate::saturating_from_integer(block_delta_as_usize as u128)
 			.checked_mul(&current_borrow_interest_rate)
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(interest_factor)
-	}
-
-	/// Calculate the interest accumulated into borrows.
-	///
-	/// returns `interest_accumulated = simple_interest_factor * current_total_borrowed_balance`
-	fn calculate_interest_accumulated(
-		simple_interest_factor: Rate,
-		current_total_borrowed_balance: Balance,
-	) -> BalanceResult {
-		let interest_accumulated = Rate::from_inner(current_total_borrowed_balance)
-			.checked_mul(&simple_interest_factor)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		Ok(interest_accumulated)
-	}
-
-	/// Calculates the new total borrow.
-	/// - `interest_accumulated`: Accrued interest on the borrower's loan.
-	/// - `current_total_borrowed_balance`: The amount of borrows in the pool.
-	///
-	/// returns `new_total_borrows = interest_accumulated + total_borrows`
-	fn calculate_new_total_borrow(
-		interest_accumulated: Balance,
-		current_total_borrowed_balance: Balance,
-	) -> BalanceResult {
-		let new_total_borrows = interest_accumulated
-			.checked_add(current_total_borrowed_balance)
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		Ok(new_total_borrows)
-	}
-
-	/// Calculates new total insurance.
-	/// - `interest_accumulated`: Accrued interest on the borrower's loan.
-	/// - `insurance_factor`: The portion of borrower interest that is converted into insurance
-	/// - `current_total_insurance`: The amount of insurance in the pool (currently unused).
-	///
-	/// returns `total_insurance_new = interest_accumulated * insurance_factor + total_insurance`
-	fn calculate_new_total_insurance(
-		interest_accumulated: Balance,
-		insurance_factor: Rate,
-		current_total_insurance: Balance,
-	) -> BalanceResult {
-		// insurance_accumulated = interest_accumulated * insurance_factor
-		let insurance_accumulated = Rate::from_inner(interest_accumulated)
-			.checked_mul(&insurance_factor)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		// total_insurance_new = insurance_accumulated + current_total_insurance
-		let total_insurance_new = insurance_accumulated
-			.checked_add(current_total_insurance)
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		Ok(total_insurance_new)
-	}
-
-	/// Calculates new borrow index.
-	///
-	/// returns `new_borrow_index = simple_interest_factor * borrow_index + borrow_index`
-	fn calculate_new_borrow_index(simple_interest_factor: Rate, current_borrow_index: Rate) -> RateResult {
-		let new_borrow_index = simple_interest_factor
-			.checked_mul(&current_borrow_index)
-			.and_then(|v| v.checked_add(&current_borrow_index))
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		Ok(new_borrow_index)
-	}
-
-	/// Performs mathematical calculations.
-	///
-	/// returns `value = value + balance_scalar * rate_scalar`
-	fn mul_price_and_balance_add_to_prev_value(
-		value: Balance,
-		balance_scalar: Balance,
-		rate_scalar: Rate,
-	) -> BalanceResult {
-		let result = value
-			.checked_add(
-				Rate::from_inner(balance_scalar)
-					.checked_mul(&rate_scalar)
-					.map(|x| x.into_inner())
-					.ok_or(Error::<T>::NumOverflow)?,
-			)
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		Ok(result)
-	}
-}
-
-// Storage getters for Controller Data
-impl<T: Config> Pallet<T> {
-	/// Determines how much a user can borrow.
-	fn get_collateral_factor(pool_id: CurrencyId) -> Rate {
-		Self::controller_dates(pool_id).collateral_factor
-	}
-
-	/// Gets the maximum borrow rate.
-	fn get_max_borrow_rate(pool_id: CurrencyId) -> Rate {
-		Self::controller_dates(pool_id).max_borrow_rate
-	}
-
-	/// Get the insurance factor.
-	fn get_insurance_factor(pool_id: CurrencyId) -> Rate {
-		Self::controller_dates(pool_id).insurance_factor
-	}
-
-	/// Gets the borrow cap amount
-	fn get_borrow_cap(pool_id: CurrencyId) -> Option<Balance> {
-		Self::controller_dates(pool_id).borrow_cap
 	}
 }
 
@@ -1039,9 +927,9 @@ impl<T: Config> Pallet<T> {
 
 		let new_insurance_balance = current_insurance_balance
 			.checked_add(amount)
-			.ok_or(Error::<T>::BalanceOverflowed)?;
+			.ok_or(Error::<T>::BalanceOverflow)?;
 
-		<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_insurance_balance)?;
+		<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_insurance_balance);
 
 		Ok(())
 	}
@@ -1069,7 +957,7 @@ impl<T: Config> Pallet<T> {
 			.checked_sub(amount)
 			.ok_or(Error::<T>::NotEnoughBalance)?;
 
-		<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_insurance_balance)?;
+		<LiquidityPools<T>>::set_pool_total_insurance(pool_id, new_insurance_balance);
 
 		// transfer amount from this pool
 		T::MultiCurrency::transfer(pool_id, &T::LiquidityPoolsManager::pools_account_id(), &who, amount)?;

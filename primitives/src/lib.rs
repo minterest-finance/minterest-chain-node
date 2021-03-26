@@ -12,6 +12,8 @@ use sp_runtime::{
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
+pub mod arithmetic;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 

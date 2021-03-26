@@ -80,9 +80,10 @@ pub mod module {
 		BaseRatePerBlockCannotBeZero,
 		/// Multiplier per block cannot be set to 0 at the same time as Base rate per block.
 		MultiplierPerBlockCannotBeZero,
-
 		/// Parameter `kink` cannot be more than one.
 		KinkCannotBeMoreThanOne,
+		/// Borrow interest rate calculation error.
+		BorrowRateCalculationError,
 	}
 
 	#[pallet::event]
@@ -304,9 +305,12 @@ impl<T: Config> Pallet<T> {
 	///
 	/// returns `borrow_interest_rate`.
 	pub fn calculate_borrow_interest_rate(underlying_asset_id: CurrencyId, utilization_rate: Rate) -> RateResult {
-		let kink = Self::minterest_model_dates(underlying_asset_id).kink;
-		let multiplier_per_block = Self::minterest_model_dates(underlying_asset_id).multiplier_per_block;
-		let base_rate_per_block = Self::minterest_model_dates(underlying_asset_id).base_rate_per_block;
+		let MinterestModelData {
+			kink,
+			base_rate_per_block,
+			multiplier_per_block,
+			jump_multiplier_per_block,
+		} = Self::minterest_model_dates(underlying_asset_id);
 
 		// if utilization_rate > kink:
 		// normal_rate = kink * multiplier_per_block + base_rate_per_block
@@ -317,23 +321,23 @@ impl<T: Config> Pallet<T> {
 		// borrow_rate = utilization_rate * multiplier_per_block + base_rate_per_block
 		let borrow_interest_rate = match utilization_rate.cmp(&kink) {
 			Ordering::Greater => {
-				let jump_multiplier_per_block =
-					Self::minterest_model_dates(underlying_asset_id).jump_multiplier_per_block;
 				let normal_rate = kink
 					.checked_mul(&multiplier_per_block)
 					.and_then(|v| v.checked_add(&base_rate_per_block))
-					.ok_or(Error::<T>::NumOverflow)?;
-				let excess_util = utilization_rate.checked_mul(&kink).ok_or(Error::<T>::NumOverflow)?;
+					.ok_or(Error::<T>::BorrowRateCalculationError)?;
+				let excess_util = utilization_rate
+					.checked_mul(&kink)
+					.ok_or(Error::<T>::BorrowRateCalculationError)?;
 
 				excess_util
 					.checked_mul(&jump_multiplier_per_block)
 					.and_then(|v| v.checked_add(&normal_rate))
-					.ok_or(Error::<T>::NumOverflow)?
+					.ok_or(Error::<T>::BorrowRateCalculationError)?
 			}
 			_ => utilization_rate
 				.checked_mul(&multiplier_per_block)
 				.and_then(|v| v.checked_add(&base_rate_per_block))
-				.ok_or(Error::<T>::NumOverflow)?,
+				.ok_or(Error::<T>::BorrowRateCalculationError)?,
 		};
 
 		Ok(borrow_interest_rate)
