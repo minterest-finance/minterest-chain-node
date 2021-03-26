@@ -7,19 +7,55 @@
 
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
-use minterest_primitives::{Balance, CurrencyId, Price, Rate};
+use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 pub use module::*;
+use orml_traits::MultiCurrency;
 use pallet_traits::{LiquidityPoolsManager, PriceProvider};
 use sp_runtime::{
-	traits::{CheckedDiv, CheckedMul, Zero},
-	DispatchResult, FixedPointNumber,
+	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
+	DispatchResult, FixedPointNumber, FixedU128,
 };
-use sp_std::{result, vec::Vec};
+use sp_std::{convert::TryInto, result, vec::Vec};
+
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
+
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct MntPoolIndex<T: Config> {
+	pub index: FixedU128,
+	pub block_number: T::BlockNumber,
+}
+
+impl<T: Config> MntPoolIndex<T> {
+	fn new() -> MntPoolIndex<T> {
+		MntPoolIndex {
+			index: Rate::one(), // initial index
+			block_number: frame_system::Module::<T>::block_number(),
+		}
+	}
+}
+
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct MntPoolState<T: Config> {
+	pub supply_state: MntPoolIndex<T>,
+	pub borrow_state: MntPoolIndex<T>,
+}
+
+impl<T: Config> MntPoolState<T> {
+	fn new() -> MntPoolState<T> {
+		MntPoolState {
+			supply_state: MntPoolIndex::new(),
+			borrow_state: MntPoolIndex::new(),
+		}
+	}
+}
 
 #[frame_support::pallet]
 pub mod module {
@@ -41,6 +77,12 @@ pub mod module {
 
 		/// Enabled underlying asset IDs.
 		type EnabledUnderlyingAssetId: Get<Vec<CurrencyId>>;
+
+		/// Enabled currency pairs.
+		type EnabledCurrencyPair: Get<Vec<CurrencyPair>>;
+
+		/// The `MultiCurrency` implementation for wrapped.
+		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 	}
 
 	#[pallet::error]
@@ -59,6 +101,9 @@ pub mod module {
 
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
+
+		/// Error that never should happen
+		StorageIsCorrupted,
 	}
 
 	#[pallet::event]
@@ -79,10 +124,15 @@ pub mod module {
 	#[pallet::getter(fn mnt_rate)]
 	type MntRate<T: Config> = StorageValue<_, Rate, ValueQuery>;
 
-	/// Mnt minting speed for each pool
+	/// MNT minting speed for each pool
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_speeds)]
 	pub(crate) type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Rate, OptionQuery>;
+
+	// TODO
+	#[pallet::storage]
+	#[pallet::getter(fn mnt_pools_state)]
+	pub(crate) type MntPoolsState<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, MntPoolState<T>, OptionQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -108,6 +158,7 @@ pub mod module {
 			MntRate::<T>::put(&self.mnt_rate);
 			for currency_id in &self.minted_pools {
 				MntSpeeds::<T>::insert(currency_id, Rate::zero());
+				MntPoolsState::<T>::insert(currency_id, MntPoolState::new());
 			}
 			if !self.minted_pools.is_empty() {
 				Pallet::<T>::refresh_mnt_speeds().expect("Calculate MntSpeeds is failed");
@@ -139,6 +190,7 @@ pub mod module {
 				Error::<T>::MntMintingAlreadyEnabled
 			);
 			MntSpeeds::<T>::insert(currency_id, Rate::zero());
+			MntPoolsState::<T>::insert(currency_id, MntPoolState::new());
 			Self::refresh_mnt_speeds()?;
 			Self::deposit_event(Event::MntMintingEnabled(currency_id));
 			Ok(().into())
@@ -160,6 +212,7 @@ pub mod module {
 				Error::<T>::MntMintingNotEnabled
 			);
 			MntSpeeds::<T>::remove(currency_id);
+			MntPoolsState::<T>::remove(currency_id);
 			Self::refresh_mnt_speeds()?;
 			Self::deposit_event(Event::MntMintingDisabled(currency_id));
 			Ok(().into())
@@ -180,6 +233,54 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
+	fn update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult {
+		// delta_blocks = current_block_number - supply_state.block_number
+		// mnt_accrued = delta_block * mnt_speed
+		// ratio = mnt_accrued / mtoken.total_supply()
+		// supply_state.index += ratio
+		// supply_state.block_number = current_block_number
+
+		let current_block = frame_system::Module::<T>::block_number();
+		let supply_speed = MntSpeeds::<T>::get(underlying_id).ok_or(Error::<T>::StorageIsCorrupted)?;
+		let mut supply_state = MntPoolsState::<T>::get(underlying_id)
+			.ok_or(Error::<T>::StorageIsCorrupted)?
+			.supply_state;
+		let delta_blocks = current_block
+			.checked_sub(&supply_state.block_number)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		if delta_blocks != T::BlockNumber::zero() && supply_speed != FixedU128::zero() {
+			let wrapped_id = T::EnabledCurrencyPair::get()
+				.iter()
+				.find(|currency_pair| currency_pair.underlying_id == underlying_id)
+				.ok_or(Error::<T>::NotValidUnderlyingAssetId)?
+				.wrapped_id;
+
+			let block_delta_as_usize = TryInto::<u32>::try_into(delta_blocks)
+				.ok()
+				.expect("blockchain will not exceed 2^32 blocks; qed");
+
+			let block_delta = Rate::saturating_from_integer(block_delta_as_usize);
+
+			let mnt_accrued = supply_speed.checked_mul(&block_delta).ok_or(Error::<T>::NumOverflow)?;
+
+			let total_tokens_supply = Rate::checked_from_integer(T::MultiCurrency::total_issuance(wrapped_id))
+				.ok_or(Error::<T>::NumOverflow)?;
+
+			let ratio = mnt_accrued
+				.checked_div(&total_tokens_supply)
+				.ok_or(Error::<T>::NumOverflow)?;
+
+			supply_state.index = supply_state.index.checked_add(&ratio).ok_or(Error::<T>::NumOverflow)?;
+		}
+		supply_state.block_number = current_block;
+
+		MntPoolsState::<T>::try_mutate(underlying_id, |pool| -> DispatchResult {
+			pool.as_mut().ok_or(Error::<T>::StorageIsCorrupted)?.supply_state = supply_state;
+			Ok(())
+		})
+	}
+
 	/// Calculate utilities for enabled pools and sum of all pools utilities
 	///
 	/// returns (Vector<CurrencyId, pool_utility>, sum_of_all_pools_utilities)

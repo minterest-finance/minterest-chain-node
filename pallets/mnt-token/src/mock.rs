@@ -5,13 +5,13 @@ use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::*, p
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
+use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
 use sp_runtime::{
 	traits::{AccountIdConversion, Zero},
 	FixedPointNumber, ModuleId,
 };
-
 parameter_type_with_key! {
 	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
 		Default::default()
@@ -19,6 +19,7 @@ parameter_type_with_key! {
 }
 
 parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
 	pub const BlockHashCount: u64 = 250;
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
@@ -80,6 +81,15 @@ impl orml_tokens::Config for Runtime {
 	type OnDust = ();
 }
 
+type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
+impl orml_currencies::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type NativeCurrency = NativeCurrency;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type WeightInfo = ();
+}
+
 pub struct MockPriceSource;
 
 impl liquidity_pools::Config for Runtime {
@@ -113,35 +123,44 @@ ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
 }
 
-impl mnt_token::Config for Runtime {
-	type Event = Event;
-	type PriceSource = MockPriceSource;
-	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
-}
-
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
-type Block = frame_system::mocking::MockBlock<Runtime>;
-
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		System: frame_system::{Module, Call, Event<T>},
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Module, Call, Event<T>},
 		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 	}
 );
+
+impl mnt_token::Config for Runtime {
+	type Event = Event;
+	type PriceSource = MockPriceSource;
+	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
+	type EnabledCurrencyPair = EnabledCurrencyPair;
+	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type MultiCurrency = Currencies;
+}
+
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
+type Block = frame_system::mocking::MockBlock<Runtime>;
+
 pub struct ExtBuilder {
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	minted_pools: Vec<CurrencyId>,
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 }
+
+pub const ALICE: AccountId = 1;
+// pub const BOB: AccountId = 2;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
+// pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
@@ -149,11 +168,16 @@ impl Default for ExtBuilder {
 			pools: vec![],
 			minted_pools: vec![],
 			pool_user_data: vec![],
+			endowed_accounts: vec![],
 		}
 	}
 }
 
 impl ExtBuilder {
+	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts.push((user, currency_id, balance));
+		self
+	}
 	pub fn enable_minting_for_all_pools(mut self) -> Self {
 		self.minted_pools = vec![CurrencyId::KSM, CurrencyId::DOT, CurrencyId::ETH, CurrencyId::BTC];
 		self
@@ -170,6 +194,7 @@ impl ExtBuilder {
 		));
 		self
 	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
@@ -178,6 +203,12 @@ impl ExtBuilder {
 		liquidity_pools::GenesisConfig::<Runtime> {
 			pools: self.pools,
 			pool_user_data: self.pool_user_data,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		orml_tokens::GenesisConfig::<Runtime> {
+			endowed_accounts: self.endowed_accounts,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

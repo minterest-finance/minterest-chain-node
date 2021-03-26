@@ -2,15 +2,99 @@
 
 use super::Error;
 use crate::mock::*;
-
 use frame_support::{assert_noop, assert_ok};
 use minterest_primitives::{CurrencyId, Rate};
+use orml_traits::MultiCurrency;
 use sp_arithmetic::FixedPointNumber;
 
 const KSM: CurrencyId = CurrencyId::KSM;
 const DOT: CurrencyId = CurrencyId::DOT;
 const ETH: CurrencyId = CurrencyId::ETH;
 const BTC: CurrencyId = CurrencyId::BTC;
+
+#[test]
+fn test_update_mnt_supply_index() {
+	ExtBuilder::default()
+		.enable_minting_for_all_pools()
+		// total borrows needs to calculate mnt_speeds
+		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
+		.pool_total_borrowed(CurrencyId::ETH, 50 * DOLLARS)
+		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
+		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			//
+			// * Minting was enabled when block_number was equal to 0. Here block_number == 1.
+			// So delta_blocks = 1
+			//
+			let mnt_rate = Rate::saturating_from_integer(10);
+			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
+
+			// set total issuances
+			let mdot_total_issuance = 10;
+			let meth_total_issuance = 20;
+			let mksm_total_issuance = 30;
+			let mbtc_total_issuance = 40;
+			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MDOT, &ALICE, mdot_total_issuance).unwrap();
+			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::METH, &ALICE, meth_total_issuance).unwrap();
+			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MKSM, &ALICE, mksm_total_issuance).unwrap();
+			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MBTC, &ALICE, mbtc_total_issuance).unwrap();
+
+			let dot_mnt_speed = Rate::from_inner(714285714285714280);
+			assert_eq!(MntToken::mnt_speeds(DOT), Some(dot_mnt_speed));
+			let ksm_mnt_speed = Rate::from_inner(2857142857142857140);
+			assert_eq!(MntToken::mnt_speeds(KSM), Some(ksm_mnt_speed));
+			let eth_mnt_speed = Rate::from_inner(2142857142857142850);
+			assert_eq!(MntToken::mnt_speeds(ETH), Some(eth_mnt_speed));
+			let btc_mnt_speed = Rate::from_inner(4285714285714285710);
+			assert_eq!(MntToken::mnt_speeds(BTC), Some(btc_mnt_speed));
+
+			let check_supply_index = |underlying_id: CurrencyId, mnt_speed: Rate, total_issuance: u128| {
+				MntToken::update_mnt_supply_index(underlying_id).unwrap();
+				let pool_state = MntToken::mnt_pools_state(underlying_id).unwrap();
+				assert_eq!(
+					pool_state.supply_state.index,
+					Rate::one() + mnt_speed / Rate::saturating_from_integer(total_issuance)
+				);
+				assert_eq!(pool_state.supply_state.block_number, 1);
+			};
+			check_supply_index(DOT, dot_mnt_speed, mdot_total_issuance);
+			check_supply_index(KSM, ksm_mnt_speed, mksm_total_issuance);
+			check_supply_index(ETH, eth_mnt_speed, meth_total_issuance);
+			check_supply_index(BTC, btc_mnt_speed, mbtc_total_issuance);
+		});
+}
+
+#[test]
+fn test_update_mnt_supply_index_simple() {
+	ExtBuilder::default()
+		// total_borrow shouldn't be zero at least for one market to calculate mnt speeds
+		.pool_total_borrowed(CurrencyId::ETH, 150 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			// Input parameters:
+			// supply_state.block_number = 1, supply_state.index = 1,
+			// mnt_speed = 10, total_supply = 20
+			// *mnt_speed = mnt_rate because the only 1 pool is included
+
+			// set total_issuance to 20
+			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::METH, &ALICE, 20).unwrap();
+			let mnt_rate = Rate::saturating_from_integer(10);
+			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
+			assert_ok!(MntToken::enable_mnt_minting(admin(), ETH));
+
+			System::set_block_number(2);
+			MntToken::update_mnt_supply_index(ETH).unwrap();
+			let pool_state = MntToken::mnt_pools_state(ETH).unwrap();
+			// delta_blocks = current_block(2) - supply_state.block_number(1) = 1
+			// mnt_accrued = delta_blocks(1) * mnt_speed(10) = 10
+			// ratio = mnt_accrued(10) / total_supply(20) = 0.5
+			// supply_state.index = supply_state.index(1) + ratio(0.5) = 1.5
+			// supply_state.block_number = current_block = 2
+			assert_eq!(pool_state.supply_state.index, Rate::saturating_from_rational(15, 10));
+			assert_eq!(pool_state.supply_state.block_number, 2);
+		});
+}
 
 #[test]
 fn test_mnt_speed_calculation() {

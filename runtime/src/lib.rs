@@ -472,7 +472,9 @@ impl mnt_token::Config for Runtime {
 	type PriceSource = Prices;
 	type UpdateOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type LiquidityPoolsManager = LiquidityPools;
+	type EnabledCurrencyPair = EnabledCurrencyPair;
 	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type MultiCurrency = Currencies;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
