@@ -167,6 +167,8 @@ pub mod module {
 		BorrowCapChanged(CurrencyId, Option<Balance>),
 		/// Protocol operation mode switched: \[is_whitelist_mode\]
 		ProtocolOperationModeSwitched(bool),
+		/// Protocol interest threshold changed: \[pool_id, new_value\]
+		ProtocolInterestThresholdChanged(CurrencyId, Balance),
 	}
 
 	/// Controller data information: `(timestamp, protocol_interest_factor, collateral_factor,
@@ -413,6 +415,34 @@ pub mod module {
 			}
 			ControllerDates::<T>::mutate(pool_id, |data| data.borrow_cap = borrow_cap);
 			Self::deposit_event(Event::BorrowCapChanged(pool_id, borrow_cap));
+			Ok(().into())
+		}
+
+		/// Set protocol interest threshold.
+		///
+		/// The dispatch origin of this call must be Administrator.
+		#[pallet::weight(T::ControllerWeightInfo::set_protocol_interest_threshold())]
+		#[transactional]
+		pub fn set_protocol_interest_threshold(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			protocol_interest_threshold: Balance,
+		) -> DispatchResultWithPostInfo {
+			T::UpdateOrigin::ensure_origin(origin)?;
+			ensure!(
+				T::EnabledUnderlyingAssetId::get()
+					.into_iter()
+					.any(|asset_id| asset_id == pool_id),
+				Error::<T>::PoolNotFound
+			);
+
+			ControllerDates::<T>::mutate(pool_id, |data| {
+				data.protocol_interest_threshold = protocol_interest_threshold
+			});
+			Self::deposit_event(Event::ProtocolInterestThresholdChanged(
+				pool_id,
+				protocol_interest_threshold,
+			));
 			Ok(().into())
 		}
 

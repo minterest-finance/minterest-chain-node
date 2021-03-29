@@ -905,3 +905,38 @@ fn set_borrow_cap_should_work() {
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 		});
 }
+
+#[test]
+fn set_protocol_interest_threshold_should_work() {
+	ExtBuilder::default()
+		.pool_mock(CurrencyId::DOT)
+		.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
+		.build()
+		.execute_with(|| {
+			// The dispatch origin of this call must be Administrator.
+			assert_noop!(
+				Controller::set_protocol_interest_threshold(bob(), CurrencyId::DOT, 10_u128),
+				BadOrigin
+			);
+
+			// ALICE set protocol interest threshold to 10.
+			assert_ok!(Controller::set_protocol_interest_threshold(
+				alice(),
+				CurrencyId::DOT,
+				10_u128
+			));
+			let expected_event =
+				Event::controller(crate::Event::ProtocolInterestThresholdChanged(CurrencyId::DOT, 10_u128));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
+			// Alice is able to set zero protocol interest threshold.
+			assert_ok!(Controller::set_protocol_interest_threshold(
+				alice(),
+				CurrencyId::DOT,
+				0_u128
+			));
+			let expected_event =
+				Event::controller(crate::Event::ProtocolInterestThresholdChanged(CurrencyId::DOT, 0_u128));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+		});
+}

@@ -55,6 +55,11 @@ impl<T: frame_system::Config> controller::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
+	fn set_protocol_interest_threshold() -> Weight {
+		(29_240_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
 	fn switch_mode() -> Weight {
 		(24_596_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))

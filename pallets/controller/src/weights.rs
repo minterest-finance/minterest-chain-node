@@ -51,6 +51,7 @@ pub trait WeightInfo {
 	fn set_max_borrow_rate() -> Weight;
 	fn set_collateral_factor() -> Weight;
 	fn set_borrow_cap() -> Weight;
+	fn set_protocol_interest_threshold() -> Weight;
 	fn switch_mode() -> Weight;
 }
 
@@ -84,6 +85,11 @@ impl<T: frame_system::Config> WeightInfo for MinterestWeight<T> {
 	}
 	fn set_borrow_cap() -> Weight {
 		(30_792_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+	fn set_protocol_interest_threshold() -> Weight {
+		(29_240_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
@@ -123,6 +129,11 @@ impl WeightInfo for () {
 	}
 	fn set_borrow_cap() -> Weight {
 		(30_792_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+	}
+	fn set_protocol_interest_threshold() -> Weight {
+		(29_240_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
