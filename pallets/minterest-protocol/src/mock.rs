@@ -15,7 +15,7 @@ use pallet_traits::PriceProvider;
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	FixedPointNumber, ModuleId,
 };
 use sp_std::cell::RefCell;
@@ -268,6 +268,7 @@ pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+	pools: Vec<(CurrencyId, Pool)>,
 }
 
 impl Default for ExtBuilder {
@@ -287,12 +288,31 @@ impl Default for ExtBuilder {
 				// seed: initial interest = 10_000$, initial pool balance = 1_000_000$
 				(TestPools::pools_account_id(), CurrencyId::KSM, ONE_MILL_DOLLARS),
 			],
+			pools: vec![],
 		}
 	}
 }
 impl ExtBuilder {
 	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts.push((user, currency_id, balance));
+		self
+	}
+
+	pub fn pool_with_params(
+		mut self,
+		pool_id: CurrencyId,
+		total_borrowed: Balance,
+		borrow_index: Rate,
+		total_protocol_interest: Balance,
+	) -> Self {
+		self.pools.push((
+			pool_id,
+			Pool {
+				total_borrowed,
+				borrow_index,
+				total_protocol_interest,
+			},
+		));
 		self
 	}
 
@@ -306,32 +326,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		liquidity_pools::GenesisConfig::<Test> {
-			pools: vec![
-				(
-					CurrencyId::ETH,
-					Pool {
-						total_borrowed: Balance::zero(),
-						borrow_index: Rate::saturating_from_rational(1, 1),
-						total_protocol_interest: TEN_THOUSAND_DOLLARS,
-					},
-				),
-				(
-					CurrencyId::DOT,
-					Pool {
-						total_borrowed: Balance::zero(),
-						borrow_index: Rate::saturating_from_rational(1, 1),
-						total_protocol_interest: TEN_THOUSAND_DOLLARS,
-					},
-				),
-				(
-					CurrencyId::KSM,
-					Pool {
-						total_borrowed: Balance::zero(),
-						borrow_index: Rate::saturating_from_rational(1, 1),
-						total_protocol_interest: TEN_THOUSAND_DOLLARS,
-					},
-				),
-			],
+			pools: self.pools,
 			pool_user_data: vec![
 				(
 					CurrencyId::DOT,
