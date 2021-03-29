@@ -25,16 +25,17 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+// TODO MOVE TYPES TO ANOTHER FILE
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct MntPoolIndex<T: Config> {
+pub struct MntState<T: Config> {
 	pub index: FixedU128,
 	pub block_number: T::BlockNumber,
 }
 
-impl<T: Config> MntPoolIndex<T> {
-	fn new() -> MntPoolIndex<T> {
-		MntPoolIndex {
+impl<T: Config> MntState<T> {
+	fn new() -> MntState<T> {
+		MntState {
 			index: Rate::one(), // initial index
 			block_number: frame_system::Module::<T>::block_number(),
 		}
@@ -44,15 +45,31 @@ impl<T: Config> MntPoolIndex<T> {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct MntPoolState<T: Config> {
-	pub supply_state: MntPoolIndex<T>,
-	pub borrow_state: MntPoolIndex<T>,
+	pub supply_state: MntState<T>,
+	pub borrow_state: MntState<T>,
 }
 
 impl<T: Config> MntPoolState<T> {
 	fn new() -> MntPoolState<T> {
 		MntPoolState {
-			supply_state: MntPoolIndex::new(),
-			borrow_state: MntPoolIndex::new(),
+			supply_state: MntState::new(),
+			borrow_state: MntState::new(),
+		}
+	}
+}
+
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct AwardeeData {
+	pub index: FixedU128,
+	pub acquired_mnt: Rate,
+}
+
+impl AwardeeData {
+	fn new() -> AwardeeData {
+		AwardeeData {
+			index: Rate::one(), // initial index
+			acquired_mnt: Rate::zero(),
 		}
 	}
 }
@@ -107,7 +124,7 @@ pub mod module {
 	}
 
 	#[pallet::event]
-	#[pallet::generate_deposit(fn deposit_event)]
+	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Change rate event (old_rate, new_rate)
 		NewMntRate(Rate, Rate),
@@ -117,6 +134,10 @@ pub mod module {
 
 		/// MNT minting disabled for pool
 		MntMintingDisabled(CurrencyId),
+
+		/// Emitted when MNT is distributed to a supplier
+		/// (CurrencyId, Reciever, Amount of distributed tokens, supply index)
+		MntDistributedToSupplier(CurrencyId, T::AccountId, Rate, Rate),
 	}
 
 	/// MNT minting rate per block
@@ -129,10 +150,15 @@ pub mod module {
 	#[pallet::getter(fn mnt_speeds)]
 	pub(crate) type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Rate, OptionQuery>;
 
-	// TODO
+	// TODO Description.
+	// P.S. Could I merge MntSpeeds and MntPoolsState storage into one?
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_pools_state)]
 	pub(crate) type MntPoolsState<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, MntPoolState<T>, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn mnt_supplier_data)]
+	pub(crate) type MntSupplierData<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, AwardeeData, OptionQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -233,6 +259,57 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
+	// TODO description
+	// TODO(2) Add deposit_event MntDistributedToSupplier, after calling this function
+	fn distribute_supplier_mnt(underlying_id: CurrencyId, supplier: &T::AccountId) -> DispatchResult {
+		// delta_index = mnt_supply_index - mnt_supplier_index
+		// supplier_delta = supplier_mtoken_balance * delta_index
+		// supplier_mnt_balance += supplier_delta
+		// mnt_supplier_index = mnt_supply_index
+		let supply_index = MntPoolsState::<T>::get(underlying_id)
+			.ok_or(Error::<T>::StorageIsCorrupted)?
+			.supply_state
+			.index;
+
+		let mut supplier_data = MntSupplierData::<T>::get(supplier)
+			.or(Some(AwardeeData::new()))
+			.unwrap();
+
+		let delta_index = supply_index
+			.checked_sub(&supplier_data.index)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		// TODO rework this
+		let wrapped_id = T::EnabledCurrencyPair::get()
+			.iter()
+			.find(|currency_pair| currency_pair.underlying_id == underlying_id)
+			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?
+			.wrapped_id;
+		let supplier_balance = Rate::saturating_from_integer(T::MultiCurrency::total_balance(wrapped_id, supplier));
+
+		let supplier_delta = delta_index
+			.checked_mul(&supplier_balance)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		supplier_data.acquired_mnt = supplier_data
+			.acquired_mnt
+			.checked_add(&supplier_delta)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		supplier_data.index = supply_index;
+
+		MntSupplierData::<T>::insert(supplier, supplier_data);
+
+		<Pallet<T>>::deposit_event(Event::MntDistributedToSupplier(
+			wrapped_id,
+			supplier.clone(),
+			supplier_delta,
+			supply_index,
+		));
+
+		Ok(())
+	}
+
 	fn update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult {
 		// delta_blocks = current_block_number - supply_state.block_number
 		// mnt_accrued = delta_block * mnt_speed
@@ -250,6 +327,7 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		if delta_blocks != T::BlockNumber::zero() && supply_speed != FixedU128::zero() {
+			// TODO rework this
 			let wrapped_id = T::EnabledCurrencyPair::get()
 				.iter()
 				.find(|currency_pair| currency_pair.underlying_id == underlying_id)

@@ -13,6 +13,90 @@ const ETH: CurrencyId = CurrencyId::ETH;
 const BTC: CurrencyId = CurrencyId::BTC;
 
 #[test]
+fn test_distribute_mnt_tokens_to_suppliers() {
+	ExtBuilder::default()
+		.enable_minting_for_all_pools()
+		// total borrows needs to calculate mnt_speeds
+		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			//
+			// * Minting was enabled when block_number was equal to 0. Here block_number == 1.
+			// So delta_blocks = 1
+			//
+
+			//
+			// Input parameters: 10 mnt for suppliers per block.
+			//
+			// There is only one pool included in minting process. So 10 mnt for this pool.
+			// Total issuance is 100. Alice has 20 MDOT and BOB 80 MDOT
+			//
+			// This is part from whole circulated wrapped currency holded by Alice.
+			// 20 / 100 = 0.2.
+			//
+			// 10(mnt per block) * 0.2(alice part) = 2.
+			// This is how many Alice shoud aqcuire MNT tokens per block as supplier
+			//
+			// For Bob: 80 / 100 = 0.8; 0.8 * 10 = 8
+			//
+			let alice_balance = 20;
+			let bob_balance = 80;
+			let alice_award_per_block = Rate::saturating_from_integer(2);
+			let bob_award_per_block = Rate::saturating_from_integer(8);
+
+			// set mnt rate
+			let mnt_rate = Rate::saturating_from_integer(10);
+			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
+			assert_eq!(MntToken::mnt_speeds(DOT), Some(mnt_rate));
+
+			// set total issuances
+			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MDOT, &ALICE, alice_balance).unwrap();
+			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MDOT, &BOB, bob_balance).unwrap();
+
+			let move_flywheel = || {
+				MntToken::update_mnt_supply_index(DOT).unwrap();
+				MntToken::distribute_supplier_mnt(DOT, &ALICE).unwrap();
+				MntToken::distribute_supplier_mnt(DOT, &BOB).unwrap();
+			};
+
+			let check_supplier_award = |supplier_id: AccountId, distributed_amount: Rate, total_acquired_mnt: Rate| {
+				let pool_state = MntToken::mnt_pools_state(DOT).unwrap();
+				let supplier = MntToken::mnt_supplier_data(supplier_id).unwrap();
+				assert_eq!(supplier.index, pool_state.supply_state.index);
+				assert_eq!(supplier.acquired_mnt, total_acquired_mnt);
+				let event = Event::mnt_token(crate::Event::MntDistributedToSupplier(
+					CurrencyId::MDOT,
+					supplier_id,
+					distributed_amount,
+					supplier.index,
+				));
+				assert!(System::events().iter().any(|record| record.event == event));
+			};
+
+			/* -------TEST SCENARIO------- */
+			move_flywheel();
+			check_supplier_award(ALICE, alice_award_per_block, alice_award_per_block);
+			check_supplier_award(BOB, bob_award_per_block, bob_award_per_block);
+
+			// Go from first block to third
+			System::set_block_number(3);
+			let current_block = Rate::saturating_from_integer(3);
+			let block_delta = Rate::saturating_from_integer(2);
+			move_flywheel();
+			check_supplier_award(
+				BOB,
+				bob_award_per_block * block_delta,
+				bob_award_per_block * current_block,
+			);
+			check_supplier_award(
+				BOB,
+				bob_award_per_block * block_delta,
+				bob_award_per_block * current_block,
+			);
+		});
+}
+
+#[test]
 fn test_update_mnt_supply_index() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
