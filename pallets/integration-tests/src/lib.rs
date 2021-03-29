@@ -188,10 +188,6 @@ mod tests {
 		}
 	}
 
-	parameter_types! {
-		pub const ProtocolInterestTransferThreshold: Balance = PROTOCOL_INTEREST_TRANSFER_THRESHOLD;
-	}
-
 	impl minterest_protocol::Config for Test {
 		type Event = Event;
 		type Borrowing = liquidity_pools::Module<Test>;
@@ -199,7 +195,6 @@ mod tests {
 		type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 		type WhitelistMembers = Four;
 		type ProtocolWeightInfo = ();
-		type ProtocolInterestTransferThreshold = ProtocolInterestTransferThreshold;
 	}
 
 	parameter_types! {
@@ -277,7 +272,7 @@ mod tests {
 	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 	pub const RATE_ZERO: Rate = Rate::from_inner(0);
 	pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
-	pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000;
+	pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
 
 	pub fn admin() -> Origin {
 		Origin::signed(ADMIN)
@@ -379,6 +374,7 @@ mod tests {
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 							borrow_cap: None,
+							protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 						},
 					),
 					(
@@ -389,6 +385,7 @@ mod tests {
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 							borrow_cap: None,
+							protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 						},
 					),
 					(
@@ -399,6 +396,7 @@ mod tests {
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 							borrow_cap: None,
+							protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 						},
 					),
 				],

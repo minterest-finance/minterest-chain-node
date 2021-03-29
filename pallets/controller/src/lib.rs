@@ -54,6 +54,9 @@ pub struct ControllerData<BlockNumber> {
 
 	/// Maximum total borrow amount per pool in usd. No value means infinite borrow cap.
 	pub borrow_cap: Option<Balance>,
+
+	/// Minimum protocol interest needed to transfer it to liquidation pool
+	pub protocol_interest_threshold: Balance,
 }
 
 /// The Root or half MinterestCouncil can pause certain actions as a safety mechanism.

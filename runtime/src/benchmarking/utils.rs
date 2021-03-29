@@ -51,6 +51,7 @@ pub fn enable_whitelist_mode_a_add_member(who: AccountId) -> DispatchResultWithP
 pub mod tests {
 	use super::*;
 	use crate::constants::currency::DOLLARS;
+	use crate::constants::PROTOCOL_INTEREST_TRANSFER_THRESHOLD;
 	use controller::{ControllerData, PauseKeeper};
 	use frame_support::traits::GenesisBuild;
 	use liquidity_pools::Pool;
@@ -114,6 +115,7 @@ pub mod tests {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
@@ -124,6 +126,7 @@ pub mod tests {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
@@ -134,6 +137,7 @@ pub mod tests {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
@@ -144,6 +148,7 @@ pub mod tests {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 			],

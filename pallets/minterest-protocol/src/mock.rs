@@ -198,10 +198,6 @@ impl Contains<u64> for Two {
 	}
 }
 
-parameter_types! {
-	pub const ProtocolInterestTransferThreshold: Balance = PROTOCOL_INTEREST_TRANSFER_THRESHOLD;
-}
-
 impl minterest_protocol::Config for Test {
 	type Event = Event;
 	type Borrowing = liquidity_pools::Module<Test>;
@@ -209,7 +205,6 @@ impl minterest_protocol::Config for Test {
 	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 	type WhitelistMembers = Two;
 	type ProtocolWeightInfo = ();
-	type ProtocolInterestTransferThreshold = ProtocolInterestTransferThreshold;
 }
 
 ord_parameter_types! {
@@ -269,7 +264,7 @@ pub const ONE_MILL_DOLLARS: Balance = 1_000_000 * DOLLARS;
 pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
 pub const TEN_THOUSAND_DOLLARS: Balance = 10_000 * DOLLARS;
 pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
-pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000;
+pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -413,6 +408,7 @@ impl ExtBuilder {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
@@ -423,6 +419,7 @@ impl ExtBuilder {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
@@ -433,6 +430,7 @@ impl ExtBuilder {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
@@ -443,6 +441,7 @@ impl ExtBuilder {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 			],

@@ -7,7 +7,8 @@ use node_minterest_runtime::{
 	AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig, GrandpaConfig,
 	LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig, MinterestModelConfig,
 	MinterestOracleConfig, OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature, SudoConfig,
-	SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, DOLLARS, WASM_BINARY,
+	SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+	WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -285,6 +286,7 @@ fn testnet_genesis(
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
@@ -295,6 +297,7 @@ fn testnet_genesis(
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
@@ -305,6 +308,7 @@ fn testnet_genesis(
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
@@ -315,6 +319,7 @@ fn testnet_genesis(
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 			],

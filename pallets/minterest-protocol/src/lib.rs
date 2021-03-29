@@ -18,7 +18,6 @@ use sp_runtime::{
 	traits::{BadOrigin, Zero},
 	DispatchError, DispatchResult,
 };
-use sp_std::cmp::Ordering;
 use sp_std::result;
 
 pub use module::*;
@@ -59,10 +58,6 @@ pub mod module {
 
 		/// Weight information for the extrinsics.
 		type ProtocolWeightInfo: WeightInfo;
-
-		#[pallet::constant]
-		/// Maximum total borrow amount per pool in usd
-		type ProtocolInterestTransferThreshold: Get<Balance>;
 	}
 
 	#[pallet::error]
@@ -136,15 +131,12 @@ pub mod module {
 			T::EnabledCurrencyPair::get().iter().for_each(|currency_pair| {
 				let pool_id = currency_pair.underlying_id;
 				let total_protocol_interest = T::LiquidityPoolsManager::get_pool_total_protocol_interest(pool_id);
-				if total_protocol_interest < T::ProtocolInterestTransferThreshold::get() {
+				if total_protocol_interest < <Controller<T>>::controller_dates(pool_id).protocol_interest_threshold {
 					return;
 				}
 
 				let total_balance = T::ManagerLiquidityPools::get_pool_available_liquidity(pool_id);
-				let to_liquidation_pool = match total_balance.cmp(&total_protocol_interest) {
-					Ordering::Less => total_balance,
-					_ => total_protocol_interest,
-				};
+				let to_liquidation_pool = total_balance.min(total_protocol_interest);
 
 				// If no overflow and transfer is successful update pool state
 				if let Some(new_protocol_interest) = total_protocol_interest.checked_sub(to_liquidation_pool) {

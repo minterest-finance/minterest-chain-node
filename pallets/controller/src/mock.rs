@@ -179,6 +179,7 @@ impl Config for Runtime {
 }
 
 pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
+pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -319,6 +320,7 @@ impl ExtBuilder {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
@@ -329,6 +331,7 @@ impl ExtBuilder {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
@@ -339,6 +342,7 @@ impl ExtBuilder {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 			],

@@ -3,7 +3,7 @@ use crate::{
 	CurrencyId::{self, DOT, ETH},
 	Dex, EnabledUnderlyingAssetId, Event, LiquidationPools, LiquidationPoolsModuleId, LiquidityPools,
 	LiquidityPoolsModuleId, MinterestCouncilMembership, MinterestOracle, MinterestProtocol, Prices, Rate, RiskManager,
-	Runtime, System, WhitelistCouncilMembership, DOLLARS,
+	Runtime, System, WhitelistCouncilMembership, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
@@ -157,6 +157,7 @@ impl ExtBuilder {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
@@ -168,6 +169,7 @@ impl ExtBuilder {
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 			],
@@ -343,6 +345,10 @@ fn origin_of(account_id: AccountId) -> <Runtime as frame_system::Config>::Origin
 
 fn origin_none() -> <Runtime as frame_system::Config>::Origin {
 	<Runtime as frame_system::Config>::Origin::none()
+}
+
+fn origin_root() -> <Runtime as frame_system::Config>::Origin {
+	<Runtime as frame_system::Config>::Origin::root()
 }
 
 fn set_oracle_price_for_all_pools(price: u128) -> DispatchResult {
@@ -1511,7 +1517,7 @@ fn protocol_interest_transfer_should_work() {
 
 			// Set interest factor equal 0.75.
 			assert_ok!(Controller::set_protocol_interest_factor(
-				<Runtime as frame_system::Config>::Origin::root(),
+				origin_root(),
 				CurrencyId::DOT,
 				Rate::saturating_from_rational(3, 4)
 			));
@@ -1550,7 +1556,7 @@ fn protocol_interest_transfer_should_work() {
 			// Not reached threshold, pool balances should stay the same
 			assert_eq!(
 				LiquidityPools::pools(CurrencyId::DOT).total_protocol_interest,
-				441000000000000000u128
+				441_000_000_000_000_000u128
 			);
 
 			System::set_block_number(10000000);
@@ -1558,7 +1564,7 @@ fn protocol_interest_transfer_should_work() {
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(20_000)));
 			assert_eq!(pool_balance(DOT), dollars(80_000));
 
-			let total_protocol_interest: Balance = 3645120550951706945733;
+			let total_protocol_interest: Balance = 3_645_120_550_951_706_945_733;
 			assert_eq!(
 				LiquidityPools::pools(CurrencyId::DOT).total_protocol_interest,
 				total_protocol_interest
