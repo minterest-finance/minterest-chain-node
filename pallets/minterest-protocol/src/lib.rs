@@ -129,28 +129,7 @@ pub mod module {
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_finalize(_block_number: T::BlockNumber) {
 			T::EnabledCurrencyPair::get().iter().for_each(|currency_pair| {
-				let pool_id = currency_pair.underlying_id;
-				let total_protocol_interest = T::LiquidityPoolsManager::get_pool_total_protocol_interest(pool_id);
-				if total_protocol_interest < <Controller<T>>::controller_dates(pool_id).protocol_interest_threshold {
-					return;
-				}
-
-				let total_balance = T::ManagerLiquidityPools::get_pool_available_liquidity(pool_id);
-				let to_liquidation_pool = total_balance.min(total_protocol_interest);
-
-				// If no overflow and transfer is successful update pool state
-				if let Some(new_protocol_interest) = total_protocol_interest.checked_sub(to_liquidation_pool) {
-					if T::MultiCurrency::transfer(
-						pool_id,
-						&T::ManagerLiquidityPools::pools_account_id(),
-						&T::ManagerLiquidationPools::pools_account_id(),
-						to_liquidation_pool,
-					)
-					.is_ok()
-					{
-						let _ = <LiquidityPools<T>>::set_pool_total_protocol_interest(pool_id, new_protocol_interest);
-					}
-				}
+				Self::transfer_protocol_interest(currency_pair.underlying_id);
 			});
 		}
 	}
@@ -711,5 +690,29 @@ impl<T: Config> Pallet<T> {
 		T::MultiCurrency::transfer(wrapped_id, &who, &receiver, transfer_amount)?;
 
 		Ok(())
+	}
+
+	fn transfer_protocol_interest(pool_id: CurrencyId) {
+		let total_protocol_interest = T::LiquidityPoolsManager::get_pool_total_protocol_interest(pool_id);
+		if total_protocol_interest < <Controller<T>>::controller_dates(pool_id).protocol_interest_threshold {
+			return;
+		}
+
+		let total_balance = T::ManagerLiquidityPools::get_pool_available_liquidity(pool_id);
+		let to_liquidation_pool = total_balance.min(total_protocol_interest);
+
+		// If no overflow and transfer is successful update pool state
+		if let Some(new_protocol_interest) = total_protocol_interest.checked_sub(to_liquidation_pool) {
+			if T::MultiCurrency::transfer(
+				pool_id,
+				&T::ManagerLiquidityPools::pools_account_id(),
+				&T::ManagerLiquidationPools::pools_account_id(),
+				to_liquidation_pool,
+			)
+			.is_ok()
+			{
+				<LiquidityPools<T>>::set_pool_total_protocol_interest(pool_id, new_protocol_interest);
+			}
+		}
 	}
 }
