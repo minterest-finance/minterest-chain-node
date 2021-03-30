@@ -1,7 +1,6 @@
 {
   "CUSTOM_TYPES": {
     "Address": "MultiAddress",
-    "LookupSource": "AccountId",
     "CurrencyId": {
       "_enum": [
         "MNT",
