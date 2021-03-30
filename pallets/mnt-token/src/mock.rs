@@ -165,7 +165,7 @@ impl ExtBuilder {
 			Pool {
 				total_borrowed,
 				borrow_index: Rate::one(),
-				total_insurance: Balance::zero(),
+				total_protocol_interest: Balance::zero(),
 			},
 		));
 		self
