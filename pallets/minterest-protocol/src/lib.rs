@@ -120,6 +120,9 @@ pub mod module {
 
 		/// The user denies use the assets in pool as collateral: \[who, pool_id\]
 		PoolDisabledCollateral(T::AccountId, CurrencyId),
+
+		/// Unable to transfer protocol interest from liquidity to liquidation pool: \[pool_id\]
+		ProtocolInterestTransferFailed(CurrencyId),
 	}
 
 	#[pallet::pallet]
@@ -712,7 +715,11 @@ impl<T: Config> Pallet<T> {
 			.is_ok()
 			{
 				<LiquidityPools<T>>::set_pool_total_protocol_interest(pool_id, new_protocol_interest);
+			} else {
+				Self::deposit_event(Event::ProtocolInterestTransferFailed(pool_id));
 			}
+		} else {
+			Self::deposit_event(Event::ProtocolInterestTransferFailed(pool_id));
 		}
 	}
 }
