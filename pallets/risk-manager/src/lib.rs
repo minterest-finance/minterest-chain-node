@@ -380,7 +380,7 @@ impl<T: Config> Pallet<T> {
 				(rng.pick_u32(underlying_asset_ids.len().saturating_sub(1) as u32), None)
 			};
 
-		// Get the max iterationns config
+		// Get the max iterations config
 		let max_iterations = StorageValueRef::persistent(&OFFCHAIN_WORKER_MAX_ITERATIONS)
 			.get::<u32>()
 			.unwrap_or(Some(DEFAULT_MAX_ITERATIONS));

@@ -1,9 +1,9 @@
 use crate::{
 	AccountId, Balance, Block, Controller, Currencies,
-	CurrencyId::{self, DOT, ETH},
-	Dex, EnabledUnderlyingAssetId, Event, LiquidationPools, LiquidationPoolsModuleId, LiquidityPools,
-	LiquidityPoolsModuleId, MinterestCouncilMembership, MinterestOracle, MinterestProtocol, Prices, Rate, RiskManager,
-	Runtime, System, WhitelistCouncilMembership, DOLLARS,
+	CurrencyId::{self, *},
+	Dex, EnabledUnderlyingAssetId, Event, LiquidationPools, LiquidityPools, MinterestCouncilMembership,
+	MinterestOracle, MinterestProtocol, Prices, Rate, RiskManager, Runtime, System, WhitelistCouncilMembership,
+	DOLLARS,
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
@@ -18,9 +18,8 @@ use minterest_primitives::{Operation, Price};
 use orml_traits::MultiCurrency;
 use pallet_traits::{DEXManager, PoolsManager, PriceProvider};
 use risk_manager::RiskManagerData;
-use sp_runtime::traits::{AccountIdConversion, Zero};
+use sp_runtime::traits::Zero;
 use sp_runtime::{DispatchResult, FixedPointNumber};
-
 mod balancing_pools_tests;
 mod liquidation_tests;
 mod rpc_tests;
@@ -49,12 +48,15 @@ impl Default for ExtBuilder {
 				(ALICE::get(), CurrencyId::MNT, 100_000 * DOLLARS),
 				(ALICE::get(), CurrencyId::DOT, 100_000 * DOLLARS),
 				(ALICE::get(), CurrencyId::ETH, 100_000 * DOLLARS),
+				(ALICE::get(), CurrencyId::BTC, 100_000 * DOLLARS),
 				(BOB::get(), CurrencyId::MNT, 100_000 * DOLLARS),
 				(BOB::get(), CurrencyId::DOT, 100_000 * DOLLARS),
 				(BOB::get(), CurrencyId::ETH, 100_000 * DOLLARS),
+				(BOB::get(), CurrencyId::BTC, 100_000 * DOLLARS),
 				(CHARLIE::get(), CurrencyId::MNT, 100_000 * DOLLARS),
 				(CHARLIE::get(), CurrencyId::DOT, 100_000 * DOLLARS),
 				(CHARLIE::get(), CurrencyId::ETH, 100_000 * DOLLARS),
+				(CHARLIE::get(), CurrencyId::BTC, 100_000 * DOLLARS),
 			],
 			pools: vec![],
 			pool_user_data: vec![],
@@ -153,7 +155,7 @@ impl ExtBuilder {
 		controller::GenesisConfig::<Runtime> {
 			controller_dates: vec![
 				(
-					CurrencyId::DOT,
+					DOT,
 					ControllerData {
 						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
 						timestamp: 1,
@@ -164,7 +166,18 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::ETH,
+					ETH,
+					ControllerData {
+						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
+						timestamp: 1,
+						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						borrow_cap: None,
+					},
+				),
+				(
+					BTC,
 					ControllerData {
 						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
 						timestamp: 1,
@@ -177,7 +190,7 @@ impl ExtBuilder {
 			],
 			pause_keepers: vec![
 				(
-					CurrencyId::DOT,
+					DOT,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,
@@ -187,7 +200,17 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::ETH,
+					ETH,
+					PauseKeeper {
+						deposit_paused: false,
+						redeem_paused: false,
+						borrow_paused: false,
+						repay_paused: false,
+						transfer_paused: false,
+					},
+				),
+				(
+					BTC,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,
@@ -205,7 +228,7 @@ impl ExtBuilder {
 		minterest_model::GenesisConfig {
 			minterest_model_dates: vec![
 				(
-					CurrencyId::DOT,
+					DOT,
 					MinterestModelData {
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::zero(),
@@ -214,7 +237,16 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::ETH,
+					ETH,
+					MinterestModelData {
+						kink: Rate::saturating_from_rational(8, 10),
+						base_rate_per_block: Rate::zero(),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
+				(
+					BTC,
 					MinterestModelData {
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::zero(),
@@ -240,6 +272,15 @@ impl ExtBuilder {
 				),
 				(
 					CurrencyId::ETH,
+					RiskManagerData {
+						max_attempts: 3,
+						min_sum: 100_000 * DOLLARS,
+						threshold: Rate::saturating_from_rational(103, 100),
+						liquidation_incentive: Rate::saturating_from_rational(105, 100),
+					},
+				),
+				(
+					CurrencyId::BTC,
 					RiskManagerData {
 						max_attempts: 3,
 						min_sum: 100_000 * DOLLARS,
@@ -357,6 +398,14 @@ fn set_oracle_price_for_all_pools(price: u128) -> DispatchResult {
 	MinterestOracle::on_finalize(0);
 	assert_ok!(MinterestOracle::feed_values(origin_of(ORACLE1::get().clone()), prices));
 	Ok(())
+}
+
+pub fn run_to_block(n: u32) {
+	while System::block_number() < n {
+		MinterestProtocol::on_finalize(System::block_number());
+		MinterestOracle::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+	}
 }
 
 #[test]

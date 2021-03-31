@@ -114,7 +114,7 @@ mod tests {
 	}
 
 	// Extrinsic `redeem_underlying`, description of scenario #1:
-	// The user The user tries to redeem all assets in the first currency. He has loan in the first
+	// The user tries to redeem all assets in the first currency. He has loan in the first
 	// currency.
 	// Initial exchange rate for all assets equal 1.0;
 	// Collateral factor for all assets equal 0.9;

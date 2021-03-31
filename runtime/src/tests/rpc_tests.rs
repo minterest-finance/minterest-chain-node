@@ -3,8 +3,8 @@ use super::*;
 #[test]
 fn demo_scenario_n2_without_insurance_using_rpc_should_work() {
 	ExtBuilder::default()
-		.pool_initial(CurrencyId::DOT)
-		.pool_initial(CurrencyId::ETH)
+		.pool_initial(DOT)
+		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all polls.
@@ -174,8 +174,8 @@ fn demo_scenario_n2_without_insurance_using_rpc_should_work() {
 #[test]
 fn test_rates_using_rpc() {
 	ExtBuilder::default()
-		.pool_initial(CurrencyId::DOT)
-		.pool_initial(CurrencyId::ETH)
+		.pool_initial(DOT)
+		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all polls.
@@ -250,8 +250,8 @@ fn test_rates_using_rpc() {
 #[test]
 fn test_user_balance_using_rpc() {
 	ExtBuilder::default()
-		.pool_initial(CurrencyId::DOT)
-		.pool_initial(CurrencyId::ETH)
+		.pool_initial(DOT)
+		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all polls.
@@ -324,8 +324,8 @@ fn test_user_balance_using_rpc() {
 #[test]
 fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 	ExtBuilder::default()
-		.pool_initial(CurrencyId::DOT)
-		.pool_initial(CurrencyId::ETH)
+		.pool_initial(DOT)
+		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all polls.
@@ -365,8 +365,8 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 #[test]
 fn test_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc() {
 	ExtBuilder::default()
-		.pool_initial(CurrencyId::DOT)
-		.pool_initial(CurrencyId::ETH)
+		.pool_initial(DOT)
+		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all polls.
@@ -389,7 +389,7 @@ fn test_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc
 				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
-				LiquidityPools::pool_user_data(CurrencyId::DOT, BOB::get()).total_borrowed,
+				LiquidityPools::pool_user_data(DOT, BOB::get()).total_borrowed,
 				(Rate::from_inner(account_data_after_repay.total_borrowed) / oracle_price).into_inner()
 			);
 			assert_eq!(
@@ -406,8 +406,8 @@ fn test_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc
 #[test]
 fn test_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rpc() {
 	ExtBuilder::default()
-		.pool_initial(CurrencyId::DOT)
-		.pool_initial(CurrencyId::ETH)
+		.pool_initial(DOT)
+		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all polls.
@@ -428,7 +428,7 @@ fn test_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rp
 				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
-				LiquidityPools::pool_user_data(CurrencyId::DOT, BOB::get()).total_borrowed,
+				LiquidityPools::pool_user_data(DOT, BOB::get()).total_borrowed,
 				(Rate::from_inner(account_data_after_borrow.total_borrowed) / oracle_price).into_inner()
 			);
 			assert_eq!(
@@ -446,8 +446,8 @@ fn test_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rp
 #[test]
 fn test_total_borrowed_difference_is_ok_before_and_after_deposit_using_balance_rpc() {
 	ExtBuilder::default()
-		.pool_initial(CurrencyId::DOT)
-		.pool_initial(CurrencyId::ETH)
+		.pool_initial(DOT)
+		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all polls.
