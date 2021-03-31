@@ -51,6 +51,7 @@ pub fn enable_whitelist_mode_a_add_member(who: AccountId) -> DispatchResultWithP
 pub mod tests {
 	use super::*;
 	use crate::constants::currency::DOLLARS;
+	use crate::constants::PROTOCOL_INTEREST_TRANSFER_THRESHOLD;
 	use controller::{ControllerData, PauseKeeper};
 	use frame_support::traits::GenesisBuild;
 	use liquidity_pools::Pool;
@@ -71,7 +72,7 @@ pub mod tests {
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_insurance: Balance::zero(),
+						total_protocol_interest: Balance::zero(),
 					},
 				),
 				(
@@ -79,7 +80,7 @@ pub mod tests {
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_insurance: Balance::zero(),
+						total_protocol_interest: Balance::zero(),
 					},
 				),
 				(
@@ -87,7 +88,7 @@ pub mod tests {
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_insurance: Balance::zero(),
+						total_protocol_interest: Balance::zero(),
 					},
 				),
 				(
@@ -95,7 +96,7 @@ pub mod tests {
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_insurance: Balance::zero(),
+						total_protocol_interest: Balance::zero(),
 					},
 				),
 			],
@@ -110,40 +111,44 @@ pub mod tests {
 					CurrencyId::ETH,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: Rate::saturating_from_rational(1, 10),
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
 					CurrencyId::DOT,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: Rate::saturating_from_rational(1, 10),
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
 					CurrencyId::KSM,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: Rate::saturating_from_rational(1, 10),
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
 					CurrencyId::BTC,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: Rate::saturating_from_rational(1, 10),
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 			],

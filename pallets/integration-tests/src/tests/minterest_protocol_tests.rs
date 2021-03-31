@@ -6,7 +6,7 @@ mod tests {
 	use crate::tests::*;
 
 	#[test]
-	fn deposit_underlying_with_supplied_insurance_should_work() {
+	fn deposit_underlying_with_supplied_interest_should_work() {
 		ExtBuilder::default()
 			.pool_initial(CurrencyId::DOT)
 			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
@@ -559,7 +559,7 @@ mod tests {
 	// 6. Alice redeem 20 DOT;
 	// 7. DOT pool extra liquidity equals 5 DOT;
 	#[test]
-	fn redeem_underlying_over_insurance() {
+	fn redeem_underlying_over_interest() {
 		ExtBuilder::default()
 			.pool_initial(CurrencyId::DOT)
 			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
@@ -1073,7 +1073,7 @@ mod tests {
 	// 5. Bob borrow 15 DOT;
 	// 6. Alice redeem 20 DOT, pool extra liquidity equals 5 DOT;
 	#[test]
-	fn redeem_over_insurance() {
+	fn redeem_over_interest() {
 		ExtBuilder::default()
 			.pool_initial(CurrencyId::DOT)
 			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)

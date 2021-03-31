@@ -31,6 +31,7 @@ pub mod time {
 pub const MAX_MEMBERS: u8 = 16;
 
 pub const MAX_BORROW_CAP: minterest_primitives::Balance = 1_000_000_000_000_000_000_000_000;
+pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: minterest_primitives::Balance = 1_000_000_000_000_000_000_000;
 
 /// Initial exchange rate: 100%
 pub const INITIAL_EXCHANGE_RATE: Rate = Rate::from_inner(1_000_000_000_000_000_000);

@@ -76,14 +76,14 @@ mod tests {
 			});
 	}
 
-	// Extrinsic `set_insurance_factor`, description of scenario #2:
-	// Pool insurance is increased if the insurance_factor is greater than zero.
+	// Extrinsic `set_protocol_interest_factor`, description of scenario #2:
+	// Pool interest is increased if the protocol_interest_factor is greater than zero.
 	// 1. Alice deposit 40 DOT;
 	// 2. Alice borrow 20 DOT;
-	// 3. Set insurance factor equal 0.5.
-	// 4. Alice repay full loan in DOTs, pool insurance increased.
+	// 3. Set interest factor equal 0.5.
+	// 4. Alice repay full loan in DOTs, pool interest increased.
 	#[test]
-	fn set_insurance_factor_greater_than_zero() {
+	fn set_protocol_interest_factor_greater_than_zero() {
 		ExtBuilder::default()
 			.pool_initial(CurrencyId::DOT)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
@@ -113,13 +113,13 @@ mod tests {
 					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
 					alice_deposited_amount - alice_borrowed_amount_in_dot
 				);
-				// Checking total insurance for DOT pool.
-				assert_eq!(TestPools::pools(CurrencyId::DOT).total_insurance, BALANCE_ZERO);
+				// Checking total interest for DOT pool.
+				assert_eq!(TestPools::pools(CurrencyId::DOT).total_protocol_interest, BALANCE_ZERO);
 
 				System::set_block_number(10);
 
-				// Set insurance factor equal 0.5.
-				assert_ok!(TestController::set_insurance_factor(
+				// Set interest factor equal 0.5.
+				assert_ok!(TestController::set_protocol_interest_factor(
 					admin(),
 					CurrencyId::DOT,
 					Rate::saturating_from_rational(1, 2)
@@ -136,20 +136,20 @@ mod tests {
 					alice_deposited_amount + expected_interest_accumulated
 				);
 				assert_eq!(
-					TestPools::pools(CurrencyId::DOT).total_insurance,
+					TestPools::pools(CurrencyId::DOT).total_protocol_interest,
 					BALANCE_ZERO + (expected_interest_accumulated / 2)
 				);
 			});
 	}
 
-	// Extrinsic `set_insurance_factor`, description of scenario #1:
-	// Pool insurance does not increase if the insurance_factor is zero.
+	// Extrinsic `set_protocol_interest_factor`, description of scenario #1:
+	// Pool interest does not increase if the protocol_interest_factor is zero.
 	// 1. Alice deposit 40 DOT;
 	// 2. Alice borrow 20 DOT;
-	// 3. Set insurance factor equal to zero.
-	// 4. Alice repay full loan in DOTs, pool total_insurance = 0.
+	// 3. Set interest factor equal to zero.
+	// 4. Alice repay full loan in DOTs, pool total_protocol_interest = 0.
 	#[test]
-	fn set_insurance_factor_equal_zero() {
+	fn set_protocol_interest_factor_equal_zero() {
 		ExtBuilder::default()
 			.pool_initial(CurrencyId::DOT)
 			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
@@ -179,13 +179,13 @@ mod tests {
 					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
 					alice_deposited_amount - alice_borrowed_amount_in_dot
 				);
-				// Checking total insurance for DOT pool.
-				assert_eq!(TestPools::pools(CurrencyId::DOT).total_insurance, BALANCE_ZERO);
+				// Checking total interest for DOT pool.
+				assert_eq!(TestPools::pools(CurrencyId::DOT).total_protocol_interest, BALANCE_ZERO);
 
 				System::set_block_number(10);
 
-				// Set insurance factor equal to zero.
-				assert_ok!(TestController::set_insurance_factor(
+				// Set interest factor equal to zero.
+				assert_ok!(TestController::set_protocol_interest_factor(
 					admin(),
 					CurrencyId::DOT,
 					RATE_ZERO
@@ -194,8 +194,8 @@ mod tests {
 				// Alice repay full loan in DOTs.
 				assert_ok!(MinterestProtocol::repay_all(Origin::signed(ALICE), CurrencyId::DOT));
 
-				// Checking pool total insurance.
-				assert_eq!(TestPools::pools(CurrencyId::DOT).total_insurance, BALANCE_ZERO);
+				// Checking pool total interest.
+				assert_eq!(TestPools::pools(CurrencyId::DOT).total_protocol_interest, BALANCE_ZERO);
 			});
 	}
 }
