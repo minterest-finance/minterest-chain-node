@@ -159,9 +159,8 @@ fn balance_liquidation_pools_two_pools_should_work_test() {
 	ExtBuilder::default()
 		.liquidity_pool_balance(DOT, 500_000 * DOLLARS)
 		.liquidity_pool_balance(ETH, 300_000 * DOLLARS)
-		.liquidation_pool_balance(DOT, 170_000 * DOLLARS) // + 140 000$
-		.liquidation_pool_balance(ETH, 30_000 * DOLLARS) //
-		// - 120 000$
+		.liquidation_pool_balance(DOT, 170_000 * DOLLARS) // + 140_000$
+		.liquidation_pool_balance(ETH, 30_000 * DOLLARS) //- 120_000$
 		.dex_balance(DOT, 500_000 * DOLLARS)
 		.dex_balance(ETH, 500_000 * DOLLARS)
 		.build()
