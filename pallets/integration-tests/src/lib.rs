@@ -49,7 +49,6 @@ mod tests {
 			System: frame_system::{Module, Call, Config, Storage, Event<T>},
 			Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 			Currencies: orml_currencies::{Module, Call, Event<T>},
-			MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 			MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 			TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 			TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
@@ -121,11 +120,6 @@ mod tests {
 		type NativeCurrency = NativeCurrency;
 		type GetNativeCurrencyId = GetNativeCurrencyId;
 		type WeightInfo = ();
-	}
-
-	impl m_tokens::Config for Test {
-		type Event = Event;
-		type MultiCurrency = orml_tokens::Module<Test>;
 	}
 
 	parameter_types! {
