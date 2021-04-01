@@ -148,7 +148,7 @@ fn liquidation_scenario_n1() {
 				origin_of(ORACLE1::get().clone()),
 				vec![(BTC, Rate::saturating_from_integer(52_000))]
 			));
-			run_to_block(800);
+			run_to_block(1000);
 
 			// ------------------- COMPLETE LIQUIDATION -----------------------------
 			// Call complete liquidation:
@@ -156,7 +156,7 @@ fn liquidation_scenario_n1() {
 
 			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
 				BOB::get(),
-				52_010_835_370_576_674_124_000, // repay_amount = $52_010;
+				52_010_835_370_810_769_596_000, // repay_amount = $52_010;
 				BTC,                            // liquidated_pool_id;
 				vec![ETH],                      // seized_pools
 				false,
@@ -165,30 +165,30 @@ fn liquidation_scenario_n1() {
 
 			assert_eq!(
 				LiquidityPools::get_pool_available_liquidity(BTC),
-				100_000_000_274_522_511_089_887 // $100_000;
+				100_000_000_274_522_515_591_723 // 100_000 BTC;
 			);
 			assert_eq!(
 				LiquidityPools::get_pool_available_liquidity(ETH),
-				100_001_149_293_186_332_194_853 // $100_001;
+				100_001_149_293_186_203_503_625 // 100_001 ETH;
 			);
 			assert_eq!(
 				LiquidationPools::get_pool_available_liquidity(ETH),
-				48_889_850_706_813_667_805_147 // $48_889;
+				48_889_850_706_813_796_496_375 // 48_889 ETH;
 			);
 			assert_eq!(
 				LiquidationPools::get_pool_available_liquidity(BTC),
-				18_948_999_725_477_488_910_113 // $18_948;
+				18_948_999_725_477_484_408_277 // 18_948 BTC;
 			);
 			assert_eq!(
 				Currencies::free_balance(METH, &BOB::get()),
-				1_149_293_186_332_194_853 // 1 METH ~ $2_000 - earned interest;
+				1_149_293_186_203_503_625 // 1 METH ~ $2_000 - earned interest;
 			);
 
 			assert_eq!(
 				LiquidityPools::pool_user_data(BTC, BOB::get()),
 				PoolUserData {
 					total_borrowed: 0,
-					interest_index: Rate::from_inner(1_000_000_085_054_503_589),
+					interest_index: Rate::from_inner(1_000_000_085_059_004_489),
 					collateral: false,
 					liquidation_attempts: 0,
 				}
