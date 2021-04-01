@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn demo_scenario_n2_without_insurance_using_rpc_should_work() {
+fn demo_scenario_n2_without_interest_using_rpc_should_work() {
 	ExtBuilder::default()
 		.pool_initial(DOT)
 		.pool_initial(ETH)
