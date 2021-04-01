@@ -12,6 +12,111 @@ const DOT: CurrencyId = CurrencyId::DOT;
 const ETH: CurrencyId = CurrencyId::ETH;
 const BTC: CurrencyId = CurrencyId::BTC;
 
+/*
+ * TODO double call
+ * 	MntToken::update_mnt_supply_index(DOT).unwrap();
+ *	MntToken::distribute_supplier_mnt(DOT, &ALICE).unwrap();
+ *
+ * TODO check supplier and two pools
+ */
+
+#[test]
+fn test_update_mnt_borrow_index() {
+	ExtBuilder::default()
+		.enable_minting_for_all_pools()
+		.pool_total_borrowed(CurrencyId::DOT, 10_000 * DOLLARS)
+		.pool_total_borrowed(CurrencyId::ETH, 20_000 * DOLLARS)
+		.pool_total_borrowed(CurrencyId::KSM, 30_000 * DOLLARS)
+		.pool_total_borrowed(CurrencyId::BTC, 40_000 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			let initial_index = Rate::saturating_from_integer(1);
+			let mnt_rate = Rate::saturating_from_integer(1);
+			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
+			// Input parameters:
+			// mnt_rate: 1
+			// Prices: DOT[0] = 0.5 USD, ETH[1] = 1.5 USD, KSM[2] = 2 USD, BTC[3] = 3 USD
+			// utilities: DOT = 5000, ETH = 30000, KSM = 60000, BTC = 120000
+			// sum_of_all_pools_utilities = 215000
+
+			let (currency_utilities, total_utility) = MntToken::calculate_enabled_pools_utilities().unwrap();
+			assert!(currency_utilities.contains(&(DOT, 5000 * DOLLARS)));
+			assert!(currency_utilities.contains(&(ETH, 30000 * DOLLARS)));
+			assert!(currency_utilities.contains(&(KSM, 60000 * DOLLARS)));
+			assert!(currency_utilities.contains(&(BTC, 120000 * DOLLARS)));
+			assert_eq!(total_utility, 215000 * DOLLARS);
+
+			// Check mnt speeds
+			// 0.0232558139534883721
+			let dot_mnt_speed = Rate::from_inner(23255813953488372);
+			// 0.139534883720930233
+			let eth_mnt_speed = Rate::from_inner(139534883720930233);
+			// 0.279069767441860465
+			let ksm_mnt_speed = Rate::from_inner(279069767441860465);
+			// 0.558139534883720930
+			let btc_mnt_speed = Rate::from_inner(558139534883720930);
+			assert_eq!(MntToken::mnt_speeds(BTC), Some(btc_mnt_speed));
+			assert_eq!(dot_mnt_speed + eth_mnt_speed + ksm_mnt_speed + btc_mnt_speed, mnt_rate);
+
+			let check_borrow_index = |underlying_id: CurrencyId, pool_mnt_speed: Rate, total_borrow: u128| {
+				MntToken::update_mnt_borrow_index(underlying_id).unwrap();
+				// 1.5 current borrow_index. I use 15 in this function, thats why I make total_borrow * 10
+				let borrow_total_amount = Rate::saturating_from_rational(total_borrow * 10, 15);
+
+				let expected_index = initial_index + pool_mnt_speed / borrow_total_amount;
+				let pool_state = MntToken::mnt_pools_state(underlying_id).unwrap();
+				assert_eq!(pool_state.borrow_state.index, expected_index);
+			};
+
+			check_borrow_index(DOT, dot_mnt_speed, 10_000);
+			check_borrow_index(ETH, eth_mnt_speed, 20_000);
+			check_borrow_index(KSM, ksm_mnt_speed, 30_000);
+			check_borrow_index(BTC, btc_mnt_speed, 40_000);
+		});
+}
+
+#[test]
+fn test_update_mnt_borrow_index_simple() {
+	ExtBuilder::default()
+		.enable_minting_for_all_pools()
+		// total borrows needs to calculate mnt_speeds
+		.pool_total_borrowed(CurrencyId::DOT, 150_000 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			//
+			// * Minting was enabled when block_number was equal to 0. Here block_number == 1.
+			// So block_delta = 1
+			//
+
+			//
+			// Input parameters: mnt_speed = 10,
+			//					 total_borrowed = 150,
+			//                   pool_borrow_index = 1.5,
+			//                   mnt_acquired = delta_blocks * mnt_speed = 1
+			//
+			// This is how much currency was borrowed without interest
+			// borrow_total_amount = total_borrowed(150000) / pool_borrow_index(1.5)  = 100000
+			//
+			// How much MNT tokens were earned per block
+			// ratio = mnt_acquired / borrow_total_amount = 0.00001
+			//
+			// mnt_borrow_index = mnt_borrow_index(1 as initial value) + ratio(0.00001) = 1.00001
+			//
+			// *ratio is amount of MNT tokens for 1 borrowed token
+			//
+
+			let mnt_rate = Rate::saturating_from_integer(1);
+			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
+			assert_eq!(MntToken::mnt_speeds(DOT), Some(mnt_rate));
+			MntToken::update_mnt_borrow_index(DOT).unwrap();
+			let pool_state = MntToken::mnt_pools_state(DOT).unwrap();
+			assert_eq!(
+				pool_state.borrow_state.index,
+				Rate::saturating_from_rational(100001, 100000)
+			);
+		});
+}
+
 #[test]
 fn test_distribute_mnt_tokens_to_suppliers() {
 	ExtBuilder::default()
@@ -22,7 +127,7 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 		.execute_with(|| {
 			//
 			// * Minting was enabled when block_number was equal to 0. Here block_number == 1.
-			// So delta_blocks = 1
+			// So block_delta = 1
 			//
 
 			//
@@ -109,7 +214,7 @@ fn test_update_mnt_supply_index() {
 		.execute_with(|| {
 			//
 			// * Minting was enabled when block_number was equal to 0. Here block_number == 1.
-			// So delta_blocks = 1
+			// So block_delta = 1
 			//
 			let mnt_rate = Rate::saturating_from_integer(10);
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
@@ -159,7 +264,7 @@ fn test_update_mnt_supply_index_simple() {
 			// Input parameters:
 			// supply_state.block_number = 1, supply_state.index = 1,
 			// mnt_speed = 10, total_supply = 20
-			// *mnt_speed = mnt_rate because the only 1 pool is included
+			// *mnt_speed = mnt_rate because the only one pool is included
 
 			// set total_issuance to 20
 			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::METH, &ALICE, 20).unwrap();
@@ -170,8 +275,8 @@ fn test_update_mnt_supply_index_simple() {
 			System::set_block_number(2);
 			MntToken::update_mnt_supply_index(ETH).unwrap();
 			let pool_state = MntToken::mnt_pools_state(ETH).unwrap();
-			// delta_blocks = current_block(2) - supply_state.block_number(1) = 1
-			// mnt_accrued = delta_blocks(1) * mnt_speed(10) = 10
+			// block_delta = current_block(2) - supply_state.block_number(1) = 1
+			// mnt_accrued = block_delta(1) * mnt_speed(10) = 10
 			// ratio = mnt_accrued(10) / total_supply(20) = 0.5
 			// supply_state.index = supply_state.index(1) + ratio(0.5) = 1.5
 			// supply_state.block_number = current_block = 2

@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::upper_case_acronyms)]
 
-use minterest_primitives::{Balance, CurrencyId, Price};
+use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use sp_runtime::{DispatchError, DispatchResult};
 
 /// An abstraction of basic borrowing functions
@@ -42,6 +42,10 @@ pub trait LiquidityPoolsManager {
 
 	/// Gets current total amount of insurance of the underlying held in this pool.
 	fn get_pool_total_insurance(pool_id: CurrencyId) -> Balance;
+
+	/// Gets pool borrow index
+	/// Accumulator of the total earned interest rate since the opening of the pool
+	fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate;
 }
 
 pub trait PriceProvider<CurrencyId> {

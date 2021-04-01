@@ -184,7 +184,7 @@ impl ExtBuilder {
 			pool_id,
 			Pool {
 				total_borrowed,
-				borrow_index: Rate::one(),
+				borrow_index: Rate::saturating_from_rational(15, 10),
 				total_insurance: Balance::zero(),
 			},
 		));

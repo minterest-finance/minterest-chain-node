@@ -160,6 +160,10 @@ pub mod module {
 	#[pallet::getter(fn mnt_supplier_data)]
 	pub(crate) type MntSupplierData<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, AwardeeData, OptionQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn mnt_borrower_data)]
+	pub(crate) type MntBorrowerData<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, AwardeeData, OptionQuery>;
+
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub mnt_rate: Rate,
@@ -259,6 +263,41 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
+	fn update_mnt_borrow_index(underlying_id: CurrencyId) -> DispatchResult {
+		let mnt_speed = MntSpeeds::<T>::get(underlying_id).ok_or(Error::<T>::StorageIsCorrupted)?;
+		let current_block = frame_system::Module::<T>::block_number();
+		let mut borrow_state = MntPoolsState::<T>::get(underlying_id)
+			.ok_or(Error::<T>::StorageIsCorrupted)?
+			.borrow_state;
+		let block_delta = current_block
+			.checked_sub(&borrow_state.block_number)
+			.ok_or(Error::<T>::NumOverflow)?;
+		if block_delta != T::BlockNumber::zero() && mnt_speed != FixedU128::zero() {
+			// TODO Is it possible to make TryInto::<BlockNumber>
+			let block_delta_as_usize = TryInto::<u32>::try_into(block_delta)
+				.ok()
+				.expect("blockchain will not exceed 2^32 blocks; qed");
+			let block_delta = Rate::saturating_from_integer(block_delta_as_usize);
+
+			let mnt_acquired = mnt_speed.checked_mul(&block_delta).ok_or(Error::<T>::NumOverflow)?;
+
+			let total_borrowed_as_rate =
+				Rate::from_inner(T::LiquidityPoolsManager::get_pool_total_borrowed(underlying_id));
+			let borrow_amount = total_borrowed_as_rate
+				.checked_div(&T::LiquidityPoolsManager::get_pool_borrow_index(underlying_id))
+				.ok_or(Error::<T>::NumOverflow)?;
+			let ratio = mnt_acquired
+				.checked_div(&borrow_amount)
+				.ok_or(Error::<T>::NumOverflow)?;
+			borrow_state.index = borrow_state.index.checked_add(&ratio).ok_or(Error::<T>::NumOverflow)?;
+		}
+		borrow_state.block_number = current_block;
+		MntPoolsState::<T>::try_mutate(underlying_id, |pool| -> DispatchResult {
+			pool.as_mut().ok_or(Error::<T>::StorageIsCorrupted)?.borrow_state = borrow_state;
+			Ok(())
+		})
+	}
+
 	// TODO description
 	// TODO(2) Add deposit_event MntDistributedToSupplier, after calling this function
 	fn distribute_supplier_mnt(underlying_id: CurrencyId, supplier: &T::AccountId) -> DispatchResult {
@@ -300,7 +339,7 @@ impl<T: Config> Pallet<T> {
 
 		MntSupplierData::<T>::insert(supplier, supplier_data);
 
-		<Pallet<T>>::deposit_event(Event::MntDistributedToSupplier(
+		Self::deposit_event(Event::MntDistributedToSupplier(
 			wrapped_id,
 			supplier.clone(),
 			supplier_delta,
@@ -311,22 +350,22 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult {
-		// delta_blocks = current_block_number - supply_state.block_number
-		// mnt_accrued = delta_block * mnt_speed
+		// block_delta = current_block_number - supply_state.block_number
+		// mnt_accrued = block_delta * mnt_speed
 		// ratio = mnt_accrued / mtoken.total_supply()
 		// supply_state.index += ratio
 		// supply_state.block_number = current_block_number
 
 		let current_block = frame_system::Module::<T>::block_number();
-		let supply_speed = MntSpeeds::<T>::get(underlying_id).ok_or(Error::<T>::StorageIsCorrupted)?;
+		let mnt_speed = MntSpeeds::<T>::get(underlying_id).ok_or(Error::<T>::StorageIsCorrupted)?;
 		let mut supply_state = MntPoolsState::<T>::get(underlying_id)
 			.ok_or(Error::<T>::StorageIsCorrupted)?
 			.supply_state;
-		let delta_blocks = current_block
+		let block_delta = current_block
 			.checked_sub(&supply_state.block_number)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		if delta_blocks != T::BlockNumber::zero() && supply_speed != FixedU128::zero() {
+		if block_delta != T::BlockNumber::zero() && mnt_speed != FixedU128::zero() {
 			// TODO rework this
 			let wrapped_id = T::EnabledCurrencyPair::get()
 				.iter()
@@ -334,18 +373,19 @@ impl<T: Config> Pallet<T> {
 				.ok_or(Error::<T>::NotValidUnderlyingAssetId)?
 				.wrapped_id;
 
-			let block_delta_as_usize = TryInto::<u32>::try_into(delta_blocks)
+			// TODO Is it possible to make TryInto::<BlockNumber>
+			let block_delta_as_usize = TryInto::<u32>::try_into(block_delta)
 				.ok()
 				.expect("blockchain will not exceed 2^32 blocks; qed");
 
 			let block_delta = Rate::saturating_from_integer(block_delta_as_usize);
 
-			let mnt_accrued = supply_speed.checked_mul(&block_delta).ok_or(Error::<T>::NumOverflow)?;
+			let mnt_acquired = mnt_speed.checked_mul(&block_delta).ok_or(Error::<T>::NumOverflow)?;
 
 			let total_tokens_supply = Rate::checked_from_integer(T::MultiCurrency::total_issuance(wrapped_id))
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			let ratio = mnt_accrued
+			let ratio = mnt_acquired
 				.checked_div(&total_tokens_supply)
 				.ok_or(Error::<T>::NumOverflow)?;
 
