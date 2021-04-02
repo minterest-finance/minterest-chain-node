@@ -179,6 +179,7 @@ impl Config for Runtime {
 }
 
 pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
+pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -228,21 +229,21 @@ impl ExtBuilder {
 			Pool {
 				total_borrowed,
 				borrow_index: Rate::saturating_from_rational(1, 1),
-				total_insurance: Balance::zero(),
+				total_protocol_interest: Balance::zero(),
 			},
 		));
 		self
 	}
 
-	pub fn pool_total_insurance(mut self, pool_id: CurrencyId, total_insurance: Balance) -> Self {
+	pub fn pool_total_protocol_interest(mut self, pool_id: CurrencyId, total_protocol_interest: Balance) -> Self {
 		self.endowed_accounts
-			.push((TestPools::pools_account_id(), pool_id, total_insurance));
+			.push((TestPools::pools_account_id(), pool_id, total_protocol_interest));
 		self.pools.push((
 			pool_id,
 			Pool {
 				total_borrowed: Balance::zero(),
 				borrow_index: Rate::saturating_from_rational(1, 1),
-				total_insurance,
+				total_protocol_interest,
 			},
 		));
 		self
@@ -254,7 +255,7 @@ impl ExtBuilder {
 			Pool {
 				total_borrowed: Balance::zero(),
 				borrow_index: Rate::saturating_from_rational(2, 1),
-				total_insurance: Balance::zero(),
+				total_protocol_interest: Balance::zero(),
 			},
 		));
 		self
@@ -315,30 +316,33 @@ impl ExtBuilder {
 					CurrencyId::DOT,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: Rate::saturating_from_rational(1, 10),
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
 					CurrencyId::ETH,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: Rate::saturating_from_rational(1, 10),
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
 					CurrencyId::BTC,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: Rate::saturating_from_rational(1, 10),
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 			],

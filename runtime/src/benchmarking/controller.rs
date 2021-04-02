@@ -1,7 +1,7 @@
-use crate::{CurrencyId, Operation, Rate, Runtime};
+use crate::{Balance, CurrencyId, Operation, Rate, Runtime};
 
 use frame_system::RawOrigin;
-use orml_benchmarking::runtime_benchmarks;
+use orml_benchmarking::{runtime_benchmarks, Zero};
 use sp_runtime::FixedPointNumber;
 use sp_std::prelude::*;
 
@@ -24,7 +24,7 @@ runtime_benchmarks! {
 		Operation::Deposit
 	)
 
-	set_insurance_factor {
+	set_protocol_interest_factor {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
@@ -48,6 +48,12 @@ runtime_benchmarks! {
 		RawOrigin::Root,
 		CurrencyId::DOT,
 		Some(0u128)
+	)
+
+	set_protocol_interest_threshold {}: _(
+		RawOrigin::Root,
+		CurrencyId::DOT,
+		Balance::zero()
 	)
 
 	switch_mode {}: _(
@@ -76,9 +82,9 @@ mod tests {
 	}
 
 	#[test]
-	fn test_set_insurance_factor() {
+	fn test_set_protocol_interest_factor() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_insurance_factor());
+			assert_ok!(test_benchmark_set_protocol_interest_factor());
 		})
 	}
 
@@ -100,6 +106,13 @@ mod tests {
 	fn test_set_borrow_cap() {
 		new_test_ext().execute_with(|| {
 			assert_ok!(test_benchmark_set_borrow_cap());
+		})
+	}
+
+	#[test]
+	fn test_set_protocol_interest_threshold() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(test_benchmark_set_protocol_interest_threshold());
 		})
 	}
 

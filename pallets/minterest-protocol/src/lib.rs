@@ -10,10 +10,10 @@
 
 use frame_support::traits::Contains;
 use frame_support::{pallet_prelude::*, transactional};
-use frame_system::{ensure_signed, pallet_prelude::*};
+use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
 use minterest_primitives::{Balance, CurrencyId, Operation};
 use orml_traits::MultiCurrency;
-use pallet_traits::{Borrowing, PoolsManager};
+use pallet_traits::{Borrowing, LiquidityPoolsManager, PoolsManager};
 use sp_runtime::{
 	traits::{BadOrigin, Zero},
 	DispatchError, DispatchResult,
@@ -40,7 +40,7 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + controller::Config {
+	pub trait Config: frame_system::Config + controller::Config + SendTransactionTypes<Call<Self>> {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -48,7 +48,10 @@ pub mod module {
 		type Borrowing: Borrowing<Self::AccountId>;
 
 		/// The basic liquidity pools.
-		type ManagerLiquidityPools: PoolsManager<Self::AccountId>;
+		type ManagerLiquidationPools: PoolsManager<Self::AccountId>;
+
+		/// The basic liquidity pools.
+		type ManagerLiquidityPools: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
 
 		/// The origin which may call deposit/redeem/borrow/repay in Whitelist mode.
 		type WhitelistMembers: Contains<Self::AccountId>;
@@ -117,13 +120,22 @@ pub mod module {
 
 		/// The user denies use the assets in pool as collateral: \[who, pool_id\]
 		PoolDisabledCollateral(T::AccountId, CurrencyId),
+
+		/// Unable to transfer protocol interest from liquidity to liquidation pool: \[pool_id\]
+		ProtocolInterestTransferFailed(CurrencyId),
 	}
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+		fn on_finalize(_block_number: T::BlockNumber) {
+			T::EnabledCurrencyPair::get().iter().for_each(|currency_pair| {
+				Self::transfer_protocol_interest(currency_pair.underlying_id);
+			});
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -681,5 +693,33 @@ impl<T: Config> Pallet<T> {
 		T::MultiCurrency::transfer(wrapped_id, &who, &receiver, transfer_amount)?;
 
 		Ok(())
+	}
+
+	fn transfer_protocol_interest(pool_id: CurrencyId) {
+		let total_protocol_interest = T::LiquidityPoolsManager::get_pool_total_protocol_interest(pool_id);
+		if total_protocol_interest < <Controller<T>>::controller_dates(pool_id).protocol_interest_threshold {
+			return;
+		}
+
+		let total_balance = T::ManagerLiquidityPools::get_pool_available_liquidity(pool_id);
+		let to_liquidation_pool = total_balance.min(total_protocol_interest);
+
+		// If no overflow and transfer is successful update pool state
+		if let Some(new_protocol_interest) = total_protocol_interest.checked_sub(to_liquidation_pool) {
+			if T::MultiCurrency::transfer(
+				pool_id,
+				&T::ManagerLiquidityPools::pools_account_id(),
+				&T::ManagerLiquidationPools::pools_account_id(),
+				to_liquidation_pool,
+			)
+			.is_ok()
+			{
+				<LiquidityPools<T>>::set_pool_total_protocol_interest(pool_id, new_protocol_interest);
+			} else {
+				Self::deposit_event(Event::ProtocolInterestTransferFailed(pool_id));
+			}
+		} else {
+			Self::deposit_event(Event::ProtocolInterestTransferFailed(pool_id));
+		}
 	}
 }

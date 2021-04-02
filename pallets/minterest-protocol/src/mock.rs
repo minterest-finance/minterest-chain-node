@@ -14,8 +14,8 @@ use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
+	testing::{Header, TestXt},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	FixedPointNumber, ModuleId,
 };
 use sp_std::cell::RefCell;
@@ -37,6 +37,8 @@ frame_support::construct_runtime!(
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		TestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
+		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
+		TestDex: dex::{Module, Storage, Call, Event<T>},
 	}
 );
 
@@ -199,9 +201,54 @@ impl Contains<u64> for Two {
 impl minterest_protocol::Config for Test {
 	type Event = Event;
 	type Borrowing = liquidity_pools::Module<Test>;
+	type ManagerLiquidationPools = liquidation_pools::Module<Test>;
 	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
 	type WhitelistMembers = Two;
 	type ProtocolWeightInfo = ();
+}
+
+ord_parameter_types! {
+	pub const ZeroAdmin: AccountId = 0;
+}
+
+parameter_types! {
+	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
+	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
+}
+
+impl liquidation_pools::Config for Test {
+	type Event = Event;
+	type UnsignedPriority = LiquidityPoolsPriority;
+	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
+	type LiquidationPoolAccountId = LiquidationPoolAccountId;
+	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
+	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	type Dex = dex::Module<Test>;
+	type LiquidationPoolsWeightInfo = ();
+}
+
+/// An extrinsic type used for tests.
+pub type Extrinsic = TestXt<Call, ()>;
+
+impl<LocalCall> SendTransactionTypes<LocalCall> for Test
+where
+	Call: From<LocalCall>,
+{
+	type OverarchingCall = Call;
+	type Extrinsic = Extrinsic;
+}
+
+parameter_types! {
+	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
+	pub DexAccountId: AccountId = DexModuleId::get().into_account();
+}
+
+impl dex::Config for Test {
+	type Event = Event;
+	type MultiCurrency = orml_tokens::Module<Test>;
+	type DexModuleId = DexModuleId;
+	type DexAccountId = DexAccountId;
 }
 
 pub const ALICE: AccountId = 1;
@@ -217,9 +264,11 @@ pub const ONE_MILL_DOLLARS: Balance = 1_000_000 * DOLLARS;
 pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
 pub const TEN_THOUSAND_DOLLARS: Balance = 10_000 * DOLLARS;
 pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
+pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+	pools: Vec<(CurrencyId, Pool)>,
 }
 
 impl Default for ExtBuilder {
@@ -233,18 +282,37 @@ impl Default for ExtBuilder {
 				(ALICE, CurrencyId::KSM, ONE_HUNDRED_DOLLARS),
 				(BOB, CurrencyId::MNT, ONE_MILL_DOLLARS),
 				(BOB, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
-				// seed: initial insurance, equal 10_000$
+				// seed: initial interest, equal 10_000$
 				(TestPools::pools_account_id(), CurrencyId::ETH, TEN_THOUSAND_DOLLARS),
 				(TestPools::pools_account_id(), CurrencyId::DOT, TEN_THOUSAND_DOLLARS),
-				// seed: initial insurance = 10_000$, initial pool balance = 1_000_000$
+				// seed: initial interest = 10_000$, initial pool balance = 1_000_000$
 				(TestPools::pools_account_id(), CurrencyId::KSM, ONE_MILL_DOLLARS),
 			],
+			pools: vec![],
 		}
 	}
 }
 impl ExtBuilder {
 	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts.push((user, currency_id, balance));
+		self
+	}
+
+	pub fn pool_with_params(
+		mut self,
+		pool_id: CurrencyId,
+		total_borrowed: Balance,
+		borrow_index: Rate,
+		total_protocol_interest: Balance,
+	) -> Self {
+		self.pools.push((
+			pool_id,
+			Pool {
+				total_borrowed,
+				borrow_index,
+				total_protocol_interest,
+			},
+		));
 		self
 	}
 
@@ -258,32 +326,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		liquidity_pools::GenesisConfig::<Test> {
-			pools: vec![
-				(
-					CurrencyId::ETH,
-					Pool {
-						total_borrowed: Balance::zero(),
-						borrow_index: Rate::saturating_from_rational(1, 1),
-						total_insurance: TEN_THOUSAND_DOLLARS,
-					},
-				),
-				(
-					CurrencyId::DOT,
-					Pool {
-						total_borrowed: Balance::zero(),
-						borrow_index: Rate::saturating_from_rational(1, 1),
-						total_insurance: TEN_THOUSAND_DOLLARS,
-					},
-				),
-				(
-					CurrencyId::KSM,
-					Pool {
-						total_borrowed: Balance::zero(),
-						borrow_index: Rate::saturating_from_rational(1, 1),
-						total_insurance: TEN_THOUSAND_DOLLARS,
-					},
-				),
-			],
+			pools: self.pools,
 			pool_user_data: vec![
 				(
 					CurrencyId::DOT,
@@ -356,40 +399,44 @@ impl ExtBuilder {
 					CurrencyId::ETH,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
-						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
+						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
 					CurrencyId::DOT,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
-						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
+						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
 					CurrencyId::KSM,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
-						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
+						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
 					CurrencyId::BTC,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
-						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
+						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 			],

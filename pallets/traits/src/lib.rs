@@ -40,12 +40,12 @@ pub trait LiquidityPoolsManager {
 	/// Gets total amount borrowed from the pool.
 	fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance;
 
-	/// Gets current total amount of insurance of the underlying held in this pool.
-	fn get_pool_total_insurance(pool_id: CurrencyId) -> Balance;
-
 	/// Gets pool borrow index
 	/// Accumulator of the total earned interest rate since the opening of the pool
 	fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate;
+
+	/// Gets current total amount of protocol interest of the underlying held in this pool.
+	fn get_pool_total_protocol_interest(pool_id: CurrencyId) -> Balance;
 }
 
 pub trait PriceProvider<CurrencyId> {

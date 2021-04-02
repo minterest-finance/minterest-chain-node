@@ -3,7 +3,7 @@ use crate::{
 	CurrencyId::{self, DOT, ETH},
 	Dex, EnabledUnderlyingAssetId, Event, LiquidationPools, LiquidationPoolsModuleId, LiquidityPools,
 	LiquidityPoolsModuleId, MinterestCouncilMembership, MinterestOracle, MinterestProtocol, Prices, Rate, RiskManager,
-	Runtime, System, WhitelistCouncilMembership, DOLLARS,
+	Runtime, System, WhitelistCouncilMembership, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
@@ -65,7 +65,7 @@ impl ExtBuilder {
 			Pool {
 				total_borrowed: Balance::zero(),
 				borrow_index: Rate::one(),
-				total_insurance: Balance::zero(),
+				total_protocol_interest: Balance::zero(),
 			},
 		));
 		self
@@ -100,7 +100,7 @@ impl ExtBuilder {
 			Pool {
 				total_borrowed,
 				borrow_index: Rate::one(),
-				total_insurance: Balance::zero(),
+				total_protocol_interest: Balance::zero(),
 			},
 		));
 		self
@@ -153,10 +153,11 @@ impl ExtBuilder {
 					ControllerData {
 						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
 						timestamp: 1,
-						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
-						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
+						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
@@ -164,10 +165,11 @@ impl ExtBuilder {
 					ControllerData {
 						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
 						timestamp: 1,
-						insurance_factor: Rate::saturating_from_rational(1, 10),  // 10%
-						max_borrow_rate: Rate::saturating_from_rational(5, 1000), // 0.5%
-						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
+						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 			],
@@ -345,6 +347,10 @@ fn origin_none() -> <Runtime as frame_system::Config>::Origin {
 	<Runtime as frame_system::Config>::Origin::none()
 }
 
+fn origin_root() -> <Runtime as frame_system::Config>::Origin {
+	<Runtime as frame_system::Config>::Origin::root()
+}
+
 fn set_oracle_price_for_all_pools(price: u128) -> DispatchResult {
 	let prices: Vec<(CurrencyId, Price)> = EnabledUnderlyingAssetId::get()
 		.into_iter()
@@ -431,7 +437,7 @@ fn test_rates_using_rpc() {
 }
 
 #[test]
-fn demo_scenario_n2_without_insurance_should_work() {
+fn demo_scenario_n2_without_interest_should_work() {
 	ExtBuilder::default()
 		.pool_initial(CurrencyId::DOT)
 		.pool_initial(CurrencyId::ETH)
@@ -1493,5 +1499,95 @@ fn balance_liquidation_pools_two_pools_should_work_test() {
 			// Liquidation Pool balances in assets
 			assert_eq!(liquidation_pool_balance(CurrencyId::DOT), 110_000 * DOLLARS);
 			assert_eq!(liquidation_pool_balance(CurrencyId::ETH), 60_000 * DOLLARS);
+		});
+}
+
+//------------ TEMPORARY Protocol interest transfer tests ----------------------
+
+// Protocol interest should be transferred to liquidation pool after block is finalized
+#[test]
+fn protocol_interest_transfer_should_work() {
+	ExtBuilder::default()
+		.pool_initial(CurrencyId::DOT)
+		.pool_initial(CurrencyId::ETH)
+		.build()
+		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
+			// Set interest factor equal 0.75.
+			assert_ok!(Controller::set_protocol_interest_factor(
+				origin_root(),
+				CurrencyId::DOT,
+				Rate::saturating_from_rational(3, 4)
+			));
+
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(100_000)));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
+
+			System::set_block_number(10);
+
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
+			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), ETH));
+			// exchange_rate = (150 - 0 + 0) / 150 = 1
+			assert_eq!(
+				liquidity_pool_state_rpc(DOT),
+				Some(PoolState {
+					exchange_rate: Rate::one(),
+					borrow_rate: Rate::zero(),
+					supply_rate: Rate::zero()
+				})
+			);
+
+			System::set_block_number(20);
+
+			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(100_000)));
+			assert_eq!(
+				LiquidityPools::pools(CurrencyId::DOT).total_protocol_interest,
+				Balance::zero()
+			);
+
+			System::set_block_number(1000);
+			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(10_000)));
+			assert_eq!(pool_balance(DOT), dollars(60_000));
+			MinterestProtocol::on_finalize(1000);
+			// Not reached threshold, pool balances should stay the same
+			assert_eq!(
+				LiquidityPools::pools(CurrencyId::DOT).total_protocol_interest,
+				441_000_000_000_000_000u128
+			);
+
+			System::set_block_number(10000000);
+
+			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(20_000)));
+			assert_eq!(pool_balance(DOT), dollars(80_000));
+
+			let total_protocol_interest: Balance = 3_645_120_550_951_706_945_733;
+			assert_eq!(
+				LiquidityPools::pools(CurrencyId::DOT).total_protocol_interest,
+				total_protocol_interest
+			);
+
+			let liquidity_pool_dot_balance = LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT);
+			let liquidation_pool_dot_balance = LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT);
+
+			// Threshold is reached. Transfer total_protocol_interest to liquidation pool
+			MinterestProtocol::on_finalize(10000000);
+
+			let transferred_to_liquidation_pool = total_protocol_interest;
+			assert_eq!(
+				LiquidityPools::pools(CurrencyId::DOT).total_protocol_interest,
+				Balance::zero()
+			);
+			assert_eq!(
+				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
+				liquidity_pool_dot_balance - transferred_to_liquidation_pool
+			);
+			assert_eq!(
+				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
+				liquidation_pool_dot_balance + transferred_to_liquidation_pool
+			);
 		});
 }

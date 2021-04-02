@@ -7,7 +7,8 @@ use node_minterest_runtime::{
 	AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig, GrandpaConfig,
 	LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig, MinterestModelConfig,
 	MinterestOracleConfig, OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature, SudoConfig,
-	SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, DOLLARS, WASM_BINARY,
+	SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+	WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -245,7 +246,7 @@ fn testnet_genesis(
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_insurance: Balance::zero(),
+						total_protocol_interest: Balance::zero(),
 					},
 				),
 				(
@@ -253,7 +254,7 @@ fn testnet_genesis(
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_insurance: Balance::zero(),
+						total_protocol_interest: Balance::zero(),
 					},
 				),
 				(
@@ -261,7 +262,7 @@ fn testnet_genesis(
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_insurance: Balance::zero(),
+						total_protocol_interest: Balance::zero(),
 					},
 				),
 				(
@@ -269,7 +270,7 @@ fn testnet_genesis(
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_insurance: Balance::zero(),
+						total_protocol_interest: Balance::zero(),
 					},
 				),
 			],
@@ -281,40 +282,44 @@ fn testnet_genesis(
 					CurrencyId::ETH,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
 					CurrencyId::DOT,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
 					CurrencyId::KSM,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 				(
 					CurrencyId::BTC,
 					ControllerData {
 						timestamp: 0,
-						insurance_factor: FixedU128::saturating_from_rational(1, 10),
+						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
 			],
