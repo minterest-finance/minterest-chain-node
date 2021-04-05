@@ -35,7 +35,7 @@
     "PoolUserData" : {
       "total_borrowed": "Balance",
       "interest_index": "Rate",
-      "collateral": "bool",
+      "is_collateral": "bool",
       "liquidation_attempts": "u8"
     },
     "RiskManagerData" : {

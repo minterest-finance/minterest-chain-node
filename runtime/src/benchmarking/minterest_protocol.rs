@@ -1,5 +1,5 @@
 use super::utils::{
-	enable_as_collateral, enable_whitelist_mode_a_add_member, set_balance, set_oracle_price_for_all_pools,
+	enable_is_collateral, enable_whitelist_mode_a_add_member, set_balance, set_oracle_price_for_all_pools,
 };
 use crate::{
 	AccountId, Balance, Currencies, CurrencyId, LiquidityPools, LiquidityPoolsModuleId, Origin, Rate, Runtime, DOLLARS,
@@ -41,10 +41,10 @@ fn hypothetical_liquidity_setup() -> Result<(AccountId, AccountId), &'static str
 	)?;
 
 	// enable pool as collateral
-	enable_as_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::DOT)?;
-	enable_as_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::ETH)?;
-	enable_as_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::KSM)?;
-	enable_as_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::BTC)?;
+	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::DOT)?;
+	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::ETH)?;
+	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::KSM)?;
+	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::BTC)?;
 
 	// set borrow params
 	LiquidityPools::set_pool_total_borrowed(CurrencyId::DOT, 10_000 * DOLLARS);
@@ -172,21 +172,21 @@ runtime_benchmarks! {
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &lender ), 30_000 * DOLLARS);
 	 }
 
-	enable_collateral {
+	enable_is_collateral {
 		let borrower:AccountId = account("borrower", 0, SEED);
 		// set balance for users
 		set_balance(CurrencyId::MDOT, &borrower, 10_000 * DOLLARS)?;
 
 		enable_whitelist_mode_a_add_member(borrower.clone())?;
-	}: enable_as_collateral(RawOrigin::Signed(borrower.clone()), CurrencyId::DOT)
-	verify  { assert_eq!(LiquidityPools::pool_user_data(CurrencyId::DOT, borrower).collateral, true) }
+	}: enable_is_collateral(RawOrigin::Signed(borrower.clone()), CurrencyId::DOT)
+	verify  { assert_eq!(LiquidityPools::pool_user_data(CurrencyId::DOT, borrower).is_collateral, true) }
 
-	disable_collateral {
+	disable_is_collateral {
 		let (borrower, lender) = hypothetical_liquidity_setup()?;
 
 		enable_whitelist_mode_a_add_member(borrower.clone())?;
 	}: _(RawOrigin::Signed(borrower.clone()), CurrencyId::DOT)
-	verify  { assert_eq!(LiquidityPools::pool_user_data(CurrencyId::DOT, borrower).collateral, false) }
+	verify  { assert_eq!(LiquidityPools::pool_user_data(CurrencyId::DOT, borrower).is_collateral, false) }
 
 }
 
@@ -260,16 +260,16 @@ mod tests {
 	}
 
 	#[test]
-	fn test_enable_collateral() {
+	fn test_enable_is_collateral() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_enable_collateral());
+			assert_ok!(test_benchmark_enable_is_collateral());
 		})
 	}
 
 	#[test]
-	fn test_disable_collateral() {
+	fn test_disable_is_collateral() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_disable_collateral());
+			assert_ok!(test_benchmark_disable_is_collateral());
 		})
 	}
 }

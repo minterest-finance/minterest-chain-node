@@ -327,7 +327,7 @@ mod tests {
 			user: AccountId,
 			total_borrowed: Balance,
 			interest_index: Rate,
-			collateral: bool,
+			is_collateral: bool,
 			liquidation_attempts: u8,
 		) -> Self {
 			self.pool_user_data.push((
@@ -336,7 +336,7 @@ mod tests {
 				PoolUserData {
 					total_borrowed,
 					interest_index,
-					collateral,
+					is_collateral,
 					liquidation_attempts,
 				},
 			));

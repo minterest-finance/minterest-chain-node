@@ -518,7 +518,7 @@ impl<T: Config> Pallet<T> {
 
 		// Get an array of collateral pools for the borrower.
 		// The array is sorted in descending order by the number of wrapped tokens in USD.
-		let collateral_pools = <LiquidityPools<T>>::get_pools_are_collateral(&borrower)?;
+		let collateral_pools = <LiquidityPools<T>>::get_is_collateral_pools(&borrower)?;
 
 		// Collect seized pools.
 		let mut seized_pools: Vec<CurrencyId> = Vec::new();

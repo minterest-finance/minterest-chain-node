@@ -33,11 +33,11 @@ pub fn set_balance(currency_id: CurrencyId, who: &AccountId, balance: Balance) -
 	Ok(().into())
 }
 
-pub fn enable_as_collateral<T: frame_system::Config<Origin = Origin>>(
+pub fn enable_is_collateral<T: frame_system::Config<Origin = Origin>>(
 	origin: OriginFor<T>,
 	currency_id: CurrencyId,
 ) -> DispatchResultWithPostInfo {
-	MinterestProtocol::enable_as_collateral(origin.into(), currency_id)?;
+	MinterestProtocol::enable_is_collateral(origin.into(), currency_id)?;
 	Ok(().into())
 }
 

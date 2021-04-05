@@ -74,22 +74,22 @@ fn set_user_total_borrowed_and_interest_index_should_work() {
 }
 
 #[test]
-fn enable_as_collateral_internal_should_work() {
+fn enable_is_collateral_internal_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Alice enable as collateral DOT pool.
-		TestPools::enable_as_collateral_internal(&ALICE, CurrencyId::DOT);
+		TestPools::enable_is_collateral_internal(&ALICE, CurrencyId::DOT);
 
-		assert!(<PoolUserDates<Test>>::get(CurrencyId::DOT, ALICE).collateral);
+		assert!(<PoolUserDates<Test>>::get(CurrencyId::DOT, ALICE).is_collateral);
 	});
 }
 
 #[test]
-fn disable_collateral_internal_should_work() {
+fn disable_is_collateral_internal_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Alice disable collateral DOT pool.
-		TestPools::disable_collateral_internal(&ALICE, CurrencyId::DOT);
+		TestPools::disable_is_collateral_internal(&ALICE, CurrencyId::DOT);
 
-		assert!(!<PoolUserDates<Test>>::get(CurrencyId::DOT, ALICE).collateral);
+		assert!(!<PoolUserDates<Test>>::get(CurrencyId::DOT, ALICE).is_collateral);
 	});
 }
 
@@ -180,7 +180,7 @@ fn get_user_total_borrowed_should_work() {
 }
 
 #[test]
-fn check_user_available_collateral_should_work() {
+fn check_user_available_is_collateral_should_work() {
 	ExtBuilder::default()
 		.pool_user_data_with_params(CurrencyId::DOT, ALICE, Balance::default(), Rate::default(), false, 0)
 		.build()
@@ -189,7 +189,7 @@ fn check_user_available_collateral_should_work() {
 			assert!(!TestPools::check_user_available_collateral(&ALICE, CurrencyId::DOT));
 
 			// set collateral parameter to true
-			TestPools::enable_as_collateral_internal(&ALICE, CurrencyId::DOT);
+			TestPools::enable_is_collateral_internal(&ALICE, CurrencyId::DOT);
 
 			assert!(TestPools::check_user_available_collateral(&ALICE, CurrencyId::DOT));
 		});
@@ -421,7 +421,7 @@ fn get_pool_members_with_loans_should_work() {
 }
 
 #[test]
-fn get_pools_are_collateral_should_work() {
+fn get_is_collateral_pools_should_work() {
 	ExtBuilder::default()
 		.pool_balance(CurrencyId::KSM, 1 * TEN_THOUSAND)
 		.pool_balance(CurrencyId::DOT, 3 * TEN_THOUSAND)
@@ -442,9 +442,9 @@ fn get_pools_are_collateral_should_work() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-				TestPools::get_pools_are_collateral(&ALICE),
+				TestPools::get_is_collateral_pools(&ALICE),
 				Ok(vec![CurrencyId::DOT, CurrencyId::ETH, CurrencyId::KSM])
 			);
-			assert_eq!(TestPools::get_pools_are_collateral(&BOB), Ok(vec![]));
+			assert_eq!(TestPools::get_is_collateral_pools(&BOB), Ok(vec![]));
 		});
 }
