@@ -257,7 +257,9 @@ pub mod module {
 			// Write new value into storage.
 			RiskManagerParams::<T>::mutate(pool_id, |r| r.min_partial_liquidation_sum = min_partial_liquidation_sum);
 
-			Self::deposit_event(Event::MinSumForPartialLiquidationHasChanged(min_partial_liquidation_sum));
+			Self::deposit_event(Event::MinSumForPartialLiquidationHasChanged(
+				min_partial_liquidation_sum,
+			));
 
 			Ok(().into())
 		}
@@ -269,11 +271,7 @@ pub mod module {
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::RiskManagerWeightInfo::set_threshold())]
 		#[transactional]
-		pub fn set_threshold(
-			origin: OriginFor<T>,
-			pool_id: CurrencyId,
-			threshold: Rate,
-		) -> DispatchResultWithPostInfo {
+		pub fn set_threshold(origin: OriginFor<T>, pool_id: CurrencyId, threshold: Rate) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
@@ -310,8 +308,7 @@ pub mod module {
 
 			// Check if 1 <= liquidation_fee <= 1.5
 			ensure!(
-				(liquidation_fee >= Rate::one()
-					&& liquidation_fee <= Rate::saturating_from_rational(15, 10)),
+				(liquidation_fee >= Rate::one() && liquidation_fee <= Rate::saturating_from_rational(15, 10)),
 				Error::<T>::InvalidLiquidationIncentiveValue
 			);
 
@@ -469,7 +466,8 @@ impl<T: Config> Pallet<T> {
 
 		let liquidation_attempts = <LiquidityPools<T>>::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
 
-		let is_partial_liquidation = total_repay_amount >= RiskManagerParams::<T>::get(liquidated_pool_id).min_partial_liquidation_sum
+		let is_partial_liquidation = total_repay_amount
+			>= RiskManagerParams::<T>::get(liquidated_pool_id).min_partial_liquidation_sum
 			&& liquidation_attempts < RiskManagerParams::<T>::get(liquidated_pool_id).max_attempts;
 
 		// Calculate sum required to liquidate.

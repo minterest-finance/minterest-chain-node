@@ -18,7 +18,10 @@ fn accrue_interest_should_work() {
 
 			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
 
-			assert_eq!(Controller::controller_dates(CurrencyId::DOT).last_interest_accrued_block, 1);
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).last_interest_accrued_block,
+				1
+			);
 			assert_eq!(
 				TestPools::pools(CurrencyId::DOT).total_protocol_interest,
 				57_600_000_000
@@ -48,7 +51,10 @@ fn accrue_interest_should_not_work() {
 			System::set_block_number(1);
 
 			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
-			assert_eq!(Controller::controller_dates(CurrencyId::DOT).last_interest_accrued_block, 1);
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).last_interest_accrued_block,
+				1
+			);
 
 			assert_ok!(Controller::set_max_borrow_rate(
 				alice(),
@@ -430,11 +436,7 @@ fn is_operation_allowed_should_work() {
 				CurrencyId::DOT,
 				Operation::Deposit
 			));
-			assert_ok!(Controller::pause_operation(
-				alice(),
-				CurrencyId::DOT,
-				Operation::Redeem
-			));
+			assert_ok!(Controller::pause_operation(alice(), CurrencyId::DOT, Operation::Redeem));
 
 			assert_eq!(
 				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Deposit),
@@ -608,27 +610,15 @@ fn pause_operation_should_work() {
 				Event::controller(crate::Event::OperationIsPaused(CurrencyId::DOT, Operation::Deposit));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::pause_operation(
-				alice(),
-				CurrencyId::DOT,
-				Operation::Redeem
-			));
+			assert_ok!(Controller::pause_operation(alice(), CurrencyId::DOT, Operation::Redeem));
 			let expected_event = Event::controller(crate::Event::OperationIsPaused(CurrencyId::DOT, Operation::Redeem));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::pause_operation(
-				alice(),
-				CurrencyId::DOT,
-				Operation::Borrow
-			));
+			assert_ok!(Controller::pause_operation(alice(), CurrencyId::DOT, Operation::Borrow));
 			let expected_event = Event::controller(crate::Event::OperationIsPaused(CurrencyId::DOT, Operation::Borrow));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::pause_operation(
-				alice(),
-				CurrencyId::DOT,
-				Operation::Repay
-			));
+			assert_ok!(Controller::pause_operation(alice(), CurrencyId::DOT, Operation::Repay));
 			let expected_event = Event::controller(crate::Event::OperationIsPaused(CurrencyId::DOT, Operation::Repay));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
@@ -698,11 +688,7 @@ fn resume_operation_should_work() {
 				Event::controller(crate::Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Borrow));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::resume_operation(
-				alice(),
-				CurrencyId::KSM,
-				Operation::Repay
-			));
+			assert_ok!(Controller::resume_operation(alice(), CurrencyId::KSM, Operation::Repay));
 			let expected_event =
 				Event::controller(crate::Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Repay));
 			assert!(System::events().iter().any(|record| record.event == expected_event));

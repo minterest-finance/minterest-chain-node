@@ -332,9 +332,7 @@ pub mod module {
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
 			);
-			ControllerParams::<T>::mutate(pool_id, |data| {
-				data.protocol_interest_factor = protocol_interest_factor
-			});
+			ControllerParams::<T>::mutate(pool_id, |data| data.protocol_interest_factor = protocol_interest_factor);
 			Self::deposit_event(Event::InterestFactorChanged);
 			Ok(().into())
 		}
@@ -480,7 +478,9 @@ impl<T: Config> Pallet<T> {
 
 		let pool_data = Self::calculate_interest_params(underlying_asset_id, block_delta)?;
 		// Save new params
-		ControllerParams::<T>::mutate(underlying_asset_id, |data| data.last_interest_accrued_block = current_block_number);
+		ControllerParams::<T>::mutate(underlying_asset_id, |data| {
+			data.last_interest_accrued_block = current_block_number
+		});
 		<LiquidityPools<T>>::set_pool_data(
 			underlying_asset_id,
 			pool_data.total_borrowed,

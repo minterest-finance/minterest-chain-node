@@ -39,7 +39,11 @@ fn set_max_attempts_should_work() {
 fn set_min_partial_liquidation_sum_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Can be set to 0.0
-		assert_ok!(TestRiskManager::set_min_partial_liquidation_sum(admin(), CurrencyId::DOT, Balance::zero()));
+		assert_ok!(TestRiskManager::set_min_partial_liquidation_sum(
+			admin(),
+			CurrencyId::DOT,
+			Balance::zero()
+		));
 		assert_eq!(
 			TestRiskManager::risk_manager_dates(CurrencyId::DOT).min_partial_liquidation_sum,
 			Balance::zero()
@@ -63,7 +67,10 @@ fn set_min_partial_liquidation_sum_should_work() {
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Administrator.
-		assert_noop!(TestRiskManager::set_min_partial_liquidation_sum(alice(), CurrencyId::DOT, 10), BadOrigin);
+		assert_noop!(
+			TestRiskManager::set_min_partial_liquidation_sum(alice(), CurrencyId::DOT, 10),
+			BadOrigin
+		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
