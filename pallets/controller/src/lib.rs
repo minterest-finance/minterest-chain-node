@@ -175,7 +175,7 @@ pub mod module {
 	/// max_borrow_rate)`.
 	#[pallet::storage]
 	#[pallet::getter(fn controller_dates)]
-	pub type ControllerDates<T: Config> =
+	pub type ControllerParams<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, ControllerData<T::BlockNumber>, ValueQuery>;
 
 	/// The Pause Guardian can pause certain actions as a safety mechanism.
@@ -212,7 +212,7 @@ pub mod module {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			self.controller_dates.iter().for_each(|(currency_id, controller_data)| {
-				ControllerDates::<T>::insert(currency_id, ControllerData { ..*controller_data })
+				ControllerParams::<T>::insert(currency_id, ControllerData { ..*controller_data })
 			});
 			self.pause_keepers.iter().for_each(|(currency_id, pause_keeper)| {
 				PauseKeepers::<T>::insert(currency_id, PauseKeeper { ..*pause_keeper })
@@ -332,7 +332,7 @@ pub mod module {
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
 			);
-			ControllerDates::<T>::mutate(pool_id, |data| {
+			ControllerParams::<T>::mutate(pool_id, |data| {
 				data.protocol_interest_factor = new_protocol_interest_factor
 			});
 			Self::deposit_event(Event::InterestFactorChanged);
@@ -357,7 +357,7 @@ pub mod module {
 				Error::<T>::PoolNotFound
 			);
 			ensure!(!new_max_borrow_rate.is_zero(), Error::<T>::MaxBorrowRateCannotBeZero);
-			ControllerDates::<T>::mutate(pool_id, |data| data.max_borrow_rate = new_max_borrow_rate);
+			ControllerParams::<T>::mutate(pool_id, |data| data.max_borrow_rate = new_max_borrow_rate);
 			Self::deposit_event(Event::MaxBorrowRateChanged);
 			Ok(().into())
 		}
@@ -383,7 +383,7 @@ pub mod module {
 				!new_collateral_factor.is_zero() && new_collateral_factor <= Rate::one(),
 				Error::<T>::CollateralFactorIncorrectValue
 			);
-			ControllerDates::<T>::mutate(pool_id, |data| data.collateral_factor = new_collateral_factor);
+			ControllerParams::<T>::mutate(pool_id, |data| data.collateral_factor = new_collateral_factor);
 			Self::deposit_event(Event::CollateralFactorChanged);
 			Ok(().into())
 		}
@@ -413,7 +413,7 @@ pub mod module {
 					Error::<T>::InvalidBorrowCap
 				);
 			}
-			ControllerDates::<T>::mutate(pool_id, |data| data.borrow_cap = borrow_cap);
+			ControllerParams::<T>::mutate(pool_id, |data| data.borrow_cap = borrow_cap);
 			Self::deposit_event(Event::BorrowCapChanged(pool_id, borrow_cap));
 			Ok(().into())
 		}
@@ -436,7 +436,7 @@ pub mod module {
 				Error::<T>::PoolNotFound
 			);
 
-			ControllerDates::<T>::mutate(pool_id, |data| {
+			ControllerParams::<T>::mutate(pool_id, |data| {
 				data.protocol_interest_threshold = protocol_interest_threshold
 			});
 			Self::deposit_event(Event::ProtocolInterestThresholdChanged(
@@ -480,7 +480,7 @@ impl<T: Config> Pallet<T> {
 
 		let pool_data = Self::calculate_interest_params(underlying_asset_id, block_delta)?;
 		// Save new params
-		ControllerDates::<T>::mutate(underlying_asset_id, |data| data.timestamp = current_block_number);
+		ControllerParams::<T>::mutate(underlying_asset_id, |data| data.timestamp = current_block_number);
 		<LiquidityPools<T>>::set_pool_data(
 			underlying_asset_id,
 			pool_data.total_borrowed,
