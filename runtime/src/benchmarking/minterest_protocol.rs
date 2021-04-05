@@ -172,7 +172,7 @@ runtime_benchmarks! {
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &lender ), 30_000 * DOLLARS);
 	 }
 
-	enable_is_collateral {
+	enable_as_collateral {
 		let borrower:AccountId = account("borrower", 0, SEED);
 		// set balance for users
 		set_balance(CurrencyId::MDOT, &borrower, 10_000 * DOLLARS)?;
@@ -262,7 +262,7 @@ mod tests {
 	#[test]
 	fn test_enable_is_collateral() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_enable_is_collateral());
+			assert_ok!(test_benchmark_enable_as_collateral());
 		})
 	}
 
