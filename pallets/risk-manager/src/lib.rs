@@ -122,7 +122,8 @@ pub mod module {
 		/// Max value of liquidation attempts has been successfully changed:
 		/// \[attempts_amount\]
 		MaxValueOFLiquidationAttempsHasChanged(u8),
-		/// Min sum for partial liquidation has been successfully changed: \[min_partial_liquidation_sum\]
+		/// Min sum for partial liquidation has been successfully changed:
+		/// \[min_partial_liquidation_sum\]
 		MinSumForPartialLiquidationHasChanged(Balance),
 		/// Threshold has been successfully changed: \[threshold\]
 		ValueOfThresholdHasChanged(Rate),

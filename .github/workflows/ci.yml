@@ -90,6 +90,7 @@ jobs:
           args: -- -D warnings
 
   security_audit:
+    name: Security Audit
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
