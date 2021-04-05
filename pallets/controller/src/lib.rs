@@ -317,7 +317,7 @@ pub mod module {
 
 		/// Set interest factor.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_protocol_interest_factor`: new value for interest factor.
+		/// - `protocol_interest_factor`: new value for interest factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::set_protocol_interest_factor())]
@@ -325,7 +325,7 @@ pub mod module {
 		pub fn set_protocol_interest_factor(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_protocol_interest_factor: Rate,
+			protocol_interest_factor: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
@@ -333,7 +333,7 @@ pub mod module {
 				Error::<T>::PoolNotFound
 			);
 			ControllerParams::<T>::mutate(pool_id, |data| {
-				data.protocol_interest_factor = new_protocol_interest_factor
+				data.protocol_interest_factor = protocol_interest_factor
 			});
 			Self::deposit_event(Event::InterestFactorChanged);
 			Ok(().into())
@@ -341,7 +341,7 @@ pub mod module {
 
 		/// Set Maximum borrow rate.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_max_borrow_rate`: new value for maximum borrow rate.
+		/// - `max_borrow_rate`: new value for maximum borrow rate.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::set_max_borrow_rate())]
@@ -349,22 +349,22 @@ pub mod module {
 		pub fn set_max_borrow_rate(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_max_borrow_rate: Rate,
+			max_borrow_rate: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
 			);
-			ensure!(!new_max_borrow_rate.is_zero(), Error::<T>::MaxBorrowRateCannotBeZero);
-			ControllerParams::<T>::mutate(pool_id, |data| data.max_borrow_rate = new_max_borrow_rate);
+			ensure!(!max_borrow_rate.is_zero(), Error::<T>::MaxBorrowRateCannotBeZero);
+			ControllerParams::<T>::mutate(pool_id, |data| data.max_borrow_rate = max_borrow_rate);
 			Self::deposit_event(Event::MaxBorrowRateChanged);
 			Ok(().into())
 		}
 
 		/// Set Collateral factor.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_collateral_factor`: new value for collateral factor.
+		/// - `collateral_factor`: new value for collateral factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::set_collateral_factor())]
@@ -372,7 +372,7 @@ pub mod module {
 		pub fn set_collateral_factor(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_collateral_factor: Rate,
+			collateral_factor: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
@@ -380,10 +380,10 @@ pub mod module {
 				Error::<T>::PoolNotFound
 			);
 			ensure!(
-				!new_collateral_factor.is_zero() && new_collateral_factor <= Rate::one(),
+				!collateral_factor.is_zero() && collateral_factor <= Rate::one(),
 				Error::<T>::CollateralFactorIncorrectValue
 			);
-			ControllerParams::<T>::mutate(pool_id, |data| data.collateral_factor = new_collateral_factor);
+			ControllerParams::<T>::mutate(pool_id, |data| data.collateral_factor = collateral_factor);
 			Self::deposit_event(Event::CollateralFactorChanged);
 			Ok(().into())
 		}
@@ -851,26 +851,26 @@ impl<T: Config> Pallet<T> {
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::BalanceOverflow)?;
 
-		let new_total_borrow_balance = interest_accumulated
+		let total_borrowed = interest_accumulated
 			.checked_add(pool_data.total_borrowed)
 			.ok_or(Error::<T>::BorrowBalanceOverflow)?;
 
-		let new_total_protocol_interest = checked_acc_and_add_mul(
+		let total_protocol_interest = checked_acc_and_add_mul(
 			pool_data.total_protocol_interest,
 			interest_accumulated,
 			protocol_interest_factor,
 		)
 		.map_err(|_| Error::<T>::ProtocolInterestOverflow)?;
 
-		let new_borrow_index = simple_interest_factor
+		let borrow_index = simple_interest_factor
 			.checked_mul(&pool_data.borrow_index)
 			.and_then(|v| v.checked_add(&pool_data.borrow_index))
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(Pool {
-			total_borrowed: new_total_borrow_balance,
-			total_protocol_interest: new_total_protocol_interest,
-			borrow_index: new_borrow_index,
+			total_borrowed,
+			total_protocol_interest,
+			borrow_index,
 		})
 	}
 

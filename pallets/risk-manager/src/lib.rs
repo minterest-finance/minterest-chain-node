@@ -61,8 +61,8 @@ pub struct RiskManagerData {
 	pub max_attempts: u8,
 
 	/// Minimal sum for partial liquidation.
-	/// Loan whose amount below this parameter will be liquidate in full.
-	pub min_sum: Balance,
+	/// Loans with amount below this parameter will be liquidate in full.
+	pub min_partial_liquidation_sum: Balance,
 
 	/// Step used in liquidation to protect the user from micro liquidations.
 	pub threshold: Rate,
@@ -121,7 +121,7 @@ pub mod module {
 	pub enum Event<T: Config> {
 		/// Max value of liquidation attempts has been successfully changed: \[attempts_amount\]
 		MaxValueOFLiquidationAttempsHasChanged(u8),
-		/// Min sum for partial liquidation has been successfully changed: \[min_sum\]
+		/// Min sum for partial liquidation has been successfully changed: \[min_partial_liquidation_sum\]
 		MinSumForPartialLiquidationHasChanged(Balance),
 		/// Threshold has been successfully changed: \[threshold\]
 		ValueOfThresholdHasChanged(Rate),
@@ -132,7 +132,7 @@ pub mod module {
 		LiquidateUnsafeLoan(T::AccountId, Balance, CurrencyId, Vec<CurrencyId>, bool),
 	}
 
-	/// Liquidation params for pools: `(max_attempts, min_sum, threshold, liquidation_fee)`.
+	/// Liquidation params for pools: `(max_attempts, min_partial_liquidation_sum, threshold, liquidation_fee)`.
 	#[pallet::storage]
 	#[pallet::getter(fn risk_manager_dates)]
 	pub(crate) type RiskManagerParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, RiskManagerData, ValueQuery>;
@@ -210,7 +210,7 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		/// Set maximum amount of partial liquidation attempts.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_max_value`: New max value of liquidation attempts.
+		/// - `max_attempts`: New max value of liquidation attempts.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::RiskManagerWeightInfo::set_max_attempts())]
@@ -218,7 +218,7 @@ pub mod module {
 		pub fn set_max_attempts(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_max_value: u8,
+			max_attempts: u8,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -228,24 +228,24 @@ pub mod module {
 			);
 
 			// Write new value into storage.
-			RiskManagerParams::<T>::mutate(pool_id, |r| r.max_attempts = new_max_value);
+			RiskManagerParams::<T>::mutate(pool_id, |r| r.max_attempts = max_attempts);
 
-			Self::deposit_event(Event::MaxValueOFLiquidationAttempsHasChanged(new_max_value));
+			Self::deposit_event(Event::MaxValueOFLiquidationAttempsHasChanged(max_attempts));
 
 			Ok(().into())
 		}
 
 		/// Set minimal sum for partial liquidation.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_min_sum`: New min sum for partial liquidation.
+		/// - `min_partial_liquidation_sum`: New min sum for partial liquidation.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(T::RiskManagerWeightInfo::set_min_sum())]
+		#[pallet::weight(T::RiskManagerWeightInfo::set_min_partial_liquidation_sum())]
 		#[transactional]
-		pub fn set_min_sum(
+		pub fn set_min_partial_liquidation_sum(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_min_sum: Balance,
+			min_partial_liquidation_sum: Balance,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -255,16 +255,16 @@ pub mod module {
 			);
 
 			// Write new value into storage.
-			RiskManagerParams::<T>::mutate(pool_id, |r| r.min_sum = new_min_sum);
+			RiskManagerParams::<T>::mutate(pool_id, |r| r.min_partial_liquidation_sum = min_partial_liquidation_sum);
 
-			Self::deposit_event(Event::MinSumForPartialLiquidationHasChanged(new_min_sum));
+			Self::deposit_event(Event::MinSumForPartialLiquidationHasChanged(min_partial_liquidation_sum));
 
 			Ok(().into())
 		}
 
 		/// Set threshold which used in liquidation to protect the user from micro liquidations..
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_threshold`: new threshold.
+		/// - `threshold`: new threshold.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::RiskManagerWeightInfo::set_threshold())]
@@ -272,7 +272,7 @@ pub mod module {
 		pub fn set_threshold(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_threshold: Rate,
+			threshold: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -282,9 +282,9 @@ pub mod module {
 			);
 
 			// Write new value into storage.
-			RiskManagerParams::<T>::mutate(pool_id, |r| r.threshold = new_threshold);
+			RiskManagerParams::<T>::mutate(pool_id, |r| r.threshold = threshold);
 
-			Self::deposit_event(Event::ValueOfThresholdHasChanged(new_threshold));
+			Self::deposit_event(Event::ValueOfThresholdHasChanged(threshold));
 
 			Ok(().into())
 		}
@@ -469,7 +469,7 @@ impl<T: Config> Pallet<T> {
 
 		let liquidation_attempts = <LiquidityPools<T>>::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
 
-		let is_partial_liquidation = total_repay_amount >= RiskManagerParams::<T>::get(liquidated_pool_id).min_sum
+		let is_partial_liquidation = total_repay_amount >= RiskManagerParams::<T>::get(liquidated_pool_id).min_partial_liquidation_sum
 			&& liquidation_attempts < RiskManagerParams::<T>::get(liquidated_pool_id).max_attempts;
 
 		// Calculate sum required to liquidate.

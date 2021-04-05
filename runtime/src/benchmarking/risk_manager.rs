@@ -24,7 +24,7 @@ runtime_benchmarks! {
 		1u8
 	)
 
-	set_min_sum {
+	set_min_partial_liquidation_sum {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
@@ -111,9 +111,9 @@ pub mod tests {
 	}
 
 	#[test]
-	fn test_set_min_sum() {
+	fn test_set_min_partial_liquidation_sum() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_min_sum());
+			assert_ok!(test_benchmark_set_min_partial_liquidation_sum());
 		})
 	}
 

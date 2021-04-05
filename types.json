@@ -40,7 +40,7 @@
     },
     "RiskManagerData" : {
       "max_attempts": "u8",
-      "min_sum": "Balance",
+      "min_partial_liquidation_sum": "Balance",
       "threshold": "Rate",
       "liquidation_fee": "Rate"
     },

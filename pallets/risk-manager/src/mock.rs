@@ -299,7 +299,7 @@ impl ExtBuilder {
 					CurrencyId::DOT,
 					RiskManagerData {
 						max_attempts: 3,
-						min_sum: ONE_HUNDRED * DOLLARS,
+						min_partial_liquidation_sum: ONE_HUNDRED * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
 						liquidation_fee: Rate::saturating_from_rational(105, 100),
 					},
@@ -308,7 +308,7 @@ impl ExtBuilder {
 					CurrencyId::BTC,
 					RiskManagerData {
 						max_attempts: 3,
-						min_sum: ONE_HUNDRED * DOLLARS,
+						min_partial_liquidation_sum: ONE_HUNDRED * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
 						liquidation_fee: Rate::saturating_from_rational(105, 100),
 					},
@@ -317,7 +317,7 @@ impl ExtBuilder {
 					CurrencyId::ETH,
 					RiskManagerData {
 						max_attempts: 3,
-						min_sum: ONE_HUNDRED * DOLLARS,
+						min_partial_liquidation_sum: ONE_HUNDRED * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
 						liquidation_fee: Rate::saturating_from_rational(105, 100),
 					},

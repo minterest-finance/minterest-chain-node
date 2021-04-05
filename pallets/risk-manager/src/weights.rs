@@ -46,7 +46,7 @@ use sp_std::marker::PhantomData;
 /// Weight functions needed for risk_manager.
 pub trait WeightInfo {
 	fn set_max_attempts() -> Weight;
-	fn set_min_sum() -> Weight;
+	fn set_min_partial_liquidation_sum() -> Weight;
 	fn set_threshold() -> Weight;
 	fn set_liquidation_fee() -> Weight;
 	fn liquidate() -> Weight;
@@ -60,7 +60,7 @@ impl<T: frame_system::Config> WeightInfo for MinterestWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn set_min_sum() -> Weight {
+	fn set_min_partial_liquidation_sum() -> Weight {
 		(32_305_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
@@ -89,7 +89,7 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
-	fn set_min_sum() -> Weight {
+	fn set_min_partial_liquidation_sum() -> Weight {
 		(32_305_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
