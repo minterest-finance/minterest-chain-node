@@ -40,7 +40,7 @@ impl<T: frame_system::Config> risk_manager::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn set_liquidation_incentive() -> Weight {
+	fn set_liquidation_fee() -> Weight {
 		(32_034_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))

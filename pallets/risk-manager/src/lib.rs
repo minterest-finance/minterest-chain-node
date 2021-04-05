@@ -68,7 +68,7 @@ pub struct RiskManagerData {
 	pub threshold: Rate,
 
 	/// The additional collateral which is taken from borrowers as a penalty for being liquidated.
-	pub liquidation_incentive: Rate,
+	pub liquidation_fee: Rate,
 }
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
@@ -291,15 +291,15 @@ pub mod module {
 
 		/// Set Liquidation fee that covers liquidation costs.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_liquidation_incentive`: new liquidation incentive.
+		/// - `liquidation_fee`: new liquidation incentive.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_liquidation_incentive(
+		pub fn set_liquidation_fee(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_liquidation_incentive: Rate,
+			liquidation_fee: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -308,17 +308,17 @@ pub mod module {
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
-			// Check if 1 <= new_liquidation_incentive <= 1.5
+			// Check if 1 <= liquidation_fee <= 1.5
 			ensure!(
-				(new_liquidation_incentive >= Rate::one()
-					&& new_liquidation_incentive <= Rate::saturating_from_rational(15, 10)),
+				(liquidation_fee >= Rate::one()
+					&& liquidation_fee <= Rate::saturating_from_rational(15, 10)),
 				Error::<T>::InvalidLiquidationIncentiveValue
 			);
 
 			// Write new value into storage.
-			RiskManagerDates::<T>::mutate(pool_id, |r| r.liquidation_incentive = new_liquidation_incentive);
+			RiskManagerDates::<T>::mutate(pool_id, |r| r.liquidation_fee = liquidation_fee);
 
-			Self::deposit_event(Event::ValueOfLiquidationFeeHasChanged(new_liquidation_incentive));
+			Self::deposit_event(Event::ValueOfLiquidationFeeHasChanged(liquidation_fee));
 
 			Ok(().into())
 		}
@@ -605,7 +605,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// Returns (`seize_amount`, `repay_amount`, `repay_assets`)
 	/// - `seize_amount`: the number of collateral tokens to seize converted
-	/// into USD (consider liquidation_incentive).
+	/// into USD (consider liquidation_fee).
 	/// - `repay_amount`: current amount of debt converted into usd.
 	/// - `repay_assets`: the amount of the underlying borrowed asset to repay.
 	pub fn liquidate_calculate_seize_and_repay(
@@ -613,17 +613,17 @@ impl<T: Config> Pallet<T> {
 		total_repay_amount: Balance,
 		is_partial_liquidation: bool,
 	) -> result::Result<(Balance, Balance, Balance), DispatchError> {
-		let liquidation_incentive = Self::risk_manager_dates(liquidated_pool_id).liquidation_incentive;
+		let liquidation_fee = Self::risk_manager_dates(liquidated_pool_id).liquidation_fee;
 
 		let temporary_factor = match is_partial_liquidation {
 			true => Rate::saturating_from_rational(30, 100),
 			false => Rate::one(),
 		};
 
-		// seize_amount = liquidation_incentive * temporary_factor * total_repay_amount
+		// seize_amount = liquidation_fee * temporary_factor * total_repay_amount
 		let seize_amount = Rate::from_inner(total_repay_amount)
 			.checked_mul(&temporary_factor)
-			.and_then(|v| v.checked_mul(&liquidation_incentive))
+			.and_then(|v| v.checked_mul(&liquidation_fee))
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 

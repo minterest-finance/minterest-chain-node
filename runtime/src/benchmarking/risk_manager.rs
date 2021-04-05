@@ -38,7 +38,7 @@ runtime_benchmarks! {
 		Rate::one()
 	)
 
-	set_liquidation_incentive {
+	set_liquidation_fee {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
@@ -125,9 +125,9 @@ pub mod tests {
 	}
 
 	#[test]
-	fn test_set_liquidation_incentive() {
+	fn test_set_liquidation_fee() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_liquidation_incentive());
+			assert_ok!(test_benchmark_set_liquidation_fee());
 		})
 	}
 

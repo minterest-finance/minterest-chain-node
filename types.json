@@ -42,7 +42,7 @@
       "max_attempts": "u8",
       "min_sum": "Balance",
       "threshold": "Rate",
-      "liquidation_incentive": "Rate"
+      "liquidation_fee": "Rate"
     },
     "CurrencyIdOf": "CurrencyId",
     "Amount": "i128",

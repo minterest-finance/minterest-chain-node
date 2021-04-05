@@ -4,8 +4,15 @@ version = "0.6.2"
 authors = ["Minterest <https://github.com/minterest-defi>"]
 edition = "2018"
 
-[profile.release]
+[profile.dev]
+opt-level = 0
 panic = 'unwind'
+overflow-checks = true
+
+[profile.release]
+opt-level = 3
+panic = 'unwind'
+overflow-checks = true
 
 [[bin]]
 name = "minterest"
@@ -38,7 +45,6 @@ members = [
     'pallets/liquidation-pools',
     'pallets/mnt-token',
     'pallets/dex',
-
     "orml/auction",
     "orml/authority",
     "orml/benchmarking",
