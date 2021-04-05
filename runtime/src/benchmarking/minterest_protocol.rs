@@ -172,13 +172,13 @@ runtime_benchmarks! {
 		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &lender ), 30_000 * DOLLARS);
 	 }
 
-	enable_as_collateral {
+	enable_is_collateral {
 		let borrower:AccountId = account("borrower", 0, SEED);
 		// set balance for users
 		set_balance(CurrencyId::MDOT, &borrower, 10_000 * DOLLARS)?;
 
 		enable_whitelist_mode_a_add_member(borrower.clone())?;
-	}: enable_is_collateral(RawOrigin::Signed(borrower.clone()), CurrencyId::DOT)
+	}: _(RawOrigin::Signed(borrower.clone()), CurrencyId::DOT)
 	verify  { assert_eq!(LiquidityPools::pool_user_data(CurrencyId::DOT, borrower).is_collateral, true) }
 
 	disable_is_collateral {
@@ -262,7 +262,7 @@ mod tests {
 	#[test]
 	fn test_enable_is_collateral() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_enable_as_collateral());
+			assert_ok!(test_benchmark_enable_is_collateral());
 		})
 	}
 
