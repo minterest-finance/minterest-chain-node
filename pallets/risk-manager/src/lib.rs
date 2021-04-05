@@ -657,7 +657,7 @@ impl<T: Config> Pallet<T> {
 	) {
 		// partial_liquidation -> liquidation_attempts += 1
 		// complete_liquidation -> liquidation_attempts = 0
-		liquidity_pools::PoolUserDates::<T>::mutate(liquidated_pool_id, &borrower, |p| {
+		liquidity_pools::PoolUserParams::<T>::mutate(liquidated_pool_id, &borrower, |p| {
 			if is_partial_liquidation {
 				p.liquidation_attempts += u8::one();
 			} else {

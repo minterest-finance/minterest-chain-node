@@ -152,7 +152,7 @@ impl ExtBuilder {
 					CurrencyId::DOT,
 					ControllerData {
 						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
-						timestamp: 1,
+						last_interest_accrued_block: 1,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
@@ -164,7 +164,7 @@ impl ExtBuilder {
 					CurrencyId::ETH,
 					ControllerData {
 						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
-						timestamp: 1,
+						last_interest_accrued_block: 1,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%

@@ -50,7 +50,7 @@
     "Rate": "FixedU128",
     "Price": "FixedU128",
     "ControllerData": {
-      "timestamp": "BlockNumber",
+      "last_interest_accrued_block": "BlockNumber",
       "protocol_interest_factor": "Rate",
       "max_borrow_rate":  "Rate",
       "collateral_factor": "Rate",

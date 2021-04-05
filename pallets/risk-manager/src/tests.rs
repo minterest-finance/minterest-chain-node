@@ -172,17 +172,17 @@ fn mutate_liquidation_attempts_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		TestRiskManager::mutate_liquidation_attempts(CurrencyId::DOT, &ALICE, true);
 		assert_eq!(
-			liquidity_pools::PoolUserDates::<Test>::get(CurrencyId::DOT, ALICE).liquidation_attempts,
+			liquidity_pools::PoolUserParams::<Test>::get(CurrencyId::DOT, ALICE).liquidation_attempts,
 			u8::one()
 		);
 		TestRiskManager::mutate_liquidation_attempts(CurrencyId::DOT, &ALICE, true);
 		assert_eq!(
-			liquidity_pools::PoolUserDates::<Test>::get(CurrencyId::DOT, ALICE).liquidation_attempts,
+			liquidity_pools::PoolUserParams::<Test>::get(CurrencyId::DOT, ALICE).liquidation_attempts,
 			2_u8
 		);
 		TestRiskManager::mutate_liquidation_attempts(CurrencyId::DOT, &ALICE, false);
 		assert_eq!(
-			liquidity_pools::PoolUserDates::<Test>::get(CurrencyId::DOT, ALICE).liquidation_attempts,
+			liquidity_pools::PoolUserParams::<Test>::get(CurrencyId::DOT, ALICE).liquidation_attempts,
 			u8::zero()
 		);
 	})

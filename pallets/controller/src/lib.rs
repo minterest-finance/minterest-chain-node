@@ -39,7 +39,7 @@ pub use weights::WeightInfo;
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct ControllerData<BlockNumber> {
 	/// Block number that interest was last accrued at.
-	pub timestamp: BlockNumber,
+	pub last_interest_accrued_block: BlockNumber,
 
 	/// Defines the portion of borrower interest that is converted into protocol interest.
 	pub protocol_interest_factor: Rate,
@@ -470,7 +470,7 @@ impl<T: Config> Pallet<T> {
 	pub fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult {
 		//Remember the initial block number.
 		let current_block_number = <frame_system::Module<T>>::block_number();
-		let accrual_block_number_previous = Self::controller_dates(underlying_asset_id).timestamp;
+		let accrual_block_number_previous = Self::controller_dates(underlying_asset_id).last_interest_accrued_block;
 		// Calculate the number of blocks elapsed since the last accrual
 		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
 		//Short-circuit accumulating 0 interest.
@@ -480,7 +480,7 @@ impl<T: Config> Pallet<T> {
 
 		let pool_data = Self::calculate_interest_params(underlying_asset_id, block_delta)?;
 		// Save new params
-		ControllerParams::<T>::mutate(underlying_asset_id, |data| data.timestamp = current_block_number);
+		ControllerParams::<T>::mutate(underlying_asset_id, |data| data.last_interest_accrued_block = current_block_number);
 		<LiquidityPools<T>>::set_pool_data(
 			underlying_asset_id,
 			pool_data.total_borrowed,
@@ -729,7 +729,7 @@ impl<T: Config> Pallet<T> {
 
 				let (current_supply_in_usd, current_borrowed_in_usd) = current_value;
 				let current_block_number = <frame_system::Module<T>>::block_number();
-				let accrual_block_number_previous = Self::controller_dates(pool_id).timestamp;
+				let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
 				// Calculate the number of blocks elapsed since the last accrual
 				let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
 				let pool_data = Self::calculate_interest_params(pool_id, block_delta)?;

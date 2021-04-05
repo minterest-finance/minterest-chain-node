@@ -120,7 +120,7 @@ pub mod module {
 
 	#[pallet::storage]
 	#[pallet::getter(fn pool_user_data)]
-	pub type PoolUserDates<T: Config> =
+	pub type PoolUserParams<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, CurrencyId, Twox64Concat, T::AccountId, PoolUserData, ValueQuery>;
 
 	#[pallet::genesis_config]
@@ -149,7 +149,7 @@ pub mod module {
 			self.pool_user_data
 				.iter()
 				.for_each(|(currency_id, account_id, pool_user_data)| {
-					PoolUserDates::<T>::insert(currency_id, account_id, PoolUserData { ..*pool_user_data })
+					PoolUserParams::<T>::insert(currency_id, account_id, PoolUserData { ..*pool_user_data })
 				});
 		}
 	}
@@ -352,7 +352,7 @@ impl<T: Config> Pallet<T> {
 		new_total_borrows: Balance,
 		new_interest_index: Rate,
 	) {
-		PoolUserDates::<T>::mutate(pool_id, who, |p| {
+		PoolUserParams::<T>::mutate(pool_id, who, |p| {
 			p.total_borrowed = new_total_borrows;
 			p.interest_index = new_interest_index;
 		})
@@ -360,12 +360,12 @@ impl<T: Config> Pallet<T> {
 
 	/// Sets the parameter `is_collateral` to `true`.
 	pub fn enable_is_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
-		PoolUserDates::<T>::mutate(pool_id, who, |p| p.is_collateral = true)
+		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = true)
 	}
 
 	/// Sets the parameter `is_collateral` to `false`.
 	pub fn disable_is_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
-		PoolUserDates::<T>::mutate(pool_id, who, |p| p.is_collateral = false);
+		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = false);
 	}
 }
 
@@ -401,7 +401,7 @@ impl<T: Config> Pallet<T> {
 	pub fn get_pool_members_with_loans(
 		underlying_asset_id: CurrencyId,
 	) -> result::Result<Vec<T::AccountId>, DispatchError> {
-		let user_vec: Vec<T::AccountId> = PoolUserDates::<T>::iter_prefix(underlying_asset_id)
+		let user_vec: Vec<T::AccountId> = PoolUserParams::<T>::iter_prefix(underlying_asset_id)
 			.filter(|(_, pool_user_data)| !pool_user_data.total_borrowed.is_zero())
 			.map(|(account, _)| account)
 			.collect();

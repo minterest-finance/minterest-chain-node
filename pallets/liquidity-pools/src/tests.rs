@@ -63,11 +63,11 @@ fn set_user_total_borrowed_and_interest_index_should_work() {
 			Rate::saturating_from_rational(33, 100),
 		);
 		assert_eq!(
-			<PoolUserDates<Test>>::get(CurrencyId::DOT, ALICE).total_borrowed,
+			<PoolUserParams<Test>>::get(CurrencyId::DOT, ALICE).total_borrowed,
 			ONE_HUNDRED_DOLLARS
 		);
 		assert_eq!(
-			<PoolUserDates<Test>>::get(CurrencyId::DOT, ALICE).interest_index,
+			<PoolUserParams<Test>>::get(CurrencyId::DOT, ALICE).interest_index,
 			Rate::saturating_from_rational(33, 100)
 		);
 	});
@@ -79,7 +79,7 @@ fn enable_is_collateral_internal_should_work() {
 		// Alice enable as collateral DOT pool.
 		TestPools::enable_is_collateral_internal(&ALICE, CurrencyId::DOT);
 
-		assert!(<PoolUserDates<Test>>::get(CurrencyId::DOT, ALICE).is_collateral);
+		assert!(<PoolUserParams<Test>>::get(CurrencyId::DOT, ALICE).is_collateral);
 	});
 }
 
@@ -89,7 +89,7 @@ fn disable_is_collateral_internal_should_work() {
 		// Alice disable collateral DOT pool.
 		TestPools::disable_is_collateral_internal(&ALICE, CurrencyId::DOT);
 
-		assert!(!<PoolUserDates<Test>>::get(CurrencyId::DOT, ALICE).is_collateral);
+		assert!(!<PoolUserParams<Test>>::get(CurrencyId::DOT, ALICE).is_collateral);
 	});
 }
 

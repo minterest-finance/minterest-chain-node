@@ -18,7 +18,7 @@ fn accrue_interest_should_work() {
 
 			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
 
-			assert_eq!(Controller::controller_dates(CurrencyId::DOT).timestamp, 1);
+			assert_eq!(Controller::controller_dates(CurrencyId::DOT).last_interest_accrued_block, 1);
 			assert_eq!(
 				TestPools::pools(CurrencyId::DOT).total_protocol_interest,
 				57_600_000_000
@@ -48,7 +48,7 @@ fn accrue_interest_should_not_work() {
 			System::set_block_number(1);
 
 			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
-			assert_eq!(Controller::controller_dates(CurrencyId::DOT).timestamp, 1);
+			assert_eq!(Controller::controller_dates(CurrencyId::DOT).last_interest_accrued_block, 1);
 
 			assert_ok!(Controller::set_max_borrow_rate(
 				alice(),
