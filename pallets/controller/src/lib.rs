@@ -233,9 +233,9 @@ pub mod module {
 		/// Pause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(T::ControllerWeightInfo::pause_specific_operation())]
+		#[pallet::weight(T::ControllerWeightInfo::pause_operation())]
 		#[transactional]
-		pub fn pause_specific_operation(
+		pub fn pause_operation(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			operation: Operation,
@@ -261,9 +261,9 @@ pub mod module {
 		/// Unpause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(T::ControllerWeightInfo::unpause_specific_operation())]
+		#[pallet::weight(T::ControllerWeightInfo::resume_operation())]
 		#[transactional]
-		pub fn unpause_specific_operation(
+		pub fn resume_operation(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			operation: Operation,

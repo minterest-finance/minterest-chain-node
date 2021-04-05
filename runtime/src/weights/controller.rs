@@ -25,12 +25,12 @@ use sp_std::marker::PhantomData;
 /// Weight functions for controller.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> controller::WeightInfo for WeightInfo<T> {
-	fn pause_specific_operation() -> Weight {
+	fn pause_operation() -> Weight {
 		(32_372_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn unpause_specific_operation() -> Weight {
+	fn resume_operation() -> Weight {
 		(31_435_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))

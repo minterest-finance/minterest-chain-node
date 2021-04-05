@@ -10,14 +10,14 @@ runtime_benchmarks! {
 
 	_ {}
 
-	pause_specific_operation {
+	pause_operation {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
 		Operation::Deposit
 	)
 
-	unpause_specific_operation {
+	resume_operation {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
@@ -68,16 +68,16 @@ mod tests {
 	use frame_support::assert_ok;
 
 	#[test]
-	fn test_pause_specific_operation() {
+	fn test_pause_operation() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_pause_specific_operation());
+			assert_ok!(test_benchmark_pause_operation());
 		})
 	}
 
 	#[test]
-	fn test_unpause_specific_operation() {
+	fn test_resume_operation() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_unpause_specific_operation());
+			assert_ok!(test_benchmark_resume_operation());
 		})
 	}
 

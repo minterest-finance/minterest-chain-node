@@ -468,7 +468,7 @@ fn demo_scenario_n2_without_interest_should_work() {
 			System::set_block_number(4200);
 			assert_ok!(MinterestProtocol::enable_is_collateral(charlie(), ETH));
 			System::set_block_number(4300);
-			assert_ok!(Controller::pause_specific_operation(
+			assert_ok!(Controller::pause_operation(
 				<Runtime as frame_system::Config>::Origin::root(),
 				DOT,
 				Operation::Borrow
@@ -479,7 +479,7 @@ fn demo_scenario_n2_without_interest_should_work() {
 				minterest_protocol::Error::<Runtime>::OperationPaused
 			);
 			System::set_block_number(5000);
-			assert_ok!(Controller::unpause_specific_operation(
+			assert_ok!(Controller::resume_operation(
 				<Runtime as frame_system::Config>::Origin::root(),
 				DOT,
 				Operation::Borrow
