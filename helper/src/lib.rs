@@ -1,5 +1,5 @@
 #[macro_export]
-macro_rules! impl_system_config {
+macro_rules! mock_impl_system_config {
     ($target:ty) => {
         parameter_types! {
             pub const BlockHashCount: u64 = 250;
@@ -29,6 +29,46 @@ macro_rules! impl_system_config {
             type OnKilledAccount = ();
             type SystemWeightInfo = ();
             type SS58Prefix = SS58Prefix;
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! mock_impl_orml_tokens_config {
+    ($target:ty) => {
+        parameter_type_with_key! {
+            pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+                Default::default()
+            };
+        }
+
+        impl orml_tokens::Config for $target {
+            type Event = Event;
+            type Balance = Balance;
+            type Amount = Amount;
+            type CurrencyId = CurrencyId;
+            type WeightInfo = ();
+            type ExistentialDeposits = ExistentialDeposits;
+            type OnDust = ();
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! mock_impl_orml_currencies_config {
+    ($target:ty, $currency_id:expr) => {
+        parameter_types! {
+            pub const GetNativeCurrencyId: CurrencyId = $currency_id;
+        }
+
+        type NativeCurrency = Currency<$target, GetNativeCurrencyId>;
+
+        impl orml_currencies::Config for $target {
+            type Event = Event;
+            type MultiCurrency = orml_tokens::Module<$target>;
+            type NativeCurrency = NativeCurrency;
+            type GetNativeCurrencyId = GetNativeCurrencyId;
+            type WeightInfo = ();
         }
     }
 }

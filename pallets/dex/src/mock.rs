@@ -17,29 +17,16 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	FixedPointNumber
 };
-use helper::impl_system_config;
+use helper::{
+	mock_impl_system_config,
+	mock_impl_orml_tokens_config,
+};
 
 pub type AccountId = u64;
-
-impl_system_config!(Runtime);
-
 type Amount = i128;
 
-parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		Default::default()
-	};
-}
-
-impl orml_tokens::Config for Runtime {
-	type Event = Event;
-	type Balance = Balance;
-	type Amount = Amount;
-	type CurrencyId = CurrencyId;
-	type WeightInfo = ();
-	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
-}
+mock_impl_system_config!(Runtime);
+mock_impl_orml_tokens_config!(Runtime);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");

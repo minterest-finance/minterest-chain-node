@@ -16,9 +16,13 @@ use sp_runtime::{
 	FixedPointNumber, ModuleId,
 };
 use sp_std::cell::RefCell;
-use helper::impl_system_config;
+use helper::{
+	mock_impl_system_config,
+	mock_impl_orml_tokens_config,
+};
 
 pub type AccountId = u64;
+type Amount = i128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -42,25 +46,8 @@ frame_support::construct_runtime!(
 	}
 );
 
-impl_system_config!(Test);
-
-type Amount = i128;
-
-parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		Default::default()
-	};
-}
-
-impl orml_tokens::Config for Test {
-	type Event = Event;
-	type Balance = Balance;
-	type Amount = Amount;
-	type CurrencyId = CurrencyId;
-	type WeightInfo = ();
-	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
-}
+mock_impl_system_config!(Test);
+mock_impl_orml_tokens_config!(Test);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");

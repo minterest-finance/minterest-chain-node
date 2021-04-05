@@ -29,7 +29,11 @@ mod tests {
 	use minterest_protocol::Error as MinterestProtocolError;
 	use pallet_traits::{PoolsManager, PriceProvider};
 	use sp_std::cell::RefCell;
-	use helper::impl_system_config;
+	use helper::{
+		mock_impl_system_config,
+		mock_impl_orml_tokens_config,
+		mock_impl_orml_currencies_config,
+	};
 
 	mod controller_tests;
 	mod liquidity_pools_tests;
@@ -38,6 +42,7 @@ mod tests {
 	mod scenario_tests;
 
 	pub type AccountId = u64;
+	type Amount = i128;
 
 	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 	type Block = frame_system::mocking::MockBlock<Test>;
@@ -62,39 +67,9 @@ mod tests {
 		}
 	);
 
-	impl_system_config!(Test);
-
-	type Amount = i128;
-
-	parameter_type_with_key! {
-		pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-			Default::default()
-		};
-	}
-
-	impl orml_tokens::Config for Test {
-		type Event = Event;
-		type Balance = Balance;
-		type Amount = Amount;
-		type CurrencyId = CurrencyId;
-		type WeightInfo = ();
-		type ExistentialDeposits = ExistentialDeposits;
-		type OnDust = ();
-	}
-
-	parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
-	}
-
-	type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
-
-	impl orml_currencies::Config for Test {
-		type Event = Event;
-		type MultiCurrency = orml_tokens::Module<Test>;
-		type NativeCurrency = NativeCurrency;
-		type GetNativeCurrencyId = GetNativeCurrencyId;
-		type WeightInfo = ();
-	}
+	mock_impl_system_config!(Test);
+	mock_impl_orml_tokens_config!(Test);
+	mock_impl_orml_currencies_config!(Test, CurrencyId::MNT);
 
 	impl m_tokens::Config for Test {
 		type Event = Event;

@@ -18,9 +18,14 @@ use sp_runtime::{
 	FixedPointNumber, ModuleId,
 };
 use sp_std::cell::RefCell;
-use helper::impl_system_config;
+use helper::{
+	mock_impl_system_config,
+	mock_impl_orml_tokens_config,
+	mock_impl_orml_currencies_config,
+};
 
 pub type AccountId = u64;
+type Amount = i128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -41,39 +46,9 @@ frame_support::construct_runtime!(
 	}
 );
 
-impl_system_config!(Runtime);
-
-type Amount = i128;
-
-parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		Default::default()
-	};
-}
-
-impl orml_tokens::Config for Runtime {
-	type Event = Event;
-	type Balance = Balance;
-	type Amount = Amount;
-	type CurrencyId = CurrencyId;
-	type WeightInfo = ();
-	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
-}
-
-parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
-}
-
-type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
-
-impl orml_currencies::Config for Runtime {
-	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Runtime>;
-	type NativeCurrency = NativeCurrency;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
-	type WeightInfo = ();
-}
+mock_impl_system_config!(Runtime);
+mock_impl_orml_tokens_config!(Runtime);
+mock_impl_orml_currencies_config!(Runtime, CurrencyId::MNT);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
