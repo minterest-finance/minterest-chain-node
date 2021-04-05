@@ -135,7 +135,7 @@ pub mod module {
 	/// Liquidation params for pools: `(max_attempts, min_sum, threshold, liquidation_fee)`.
 	#[pallet::storage]
 	#[pallet::getter(fn risk_manager_dates)]
-	pub(crate) type RiskManagerDates<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, RiskManagerData, ValueQuery>;
+	pub(crate) type RiskManagerParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, RiskManagerData, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -157,7 +157,7 @@ pub mod module {
 			self.risk_manager_dates
 				.iter()
 				.for_each(|(currency_id, risk_manager_data)| {
-					RiskManagerDates::<T>::insert(currency_id, RiskManagerData { ..*risk_manager_data })
+					RiskManagerParams::<T>::insert(currency_id, RiskManagerData { ..*risk_manager_data })
 				});
 		}
 	}
@@ -228,7 +228,7 @@ pub mod module {
 			);
 
 			// Write new value into storage.
-			RiskManagerDates::<T>::mutate(pool_id, |r| r.max_attempts = new_max_value);
+			RiskManagerParams::<T>::mutate(pool_id, |r| r.max_attempts = new_max_value);
 
 			Self::deposit_event(Event::MaxValueOFLiquidationAttempsHasChanged(new_max_value));
 
@@ -255,7 +255,7 @@ pub mod module {
 			);
 
 			// Write new value into storage.
-			RiskManagerDates::<T>::mutate(pool_id, |r| r.min_sum = new_min_sum);
+			RiskManagerParams::<T>::mutate(pool_id, |r| r.min_sum = new_min_sum);
 
 			Self::deposit_event(Event::MinSumForPartialLiquidationHasChanged(new_min_sum));
 
@@ -282,7 +282,7 @@ pub mod module {
 			);
 
 			// Write new value into storage.
-			RiskManagerDates::<T>::mutate(pool_id, |r| r.threshold = new_threshold);
+			RiskManagerParams::<T>::mutate(pool_id, |r| r.threshold = new_threshold);
 
 			Self::deposit_event(Event::ValueOfThresholdHasChanged(new_threshold));
 
@@ -316,7 +316,7 @@ pub mod module {
 			);
 
 			// Write new value into storage.
-			RiskManagerDates::<T>::mutate(pool_id, |r| r.liquidation_fee = liquidation_fee);
+			RiskManagerParams::<T>::mutate(pool_id, |r| r.liquidation_fee = liquidation_fee);
 
 			Self::deposit_event(Event::ValueOfLiquidationFeeHasChanged(liquidation_fee));
 
@@ -469,8 +469,8 @@ impl<T: Config> Pallet<T> {
 
 		let liquidation_attempts = <LiquidityPools<T>>::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
 
-		let is_partial_liquidation = total_repay_amount >= RiskManagerDates::<T>::get(liquidated_pool_id).min_sum
-			&& liquidation_attempts < RiskManagerDates::<T>::get(liquidated_pool_id).max_attempts;
+		let is_partial_liquidation = total_repay_amount >= RiskManagerParams::<T>::get(liquidated_pool_id).min_sum
+			&& liquidation_attempts < RiskManagerParams::<T>::get(liquidated_pool_id).max_attempts;
 
 		// Calculate sum required to liquidate.
 		let (seize_amount, repay_amount, repay_assets) =
