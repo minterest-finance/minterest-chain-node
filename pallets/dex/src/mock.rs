@@ -5,44 +5,23 @@
 use super::*;
 use crate as dex;
 use frame_support::{construct_runtime, ord_parameter_types, parameter_types};
+use frame_system as system;
 use frame_system::offchain::SendTransactionTypes;
 use frame_system::EnsureSignedBy;
 pub(crate) use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_traits::parameter_type_with_key;
 pub(crate) use pallet_traits::{PoolsManager, PriceProvider};
-use sp_runtime::{testing::TestXt, traits::AccountIdConversion, FixedPointNumber};
-
-parameter_types!(
-	pub const SomeConst: u64 = 10;
-	pub const BlockHashCount: u32 = 250;
-);
+use sp_core::H256;
+use sp_runtime::{
+	testing::{Header, TestXt},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
+	FixedPointNumber
+};
+use helper::impl_system_config;
 
 pub type AccountId = u64;
 
-impl frame_system::Config for Runtime {
-	type BaseCallFilter = ();
-	type Origin = Origin;
-	type Index = u64;
-	type BlockNumber = u64;
-	type Call = Call;
-	type Hash = sp_runtime::testing::H256;
-	type Hashing = sp_runtime::traits::BlakeTwo256;
-	type AccountId = u64;
-	type Lookup = sp_runtime::traits::IdentityLookup<Self::AccountId>;
-	type Header = sp_runtime::testing::Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = ();
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
-}
+impl_system_config!(Runtime);
 
 type Amount = i128;
 

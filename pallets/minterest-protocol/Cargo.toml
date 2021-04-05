@@ -20,6 +20,7 @@ liquidity-pools = { path = "../liquidity-pools", default-features = false }
 liquidation-pools = { path = "../liquidation-pools", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
 controller = { path = "../controller", default-features = false }
+helper = { path = "../../helper" }
 
 [dev-dependencies]
 serde = { version = "1.0.101" }
@@ -50,4 +51,5 @@ std = [
     "liquidation-pools/std",
     "pallet-traits/std",
     "controller/std",
+    "helper/std",
 ]

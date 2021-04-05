@@ -911,6 +911,7 @@ version = "0.6.2"
 dependencies = [
  "frame-support",
  "frame-system",
+ "helper",
  "liquidity-pools",
  "minterest-model",
  "minterest-primitives",
@@ -1384,6 +1385,7 @@ version = "0.6.2"
 dependencies = [
  "frame-support",
  "frame-system",
+ "helper",
  "liquidation-pools",
  "liquidity-pools",
  "minterest-primitives",
@@ -2357,6 +2359,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "helper"
+version = "0.6.2"
+
+[[package]]
 name = "hermit-abi"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2740,6 +2746,7 @@ dependencies = [
  "dex",
  "frame-support",
  "frame-system",
+ "helper",
  "liquidation-pools",
  "liquidity-pools",
  "m-tokens",
@@ -3556,6 +3563,7 @@ dependencies = [
  "dex",
  "frame-support",
  "frame-system",
+ "helper",
  "liquidity-pools",
  "minterest-primitives",
  "orml-currencies",
@@ -3577,6 +3585,7 @@ version = "0.5.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "helper",
  "minterest-primitives",
  "orml-currencies",
  "orml-tokens",
@@ -3636,6 +3645,7 @@ version = "0.5.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "helper",
  "minterest-primitives",
  "orml-currencies",
  "orml-tokens",
@@ -3815,6 +3825,7 @@ version = "0.5.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "helper",
  "liquidity-pools",
  "minterest-primitives",
  "orml-tokens",
@@ -3849,6 +3860,7 @@ dependencies = [
  "dex",
  "frame-support",
  "frame-system",
+ "helper",
  "liquidation-pools",
  "liquidity-pools",
  "minterest-model",
@@ -4018,6 +4030,7 @@ version = "0.6.2"
 dependencies = [
  "frame-support",
  "frame-system",
+ "helper",
  "liquidity-pools",
  "minterest-primitives",
  "orml-tokens",
@@ -4038,6 +4051,7 @@ version = "0.6.2"
 dependencies = [
  "frame-support",
  "frame-system",
+ "helper",
  "minterest-primitives",
  "orml-traits",
  "pallet-traits",
@@ -5831,6 +5845,7 @@ dependencies = [
  "dex",
  "frame-support",
  "frame-system",
+ "helper",
  "liquidation-pools",
  "liquidity-pools",
  "minterest-model",

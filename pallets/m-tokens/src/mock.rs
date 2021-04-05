@@ -2,6 +2,7 @@
 use crate as m_tokens;
 use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::parameter_types;
+use frame_system as system;
 pub use minterest_primitives::{Balance, CurrencyId};
 use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
@@ -10,6 +11,9 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
+use helper::impl_system_config;
+
+pub type AccountId = u64;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -28,37 +32,7 @@ frame_support::construct_runtime!(
 	}
 );
 
-parameter_types! {
-	pub const BlockHashCount: u64 = 250;
-	pub const SS58Prefix: u8 = 42;
-}
-
-pub type AccountId = u64;
-
-impl frame_system::Config for Runtime {
-	type BaseCallFilter = ();
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type Origin = Origin;
-	type Call = Call;
-	type Index = u64;
-	type BlockNumber = u64;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type AccountId = u64;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = ();
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = SS58Prefix;
-}
+impl_system_config!(Runtime);
 
 type Amount = i128;
 

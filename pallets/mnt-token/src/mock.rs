@@ -2,15 +2,19 @@
 
 use crate as mnt_token;
 use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::*, parameter_types};
+use frame_system as system;
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
+use sp_core::H256;
 use sp_runtime::{
-	traits::{AccountIdConversion, Zero},
+	testing::Header,
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
 	FixedPointNumber, ModuleId,
 };
+use helper::impl_system_config;
 
 parameter_type_with_key! {
 	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
@@ -19,7 +23,6 @@ parameter_type_with_key! {
 }
 
 parameter_types! {
-	pub const BlockHashCount: u64 = 250;
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
@@ -44,30 +47,7 @@ pub fn admin() -> Origin {
 	Origin::signed(ADMIN)
 }
 
-impl frame_system::Config for Runtime {
-	type BaseCallFilter = ();
-	type Origin = Origin;
-	type Index = u64;
-	type BlockNumber = u64;
-	type Call = Call;
-	type Hash = sp_runtime::testing::H256;
-	type Hashing = sp_runtime::traits::BlakeTwo256;
-	type AccountId = u64;
-	type Lookup = sp_runtime::traits::IdentityLookup<Self::AccountId>;
-	type Header = sp_runtime::testing::Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = ();
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
-}
+impl_system_config!(Runtime);
 
 type Amount = i128;
 impl orml_tokens::Config for Runtime {
