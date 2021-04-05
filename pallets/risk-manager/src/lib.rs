@@ -119,7 +119,8 @@ pub mod module {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Max value of liquidation attempts has been successfully changed: \[attempts_amount\]
+		/// Max value of liquidation attempts has been successfully changed:
+		/// \[attempts_amount\]
 		MaxValueOFLiquidationAttempsHasChanged(u8),
 		/// Min sum for partial liquidation has been successfully changed: \[min_partial_liquidation_sum\]
 		MinSumForPartialLiquidationHasChanged(Balance),
@@ -132,7 +133,8 @@ pub mod module {
 		LiquidateUnsafeLoan(T::AccountId, Balance, CurrencyId, Vec<CurrencyId>, bool),
 	}
 
-	/// Liquidation params for pools: `(max_attempts, min_partial_liquidation_sum, threshold, liquidation_fee)`.
+	/// Liquidation params for pools: `(max_attempts, min_partial_liquidation_sum, threshold,
+	/// liquidation_fee)`.
 	#[pallet::storage]
 	#[pallet::getter(fn risk_manager_dates)]
 	pub(crate) type RiskManagerParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, RiskManagerData, ValueQuery>;
