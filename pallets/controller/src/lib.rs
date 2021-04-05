@@ -14,7 +14,7 @@ use frame_system::{ensure_signed, pallet_prelude::*};
 use liquidity_pools::Pool;
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{LiquidityPoolsManager, PoolsManager, PriceProvider};
+use pallet_traits::{ControllerAPI, LiquidityPoolsManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;
@@ -1002,5 +1002,11 @@ impl<T: Config> Pallet<T> {
 		T::MultiCurrency::transfer(pool_id, &T::LiquidityPoolsManager::pools_account_id(), &who, amount)?;
 
 		Ok(())
+	}
+}
+
+impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
+	fn borrow_balance_stored(who: &T::AccountId, underlying_asset_id: CurrencyId) -> Result<Balance, DispatchError> {
+		Pallet::<T>::borrow_balance_stored(who, underlying_asset_id)
 	}
 }

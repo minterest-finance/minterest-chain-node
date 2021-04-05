@@ -71,3 +71,10 @@ pub trait DEXManager<AccountId, CurrencyId, Balance> {
 		target_amount: Balance,
 	) -> sp_std::result::Result<Balance, DispatchError>;
 }
+
+pub trait ControllerAPI<AccountId> {
+	fn borrow_balance_stored(
+		who: &AccountId,
+		underlying_asset_id: CurrencyId,
+	) -> sp_std::result::Result<Balance, DispatchError>;
+}

@@ -476,6 +476,7 @@ impl mnt_token::Config for Runtime {
 	type EnabledCurrencyPair = EnabledCurrencyPair;
 	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
 	type MultiCurrency = Currencies;
+	type ControllerAPI = Controller;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime

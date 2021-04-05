@@ -18,7 +18,12 @@ parameter_type_with_key! {
 	};
 }
 
+pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
+pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
+
 parameter_types! {
+	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
+	pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
 	pub const BlockHashCount: u64 = 250;
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
@@ -103,6 +108,21 @@ impl liquidity_pools::Config for Runtime {
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
+impl minterest_model::Config for Runtime {
+	type Event = Event;
+	type BlocksPerYear = BlocksPerYear;
+	type ModelUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	type WeightInfo = ();
+}
+
+impl controller::Config for Runtime {
+	type Event = Event;
+	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
+	type MaxBorrowCap = MaxBorrowCap;
+	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	type ControllerWeightInfo = ();
+}
+
 impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
 		match currency_id {
@@ -134,6 +154,8 @@ construct_runtime!(
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
+		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 	}
 );
 
@@ -145,6 +167,7 @@ impl mnt_token::Config for Runtime {
 	type EnabledCurrencyPair = EnabledCurrencyPair;
 	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
 	type MultiCurrency = Currencies;
+	type ControllerAPI = Controller;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -155,6 +178,7 @@ pub struct ExtBuilder {
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	minted_pools: Vec<CurrencyId>,
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+	mnt_rate: Rate,
 }
 
 pub const ALICE: AccountId = 1;
@@ -169,6 +193,7 @@ impl Default for ExtBuilder {
 			minted_pools: vec![],
 			pool_user_data: vec![],
 			endowed_accounts: vec![],
+			mnt_rate: Rate::zero(),
 		}
 	}
 }
@@ -179,13 +204,40 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn set_mnt_rate(mut self, rate: u32) -> Self {
+		self.mnt_rate = Rate::saturating_from_integer(rate);
+		self
+	}
+
 	pub fn pool_total_borrowed(mut self, pool_id: CurrencyId, total_borrowed: Balance) -> Self {
 		self.pools.push((
 			pool_id,
 			Pool {
 				total_borrowed,
 				borrow_index: Rate::saturating_from_rational(15, 10),
-				total_protocol_interest : Balance::zero(),
+				total_protocol_interest: Balance::zero(),
+			},
+		));
+		self
+	}
+
+	pub fn pool_user_data(
+		mut self,
+		pool_id: CurrencyId,
+		user: AccountId,
+		total_borrowed: Balance,
+		interest_index: Rate,
+		collateral: bool,
+		liquidation_attempts: u8,
+	) -> Self {
+		self.pool_user_data.push((
+			pool_id,
+			user,
+			PoolUserData {
+				total_borrowed,
+				interest_index,
+				collateral,
+				liquidation_attempts,
 			},
 		));
 		self
@@ -210,7 +262,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		mnt_token::GenesisConfig::<Runtime> {
-			mnt_rate: Rate::zero(),
+			mnt_rate: self.mnt_rate,
 			minted_pools: self.minted_pools,
 			_marker: PhantomData,
 		}

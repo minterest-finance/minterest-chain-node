@@ -20,6 +20,8 @@ orml-tokens = { path = "../../orml/tokens", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
+minterest-model = { path = "../minterest-model", default-features = false }
+controller = { path = "../controller", default-features = false }
 
 [dev-dependencies]
 sp-core = "3.0.0"
@@ -32,25 +34,29 @@ orml-currencies = { path = "../../orml/currencies" }
 
 liquidity-pools = { path = "../liquidity-pools" }
 minterest-primitives = { path = "../../primitives" }
+minterest-model = { path = "../minterest-model" }
+controller = { path = "../controller" }
 
 pallet-treasury = "3.0.0"
 
 [features]
 default = ["std"]
 std = [
-	"serde",
-	"codec/std",
+    "serde",
+    "codec/std",
 
-	"sp-runtime/std",
-	"sp-std/std",
-	"sp-arithmetic/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "sp-arithmetic/std",
 
-	"frame-support/std",
-	"frame-system/std",
+    "frame-support/std",
+    "frame-system/std",
 
     "pallet-traits/std",
     "minterest-primitives/std",
+    "controller/std",
+    "minterest-model/std",
 
-	"orml-tokens/std",
-	"orml-traits/std",
+    "orml-tokens/std",
+    "orml-traits/std",
 ]

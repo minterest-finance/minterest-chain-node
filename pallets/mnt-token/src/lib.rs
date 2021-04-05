@@ -10,7 +10,7 @@ use frame_system::pallet_prelude::*;
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{LiquidityPoolsManager, PriceProvider};
+use pallet_traits::{ControllerAPI, LiquidityPoolsManager, PriceProvider};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
 	DispatchResult, FixedPointNumber, FixedU128,
@@ -58,22 +58,6 @@ impl<T: Config> MntPoolState<T> {
 	}
 }
 
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct AwardeeData {
-	pub index: FixedU128,
-	pub acquired_mnt: Rate,
-}
-
-impl AwardeeData {
-	fn new() -> AwardeeData {
-		AwardeeData {
-			index: Rate::one(), // initial index
-			acquired_mnt: Rate::zero(),
-		}
-	}
-}
-
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
@@ -100,6 +84,9 @@ pub mod module {
 
 		/// The `MultiCurrency` implementation for wrapped.
 		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
+
+		/// ControllerAPI
+		type ControllerAPI: ControllerAPI<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -136,8 +123,12 @@ pub mod module {
 		MntMintingDisabled(CurrencyId),
 
 		/// Emitted when MNT is distributed to a supplier
-		/// (CurrencyId, Reciever, Amount of distributed tokens, supply index)
-		MntDistributedToSupplier(CurrencyId, T::AccountId, Rate, Rate),
+		/// (pool id, Reciever, Amount of distributed tokens, supply index)
+		MntDistributedToSupplier(CurrencyId, T::AccountId, Balance, Rate),
+
+		/// Emitted when MNT is distributed to a borrower
+		/// (pool id, Reciever, Amount of distributed tokens, index)
+		MntDistributedToBorrower(CurrencyId, T::AccountId, Balance, Rate),
 	}
 
 	/// MNT minting rate per block
@@ -148,7 +139,7 @@ pub mod module {
 	/// MNT minting speed for each pool
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_speeds)]
-	pub(crate) type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Rate, OptionQuery>;
+	pub(crate) type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Balance, OptionQuery>;
 
 	// TODO Description.
 	// P.S. Could I merge MntSpeeds and MntPoolsState storage into one?
@@ -157,12 +148,18 @@ pub mod module {
 	pub(crate) type MntPoolsState<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, MntPoolState<T>, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn mnt_supplier_data)]
-	pub(crate) type MntSupplierData<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, AwardeeData, OptionQuery>;
+	#[pallet::getter(fn mnt_supplier_index)]
+	pub(crate) type MntSupplierIndex<T: Config> =
+		StorageDoubleMap<_, Twox64Concat, CurrencyId, Twox64Concat, T::AccountId, Rate, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn mnt_borrower_data)]
-	pub(crate) type MntBorrowerData<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, AwardeeData, OptionQuery>;
+	#[pallet::getter(fn mnt_accrued)]
+	pub(crate) type MntAccrued<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Balance, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn mnt_borrower_index)]
+	pub(crate) type MntBorrowerIndex<T: Config> =
+		StorageDoubleMap<_, Twox64Concat, CurrencyId, Twox64Concat, T::AccountId, Rate, OptionQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -187,7 +184,7 @@ pub mod module {
 		fn build(&self) {
 			MntRate::<T>::put(&self.mnt_rate);
 			for currency_id in &self.minted_pools {
-				MntSpeeds::<T>::insert(currency_id, Rate::zero());
+				MntSpeeds::<T>::insert(currency_id, Balance::zero());
 				MntPoolsState::<T>::insert(currency_id, MntPoolState::new());
 			}
 			if !self.minted_pools.is_empty() {
@@ -219,7 +216,7 @@ pub mod module {
 				!MntSpeeds::<T>::contains_key(currency_id),
 				Error::<T>::MntMintingAlreadyEnabled
 			);
-			MntSpeeds::<T>::insert(currency_id, Rate::zero());
+			MntSpeeds::<T>::insert(currency_id, Balance::zero());
 			MntPoolsState::<T>::insert(currency_id, MntPoolState::new());
 			Self::refresh_mnt_speeds()?;
 			Self::deposit_event(Event::MntMintingEnabled(currency_id));
@@ -263,7 +260,69 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
+	/// Distribute mnt token to borrower. It should be called after update_mnt_borrow_index
+	fn distribute_borrower_mnt(underlying_id: CurrencyId, borrower: &T::AccountId) -> DispatchResult {
+		// borrower_amount = account_borrow_balance / pool_borrow_index
+		// delta_index = pool_borrow_index - borrower_index
+		// borrower_delta = borrower_amount * delta_index
+		// borrower_accrued += borrower_delta
+		// borrower_index = borrow_index
+
+		let borrow_balance = T::ControllerAPI::borrow_balance_stored(&borrower, underlying_id)?;
+		let pool_borrow_index = T::LiquidityPoolsManager::get_pool_borrow_index(underlying_id);
+		let borrower_amount = Price::from_inner(borrow_balance)
+			.checked_div(&pool_borrow_index)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		let mut borrower_index = MntBorrowerIndex::<T>::get(underlying_id, borrower)
+			.or(Some(Rate::one()))
+			.unwrap();
+
+		let pool_borrow_state = MntPoolsState::<T>::get(underlying_id)
+			.ok_or(Error::<T>::StorageIsCorrupted)?
+			.borrow_state;
+		let delta_index = pool_borrow_state
+			.index
+			.checked_sub(&borrower_index)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		if delta_index == Rate::zero() {
+			return Ok(());
+		}
+		// IF delta index == 0, return from function ?
+
+		let borrower_delta = borrower_amount
+			.checked_mul(&delta_index)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		let mut borrower_mnt_accrued = MntAccrued::<T>::get(borrower).or(Some(Balance::zero())).unwrap();
+		borrower_mnt_accrued = borrower_mnt_accrued
+			.checked_add(borrower_delta.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		borrower_index = pool_borrow_state.index;
+
+		MntBorrowerIndex::<T>::insert(underlying_id, borrower, borrower_index);
+		MntAccrued::<T>::insert(borrower, borrower_mnt_accrued);
+
+		Self::deposit_event(Event::MntDistributedToBorrower(
+			underlying_id,
+			borrower.clone(),
+			borrower_delta.into_inner(),
+			borrower_index,
+		));
+		Ok(())
+	}
+
+	/// Update mnt borrow index for pool
 	fn update_mnt_borrow_index(underlying_id: CurrencyId) -> DispatchResult {
+		// block_delta = current_block_number - bottow_state.block_number
+		// mnt_acquired = delta_blocks * mnt_speed
+		// borrow_amount - mtoken.total_borrows() / market_borrow_index
+		// ratio = mnt_acquired / borrow_amount
+		// borrow_state.index += ratio
+		// borrow_state.block_number = current_block_number
+
 		let mnt_speed = MntSpeeds::<T>::get(underlying_id).ok_or(Error::<T>::StorageIsCorrupted)?;
 		let current_block = frame_system::Module::<T>::block_number();
 		let mut borrow_state = MntPoolsState::<T>::get(underlying_id)
@@ -272,23 +331,26 @@ impl<T: Config> Pallet<T> {
 		let block_delta = current_block
 			.checked_sub(&borrow_state.block_number)
 			.ok_or(Error::<T>::NumOverflow)?;
-		if block_delta != T::BlockNumber::zero() && mnt_speed != FixedU128::zero() {
-			// TODO Is it possible to make TryInto::<BlockNumber>
-			let block_delta_as_usize = TryInto::<u32>::try_into(block_delta)
+		if block_delta != T::BlockNumber::zero() && mnt_speed != Balance::zero() {
+			let block_delta_as_u128 = TryInto::<u128>::try_into(block_delta)
 				.ok()
-				.expect("blockchain will not exceed 2^32 blocks; qed");
-			let block_delta = Rate::saturating_from_integer(block_delta_as_usize);
+				.expect("blockchain will not exceed 2^128 blocks; qed");
 
-			let mnt_acquired = mnt_speed.checked_mul(&block_delta).ok_or(Error::<T>::NumOverflow)?;
+			let mnt_acquired = mnt_speed
+				.checked_mul(block_delta_as_u128)
+				.ok_or(Error::<T>::NumOverflow)?;
 
 			let total_borrowed_as_rate =
 				Rate::from_inner(T::LiquidityPoolsManager::get_pool_total_borrowed(underlying_id));
+
 			let borrow_amount = total_borrowed_as_rate
 				.checked_div(&T::LiquidityPoolsManager::get_pool_borrow_index(underlying_id))
 				.ok_or(Error::<T>::NumOverflow)?;
-			let ratio = mnt_acquired
+
+			let ratio = Rate::from_inner(mnt_acquired)
 				.checked_div(&borrow_amount)
 				.ok_or(Error::<T>::NumOverflow)?;
+
 			borrow_state.index = borrow_state.index.checked_add(&ratio).ok_or(Error::<T>::NumOverflow)?;
 		}
 		borrow_state.block_number = current_block;
@@ -298,8 +360,7 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	// TODO description
-	// TODO(2) Add deposit_event MntDistributedToSupplier, after calling this function
+	/// Distribute mnt token to supplier. It should be called after update_mnt_supply_index
 	fn distribute_supplier_mnt(underlying_id: CurrencyId, supplier: &T::AccountId) -> DispatchResult {
 		// delta_index = mnt_supply_index - mnt_supplier_index
 		// supplier_delta = supplier_mtoken_balance * delta_index
@@ -310,12 +371,12 @@ impl<T: Config> Pallet<T> {
 			.supply_state
 			.index;
 
-		let mut supplier_data = MntSupplierData::<T>::get(supplier)
-			.or(Some(AwardeeData::new()))
+		let mut supplier_index = MntSupplierIndex::<T>::get(underlying_id, supplier)
+			.or(Some(Rate::one()))
 			.unwrap();
 
 		let delta_index = supply_index
-			.checked_sub(&supplier_data.index)
+			.checked_sub(&supplier_index)
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		// TODO rework this
@@ -324,31 +385,34 @@ impl<T: Config> Pallet<T> {
 			.find(|currency_pair| currency_pair.underlying_id == underlying_id)
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?
 			.wrapped_id;
-		let supplier_balance = Rate::saturating_from_integer(T::MultiCurrency::total_balance(wrapped_id, supplier));
+		let supplier_balance = Rate::from_inner(T::MultiCurrency::total_balance(wrapped_id, supplier));
 
 		let supplier_delta = delta_index
 			.checked_mul(&supplier_balance)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		supplier_data.acquired_mnt = supplier_data
-			.acquired_mnt
-			.checked_add(&supplier_delta)
+		let mut supplier_mnt_accrued = MntAccrued::<T>::get(supplier).or(Some(Balance::zero())).unwrap();
+
+		supplier_mnt_accrued = supplier_mnt_accrued
+			.checked_add(supplier_delta.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		supplier_data.index = supply_index;
+		supplier_index = supply_index;
 
-		MntSupplierData::<T>::insert(supplier, supplier_data);
+		MntAccrued::<T>::insert(supplier, supplier_mnt_accrued);
+		MntSupplierIndex::<T>::insert(underlying_id, supplier, supplier_index);
 
 		Self::deposit_event(Event::MntDistributedToSupplier(
-			wrapped_id,
+			underlying_id,
 			supplier.clone(),
-			supplier_delta,
+			supplier_delta.into_inner(),
 			supply_index,
 		));
 
 		Ok(())
 	}
 
+	/// Update mnt supply index for pool
 	fn update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult {
 		// block_delta = current_block_number - supply_state.block_number
 		// mnt_accrued = block_delta * mnt_speed
@@ -365,7 +429,7 @@ impl<T: Config> Pallet<T> {
 			.checked_sub(&supply_state.block_number)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		if block_delta != T::BlockNumber::zero() && mnt_speed != FixedU128::zero() {
+		if block_delta != T::BlockNumber::zero() && mnt_speed != Balance::zero() {
 			// TODO rework this
 			let wrapped_id = T::EnabledCurrencyPair::get()
 				.iter()
@@ -373,23 +437,27 @@ impl<T: Config> Pallet<T> {
 				.ok_or(Error::<T>::NotValidUnderlyingAssetId)?
 				.wrapped_id;
 
-			// TODO Is it possible to make TryInto::<BlockNumber>
+			// TODO Is it possible to make TryInto::<Rate>
 			let block_delta_as_usize = TryInto::<u32>::try_into(block_delta)
 				.ok()
 				.expect("blockchain will not exceed 2^32 blocks; qed");
 
 			let block_delta = Rate::saturating_from_integer(block_delta_as_usize);
 
-			let mnt_acquired = mnt_speed.checked_mul(&block_delta).ok_or(Error::<T>::NumOverflow)?;
-
-			let total_tokens_supply = Rate::checked_from_integer(T::MultiCurrency::total_issuance(wrapped_id))
+			let mnt_acquired = mnt_speed
+				.checked_mul(block_delta.into_inner())
 				.ok_or(Error::<T>::NumOverflow)?;
+
+			let total_tokens_supply = T::MultiCurrency::total_issuance(wrapped_id);
 
 			let ratio = mnt_acquired
-				.checked_div(&total_tokens_supply)
+				.checked_div(total_tokens_supply)
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			supply_state.index = supply_state.index.checked_add(&ratio).ok_or(Error::<T>::NumOverflow)?;
+			supply_state.index = supply_state
+				.index
+				.checked_add(&Rate::from_inner(ratio))
+				.ok_or(Error::<T>::NumOverflow)?;
 		}
 		supply_state.block_number = current_block;
 
@@ -440,7 +508,7 @@ impl<T: Config> Pallet<T> {
 				.checked_div(&sum_of_all_utilities)
 				.ok_or(Error::<T>::NumOverflow)?;
 			let pool_mnt_speed = mnt_rate.checked_mul(&utility_fraction).ok_or(Error::<T>::NumOverflow)?;
-			MntSpeeds::<T>::insert(currency_id, pool_mnt_speed);
+			MntSpeeds::<T>::insert(currency_id, pool_mnt_speed.into_inner());
 		}
 		Ok(())
 	}
