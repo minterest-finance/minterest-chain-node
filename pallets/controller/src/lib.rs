@@ -401,7 +401,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
-				T::EnabledUnderlyingAssetId::get()
+				T::EnabledUnderlyingAssetsIds::get()
 					.into_iter()
 					.any(|asset_id| asset_id == pool_id),
 				Error::<T>::PoolNotFound
@@ -430,7 +430,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
-				T::EnabledUnderlyingAssetId::get()
+				T::EnabledUnderlyingAssetsIds::get()
 					.into_iter()
 					.any(|asset_id| asset_id == pool_id),
 				Error::<T>::PoolNotFound

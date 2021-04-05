@@ -39,8 +39,8 @@ pub mod module {
 		/// The price source of currencies
 		type PriceSource: PriceProvider<CurrencyId>;
 
-		/// Enabled underlying asset IDs.
-		type EnabledUnderlyingAssetId: Get<Vec<CurrencyId>>;
+		/// Enabled underlying assets IDs.
+		type EnabledUnderlyingAssetsIds: Get<Vec<CurrencyId>>;
 	}
 
 	#[pallet::error]
@@ -129,7 +129,7 @@ pub mod module {
 		pub fn enable_mnt_minting(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
-				T::EnabledUnderlyingAssetId::get()
+				T::EnabledUnderlyingAssetsIds::get()
 					.into_iter()
 					.any(|asset_id| asset_id == currency_id),
 				Error::<T>::NotValidUnderlyingAssetId
@@ -150,7 +150,7 @@ pub mod module {
 		pub fn disable_mnt_minting(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
-				T::EnabledUnderlyingAssetId::get()
+				T::EnabledUnderlyingAssetsIds::get()
 					.into_iter()
 					.any(|asset_id| asset_id == currency_id),
 				Error::<T>::NotValidUnderlyingAssetId

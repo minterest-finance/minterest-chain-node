@@ -364,7 +364,7 @@ impl<T: Config> Pallet<T> {
 	pub fn collects_sales_list() -> sp_std::result::Result<Vec<Sales>, DispatchError> {
 		// Collecting information about the current state of liquidation pools.
 		let (mut information_vec, mut sum_oversupply, mut sum_shortfall) =
-			T::EnabledUnderlyingAssetId::get().iter().try_fold(
+			T::EnabledUnderlyingAssetsIds::get().iter().try_fold(
 				(Vec::<LiquidationInformation>::new(), Balance::zero(), Balance::zero()),
 				|(mut current_vec, mut current_sum_oversupply, mut current_sum_shortfall),
 				 pool_id|

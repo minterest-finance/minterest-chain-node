@@ -91,7 +91,7 @@ pub mod module {
 
 		#[pallet::constant]
 		/// Enabled underlying asset IDs.
-		type EnabledUnderlyingAssetId: Get<Vec<CurrencyId>>;
+		type EnabledUnderlyingAssetsIds: Get<Vec<CurrencyId>>;
 
 		#[pallet::constant]
 		/// Enabled wrapped token IDs.

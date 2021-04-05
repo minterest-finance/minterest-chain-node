@@ -1,5 +1,5 @@
 use crate::{
-	AccountId, Balance, Currencies, CurrencyId, EnabledUnderlyingAssetId, MinterestOracle, MinterestProtocol, Origin,
+	AccountId, Balance, Currencies, CurrencyId, EnabledUnderlyingAssetsIds, MinterestOracle, MinterestProtocol, Origin,
 	Price, Runtime, Vec, WhitelistCouncilMembership,
 };
 
@@ -19,7 +19,7 @@ pub fn set_oracle_price_for_all_pools<T: frame_system::Config<Origin = Origin>>(
 	origin: OriginFor<T>,
 	block: u32,
 ) -> DispatchResultWithPostInfo {
-	let prices: Vec<(CurrencyId, Price)> = EnabledUnderlyingAssetId::get()
+	let prices: Vec<(CurrencyId, Price)> = EnabledUnderlyingAssetsIds::get()
 		.into_iter()
 		.map(|pool_id| (pool_id, Price::saturating_from_integer(price)))
 		.collect();

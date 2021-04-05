@@ -1,7 +1,7 @@
 use crate::{
 	AccountId, Balance, Block, Controller, Currencies,
 	CurrencyId::{self, DOT, ETH},
-	Dex, EnabledUnderlyingAssetId, Event, LiquidationPools, LiquidationPoolsModuleId, LiquidityPools,
+	Dex, EnabledUnderlyingAssetsIds, Event, LiquidationPools, LiquidationPoolsModuleId, LiquidityPools,
 	LiquidityPoolsModuleId, MinterestCouncilMembership, MinterestOracle, MinterestProtocol, Prices, Rate, RiskManager,
 	Runtime, System, WhitelistCouncilMembership, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 };
@@ -352,7 +352,7 @@ fn origin_root() -> <Runtime as frame_system::Config>::Origin {
 }
 
 fn set_oracle_price_for_all_pools(price: u128) -> DispatchResult {
-	let prices: Vec<(CurrencyId, Price)> = EnabledUnderlyingAssetId::get()
+	let prices: Vec<(CurrencyId, Price)> = EnabledUnderlyingAssetsIds::get()
 		.into_iter()
 		.map(|pool_id| (pool_id, Price::saturating_from_integer(price)))
 		.collect();
