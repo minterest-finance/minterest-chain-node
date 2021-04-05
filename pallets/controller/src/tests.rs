@@ -734,17 +734,17 @@ fn resume_operation_should_work() {
 }
 
 #[test]
-fn switch_mode_should_work() {
+fn switch_whitelist_mode_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::switch_mode(alice()));
+		assert_ok!(Controller::switch_whitelist_mode(alice()));
 		let expected_event = Event::controller(crate::Event::ProtocolOperationModeSwitched(true));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(Controller::whitelist_mode(), true);
 
-		assert_ok!(Controller::switch_mode(alice()));
+		assert_ok!(Controller::switch_whitelist_mode(alice()));
 		assert_eq!(Controller::whitelist_mode(), false);
 
-		assert_noop!(Controller::switch_mode(bob()), BadOrigin);
+		assert_noop!(Controller::switch_whitelist_mode(bob()), BadOrigin);
 		assert_eq!(Controller::whitelist_mode(), false);
 	});
 }

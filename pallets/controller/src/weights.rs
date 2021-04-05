@@ -52,7 +52,7 @@ pub trait WeightInfo {
 	fn set_collateral_factor() -> Weight;
 	fn set_borrow_cap() -> Weight;
 	fn set_protocol_interest_threshold() -> Weight;
-	fn switch_mode() -> Weight;
+	fn switch_whitelist_mode() -> Weight;
 }
 
 /// Weights for controller using the Minterest node and recommended hardware.
@@ -93,7 +93,7 @@ impl<T: frame_system::Config> WeightInfo for MinterestWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn switch_mode() -> Weight {
+	fn switch_whitelist_mode() -> Weight {
 		(23_922_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
@@ -137,7 +137,7 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
-	fn switch_mode() -> Weight {
+	fn switch_whitelist_mode() -> Weight {
 		(23_922_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))

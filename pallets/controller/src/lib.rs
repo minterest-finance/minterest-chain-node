@@ -449,9 +449,9 @@ pub mod module {
 		/// Enable / disable whitelist mode.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(T::ControllerWeightInfo::switch_mode())]
+		#[pallet::weight(T::ControllerWeightInfo::switch_whitelist_mode())]
 		#[transactional]
-		pub fn switch_mode(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn switch_whitelist_mode(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			let mode = WhitelistMode::<T>::mutate(|mode| {
 				*mode = !*mode;

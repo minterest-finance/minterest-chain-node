@@ -60,7 +60,7 @@ impl<T: frame_system::Config> controller::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn switch_mode() -> Weight {
+	fn switch_whitelist_mode() -> Weight {
 		(23_643_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))

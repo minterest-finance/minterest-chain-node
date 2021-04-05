@@ -56,7 +56,7 @@ runtime_benchmarks! {
 		Balance::zero()
 	)
 
-	switch_mode {}: _(
+	switch_whitelist_mode {}: _(
 		RawOrigin::Root
 	)
 }
@@ -117,9 +117,9 @@ mod tests {
 	}
 
 	#[test]
-	fn test_switch_mode() {
+	fn test_switch_whitelist_mode() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_switch_mode());
+			assert_ok!(test_benchmark_switch_whitelist_mode());
 		})
 	}
 }

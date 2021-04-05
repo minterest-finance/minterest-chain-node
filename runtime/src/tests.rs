@@ -859,7 +859,7 @@ fn whitelist_mode_should_work() {
 		assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(10_000)));
 		System::set_block_number(2);
 
-		assert_ok!(Controller::switch_mode(
+		assert_ok!(Controller::switch_whitelist_mode(
 			<Runtime as frame_system::Config>::Origin::root()
 		));
 		System::set_block_number(3);
