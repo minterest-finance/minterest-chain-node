@@ -22,6 +22,7 @@ use helper::{
 	mock_impl_system_config,
 	mock_impl_orml_tokens_config,
 	mock_impl_orml_currencies_config,
+	mock_impl_liquidity_pools_config,
 };
 
 pub type AccountId = u64;
@@ -88,16 +89,7 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
-impl liquidity_pools::Config for Runtime {
-	type MultiCurrency = orml_tokens::Module<Runtime>;
-	type PriceSource = MockPriceSource;
-	type ModuleId = LiquidityPoolsModuleId;
-	type LiquidityPoolAccountId = LiquidityPoolAccountId;
-	type InitialExchangeRate = InitialExchangeRate;
-	type EnabledCurrencyPair = EnabledCurrencyPair;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
-	type EnabledWrappedTokensId = EnabledWrappedTokensId;
-}
+mock_impl_liquidity_pools_config!(Runtime);
 
 parameter_types! {
 	pub const BlocksPerYear: u128 = 5256000u128;

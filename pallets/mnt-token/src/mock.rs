@@ -17,6 +17,7 @@ use sp_runtime::{
 use helper::{
 	mock_impl_system_config,
 	mock_impl_orml_tokens_config,
+	mock_impl_liquidity_pools_config,
 };
 
 parameter_types! {
@@ -50,16 +51,7 @@ mock_impl_orml_tokens_config!(Runtime);
 
 pub struct MockPriceSource;
 
-impl liquidity_pools::Config for Runtime {
-	type MultiCurrency = orml_tokens::Module<Runtime>;
-	type PriceSource = MockPriceSource;
-	type ModuleId = LiquidityPoolsModuleId;
-	type LiquidityPoolAccountId = LiquidityPoolAccountId;
-	type InitialExchangeRate = InitialExchangeRate;
-	type EnabledCurrencyPair = EnabledCurrencyPair;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
-	type EnabledWrappedTokensId = EnabledWrappedTokensId;
-}
+mock_impl_liquidity_pools_config!(Runtime);
 
 impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {

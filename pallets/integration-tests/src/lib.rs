@@ -33,6 +33,7 @@ mod tests {
 		mock_impl_system_config,
 		mock_impl_orml_tokens_config,
 		mock_impl_orml_currencies_config,
+		mock_impl_liquidity_pools_config,
 	};
 
 	mod controller_tests;
@@ -106,16 +107,7 @@ mod tests {
 		fn unlock_price(_currency_id: CurrencyId) {}
 	}
 
-	impl liquidity_pools::Config for Test {
-		type MultiCurrency = orml_tokens::Module<Test>;
-		type PriceSource = MockPriceSource;
-		type ModuleId = LiquidityPoolsModuleId;
-		type LiquidityPoolAccountId = LiquidityPoolAccountId;
-		type InitialExchangeRate = InitialExchangeRate;
-		type EnabledCurrencyPair = EnabledCurrencyPair;
-		type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
-		type EnabledWrappedTokensId = EnabledWrappedTokensId;
-	}
+	mock_impl_liquidity_pools_config!(Test);
 
 	thread_local! {
 		static FOUR: RefCell<Vec<u64>> = RefCell::new(vec![4]);
