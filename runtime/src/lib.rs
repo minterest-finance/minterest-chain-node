@@ -335,11 +335,6 @@ impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime 
 	type MembershipChanged = MinterestOracle;
 }
 
-impl m_tokens::Config for Runtime {
-	type Event = Event;
-	type MultiCurrency = Currencies;
-}
-
 impl minterest_protocol::Config for Runtime {
 	type Event = Event;
 	type Borrowing = LiquidityPools;
@@ -580,7 +575,6 @@ construct_runtime!(
 		OperatorMembershipMinterest: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
 
 		// Minterest pallets
-		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 		MinterestProtocol: minterest_protocol::{Module, Call, Event<T>},
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
