@@ -20,6 +20,7 @@ orml-utilities = { path = "../../orml/utilities", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
 minterest-primitives = { path = "../../primitives", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
+test-helper = { path = "../../test-helper", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = '3.0.0' }
@@ -29,7 +30,6 @@ orml-tokens = { path = "../../orml/tokens" }
 
 liquidity-pools = { path = "../liquidity-pools" }
 dex = { path = "../dex" }
-test-helper = { path = "../../test-helper" }
 
 [features]
 default = ['std']
