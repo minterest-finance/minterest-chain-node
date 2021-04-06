@@ -30,7 +30,6 @@ members = [
     'runtime',
     'test-helper',
     'pallets/liquidity-pools',
-    'pallets/m-tokens',
     'pallets/minterest-model',
     'pallets/minterest-protocol',
     'pallets/controller',

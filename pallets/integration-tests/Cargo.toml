@@ -17,7 +17,6 @@ sp-std = { version = "3.0.0", default-features = false }
 orml-utilities = { path = "../../orml/utilities", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
-m-tokens = { path = "../m-tokens", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
 liquidation-pools = { path = "../liquidation-pools", default-features = false }
 minterest-protocol = { path = "../minterest-protocol", default-features = false }
@@ -53,7 +52,6 @@ std = [
     "orml-utilities/std",
 
     "minterest-primitives/std",
-    "m-tokens/std",
     "liquidity-pools/std",
     "liquidation-pools/std",
     "minterest-protocol/std",

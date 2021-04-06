@@ -2744,7 +2744,6 @@ dependencies = [
  "frame-system",
  "liquidation-pools",
  "liquidity-pools",
- "m-tokens",
  "minterest-model",
  "minterest-primitives",
  "minterest-protocol",
@@ -3636,26 +3635,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "m-tokens"
-version = "0.5.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "minterest-primitives",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "orml-utilities",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "test-helper",
-]
-
-[[package]]
 name = "mach"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4192,7 +4171,6 @@ dependencies = [
  "integration-tests",
  "liquidation-pools",
  "liquidity-pools",
- "m-tokens",
  "minterest-model",
  "minterest-primitives",
  "minterest-protocol",

@@ -59,7 +59,6 @@ mod tests {
 			System: frame_system::{Module, Call, Config, Storage, Event<T>},
 			Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 			Currencies: orml_currencies::{Module, Call, Event<T>},
-			MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 			MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 			TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 			TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
@@ -98,11 +97,6 @@ mod tests {
 	mock_impl_orml_currencies_config!(Test, CurrencyId::MNT);
 	mock_impl_liquidity_pools_config!(Test);
 	mock_impl_liquidation_pools_config!(Test);
-
-	impl m_tokens::Config for Test {
-		type Event = Event;
-		type MultiCurrency = orml_tokens::Module<Test>;
-	}
 
 	pub struct MockPriceSource;
 
