@@ -20,6 +20,7 @@ use helper::{
 	mock_impl_system_config,
 	mock_impl_orml_tokens_config,
 	mock_impl_liquidity_pools_config,
+	mock_impl_liquidation_pools_config,
 };
 
 pub type AccountId = u64;
@@ -47,8 +48,14 @@ frame_support::construct_runtime!(
 	}
 );
 
+ord_parameter_types! {
+	pub const ZeroAdmin: AccountId = 0;
+}
+
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
+mock_impl_liquidity_pools_config!(Test);
+mock_impl_liquidation_pools_config!(Test);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
@@ -80,14 +87,8 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
-mock_impl_liquidity_pools_config!(Test);
-
 parameter_types! {
 	pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
-}
-
-ord_parameter_types! {
-	pub const ZeroAdmin: AccountId = 0;
 }
 
 impl controller::Config for Test {
@@ -107,23 +108,6 @@ impl minterest_model::Config for Test {
 	type BlocksPerYear = BlocksPerYear;
 	type ModelUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	type WeightInfo = ();
-}
-
-parameter_types! {
-	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
-	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
-	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
-}
-
-impl liquidation_pools::Config for Test {
-	type Event = Event;
-	type UnsignedPriority = LiquidityPoolsPriority;
-	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
-	type LiquidationPoolAccountId = LiquidationPoolAccountId;
-	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
-	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-	type Dex = dex::Module<Test>;
-	type LiquidationPoolsWeightInfo = ();
 }
 
 ord_parameter_types! {
@@ -186,17 +170,6 @@ impl dex::Config for Test {
 	type MultiCurrency = orml_tokens::Module<Test>;
 	type DexModuleId = DexModuleId;
 	type DexAccountId = DexAccountId;
-}
-
-/// An extrinsic type used for tests.
-pub type Extrinsic = TestXt<Call, ()>;
-
-impl<LocalCall> SendTransactionTypes<LocalCall> for Test
-where
-	Call: From<LocalCall>,
-{
-	type OverarchingCall = Call;
-	type Extrinsic = Extrinsic;
 }
 
 pub const BLOCKS_PER_YEAR: u128 = 5_256_000;

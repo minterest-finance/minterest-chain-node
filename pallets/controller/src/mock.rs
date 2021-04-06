@@ -50,6 +50,7 @@ frame_support::construct_runtime!(
 mock_impl_system_config!(Runtime);
 mock_impl_orml_tokens_config!(Runtime);
 mock_impl_orml_currencies_config!(Runtime, CurrencyId::MNT);
+mock_impl_liquidity_pools_config!(Runtime);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
@@ -88,8 +89,6 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
-
-mock_impl_liquidity_pools_config!(Runtime);
 
 parameter_types! {
 	pub const BlocksPerYear: u128 = 5256000u128;

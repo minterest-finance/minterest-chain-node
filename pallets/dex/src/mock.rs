@@ -21,13 +21,20 @@ use helper::{
 	mock_impl_system_config,
 	mock_impl_orml_tokens_config,
 	mock_impl_liquidity_pools_config,
+	mock_impl_liquidation_pools_config,
 };
 
 pub type AccountId = u64;
 type Amount = i128;
 
+ord_parameter_types! {
+	pub const ZeroAdmin: AccountId = 0;
+}
+
 mock_impl_system_config!(Runtime);
 mock_impl_orml_tokens_config!(Runtime);
+mock_impl_liquidity_pools_config!(Runtime);
+mock_impl_liquidation_pools_config!(Runtime);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
@@ -59,29 +66,6 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
-mock_impl_liquidity_pools_config!(Runtime);
-
-ord_parameter_types! {
-	pub const ZeroAdmin: AccountId = 0;
-}
-
-parameter_types! {
-	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
-	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
-	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
-}
-
-impl liquidation_pools::Config for Runtime {
-	type Event = Event;
-	type UnsignedPriority = LiquidityPoolsPriority;
-	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
-	type LiquidationPoolAccountId = LiquidationPoolAccountId;
-	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
-	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-	type Dex = dex::Module<Runtime>;
-	type LiquidationPoolsWeightInfo = ();
-}
-
 parameter_types! {
 	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
 	pub DexAccountId: AccountId = DexModuleId::get().into_account();
@@ -110,17 +94,6 @@ construct_runtime!(
 		TestDex: dex::{Module, Storage, Call, Event<T>},
 	}
 );
-
-/// An extrinsic type used for tests.
-pub type Extrinsic = TestXt<Call, ()>;
-
-impl<LocalCall> SendTransactionTypes<LocalCall> for Runtime
-where
-	Call: From<LocalCall>,
-{
-	type OverarchingCall = Call;
-	type Extrinsic = Extrinsic;
-}
 
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub fn dollars<T: Into<u128>>(d: T) -> Balance {

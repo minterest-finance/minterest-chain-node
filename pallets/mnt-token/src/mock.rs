@@ -46,11 +46,10 @@ pub fn admin() -> Origin {
 	Origin::signed(ADMIN)
 }
 
-mock_impl_system_config!(Runtime);
-mock_impl_orml_tokens_config!(Runtime);
-
 pub struct MockPriceSource;
 
+mock_impl_system_config!(Runtime);
+mock_impl_orml_tokens_config!(Runtime);
 mock_impl_liquidity_pools_config!(Runtime);
 
 impl PriceProvider<CurrencyId> for MockPriceSource {

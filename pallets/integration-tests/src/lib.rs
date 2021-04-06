@@ -34,6 +34,7 @@ mod tests {
 		mock_impl_orml_tokens_config,
 		mock_impl_orml_currencies_config,
 		mock_impl_liquidity_pools_config,
+		mock_impl_liquidation_pools_config,
 	};
 
 	mod controller_tests;
@@ -68,9 +69,15 @@ mod tests {
 		}
 	);
 
+	ord_parameter_types! {
+		pub const ZeroAdmin: AccountId = 0;
+	}
+
 	mock_impl_system_config!(Test);
 	mock_impl_orml_tokens_config!(Test);
 	mock_impl_orml_currencies_config!(Test, CurrencyId::MNT);
+	mock_impl_liquidity_pools_config!(Test);
+	mock_impl_liquidation_pools_config!(Test);
 
 	impl m_tokens::Config for Test {
 		type Event = Event;
@@ -107,8 +114,6 @@ mod tests {
 		fn unlock_price(_currency_id: CurrencyId) {}
 	}
 
-	mock_impl_liquidity_pools_config!(Test);
-
 	thread_local! {
 		static FOUR: RefCell<Vec<u64>> = RefCell::new(vec![4]);
 	}
@@ -139,38 +144,6 @@ mod tests {
 
 	parameter_types! {
 		pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
-	}
-
-	ord_parameter_types! {
-		pub const ZeroAdmin: AccountId = 0;
-	}
-
-	parameter_types! {
-		pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
-		pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
-		pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
-	}
-
-	impl liquidation_pools::Config for Test {
-		type Event = Event;
-		type UnsignedPriority = LiquidityPoolsPriority;
-		type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
-		type LiquidationPoolAccountId = LiquidationPoolAccountId;
-		type LiquidityPoolsManager = liquidity_pools::Module<Test>;
-		type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-		type Dex = dex::Module<Test>;
-		type LiquidationPoolsWeightInfo = ();
-	}
-
-	/// An extrinsic type used for tests.
-	pub type Extrinsic = TestXt<Call, ()>;
-
-	impl<LocalCall> SendTransactionTypes<LocalCall> for Test
-	where
-		Call: From<LocalCall>,
-	{
-		type OverarchingCall = Call;
-		type Extrinsic = Extrinsic;
 	}
 
 	impl controller::Config for Test {

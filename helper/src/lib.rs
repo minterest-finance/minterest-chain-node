@@ -88,3 +88,36 @@ macro_rules! mock_impl_liquidity_pools_config {
         }
     }
 }
+
+#[macro_export]
+macro_rules! mock_impl_liquidation_pools_config {
+    ($target:ty) => {
+        parameter_types! {
+            pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+            pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
+            pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
+        }
+
+        impl liquidation_pools::Config for $target {
+            type Event = Event;
+            type UnsignedPriority = LiquidityPoolsPriority;
+            type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
+            type LiquidationPoolAccountId = LiquidationPoolAccountId;
+            type LiquidityPoolsManager = liquidity_pools::Module<$target>;
+            type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+            type Dex = dex::Module<$target>;
+            type LiquidationPoolsWeightInfo = ();
+        }
+
+        /// An extrinsic type used for tests.
+        pub type Extrinsic = TestXt<Call, ()>;
+
+        impl<LocalCall> SendTransactionTypes<LocalCall> for $target
+        where
+            Call: From<LocalCall>,
+        {
+            type OverarchingCall = Call;
+            type Extrinsic = Extrinsic;
+        }
+    }
+}
