@@ -73,20 +73,11 @@ mod tests {
 		pub const ZeroAdmin: AccountId = 0;
 	}
 
-	mock_impl_system_config!(Test);
-	mock_impl_orml_tokens_config!(Test);
-	mock_impl_orml_currencies_config!(Test, CurrencyId::MNT);
-	mock_impl_liquidity_pools_config!(Test);
-	mock_impl_liquidation_pools_config!(Test);
-
-	impl m_tokens::Config for Test {
-		type Event = Event;
-		type MultiCurrency = orml_tokens::Module<Test>;
-	}
-
 	parameter_types! {
 		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+		pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 		pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
+		pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 		pub InitialExchangeRate: Rate = Rate::one();
 		pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 			CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
@@ -100,6 +91,17 @@ mod tests {
 		pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
 				.map(|currency_pair| currency_pair.wrapped_id)
 				.collect();
+	}
+
+	mock_impl_system_config!(Test);
+	mock_impl_orml_tokens_config!(Test);
+	mock_impl_orml_currencies_config!(Test, CurrencyId::MNT);
+	mock_impl_liquidity_pools_config!(Test);
+	mock_impl_liquidation_pools_config!(Test);
+
+	impl m_tokens::Config for Test {
+		type Event = Event;
+		type MultiCurrency = orml_tokens::Module<Test>;
 	}
 
 	pub struct MockPriceSource;

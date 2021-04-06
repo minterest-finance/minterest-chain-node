@@ -2,8 +2,8 @@
 macro_rules! mock_impl_system_config {
     ($target:ty) => {
         parameter_types! {
-            pub const BlockHashCount: u64 = 250;
-            pub const SS58Prefix: u8 = 42;
+            pub const MockBlockHashCount: u64 = 250;
+            pub const MockSS58Prefix: u8 = 42;
         }
 
         impl system::Config for $target {
@@ -21,14 +21,14 @@ macro_rules! mock_impl_system_config {
             type Lookup = IdentityLookup<Self::AccountId>;
             type Header = Header;
             type Event = Event;
-            type BlockHashCount = BlockHashCount;
+            type BlockHashCount = MockBlockHashCount;
             type Version = ();
             type PalletInfo = PalletInfo;
             type AccountData = ();
             type OnNewAccount = ();
             type OnKilledAccount = ();
             type SystemWeightInfo = ();
-            type SS58Prefix = SS58Prefix;
+            type SS58Prefix = MockSS58Prefix;
         }
     }
 }
@@ -37,7 +37,7 @@ macro_rules! mock_impl_system_config {
 macro_rules! mock_impl_orml_tokens_config {
     ($target:ty) => {
         parameter_type_with_key! {
-            pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+            pub MockExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
                 Default::default()
             };
         }
@@ -48,7 +48,7 @@ macro_rules! mock_impl_orml_tokens_config {
             type Amount = Amount;
             type CurrencyId = CurrencyId;
             type WeightInfo = ();
-            type ExistentialDeposits = ExistentialDeposits;
+            type ExistentialDeposits = MockExistentialDeposits;
             type OnDust = ();
         }
     }
@@ -58,16 +58,16 @@ macro_rules! mock_impl_orml_tokens_config {
 macro_rules! mock_impl_orml_currencies_config {
     ($target:ty, $currency_id:expr) => {
         parameter_types! {
-            pub const GetNativeCurrencyId: CurrencyId = $currency_id;
+            pub const MockGetNativeCurrencyId: CurrencyId = $currency_id;
         }
 
-        type NativeCurrency = Currency<$target, GetNativeCurrencyId>;
+        type MockNativeCurrency = Currency<$target, MockGetNativeCurrencyId>;
 
         impl orml_currencies::Config for $target {
             type Event = Event;
             type MultiCurrency = orml_tokens::Module<$target>;
-            type NativeCurrency = NativeCurrency;
-            type GetNativeCurrencyId = GetNativeCurrencyId;
+            type NativeCurrency = MockNativeCurrency;
+            type GetNativeCurrencyId = MockGetNativeCurrencyId;
             type WeightInfo = ();
         }
     }
@@ -93,14 +93,12 @@ macro_rules! mock_impl_liquidity_pools_config {
 macro_rules! mock_impl_liquidation_pools_config {
     ($target:ty) => {
         parameter_types! {
-            pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
-            pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
-            pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
+            pub const MockLiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
         }
 
         impl liquidation_pools::Config for $target {
             type Event = Event;
-            type UnsignedPriority = LiquidityPoolsPriority;
+            type UnsignedPriority = MockLiquidityPoolsPriority;
             type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
             type LiquidationPoolAccountId = LiquidationPoolAccountId;
             type LiquidityPoolsManager = liquidity_pools::Module<$target>;
@@ -110,14 +108,14 @@ macro_rules! mock_impl_liquidation_pools_config {
         }
 
         /// An extrinsic type used for tests.
-        pub type Extrinsic = TestXt<Call, ()>;
+        pub type MockExtrinsic = TestXt<Call, ()>;
 
         impl<LocalCall> SendTransactionTypes<LocalCall> for $target
         where
             Call: From<LocalCall>,
         {
             type OverarchingCall = Call;
-            type Extrinsic = Extrinsic;
+            type Extrinsic = MockExtrinsic;
         }
     }
 }

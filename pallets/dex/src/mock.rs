@@ -31,14 +31,11 @@ ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
 }
 
-mock_impl_system_config!(Runtime);
-mock_impl_orml_tokens_config!(Runtime);
-mock_impl_liquidity_pools_config!(Runtime);
-mock_impl_liquidation_pools_config!(Runtime);
-
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
+	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
@@ -53,6 +50,11 @@ parameter_types! {
 			.map(|currency_pair| currency_pair.wrapped_id)
 			.collect();
 }
+
+mock_impl_system_config!(Runtime);
+mock_impl_orml_tokens_config!(Runtime);
+mock_impl_liquidity_pools_config!(Runtime);
+mock_impl_liquidation_pools_config!(Runtime);
 
 pub struct MockPriceSource;
 
