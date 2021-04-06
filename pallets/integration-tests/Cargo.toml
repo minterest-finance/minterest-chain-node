@@ -21,7 +21,6 @@ m-tokens = { path = "../m-tokens", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
 liquidation-pools = { path = "../liquidation-pools", default-features = false }
 minterest-protocol = { path = "../minterest-protocol", default-features = false }
-test-helper = { path = "../../test-helper" }
 
 [dev-dependencies]
 serde = { version = "1.0.101" }
@@ -40,6 +39,7 @@ pallet-traits = { path = "../traits" }
 minterest-model = { path = "../minterest-model" }
 minterest-protocol = { path = "../minterest-protocol" }
 dex = { path = "../dex" }
+test-helper = { path = "../../test-helper" }
 
 [features]
 default = ['std']

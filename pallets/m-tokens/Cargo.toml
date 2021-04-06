@@ -22,12 +22,12 @@ orml-utilities = { path = "../../orml/utilities", default-features = false }
 orml-tokens = { path = "../../orml/tokens", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
-test-helper = { path = "../../test-helper" }
 
 [dev-dependencies]
 sp-core = { version = "3.0.0", default-features = false }
 orml-tokens = { path = "../../orml/tokens"}
 orml-currencies = { path = "../../orml/currencies"}
+test-helper = { path = "../../test-helper" }
 
 [features]
 default = ["std"]

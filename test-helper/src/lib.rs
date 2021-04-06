@@ -1,3 +1,9 @@
+//! # Test Helper Module
+//!
+//! ## Overview
+//!
+//! Contains macros with mocked implementations of several modules config traits
+
 #[macro_export]
 macro_rules! mock_impl_system_config {
     ($target:ty) => {
