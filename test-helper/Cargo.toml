@@ -1,5 +1,5 @@
 [package]
-name = "helper"
+name = "test-helper"
 version = "0.6.2"
 authors = ["Minterest <https://github.com/minterest-defi>"]
 edition = "2018"

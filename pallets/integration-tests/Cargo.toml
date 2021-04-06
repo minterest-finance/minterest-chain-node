@@ -21,7 +21,7 @@ m-tokens = { path = "../m-tokens", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
 liquidation-pools = { path = "../liquidation-pools", default-features = false }
 minterest-protocol = { path = "../minterest-protocol", default-features = false }
-helper = { path = "../../helper" }
+test-helper = { path = "../../test-helper" }
 
 [dev-dependencies]
 serde = { version = "1.0.101" }
@@ -57,6 +57,6 @@ std = [
     "liquidity-pools/std",
     "liquidation-pools/std",
     "minterest-protocol/std",
-    "helper/std",
+    "test-helper/std",
 ]
 

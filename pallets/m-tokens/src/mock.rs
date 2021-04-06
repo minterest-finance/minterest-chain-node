@@ -11,7 +11,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use helper::{
+use test_helper::{
 	mock_impl_system_config,
 	mock_impl_orml_tokens_config,
 	mock_impl_orml_currencies_config,

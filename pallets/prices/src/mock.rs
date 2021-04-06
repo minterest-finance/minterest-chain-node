@@ -9,7 +9,7 @@ use sp_core::H256;
 use sp_runtime::testing::Header;
 use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
 use sp_runtime::FixedPointNumber;
-use helper::mock_impl_system_config;
+use test_helper::mock_impl_system_config;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;

@@ -18,7 +18,7 @@ orml-utilities = { path = "../../orml/utilities", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
-helper = { path = "../../helper" }
+test-helper = { path = "../../test-helper" }
 
 [dev-dependencies]
 sp-core = { version = '3.0.0' }
@@ -45,5 +45,5 @@ std = [
 
     "minterest-primitives/std",
     "liquidity-pools/std",
-    "helper/std",
+    "test-helper/std",
 ]

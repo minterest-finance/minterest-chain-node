@@ -23,7 +23,7 @@ minterest-primitives = { path = "../../primitives", default-features = false }
 minterest-model = { path = "../minterest-model", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
-helper = { path = "../../helper", default-features = false }
+test-helper = { path = "../../test-helper", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = "3.0.0" }
@@ -54,5 +54,5 @@ std = [
     "minterest-model/std",
     "liquidity-pools/std",
     "pallet-traits/std",
-    "helper/std",
+    "test-helper/std",
 ]

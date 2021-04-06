@@ -28,7 +28,7 @@ members = [
     'primitives',
     'service',
     'runtime',
-    'helper',
+    'test-helper',
     'pallets/liquidity-pools',
     'pallets/m-tokens',
     'pallets/minterest-model',

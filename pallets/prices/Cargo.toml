@@ -16,7 +16,7 @@ orml-traits = { path = "../../orml/traits", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
-helper = { path = "../../helper" }
+test-helper = { path = "../../test-helper" }
 
 [dev-dependencies]
 sp-core = { version = '3.0.0' }
@@ -33,5 +33,5 @@ std = [
     'frame-system/std',
     "sp-runtime/std",
     "sp-std/std",
-    "helper/std",
+    "test-helper/std",
 ]

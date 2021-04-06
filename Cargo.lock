@@ -911,7 +911,6 @@ version = "0.6.2"
 dependencies = [
  "frame-support",
  "frame-system",
- "helper",
  "liquidity-pools",
  "minterest-model",
  "minterest-primitives",
@@ -926,6 +925,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -1385,7 +1385,6 @@ version = "0.6.2"
 dependencies = [
  "frame-support",
  "frame-system",
- "helper",
  "liquidation-pools",
  "liquidity-pools",
  "minterest-primitives",
@@ -1398,6 +1397,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -2359,10 +2359,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "helper"
-version = "0.6.2"
-
-[[package]]
 name = "hermit-abi"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2746,7 +2742,6 @@ dependencies = [
  "dex",
  "frame-support",
  "frame-system",
- "helper",
  "liquidation-pools",
  "liquidity-pools",
  "m-tokens",
@@ -2764,6 +2759,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -3563,7 +3559,6 @@ dependencies = [
  "dex",
  "frame-support",
  "frame-system",
- "helper",
  "liquidity-pools",
  "minterest-primitives",
  "orml-currencies",
@@ -3577,6 +3572,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -3585,7 +3581,6 @@ version = "0.5.0"
 dependencies = [
  "frame-support",
  "frame-system",
- "helper",
  "minterest-primitives",
  "orml-currencies",
  "orml-tokens",
@@ -3600,6 +3595,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -3645,7 +3641,6 @@ version = "0.5.0"
 dependencies = [
  "frame-support",
  "frame-system",
- "helper",
  "minterest-primitives",
  "orml-currencies",
  "orml-tokens",
@@ -3657,6 +3652,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -3825,7 +3821,6 @@ version = "0.5.0"
 dependencies = [
  "frame-support",
  "frame-system",
- "helper",
  "liquidity-pools",
  "minterest-primitives",
  "orml-tokens",
@@ -3838,6 +3833,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -3860,7 +3856,6 @@ dependencies = [
  "dex",
  "frame-support",
  "frame-system",
- "helper",
  "liquidation-pools",
  "liquidity-pools",
  "minterest-model",
@@ -3876,6 +3871,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -4030,7 +4026,6 @@ version = "0.6.2"
 dependencies = [
  "frame-support",
  "frame-system",
- "helper",
  "liquidity-pools",
  "minterest-primitives",
  "orml-tokens",
@@ -4043,6 +4038,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -4051,7 +4047,6 @@ version = "0.6.2"
 dependencies = [
  "frame-support",
  "frame-system",
- "helper",
  "minterest-primitives",
  "orml-traits",
  "pallet-traits",
@@ -4061,6 +4056,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -5845,7 +5841,6 @@ dependencies = [
  "dex",
  "frame-support",
  "frame-system",
- "helper",
  "liquidation-pools",
  "liquidity-pools",
  "minterest-model",
@@ -5862,6 +5857,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -8304,6 +8300,10 @@ checksum = "2dfed899f0eb03f32ee8c6a0aabdb8a7949659e3466561fc0adf54e26d88c5f4"
 dependencies = [
  "winapi-util",
 ]
+
+[[package]]
+name = "test-helper"
+version = "0.6.2"
 
 [[package]]
 name = "textwrap"

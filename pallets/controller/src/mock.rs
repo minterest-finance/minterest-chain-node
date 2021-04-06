@@ -18,7 +18,7 @@ use sp_runtime::{
 	FixedPointNumber, ModuleId,
 };
 use sp_std::cell::RefCell;
-use helper::{
+use test_helper::{
 	mock_impl_system_config,
 	mock_impl_orml_tokens_config,
 	mock_impl_orml_currencies_config,

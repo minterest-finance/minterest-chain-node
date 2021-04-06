@@ -14,7 +14,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
 	FixedPointNumber, ModuleId,
 };
-use helper::{
+use test_helper::{
 	mock_impl_system_config,
 	mock_impl_orml_tokens_config,
 	mock_impl_liquidity_pools_config,

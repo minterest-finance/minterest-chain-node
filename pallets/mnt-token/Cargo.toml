@@ -18,7 +18,7 @@ sp-arithmetic = { version = "3.0.0", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
-helper = { path = "../../helper" }
+test-helper = { path = "../../test-helper" }
 
 [dev-dependencies]
 sp-core = "3.0.0"
@@ -46,5 +46,5 @@ std = [
 
     "pallet-traits/std",
     "minterest-primitives/std",
-	"helper/std",
+	"test-helper/std",
 ]

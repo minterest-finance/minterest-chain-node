@@ -29,7 +29,7 @@ mod tests {
 	use minterest_protocol::Error as MinterestProtocolError;
 	use pallet_traits::{PoolsManager, PriceProvider};
 	use sp_std::cell::RefCell;
-	use helper::{
+	use test_helper::{
 		mock_impl_system_config,
 		mock_impl_orml_tokens_config,
 		mock_impl_orml_currencies_config,
