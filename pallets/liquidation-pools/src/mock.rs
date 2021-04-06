@@ -18,10 +18,8 @@ use sp_runtime::{
 	FixedPointNumber,
 };
 use test_helper::{
+	mock_impl_liquidity_pools_config, mock_impl_orml_currencies_config, mock_impl_orml_tokens_config,
 	mock_impl_system_config,
-	mock_impl_orml_tokens_config,
-	mock_impl_orml_currencies_config,
-	mock_impl_liquidity_pools_config,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;

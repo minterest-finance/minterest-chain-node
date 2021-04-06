@@ -14,11 +14,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
 	FixedPointNumber, ModuleId,
 };
-use test_helper::{
-	mock_impl_system_config,
-	mock_impl_orml_tokens_config,
-	mock_impl_liquidity_pools_config,
-};
+use test_helper::{mock_impl_liquidity_pools_config, mock_impl_orml_tokens_config, mock_impl_system_config};
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");

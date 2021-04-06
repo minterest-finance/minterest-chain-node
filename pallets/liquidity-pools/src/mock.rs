@@ -15,10 +15,8 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 };
 use test_helper::{
+	mock_impl_liquidity_pools_config, mock_impl_orml_currencies_config, mock_impl_orml_tokens_config,
 	mock_impl_system_config,
-	mock_impl_orml_tokens_config,
-	mock_impl_orml_currencies_config,
-	mock_impl_liquidity_pools_config,
 };
 
 pub type AccountId = u64;

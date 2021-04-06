@@ -30,11 +30,8 @@ mod tests {
 	use pallet_traits::{PoolsManager, PriceProvider};
 	use sp_std::cell::RefCell;
 	use test_helper::{
-		mock_impl_system_config,
-		mock_impl_orml_tokens_config,
-		mock_impl_orml_currencies_config,
-		mock_impl_liquidity_pools_config,
-		mock_impl_liquidation_pools_config,
+		mock_impl_liquidation_pools_config, mock_impl_liquidity_pools_config, mock_impl_orml_currencies_config,
+		mock_impl_orml_tokens_config, mock_impl_system_config,
 	};
 
 	mod controller_tests;

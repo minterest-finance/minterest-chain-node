@@ -15,13 +15,11 @@ use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-	FixedPointNumber
+	FixedPointNumber,
 };
 use test_helper::{
+	mock_impl_liquidation_pools_config, mock_impl_liquidity_pools_config, mock_impl_orml_tokens_config,
 	mock_impl_system_config,
-	mock_impl_orml_tokens_config,
-	mock_impl_liquidity_pools_config,
-	mock_impl_liquidation_pools_config,
 };
 
 pub type AccountId = u64;
