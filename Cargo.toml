@@ -15,6 +15,7 @@ path = "src/main.rs"
 cargo-audit = "0.14.0"
 minterest-cli = { path = "cli" }
 minterest-service = { path = "service" }
+orml-oracle = "0.4.0"
 
 [features]
 runtime-benchmarks = [
@@ -37,16 +38,5 @@ members = [
     'pallets/liquidation-pools',
     'pallets/mnt-token',
     'pallets/dex',
-
-    "orml/auction",
-    "orml/authority",
-    "orml/benchmarking",
-    "orml/currencies",
-    "orml/gradually-update",
-    "orml/oracle",
-    "orml/tokens",
-    "orml/traits",
-    "orml/utilities",
-    "orml/vesting",
 ]
 

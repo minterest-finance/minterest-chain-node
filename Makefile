@@ -1,13 +1,9 @@
 .PHONY: init
-init: toolchain submodule build
+init: toolchain build
 
 .PHONY: toolchain
 toolchain:
 	./scripts/init.sh
-
-.PHONY: submodule
-submodule:
-	git submodule update --init --recursive
 
 .PHONY: build
 build:
@@ -45,10 +41,7 @@ restart: purge run
 cargo-audit:
 	cargo audit
 
-update-orml:
-	cd orml && git checkout master && git pull
-	git add orml
-
-update: update-orml
+.PHONY: update
+update:
 	cargo update
 	make check
