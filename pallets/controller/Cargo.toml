@@ -23,7 +23,6 @@ minterest-primitives = { path = "../../primitives", default-features = false }
 minterest-model = { path = "../minterest-model", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
-test-helper = { path = "../../test-helper", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = "3.0.0" }
@@ -34,6 +33,7 @@ orml-currencies = { path = "../../orml/currencies" }
 
 liquidity-pools = { path = "../liquidity-pools" }
 minterest-model = { path = "../minterest-model" }
+test-helper = { path = "../../test-helper" }
 
 [features]
 default = ["std"]
@@ -54,5 +54,4 @@ std = [
     "minterest-model/std",
     "liquidity-pools/std",
     "pallet-traits/std",
-    "test-helper/std",
 ]

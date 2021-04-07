@@ -16,7 +16,6 @@ orml-traits = { path = "../../orml/traits", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
-test-helper = { path = "../../test-helper", default-features = false }
 
 [dev-dependencies]
 sp-core = "3.0.0"
@@ -26,6 +25,7 @@ orml-tokens = { path = "../../orml/tokens" }
 minterest-primitives = { path = "../../primitives" }
 liquidity-pools = { path = "../liquidity-pools" }
 liquidation-pools = { path = "../liquidation-pools" }
+test-helper = { path = "../../test-helper" }
 
 [features]
 default = ["std"]
@@ -41,5 +41,4 @@ std = [
 
 	"minterest-primitives/std",
 	"pallet-traits/std",
-	"test-helper/std",
 ]

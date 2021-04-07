@@ -26,7 +26,6 @@ minterest-protocol = { path = "../minterest-protocol", default-features = false 
 liquidation-pools = { path = "../liquidation-pools", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
 controller = { path = "../controller", default-features = false }
-test-helper = { path = "../../test-helper", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = '3.0.0' }
@@ -39,6 +38,7 @@ liquidation-pools = { path = "../liquidation-pools" }
 controller = { path = "../controller" }
 minterest-model = { path = "../minterest-model" }
 dex = { path = "../dex" }
+test-helper = { path = "../../test-helper" }
 
 [features]
 default = ['std']
@@ -60,5 +60,4 @@ std = [
     "minterest-protocol/std",
     "liquidation-pools/std",
     "controller/std",
-    "test-helper/std",
 ]

@@ -14,10 +14,9 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 	ModuleId,
 };
-use test_helper::{mock_impl_liquidity_pools_config, mock_impl_orml_tokens_config, mock_impl_system_config};
+use test_helper::*;
 
 pub type AccountId = u64;
-type Amount = i128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -36,9 +35,14 @@ frame_support::construct_runtime!(
 	}
 );
 
+ord_parameter_types! {
+	pub const OneAlice: AccountId = 1;
+}
+
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
 mock_impl_liquidity_pools_config!(Test);
+mock_impl_minterest_model_config!(Test, OneAlice);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
@@ -70,22 +74,6 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
-parameter_types! {
-	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
-}
-
-ord_parameter_types! {
-	pub const OneAlice: AccountId = 1;
-}
-
-impl minterest_model::Config for Test {
-	type Event = Event;
-	type BlocksPerYear = BlocksPerYear;
-	type ModelUpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
-	type WeightInfo = ();
-}
-
-pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
 pub const ALICE: AccountId = 1;
 pub fn alice() -> Origin {
 	Origin::signed(ALICE)

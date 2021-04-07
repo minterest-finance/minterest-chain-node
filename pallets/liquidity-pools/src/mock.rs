@@ -14,13 +14,9 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use test_helper::{
-	mock_impl_liquidity_pools_config, mock_impl_orml_currencies_config, mock_impl_orml_tokens_config,
-	mock_impl_system_config,
-};
+use test_helper::*;
 
 pub type AccountId = u64;
-type Amount = i128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;

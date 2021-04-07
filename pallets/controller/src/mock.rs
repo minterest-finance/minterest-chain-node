@@ -18,13 +18,9 @@ use sp_runtime::{
 	FixedPointNumber, ModuleId,
 };
 use sp_std::cell::RefCell;
-use test_helper::{
-	mock_impl_liquidity_pools_config, mock_impl_orml_currencies_config, mock_impl_orml_tokens_config,
-	mock_impl_system_config,
-};
+use test_helper::*;
 
 pub type AccountId = u64;
-type Amount = i128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -45,10 +41,15 @@ frame_support::construct_runtime!(
 	}
 );
 
+ord_parameter_types! {
+	pub const OneAlice: AccountId = 1;
+}
+
 mock_impl_system_config!(Runtime);
 mock_impl_orml_tokens_config!(Runtime);
 mock_impl_orml_currencies_config!(Runtime, CurrencyId::MNT);
 mock_impl_liquidity_pools_config!(Runtime);
+mock_impl_minterest_model_config!(Runtime, OneAlice);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
@@ -86,21 +87,6 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn lock_price(_currency_id: CurrencyId) {}
 
 	fn unlock_price(_currency_id: CurrencyId) {}
-}
-
-parameter_types! {
-	pub const BlocksPerYear: u128 = 5256000u128;
-}
-
-impl minterest_model::Config for Runtime {
-	type Event = Event;
-	type BlocksPerYear = BlocksPerYear;
-	type ModelUpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
-	type WeightInfo = ();
-}
-
-ord_parameter_types! {
-	pub const OneAlice: AccountId = 1;
 }
 
 parameter_types! {

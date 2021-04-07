@@ -17,13 +17,9 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	FixedPointNumber,
 };
-use test_helper::{
-	mock_impl_liquidation_pools_config, mock_impl_liquidity_pools_config, mock_impl_orml_tokens_config,
-	mock_impl_system_config,
-};
+use test_helper::*;
 
 pub type AccountId = u64;
-type Amount = i128;
 
 ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
@@ -53,6 +49,7 @@ mock_impl_system_config!(Runtime);
 mock_impl_orml_tokens_config!(Runtime);
 mock_impl_liquidity_pools_config!(Runtime);
 mock_impl_liquidation_pools_config!(Runtime);
+mock_impl_dex_config!(Runtime);
 
 pub struct MockPriceSource;
 
@@ -64,18 +61,6 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn lock_price(_currency_id: CurrencyId) {}
 
 	fn unlock_price(_currency_id: CurrencyId) {}
-}
-
-parameter_types! {
-	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
-	pub DexAccountId: AccountId = DexModuleId::get().into_account();
-}
-
-impl dex::Config for Runtime {
-	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Runtime>;
-	type DexModuleId = DexModuleId;
-	type DexAccountId = DexAccountId;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;

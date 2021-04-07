@@ -51,7 +51,7 @@ macro_rules! mock_impl_orml_tokens_config {
 		impl orml_tokens::Config for $target {
 			type Event = Event;
 			type Balance = Balance;
-			type Amount = Amount;
+			type Amount = i128;
 			type CurrencyId = CurrencyId;
 			type WeightInfo = ();
 			type ExistentialDeposits = MockExistentialDeposits;
@@ -122,6 +122,88 @@ macro_rules! mock_impl_liquidation_pools_config {
 		{
 			type OverarchingCall = Call;
 			type Extrinsic = MockExtrinsic;
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! mock_impl_controller_config {
+	($target:ty, $acc:ident) => {
+		parameter_types! {
+			pub const MaxBorrowCap: Balance = 1_000_000_000_000_000_000_000_000;
+		}
+
+		impl controller::Config for $target {
+			type Event = Event;
+			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
+			type MaxBorrowCap = MaxBorrowCap;
+			type UpdateOrigin = EnsureSignedBy<$acc, AccountId>;
+			type ControllerWeightInfo = ();
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! mock_impl_minterest_model_config {
+	($target:ty, $acc:ident) => {
+		parameter_types! {
+			pub const BlocksPerYear: u128 = 5_256_000;
+		}
+
+		impl minterest_model::Config for $target {
+			type Event = Event;
+			type BlocksPerYear = BlocksPerYear;
+			type ModelUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
+			type WeightInfo = ();
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! mock_impl_dex_config {
+	($target:ty) => {
+		parameter_types! {
+			pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
+			pub DexAccountId: AccountId = DexModuleId::get().into_account();
+		}
+
+		impl dex::Config for $target {
+			type Event = Event;
+			type MultiCurrency = orml_tokens::Module<$target>;
+			type DexModuleId = DexModuleId;
+			type DexAccountId = DexAccountId;
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! mock_impl_minterest_protocol_config {
+	($target:ty) => {
+		impl minterest_protocol::Config for $target {
+			type Event = Event;
+			type Borrowing = liquidity_pools::Module<$target>;
+			type ManagerLiquidationPools = liquidation_pools::Module<$target>;
+			type ManagerLiquidityPools = liquidity_pools::Module<$target>;
+			type WhitelistMembers = WhitelistMembers;
+			type ProtocolWeightInfo = ();
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! mock_impl_risk_manager_config {
+	($target:ty, $acc:ident) => {
+		parameter_types! {
+			pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
+		}
+
+		impl risk_manager::Config for $target {
+			type Event = Event;
+			type UnsignedPriority = RiskManagerPriority;
+			type LiquidationPoolsManager = liquidation_pools::Module<$target>;
+			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
+			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
+			type RiskManagerWeightInfo = ();
 		}
 	};
 }

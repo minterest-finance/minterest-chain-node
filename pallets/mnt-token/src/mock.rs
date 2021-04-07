@@ -14,7 +14,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
 	FixedPointNumber, ModuleId,
 };
-use test_helper::{mock_impl_liquidity_pools_config, mock_impl_orml_tokens_config, mock_impl_system_config};
+use test_helper::*;
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
@@ -35,7 +35,6 @@ parameter_types! {
 }
 
 pub type AccountId = u64;
-type Amount = i128;
 
 pub const ADMIN: AccountId = 0;
 pub fn admin() -> Origin {

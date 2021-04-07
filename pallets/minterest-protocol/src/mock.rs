@@ -19,13 +19,9 @@ use sp_runtime::{
 	FixedPointNumber, ModuleId,
 };
 use sp_std::cell::RefCell;
-use test_helper::{
-	mock_impl_liquidation_pools_config, mock_impl_liquidity_pools_config, mock_impl_orml_currencies_config,
-	mock_impl_orml_tokens_config, mock_impl_system_config,
-};
+use test_helper::*;
 
 pub type AccountId = u64;
-type Amount = i128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -51,6 +47,7 @@ frame_support::construct_runtime!(
 
 ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
+	pub const OneAlice: AccountId = 1;
 }
 
 parameter_types! {
@@ -73,11 +70,16 @@ parameter_types! {
 			.collect();
 }
 
+pub struct WhitelistMembers;
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
 mock_impl_orml_currencies_config!(Test, CurrencyId::MNT);
 mock_impl_liquidity_pools_config!(Test);
 mock_impl_liquidation_pools_config!(Test);
+mock_impl_controller_config!(Test, OneAlice);
+mock_impl_minterest_model_config!(Test, OneAlice);
+mock_impl_dex_config!(Test);
+mock_impl_minterest_protocol_config!(Test);
 
 pub struct MockPriceSource;
 
@@ -91,39 +93,11 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
-parameter_types! {
-	pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
-}
-
-ord_parameter_types! {
-	pub const OneAlice: AccountId = 1;
-}
-
-impl controller::Config for Test {
-	type Event = Event;
-	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
-	type MaxBorrowCap = MaxBorrowCap;
-	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
-	type ControllerWeightInfo = ();
-}
-
-parameter_types! {
-	pub const BlocksPerYear: u128 = 5256000;
-}
-
-impl minterest_model::Config for Test {
-	type Event = Event;
-	type BlocksPerYear = BlocksPerYear;
-	type ModelUpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
-	type WeightInfo = ();
-}
-
 thread_local! {
 	static TWO: RefCell<Vec<u64>> = RefCell::new(vec![2]);
 }
 
-pub struct Two;
-impl Contains<u64> for Two {
+impl Contains<u64> for WhitelistMembers {
 	fn contains(who: &AccountId) -> bool {
 		TWO.with(|v| v.borrow().contains(who))
 	}
@@ -142,27 +116,6 @@ impl Contains<u64> for Two {
 	}
 }
 
-impl minterest_protocol::Config for Test {
-	type Event = Event;
-	type Borrowing = liquidity_pools::Module<Test>;
-	type ManagerLiquidationPools = liquidation_pools::Module<Test>;
-	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
-	type WhitelistMembers = Two;
-	type ProtocolWeightInfo = ();
-}
-
-parameter_types! {
-	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
-	pub DexAccountId: AccountId = DexModuleId::get().into_account();
-}
-
-impl dex::Config for Test {
-	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Test>;
-	type DexModuleId = DexModuleId;
-	type DexAccountId = DexAccountId;
-}
-
 pub const ALICE: AccountId = 1;
 pub fn alice() -> Origin {
 	Origin::signed(ALICE)
@@ -175,7 +128,6 @@ pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ONE_MILL_DOLLARS: Balance = 1_000_000 * DOLLARS;
 pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
 pub const TEN_THOUSAND_DOLLARS: Balance = 10_000 * DOLLARS;
-pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
 pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
 
 pub struct ExtBuilder {

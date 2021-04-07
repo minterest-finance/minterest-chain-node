@@ -20,7 +20,6 @@ liquidity-pools = { path = "../liquidity-pools", default-features = false }
 liquidation-pools = { path = "../liquidation-pools", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
 controller = { path = "../controller", default-features = false }
-test-helper = { path = "../../test-helper", default-features = false }
 
 [dev-dependencies]
 serde = { version = "1.0.101" }
@@ -33,6 +32,7 @@ liquidation-pools = { path = "../liquidation-pools" }
 controller = { path = "../controller" }
 minterest-model = { path = "../minterest-model" }
 dex = { path = "../dex" }
+test-helper = { path = "../../test-helper" }
 
 [features]
 default = ['std']
@@ -51,5 +51,4 @@ std = [
     "liquidation-pools/std",
     "pallet-traits/std",
     "controller/std",
-    "test-helper/std",
 ]

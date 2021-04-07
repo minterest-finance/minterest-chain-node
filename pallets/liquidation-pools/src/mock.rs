@@ -17,10 +17,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 	FixedPointNumber,
 };
-use test_helper::{
-	mock_impl_liquidity_pools_config, mock_impl_orml_currencies_config, mock_impl_orml_tokens_config,
-	mock_impl_system_config,
-};
+use test_helper::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -47,6 +44,7 @@ mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
 mock_impl_orml_currencies_config!(Test, CurrencyId::MNT);
 mock_impl_liquidity_pools_config!(Test);
+mock_impl_dex_config!(Test);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
@@ -76,18 +74,6 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn lock_price(_currency_id: CurrencyId) {}
 
 	fn unlock_price(_currency_id: CurrencyId) {}
-}
-
-parameter_types! {
-	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
-	pub DexAccountId: AccountId = DexModuleId::get().into_account();
-}
-
-impl dex::Config for Test {
-	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Test>;
-	type DexModuleId = DexModuleId;
-	type DexAccountId = DexAccountId;
 }
 
 parameter_types! {
@@ -122,7 +108,6 @@ where
 	type Extrinsic = Extrinsic;
 }
 
-type Amount = i128;
 type AccountId = u64;
 pub type BlockNumber = u64;
 pub const ADMIN: AccountId = 0;

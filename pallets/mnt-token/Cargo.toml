@@ -18,7 +18,6 @@ sp-arithmetic = { version = "3.0.0", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
-test-helper = { path = "../../test-helper", default-features = false }
 
 [dev-dependencies]
 sp-core = "3.0.0"
@@ -30,6 +29,7 @@ orml-traits = { path = "../../orml/traits"}
 
 liquidity-pools = { path = "../liquidity-pools" }
 minterest-primitives = { path = "../../primitives" }
+test-helper = { path = "../../test-helper" }
 
 [features]
 default = ["std"]
@@ -46,5 +46,4 @@ std = [
 
     "pallet-traits/std",
     "minterest-primitives/std",
-	"test-helper/std",
 ]
