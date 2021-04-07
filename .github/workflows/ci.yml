@@ -26,6 +26,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
+
   test:
     name: Test Suite
     runs-on: ubuntu-20.04
@@ -87,7 +88,9 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+
   security_audit:
+    name: Security Audit
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2

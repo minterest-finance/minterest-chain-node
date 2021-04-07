@@ -763,7 +763,7 @@ fn repay_on_behalf_should_work() {
 }
 
 #[test]
-fn enable_as_collateral_should_work() {
+fn enable_is_collateral_should_work() {
 	ExtBuilder::default()
 		.pool_with_params(
 			CurrencyId::DOT,
@@ -781,8 +781,8 @@ fn enable_as_collateral_should_work() {
 		.execute_with(|| {
 			// Alice cannot enable as collateral ETH pool, because she has not deposited funds into the pool.
 			assert_noop!(
-				TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH),
-				Error::<Test>::CannotBeEnabledAsCollateral
+				TestProtocol::enable_is_collateral(alice(), CurrencyId::ETH),
+				Error::<Test>::IsCollateralCannotBeEnabled
 			);
 
 			// Alice deposit 60 ETH
@@ -795,32 +795,32 @@ fn enable_as_collateral_should_work() {
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// 'WhitelistCouncil' can work with protocols.
 			controller::WhitelistMode::<Test>::put(true);
-			assert_noop!(TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH), BadOrigin);
+			assert_noop!(TestProtocol::enable_is_collateral(alice(), CurrencyId::ETH), BadOrigin);
 
 			controller::WhitelistMode::<Test>::put(false);
 
 			// Alice enable as collateral her ETH pool.
-			assert_ok!(TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH));
+			assert_ok!(TestProtocol::enable_is_collateral(alice(), CurrencyId::ETH));
 			let expected_event =
-				Event::minterest_protocol(crate::Event::PoolEnabledAsCollateral(ALICE, CurrencyId::ETH));
+				Event::minterest_protocol(crate::Event::PoolEnabledIsCollateral(ALICE, CurrencyId::ETH));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert!(TestPools::check_user_available_collateral(&ALICE, CurrencyId::ETH));
 
 			// ETH pool is already collateral.
 			assert_noop!(
-				TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH),
-				Error::<Test>::AlreadyCollateral
+				TestProtocol::enable_is_collateral(alice(), CurrencyId::ETH),
+				Error::<Test>::AlreadyIsCollateral
 			);
 
 			assert_noop!(
-				TestProtocol::enable_as_collateral(alice(), CurrencyId::MDOT),
+				TestProtocol::enable_is_collateral(alice(), CurrencyId::MDOT),
 				Error::<Test>::NotValidUnderlyingAssetId
 			);
 		});
 }
 
 #[test]
-fn disable_collateral_should_work() {
+fn disable_is_collateral_should_work() {
 	ExtBuilder::default()
 		.pool_with_params(
 			CurrencyId::DOT,
@@ -837,8 +837,8 @@ fn disable_collateral_should_work() {
 		.build()
 		.execute_with(|| {
 			assert_noop!(
-				TestProtocol::disable_collateral(alice(), CurrencyId::ETH),
-				Error::<Test>::AlreadyDisabledCollateral
+				TestProtocol::disable_is_collateral(alice(), CurrencyId::ETH),
+				Error::<Test>::IsCollateralAlreadyDisabled
 			);
 
 			// Alice deposit 60 ETH
@@ -849,29 +849,29 @@ fn disable_collateral_should_work() {
 			));
 
 			// Alice enable as collateral her ETH pool.
-			assert_ok!(TestProtocol::enable_as_collateral(alice(), CurrencyId::ETH));
+			assert_ok!(TestProtocol::enable_is_collateral(alice(), CurrencyId::ETH));
 
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// 'WhitelistCouncil' can work with protocols.
 			controller::WhitelistMode::<Test>::put(true);
-			assert_noop!(TestProtocol::disable_collateral(alice(), CurrencyId::ETH), BadOrigin);
+			assert_noop!(TestProtocol::disable_is_collateral(alice(), CurrencyId::ETH), BadOrigin);
 
 			controller::WhitelistMode::<Test>::put(false);
 
 			// Alice disable collateral her ETH pool.
-			assert_ok!(TestProtocol::disable_collateral(alice(), CurrencyId::ETH));
+			assert_ok!(TestProtocol::disable_is_collateral(alice(), CurrencyId::ETH));
 			let expected_event =
-				Event::minterest_protocol(crate::Event::PoolDisabledCollateral(ALICE, CurrencyId::ETH));
+				Event::minterest_protocol(crate::Event::PoolDisabledIsCollateral(ALICE, CurrencyId::ETH));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert!(!TestPools::check_user_available_collateral(&ALICE, CurrencyId::ETH));
 
 			assert_noop!(
-				TestProtocol::disable_collateral(alice(), CurrencyId::ETH),
-				Error::<Test>::AlreadyDisabledCollateral
+				TestProtocol::disable_is_collateral(alice(), CurrencyId::ETH),
+				Error::<Test>::IsCollateralAlreadyDisabled
 			);
 
 			assert_noop!(
-				TestProtocol::disable_collateral(alice(), CurrencyId::MDOT),
+				TestProtocol::disable_is_collateral(alice(), CurrencyId::MDOT),
 				Error::<Test>::NotValidUnderlyingAssetId
 			);
 		});

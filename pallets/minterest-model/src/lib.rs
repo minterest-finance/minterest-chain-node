@@ -103,7 +103,7 @@ pub mod module {
 	/// jump_multiplier_per_block)`.
 	#[pallet::storage]
 	#[pallet::getter(fn minterest_model_dates)]
-	pub(crate) type MinterestModelDates<T: Config> =
+	pub(crate) type MinterestModelParams<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, MinterestModelData, ValueQuery>;
 
 	#[pallet::genesis_config]
@@ -126,7 +126,7 @@ pub mod module {
 			self.minterest_model_dates
 				.iter()
 				.for_each(|(currency_id, minterest_model_data)| {
-					MinterestModelDates::<T>::insert(
+					MinterestModelParams::<T>::insert(
 						currency_id,
 						MinterestModelData {
 							..*minterest_model_data
@@ -187,7 +187,7 @@ pub mod module {
 				.ok_or(Error::<T>::NumOverflow)?;
 
 			// Write the previously calculated values into storage.
-			MinterestModelDates::<T>::mutate(pool_id, |r| r.jump_multiplier_per_block = new_jump_multiplier_per_block);
+			MinterestModelParams::<T>::mutate(pool_id, |r| r.jump_multiplier_per_block = new_jump_multiplier_per_block);
 
 			Self::deposit_event(Event::JumpMultiplierPerBlockHasChanged);
 
@@ -227,7 +227,7 @@ pub mod module {
 			}
 
 			// Write the previously calculated values into storage.
-			MinterestModelDates::<T>::mutate(pool_id, |r| r.base_rate_per_block = new_base_rate_per_block);
+			MinterestModelParams::<T>::mutate(pool_id, |r| r.base_rate_per_block = new_base_rate_per_block);
 
 			Self::deposit_event(Event::BaseRatePerBlockHasChanged);
 
@@ -267,7 +267,7 @@ pub mod module {
 			}
 
 			// Write the previously calculated values into storage.
-			MinterestModelDates::<T>::mutate(pool_id, |r| r.multiplier_per_block = new_multiplier_per_block);
+			MinterestModelParams::<T>::mutate(pool_id, |r| r.multiplier_per_block = new_multiplier_per_block);
 			Self::deposit_event(Event::MultiplierPerBlockHasChanged);
 			Ok(().into())
 		}
@@ -290,7 +290,7 @@ pub mod module {
 			ensure!(kink <= Rate::one(), Error::<T>::KinkCannotBeMoreThanOne);
 
 			// Write the previously calculated values into storage.
-			MinterestModelDates::<T>::mutate(pool_id, |r| r.kink = kink);
+			MinterestModelParams::<T>::mutate(pool_id, |r| r.kink = kink);
 			Self::deposit_event(Event::KinkHasChanged);
 
 			Ok(().into())

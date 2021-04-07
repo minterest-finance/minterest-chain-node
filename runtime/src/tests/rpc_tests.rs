@@ -28,11 +28,11 @@ fn demo_scenario_n2_without_interest_using_rpc_should_work() {
 				controller::Error::<Runtime>::InsufficientLiquidity
 			);
 			System::set_block_number(4100);
-			assert_ok!(MinterestProtocol::enable_as_collateral(charlie(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(charlie(), DOT));
 			System::set_block_number(4200);
-			assert_ok!(MinterestProtocol::enable_as_collateral(charlie(), ETH));
+			assert_ok!(MinterestProtocol::enable_is_collateral(charlie(), ETH));
 			System::set_block_number(4300);
-			assert_ok!(Controller::pause_specific_operation(
+			assert_ok!(Controller::pause_operation(
 				<Runtime as frame_system::Config>::Origin::root(),
 				DOT,
 				Operation::Borrow
@@ -43,7 +43,7 @@ fn demo_scenario_n2_without_interest_using_rpc_should_work() {
 				minterest_protocol::Error::<Runtime>::OperationPaused
 			);
 			System::set_block_number(5000);
-			assert_ok!(Controller::unpause_specific_operation(
+			assert_ok!(Controller::resume_operation(
 				<Runtime as frame_system::Config>::Origin::root(),
 				DOT,
 				Operation::Borrow
@@ -188,8 +188,8 @@ fn test_rates_using_rpc() {
 
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), ETH));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
 			// exchange_rate = (150 - 0 + 0) / 150 = 1
 			assert_eq!(
 				liquidity_pool_state_rpc(DOT),
@@ -231,8 +231,8 @@ fn test_rates_using_rpc() {
 
 			System::set_block_number(40);
 
-			assert_ok!(MinterestProtocol::enable_as_collateral(charlie(), DOT));
-			assert_ok!(MinterestProtocol::enable_as_collateral(charlie(), ETH));
+			assert_ok!(MinterestProtocol::enable_is_collateral(charlie(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(charlie(), ETH));
 			assert_ok!(MinterestProtocol::borrow(charlie(), DOT, dollars(20_000)));
 			// supply rate and borrow rate increased
 			assert_eq!(
@@ -290,8 +290,8 @@ fn test_user_balance_using_rpc() {
 				})
 			);
 
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), ETH));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
 			System::set_block_number(20);
 
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(50_000)));
@@ -333,7 +333,7 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
 			System::set_block_number(50);
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
 			System::set_block_number(100);
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(30_000)));
 			System::set_block_number(150);
@@ -374,7 +374,7 @@ fn test_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc
 
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
 			System::set_block_number(50);
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
 			System::set_block_number(100);
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(30_000)));
 			System::set_block_number(150);
@@ -415,7 +415,7 @@ fn test_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rp
 
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
 			System::set_block_number(50);
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
 			System::set_block_number(100);
 
 			let account_data_before_borrow =
@@ -455,7 +455,7 @@ fn test_total_borrowed_difference_is_ok_before_and_after_deposit_using_balance_r
 
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
 			System::set_block_number(50);
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
 			System::set_block_number(100);
 
 			let account_data_before_deposit =

@@ -112,7 +112,7 @@ parameter_types! {
 		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
 		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 	];
-	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
 			.map(|currency_pair| currency_pair.underlying_id)
 			.collect();
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
@@ -147,7 +147,7 @@ impl liquidity_pools::Config for Runtime {
 	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
 	type EnabledCurrencyPair = EnabledCurrencyPair;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
@@ -267,7 +267,7 @@ impl ExtBuilder {
 		user: AccountId,
 		total_borrowed: Balance,
 		interest_index: Rate,
-		collateral: bool,
+		is_collateral: bool,
 		liquidation_attempts: u8,
 	) -> Self {
 		self.pool_user_data.push((
@@ -276,7 +276,7 @@ impl ExtBuilder {
 			PoolUserData {
 				total_borrowed,
 				interest_index,
-				collateral,
+				is_collateral,
 				liquidation_attempts,
 			},
 		));
@@ -315,7 +315,7 @@ impl ExtBuilder {
 				(
 					CurrencyId::DOT,
 					ControllerData {
-						timestamp: 0,
+						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
@@ -326,7 +326,7 @@ impl ExtBuilder {
 				(
 					CurrencyId::ETH,
 					ControllerData {
-						timestamp: 0,
+						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90
@@ -337,7 +337,7 @@ impl ExtBuilder {
 				(
 					CurrencyId::BTC,
 					ControllerData {
-						timestamp: 0,
+						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%

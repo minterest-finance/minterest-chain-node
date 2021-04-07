@@ -10,14 +10,14 @@ runtime_benchmarks! {
 
 	_ {}
 
-	pause_specific_operation {
+	pause_operation {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
 		Operation::Deposit
 	)
 
-	unpause_specific_operation {
+	resume_operation {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
@@ -56,7 +56,7 @@ runtime_benchmarks! {
 		Balance::zero()
 	)
 
-	switch_mode {}: _(
+	switch_whitelist_mode {}: _(
 		RawOrigin::Root
 	)
 }
@@ -68,16 +68,16 @@ mod tests {
 	use frame_support::assert_ok;
 
 	#[test]
-	fn test_pause_specific_operation() {
+	fn test_pause_operation() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_pause_specific_operation());
+			assert_ok!(test_benchmark_pause_operation());
 		})
 	}
 
 	#[test]
-	fn test_unpause_specific_operation() {
+	fn test_resume_operation() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_unpause_specific_operation());
+			assert_ok!(test_benchmark_resume_operation());
 		})
 	}
 
@@ -117,9 +117,9 @@ mod tests {
 	}
 
 	#[test]
-	fn test_switch_mode() {
+	fn test_switch_whitelist_mode() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_switch_mode());
+			assert_ok!(test_benchmark_switch_whitelist_mode());
 		})
 	}
 }

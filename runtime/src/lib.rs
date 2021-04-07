@@ -399,7 +399,7 @@ parameter_types! {
 		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
 		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 	];
-	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
 			.map(|currency_pair| currency_pair.underlying_id)
 			.collect();
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
@@ -414,7 +414,7 @@ impl liquidity_pools::Config for Runtime {
 	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
 	type EnabledCurrencyPair = EnabledCurrencyPair;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
@@ -434,7 +434,7 @@ impl module_prices::Config for Runtime {
 	type Event = Event;
 	type Source = AggregatedDataProvider;
 	type LockOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 	type WeightInfo = weights::prices::WeightInfo<Runtime>;
 }
 
@@ -468,7 +468,7 @@ impl mnt_token::Config for Runtime {
 	type PriceSource = Prices;
 	type UpdateOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type LiquidityPoolsManager = LiquidityPools;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime

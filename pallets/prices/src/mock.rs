@@ -86,7 +86,7 @@ parameter_types! {
 		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
 		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 	];
-	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
 			.map(|currency_pair| currency_pair.underlying_id)
 			.collect();
 }
@@ -95,7 +95,7 @@ impl module_prices::Config for Test {
 	type Event = Event;
 	type Source = MockDataProvider;
 	type LockOrigin = EnsureSignedBy<One, AccountId>;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 	type WeightInfo = ();
 }
 

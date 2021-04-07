@@ -29,7 +29,7 @@ parameter_types! {
 		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
 		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 	];
-	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
 			.map(|currency_pair| currency_pair.underlying_id)
 			.collect();
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
@@ -89,7 +89,7 @@ impl liquidity_pools::Config for Runtime {
 	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
 	type EnabledCurrencyPair = EnabledCurrencyPair;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
@@ -118,7 +118,7 @@ impl mnt_token::Config for Runtime {
 	type PriceSource = MockPriceSource;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
