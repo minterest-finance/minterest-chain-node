@@ -18,7 +18,10 @@ fn accrue_interest_should_work() {
 
 			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
 
-			assert_eq!(Controller::controller_dates(CurrencyId::DOT).timestamp, 1);
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).last_interest_accrued_block,
+				1
+			);
 			assert_eq!(
 				TestPools::pools(CurrencyId::DOT).total_protocol_interest,
 				57_600_000_000
@@ -48,7 +51,10 @@ fn accrue_interest_should_not_work() {
 			System::set_block_number(1);
 
 			assert_ok!(Controller::accrue_interest_rate(CurrencyId::DOT));
-			assert_eq!(Controller::controller_dates(CurrencyId::DOT).timestamp, 1);
+			assert_eq!(
+				Controller::controller_dates(CurrencyId::DOT).last_interest_accrued_block,
+				1
+			);
 
 			assert_ok!(Controller::set_max_borrow_rate(
 				alice(),
@@ -303,7 +309,7 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 			);
 
 			// Alice set collateral parameter value to true for DOT pool. Alice can borrow.
-			<LiquidityPools<Runtime>>::enable_as_collateral_internal(&ALICE, CurrencyId::DOT);
+			<LiquidityPools<Runtime>>::enable_is_collateral_internal(&ALICE, CurrencyId::DOT);
 
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, CurrencyId::DOT, 0, 50),
@@ -372,7 +378,7 @@ fn redeem_allowed_should_work() {
 		assert_ok!(Controller::redeem_allowed(CurrencyId::DOT, &ALICE, dollars(40_u128)));
 
 		// collateral parameter is set to true.
-		<LiquidityPools<Runtime>>::enable_as_collateral_internal(&ALICE, CurrencyId::DOT);
+		<LiquidityPools<Runtime>>::enable_is_collateral_internal(&ALICE, CurrencyId::DOT);
 
 		assert_err!(
 			Controller::redeem_allowed(CurrencyId::DOT, &ALICE, dollars(100_u128)),
@@ -391,7 +397,7 @@ fn borrow_allowed_should_work() {
 		);
 
 		// collateral parameter is set to true. User can borrow.
-		<LiquidityPools<Runtime>>::enable_as_collateral_internal(&ALICE, CurrencyId::DOT);
+		<LiquidityPools<Runtime>>::enable_is_collateral_internal(&ALICE, CurrencyId::DOT);
 
 		assert_ok!(Controller::borrow_allowed(CurrencyId::DOT, &ALICE, dollars(10_u128)));
 
@@ -425,16 +431,12 @@ fn is_operation_allowed_should_work() {
 				true
 			);
 
-			assert_ok!(Controller::pause_specific_operation(
+			assert_ok!(Controller::pause_operation(
 				alice(),
 				CurrencyId::DOT,
 				Operation::Deposit
 			));
-			assert_ok!(Controller::pause_specific_operation(
-				alice(),
-				CurrencyId::DOT,
-				Operation::Redeem
-			));
+			assert_ok!(Controller::pause_operation(alice(), CurrencyId::DOT, Operation::Redeem));
 
 			assert_eq!(
 				Controller::is_operation_allowed(CurrencyId::DOT, Operation::Deposit),
@@ -588,7 +590,7 @@ fn set_collateral_factor_should_work() {
 }
 
 #[test]
-fn pause_specific_operation_should_work() {
+fn pause_operation_should_work() {
 	ExtBuilder::default()
 		.pool_mock(CurrencyId::DOT)
 		.build()
@@ -599,7 +601,7 @@ fn pause_specific_operation_should_work() {
 			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).repay_paused, false);
 			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).transfer_paused, false);
 
-			assert_ok!(Controller::pause_specific_operation(
+			assert_ok!(Controller::pause_operation(
 				alice(),
 				CurrencyId::DOT,
 				Operation::Deposit
@@ -608,31 +610,19 @@ fn pause_specific_operation_should_work() {
 				Event::controller(crate::Event::OperationIsPaused(CurrencyId::DOT, Operation::Deposit));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::pause_specific_operation(
-				alice(),
-				CurrencyId::DOT,
-				Operation::Redeem
-			));
+			assert_ok!(Controller::pause_operation(alice(), CurrencyId::DOT, Operation::Redeem));
 			let expected_event = Event::controller(crate::Event::OperationIsPaused(CurrencyId::DOT, Operation::Redeem));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::pause_specific_operation(
-				alice(),
-				CurrencyId::DOT,
-				Operation::Borrow
-			));
+			assert_ok!(Controller::pause_operation(alice(), CurrencyId::DOT, Operation::Borrow));
 			let expected_event = Event::controller(crate::Event::OperationIsPaused(CurrencyId::DOT, Operation::Borrow));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::pause_specific_operation(
-				alice(),
-				CurrencyId::DOT,
-				Operation::Repay
-			));
+			assert_ok!(Controller::pause_operation(alice(), CurrencyId::DOT, Operation::Repay));
 			let expected_event = Event::controller(crate::Event::OperationIsPaused(CurrencyId::DOT, Operation::Repay));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::pause_specific_operation(
+			assert_ok!(Controller::pause_operation(
 				alice(),
 				CurrencyId::DOT,
 				Operation::Transfer
@@ -648,18 +638,18 @@ fn pause_specific_operation_should_work() {
 			assert_eq!(Controller::pause_keepers(&CurrencyId::DOT).transfer_paused, true);
 
 			assert_noop!(
-				Controller::pause_specific_operation(bob(), CurrencyId::DOT, Operation::Deposit),
+				Controller::pause_operation(bob(), CurrencyId::DOT, Operation::Deposit),
 				BadOrigin
 			);
 			assert_noop!(
-				Controller::pause_specific_operation(alice(), CurrencyId::MDOT, Operation::Redeem),
+				Controller::pause_operation(alice(), CurrencyId::MDOT, Operation::Redeem),
 				Error::<Runtime>::PoolNotFound
 			);
 		});
 }
 
 #[test]
-fn unpause_specific_operation_should_work() {
+fn resume_operation_should_work() {
 	ExtBuilder::default()
 		.pool_mock(CurrencyId::DOT)
 		.pool_mock(CurrencyId::KSM)
@@ -671,7 +661,7 @@ fn unpause_specific_operation_should_work() {
 			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).repay_paused, true);
 			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).transfer_paused, true);
 
-			assert_ok!(Controller::unpause_specific_operation(
+			assert_ok!(Controller::resume_operation(
 				alice(),
 				CurrencyId::KSM,
 				Operation::Deposit
@@ -680,7 +670,7 @@ fn unpause_specific_operation_should_work() {
 				Event::controller(crate::Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Deposit));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::unpause_specific_operation(
+			assert_ok!(Controller::resume_operation(
 				alice(),
 				CurrencyId::KSM,
 				Operation::Redeem
@@ -689,7 +679,7 @@ fn unpause_specific_operation_should_work() {
 				Event::controller(crate::Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Redeem));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::unpause_specific_operation(
+			assert_ok!(Controller::resume_operation(
 				alice(),
 				CurrencyId::KSM,
 				Operation::Borrow
@@ -698,16 +688,12 @@ fn unpause_specific_operation_should_work() {
 				Event::controller(crate::Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Borrow));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::unpause_specific_operation(
-				alice(),
-				CurrencyId::KSM,
-				Operation::Repay
-			));
+			assert_ok!(Controller::resume_operation(alice(), CurrencyId::KSM, Operation::Repay));
 			let expected_event =
 				Event::controller(crate::Event::OperationIsUnPaused(CurrencyId::KSM, Operation::Repay));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::unpause_specific_operation(
+			assert_ok!(Controller::resume_operation(
 				alice(),
 				CurrencyId::KSM,
 				Operation::Transfer
@@ -723,28 +709,28 @@ fn unpause_specific_operation_should_work() {
 			assert_eq!(Controller::pause_keepers(&CurrencyId::KSM).transfer_paused, false);
 
 			assert_noop!(
-				Controller::unpause_specific_operation(bob(), CurrencyId::DOT, Operation::Deposit),
+				Controller::resume_operation(bob(), CurrencyId::DOT, Operation::Deposit),
 				BadOrigin
 			);
 			assert_noop!(
-				Controller::unpause_specific_operation(alice(), CurrencyId::MDOT, Operation::Redeem),
+				Controller::resume_operation(alice(), CurrencyId::MDOT, Operation::Redeem),
 				Error::<Runtime>::PoolNotFound
 			);
 		});
 }
 
 #[test]
-fn switch_mode_should_work() {
+fn switch_whitelist_mode_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::switch_mode(alice()));
+		assert_ok!(Controller::switch_whitelist_mode(alice()));
 		let expected_event = Event::controller(crate::Event::ProtocolOperationModeSwitched(true));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(Controller::whitelist_mode(), true);
 
-		assert_ok!(Controller::switch_mode(alice()));
+		assert_ok!(Controller::switch_whitelist_mode(alice()));
 		assert_eq!(Controller::whitelist_mode(), false);
 
-		assert_noop!(Controller::switch_mode(bob()), BadOrigin);
+		assert_noop!(Controller::switch_whitelist_mode(bob()), BadOrigin);
 		assert_eq!(Controller::whitelist_mode(), false);
 	});
 }

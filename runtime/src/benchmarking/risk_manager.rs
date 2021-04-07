@@ -1,4 +1,4 @@
-use super::utils::{enable_as_collateral, lookup_of_account, set_balance, set_oracle_price_for_all_pools};
+use super::utils::{enable_is_collateral, lookup_of_account, set_balance, set_oracle_price_for_all_pools};
 use crate::{
 	AccountId, CurrencyId, LiquidationPoolsModuleId, LiquidityPools, LiquidityPoolsModuleId, Origin, Rate, Runtime,
 	System, DOLLARS,
@@ -24,7 +24,7 @@ runtime_benchmarks! {
 		1u8
 	)
 
-	set_min_sum {
+	set_min_partial_liquidation_sum {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
@@ -38,7 +38,7 @@ runtime_benchmarks! {
 		Rate::one()
 	)
 
-	set_liquidation_incentive {
+	set_liquidation_fee {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
@@ -75,10 +75,10 @@ runtime_benchmarks! {
 		set_balance(CurrencyId::DOT, &liquidation_pool_account_id, 40_000 * DOLLARS)?;
 
 		// enable pool as collateral
-		enable_as_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::DOT)?;
-		enable_as_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::ETH)?;
-		enable_as_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::KSM)?;
-		enable_as_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::BTC)?;
+		enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::DOT)?;
+		enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::ETH)?;
+		enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::KSM)?;
+		enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::BTC)?;
 
 		// set borrow params
 		LiquidityPools::set_pool_total_borrowed(CurrencyId::DOT, 35_000 * DOLLARS);
@@ -111,9 +111,9 @@ pub mod tests {
 	}
 
 	#[test]
-	fn test_set_min_sum() {
+	fn test_set_min_partial_liquidation_sum() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_min_sum());
+			assert_ok!(test_benchmark_set_min_partial_liquidation_sum());
 		})
 	}
 
@@ -125,9 +125,9 @@ pub mod tests {
 	}
 
 	#[test]
-	fn test_set_liquidation_incentive() {
+	fn test_set_liquidation_fee() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_liquidation_incentive());
+			assert_ok!(test_benchmark_set_liquidation_fee());
 		})
 	}
 

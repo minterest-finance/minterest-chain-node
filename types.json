@@ -35,14 +35,14 @@
     "PoolUserData" : {
       "total_borrowed": "Balance",
       "interest_index": "Rate",
-      "collateral": "bool",
+      "is_collateral": "bool",
       "liquidation_attempts": "u8"
     },
     "RiskManagerData" : {
       "max_attempts": "u8",
-      "min_sum": "Balance",
+      "min_partial_liquidation_sum": "Balance",
       "threshold": "Rate",
-      "liquidation_incentive": "Rate"
+      "liquidation_fee": "Rate"
     },
     "CurrencyIdOf": "CurrencyId",
     "Amount": "i128",
@@ -50,7 +50,7 @@
     "Rate": "FixedU128",
     "Price": "FixedU128",
     "ControllerData": {
-      "timestamp": "BlockNumber",
+      "last_interest_accrued_block": "BlockNumber",
       "protocol_interest_factor": "Rate",
       "max_borrow_rate":  "Rate",
       "collateral_factor": "Rate",

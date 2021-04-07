@@ -49,9 +49,9 @@ fn liquidation_scenario_n1() {
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(100_000)));
 			run_to_block(500);
 
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
 			run_to_block(550);
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), ETH));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
 			run_to_block(600);
 
 			assert_ok!(MinterestProtocol::borrow(bob(), BTC, dollars(3500)));
@@ -93,7 +93,7 @@ fn liquidation_scenario_n1() {
 				PoolUserData {
 					total_borrowed: 2_450_000_154_350_000_000_000, // 3500 BTC - 1_050 BTC = 2_450 BTC
 					interest_index: Rate::from_inner(1_000_000_063_000_000_000),
-					collateral: false,
+					is_collateral: false,
 					liquidation_attempts: 1,
 				}
 			);
@@ -189,7 +189,7 @@ fn liquidation_scenario_n1() {
 				PoolUserData {
 					total_borrowed: 0,
 					interest_index: Rate::from_inner(1_000_000_085_059_004_489),
-					collateral: false,
+					is_collateral: false,
 					liquidation_attempts: 0,
 				}
 			);

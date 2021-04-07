@@ -9,7 +9,7 @@ fn whitelist_mode_should_work() {
 		assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(10_000)));
 		System::set_block_number(2);
 
-		assert_ok!(Controller::switch_mode(
+		assert_ok!(Controller::switch_whitelist_mode(
 			<Runtime as frame_system::Config>::Origin::root()
 		));
 		System::set_block_number(3);
@@ -58,8 +58,8 @@ fn protocol_interest_transfer_should_work() {
 
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), DOT));
-			assert_ok!(MinterestProtocol::enable_as_collateral(bob(), ETH));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
 			// exchange_rate = (150 - 0 + 0) / 150 = 1
 			assert_eq!(
 				liquidity_pool_state_rpc(DOT),

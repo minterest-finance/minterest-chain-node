@@ -61,14 +61,14 @@ pub struct RiskManagerData {
 	pub max_attempts: u8,
 
 	/// Minimal sum for partial liquidation.
-	/// Loan whose amount below this parameter will be liquidate in full.
-	pub min_sum: Balance,
+	/// Loans with amount below this parameter will be liquidate in full.
+	pub min_partial_liquidation_sum: Balance,
 
 	/// Step used in liquidation to protect the user from micro liquidations.
 	pub threshold: Rate,
 
 	/// The additional collateral which is taken from borrowers as a penalty for being liquidated.
-	pub liquidation_incentive: Rate,
+	pub liquidation_fee: Rate,
 }
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
@@ -119,9 +119,11 @@ pub mod module {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Max value of liquidation attempts has been successfully changed: \[attempts_amount\]
+		/// Max value of liquidation attempts has been successfully changed:
+		/// \[attempts_amount\]
 		MaxValueOFLiquidationAttempsHasChanged(u8),
-		/// Min sum for partial liquidation has been successfully changed: \[min_sum\]
+		/// Min sum for partial liquidation has been successfully changed:
+		/// \[min_partial_liquidation_sum\]
 		MinSumForPartialLiquidationHasChanged(Balance),
 		/// Threshold has been successfully changed: \[threshold\]
 		ValueOfThresholdHasChanged(Rate),
@@ -132,10 +134,11 @@ pub mod module {
 		LiquidateUnsafeLoan(T::AccountId, Balance, CurrencyId, Vec<CurrencyId>, bool),
 	}
 
-	/// Liquidation params for pools: `(max_attempts, min_sum, threshold, liquidation_fee)`.
+	/// Liquidation params for pools: `(max_attempts, min_partial_liquidation_sum, threshold,
+	/// liquidation_fee)`.
 	#[pallet::storage]
 	#[pallet::getter(fn risk_manager_dates)]
-	pub(crate) type RiskManagerDates<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, RiskManagerData, ValueQuery>;
+	pub(crate) type RiskManagerParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, RiskManagerData, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -157,7 +160,7 @@ pub mod module {
 			self.risk_manager_dates
 				.iter()
 				.for_each(|(currency_id, risk_manager_data)| {
-					RiskManagerDates::<T>::insert(currency_id, RiskManagerData { ..*risk_manager_data })
+					RiskManagerParams::<T>::insert(currency_id, RiskManagerData { ..*risk_manager_data })
 				});
 		}
 	}
@@ -210,7 +213,7 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		/// Set maximum amount of partial liquidation attempts.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_max_value`: New max value of liquidation attempts.
+		/// - `max_attempts`: New max value of liquidation attempts.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::RiskManagerWeightInfo::set_max_attempts())]
@@ -218,7 +221,7 @@ pub mod module {
 		pub fn set_max_attempts(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_max_value: u8,
+			max_attempts: u8,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -228,24 +231,24 @@ pub mod module {
 			);
 
 			// Write new value into storage.
-			RiskManagerDates::<T>::mutate(pool_id, |r| r.max_attempts = new_max_value);
+			RiskManagerParams::<T>::mutate(pool_id, |r| r.max_attempts = max_attempts);
 
-			Self::deposit_event(Event::MaxValueOFLiquidationAttempsHasChanged(new_max_value));
+			Self::deposit_event(Event::MaxValueOFLiquidationAttempsHasChanged(max_attempts));
 
 			Ok(().into())
 		}
 
 		/// Set minimal sum for partial liquidation.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_min_sum`: New min sum for partial liquidation.
+		/// - `min_partial_liquidation_sum`: New min sum for partial liquidation.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(T::RiskManagerWeightInfo::set_min_sum())]
+		#[pallet::weight(T::RiskManagerWeightInfo::set_min_partial_liquidation_sum())]
 		#[transactional]
-		pub fn set_min_sum(
+		pub fn set_min_partial_liquidation_sum(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_min_sum: Balance,
+			min_partial_liquidation_sum: Balance,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -255,25 +258,23 @@ pub mod module {
 			);
 
 			// Write new value into storage.
-			RiskManagerDates::<T>::mutate(pool_id, |r| r.min_sum = new_min_sum);
+			RiskManagerParams::<T>::mutate(pool_id, |r| r.min_partial_liquidation_sum = min_partial_liquidation_sum);
 
-			Self::deposit_event(Event::MinSumForPartialLiquidationHasChanged(new_min_sum));
+			Self::deposit_event(Event::MinSumForPartialLiquidationHasChanged(
+				min_partial_liquidation_sum,
+			));
 
 			Ok(().into())
 		}
 
 		/// Set threshold which used in liquidation to protect the user from micro liquidations..
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_threshold`: new threshold.
+		/// - `threshold`: new threshold.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::RiskManagerWeightInfo::set_threshold())]
 		#[transactional]
-		pub fn set_threshold(
-			origin: OriginFor<T>,
-			pool_id: CurrencyId,
-			new_threshold: Rate,
-		) -> DispatchResultWithPostInfo {
+		pub fn set_threshold(origin: OriginFor<T>, pool_id: CurrencyId, threshold: Rate) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
@@ -282,24 +283,24 @@ pub mod module {
 			);
 
 			// Write new value into storage.
-			RiskManagerDates::<T>::mutate(pool_id, |r| r.threshold = new_threshold);
+			RiskManagerParams::<T>::mutate(pool_id, |r| r.threshold = threshold);
 
-			Self::deposit_event(Event::ValueOfThresholdHasChanged(new_threshold));
+			Self::deposit_event(Event::ValueOfThresholdHasChanged(threshold));
 
 			Ok(().into())
 		}
 
 		/// Set Liquidation fee that covers liquidation costs.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_liquidation_incentive`: new liquidation incentive.
+		/// - `liquidation_fee`: new liquidation incentive.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_liquidation_incentive(
+		pub fn set_liquidation_fee(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_liquidation_incentive: Rate,
+			liquidation_fee: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -308,17 +309,16 @@ pub mod module {
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
-			// Check if 1 <= new_liquidation_incentive <= 1.5
+			// Check if 1 <= liquidation_fee <= 1.5
 			ensure!(
-				(new_liquidation_incentive >= Rate::one()
-					&& new_liquidation_incentive <= Rate::saturating_from_rational(15, 10)),
+				(liquidation_fee >= Rate::one() && liquidation_fee <= Rate::saturating_from_rational(15, 10)),
 				Error::<T>::InvalidLiquidationIncentiveValue
 			);
 
 			// Write new value into storage.
-			RiskManagerDates::<T>::mutate(pool_id, |r| r.liquidation_incentive = new_liquidation_incentive);
+			RiskManagerParams::<T>::mutate(pool_id, |r| r.liquidation_fee = liquidation_fee);
 
-			Self::deposit_event(Event::ValueOfLiquidationFeeHasChanged(new_liquidation_incentive));
+			Self::deposit_event(Event::ValueOfLiquidationFeeHasChanged(liquidation_fee));
 
 			Ok(().into())
 		}
@@ -469,8 +469,9 @@ impl<T: Config> Pallet<T> {
 
 		let liquidation_attempts = <LiquidityPools<T>>::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
 
-		let is_partial_liquidation = total_repay_amount >= RiskManagerDates::<T>::get(liquidated_pool_id).min_sum
-			&& liquidation_attempts < RiskManagerDates::<T>::get(liquidated_pool_id).max_attempts;
+		let is_partial_liquidation = total_repay_amount
+			>= RiskManagerParams::<T>::get(liquidated_pool_id).min_partial_liquidation_sum
+			&& liquidation_attempts < RiskManagerParams::<T>::get(liquidated_pool_id).max_attempts;
 
 		// Calculate sum required to liquidate.
 		let (seize_amount, repay_amount, repay_assets) =
@@ -518,7 +519,7 @@ impl<T: Config> Pallet<T> {
 
 		// Get an array of collateral pools for the borrower.
 		// The array is sorted in descending order by the number of wrapped tokens in USD.
-		let collateral_pools = <LiquidityPools<T>>::get_pools_are_collateral(&borrower)?;
+		let collateral_pools = <LiquidityPools<T>>::get_is_collateral_pools(&borrower)?;
 
 		// Collect seized pools.
 		let mut seized_pools: Vec<CurrencyId> = Vec::new();
@@ -605,7 +606,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// Returns (`seize_amount`, `repay_amount`, `repay_assets`)
 	/// - `seize_amount`: the number of collateral tokens to seize converted
-	/// into USD (consider liquidation_incentive).
+	/// into USD (consider liquidation_fee).
 	/// - `repay_amount`: current amount of debt converted into usd.
 	/// - `repay_assets`: the amount of the underlying borrowed asset to repay.
 	pub fn liquidate_calculate_seize_and_repay(
@@ -613,17 +614,17 @@ impl<T: Config> Pallet<T> {
 		total_repay_amount: Balance,
 		is_partial_liquidation: bool,
 	) -> result::Result<(Balance, Balance, Balance), DispatchError> {
-		let liquidation_incentive = Self::risk_manager_dates(liquidated_pool_id).liquidation_incentive;
+		let liquidation_fee = Self::risk_manager_dates(liquidated_pool_id).liquidation_fee;
 
 		let temporary_factor = match is_partial_liquidation {
 			true => Rate::saturating_from_rational(30, 100),
 			false => Rate::one(),
 		};
 
-		// seize_amount = liquidation_incentive * temporary_factor * total_repay_amount
+		// seize_amount = liquidation_fee * temporary_factor * total_repay_amount
 		let seize_amount = Rate::from_inner(total_repay_amount)
 			.checked_mul(&temporary_factor)
-			.and_then(|v| v.checked_mul(&liquidation_incentive))
+			.and_then(|v| v.checked_mul(&liquidation_fee))
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
@@ -657,7 +658,7 @@ impl<T: Config> Pallet<T> {
 	) {
 		// partial_liquidation -> liquidation_attempts += 1
 		// complete_liquidation -> liquidation_attempts = 0
-		liquidity_pools::PoolUserDates::<T>::mutate(liquidated_pool_id, &borrower, |p| {
+		liquidity_pools::PoolUserParams::<T>::mutate(liquidated_pool_id, &borrower, |p| {
 			if is_partial_liquidation {
 				p.liquidation_attempts += u8::one();
 			} else {

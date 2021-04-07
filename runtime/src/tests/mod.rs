@@ -1,7 +1,7 @@
 use crate::{
 	AccountId, Balance, Block, Controller, Currencies,
 	CurrencyId::{self, *},
-	Dex, EnabledUnderlyingAssetId, Event, LiquidationPools, LiquidityPools, MinterestCouncilMembership,
+	Dex, EnabledUnderlyingAssetsIds, Event, LiquidationPools, LiquidityPools, MinterestCouncilMembership,
 	MinterestOracle, MinterestProtocol, Prices, Rate, RiskManager, Runtime, System, WhitelistCouncilMembership,
 	DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 };
@@ -121,7 +121,7 @@ impl ExtBuilder {
 		user: AccountId,
 		total_borrowed: Balance,
 		interest_index: Rate,
-		collateral: bool,
+		is_collateral: bool,
 		liquidation_attempts: u8,
 	) -> Self {
 		self.pool_user_data.push((
@@ -130,7 +130,7 @@ impl ExtBuilder {
 			PoolUserData {
 				total_borrowed,
 				interest_index,
-				collateral,
+				is_collateral,
 				liquidation_attempts,
 			},
 		));
@@ -161,7 +161,7 @@ impl ExtBuilder {
 					DOT,
 					ControllerData {
 						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
-						timestamp: 1,
+						last_interest_accrued_block: 1,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
@@ -173,7 +173,7 @@ impl ExtBuilder {
 					ETH,
 					ControllerData {
 						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
-						timestamp: 1,
+						last_interest_accrued_block: 1,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
@@ -185,7 +185,7 @@ impl ExtBuilder {
 					BTC,
 					ControllerData {
 						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
-						timestamp: 1,
+						last_interest_accrued_block: 1,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
@@ -271,27 +271,27 @@ impl ExtBuilder {
 					CurrencyId::DOT,
 					RiskManagerData {
 						max_attempts: 3,
-						min_sum: 100_000 * DOLLARS,
+						min_partial_liquidation_sum: 100_000 * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_incentive: Rate::saturating_from_rational(105, 100),
+						liquidation_fee: Rate::saturating_from_rational(105, 100),
 					},
 				),
 				(
 					CurrencyId::ETH,
 					RiskManagerData {
 						max_attempts: 3,
-						min_sum: 100_000 * DOLLARS,
+						min_partial_liquidation_sum: 100_000 * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_incentive: Rate::saturating_from_rational(105, 100),
+						liquidation_fee: Rate::saturating_from_rational(105, 100),
 					},
 				),
 				(
 					CurrencyId::BTC,
 					RiskManagerData {
 						max_attempts: 3,
-						min_sum: 100_000 * DOLLARS,
+						min_partial_liquidation_sum: 100_000 * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_incentive: Rate::saturating_from_rational(105, 100),
+						liquidation_fee: Rate::saturating_from_rational(105, 100),
 					},
 				),
 			],
@@ -401,7 +401,7 @@ fn origin_root() -> <Runtime as frame_system::Config>::Origin {
 }
 
 fn set_oracle_price_for_all_pools(price: u128) -> DispatchResult {
-	let prices: Vec<(CurrencyId, Price)> = EnabledUnderlyingAssetId::get()
+	let prices: Vec<(CurrencyId, Price)> = EnabledUnderlyingAssetsIds::get()
 		.into_iter()
 		.map(|pool_id| (pool_id, Price::saturating_from_integer(price)))
 		.collect();

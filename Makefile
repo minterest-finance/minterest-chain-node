@@ -43,5 +43,5 @@ cargo-audit:
 
 .PHONY: update
 update:
-	cargo update
+	cargo update --aggressive
 	make check

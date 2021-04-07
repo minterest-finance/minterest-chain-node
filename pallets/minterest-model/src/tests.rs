@@ -271,7 +271,7 @@ fn calculate_borrow_interest_rate_should_work() {
 fn calculate_borrow_interest_rate_fails_if_overflow_kink_mul_multiplier() {
 	new_test_ext().execute_with(|| {
 		let minterest_model_data = multiplier_per_block_equal_max_value();
-		<MinterestModelDates<Test>>::insert(CurrencyId::KSM, minterest_model_data.clone());
+		<MinterestModelParams<Test>>::insert(CurrencyId::KSM, minterest_model_data.clone());
 		// utilization_rate > kink.
 		// Overflow in calculation: kink * multiplier_per_block = 1.01 * max_value()
 		assert_noop!(
@@ -288,7 +288,7 @@ fn calculate_borrow_interest_rate_fails_if_overflow_kink_mul_multiplier() {
 fn calculate_borrow_interest_rate_fails_if_overflow_add_base_rate_per_block() {
 	new_test_ext().execute_with(|| {
 		let minterest_model_data = base_rate_per_block_equal_max_value();
-		<MinterestModelDates<Test>>::insert(CurrencyId::KSM, minterest_model_data.clone());
+		<MinterestModelParams<Test>>::insert(CurrencyId::KSM, minterest_model_data.clone());
 		// utilization_rate > kink.
 		// Overflow in calculation: kink_mul_multiplier + base_rate_per_block = ... + max_value()
 		assert_noop!(
