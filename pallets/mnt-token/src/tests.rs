@@ -13,6 +13,7 @@ const DOT: CurrencyId = CurrencyId::DOT;
 const ETH: CurrencyId = CurrencyId::ETH;
 const BTC: CurrencyId = CurrencyId::BTC;
 
+/// Move flywheel and check borrower balance
 fn check_borrower(pool_id: CurrencyId, borrower: AccountId, expected_mnt: Balance) {
 	assert_ok!(MntToken::update_mnt_borrow_index(pool_id));
 	assert_ok!(MntToken::distribute_borrower_mnt(pool_id, &borrower));
@@ -22,6 +23,13 @@ fn check_borrower(pool_id: CurrencyId, borrower: AccountId, expected_mnt: Balanc
 	let borrower_accrued_mnt = MntToken::mnt_accrued(borrower).unwrap();
 	assert_eq!(borrower_accrued_mnt, expected_mnt);
 	assert_eq!(borrower_index, pool_state.index);
+}
+
+/// Move flywheel and check supplier balance
+fn check_supplier_accrued(pool_id: CurrencyId, supplier: AccountId, expected_mnt: Balance) {
+	MntToken::update_mnt_supply_index(pool_id).unwrap();
+	MntToken::distribute_supplier_mnt(pool_id, &supplier).unwrap();
+	assert_eq!(MntToken::mnt_accrued(supplier).unwrap(), expected_mnt);
 }
 
 #[test]
@@ -43,18 +51,10 @@ fn distribute_mnt_to_supplier_from_differt_pools() {
 			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MDOT, &ALICE, 100 * DOLLARS).unwrap();
 			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MKSM, &ALICE, 100 * DOLLARS).unwrap();
 
-			MntToken::update_mnt_supply_index(KSM).unwrap();
-			MntToken::distribute_supplier_mnt(KSM, &ALICE).unwrap();
-			assert_eq!(MntToken::mnt_accrued(ALICE).unwrap(), ksm_mnt_speed);
-
-			MntToken::update_mnt_supply_index(DOT).unwrap();
-			MntToken::distribute_supplier_mnt(DOT, &ALICE).unwrap();
-			assert_eq!(MntToken::mnt_accrued(&ALICE).unwrap(), ksm_mnt_speed + dot_mnt_speed);
-
+			check_supplier_accrued(KSM, ALICE, ksm_mnt_speed);
+			check_supplier_accrued(DOT, ALICE, ksm_mnt_speed + dot_mnt_speed);
 			// The Block number wasn't changed, so we should get the same result without errors
-			MntToken::update_mnt_supply_index(DOT).unwrap();
-			MntToken::distribute_supplier_mnt(DOT, &ALICE).unwrap();
-			assert_eq!(MntToken::mnt_accrued(&ALICE).unwrap(), ksm_mnt_speed + dot_mnt_speed);
+			check_supplier_accrued(DOT, ALICE, ksm_mnt_speed + dot_mnt_speed);
 		});
 }
 
