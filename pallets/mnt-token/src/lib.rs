@@ -263,6 +263,7 @@ pub mod module {
 
 impl<T: Config> Pallet<T> {
 	/// Distribute mnt token to borrower. It should be called after update_mnt_borrow_index
+	#[allow(dead_code)] // TODO remove this
 	fn distribute_borrower_mnt(underlying_id: CurrencyId, borrower: &T::AccountId) -> DispatchResult {
 		// borrower_amount = account_borrow_balance / pool_borrow_index
 		// delta_index = pool_borrow_index - borrower_index
@@ -277,7 +278,7 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		let mut borrower_index = MntBorrowerIndex::<T>::get(underlying_id, borrower)
-			.or(Some(Rate::one()))
+			.or_else(|| Some(Rate::one()))
 			.unwrap();
 
 		let pool_borrow_state = MntPoolsState::<T>::get(underlying_id)
@@ -296,7 +297,9 @@ impl<T: Config> Pallet<T> {
 			.checked_mul(&delta_index)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let mut borrower_mnt_accrued = MntAccrued::<T>::get(borrower).or(Some(Balance::zero())).unwrap();
+		let mut borrower_mnt_accrued = MntAccrued::<T>::get(borrower)
+			.or_else(|| Some(Balance::zero()))
+			.unwrap();
 		borrower_mnt_accrued = borrower_mnt_accrued
 			.checked_add(borrower_delta.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
@@ -316,6 +319,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Update mnt borrow index for pool
+	#[allow(dead_code)] // TODO remove this
 	fn update_mnt_borrow_index(underlying_id: CurrencyId) -> DispatchResult {
 		// block_delta = current_block_number - bottow_state.block_number
 		// mnt_accrued = delta_blocks * mnt_speed
@@ -362,6 +366,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Distribute mnt token to supplier. It should be called after update_mnt_supply_index
+	#[allow(dead_code)] // TODO remove this
 	fn distribute_supplier_mnt(underlying_id: CurrencyId, supplier: &T::AccountId) -> DispatchResult {
 		// delta_index = mnt_supply_index - mnt_supplier_index
 		// supplier_delta = supplier_mtoken_balance * delta_index
@@ -373,7 +378,7 @@ impl<T: Config> Pallet<T> {
 			.index;
 
 		let mut supplier_index = MntSupplierIndex::<T>::get(underlying_id, supplier)
-			.or(Some(Rate::one()))
+			.or_else(|| Some(Rate::one()))
 			.unwrap();
 
 		let delta_index = supply_index
@@ -391,7 +396,9 @@ impl<T: Config> Pallet<T> {
 			.checked_mul(&supplier_balance)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let mut supplier_mnt_accrued = MntAccrued::<T>::get(supplier).or(Some(Balance::zero())).unwrap();
+		let mut supplier_mnt_accrued = MntAccrued::<T>::get(supplier)
+			.or_else(|| Some(Balance::zero()))
+			.unwrap();
 
 		supplier_mnt_accrued = supplier_mnt_accrued
 			.checked_add(supplier_delta.into_inner())
@@ -413,6 +420,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Update mnt supply index for pool
+	#[allow(dead_code)] // TODO remove this
 	fn update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult {
 		// block_delta = current_block_number - supply_state.block_number
 		// mnt_accrued = block_delta * mnt_speed

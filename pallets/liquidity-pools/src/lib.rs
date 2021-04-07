@@ -551,5 +551,4 @@ impl<T: Config> LiquidityPoolsManager for Pallet<T> {
 	fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate {
 		Self::pools(pool_id).borrow_index
 	}
-
 }
