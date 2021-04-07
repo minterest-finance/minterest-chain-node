@@ -5,8 +5,8 @@ Description of scenario #1:
 
 Collateral factor = 90% for all pools.
 Alice - depositer, Bob - borrower.
-1. Bob made a deposit into the system and set as collateral DOT and BTC.
-2. Bob borrowed ETH.
+1. Bob made a deposit into the system and set as collateral DOT and ETH.
+2. Bob borrowed BTC.
 3. Ethereum price decreased.
 4. The first partial liquidation.
 5. Bob withdrew all the collateral DOT.
@@ -483,9 +483,6 @@ fn complete_liquidation_one_collateral_not_enough_balance_should_work() {
 		})
 }
 
-// If the liquidation pool does not have enough funds to pay off the debt, then the
-// liquidation pool repays the amount of assets available to it. The number of liquidation
-// attempts does not change.
 #[test]
 fn complete_liquidation_multi_collateral_not_enough_balance_should_work() {
 	ExtBuilder::default()
@@ -538,9 +535,6 @@ fn complete_liquidation_multi_collateral_not_enough_balance_should_work() {
 		})
 }
 
-// If the liquidation pool does not have enough funds to pay off the debt, then the
-// liquidation pool repays the amount of assets available to it. The number of liquidation
-// attempts does not change.
 #[test]
 fn partial_liquidation_multi_collateral_not_enough_balance_should_work() {
 	ExtBuilder::default()

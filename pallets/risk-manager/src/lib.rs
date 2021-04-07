@@ -75,6 +75,17 @@ type LiquidityPools<T> = liquidity_pools::Module<T>;
 type Controller<T> = controller::Module<T>;
 type MinterestProtocol<T> = minterest_protocol::Module<T>;
 
+pub struct LiquidationInfo {
+	/// The number of collateral tokens to seize converted into USD (consider liquidation_fee).
+	seize_amount: Balance,
+	/// The amount of the underlying borrowed asset to repay converted into usd.
+	repay_amount: Balance,
+	/// The amount of the underlying borrowed asset to repay.
+	repay_assets: Balance,
+	/// Boolean, whether or not to increment the counter of liquidation attempts.
+	is_attempt_increment_required: bool,
+}
+
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
@@ -474,11 +485,15 @@ impl<T: Config> Pallet<T> {
 			&& liquidation_attempts < RiskManagerParams::<T>::get(liquidated_pool_id).max_attempts;
 
 		// Calculate sum required to liquidate.
-		let (seize_amount, repay_amount, repay_assets, is_need_mutate_attempts) =
-			Self::liquidate_calculate_seize_and_repay(liquidated_pool_id, total_repay_amount, is_partial_liquidation)?;
+		let LiquidationInfo {
+			seize_amount,
+			repay_amount,
+			repay_assets,
+			is_attempt_increment_required,
+		} = Self::calculate_liquidation_info(liquidated_pool_id, total_repay_amount, is_partial_liquidation)?;
 
 		let seized_pools = Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, repay_assets, seize_amount)?;
-		if is_need_mutate_attempts {
+		if is_attempt_increment_required {
 			Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation);
 		}
 
@@ -605,16 +620,12 @@ impl<T: Config> Pallet<T> {
 	/// - `total_repay_amount`: total amount of debt converted into usd.
 	/// - `is_partial_liquidation`: partial or complete liquidation.
 	///
-	/// Returns (`seize_amount`, `repay_amount`, `repay_assets`)
-	/// - `seize_amount`: the number of collateral tokens to seize converted
-	/// into USD (consider liquidation_fee).
-	/// - `repay_amount`: current amount of debt converted into usd.
-	/// - `repay_assets`: the amount of the underlying borrowed asset to repay.
-	pub fn liquidate_calculate_seize_and_repay(
+	/// Returns LiquidationInfo.
+	pub fn calculate_liquidation_info(
 		liquidated_pool_id: CurrencyId,
 		total_repay_amount: Balance,
 		is_partial_liquidation: bool,
-	) -> result::Result<(Balance, Balance, Balance, bool), DispatchError> {
+	) -> result::Result<LiquidationInfo, DispatchError> {
 		let liquidation_fee = Self::risk_manager_dates(liquidated_pool_id).liquidation_fee;
 		let price_borrowed =
 			T::PriceSource::get_underlying_price(liquidated_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
@@ -638,7 +649,7 @@ impl<T: Config> Pallet<T> {
 
 		// If there is not enough liquidity in the liquidation pool, then we do not change
 		// the user's liquidation attempts counter.
-		let is_need_mutate_attempts = liquidation_pool_balance_usd >= repay_amount;
+		let is_attempt_increment_required = liquidation_pool_balance_usd >= repay_amount;
 
 		// repay_amount = min(amount_to_liquidate, liquidation_pool_balance_usd)
 		repay_amount = repay_amount.min(liquidation_pool_balance_usd);
@@ -658,7 +669,12 @@ impl<T: Config> Pallet<T> {
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		Ok((seize_amount, repay_amount, repay_assets, is_need_mutate_attempts))
+		Ok(LiquidationInfo {
+			seize_amount,
+			repay_amount,
+			repay_assets,
+			is_attempt_increment_required,
+		})
 	}
 
 	/// Changes the parameter liquidation_attempts depending on the type of liquidation.
