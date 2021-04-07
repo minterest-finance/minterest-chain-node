@@ -39,7 +39,7 @@ pub use weights::WeightInfo;
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct ControllerData<BlockNumber> {
 	/// Block number that interest was last accrued at.
-	pub timestamp: BlockNumber,
+	pub last_interest_accrued_block: BlockNumber,
 
 	/// Defines the portion of borrower interest that is converted into protocol interest.
 	pub protocol_interest_factor: Rate,
@@ -175,7 +175,7 @@ pub mod module {
 	/// max_borrow_rate)`.
 	#[pallet::storage]
 	#[pallet::getter(fn controller_dates)]
-	pub type ControllerDates<T: Config> =
+	pub type ControllerParams<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, ControllerData<T::BlockNumber>, ValueQuery>;
 
 	/// The Pause Guardian can pause certain actions as a safety mechanism.
@@ -212,7 +212,7 @@ pub mod module {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			self.controller_dates.iter().for_each(|(currency_id, controller_data)| {
-				ControllerDates::<T>::insert(currency_id, ControllerData { ..*controller_data })
+				ControllerParams::<T>::insert(currency_id, ControllerData { ..*controller_data })
 			});
 			self.pause_keepers.iter().for_each(|(currency_id, pause_keeper)| {
 				PauseKeepers::<T>::insert(currency_id, PauseKeeper { ..*pause_keeper })
@@ -233,9 +233,9 @@ pub mod module {
 		/// Pause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(T::ControllerWeightInfo::pause_specific_operation())]
+		#[pallet::weight(T::ControllerWeightInfo::pause_operation())]
 		#[transactional]
-		pub fn pause_specific_operation(
+		pub fn pause_operation(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			operation: Operation,
@@ -261,9 +261,9 @@ pub mod module {
 		/// Unpause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(T::ControllerWeightInfo::unpause_specific_operation())]
+		#[pallet::weight(T::ControllerWeightInfo::resume_operation())]
 		#[transactional]
-		pub fn unpause_specific_operation(
+		pub fn resume_operation(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			operation: Operation,
@@ -317,7 +317,7 @@ pub mod module {
 
 		/// Set interest factor.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_protocol_interest_factor`: new value for interest factor.
+		/// - `protocol_interest_factor`: new value for interest factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::set_protocol_interest_factor())]
@@ -325,23 +325,21 @@ pub mod module {
 		pub fn set_protocol_interest_factor(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_protocol_interest_factor: Rate,
+			protocol_interest_factor: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
 			);
-			ControllerDates::<T>::mutate(pool_id, |data| {
-				data.protocol_interest_factor = new_protocol_interest_factor
-			});
+			ControllerParams::<T>::mutate(pool_id, |data| data.protocol_interest_factor = protocol_interest_factor);
 			Self::deposit_event(Event::InterestFactorChanged);
 			Ok(().into())
 		}
 
 		/// Set Maximum borrow rate.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_max_borrow_rate`: new value for maximum borrow rate.
+		/// - `max_borrow_rate`: new value for maximum borrow rate.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::set_max_borrow_rate())]
@@ -349,22 +347,22 @@ pub mod module {
 		pub fn set_max_borrow_rate(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_max_borrow_rate: Rate,
+			max_borrow_rate: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
 			);
-			ensure!(!new_max_borrow_rate.is_zero(), Error::<T>::MaxBorrowRateCannotBeZero);
-			ControllerDates::<T>::mutate(pool_id, |data| data.max_borrow_rate = new_max_borrow_rate);
+			ensure!(!max_borrow_rate.is_zero(), Error::<T>::MaxBorrowRateCannotBeZero);
+			ControllerParams::<T>::mutate(pool_id, |data| data.max_borrow_rate = max_borrow_rate);
 			Self::deposit_event(Event::MaxBorrowRateChanged);
 			Ok(().into())
 		}
 
 		/// Set Collateral factor.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_collateral_factor`: new value for collateral factor.
+		/// - `collateral_factor`: new value for collateral factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::set_collateral_factor())]
@@ -372,7 +370,7 @@ pub mod module {
 		pub fn set_collateral_factor(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_collateral_factor: Rate,
+			collateral_factor: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
@@ -380,10 +378,10 @@ pub mod module {
 				Error::<T>::PoolNotFound
 			);
 			ensure!(
-				!new_collateral_factor.is_zero() && new_collateral_factor <= Rate::one(),
+				!collateral_factor.is_zero() && collateral_factor <= Rate::one(),
 				Error::<T>::CollateralFactorIncorrectValue
 			);
-			ControllerDates::<T>::mutate(pool_id, |data| data.collateral_factor = new_collateral_factor);
+			ControllerParams::<T>::mutate(pool_id, |data| data.collateral_factor = collateral_factor);
 			Self::deposit_event(Event::CollateralFactorChanged);
 			Ok(().into())
 		}
@@ -401,7 +399,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
-				T::EnabledUnderlyingAssetId::get()
+				T::EnabledUnderlyingAssetsIds::get()
 					.into_iter()
 					.any(|asset_id| asset_id == pool_id),
 				Error::<T>::PoolNotFound
@@ -413,7 +411,7 @@ pub mod module {
 					Error::<T>::InvalidBorrowCap
 				);
 			}
-			ControllerDates::<T>::mutate(pool_id, |data| data.borrow_cap = borrow_cap);
+			ControllerParams::<T>::mutate(pool_id, |data| data.borrow_cap = borrow_cap);
 			Self::deposit_event(Event::BorrowCapChanged(pool_id, borrow_cap));
 			Ok(().into())
 		}
@@ -430,13 +428,13 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
-				T::EnabledUnderlyingAssetId::get()
+				T::EnabledUnderlyingAssetsIds::get()
 					.into_iter()
 					.any(|asset_id| asset_id == pool_id),
 				Error::<T>::PoolNotFound
 			);
 
-			ControllerDates::<T>::mutate(pool_id, |data| {
+			ControllerParams::<T>::mutate(pool_id, |data| {
 				data.protocol_interest_threshold = protocol_interest_threshold
 			});
 			Self::deposit_event(Event::ProtocolInterestThresholdChanged(
@@ -449,9 +447,9 @@ pub mod module {
 		/// Enable / disable whitelist mode.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(T::ControllerWeightInfo::switch_mode())]
+		#[pallet::weight(T::ControllerWeightInfo::switch_whitelist_mode())]
 		#[transactional]
-		pub fn switch_mode(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn switch_whitelist_mode(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			let mode = WhitelistMode::<T>::mutate(|mode| {
 				*mode = !*mode;
@@ -470,7 +468,7 @@ impl<T: Config> Pallet<T> {
 	pub fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult {
 		//Remember the initial block number.
 		let current_block_number = <frame_system::Module<T>>::block_number();
-		let accrual_block_number_previous = Self::controller_dates(underlying_asset_id).timestamp;
+		let accrual_block_number_previous = Self::controller_dates(underlying_asset_id).last_interest_accrued_block;
 		// Calculate the number of blocks elapsed since the last accrual
 		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
 		//Short-circuit accumulating 0 interest.
@@ -480,7 +478,9 @@ impl<T: Config> Pallet<T> {
 
 		let pool_data = Self::calculate_interest_params(underlying_asset_id, block_delta)?;
 		// Save new params
-		ControllerDates::<T>::mutate(underlying_asset_id, |data| data.timestamp = current_block_number);
+		ControllerParams::<T>::mutate(underlying_asset_id, |data| {
+			data.last_interest_accrued_block = current_block_number
+		});
 		<LiquidityPools<T>>::set_pool_data(
 			underlying_asset_id,
 			pool_data.total_borrowed,
@@ -729,7 +729,7 @@ impl<T: Config> Pallet<T> {
 
 				let (current_supply_in_usd, current_borrowed_in_usd) = current_value;
 				let current_block_number = <frame_system::Module<T>>::block_number();
-				let accrual_block_number_previous = Self::controller_dates(pool_id).timestamp;
+				let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
 				// Calculate the number of blocks elapsed since the last accrual
 				let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
 				let pool_data = Self::calculate_interest_params(pool_id, block_delta)?;
@@ -851,26 +851,26 @@ impl<T: Config> Pallet<T> {
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::BalanceOverflow)?;
 
-		let new_total_borrow_balance = interest_accumulated
+		let total_borrowed = interest_accumulated
 			.checked_add(pool_data.total_borrowed)
 			.ok_or(Error::<T>::BorrowBalanceOverflow)?;
 
-		let new_total_protocol_interest = checked_acc_and_add_mul(
+		let total_protocol_interest = checked_acc_and_add_mul(
 			pool_data.total_protocol_interest,
 			interest_accumulated,
 			protocol_interest_factor,
 		)
 		.map_err(|_| Error::<T>::ProtocolInterestOverflow)?;
 
-		let new_borrow_index = simple_interest_factor
+		let borrow_index = simple_interest_factor
 			.checked_mul(&pool_data.borrow_index)
 			.and_then(|v| v.checked_add(&pool_data.borrow_index))
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(Pool {
-			total_borrowed: new_total_borrow_balance,
-			total_protocol_interest: new_total_protocol_interest,
-			borrow_index: new_borrow_index,
+			total_borrowed,
+			total_protocol_interest,
+			borrow_index,
 		})
 	}
 

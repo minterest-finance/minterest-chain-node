@@ -35,7 +35,7 @@ parameter_types! {
 		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
 		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 	];
-	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
 			.map(|currency_pair| currency_pair.underlying_id)
 			.collect();
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
@@ -104,7 +104,7 @@ impl liquidity_pools::Config for Runtime {
 	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
 	type EnabledCurrencyPair = EnabledCurrencyPair;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
@@ -165,7 +165,7 @@ impl mnt_token::Config for Runtime {
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
 	type EnabledCurrencyPair = EnabledCurrencyPair;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 	type MultiCurrency = Currencies;
 	type ControllerAPI = Controller;
 }
@@ -227,7 +227,7 @@ impl ExtBuilder {
 		user: AccountId,
 		total_borrowed: Balance,
 		interest_index: Rate,
-		collateral: bool,
+		is_collateral: bool,
 		liquidation_attempts: u8,
 	) -> Self {
 		self.pool_user_data.push((
@@ -236,7 +236,7 @@ impl ExtBuilder {
 			PoolUserData {
 				total_borrowed,
 				interest_index,
-				collateral,
+				is_collateral,
 				liquidation_attempts,
 			},
 		));

@@ -45,7 +45,7 @@ pub mod module {
 		type LockOrigin: EnsureOrigin<Self::Origin>;
 
 		/// Enabled underlying asset IDs.
-		type EnabledUnderlyingAssetId: Get<Vec<CurrencyId>>;
+		type EnabledUnderlyingAssetsIds: Get<Vec<CurrencyId>>;
 
 		/// Weight information for the extrinsics.
 		type WeightInfo: WeightInfo;
@@ -112,7 +112,7 @@ pub mod module {
 			T::LockOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				T::EnabledUnderlyingAssetId::get()
+				T::EnabledUnderlyingAssetsIds::get()
 					.into_iter()
 					.any(|asset_id| asset_id == currency_id),
 				Error::<T>::NotValidUnderlyingAssetId
@@ -133,7 +133,7 @@ pub mod module {
 			T::LockOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				T::EnabledUnderlyingAssetId::get()
+				T::EnabledUnderlyingAssetsIds::get()
 					.into_iter()
 					.any(|asset_id| asset_id == currency_id),
 				Error::<T>::NotValidUnderlyingAssetId

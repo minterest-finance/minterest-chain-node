@@ -77,13 +77,13 @@ pub mod module {
 		/// User is trying repay more than he borrowed.
 		RepayAmountToBig,
 		/// This pool is already collateral.
-		AlreadyCollateral,
+		AlreadyIsCollateral,
 		/// This pool has already been disabled as a collateral.
-		AlreadyDisabledCollateral,
+		IsCollateralAlreadyDisabled,
 		/// The user has an outstanding borrow. Cannot be disabled as collateral.
-		CannotBeDisabledAsCollateral,
+		IsCollateralCannotBeDisabled,
 		/// The user has not deposited funds into the pool.
-		CannotBeEnabledAsCollateral,
+		IsCollateralCannotBeEnabled,
 		/// Operation (deposit, redeem, borrow, repay) is paused.
 		OperationPaused,
 		/// The user is trying to transfer tokens to self
@@ -116,10 +116,10 @@ pub mod module {
 		Transferred(T::AccountId, T::AccountId, CurrencyId, Balance),
 
 		/// The user allowed the assets in the pool to be used as collateral: \[who, pool_id\]
-		PoolEnabledAsCollateral(T::AccountId, CurrencyId),
+		PoolEnabledIsCollateral(T::AccountId, CurrencyId),
 
-		/// The user denies use the assets in pool as collateral: \[who, pool_id\]
-		PoolDisabledCollateral(T::AccountId, CurrencyId),
+		/// The user forbids the assets in the pool to be used as collateral: \[who, pool_id\]
+		PoolDisabledIsCollateral(T::AccountId, CurrencyId),
 
 		/// Unable to transfer protocol interest from liquidity to liquidation pool: \[pool_id\]
 		ProtocolInterestTransferFailed(CurrencyId),
@@ -368,9 +368,9 @@ pub mod module {
 		}
 
 		/// Sender allowed the assets in the pool to be used as collateral.
-		#[pallet::weight(T::ProtocolWeightInfo::enable_collateral())]
+		#[pallet::weight(T::ProtocolWeightInfo::enable_is_collateral())]
 		#[transactional]
-		pub fn enable_as_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
+		pub fn enable_is_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 
 			if controller::WhitelistMode::<T>::get() {
@@ -384,23 +384,23 @@ pub mod module {
 
 			ensure!(
 				!<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id),
-				Error::<T>::AlreadyCollateral
+				Error::<T>::AlreadyIsCollateral
 			);
 
 			// If user does not have assets in the pool, then he cannot enable as collateral the pool.
 			let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
 			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &sender);
-			ensure!(!user_wrapped_balance.is_zero(), Error::<T>::CannotBeEnabledAsCollateral);
+			ensure!(!user_wrapped_balance.is_zero(), Error::<T>::IsCollateralCannotBeEnabled);
 
-			<LiquidityPools<T>>::enable_as_collateral_internal(&sender, pool_id);
-			Self::deposit_event(Event::PoolEnabledAsCollateral(sender, pool_id));
+			<LiquidityPools<T>>::enable_is_collateral_internal(&sender, pool_id);
+			Self::deposit_event(Event::PoolEnabledIsCollateral(sender, pool_id));
 			Ok(().into())
 		}
 
 		/// Sender has denies use the assets in pool as collateral.
-		#[pallet::weight(T::ProtocolWeightInfo::disable_collateral())]
+		#[pallet::weight(T::ProtocolWeightInfo::disable_is_collateral())]
 		#[transactional]
-		pub fn disable_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
+		pub fn disable_is_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 
 			if controller::WhitelistMode::<T>::get() {
@@ -414,7 +414,7 @@ pub mod module {
 
 			ensure!(
 				<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id),
-				Error::<T>::AlreadyDisabledCollateral
+				Error::<T>::IsCollateralAlreadyDisabled
 			);
 
 			let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
@@ -426,10 +426,10 @@ pub mod module {
 			let (_, shortfall) =
 				<Controller<T>>::get_hypothetical_account_liquidity(&sender, pool_id, user_balance_disabled_asset, 0)
 					.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
-			ensure!(shortfall == 0, Error::<T>::CannotBeDisabledAsCollateral);
+			ensure!(shortfall == 0, Error::<T>::IsCollateralCannotBeDisabled);
 
-			<LiquidityPools<T>>::disable_collateral_internal(&sender, pool_id);
-			Self::deposit_event(Event::PoolDisabledCollateral(sender, pool_id));
+			<LiquidityPools<T>>::disable_is_collateral_internal(&sender, pool_id);
+			Self::deposit_event(Event::PoolDisabledIsCollateral(sender, pool_id));
 			Ok(().into())
 		}
 	}

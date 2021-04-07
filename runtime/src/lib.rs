@@ -335,11 +335,6 @@ impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime 
 	type MembershipChanged = MinterestOracle;
 }
 
-impl m_tokens::Config for Runtime {
-	type Event = Event;
-	type MultiCurrency = Currencies;
-}
-
 impl minterest_protocol::Config for Runtime {
 	type Event = Event;
 	type Borrowing = LiquidityPools;
@@ -404,7 +399,7 @@ parameter_types! {
 		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
 		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 	];
-	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
 			.map(|currency_pair| currency_pair.underlying_id)
 			.collect();
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
@@ -419,7 +414,7 @@ impl liquidity_pools::Config for Runtime {
 	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
 	type EnabledCurrencyPair = EnabledCurrencyPair;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
@@ -439,7 +434,7 @@ impl module_prices::Config for Runtime {
 	type Event = Event;
 	type Source = AggregatedDataProvider;
 	type LockOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 	type WeightInfo = weights::prices::WeightInfo<Runtime>;
 }
 
@@ -474,7 +469,7 @@ impl mnt_token::Config for Runtime {
 	type UpdateOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type LiquidityPoolsManager = LiquidityPools;
 	type EnabledCurrencyPair = EnabledCurrencyPair;
-	type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 	type MultiCurrency = Currencies;
 	type ControllerAPI = Controller;
 }
@@ -583,7 +578,6 @@ construct_runtime!(
 		OperatorMembershipMinterest: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
 
 		// Minterest pallets
-		MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 		MinterestProtocol: minterest_protocol::{Module, Call, Event<T>},
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},

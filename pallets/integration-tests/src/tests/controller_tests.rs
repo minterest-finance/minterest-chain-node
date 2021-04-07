@@ -14,7 +14,7 @@ mod tests {
 	// 1. Alice can't disable DOT as collateral (because 40 ETH won't cover 50 BTC borrowing);
 	// 2. Alice can disable ETH as collateral (because 60 DOT will cover 50 BTC borrowing);
 	#[test]
-	fn disable_collateral_internal_fails_if_not_cover_borrowing() {
+	fn disable_is_collateral_internal_fails_if_not_cover_borrowing() {
 		ExtBuilder::default()
 			.pool_initial(CurrencyId::DOT)
 			.pool_initial(CurrencyId::BTC)
@@ -47,9 +47,9 @@ mod tests {
 				System::set_block_number(11);
 
 				// Alice enable her assets in pools as collateral.
-				assert_ok!(MinterestProtocol::enable_as_collateral(alice(), CurrencyId::DOT));
-				assert_ok!(MinterestProtocol::enable_as_collateral(alice(), CurrencyId::BTC));
-				assert_ok!(MinterestProtocol::enable_as_collateral(alice(), CurrencyId::ETH));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), CurrencyId::DOT));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), CurrencyId::BTC));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), CurrencyId::ETH));
 
 				System::set_block_number(21);
 
@@ -65,14 +65,14 @@ mod tests {
 
 				// Alice can't disable DOT as collateral (because ETH won't cover the borrowing).
 				assert_noop!(
-					MinterestProtocol::disable_collateral(alice(), CurrencyId::DOT),
-					MinterestProtocolError::<Test>::CannotBeDisabledAsCollateral
+					MinterestProtocol::disable_is_collateral(alice(), CurrencyId::DOT),
+					MinterestProtocolError::<Test>::IsCollateralCannotBeDisabled
 				);
 
 				System::set_block_number(51);
 
 				// Alice can disable ETH as collateral (because DOT will cover the borrowing);
-				assert_ok!(MinterestProtocol::disable_collateral(alice(), CurrencyId::ETH));
+				assert_ok!(MinterestProtocol::disable_is_collateral(alice(), CurrencyId::ETH));
 			});
 	}
 

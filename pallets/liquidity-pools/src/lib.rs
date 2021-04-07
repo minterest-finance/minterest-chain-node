@@ -47,8 +47,8 @@ pub struct PoolUserData {
 	/// Global borrow_index as of the most recent balance-changing action.
 	pub interest_index: Rate,
 
-	/// Whether or not pool as a collateral.
-	pub collateral: bool,
+	/// Whether or not pool liquidity is used as a collateral.
+	pub is_collateral: bool,
 
 	/// Number of partial liquidations for debt
 	pub liquidation_attempts: u8,
@@ -91,7 +91,7 @@ pub mod module {
 
 		#[pallet::constant]
 		/// Enabled underlying asset IDs.
-		type EnabledUnderlyingAssetId: Get<Vec<CurrencyId>>;
+		type EnabledUnderlyingAssetsIds: Get<Vec<CurrencyId>>;
 
 		#[pallet::constant]
 		/// Enabled wrapped token IDs.
@@ -120,7 +120,7 @@ pub mod module {
 
 	#[pallet::storage]
 	#[pallet::getter(fn pool_user_data)]
-	pub type PoolUserDates<T: Config> =
+	pub type PoolUserParams<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, CurrencyId, Twox64Concat, T::AccountId, PoolUserData, ValueQuery>;
 
 	#[pallet::genesis_config]
@@ -149,7 +149,7 @@ pub mod module {
 			self.pool_user_data
 				.iter()
 				.for_each(|(currency_id, account_id, pool_user_data)| {
-					PoolUserDates::<T>::insert(currency_id, account_id, PoolUserData { ..*pool_user_data })
+					PoolUserParams::<T>::insert(currency_id, account_id, PoolUserData { ..*pool_user_data })
 				});
 		}
 	}
@@ -352,20 +352,20 @@ impl<T: Config> Pallet<T> {
 		new_total_borrows: Balance,
 		new_interest_index: Rate,
 	) {
-		PoolUserDates::<T>::mutate(pool_id, who, |p| {
+		PoolUserParams::<T>::mutate(pool_id, who, |p| {
 			p.total_borrowed = new_total_borrows;
 			p.interest_index = new_interest_index;
 		})
 	}
 
-	/// Sets the parameter `collateral` to `true`.
-	pub fn enable_as_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
-		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = true)
+	/// Sets the parameter `is_collateral` to `true`.
+	pub fn enable_is_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
+		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = true)
 	}
 
-	/// Sets the parameter `collateral` to `false`.
-	pub fn disable_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
-		PoolUserDates::<T>::mutate(pool_id, who, |p| p.collateral = false);
+	/// Sets the parameter `is_collateral` to `false`.
+	pub fn disable_is_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
+		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = false);
 	}
 }
 
@@ -388,15 +388,15 @@ impl<T: Config> Pallet<T> {
 
 	/// Checks if the user has enabled the pool as collateral.
 	pub fn check_user_available_collateral(who: &T::AccountId, pool_id: CurrencyId) -> bool {
-		Self::pool_user_data(pool_id, who).collateral
+		Self::pool_user_data(pool_id, who).is_collateral
 	}
 
 	// TODO: Maybe implement using a binary tree?
-	/// Get list of users with active loan positions for particular pool.
+	/// Get list of users with active loan positions for a particular pool.
 	pub fn get_pool_members_with_loans(
 		underlying_asset_id: CurrencyId,
 	) -> result::Result<Vec<T::AccountId>, DispatchError> {
-		let user_vec: Vec<T::AccountId> = PoolUserDates::<T>::iter_prefix(underlying_asset_id)
+		let user_vec: Vec<T::AccountId> = PoolUserParams::<T>::iter_prefix(underlying_asset_id)
 			.filter(|(_, pool_user_data)| !pool_user_data.total_borrowed.is_zero())
 			.map(|(account, _)| account)
 			.collect();
@@ -412,7 +412,7 @@ impl<T: Config> Pallet<T> {
 	/// The array is sorted in descending order by the number of wrapped tokens in USD.
 	///
 	/// - `who`: AccountId for which the pool array is returned.
-	pub fn get_pools_are_collateral(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
+	pub fn get_is_collateral_pools(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
 		let mut pools: Vec<(CurrencyId, Balance)> = T::EnabledCurrencyPair::get()
 			.iter()
 			.filter_map(|currency_pair| {
@@ -420,7 +420,7 @@ impl<T: Config> Pallet<T> {
 				let wrapped_id = currency_pair.wrapped_id;
 
 				// only collateral pools.
-				if !Self::pool_user_data(pool_id, who).collateral {
+				if !Self::pool_user_data(pool_id, who).is_collateral {
 					return None;
 				};
 

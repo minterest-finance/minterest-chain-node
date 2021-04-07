@@ -49,7 +49,6 @@ mod tests {
 			System: frame_system::{Module, Call, Config, Storage, Event<T>},
 			Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 			Currencies: orml_currencies::{Module, Call, Event<T>},
-			MTokens: m_tokens::{Module, Storage, Call, Event<T>},
 			MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 			TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 			TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
@@ -123,11 +122,6 @@ mod tests {
 		type WeightInfo = ();
 	}
 
-	impl m_tokens::Config for Test {
-		type Event = Event;
-		type MultiCurrency = orml_tokens::Module<Test>;
-	}
-
 	parameter_types! {
 		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 		pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
@@ -138,7 +132,7 @@ mod tests {
 			CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
 			CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 		];
-		pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+		pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
 				.map(|currency_pair| currency_pair.underlying_id)
 				.collect();
 		pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
@@ -165,7 +159,7 @@ mod tests {
 		type LiquidityPoolAccountId = LiquidityPoolAccountId;
 		type InitialExchangeRate = InitialExchangeRate;
 		type EnabledCurrencyPair = EnabledCurrencyPair;
-		type EnabledUnderlyingAssetId = EnabledUnderlyingAssetId;
+		type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 		type EnabledWrappedTokensId = EnabledWrappedTokensId;
 	}
 
@@ -327,7 +321,7 @@ mod tests {
 			user: AccountId,
 			total_borrowed: Balance,
 			interest_index: Rate,
-			collateral: bool,
+			is_collateral: bool,
 			liquidation_attempts: u8,
 		) -> Self {
 			self.pool_user_data.push((
@@ -336,7 +330,7 @@ mod tests {
 				PoolUserData {
 					total_borrowed,
 					interest_index,
-					collateral,
+					is_collateral,
 					liquidation_attempts,
 				},
 			));
@@ -369,7 +363,7 @@ mod tests {
 					(
 						CurrencyId::DOT,
 						ControllerData {
-							timestamp: 0,
+							last_interest_accrued_block: 0,
 							protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
@@ -380,7 +374,7 @@ mod tests {
 					(
 						CurrencyId::ETH,
 						ControllerData {
-							timestamp: 0,
+							last_interest_accrued_block: 0,
 							protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
@@ -391,7 +385,7 @@ mod tests {
 					(
 						CurrencyId::BTC,
 						ControllerData {
-							timestamp: 0,
+							last_interest_accrued_block: 0,
 							protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
