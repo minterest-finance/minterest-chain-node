@@ -281,7 +281,7 @@ fn testnet_genesis(
 				(
 					CurrencyId::ETH,
 					ControllerData {
-						timestamp: 0,
+						last_interest_accrued_block: 0,
 						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
@@ -292,7 +292,7 @@ fn testnet_genesis(
 				(
 					CurrencyId::DOT,
 					ControllerData {
-						timestamp: 0,
+						last_interest_accrued_block: 0,
 						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
@@ -303,7 +303,7 @@ fn testnet_genesis(
 				(
 					CurrencyId::KSM,
 					ControllerData {
-						timestamp: 0,
+						last_interest_accrued_block: 0,
 						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
@@ -314,7 +314,7 @@ fn testnet_genesis(
 				(
 					CurrencyId::BTC,
 					ControllerData {
-						timestamp: 0,
+						last_interest_accrued_block: 0,
 						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
 						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
 						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
@@ -413,36 +413,36 @@ fn testnet_genesis(
 					CurrencyId::ETH,
 					RiskManagerData {
 						max_attempts: 2,
-						min_sum: 200_000 * DOLLARS,                               // In USD. FIXME: temporary value.
+						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
 						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_incentive: FixedU128::saturating_from_rational(105, 100), // 5%
+						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
 					},
 				),
 				(
 					CurrencyId::DOT,
 					RiskManagerData {
 						max_attempts: 2,
-						min_sum: 100_000 * DOLLARS,                               // In USD. FIXME: temporary value.
+						min_partial_liquidation_sum: 100_000 * DOLLARS, // In USD. FIXME: temporary value.
 						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_incentive: FixedU128::saturating_from_rational(105, 100), // 5%
+						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
 					},
 				),
 				(
 					CurrencyId::KSM,
 					RiskManagerData {
 						max_attempts: 2,
-						min_sum: 200_000 * DOLLARS,                               // In USD. FIXME: temporary value.
+						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
 						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_incentive: FixedU128::saturating_from_rational(105, 100), // 5%
+						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
 					},
 				),
 				(
 					CurrencyId::BTC,
 					RiskManagerData {
 						max_attempts: 2,
-						min_sum: 200_000 * DOLLARS,                               // In USD. FIXME: temporary value.
+						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
 						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_incentive: FixedU128::saturating_from_rational(105, 100), // 5%
+						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
 					},
 				),
 			],

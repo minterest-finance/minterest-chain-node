@@ -45,25 +45,25 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for controller.
 pub trait WeightInfo {
-	fn pause_specific_operation() -> Weight;
-	fn unpause_specific_operation() -> Weight;
+	fn pause_operation() -> Weight;
+	fn resume_operation() -> Weight;
 	fn set_protocol_interest_factor() -> Weight;
 	fn set_max_borrow_rate() -> Weight;
 	fn set_collateral_factor() -> Weight;
 	fn set_borrow_cap() -> Weight;
 	fn set_protocol_interest_threshold() -> Weight;
-	fn switch_mode() -> Weight;
+	fn switch_whitelist_mode() -> Weight;
 }
 
 /// Weights for controller using the Minterest node and recommended hardware.
 pub struct MinterestWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for MinterestWeight<T> {
-	fn pause_specific_operation() -> Weight {
+	fn pause_operation() -> Weight {
 		(32_393_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn unpause_specific_operation() -> Weight {
+	fn resume_operation() -> Weight {
 		(31_948_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
@@ -93,7 +93,7 @@ impl<T: frame_system::Config> WeightInfo for MinterestWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn switch_mode() -> Weight {
+	fn switch_whitelist_mode() -> Weight {
 		(23_922_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
@@ -102,12 +102,12 @@ impl<T: frame_system::Config> WeightInfo for MinterestWeight<T> {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn pause_specific_operation() -> Weight {
+	fn pause_operation() -> Weight {
 		(32_393_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
-	fn unpause_specific_operation() -> Weight {
+	fn resume_operation() -> Weight {
 		(31_948_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
@@ -137,7 +137,7 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
-	fn switch_mode() -> Weight {
+	fn switch_whitelist_mode() -> Weight {
 		(23_922_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))

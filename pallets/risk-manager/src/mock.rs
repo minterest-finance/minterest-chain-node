@@ -58,7 +58,7 @@ parameter_types! {
 		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
 		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 	];
-	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
 			.map(|currency_pair| currency_pair.underlying_id)
 			.collect();
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
@@ -166,27 +166,27 @@ impl ExtBuilder {
 					CurrencyId::DOT,
 					RiskManagerData {
 						max_attempts: 3,
-						min_sum: ONE_HUNDRED * DOLLARS,
+						min_partial_liquidation_sum: ONE_HUNDRED * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_incentive: Rate::saturating_from_rational(105, 100),
+						liquidation_fee: Rate::saturating_from_rational(105, 100),
 					},
 				),
 				(
 					CurrencyId::BTC,
 					RiskManagerData {
 						max_attempts: 3,
-						min_sum: ONE_HUNDRED * DOLLARS,
+						min_partial_liquidation_sum: ONE_HUNDRED * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_incentive: Rate::saturating_from_rational(105, 100),
+						liquidation_fee: Rate::saturating_from_rational(105, 100),
 					},
 				),
 				(
 					CurrencyId::ETH,
 					RiskManagerData {
 						max_attempts: 3,
-						min_sum: ONE_HUNDRED * DOLLARS,
+						min_partial_liquidation_sum: ONE_HUNDRED * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_incentive: Rate::saturating_from_rational(105, 100),
+						liquidation_fee: Rate::saturating_from_rational(105, 100),
 					},
 				),
 			],

@@ -183,22 +183,22 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		/// Set new value of balancing period.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_period`: New value of balancing period.
+		/// - `period`: New value of balancing period in blocks.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_balancing_period())]
 		#[transactional]
-		pub fn set_balancing_period(origin: OriginFor<T>, new_period: T::BlockNumber) -> DispatchResultWithPostInfo {
+		pub fn set_balancing_period(origin: OriginFor<T>, period: T::BlockNumber) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			// Write new value into storage.
-			BalancingPeriod::<T>::put(new_period);
-			Self::deposit_event(Event::BalancingPeriodChanged(new_period));
+			BalancingPeriod::<T>::put(period);
+			Self::deposit_event(Event::BalancingPeriodChanged(period));
 			Ok(().into())
 		}
 
 		/// Set new value of deviation threshold.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_threshold`: New value of deviation threshold.
+		/// - `threshold`: New value of deviation threshold.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_deviation_threshold())]
@@ -206,7 +206,7 @@ pub mod module {
 		pub fn set_deviation_threshold(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_threshold: u128,
+			threshold: u128,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -215,7 +215,7 @@ pub mod module {
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
-			let new_deviation_threshold = Rate::from_inner(new_threshold);
+			let new_deviation_threshold = Rate::from_inner(threshold);
 
 			ensure!(
 				(Rate::zero() <= new_deviation_threshold && new_deviation_threshold <= Rate::one()),
@@ -232,7 +232,7 @@ pub mod module {
 
 		/// Set new value of balance ratio.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `new_balance_ratio`: New value of deviation threshold.
+		/// - `balance_ratio`: New value of deviation threshold.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_balance_ratio())]
@@ -240,7 +240,7 @@ pub mod module {
 		pub fn set_balance_ratio(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			new_balance_ratio: u128,
+			balance_ratio: u128,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -249,7 +249,7 @@ pub mod module {
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
-			let new_balance_ratio = Rate::from_inner(new_balance_ratio);
+			let new_balance_ratio = Rate::from_inner(balance_ratio);
 
 			ensure!(
 				(Rate::zero() <= new_balance_ratio && new_balance_ratio <= Rate::one()),
@@ -364,7 +364,7 @@ impl<T: Config> Pallet<T> {
 	pub fn collects_sales_list() -> sp_std::result::Result<Vec<Sales>, DispatchError> {
 		// Collecting information about the current state of liquidation pools.
 		let (mut information_vec, mut sum_oversupply, mut sum_shortfall) =
-			T::EnabledUnderlyingAssetId::get().iter().try_fold(
+			T::EnabledUnderlyingAssetsIds::get().iter().try_fold(
 				(Vec::<LiquidationInformation>::new(), Balance::zero(), Balance::zero()),
 				|(mut current_vec, mut current_sum_oversupply, mut current_sum_shortfall),
 				 pool_id|

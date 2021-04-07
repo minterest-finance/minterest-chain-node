@@ -1,5 +1,5 @@
 use crate::{
-	AccountId, Balance, Currencies, CurrencyId, EnabledUnderlyingAssetId, MinterestOracle, MinterestProtocol, Origin,
+	AccountId, Balance, Currencies, CurrencyId, EnabledUnderlyingAssetsIds, MinterestOracle, MinterestProtocol, Origin,
 	Price, Runtime, Vec, WhitelistCouncilMembership,
 };
 
@@ -19,7 +19,7 @@ pub fn set_oracle_price_for_all_pools<T: frame_system::Config<Origin = Origin>>(
 	origin: OriginFor<T>,
 	block: u32,
 ) -> DispatchResultWithPostInfo {
-	let prices: Vec<(CurrencyId, Price)> = EnabledUnderlyingAssetId::get()
+	let prices: Vec<(CurrencyId, Price)> = EnabledUnderlyingAssetsIds::get()
 		.into_iter()
 		.map(|pool_id| (pool_id, Price::saturating_from_integer(price)))
 		.collect();
@@ -33,11 +33,11 @@ pub fn set_balance(currency_id: CurrencyId, who: &AccountId, balance: Balance) -
 	Ok(().into())
 }
 
-pub fn enable_as_collateral<T: frame_system::Config<Origin = Origin>>(
+pub fn enable_is_collateral<T: frame_system::Config<Origin = Origin>>(
 	origin: OriginFor<T>,
 	currency_id: CurrencyId,
 ) -> DispatchResultWithPostInfo {
-	MinterestProtocol::enable_as_collateral(origin.into(), currency_id)?;
+	MinterestProtocol::enable_is_collateral(origin.into(), currency_id)?;
 	Ok(().into())
 }
 
@@ -110,7 +110,7 @@ pub mod tests {
 				(
 					CurrencyId::ETH,
 					ControllerData {
-						timestamp: 0,
+						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
@@ -121,7 +121,7 @@ pub mod tests {
 				(
 					CurrencyId::DOT,
 					ControllerData {
-						timestamp: 0,
+						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
@@ -132,7 +132,7 @@ pub mod tests {
 				(
 					CurrencyId::KSM,
 					ControllerData {
-						timestamp: 0,
+						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
@@ -143,7 +143,7 @@ pub mod tests {
 				(
 					CurrencyId::BTC,
 					ControllerData {
-						timestamp: 0,
+						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
@@ -248,36 +248,36 @@ pub mod tests {
 					CurrencyId::ETH,
 					RiskManagerData {
 						max_attempts: 2,
-						min_sum: 200_000 * DOLLARS,                          // In USD. FIXME: temporary value.
+						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
 						threshold: Rate::saturating_from_rational(103, 100), // 3%
-						liquidation_incentive: Rate::saturating_from_rational(105, 100), // 5%
+						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
 					},
 				),
 				(
 					CurrencyId::DOT,
 					RiskManagerData {
 						max_attempts: 2,
-						min_sum: 100_000 * DOLLARS,                          // In USD. FIXME: temporary value.
+						min_partial_liquidation_sum: 100_000 * DOLLARS, // In USD. FIXME: temporary value.
 						threshold: Rate::saturating_from_rational(103, 100), // 3%
-						liquidation_incentive: Rate::saturating_from_rational(105, 100), // 5%
+						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
 					},
 				),
 				(
 					CurrencyId::KSM,
 					RiskManagerData {
 						max_attempts: 2,
-						min_sum: 200_000 * DOLLARS,                          // In USD. FIXME: temporary value.
+						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
 						threshold: Rate::saturating_from_rational(103, 100), // 3%
-						liquidation_incentive: Rate::saturating_from_rational(105, 100), // 5%
+						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
 					},
 				),
 				(
 					CurrencyId::BTC,
 					RiskManagerData {
 						max_attempts: 2,
-						min_sum: 200_000 * DOLLARS,                          // In USD. FIXME: temporary value.
+						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
 						threshold: Rate::saturating_from_rational(103, 100), // 3%
-						liquidation_incentive: Rate::saturating_from_rational(105, 100), // 5%
+						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
 					},
 				),
 			],

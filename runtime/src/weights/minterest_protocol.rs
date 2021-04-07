@@ -70,12 +70,12 @@ impl<T: frame_system::Config> minterest_protocol::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(33 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
-	fn enable_collateral() -> Weight {
+	fn enable_is_collateral() -> Weight {
 		(48_665_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn disable_collateral() -> Weight {
+	fn disable_is_collateral() -> Weight {
 		(285_328_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(30 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))

@@ -62,7 +62,7 @@ parameter_types! {
 		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
 		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
 	];
-	pub EnabledUnderlyingAssetId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
 			.map(|currency_pair| currency_pair.underlying_id)
 			.collect();
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
@@ -198,7 +198,7 @@ impl ExtBuilder {
 					PoolUserData {
 						total_borrowed: 0,
 						interest_index: Rate::from_inner(0),
-						collateral: true,
+						is_collateral: true,
 						liquidation_attempts: 0,
 					},
 				),
@@ -208,7 +208,7 @@ impl ExtBuilder {
 					PoolUserData {
 						total_borrowed: 0,
 						interest_index: Rate::from_inner(0),
-						collateral: false,
+						is_collateral: false,
 						liquidation_attempts: 0,
 					},
 				),
@@ -218,7 +218,7 @@ impl ExtBuilder {
 					PoolUserData {
 						total_borrowed: 0,
 						interest_index: Rate::from_inner(0),
-						collateral: true,
+						is_collateral: true,
 						liquidation_attempts: 0,
 					},
 				),
@@ -228,7 +228,7 @@ impl ExtBuilder {
 					PoolUserData {
 						total_borrowed: 0,
 						interest_index: Rate::from_inner(0),
-						collateral: true,
+						is_collateral: true,
 						liquidation_attempts: 0,
 					},
 				),
@@ -238,7 +238,7 @@ impl ExtBuilder {
 					PoolUserData {
 						total_borrowed: 0,
 						interest_index: Rate::from_inner(0),
-						collateral: true,
+						is_collateral: true,
 						liquidation_attempts: 0,
 					},
 				),
@@ -248,7 +248,7 @@ impl ExtBuilder {
 					PoolUserData {
 						total_borrowed: 0,
 						interest_index: Rate::from_inner(0),
-						collateral: true,
+						is_collateral: true,
 						liquidation_attempts: 0,
 					},
 				),
@@ -262,7 +262,7 @@ impl ExtBuilder {
 				(
 					CurrencyId::ETH,
 					ControllerData {
-						timestamp: 0,
+						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
@@ -273,7 +273,7 @@ impl ExtBuilder {
 				(
 					CurrencyId::DOT,
 					ControllerData {
-						timestamp: 0,
+						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
@@ -284,7 +284,7 @@ impl ExtBuilder {
 				(
 					CurrencyId::KSM,
 					ControllerData {
-						timestamp: 0,
+						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
@@ -295,7 +295,7 @@ impl ExtBuilder {
 				(
 					CurrencyId::BTC,
 					ControllerData {
-						timestamp: 0,
+						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
 						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
 						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%

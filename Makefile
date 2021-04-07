@@ -50,5 +50,5 @@ update-orml:
 	git add orml
 
 update: update-orml
-	cargo update
+	cargo update --aggressive
 	make check
