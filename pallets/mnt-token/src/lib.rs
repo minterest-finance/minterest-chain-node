@@ -107,6 +107,9 @@ pub mod module {
 
 		/// Error that never should happen
 		StorageIsCorrupted,
+
+		/// Error that never should happen
+		InternalError,
 	}
 
 	#[pallet::event]
@@ -337,9 +340,7 @@ impl<T: Config> Pallet<T> {
 			.checked_sub(&borrow_state.block_number)
 			.ok_or(Error::<T>::NumOverflow)?;
 		if block_delta != T::BlockNumber::zero() && mnt_speed != Balance::zero() {
-			let block_delta_as_u128 = TryInto::<u128>::try_into(block_delta)
-				.ok()
-				.expect("blockchain will not exceed 2^128 blocks; qed");
+			let block_delta_as_u128 = TryInto::<u128>::try_into(block_delta).or(Err(Error::<T>::InternalError))?;
 
 			let mnt_accrued = mnt_speed
 				.checked_mul(block_delta_as_u128)
@@ -444,9 +445,7 @@ impl<T: Config> Pallet<T> {
 				.ok_or(Error::<T>::NotValidUnderlyingAssetId)?
 				.wrapped_id;
 
-			let block_delta_as_u128 = TryInto::<u128>::try_into(block_delta)
-				.ok()
-				.expect("blockchain will not exceed 2^128 blocks; qed");
+			let block_delta_as_u128 = TryInto::<u128>::try_into(block_delta).or(Err(Error::<T>::InternalError))?;
 
 			let mnt_accrued = mnt_speed
 				.checked_mul(block_delta_as_u128)
