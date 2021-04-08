@@ -507,17 +507,13 @@ impl<T: Config> Pallet<T> {
 	fn refresh_mnt_speeds() -> DispatchResult {
 		// TODO Add update indexes here when it will be implemented
 		let (pool_utilities, sum_of_all_utilities) = Self::calculate_enabled_pools_utilities()?;
-		let sum_of_all_utilities = Rate::from_inner(sum_of_all_utilities);
-		if sum_of_all_utilities == Rate::zero() {
+		if sum_of_all_utilities == Balance::zero() {
 			// There is nothing to calculate.
 			return Ok(());
 		}
 		let mnt_rate = Self::mnt_rate();
 		for (currency_id, utility) in pool_utilities {
-			let utility = Rate::from_inner(utility);
-			let utility_fraction = utility
-				.checked_div(&sum_of_all_utilities)
-				.ok_or(Error::<T>::NumOverflow)?;
+			let utility_fraction = Rate::saturating_from_rational(utility, sum_of_all_utilities);
 			let pool_mnt_speed = mnt_rate.checked_mul(&utility_fraction).ok_or(Error::<T>::NumOverflow)?;
 			MntSpeeds::<T>::insert(currency_id, pool_mnt_speed.into_inner());
 		}
