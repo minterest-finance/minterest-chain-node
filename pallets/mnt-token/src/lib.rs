@@ -177,7 +177,7 @@ pub mod module {
 	pub struct GenesisConfig<T: Config> {
 		pub mnt_rate: Rate,
 		pub minted_pools: Vec<CurrencyId>,
-		pub _marker: PhantomData<T>,
+		pub phantom: PhantomData<T>,
 	}
 
 	#[cfg(feature = "std")]
@@ -186,7 +186,7 @@ pub mod module {
 			GenesisConfig {
 				mnt_rate: Rate::zero(),
 				minted_pools: vec![],
-				_marker: PhantomData,
+				phantom: PhantomData,
 			}
 		}
 	}

@@ -264,7 +264,7 @@ impl ExtBuilder {
 		mnt_token::GenesisConfig::<Runtime> {
 			mnt_rate: self.mnt_rate,
 			minted_pools: self.minted_pools,
-			_marker: PhantomData,
+			phantom: PhantomData,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
