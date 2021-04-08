@@ -16,8 +16,8 @@ sp-std = { version = "3.0.0", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 
-orml-traits = { path = "../../orml/traits", default-features = false }
-orml-utilities = { path = "../../orml/utilities", default-features = false }
+orml-traits = { version = "0.4.0", default-features = false }
+orml-utilities = { version = "0.4.0", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 minterest-model = { path = "../minterest-model", default-features = false }
@@ -28,8 +28,8 @@ pallet-traits = { path = "../traits", default-features = false }
 sp-core = { version = "3.0.0" }
 sp-io = { version = "3.0.0" }
 
-orml-tokens = { path = "../../orml/tokens" }
-orml-currencies = { path = "../../orml/currencies" }
+orml-tokens = { version = "0.4.0" }
+orml-currencies = { version = "0.4.0" }
 
 liquidity-pools = { path = "../liquidity-pools" }
 minterest-model = { path = "../minterest-model" }
