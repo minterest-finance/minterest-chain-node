@@ -16,8 +16,8 @@ sp-core = { version = '3.0.0', default-features = false }
 sp-io = { version = '3.0.0', default-features = false }
 sp-runtime = { version = '3.0.0', default-features = false }
 sp-std = { version = '3.0.0', default-features = false }
-orml-utilities = { path = "../../orml/utilities", default-features = false }
-orml-traits = { path = "../../orml/traits", default-features = false }
+orml-utilities = { version = '0.4.0', default-features = false }
+orml-traits = { version = '0.4.0', default-features = false }
 sp-arithmetic = { version = "3.0.0", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
@@ -31,7 +31,7 @@ controller = { path = "../controller", default-features = false }
 sp-core = { version = '3.0.0' }
 sp-io = { version = '3.0.0' }
 
-orml-tokens = { path = "../../orml/tokens" }
+orml-tokens = { version = "0.4.0" }
 
 liquidity-pools = { path = "../liquidity-pools" }
 liquidation-pools = { path = "../liquidation-pools" }
