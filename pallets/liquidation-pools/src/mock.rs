@@ -132,6 +132,7 @@ impl Default for ExternalityBuilder {
 				LiquidationPoolData {
 					deviation_threshold: Rate::saturating_from_rational(1, 10),
 					balance_ratio: Rate::saturating_from_rational(2, 10),
+					max_ideal_balance: None,
 				},
 			)],
 			balancing_period: 600, // Blocks per 10 minutes

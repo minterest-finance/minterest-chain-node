@@ -38,7 +38,8 @@ fn set_deviation_threshold_should_work() {
 			TestLiquidationPools::liquidation_pools_data(CurrencyId::DOT).deviation_threshold,
 			Rate::zero()
 		);
-		let expected_event = Event::liquidation_pools(crate::Event::DeviationThresholdChanged(Rate::zero()));
+		let expected_event =
+			Event::liquidation_pools(crate::Event::DeviationThresholdChanged(CurrencyId::DOT, Rate::zero()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 1.0
@@ -51,7 +52,8 @@ fn set_deviation_threshold_should_work() {
 			TestLiquidationPools::liquidation_pools_data(CurrencyId::DOT).deviation_threshold,
 			Rate::one()
 		);
-		let expected_event = Event::liquidation_pools(crate::Event::DeviationThresholdChanged(Rate::one()));
+		let expected_event =
+			Event::liquidation_pools(crate::Event::DeviationThresholdChanged(CurrencyId::DOT, Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can not be set grater than 1.0
@@ -83,7 +85,7 @@ fn set_balance_ratio_should_work() {
 			TestLiquidationPools::liquidation_pools_data(CurrencyId::DOT).balance_ratio,
 			Rate::zero()
 		);
-		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(Rate::zero()));
+		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(CurrencyId::DOT, Rate::zero()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 1.0
@@ -96,7 +98,7 @@ fn set_balance_ratio_should_work() {
 			TestLiquidationPools::liquidation_pools_data(CurrencyId::DOT).balance_ratio,
 			Rate::one()
 		);
-		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(Rate::one()));
+		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(CurrencyId::DOT, Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can not be set grater than 1.0
@@ -114,6 +116,52 @@ fn set_balance_ratio_should_work() {
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
 			TestLiquidationPools::set_balance_ratio(admin(), CurrencyId::MDOT, 10),
+			Error::<Test>::NotValidUnderlyingAssetId
+		);
+	});
+}
+
+#[test]
+fn set_max_ideal_balance_should_work() {
+	ExternalityBuilder::default().build().execute_with(|| {
+		// Can be set to 0
+		assert_ok!(TestLiquidationPools::set_max_ideal_balance(
+			admin(),
+			CurrencyId::DOT,
+			Some(Balance::zero())
+		));
+		assert_eq!(
+			TestLiquidationPools::liquidation_pools_data(CurrencyId::DOT).max_ideal_balance,
+			Some(0)
+		);
+		let expected_event = Event::liquidation_pools(crate::Event::MaxIdealBalanceChanged(
+			CurrencyId::DOT,
+			Some(Balance::zero()),
+		));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+
+		// Can be set to None
+		assert_ok!(TestLiquidationPools::set_max_ideal_balance(
+			admin(),
+			CurrencyId::DOT,
+			None
+		));
+		assert_eq!(
+			TestLiquidationPools::liquidation_pools_data(CurrencyId::DOT).max_ideal_balance,
+			None
+		);
+		let expected_event = Event::liquidation_pools(crate::Event::MaxIdealBalanceChanged(CurrencyId::DOT, None));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+
+		// The dispatch origin of this call must be Root or half MinterestCouncil.
+		assert_noop!(
+			TestLiquidationPools::set_max_ideal_balance(alice(), CurrencyId::DOT, Some(10u128)),
+			BadOrigin
+		);
+
+		// MDOT is wrong CurrencyId for underlying assets.
+		assert_noop!(
+			TestLiquidationPools::set_max_ideal_balance(admin(), CurrencyId::MDOT, Some(10u128)),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});

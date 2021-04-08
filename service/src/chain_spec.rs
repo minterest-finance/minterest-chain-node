@@ -455,6 +455,7 @@ fn testnet_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
 					},
 				),
 				(
@@ -462,6 +463,7 @@ fn testnet_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
 					},
 				),
 				(
@@ -469,6 +471,7 @@ fn testnet_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
 					},
 				),
 				(
@@ -476,6 +479,7 @@ fn testnet_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
 					},
 				),
 			],
