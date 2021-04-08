@@ -548,14 +548,10 @@ impl<T: Config> Pallet<T> {
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::BalanceOverflow)?;
 
-		match Self::get_max_ideal_balance(pool_id) {
+		match Self::liquidation_pools_data(pool_id).max_ideal_balance {
 			Some(max_ideal_balance) => Ok(ideal_balance.min(max_ideal_balance)),
 			None => Ok(ideal_balance),
 		}
-	}
-
-	pub fn get_max_ideal_balance(pool_id: CurrencyId) -> Option<Balance> {
-		Self::liquidation_pools_data(pool_id).max_ideal_balance
 	}
 }
 
