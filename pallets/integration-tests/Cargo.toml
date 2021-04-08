@@ -38,6 +38,7 @@ pallet-traits = { path = "../traits" }
 minterest-model = { path = "../minterest-model" }
 minterest-protocol = { path = "../minterest-protocol" }
 dex = { path = "../dex" }
+test-helper = { path = "../../test-helper" }
 
 [features]
 default = ['std']

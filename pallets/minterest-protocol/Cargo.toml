@@ -32,6 +32,7 @@ liquidation-pools = { path = "../liquidation-pools" }
 controller = { path = "../controller" }
 minterest-model = { path = "../minterest-model" }
 dex = { path = "../dex" }
+test-helper = { path = "../../test-helper" }
 
 [features]
 default = ['std']

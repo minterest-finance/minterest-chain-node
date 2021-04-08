@@ -36,6 +36,7 @@ members = [
     'primitives',
     'service',
     'runtime',
+    'test-helper',
     'pallets/liquidity-pools',
     'pallets/minterest-model',
     'pallets/minterest-protocol',

@@ -17,6 +17,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 	FixedPointNumber,
 };
+use test_helper::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -39,65 +40,11 @@ frame_support::construct_runtime!(
 	}
 );
 
-parameter_types! {
-	pub const BlockHashCount: u64 = 250;
-	pub const SS58Prefix: u8 = 42;
-}
-
-impl system::Config for Test {
-	type BaseCallFilter = ();
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type Origin = Origin;
-	type Call = Call;
-	type Index = u64;
-	type BlockNumber = u64;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type AccountId = u64;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = ();
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = SS58Prefix;
-}
-
-parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		Default::default()
-	};
-}
-
-impl orml_tokens::Config for Test {
-	type Event = Event;
-	type Balance = Balance;
-	type Amount = Amount;
-	type CurrencyId = CurrencyId;
-	type WeightInfo = ();
-	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
-}
-
-parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
-}
-
-type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
-
-impl orml_currencies::Config for Test {
-	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Test>;
-	type NativeCurrency = NativeCurrency;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
-	type WeightInfo = ();
-}
+mock_impl_system_config!(Test);
+mock_impl_orml_tokens_config!(Test);
+mock_impl_orml_currencies_config!(Test, CurrencyId::MNT);
+mock_impl_liquidity_pools_config!(Test);
+mock_impl_dex_config!(Test);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
@@ -127,29 +74,6 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn lock_price(_currency_id: CurrencyId) {}
 
 	fn unlock_price(_currency_id: CurrencyId) {}
-}
-
-impl liquidity_pools::Config for Test {
-	type MultiCurrency = orml_tokens::Module<Test>;
-	type PriceSource = MockPriceSource;
-	type ModuleId = LiquidityPoolsModuleId;
-	type LiquidityPoolAccountId = LiquidityPoolAccountId;
-	type InitialExchangeRate = InitialExchangeRate;
-	type EnabledCurrencyPair = EnabledCurrencyPair;
-	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
-	type EnabledWrappedTokensId = EnabledWrappedTokensId;
-}
-
-parameter_types! {
-	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
-	pub DexAccountId: AccountId = DexModuleId::get().into_account();
-}
-
-impl dex::Config for Test {
-	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Test>;
-	type DexModuleId = DexModuleId;
-	type DexAccountId = DexAccountId;
 }
 
 parameter_types! {
@@ -184,7 +108,6 @@ where
 	type Extrinsic = Extrinsic;
 }
 
-type Amount = i128;
 type AccountId = u64;
 pub type BlockNumber = u64;
 pub const ADMIN: AccountId = 0;

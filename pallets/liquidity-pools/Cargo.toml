@@ -29,6 +29,7 @@ sp-core = { version = "3.0.0" }
 pallet-balances = { version = "3.0.0" }
 orml-tokens = { version = "0.4.0" }
 orml-currencies = { version = "0.4.0" }
+test-helper = { path = "../../test-helper" }
 
 [features]
 default = ["std"]
