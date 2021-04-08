@@ -148,7 +148,7 @@ pub mod module {
 	/// Doubling this number shows how much MNT goes to all suppliers and borrowers of particular pool.
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_speeds)]
-	pub(crate) type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Balance, OptionQuery>;
+	pub(crate) type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Balance, ValueQuery>;
 
 	// TODO Could I merge MntSpeeds and MntPoolsState storage into one?
 	/// Index + block_number need for generating and distributing new MNT tokens for pool
@@ -338,7 +338,7 @@ impl<T: Config> Pallet<T> {
 		// borrow_state.index += ratio
 		// borrow_state.block_number = current_block_number
 
-		let mnt_speed = MntSpeeds::<T>::get(underlying_id).ok_or(Error::<T>::StorageIsCorrupted)?;
+		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
 		let current_block = frame_system::Module::<T>::block_number();
 		let mut borrow_state = MntPoolsState::<T>::get(underlying_id)
 			.ok_or(Error::<T>::StorageIsCorrupted)?
@@ -441,7 +441,7 @@ impl<T: Config> Pallet<T> {
 		// supply_state.block_number = current_block_number
 
 		let current_block = frame_system::Module::<T>::block_number();
-		let mnt_speed = MntSpeeds::<T>::get(underlying_id).ok_or(Error::<T>::StorageIsCorrupted)?;
+		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
 		let mut supply_state = MntPoolsState::<T>::get(underlying_id)
 			.ok_or(Error::<T>::StorageIsCorrupted)?
 			.supply_state;
