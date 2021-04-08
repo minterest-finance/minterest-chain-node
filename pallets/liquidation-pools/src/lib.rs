@@ -537,6 +537,11 @@ impl<T: Config> Pallet<T> {
 		Ok((max_supply_amount, target_amount))
 	}
 
+	/// Calculates ideal balance for pool balancing
+	/// - `pool_id`: PoolID for which the ideal balance is calculated.
+	///
+	/// Returns minimum of (liquidity_pool_balance * balance_ratio * oracle_price) and
+	/// max_ideal_balance
 	pub fn calculate_ideal_balance(pool_id: CurrencyId) -> BalanceResult {
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 		let balance_ratio = Self::liquidation_pools_data(pool_id).balance_ratio;

@@ -178,7 +178,10 @@ fn calculate_ideal_balance_should_work() {
 			// Oracle price: 1.0
 			// Balance ratio: 0.2
 			// Expected ideal balance: 100_000
-			assert_eq!(TestLiquidationPools::calculate_ideal_balance(CurrencyId::DOT), Ok(100_000 * DOLLARS));
+			assert_eq!(
+				TestLiquidationPools::calculate_ideal_balance(CurrencyId::DOT),
+				Ok(100_000 * DOLLARS)
+			);
 
 			assert_ok!(TestLiquidationPools::set_max_ideal_balance(
 				admin(),
@@ -190,7 +193,10 @@ fn calculate_ideal_balance_should_work() {
 			// Oracle price: 1.0
 			// Balance ratio: 0.2
 			// Expected ideal balance: min(100_000, 1_000) = 1_000
-			assert_eq!(TestLiquidationPools::calculate_ideal_balance(CurrencyId::DOT), Ok(1_000 * DOLLARS));
+			assert_eq!(
+				TestLiquidationPools::calculate_ideal_balance(CurrencyId::DOT),
+				Ok(1_000 * DOLLARS)
+			);
 
 			assert_ok!(TestLiquidationPools::set_max_ideal_balance(
 				admin(),
@@ -202,6 +208,9 @@ fn calculate_ideal_balance_should_work() {
 			// Oracle price: 1.0
 			// Balance ratio: 0.2
 			// Expected ideal balance: min(100_000, 1_000_000) = 100_000
-			assert_eq!(TestLiquidationPools::calculate_ideal_balance(CurrencyId::DOT), Ok(100_000 * DOLLARS));
+			assert_eq!(
+				TestLiquidationPools::calculate_ideal_balance(CurrencyId::DOT),
+				Ok(100_000 * DOLLARS)
+			);
 		});
 }
