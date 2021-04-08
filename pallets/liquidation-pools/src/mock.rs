@@ -110,6 +110,7 @@ where
 
 type AccountId = u64;
 pub type BlockNumber = u64;
+pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ADMIN: AccountId = 0;
 pub fn admin() -> Origin {
 	Origin::signed(ADMIN)
@@ -120,6 +121,7 @@ pub fn alice() -> Origin {
 }
 
 pub struct ExternalityBuilder {
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
 	balancing_period: BlockNumber,
 }
@@ -127,6 +129,7 @@ pub struct ExternalityBuilder {
 impl Default for ExternalityBuilder {
 	fn default() -> Self {
 		Self {
+			endowed_accounts: vec![],
 			liquidation_pools: vec![(
 				CurrencyId::DOT,
 				LiquidationPoolData {
@@ -141,8 +144,20 @@ impl Default for ExternalityBuilder {
 }
 
 impl ExternalityBuilder {
+	pub fn liquidity_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts
+			.push((TestLiquidityPools::pools_account_id(), currency_id, balance));
+		self
+	}
+
 	pub fn build(self) -> TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+		orml_tokens::GenesisConfig::<Test> {
+			endowed_accounts: self.endowed_accounts,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 		liquidation_pools::GenesisConfig::<Test> {
 			liquidation_pools: self.liquidation_pools,

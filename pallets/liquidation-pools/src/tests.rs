@@ -132,7 +132,7 @@ fn set_max_ideal_balance_should_work() {
 		));
 		assert_eq!(
 			TestLiquidationPools::liquidation_pools_data(CurrencyId::DOT).max_ideal_balance,
-			Some(0)
+			Some(Balance::zero())
 		);
 		let expected_event = Event::liquidation_pools(crate::Event::MaxIdealBalanceChanged(
 			CurrencyId::DOT,
@@ -165,4 +165,43 @@ fn set_max_ideal_balance_should_work() {
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
+}
+
+#[test]
+fn calculate_ideal_balance_should_work() {
+	ExternalityBuilder::default()
+		.liquidity_pool_balance(CurrencyId::DOT, 500_000 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			// Check that ideal balance is calculated correctly when max_ideal_balance is set to None
+			// Liquidity pool value: 500_000
+			// Oracle price: 1.0
+			// Balance ratio: 0.2
+			// Expected ideal balance: 100_000
+			assert_eq!(TestLiquidationPools::calculate_ideal_balance(CurrencyId::DOT), Ok(100_000 * DOLLARS));
+
+			assert_ok!(TestLiquidationPools::set_max_ideal_balance(
+				admin(),
+				CurrencyId::DOT,
+				Some(1_000 * DOLLARS)
+			));
+			// Check that ideal balance is calculated correctly when max_ideal_balance is set to 1_000
+			// Liquidity pool value: 500_000
+			// Oracle price: 1.0
+			// Balance ratio: 0.2
+			// Expected ideal balance: min(100_000, 1_000) = 1_000
+			assert_eq!(TestLiquidationPools::calculate_ideal_balance(CurrencyId::DOT), Ok(1_000 * DOLLARS));
+
+			assert_ok!(TestLiquidationPools::set_max_ideal_balance(
+				admin(),
+				CurrencyId::DOT,
+				Some(1_000_000 * DOLLARS)
+			));
+			// Check that ideal balance is calculated correctly when max_ideal_balance is set to 1_000_000
+			// Liquidity pool value: 500_000
+			// Oracle price: 1.0
+			// Balance ratio: 0.2
+			// Expected ideal balance: min(100_000, 1_000_000) = 100_000
+			assert_eq!(TestLiquidationPools::calculate_ideal_balance(CurrencyId::DOT), Ok(100_000 * DOLLARS));
+		});
 }
