@@ -3,6 +3,7 @@
 
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use sp_runtime::{DispatchError, DispatchResult};
+use sp_std::result::Result;
 
 /// An abstraction of basic borrowing functions
 pub trait Borrowing<AccountId> {
@@ -61,7 +62,7 @@ pub trait DEXManager<AccountId, CurrencyId, Balance> {
 		supply_currency_id: CurrencyId,
 		supply_amount: Balance,
 		min_target_amount: Balance,
-	) -> sp_std::result::Result<Balance, DispatchError>;
+	) -> Result<Balance, DispatchError>;
 
 	fn swap_with_exact_target(
 		who: &AccountId,
@@ -69,12 +70,42 @@ pub trait DEXManager<AccountId, CurrencyId, Balance> {
 		target_currency_id: CurrencyId,
 		max_supply_amount: Balance,
 		target_amount: Balance,
-	) -> sp_std::result::Result<Balance, DispatchError>;
+	) -> Result<Balance, DispatchError>;
 }
 
+// TODO MIN-191
 pub trait ControllerAPI<AccountId> {
-	fn borrow_balance_stored(
-		who: &AccountId,
-		underlying_asset_id: CurrencyId,
-	) -> sp_std::result::Result<Balance, DispatchError>;
+	/// Return the borrow balance of account based on stored data.
+	fn borrow_balance_stored(who: &AccountId, underlying_asset_id: CurrencyId) -> Result<Balance, DispatchError>;
+
+	// /// Determine what the account liquidity would be if the given amounts were redeemed/borrowed.
+	// fn get_hypothetical_account_liquidity(
+	// 	account: &AccountId,
+	// 	underlying_to_borrow: CurrencyId,
+	// 	redeem_amount: Balance,
+	// 	borrow_amount: Balance,
+	// ) -> Result<(Balance, Balance), DispatchError>;
+
+	// /// Applies accrued interest to total borrows and protocol interest.
+	// /// This calculates interest accrued from the last checkpointed block
+	// /// up to the current block and writes new checkpoint to storage.
+	// fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult;
+
+	// /// Checks if a specific operation is allowed on a pool.
+	// fn is_operation_allowed(pool_id: CurrencyId, operation: Operation) -> bool;
+
+	// /// Checks if the account should be allowed to redeem tokens in the given pool.
+	// fn redeem_allowed(underlying_asset_id: CurrencyId, redeemer: &AccountId, redeem_amount: Balance)
+	// -> DispatchResult;
+
+	// /// Checks if the account should be allowed to borrow the underlying asset of the given pool.
+	// fn borrow_allowed(underlying_asset_id: CurrencyId, who: &AccountId, borrow_amount: Balance) ->
+	// DispatchResult;
+
+	// /// Return minimum protocol interest needed to transfer it to liquidation pool
+	// fn get_protocol_interest_treshold(pool_id: CurrencyId) -> Balance;
+
+	// /// Protocol operation mode. In whitelist mode, only members 'WhitelistCouncil' can work with
+	// /// protocols.
+	// fn is_whitelist_mode_enabled() -> bool;
 }

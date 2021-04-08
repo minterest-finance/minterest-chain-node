@@ -25,10 +25,14 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+/// Representation of supply/borrow pool state
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct MntState<T: Config> {
+	/// Index that represents MNT tokens that distributes for whole pool.
+	/// There is calculation MNT tokens for each user based on this index.
 	pub index: FixedU128,
+	/// The block number the index was last updated at
 	pub block_number: T::BlockNumber,
 }
 
@@ -41,6 +45,7 @@ impl<T: Config> MntState<T> {
 	}
 }
 
+/// Each pool state contains supply and borrow part
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct MntPoolState<T: Config> {
@@ -84,7 +89,7 @@ pub mod module {
 		/// The `MultiCurrency` implementation for wrapped.
 		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 
-		/// ControllerAPI
+		/// Public API of controller pallet
 		type ControllerAPI: ControllerAPI<Self::AccountId>;
 	}
 
@@ -125,20 +130,22 @@ pub mod module {
 		MntMintingDisabled(CurrencyId),
 
 		/// Emitted when MNT is distributed to a supplier
-		/// (pool id, Reciever, Amount of distributed tokens, supply index)
+		/// (pool id, receiver, amount of distributed tokens, supply index)
 		MntDistributedToSupplier(CurrencyId, T::AccountId, Balance, Rate),
 
 		/// Emitted when MNT is distributed to a borrower
-		/// (pool id, Reciever, Amount of distributed tokens, index)
+		/// (pool id, receiver, amount of distributed tokens, index)
 		MntDistributedToBorrower(CurrencyId, T::AccountId, Balance, Rate),
 	}
 
-	/// MNT minting rate per block
+	/// The rate at which the flywheel distributes MNT, per block.
+	/// Doubling this number shows how much MNT goes to all suppliers and borrowers from all pools.
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_rate)]
 	type MntRate<T: Config> = StorageValue<_, Rate, ValueQuery>;
 
 	/// MNT minting speed for each pool
+	/// Doubling this number shows how much MNT goes to all suppliers and borrowers of particular pool.
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_speeds)]
 	pub(crate) type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Balance, OptionQuery>;
@@ -391,6 +398,10 @@ impl<T: Config> Pallet<T> {
 			.find(|currency_pair| currency_pair.underlying_id == underlying_id)
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?
 			.wrapped_id;
+
+		// We use total_balance (not free balance). Because sum of balances should be equal to
+		// total_issuance. Otherwise, mnt_rate calculating will not correct.
+		// (see total_tokens_supply in update_mnt_supply_index)
 		let supplier_balance = Rate::from_inner(T::MultiCurrency::total_balance(wrapped_id, supplier));
 
 		let supplier_delta = delta_index
