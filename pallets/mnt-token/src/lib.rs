@@ -47,7 +47,7 @@ impl<T: Config> MntState<T> {
 
 /// Each pool state contains supply and borrow part
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq)]
 pub struct MntPoolState<T: Config> {
 	pub supply_state: MntState<T>,
 	pub borrow_state: MntState<T>,
@@ -59,6 +59,12 @@ impl<T: Config> MntPoolState<T> {
 			supply_state: MntState::new(),
 			borrow_state: MntState::new(),
 		}
+	}
+}
+
+impl<T: Config> Default for MntPoolState<T> {
+	fn default() -> Self {
+		Self::new()
 	}
 }
 
@@ -145,7 +151,8 @@ pub mod module {
 	type MntRate<T: Config> = StorageValue<_, Rate, ValueQuery>;
 
 	/// MNT minting speed for each pool
-	/// Doubling this number shows how much MNT goes to all suppliers and borrowers of particular pool.
+	/// Doubling this number shows how much MNT goes to all suppliers and borrowers of particular
+	/// pool.
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_speeds)]
 	pub(crate) type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Balance, ValueQuery>;
@@ -154,7 +161,7 @@ pub mod module {
 	/// Index + block_number need for generating and distributing new MNT tokens for pool
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_pools_state)]
-	pub(crate) type MntPoolsState<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, MntPoolState<T>, OptionQuery>;
+	pub(crate) type MntPoolsState<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, MntPoolState<T>, ValueQuery>;
 
 	/// Use for accruing MNT tokens for supplier
 	#[pallet::storage]
@@ -291,9 +298,7 @@ impl<T: Config> Pallet<T> {
 			.or_else(|| Some(Rate::one()))
 			.unwrap();
 
-		let pool_borrow_state = MntPoolsState::<T>::get(underlying_id)
-			.ok_or(Error::<T>::StorageIsCorrupted)?
-			.borrow_state;
+		let pool_borrow_state = MntPoolsState::<T>::get(underlying_id).borrow_state;
 		let delta_index = pool_borrow_state
 			.index
 			.checked_sub(&borrower_index)
@@ -340,9 +345,7 @@ impl<T: Config> Pallet<T> {
 
 		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
 		let current_block = frame_system::Module::<T>::block_number();
-		let mut borrow_state = MntPoolsState::<T>::get(underlying_id)
-			.ok_or(Error::<T>::StorageIsCorrupted)?
-			.borrow_state;
+		let mut borrow_state = MntPoolsState::<T>::get(underlying_id).borrow_state;
 		let block_delta = current_block
 			.checked_sub(&borrow_state.block_number)
 			.ok_or(Error::<T>::NumOverflow)?;
@@ -368,7 +371,7 @@ impl<T: Config> Pallet<T> {
 		}
 		borrow_state.block_number = current_block;
 		MntPoolsState::<T>::try_mutate(underlying_id, |pool| -> DispatchResult {
-			pool.as_mut().ok_or(Error::<T>::StorageIsCorrupted)?.borrow_state = borrow_state;
+			pool.borrow_state = borrow_state;
 			Ok(())
 		})
 	}
@@ -380,10 +383,7 @@ impl<T: Config> Pallet<T> {
 		// supplier_delta = supplier_mtoken_balance * delta_index
 		// supplier_mnt_balance += supplier_delta
 		// mnt_supplier_index = mnt_supply_index
-		let supply_index = MntPoolsState::<T>::get(underlying_id)
-			.ok_or(Error::<T>::StorageIsCorrupted)?
-			.supply_state
-			.index;
+		let supply_index = MntPoolsState::<T>::get(underlying_id).supply_state.index;
 
 		let mut supplier_index = MntSupplierIndex::<T>::get(underlying_id, supplier)
 			.or_else(|| Some(Rate::one()))
@@ -442,9 +442,7 @@ impl<T: Config> Pallet<T> {
 
 		let current_block = frame_system::Module::<T>::block_number();
 		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
-		let mut supply_state = MntPoolsState::<T>::get(underlying_id)
-			.ok_or(Error::<T>::StorageIsCorrupted)?
-			.supply_state;
+		let mut supply_state = MntPoolsState::<T>::get(underlying_id).supply_state;
 		let block_delta = current_block
 			.checked_sub(&supply_state.block_number)
 			.ok_or(Error::<T>::NumOverflow)?;
@@ -473,7 +471,7 @@ impl<T: Config> Pallet<T> {
 		supply_state.block_number = current_block;
 
 		MntPoolsState::<T>::try_mutate(underlying_id, |pool| -> DispatchResult {
-			pool.as_mut().ok_or(Error::<T>::StorageIsCorrupted)?.supply_state = supply_state;
+			pool.supply_state = supply_state;
 			Ok(())
 		})
 	}

@@ -18,7 +18,7 @@ fn check_borrower(pool_id: CurrencyId, borrower: AccountId, expected_mnt: Balanc
 	assert_ok!(MntToken::update_mnt_borrow_index(pool_id));
 	assert_ok!(MntToken::distribute_borrower_mnt(pool_id, &borrower));
 
-	let pool_state = MntToken::mnt_pools_state(pool_id).unwrap().borrow_state;
+	let pool_state = MntToken::mnt_pools_state(pool_id).borrow_state;
 	let borrower_index = MntToken::mnt_borrower_index(pool_id, borrower).unwrap();
 	let borrower_accrued_mnt = MntToken::mnt_accrued(borrower).unwrap();
 	assert_eq!(borrower_accrued_mnt, expected_mnt);
@@ -228,7 +228,7 @@ fn test_update_mnt_borrow_index() {
 				let borrow_total_amount = Rate::saturating_from_rational(total_borrow * 10, 15);
 
 				let expected_index = initial_index + Rate::from_inner(pool_mnt_speed) / borrow_total_amount;
-				let pool_state = MntToken::mnt_pools_state(underlying_id).unwrap();
+				let pool_state = MntToken::mnt_pools_state(underlying_id);
 				assert_eq!(pool_state.borrow_state.index, expected_index);
 			};
 
@@ -271,7 +271,7 @@ fn test_update_mnt_borrow_index_simple() {
 			//
 
 			MntToken::update_mnt_borrow_index(DOT).unwrap();
-			let pool_state = MntToken::mnt_pools_state(DOT).unwrap();
+			let pool_state = MntToken::mnt_pools_state(DOT);
 			assert_eq!(
 				pool_state.borrow_state.index,
 				Rate::saturating_from_rational(100001, 100000)
@@ -324,7 +324,7 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 
 			let check_supplier_award =
 				|supplier_id: AccountId, distributed_amount: Balance, total_acquired_mnt: Balance| {
-					let pool_state = MntToken::mnt_pools_state(DOT).unwrap();
+					let pool_state = MntToken::mnt_pools_state(DOT);
 					let supplier_accrued = MntToken::mnt_accrued(supplier_id).unwrap();
 					let supplier_index = MntToken::mnt_supplier_index(DOT, supplier_id).unwrap();
 					assert_eq!(supplier_index, pool_state.supply_state.index);
@@ -401,7 +401,7 @@ fn test_update_mnt_supply_index() {
 
 			let check_supply_index = |underlying_id: CurrencyId, mnt_speed: Balance, total_issuance: u128| {
 				MntToken::update_mnt_supply_index(underlying_id).unwrap();
-				let pool_state = MntToken::mnt_pools_state(underlying_id).unwrap();
+				let pool_state = MntToken::mnt_pools_state(underlying_id);
 				assert_eq!(
 					pool_state.supply_state.index,
 					Rate::one() + Rate::from_inner(mnt_speed) / Rate::from_inner(total_issuance)
@@ -435,7 +435,7 @@ fn test_update_mnt_supply_index_simple() {
 
 			System::set_block_number(2);
 			MntToken::update_mnt_supply_index(ETH).unwrap();
-			let pool_state = MntToken::mnt_pools_state(ETH).unwrap();
+			let pool_state = MntToken::mnt_pools_state(ETH);
 			// block_delta = current_block(2) - supply_state.block_number(1) = 1
 			// mnt_accrued = block_delta(1) * mnt_speed(10) = 10
 			// ratio = mnt_accrued(10) / total_supply(20) = 0.5
