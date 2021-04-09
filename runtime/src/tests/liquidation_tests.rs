@@ -1,16 +1,19 @@
 use super::*;
 
-// Description of scenario #1:
-// Collateral factor = 90% for all pools.
-// Alice - depositer, Bob - borrower.
-//
-// 1. Alice - depositer;
-// 2. Bob - borrower;
-// 3. Alice borrow 50 DOT;
-// 4. Alice can't `redeem_underlying` 60 DOT: 50 ETH * 0.9 collateral < 50 DOT borrow;
-// 5. Alice deposit 10 ETH;
-// 6. Alice `redeem_underlying` 60 DOT;
-// 7. Alice can't `redeem_underlying` 60 ETH.
+/*
+Description of scenario #1:
+
+Collateral factor = 90% for all pools.
+Alice - depositer, Bob - borrower.
+1. Bob made a deposit into the system and set as collateral DOT and ETH.
+2. Bob borrowed BTC.
+3. Ethereum price decreased.
+4. The first partial liquidation.
+5. Bob withdrew all the collateral DOT.
+6. Bob withdrew BTC and left only 1 bitcoin in the protocol.
+7. Bitcoin price has increased.
+8. Complete liquidation.
+ */
 #[test]
 fn liquidation_scenario_n1() {
 	ExtBuilder::default()
@@ -386,6 +389,7 @@ fn partial_liquidation_multi_collateral_should_work() {
 		})
 }
 
+// The balance of liquidation pools is zero, therefore we expect a zero transaction error.
 #[test]
 fn complete_liquidation_should_not_work() {
 	ExtBuilder::default()
@@ -404,11 +408,12 @@ fn complete_liquidation_should_not_work() {
 
 			assert_err!(
 				RiskManager::liquidate_unsafe_loan(ALICE::get(), DOT),
-				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingAsset
+				minterest_protocol::Error::<Runtime>::ZeroBalanceTransaction
 			);
 		})
 }
 
+// The balance of liquidation pools is zero, therefore we expect a zero transaction error.
 #[test]
 fn partial_liquidation_should_not_work() {
 	ExtBuilder::default()
@@ -427,7 +432,157 @@ fn partial_liquidation_should_not_work() {
 
 			assert_err!(
 				RiskManager::liquidate_unsafe_loan(ALICE::get(), DOT),
-				minterest_protocol::Error::<Runtime>::NotEnoughUnderlyingAsset
+				minterest_protocol::Error::<Runtime>::ZeroBalanceTransaction
+			);
+		})
+}
+
+// If the liquidation pool does not have enough funds to pay off the debt, then the
+// liquidation pool repays the amount of assets available to it. The number of liquidation
+// attempts does not change.
+#[test]
+fn complete_liquidation_one_collateral_not_enough_balance_should_work() {
+	ExtBuilder::default()
+		.liquidity_pool_balance(DOT, dollars(110_000))
+		.liquidation_pool_balance(DOT, dollars(50_000))
+		.user_balance(ALICE::get(), MDOT, dollars(100_000))
+		.user_balance(BOB::get(), MDOT, dollars(100_000))
+		.pool_user_data(DOT, ALICE::get(), dollars(90_000), Rate::one(), true, 3)
+		.pool_total_borrowed(DOT, dollars(90_000))
+		.build()
+		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
+			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), DOT));
+
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
+				ALICE::get(),
+				100_000 * DOLLARS,
+				DOT,
+				vec![DOT],
+				false,
+			));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
+			assert_eq!(Currencies::free_balance(MDOT, &ALICE::get()), dollars(47_500));
+
+			assert_eq!(LiquidityPools::get_pool_available_liquidity(DOT), dollars(107_500));
+			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), dollars(52_500));
+
+			assert_eq!(LiquidityPools::pools(DOT).total_borrowed, dollars(40_000));
+			assert_eq!(
+				LiquidityPools::pool_user_data(DOT, ALICE::get()).total_borrowed,
+				dollars(40_000)
+			);
+
+			assert_eq!(
+				LiquidityPools::pool_user_data(DOT, ALICE::get()).liquidation_attempts,
+				3
+			);
+		})
+}
+
+#[test]
+fn complete_liquidation_multi_collateral_not_enough_balance_should_work() {
+	ExtBuilder::default()
+		.liquidity_pool_balance(DOT, 160_000 * DOLLARS)
+		.liquidity_pool_balance(ETH, 50_000 * DOLLARS)
+		.liquidation_pool_balance(DOT, 60_000 * DOLLARS)
+		.liquidation_pool_balance(ETH, 100_000 * DOLLARS)
+		.user_balance(ALICE::get(), MDOT, 50_000 * DOLLARS)
+		.user_balance(ALICE::get(), METH, 50_000 * DOLLARS)
+		.user_balance(BOB::get(), MDOT, 100_000 * DOLLARS)
+		.user_balance(CHARLIE::get(), MDOT, 100_000 * DOLLARS)
+		.pool_user_data(DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 3)
+		.pool_user_data(ETH, ALICE::get(), 0, Rate::one(), true, 0)
+		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
+			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), DOT));
+
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
+				ALICE::get(),
+				120_000 * DOLLARS,
+				DOT,
+				vec![DOT, ETH],
+				false,
+			));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
+			assert_eq!(Currencies::free_balance(MDOT, &ALICE::get()), Balance::zero());
+			assert_eq!(Currencies::free_balance(METH, &ALICE::get()), 37_000 * DOLLARS);
+
+			assert_eq!(LiquidityPools::get_pool_available_liquidity(DOT), 170_000 * DOLLARS);
+			assert_eq!(LiquidityPools::get_pool_available_liquidity(ETH), 37_000 * DOLLARS);
+
+			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), 50_000 * DOLLARS);
+			assert_eq!(LiquidationPools::get_pool_available_liquidity(ETH), 113_000 * DOLLARS);
+
+			assert_eq!(LiquidityPools::pools(DOT).total_borrowed, dollars(30_000));
+			assert_eq!(
+				LiquidityPools::pool_user_data(DOT, ALICE::get()).total_borrowed,
+				dollars(30_000)
+			);
+
+			assert_eq!(
+				LiquidityPools::pool_user_data(DOT, ALICE::get()).liquidation_attempts,
+				3
+			);
+		})
+}
+
+#[test]
+fn partial_liquidation_multi_collateral_not_enough_balance_should_work() {
+	ExtBuilder::default()
+		.liquidity_pool_balance(DOT, 130_000 * DOLLARS)
+		.liquidity_pool_balance(ETH, 80_000 * DOLLARS)
+		.liquidation_pool_balance(DOT, 10_000 * DOLLARS)
+		.liquidation_pool_balance(ETH, 100_000 * DOLLARS)
+		.user_balance(ALICE::get(), MDOT, 20_000 * DOLLARS)
+		.user_balance(ALICE::get(), METH, 80_000 * DOLLARS)
+		.user_balance(BOB::get(), MDOT, 100_000 * DOLLARS)
+		.user_balance(CHARLIE::get(), MDOT, 100_000 * DOLLARS)
+		.pool_user_data(DOT, ALICE::get(), 90_000 * DOLLARS, Rate::one(), true, 0)
+		.pool_user_data(ETH, ALICE::get(), 0, Rate::one(), true, 0)
+		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
+			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), DOT));
+
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
+				ALICE::get(),
+				20_000 * DOLLARS,
+				DOT,
+				vec![ETH],
+				true,
+			));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
+			assert_eq!(Currencies::free_balance(MDOT, &ALICE::get()), dollars(20_000));
+			assert_eq!(Currencies::free_balance(METH, &ALICE::get()), dollars(69_500));
+
+			assert_eq!(LiquidityPools::get_pool_available_liquidity(DOT), dollars(140_000));
+			assert_eq!(LiquidityPools::get_pool_available_liquidity(ETH), dollars(69_500));
+
+			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), Balance::zero());
+			assert_eq!(LiquidationPools::get_pool_available_liquidity(ETH), dollars(110_500));
+
+			assert_eq!(LiquidityPools::pools(DOT).total_borrowed, dollars(80_000));
+			assert_eq!(
+				LiquidityPools::pool_user_data(DOT, ALICE::get()).total_borrowed,
+				dollars(80_000)
+			);
+
+			assert_eq!(
+				LiquidityPools::pool_user_data(DOT, ALICE::get()).liquidation_attempts,
+				0
 			);
 		})
 }

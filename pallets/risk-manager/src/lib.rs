@@ -75,6 +75,17 @@ type LiquidityPools<T> = liquidity_pools::Module<T>;
 type Controller<T> = controller::Module<T>;
 type MinterestProtocol<T> = minterest_protocol::Module<T>;
 
+pub struct LiquidationInfo {
+	/// The number of collateral tokens to seize converted into USD (consider liquidation_fee).
+	seize_amount: Balance,
+	/// The amount of the underlying borrowed asset to repay converted into usd.
+	repay_amount: Balance,
+	/// The amount of the underlying borrowed asset to repay.
+	repay_assets: Balance,
+	/// Boolean, whether or not to increment the counter of liquidation attempts.
+	is_attempt_increment_required: bool,
+}
+
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
@@ -474,12 +485,17 @@ impl<T: Config> Pallet<T> {
 			&& liquidation_attempts < RiskManagerParams::<T>::get(liquidated_pool_id).max_attempts;
 
 		// Calculate sum required to liquidate.
-		let (seize_amount, repay_amount, repay_assets) =
-			Self::liquidate_calculate_seize_and_repay(liquidated_pool_id, total_repay_amount, is_partial_liquidation)?;
+		let LiquidationInfo {
+			seize_amount,
+			repay_amount,
+			repay_assets,
+			is_attempt_increment_required,
+		} = Self::calculate_liquidation_info(liquidated_pool_id, total_repay_amount, is_partial_liquidation)?;
 
 		let seized_pools = Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, repay_assets, seize_amount)?;
-
-		Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation);
+		if is_attempt_increment_required {
+			Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation);
+		}
 
 		Self::deposit_event(Event::LiquidateUnsafeLoan(
 			borrower,
@@ -531,7 +547,7 @@ impl<T: Config> Pallet<T> {
 				let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&collateral_pool_id)?;
 				let balance_wrapped_token = T::MultiCurrency::free_balance(wrapped_id, &borrower);
 
-				// Get the exchange rate, read prices price for collateral pool and calculate the number
+				// Get the exchange rate, read price for collateral pool and calculate the number
 				// of collateral tokens to seize:
 				// seize_tokens = seize_amount / (price_collateral * exchange_rate)
 				let price_collateral =
@@ -604,38 +620,45 @@ impl<T: Config> Pallet<T> {
 	/// - `total_repay_amount`: total amount of debt converted into usd.
 	/// - `is_partial_liquidation`: partial or complete liquidation.
 	///
-	/// Returns (`seize_amount`, `repay_amount`, `repay_assets`)
-	/// - `seize_amount`: the number of collateral tokens to seize converted
-	/// into USD (consider liquidation_fee).
-	/// - `repay_amount`: current amount of debt converted into usd.
-	/// - `repay_assets`: the amount of the underlying borrowed asset to repay.
-	pub fn liquidate_calculate_seize_and_repay(
+	/// Returns LiquidationInfo.
+	pub fn calculate_liquidation_info(
 		liquidated_pool_id: CurrencyId,
 		total_repay_amount: Balance,
 		is_partial_liquidation: bool,
-	) -> result::Result<(Balance, Balance, Balance), DispatchError> {
+	) -> result::Result<LiquidationInfo, DispatchError> {
 		let liquidation_fee = Self::risk_manager_dates(liquidated_pool_id).liquidation_fee;
+		let price_borrowed =
+			T::PriceSource::get_underlying_price(liquidated_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
 		let temporary_factor = match is_partial_liquidation {
 			true => Rate::saturating_from_rational(30, 100),
 			false => Rate::one(),
 		};
 
-		// seize_amount = liquidation_fee * temporary_factor * total_repay_amount
-		let seize_amount = Rate::from_inner(total_repay_amount)
-			.checked_mul(&temporary_factor)
-			.and_then(|v| v.checked_mul(&liquidation_fee))
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-
 		// repay_amount = temporary_factor * total_repay_amount
-		let repay_amount = Rate::from_inner(total_repay_amount)
+		let mut repay_amount = Rate::from_inner(total_repay_amount)
 			.checked_mul(&temporary_factor)
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let price_borrowed =
-			T::PriceSource::get_underlying_price(liquidated_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+		let liquidation_pool_balance = T::LiquidationPoolsManager::get_pool_available_liquidity(liquidated_pool_id);
+		let liquidation_pool_balance_usd = Rate::from_inner(liquidation_pool_balance)
+			.checked_mul(&price_borrowed)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		// If there is not enough liquidity in the liquidation pool, then we do not change
+		// the user's liquidation attempts counter.
+		let is_attempt_increment_required = liquidation_pool_balance_usd >= repay_amount;
+
+		// repay_amount = min(amount_to_liquidate, liquidation_pool_balance_usd)
+		repay_amount = repay_amount.min(liquidation_pool_balance_usd);
+
+		// seize_amount = liquidation_fee * repay_amount
+		let seize_amount = Rate::from_inner(repay_amount)
+			.checked_mul(&liquidation_fee)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
 
 		// repay_assets = repay_amount / price_borrowed (Tokens)
 		let repay_assets = Rate::from_inner(repay_amount)
@@ -643,7 +666,12 @@ impl<T: Config> Pallet<T> {
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		Ok((seize_amount, repay_amount, repay_assets))
+		Ok(LiquidationInfo {
+			seize_amount,
+			repay_amount,
+			repay_assets,
+			is_attempt_increment_required,
+		})
 	}
 
 	/// Changes the parameter liquidation_attempts depending on the type of liquidation.
