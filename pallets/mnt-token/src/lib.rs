@@ -291,8 +291,7 @@ impl<T: Config> Pallet<T> {
 			.checked_div(&pool_borrow_index)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let mut borrower_index = MntBorrowerIndex::<T>::get(underlying_id, borrower)
-			.unwrap_or_else(|| Rate::one());
+		let mut borrower_index = MntBorrowerIndex::<T>::get(underlying_id, borrower).unwrap_or_else(|| Rate::one());
 
 		let pool_borrow_state = MntPoolsState::<T>::get(underlying_id).borrow_state;
 		let delta_index = pool_borrow_state
@@ -337,13 +336,19 @@ impl<T: Config> Pallet<T> {
 		// borrow_state.index += ratio
 		// borrow_state.block_number = current_block_number
 
-		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
 		let current_block = frame_system::Module::<T>::block_number();
 		let mut borrow_state = MntPoolsState::<T>::get(underlying_id).borrow_state;
 		let block_delta = current_block
 			.checked_sub(&borrow_state.block_number)
 			.ok_or(Error::<T>::NumOverflow)?;
-		if block_delta != T::BlockNumber::zero() && mnt_speed != Balance::zero() {
+
+		if block_delta.is_zero() {
+			// Index for current block was already calculated
+			return Ok(());
+		}
+
+		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
+		if !mnt_speed.is_zero() {
 			let block_delta_as_u128 = TryInto::<u128>::try_into(block_delta).or(Err(Error::<T>::InternalError))?;
 
 			let mnt_accrued = mnt_speed
@@ -379,13 +384,13 @@ impl<T: Config> Pallet<T> {
 		// mnt_supplier_index = mnt_supply_index
 		let supply_index = MntPoolsState::<T>::get(underlying_id).supply_state.index;
 
-		let mut supplier_index = MntSupplierIndex::<T>::get(underlying_id, supplier)
-			.unwrap_or_else(|| Rate::one());
+		let mut supplier_index = MntSupplierIndex::<T>::get(underlying_id, supplier).unwrap_or_else(|| Rate::one());
 
 		let delta_index = supply_index
 			.checked_sub(&supplier_index)
 			.ok_or(Error::<T>::NumOverflow)?;
 
+		// This should be reworked. TODO MIN-185
 		let wrapped_id = T::EnabledCurrencyPair::get()
 			.iter()
 			.find(|currency_pair| currency_pair.underlying_id == underlying_id)
@@ -432,13 +437,19 @@ impl<T: Config> Pallet<T> {
 		// supply_state.block_number = current_block_number
 
 		let current_block = frame_system::Module::<T>::block_number();
-		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
 		let mut supply_state = MntPoolsState::<T>::get(underlying_id).supply_state;
 		let block_delta = current_block
 			.checked_sub(&supply_state.block_number)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		if block_delta != T::BlockNumber::zero() && mnt_speed != Balance::zero() {
+		if block_delta.is_zero() {
+			// Index for current block was already calculated
+			return Ok(());
+		}
+
+		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
+		if !mnt_speed.is_zero() {
+			// This should be reworked. TODO MIN-185
 			let wrapped_id = T::EnabledCurrencyPair::get()
 				.iter()
 				.find(|currency_pair| currency_pair.underlying_id == underlying_id)
@@ -453,9 +464,7 @@ impl<T: Config> Pallet<T> {
 
 			let total_tokens_supply = T::MultiCurrency::total_issuance(wrapped_id);
 
-			let ratio = Rate::from_inner(mnt_accrued)
-				.checked_div(&Rate::from_inner(total_tokens_supply))
-				.ok_or(Error::<T>::NumOverflow)?;
+			let ratio = Rate::checked_from_rational(mnt_accrued, total_tokens_supply).ok_or(Error::<T>::NumOverflow)?;
 
 			supply_state.index = supply_state.index.checked_add(&ratio).ok_or(Error::<T>::NumOverflow)?;
 		}
@@ -503,7 +512,9 @@ impl<T: Config> Pallet<T> {
 		let mnt_rate = Self::mnt_rate();
 		for (currency_id, utility) in pool_utilities {
 			let utility_fraction = Rate::saturating_from_rational(utility, sum_of_all_utilities);
-			let pool_mnt_speed = Rate::from_inner(mnt_rate).checked_mul(&utility_fraction).ok_or(Error::<T>::NumOverflow)?;
+			let pool_mnt_speed = Rate::from_inner(mnt_rate)
+				.checked_mul(&utility_fraction)
+				.ok_or(Error::<T>::NumOverflow)?;
 			MntSpeeds::<T>::insert(currency_id, pool_mnt_speed.into_inner());
 		}
 		Ok(())
