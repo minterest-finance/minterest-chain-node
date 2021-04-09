@@ -16,6 +16,9 @@ use sp_runtime::{
 	FixedPointNumber, ModuleId,
 };
 use sp_std::cell::RefCell;
+use test_helper::*;
+
+pub type AccountId = u64;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -39,59 +42,15 @@ frame_support::construct_runtime!(
 	}
 );
 
-parameter_types! {
-	pub const BlockHashCount: u64 = 250;
-	pub const SS58Prefix: u8 = 42;
-}
-
-pub type AccountId = u64;
-
-impl system::Config for Test {
-	type BaseCallFilter = ();
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type Origin = Origin;
-	type Call = Call;
-	type Index = u64;
-	type BlockNumber = u64;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type AccountId = u64;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = ();
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = SS58Prefix;
-}
-
-type Amount = i128;
-
-parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		Default::default()
-	};
-}
-
-impl orml_tokens::Config for Test {
-	type Event = Event;
-	type Balance = Balance;
-	type Amount = Amount;
-	type CurrencyId = CurrencyId;
-	type WeightInfo = ();
-	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
+ord_parameter_types! {
+	pub const ZeroAdmin: AccountId = 0;
 }
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
+	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
@@ -107,6 +66,17 @@ parameter_types! {
 			.collect();
 }
 
+pub struct WhitelistMembers;
+mock_impl_system_config!(Test);
+mock_impl_orml_tokens_config!(Test);
+mock_impl_liquidity_pools_config!(Test);
+mock_impl_liquidation_pools_config!(Test);
+mock_impl_controller_config!(Test, ZeroAdmin);
+mock_impl_minterest_model_config!(Test, ZeroAdmin);
+mock_impl_dex_config!(Test);
+mock_impl_minterest_protocol_config!(Test);
+mock_impl_risk_manager_config!(Test, ZeroAdmin);
+
 pub struct MockPriceSource;
 
 impl PriceProvider<CurrencyId> for MockPriceSource {
@@ -119,61 +89,6 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
-impl liquidity_pools::Config for Test {
-	type MultiCurrency = orml_tokens::Module<Test>;
-	type PriceSource = MockPriceSource;
-	type ModuleId = LiquidityPoolsModuleId;
-	type LiquidityPoolAccountId = LiquidityPoolAccountId;
-	type InitialExchangeRate = InitialExchangeRate;
-	type EnabledCurrencyPair = EnabledCurrencyPair;
-	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
-	type EnabledWrappedTokensId = EnabledWrappedTokensId;
-}
-
-parameter_types! {
-	pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
-}
-
-ord_parameter_types! {
-	pub const ZeroAdmin: AccountId = 0;
-}
-
-impl controller::Config for Test {
-	type Event = Event;
-	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
-	type MaxBorrowCap = MaxBorrowCap;
-	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-	type ControllerWeightInfo = ();
-}
-
-parameter_types! {
-	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
-}
-
-impl minterest_model::Config for Test {
-	type Event = Event;
-	type BlocksPerYear = BlocksPerYear;
-	type ModelUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-	type WeightInfo = ();
-}
-
-parameter_types! {
-	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
-	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
-	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
-}
-
-impl liquidation_pools::Config for Test {
-	type Event = Event;
-	type UnsignedPriority = LiquidityPoolsPriority;
-	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
-	type LiquidationPoolAccountId = LiquidationPoolAccountId;
-	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
-	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-	type Dex = dex::Module<Test>;
-	type LiquidationPoolsWeightInfo = ();
-}
-
 ord_parameter_types! {
 		pub const Four: AccountId = 4;
 }
@@ -182,8 +97,7 @@ thread_local! {
 	static TWO: RefCell<Vec<u64>> = RefCell::new(vec![2]);
 }
 
-pub struct Two;
-impl Contains<u64> for Two {
+impl Contains<u64> for WhitelistMembers {
 	fn contains(who: &AccountId) -> bool {
 		TWO.with(|v| v.borrow().contains(who))
 	}
@@ -202,53 +116,6 @@ impl Contains<u64> for Two {
 	}
 }
 
-impl minterest_protocol::Config for Test {
-	type Event = Event;
-	type Borrowing = liquidity_pools::Module<Test>;
-	type ManagerLiquidationPools = liquidation_pools::Module<Test>;
-	type ManagerLiquidityPools = liquidity_pools::Module<Test>;
-	type WhitelistMembers = Two;
-	type ProtocolWeightInfo = ();
-}
-
-parameter_types! {
-	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
-}
-
-impl risk_manager::Config for Test {
-	type Event = Event;
-	type UnsignedPriority = RiskManagerPriority;
-	type LiquidationPoolsManager = liquidation_pools::Module<Test>;
-	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
-	type RiskManagerUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-	type RiskManagerWeightInfo = ();
-}
-
-parameter_types! {
-	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
-	pub DexAccountId: AccountId = DexModuleId::get().into_account();
-}
-
-impl dex::Config for Test {
-	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Test>;
-	type DexModuleId = DexModuleId;
-	type DexAccountId = DexAccountId;
-}
-
-/// An extrinsic type used for tests.
-pub type Extrinsic = TestXt<Call, ()>;
-
-impl<LocalCall> SendTransactionTypes<LocalCall> for Test
-where
-	Call: From<LocalCall>,
-{
-	type OverarchingCall = Call;
-	type Extrinsic = Extrinsic;
-}
-
-pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
-pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
 pub const ONE_HUNDRED: Balance = 100;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ADMIN: AccountId = 0;
