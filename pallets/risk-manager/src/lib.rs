@@ -660,9 +660,6 @@ impl<T: Config> Pallet<T> {
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let price_borrowed =
-			T::PriceSource::get_underlying_price(liquidated_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-
 		// repay_assets = repay_amount / price_borrowed (Tokens)
 		let repay_assets = Rate::from_inner(repay_amount)
 			.checked_div(&price_borrowed)
