@@ -172,7 +172,7 @@ pub mod module {
 	/// Place where accrued MNT token are keeping for each user
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_accrued)]
-	pub(crate) type MntAccrued<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Balance, OptionQuery>;
+	pub(crate) type MntAccrued<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Balance, ValueQuery>;
 
 	/// Use for accruing MNT tokens for borrower
 	#[pallet::storage]
@@ -312,9 +312,7 @@ impl<T: Config> Pallet<T> {
 			.checked_mul(&delta_index)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let mut borrower_mnt_accrued = MntAccrued::<T>::get(borrower)
-			.or_else(|| Some(Balance::zero()))
-			.unwrap();
+		let mut borrower_mnt_accrued = MntAccrued::<T>::get(borrower);
 		borrower_mnt_accrued = borrower_mnt_accrued
 			.checked_add(borrower_delta.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
@@ -408,9 +406,7 @@ impl<T: Config> Pallet<T> {
 			.checked_mul(&supplier_balance)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let mut supplier_mnt_accrued = MntAccrued::<T>::get(supplier)
-			.or_else(|| Some(Balance::zero()))
-			.unwrap();
+		let mut supplier_mnt_accrued = MntAccrued::<T>::get(supplier);
 
 		supplier_mnt_accrued = supplier_mnt_accrued
 			.checked_add(supplier_delta.into_inner())

@@ -20,7 +20,7 @@ fn check_borrower(pool_id: CurrencyId, borrower: AccountId, expected_mnt: Balanc
 
 	let pool_state = MntToken::mnt_pools_state(pool_id).borrow_state;
 	let borrower_index = MntToken::mnt_borrower_index(pool_id, borrower).unwrap();
-	let borrower_accrued_mnt = MntToken::mnt_accrued(borrower).unwrap();
+	let borrower_accrued_mnt = MntToken::mnt_accrued(borrower);
 	assert_eq!(borrower_accrued_mnt, expected_mnt);
 	assert_eq!(borrower_index, pool_state.index);
 }
@@ -29,7 +29,7 @@ fn check_borrower(pool_id: CurrencyId, borrower: AccountId, expected_mnt: Balanc
 fn check_supplier_accrued(pool_id: CurrencyId, supplier: AccountId, expected_mnt: Balance) {
 	MntToken::update_mnt_supply_index(pool_id).unwrap();
 	MntToken::distribute_supplier_mnt(pool_id, &supplier).unwrap();
-	assert_eq!(MntToken::mnt_accrued(supplier).unwrap(), expected_mnt);
+	assert_eq!(MntToken::mnt_accrued(supplier), expected_mnt);
 }
 
 #[test]
@@ -91,7 +91,7 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 			assert_ok!(MntToken::update_mnt_borrow_index(KSM));
 			assert_ok!(MntToken::distribute_borrower_mnt(KSM, &ALICE));
 			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &ALICE));
-			let borrower_accrued = MntToken::mnt_accrued(&ALICE).unwrap();
+			let borrower_accrued = MntToken::mnt_accrued(&ALICE);
 			assert_eq!(borrower_accrued, mnt_rate);
 
 			let dot_mnt_speed = 2 * DOLLARS;
@@ -325,7 +325,7 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 			let check_supplier_award =
 				|supplier_id: AccountId, distributed_amount: Balance, total_acquired_mnt: Balance| {
 					let pool_state = MntToken::mnt_pools_state(DOT);
-					let supplier_accrued = MntToken::mnt_accrued(supplier_id).unwrap();
+					let supplier_accrued = MntToken::mnt_accrued(supplier_id);
 					let supplier_index = MntToken::mnt_supplier_index(DOT, supplier_id).unwrap();
 					assert_eq!(supplier_index, pool_state.supply_state.index);
 					assert_eq!(supplier_accrued, total_acquired_mnt);
