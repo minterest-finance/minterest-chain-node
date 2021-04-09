@@ -869,8 +869,8 @@ impl<T: Config> Pallet<T> {
 
 		Ok(Pool {
 			total_borrowed,
-			total_protocol_interest,
 			borrow_index,
+			total_protocol_interest,
 		})
 	}
 
