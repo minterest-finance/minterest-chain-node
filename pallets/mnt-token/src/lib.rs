@@ -126,8 +126,8 @@ pub mod module {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Change rate event (old_rate, new_rate)
-		NewMntRate(Rate, Rate),
+		/// Change rate event (old rate, new rate)
+		NewMntRate(Balance, Balance),
 
 		/// MNT minting enabled for pool
 		MntMintingEnabled(CurrencyId),
@@ -148,7 +148,7 @@ pub mod module {
 	/// Doubling this number shows how much MNT goes to all suppliers and borrowers from all pools.
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_rate)]
-	type MntRate<T: Config> = StorageValue<_, Rate, ValueQuery>;
+	type MntRate<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
 	/// MNT minting speed for each pool
 	/// Doubling this number shows how much MNT goes to all suppliers and borrowers of particular
@@ -182,7 +182,7 @@ pub mod module {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub mnt_rate: Rate,
+		pub mnt_rate: Balance,
 		pub minted_pools: Vec<CurrencyId>,
 		pub phantom: PhantomData<T>,
 	}
@@ -191,7 +191,7 @@ pub mod module {
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			GenesisConfig {
-				mnt_rate: Rate::zero(),
+				mnt_rate: Balance::zero(),
 				minted_pools: vec![],
 				phantom: PhantomData,
 			}
@@ -267,7 +267,7 @@ pub mod module {
 		#[pallet::weight(10_000)]
 		#[transactional]
 		/// Set MNT rate and recalculate MntSpeeds distribution
-		pub fn set_mnt_rate(origin: OriginFor<T>, rate: Rate) -> DispatchResultWithPostInfo {
+		pub fn set_mnt_rate(origin: OriginFor<T>, rate: Balance) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			let old_rate = MntRate::<T>::get();
 			MntRate::<T>::put(rate);
@@ -295,8 +295,7 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		let mut borrower_index = MntBorrowerIndex::<T>::get(underlying_id, borrower)
-			.or_else(|| Some(Rate::one()))
-			.unwrap();
+			.unwrap_or_else(|| Rate::one());
 
 		let pool_borrow_state = MntPoolsState::<T>::get(underlying_id).borrow_state;
 		let delta_index = pool_borrow_state
@@ -384,8 +383,7 @@ impl<T: Config> Pallet<T> {
 		let supply_index = MntPoolsState::<T>::get(underlying_id).supply_state.index;
 
 		let mut supplier_index = MntSupplierIndex::<T>::get(underlying_id, supplier)
-			.or_else(|| Some(Rate::one()))
-			.unwrap();
+			.unwrap_or_else(|| Rate::one());
 
 		let delta_index = supply_index
 			.checked_sub(&supplier_index)
@@ -508,7 +506,7 @@ impl<T: Config> Pallet<T> {
 		let mnt_rate = Self::mnt_rate();
 		for (currency_id, utility) in pool_utilities {
 			let utility_fraction = Rate::saturating_from_rational(utility, sum_of_all_utilities);
-			let pool_mnt_speed = mnt_rate.checked_mul(&utility_fraction).ok_or(Error::<T>::NumOverflow)?;
+			let pool_mnt_speed = Rate::from_inner(mnt_rate).checked_mul(&utility_fraction).ok_or(Error::<T>::NumOverflow)?;
 			MntSpeeds::<T>::insert(currency_id, pool_mnt_speed.into_inner());
 		}
 		Ok(())

@@ -85,7 +85,7 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 		.execute_with(|| {
 			// Check accruing mnt tokens from two pools for borrower
 			let mnt_rate = 10 * DOLLARS;
-			assert_ok!(MntToken::set_mnt_rate(admin(), Rate::from_inner(mnt_rate)));
+			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
 
 			assert_ok!(MntToken::update_mnt_borrow_index(DOT));
 			assert_ok!(MntToken::update_mnt_borrow_index(KSM));
@@ -168,7 +168,7 @@ fn distribute_borrower_mnt() {
 			// So block_delta = 1
 			//
 			let mnt_rate = 12 * DOLLARS;
-			assert_ok!(MntToken::set_mnt_rate(admin(), Rate::from_inner(mnt_rate)));
+			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
 
 			// Alice account borrow balance is 150_000
 			check_borrower(DOT, ALICE, mnt_rate);
@@ -192,7 +192,7 @@ fn test_update_mnt_borrow_index() {
 		.build()
 		.execute_with(|| {
 			let initial_index = Rate::saturating_from_integer(1);
-			let mnt_rate = Rate::saturating_from_integer(1);
+			let mnt_rate = 1 * DOLLARS;
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
 			// Input parameters:
 			// mnt_rate: 1
@@ -217,10 +217,7 @@ fn test_update_mnt_borrow_index() {
 			// 0.558139534883720930
 			let btc_mnt_speed = 558139534883720930;
 			assert_eq!(MntToken::mnt_speeds(BTC), btc_mnt_speed);
-			assert_eq!(
-				dot_mnt_speed + eth_mnt_speed + ksm_mnt_speed + btc_mnt_speed,
-				mnt_rate.into_inner()
-			);
+			assert_eq!(dot_mnt_speed + eth_mnt_speed + ksm_mnt_speed + btc_mnt_speed, mnt_rate);
 
 			let check_borrow_index = |underlying_id: CurrencyId, pool_mnt_speed: Balance, total_borrow: u128| {
 				MntToken::update_mnt_borrow_index(underlying_id).unwrap();
@@ -429,7 +426,7 @@ fn test_update_mnt_supply_index_simple() {
 
 			// set total_issuance to 20
 			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::METH, &ALICE, 20 * DOLLARS).unwrap();
-			let mnt_rate = Rate::saturating_from_integer(10);
+			let mnt_rate = 10 * DOLLARS;
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
 			assert_ok!(MntToken::enable_mnt_minting(admin(), ETH));
 
@@ -456,7 +453,7 @@ fn test_mnt_speed_calculation() {
 		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			let mnt_rate = Rate::saturating_from_integer(10);
+			let mnt_rate = 10 * DOLLARS;
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
 
 			// Formula:
@@ -498,10 +495,10 @@ fn test_mnt_speed_calculation() {
 
 			// Sum of all mnt_speeds is equal to mnt_rate
 			let sum = expected_dot_mnt_speed + expected_btc_mnt_speed + expected_eth_mnt_speed + expected_ksm_mnt_speed;
-			assert_eq!(Rate::from_inner(sum).round(), mnt_rate);
+			assert_eq!(Rate::from_inner(sum).round().into_inner(), mnt_rate);
 
 			// Multiply mnt rate in twice. Expected mnt speeds should double up
-			let mnt_rate = Rate::saturating_from_integer(20);
+			let mnt_rate = mnt_rate * 2;
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
 			assert_eq!(MntToken::mnt_speeds(DOT), expected_dot_mnt_speed * 2);
 			assert_eq!(MntToken::mnt_speeds(KSM), expected_ksm_mnt_speed * 2);
@@ -606,7 +603,7 @@ fn test_disable_generating_all_mnt_tokens() {
 		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			assert_ok!(MntToken::set_mnt_rate(admin(), Rate::zero()));
+			assert_ok!(MntToken::set_mnt_rate(admin(), Balance::zero()));
 			let zero = Balance::zero();
 			assert_eq!(MntToken::mnt_speeds(DOT), zero);
 			assert_eq!(MntToken::mnt_speeds(KSM), zero);
@@ -625,7 +622,7 @@ fn test_set_mnt_rate() {
 		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			let test = |new_rate: Rate| {
+			let test = |new_rate: Balance| {
 				let old_rate = MntToken::mnt_rate();
 				assert_eq!(MntToken::mnt_rate(), old_rate);
 				assert_ok!(MntToken::set_mnt_rate(admin(), new_rate));
@@ -634,8 +631,8 @@ fn test_set_mnt_rate() {
 				assert!(System::events().iter().any(|record| record.event == new_mnt_rate_event));
 			};
 
-			test(Rate::saturating_from_rational(11, 10));
-			test(Rate::saturating_from_rational(12, 10));
+			test(10 * DOLLARS);
+			test(15 * DOLLARS);
 		});
 }
 

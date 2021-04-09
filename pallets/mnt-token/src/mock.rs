@@ -178,7 +178,7 @@ pub struct ExtBuilder {
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	minted_pools: Vec<CurrencyId>,
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	mnt_rate: Rate,
+	mnt_rate: Balance,
 }
 
 pub const ALICE: AccountId = 1;
@@ -193,7 +193,7 @@ impl Default for ExtBuilder {
 			minted_pools: vec![],
 			pool_user_data: vec![],
 			endowed_accounts: vec![],
-			mnt_rate: Rate::zero(),
+			mnt_rate: Balance::zero(),
 		}
 	}
 }
@@ -204,8 +204,8 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn set_mnt_rate(mut self, rate: u32) -> Self {
-		self.mnt_rate = Rate::saturating_from_integer(rate);
+	pub fn set_mnt_rate(mut self, rate: u128) -> Self {
+		self.mnt_rate = rate * DOLLARS;
 		self
 	}
 
