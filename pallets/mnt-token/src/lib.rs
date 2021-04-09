@@ -117,9 +117,6 @@ pub mod module {
 		NotValidUnderlyingAssetId,
 
 		/// Error that never should happen
-		StorageIsCorrupted,
-
-		/// Error that never should happen
 		InternalError,
 	}
 
