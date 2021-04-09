@@ -226,7 +226,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_enabled_underlying_asset_id(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -253,7 +253,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_enabled_underlying_asset_id(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -278,7 +278,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_enabled_underlying_asset_id(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -305,7 +305,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_enabled_underlying_asset_id(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -347,9 +347,9 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 	fn _offchain_worker() -> Result<(), OffchainErr> {
 		// Get available assets list
-		let underlying_asset_ids: Vec<CurrencyId> = <T as liquidity_pools::Config>::EnabledCurrencyPair::get()
+		let underlying_asset_ids: Vec<CurrencyId> = CurrencyId::get_enabled_underlying_assets_ids()
 			.iter()
-			.map(|currency_pair| currency_pair.underlying_id)
+			.map(|&underlying_id| underlying_id)
 			.collect();
 
 		if underlying_asset_ids.len().is_zero() {
@@ -528,7 +528,9 @@ impl<T: Config> Pallet<T> {
 			if !seize_amount.is_zero() {
 				<Controller<T>>::accrue_interest_rate(collateral_pool_id)?;
 
-				let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&collateral_pool_id)?;
+				let wrapped_id = collateral_pool_id
+					.get_wrapped_id_by_underlying_asset_id()
+					.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 				let balance_wrapped_token = T::MultiCurrency::free_balance(wrapped_id, &borrower);
 
 				// Get the exchange rate, read prices price for collateral pool and calculate the number

@@ -8,6 +8,7 @@ use frame_support::{construct_runtime, ord_parameter_types, parameter_types};
 use frame_system as system;
 use frame_system::offchain::SendTransactionTypes;
 use frame_system::EnsureSignedBy;
+use minterest_primitives::currency::TokenSymbol;
 pub(crate) use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_traits::parameter_type_with_key;
 pub(crate) use pallet_traits::{PoolsManager, PriceProvider};
@@ -80,6 +81,7 @@ construct_runtime!(
 	}
 );
 
+pub const DOT: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::DOT);
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub fn dollars<T: Into<u128>>(d: T) -> Balance {
 	DOLLARS.saturating_mul(d.into())

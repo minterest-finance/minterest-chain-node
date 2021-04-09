@@ -5,6 +5,7 @@ use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::*, p
 use frame_system as system;
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
+use minterest_primitives::currency::TokenSymbol;
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
@@ -21,10 +22,10 @@ parameter_types! {
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
-		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
-		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
-		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
-		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
+		CurrencyPair::new(DOT, MDOT),
+		CurrencyPair::new(KSM, MKSM),
+		CurrencyPair::new(BTC, MBTC),
+		CurrencyPair::new(ETH, METH),
 	];
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
 			.map(|currency_pair| currency_pair.underlying_id)
@@ -41,6 +42,16 @@ pub fn admin() -> Origin {
 	Origin::signed(ADMIN)
 }
 
+pub const MNT: CurrencyId = CurrencyId::Native(TokenSymbol::MNT);
+pub const DOT: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::DOT);
+pub const KSM: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::KSM);
+pub const ETH: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::ETH);
+pub const BTC: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::BTC);
+pub const MDOT: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MDOT);
+pub const MKSM: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MKSM);
+pub const METH: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::METH);
+pub const MBTC: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MBTC);
+
 pub struct MockPriceSource;
 
 mock_impl_system_config!(Runtime);
@@ -50,10 +61,10 @@ mock_impl_liquidity_pools_config!(Runtime);
 impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
 		match currency_id {
-			CurrencyId::DOT => return Some(Price::saturating_from_rational(5, 10)), // 0.5 USD
-			CurrencyId::ETH => return Some(Price::saturating_from_rational(15, 10)), // 1.5 USD
-			CurrencyId::KSM => return Some(Price::saturating_from_integer(2)),      // 2 USD
-			CurrencyId::BTC => return Some(Price::saturating_from_integer(3)),      // 3 USD
+			DOT => return Some(Price::saturating_from_rational(5, 10)), // 0.5 USD
+			ETH => return Some(Price::saturating_from_rational(15, 10)), // 1.5 USD
+			KSM => return Some(Price::saturating_from_integer(2)),      // 2 USD
+			BTC => return Some(Price::saturating_from_integer(3)),      // 3 USD
 			_ => return None,
 		}
 	}
@@ -109,7 +120,7 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
 	pub fn enable_minting_for_all_pools(mut self) -> Self {
-		self.minted_pools = vec![CurrencyId::KSM, CurrencyId::DOT, CurrencyId::ETH, CurrencyId::BTC];
+		self.minted_pools = vec![KSM, DOT, ETH, BTC];
 		self
 	}
 

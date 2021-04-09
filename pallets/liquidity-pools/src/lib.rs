@@ -10,7 +10,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{pallet_prelude::*, traits::Get};
-use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
+use minterest_primitives::{Balance, CurrencyId, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{Borrowing, LiquidityPoolsManager, PoolsManager, PriceProvider};
@@ -60,7 +60,6 @@ mod mock;
 mod tests;
 
 type RateResult = result::Result<Rate, DispatchError>;
-type CurrencyIdResult = result::Result<CurrencyId, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 
 #[frame_support::pallet]
@@ -74,9 +73,6 @@ pub mod module {
 
 		/// Start exchange rate.
 		type InitialExchangeRate: Get<Rate>;
-
-		/// Enabled currency pairs.
-		type EnabledCurrencyPair: Get<Vec<CurrencyPair>>;
 
 		/// The price source of currencies
 		type PriceSource: PriceProvider<CurrencyId>;
@@ -191,7 +187,9 @@ impl<T: Config> Pallet<T> {
 	///
 	/// Returns `underlying_amount = wrapped_amount * exchange_rate`
 	pub fn convert_from_wrapped(wrapped_id: CurrencyId, wrapped_amount: Balance) -> BalanceResult {
-		let underlying_asset_id = Self::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
+		let underlying_asset_id = wrapped_id
+			.get_underlying_asset_id_by_wrapped_id()
+			.ok_or(Error::<T>::NotValidWrappedTokenId)?;
 		let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
 
 		let underlying_amount = Rate::from_inner(wrapped_amount)
@@ -209,7 +207,9 @@ impl<T: Config> Pallet<T> {
 	///
 	/// returns `exchange_rate` between a mToken and the underlying asset.
 	pub fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
-		let wrapped_asset_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
+		let wrapped_asset_id = underlying_asset_id
+			.get_wrapped_id_by_underlying_asset_id()
+			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 		// Current the total amount of cash the pool has.
 		let total_cash = Self::get_pool_available_liquidity(underlying_asset_id);
 
@@ -259,37 +259,6 @@ impl<T: Config> Pallet<T> {
 
 		Ok(rate)
 	}
-
-	/// Check if enabled underlying asset id.
-	pub fn is_enabled_underlying_asset_id(underlying_asset_id: CurrencyId) -> bool {
-		T::EnabledCurrencyPair::get()
-			.iter()
-			.any(|pair| pair.underlying_id == underlying_asset_id)
-	}
-
-	/// Gets the wrapped token ID from the underlying asset ID.
-	pub fn get_wrapped_id_by_underlying_asset_id(asset_id: &CurrencyId) -> CurrencyIdResult {
-		let enabled_currency_pair = T::EnabledCurrencyPair::get();
-
-		let currency_pair = *enabled_currency_pair
-			.iter()
-			.find(|currency_pair| currency_pair.underlying_id == *asset_id)
-			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
-
-		Ok(currency_pair.wrapped_id)
-	}
-
-	/// Gets the underlying asset ID from the wrapped token ID.
-	pub fn get_underlying_asset_id_by_wrapped_id(wrapped_id: &CurrencyId) -> CurrencyIdResult {
-		let enabled_currency_pair = T::EnabledCurrencyPair::get();
-
-		let currency_pair = *enabled_currency_pair
-			.iter()
-			.find(|currency_pair| currency_pair.wrapped_id == *wrapped_id)
-			.ok_or(Error::<T>::NotValidWrappedTokenId)?;
-
-		Ok(currency_pair.underlying_id)
-	}
 }
 
 // RPC methods
@@ -304,7 +273,9 @@ impl<T: Config> Pallet<T> {
 		total_protocol_interest: Balance,
 		total_borrowed: Balance,
 	) -> RateResult {
-		let wrapped_asset_id = Self::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
+		let wrapped_asset_id = underlying_asset_id
+			.get_wrapped_id_by_underlying_asset_id()
+			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 		// Current the total amount of cash the pool has.
 		let total_cash = Self::get_pool_available_liquidity(underlying_asset_id);
 
@@ -418,11 +389,10 @@ impl<T: Config> Pallet<T> {
 	///
 	/// - `who`: AccountId for which the pool array is returned.
 	pub fn get_is_collateral_pools(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
-		let mut pools: Vec<(CurrencyId, Balance)> = T::EnabledCurrencyPair::get()
+		let mut pools: Vec<(CurrencyId, Balance)> = CurrencyId::get_enabled_underlying_assets_ids()
 			.iter()
-			.filter_map(|currency_pair| {
-				let pool_id = currency_pair.underlying_id;
-				let wrapped_id = currency_pair.wrapped_id;
+			.filter_map(|&pool_id| {
+				let wrapped_id = pool_id.get_wrapped_id_by_underlying_asset_id()?;
 
 				// only collateral pools.
 				if !Self::pool_user_data(pool_id, who).is_collateral {

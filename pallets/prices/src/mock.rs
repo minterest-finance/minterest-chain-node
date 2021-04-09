@@ -4,6 +4,7 @@ use super::*;
 use crate as module_prices;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system::{self as system, EnsureSignedBy};
+use minterest_primitives::currency::TokenSymbol;
 use minterest_primitives::{CurrencyId, CurrencyPair};
 use sp_core::H256;
 use sp_runtime::testing::Header;
@@ -32,11 +33,11 @@ pub struct MockDataProvider;
 impl DataProvider<CurrencyId, Price> for MockDataProvider {
 	fn get(currency_id: &CurrencyId) -> Option<Price> {
 		match currency_id {
-			&CurrencyId::MNT => Some(Price::zero()),
-			&CurrencyId::BTC => Some(Price::saturating_from_integer(48_000)),
-			&CurrencyId::DOT => Some(Price::saturating_from_integer(40)),
-			&CurrencyId::ETH => Some(Price::saturating_from_integer(1_500)),
-			&CurrencyId::KSM => Some(Price::saturating_from_integer(250)),
+			&CurrencyId::Native(TokenSymbol::MNT) => Some(Price::zero()),
+			&CurrencyId::UnderlyingAsset(TokenSymbol::BTC) => Some(Price::saturating_from_integer(48_000)),
+			&CurrencyId::UnderlyingAsset(TokenSymbol::DOT) => Some(Price::saturating_from_integer(40)),
+			&CurrencyId::UnderlyingAsset(TokenSymbol::ETH) => Some(Price::saturating_from_integer(1_500)),
+			&CurrencyId::UnderlyingAsset(TokenSymbol::KSM) => Some(Price::saturating_from_integer(250)),
 			_ => None,
 		}
 	}

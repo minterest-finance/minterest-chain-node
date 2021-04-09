@@ -31,7 +31,6 @@ frame_support::construct_runtime!(
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
-		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 	}
 );
 
@@ -41,7 +40,6 @@ ord_parameter_types! {
 
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
-mock_impl_liquidity_pools_config!(Test);
 mock_impl_minterest_model_config!(Test, OneAlice);
 
 parameter_types! {

@@ -90,6 +90,8 @@ pub mod module {
 		CannotTransferToSelf,
 		/// Hypothetical account liquidity calculation error.
 		HypotheticalLiquidityCalculationError,
+		/// The currency is not enabled in wrapped protocol.
+		NotValidWrappedTokenId,
 	}
 
 	#[pallet::event]
@@ -131,9 +133,11 @@ pub mod module {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_finalize(_block_number: T::BlockNumber) {
-			T::EnabledCurrencyPair::get().iter().for_each(|currency_pair| {
-				Self::transfer_protocol_interest(currency_pair.underlying_id);
-			});
+			CurrencyId::get_enabled_underlying_assets_ids()
+				.iter()
+				.for_each(|&underlying_id| {
+					Self::transfer_protocol_interest(underlying_id);
+				});
 		}
 	}
 
@@ -244,7 +248,9 @@ pub mod module {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
-			let underlying_asset_id = <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
+			let underlying_asset_id = wrapped_id
+				.get_underlying_asset_id_by_wrapped_id()
+				.ok_or(Error::<T>::NotValidWrappedTokenId)?;
 			let (underlying_amount, wrapped_id, _) =
 				Self::do_redeem(&who, underlying_asset_id, Balance::zero(), wrapped_amount, false)?;
 			Self::deposit_event(Event::Redeemed(
@@ -378,7 +384,7 @@ pub mod module {
 			}
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_enabled_underlying_asset_id(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -388,7 +394,9 @@ pub mod module {
 			);
 
 			// If user does not have assets in the pool, then he cannot enable as collateral the pool.
-			let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
+			let wrapped_id = pool_id
+				.get_wrapped_id_by_underlying_asset_id()
+				.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &sender);
 			ensure!(!user_wrapped_balance.is_zero(), Error::<T>::IsCollateralCannotBeEnabled);
 
@@ -408,7 +416,7 @@ pub mod module {
 			}
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_enabled_underlying_asset_id(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -417,7 +425,9 @@ pub mod module {
 				Error::<T>::IsCollateralAlreadyDisabled
 			);
 
-			let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&pool_id)?;
+			let wrapped_id = pool_id
+				.get_wrapped_id_by_underlying_asset_id()
+				.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 			let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &sender);
 			let user_balance_disabled_asset =
 				<LiquidityPools<T>>::convert_from_wrapped(wrapped_id, user_balance_wrapped_tokens)?;
@@ -439,7 +449,7 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 	fn do_deposit(who: &T::AccountId, underlying_asset_id: CurrencyId, underlying_amount: Balance) -> TokensResult {
 		ensure!(
-			<LiquidityPools<T>>::is_enabled_underlying_asset_id(underlying_asset_id),
+			underlying_asset_id.is_enabled_underlying_asset_id(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
@@ -458,7 +468,9 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::OperationPaused
 		);
 
-		let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
+		let wrapped_id = underlying_asset_id
+			.get_wrapped_id_by_underlying_asset_id()
+			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
 		let wrapped_amount = <LiquidityPools<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)?;
 
@@ -482,13 +494,15 @@ impl<T: Config> Pallet<T> {
 		all_assets: bool,
 	) -> TokensResult {
 		ensure!(
-			<LiquidityPools<T>>::is_enabled_underlying_asset_id(underlying_asset_id),
+			underlying_asset_id.is_enabled_underlying_asset_id(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
-		let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&underlying_asset_id)?;
+		let wrapped_id = underlying_asset_id
+			.get_wrapped_id_by_underlying_asset_id()
+			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
 		let wrapped_amount = match (underlying_amount, wrapped_amount, all_assets) {
 			(0, 0, true) => {
@@ -547,7 +561,7 @@ impl<T: Config> Pallet<T> {
 	/// - `underlying_amount`: the amount of the underlying asset to borrow.
 	fn do_borrow(who: &T::AccountId, underlying_asset_id: CurrencyId, borrow_amount: Balance) -> DispatchResult {
 		ensure!(
-			<LiquidityPools<T>>::is_enabled_underlying_asset_id(underlying_asset_id),
+			underlying_asset_id.is_enabled_underlying_asset_id(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
@@ -600,7 +614,7 @@ impl<T: Config> Pallet<T> {
 		all_assets: bool,
 	) -> BalanceResult {
 		ensure!(
-			<LiquidityPools<T>>::is_enabled_underlying_asset_id(underlying_asset_id),
+			underlying_asset_id.is_enabled_underlying_asset_id(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
@@ -672,7 +686,9 @@ impl<T: Config> Pallet<T> {
 		ensure!(who != receiver, Error::<T>::CannotTransferToSelf);
 
 		// Fail if invalid token id
-		let underlying_asset_id = <LiquidityPools<T>>::get_underlying_asset_id_by_wrapped_id(&wrapped_id)?;
+		let underlying_asset_id = wrapped_id
+			.get_underlying_asset_id_by_wrapped_id()
+			.ok_or(Error::<T>::NotValidWrappedTokenId)?;
 
 		// Fail if transfer is not allowed
 		ensure!(

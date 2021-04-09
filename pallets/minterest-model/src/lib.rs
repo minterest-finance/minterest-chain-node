@@ -46,7 +46,6 @@ pub struct MinterestModelData {
 	pub jump_multiplier_per_block: Rate,
 }
 
-type LiquidityPools<T> = liquidity_pools::Module<T>;
 type RateResult = result::Result<Rate, DispatchError>;
 
 #[frame_support::pallet]
@@ -54,7 +53,7 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + liquidity_pools::Config {
+	pub trait Config: frame_system::Config {
 		/// The overarching event type.
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -177,7 +176,7 @@ pub mod module {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_enabled_underlying_asset_id(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -210,7 +209,7 @@ pub mod module {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_enabled_underlying_asset_id(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -250,7 +249,7 @@ pub mod module {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_enabled_underlying_asset_id(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -283,7 +282,7 @@ pub mod module {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_enabled_underlying_asset_id(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 

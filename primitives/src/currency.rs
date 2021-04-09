@@ -3,38 +3,9 @@ use codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use sp_runtime::RuntimeDebug;
 use sp_std::convert::TryFrom;
+use sp_std::{prelude::Vec, vec};
 #[allow(unused_imports)]
 use CurrencyType::*;
-
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum CurrencyId {
-	MNT = 0,
-	DOT,
-	KSM,
-	BTC,
-	ETH,
-	MDOT,
-	MKSM,
-	MBTC,
-	METH,
-}
-
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct CurrencyPair {
-	pub underlying_id: CurrencyId,
-	pub wrapped_id: CurrencyId,
-}
-
-impl CurrencyPair {
-	pub fn new(underlying_id: CurrencyId, wrapped_id: CurrencyId) -> Self {
-		Self {
-			underlying_id,
-			wrapped_id,
-		}
-	}
-}
 
 macro_rules! create_currency_id {
 	($(#[$meta:meta])*
@@ -57,40 +28,28 @@ macro_rules! create_currency_id {
             }
         }
 
-		impl GetDecimals for NEWCurrencyId {
+		impl GetDecimals for CurrencyId {
 			fn decimals(&self) -> u32 {
 				match self {
-					$(NEWCurrencyId::Native(TokenSymbol::$symbol) => $deci,)*
-					$(NEWCurrencyId::UnderlyingAsset(TokenSymbol::$symbol) => $deci,)*
-					$(NEWCurrencyId::WrappedToken(TokenSymbol::$symbol) => $deci,)*
+					$(CurrencyId::Native(TokenSymbol::$symbol) => $deci,)*
+					$(CurrencyId::UnderlyingAsset(TokenSymbol::$symbol) => $deci,)*
+					$(CurrencyId::WrappedToken(TokenSymbol::$symbol) => $deci,)*
 				}
 			}
 		}
 
-		$(pub const $symbol: NEWCurrencyId = match $ctype {
-			Native => NEWCurrencyId::Native(TokenSymbol::$symbol),
-			UnderlyingAsset => NEWCurrencyId::UnderlyingAsset(TokenSymbol::$symbol),
-			WrappedToken => NEWCurrencyId::WrappedToken(TokenSymbol::$symbol),
+		$(pub const $symbol: CurrencyId = match $ctype {
+			Native => CurrencyId::Native(TokenSymbol::$symbol),
+			UnderlyingAsset => CurrencyId::UnderlyingAsset(TokenSymbol::$symbol),
+			WrappedToken => CurrencyId::WrappedToken(TokenSymbol::$symbol),
 		};)*
-
-		// {let mut EnabledUnderlyingAssetsIds = Vec::new();
-		// $(EnabledUnderlyingAssetsIds.push($symbol);)*
-		// 	EnabledUnderlyingAssetsIds
-		// }
-
-		 // let EnabledUnderlyingAssetsIds: Vec<NEWCurrencyId> = vec![$(NEWCurrencyId::Native(TokenSymbol::$symbol),)*];
-
-		// pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
-		// 	CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
-		// 	CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
-		// 	CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
-		// 	CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
-		// ];
 	}
 }
 
 create_currency_id! {
 	// Convention: the wrapped token follows immediately after the underlying token.
+	// Wrapped token ID = Underlying Asset ID + 1;
+	// Underlying Asset ID  = Wrapped token ID - 1;
 	# [derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 	# [cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 	# [repr(u8)]
@@ -109,26 +68,27 @@ create_currency_id! {
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum NEWCurrencyId {
+pub enum CurrencyId {
 	Native(TokenSymbol),
 	UnderlyingAsset(TokenSymbol),
 	WrappedToken(TokenSymbol),
 }
 
-impl NEWCurrencyId {
+impl CurrencyId {
 	pub fn is_native_currency_id(&self) -> bool {
-		matches!(self, NEWCurrencyId::Native(_))
+		matches!(self, CurrencyId::Native(_))
 	}
-	pub fn is_underlying_asset_id(&self) -> bool {
-		matches!(self, NEWCurrencyId::UnderlyingAsset(_))
+	pub fn is_enabled_underlying_asset_id(&self) -> bool {
+		matches!(self, CurrencyId::UnderlyingAsset(_))
 	}
-	pub fn is_wrapped_token_id(&self) -> bool {
-		matches!(self, NEWCurrencyId::WrappedToken(_))
+	pub fn is_enabled_wrapped_token_id(&self) -> bool {
+		matches!(self, CurrencyId::WrappedToken(_))
 	}
-	pub fn get_underlying_asset_id_by_wrapped_id(&self) -> Option<NEWCurrencyId> {
-		if self.is_wrapped_token_id() {
+	//TODO Option -> Result
+	pub fn get_underlying_asset_id_by_wrapped_id(&self) -> Option<CurrencyId> {
+		if self.is_enabled_wrapped_token_id() {
 			match self {
-				NEWCurrencyId::UnderlyingAsset(currency_id) => Some(NEWCurrencyId::WrappedToken(
+				CurrencyId::UnderlyingAsset(currency_id) => Some(CurrencyId::WrappedToken(
 					TokenSymbol::try_from(*currency_id as u8 - 1_u8).ok()?,
 				)),
 				_ => None,
@@ -137,10 +97,11 @@ impl NEWCurrencyId {
 			None
 		}
 	}
-	pub fn get_wrapped_id_by_underlying_asset_id(&self) -> Option<NEWCurrencyId> {
-		if self.is_underlying_asset_id() {
+	//TODO Option -> Result
+	pub fn get_wrapped_id_by_underlying_asset_id(&self) -> Option<CurrencyId> {
+		if self.is_enabled_underlying_asset_id() {
 			match self {
-				NEWCurrencyId::UnderlyingAsset(currency_id) => Some(NEWCurrencyId::WrappedToken(
+				CurrencyId::UnderlyingAsset(currency_id) => Some(CurrencyId::WrappedToken(
 					TokenSymbol::try_from(*currency_id as u8 + 1_u8).ok()?,
 				)),
 				_ => None,
@@ -148,6 +109,14 @@ impl NEWCurrencyId {
 		} else {
 			None
 		}
+	}
+	// TODO write dynamic
+	pub fn get_enabled_underlying_assets_ids() -> Vec<CurrencyId> {
+		vec![DOT, ETH, KSM, BTC]
+	}
+	// TODO write dynamic
+	pub fn get_enabled_wrapped_tokens_ids() -> Vec<CurrencyId> {
+		vec![MDOT, METH, MKSM, MBTC]
 	}
 }
 
@@ -171,10 +140,10 @@ mod tests {
 	fn currency_type_identification_should_work() {
 		assert!(MNT.is_native_currency_id());
 		assert!(!DOT.is_native_currency_id());
-		assert!(DOT.is_underlying_asset_id());
-		assert!(!MDOT.is_underlying_asset_id());
-		assert!(!ETH.is_wrapped_token_id());
-		assert!(METH.is_wrapped_token_id());
+		assert!(DOT.is_enabled_underlying_asset_id());
+		assert!(!MDOT.is_enabled_underlying_asset_id());
+		assert!(!ETH.is_enabled_wrapped_token_id());
+		assert!(METH.is_enabled_wrapped_token_id());
 	}
 
 	#[test]
@@ -195,5 +164,21 @@ mod tests {
 		assert_eq!(MNT.get_underlying_asset_id_by_wrapped_id(), None);
 		assert_eq!(MDOT.get_underlying_asset_id_by_wrapped_id(), Some(DOT));
 		assert_eq!(ETH.get_underlying_asset_id_by_wrapped_id(), None);
+	}
+
+	#[test]
+	fn get_enabled_underlying_assets_ids_should_work() {
+		assert_eq!(
+			CurrencyId::get_enabled_underlying_assets_ids(),
+			vec![DOT, ETH, KSM, BTC]
+		);
+	}
+
+	#[test]
+	fn get_enabled_wrapped_tokens_ids_should_work() {
+		assert_eq!(
+			CurrencyId::get_enabled_wrapped_tokens_ids(),
+			vec![MDOT, METH, MKSM, MBTC]
+		);
 	}
 }

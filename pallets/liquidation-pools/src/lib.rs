@@ -46,16 +46,17 @@ pub struct LiquidationPoolData {
 	pub balance_ratio: Rate,
 }
 
-type LiquidityPools<T> = liquidity_pools::Module<T>;
-
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + liquidity_pools::Config + SendTransactionTypes<Call<Self>> {
+	pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		/// The `MultiCurrency` implementation.
+		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 
 		/// A configuration for base priority of unsigned transactions.
 		///
@@ -70,6 +71,9 @@ pub mod module {
 		#[pallet::constant]
 		/// The Liquidation Pool's account id, keep all assets in Pools.
 		type LiquidationPoolAccountId: Get<Self::AccountId>;
+
+		/// The price source of currencies
+		type PriceSource: PriceProvider<CurrencyId>;
 
 		/// The basic liquidity pools manager.
 		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
@@ -211,7 +215,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_enabled_underlying_asset_id(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -245,7 +249,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_enabled_underlying_asset_id(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -364,7 +368,7 @@ impl<T: Config> Pallet<T> {
 	pub fn collects_sales_list() -> sp_std::result::Result<Vec<Sales>, DispatchError> {
 		// Collecting information about the current state of liquidation pools.
 		let (mut information_vec, mut sum_oversupply, mut sum_shortfall) =
-			T::EnabledUnderlyingAssetsIds::get().iter().try_fold(
+			CurrencyId::get_enabled_underlying_assets_ids().iter().try_fold(
 				(Vec::<LiquidationInformation>::new(), Balance::zero(), Balance::zero()),
 				|(mut current_vec, mut current_sum_oversupply, mut current_sum_shortfall),
 				 pool_id|

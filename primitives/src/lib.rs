@@ -3,7 +3,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-pub use currency::{CurrencyId, CurrencyPair};
+pub use currency::CurrencyId;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{

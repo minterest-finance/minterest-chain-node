@@ -4,22 +4,17 @@ use super::Error;
 use crate::mock::*;
 
 use frame_support::{assert_noop, assert_ok};
-use minterest_primitives::{CurrencyId, Rate};
+use minterest_primitives::Rate;
 use sp_arithmetic::FixedPointNumber;
-
-const KSM: CurrencyId = CurrencyId::KSM;
-const DOT: CurrencyId = CurrencyId::DOT;
-const ETH: CurrencyId = CurrencyId::ETH;
-const BTC: CurrencyId = CurrencyId::BTC;
 
 #[test]
 fn test_mnt_speed_calculation() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 50 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			let mnt_rate = Rate::saturating_from_integer(10);
@@ -92,10 +87,10 @@ fn test_mnt_speed_calculation() {
 fn test_mnt_speed_calculaction_with_zero_borrowed() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 0 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 0 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			let mnt_rate = Rate::saturating_from_integer(10);
@@ -141,10 +136,10 @@ fn test_disable_mnt_minting() {
 	// 2. Enable MNT minting for disabled pool
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 50 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			let mnt_rate = Rate::saturating_from_integer(10);
@@ -190,10 +185,10 @@ fn test_disable_mnt_minting() {
 fn test_disable_generating_all_mnt_tokens() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 50 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			let zero = Rate::zero();
@@ -209,10 +204,10 @@ fn test_disable_generating_all_mnt_tokens() {
 fn test_set_mnt_rate() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 50 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			let test = |new_rate: Rate| {
@@ -232,10 +227,10 @@ fn test_set_mnt_rate() {
 #[test]
 fn test_minting_enable_disable() {
 	ExtBuilder::default()
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 50 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Add new mnt minting
@@ -275,10 +270,10 @@ fn test_minting_enable_disable() {
 fn test_calculate_enabled_pools_utilities() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 50 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Amount tokens: 50 for each currency
@@ -296,7 +291,7 @@ fn test_calculate_enabled_pools_utilities() {
 #[test]
 fn test_calculate_enabled_pools_utilities_fail() {
 	ExtBuilder::default().build().execute_with(|| {
-		let non_existent_liquidity_pool = CurrencyId::MNT;
+		let non_existent_liquidity_pool = MNT;
 		assert_noop!(
 			MntToken::enable_mnt_minting(admin(), non_existent_liquidity_pool),
 			Error::<Runtime>::NotValidUnderlyingAssetId

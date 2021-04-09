@@ -12,7 +12,7 @@
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
 
-use frame_support::{pallet_prelude::*, traits::Get, transactional};
+use frame_support::{pallet_prelude::*, transactional};
 use minterest_primitives::{CurrencyId, Price};
 use orml_traits::{DataFeeder, DataProvider};
 use pallet_traits::PriceProvider;
@@ -43,9 +43,6 @@ pub mod module {
 
 		/// The origin which may lock and unlock prices feed to system.
 		type LockOrigin: EnsureOrigin<Self::Origin>;
-
-		/// Enabled underlying asset IDs.
-		type EnabledUnderlyingAssetsIds: Get<Vec<CurrencyId>>;
 
 		/// Weight information for the extrinsics.
 		type WeightInfo: WeightInfo;
@@ -112,9 +109,7 @@ pub mod module {
 			T::LockOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				T::EnabledUnderlyingAssetsIds::get()
-					.into_iter()
-					.any(|asset_id| asset_id == currency_id),
+				currency_id.is_enabled_underlying_asset_id(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -133,9 +128,7 @@ pub mod module {
 			T::LockOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				T::EnabledUnderlyingAssetsIds::get()
-					.into_iter()
-					.any(|asset_id| asset_id == currency_id),
+				currency_id.is_enabled_underlying_asset_id(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 

@@ -35,7 +35,6 @@ frame_support::construct_runtime!(
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		// Minterest pallets
 		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, ValidateUnsigned},
-		TestLiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestDex: dex::{Module, Storage, Call, Event<T>}
 	}
 );
@@ -43,7 +42,6 @@ frame_support::construct_runtime!(
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
 mock_impl_orml_currencies_config!(Test, CurrencyId::MNT);
-mock_impl_liquidity_pools_config!(Test);
 mock_impl_dex_config!(Test);
 
 parameter_types! {
