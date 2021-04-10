@@ -175,7 +175,7 @@ pub mod module {
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_borrower_index)]
 	pub(crate) type MntBorrowerIndex<T: Config> =
-		StorageDoubleMap<_, Twox64Concat, CurrencyId, Twox64Concat, T::AccountId, Rate, OptionQuery>;
+		StorageDoubleMap<_, Twox64Concat, CurrencyId, Twox64Concat, T::AccountId, Rate, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -285,15 +285,21 @@ impl<T: Config> Pallet<T> {
 		// borrower_accrued += borrower_delta
 		// borrower_index = borrow_index
 
+		let borrower_index = MntBorrowerIndex::<T>::get(underlying_id, borrower);
+		let pool_borrow_state = MntPoolsState::<T>::get(underlying_id).borrow_state;
+		// Update borrower index
+		MntBorrowerIndex::<T>::insert(underlying_id, borrower, pool_borrow_state.index);
+		if borrower_index.is_zero() {
+			// This is first interaction with protocol
+			return Ok(());
+		}
+
 		let borrow_balance = T::ControllerAPI::borrow_balance_stored(&borrower, underlying_id)?;
 		let pool_borrow_index = T::LiquidityPoolsManager::get_pool_borrow_index(underlying_id);
 		let borrower_amount = Price::from_inner(borrow_balance)
 			.checked_div(&pool_borrow_index)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let mut borrower_index = MntBorrowerIndex::<T>::get(underlying_id, borrower).unwrap_or_else(|| Rate::one());
-
-		let pool_borrow_state = MntPoolsState::<T>::get(underlying_id).borrow_state;
 		let delta_index = pool_borrow_state
 			.index
 			.checked_sub(&borrower_index)
@@ -312,16 +318,13 @@ impl<T: Config> Pallet<T> {
 			.checked_add(borrower_delta.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		borrower_index = pool_borrow_state.index;
-
-		MntBorrowerIndex::<T>::insert(underlying_id, borrower, borrower_index);
 		MntAccrued::<T>::insert(borrower, borrower_mnt_accrued);
 
 		Self::deposit_event(Event::MntDistributedToBorrower(
 			underlying_id,
 			borrower.clone(),
 			borrower_delta.into_inner(),
-			borrower_index,
+			pool_borrow_state.index,
 		));
 		Ok(())
 	}

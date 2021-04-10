@@ -19,7 +19,7 @@ fn check_borrower(pool_id: CurrencyId, borrower: AccountId, expected_mnt: Balanc
 	assert_ok!(MntToken::distribute_borrower_mnt(pool_id, &borrower));
 
 	let pool_state = MntToken::mnt_pools_state(pool_id).borrow_state;
-	let borrower_index = MntToken::mnt_borrower_index(pool_id, borrower).unwrap();
+	let borrower_index = MntToken::mnt_borrower_index(pool_id, borrower);
 	let borrower_accrued_mnt = MntToken::mnt_accrued(borrower);
 	assert_eq!(borrower_accrued_mnt, expected_mnt);
 	assert_eq!(borrower_index, pool_state.index);
@@ -87,16 +87,27 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 			let mnt_rate = 10 * DOLLARS;
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
 
+			// First interaction with protocol for distributers.
+			// This is started point to earn MNT token
 			assert_ok!(MntToken::update_mnt_borrow_index(DOT));
 			assert_ok!(MntToken::update_mnt_borrow_index(KSM));
 			assert_ok!(MntToken::distribute_borrower_mnt(KSM, &ALICE));
 			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &ALICE));
+
+			System::set_block_number(2);
+
+			// Move flywheel
+			assert_ok!(MntToken::update_mnt_borrow_index(DOT));
+			assert_ok!(MntToken::update_mnt_borrow_index(KSM));
+			assert_ok!(MntToken::distribute_borrower_mnt(KSM, &ALICE));
+			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &ALICE));
+
 			let borrower_accrued = MntToken::mnt_accrued(&ALICE);
 			assert_eq!(borrower_accrued, mnt_rate);
 
 			let dot_mnt_speed = 2 * DOLLARS;
 			// Check event about distributing mnt tokens by DOT pool
-			let borrower_index = MntToken::mnt_borrower_index(DOT, ALICE).unwrap();
+			let borrower_index = MntToken::mnt_borrower_index(DOT, ALICE);
 			let event = Event::mnt_token(crate::Event::MntDistributedToBorrower(
 				CurrencyId::DOT,
 				ALICE,
@@ -143,6 +154,13 @@ fn distribute_borrowers_mnt() {
 			//
 			// For Bob: 120 / 150 = 0.8; 0.8 * 10 = 8
 
+			// First interaction with protocol for distributers.
+			// This is started point to earn MNT token
+			assert_ok!(MntToken::update_mnt_borrow_index(DOT));
+			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &ALICE));
+			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &BOB));
+
+			System::set_block_number(2);
 			check_borrower(DOT, ALICE, 2 * DOLLARS);
 			check_borrower(DOT, BOB, 8 * DOLLARS);
 		});
@@ -163,18 +181,19 @@ fn distribute_borrower_mnt() {
 		)
 		.build()
 		.execute_with(|| {
-			//
-			// Minting was enabled when block_number was equal to 0. Here block_number == 1.
-			// So block_delta = 1
-			//
 			let mnt_rate = 12 * DOLLARS;
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
+			// First interaction with protocol for distributers.
+			// This is started point to earn MNT token
+			assert_ok!(MntToken::update_mnt_borrow_index(DOT));
+			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &ALICE));
 
+			System::set_block_number(2);
 			// Alice account borrow balance is 150_000
 			check_borrower(DOT, ALICE, mnt_rate);
 
 			// block_delta == 2
-			System::set_block_number(3);
+			System::set_block_number(4);
 			check_borrower(DOT, ALICE, mnt_rate * 3);
 			// check twice, move flywheel again
 			check_borrower(DOT, ALICE, mnt_rate * 3);
