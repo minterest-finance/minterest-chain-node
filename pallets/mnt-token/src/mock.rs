@@ -5,8 +5,8 @@ use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::*, p
 use frame_system as system;
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
-use minterest_primitives::currency::TokenSymbol;
-use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
+pub use minterest_primitives::currency::{BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT};
+use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
 use sp_core::H256;
@@ -21,18 +21,8 @@ parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
-		CurrencyPair::new(DOT, MDOT),
-		CurrencyPair::new(KSM, MKSM),
-		CurrencyPair::new(BTC, MBTC),
-		CurrencyPair::new(ETH, METH),
-	];
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.underlying_id)
-			.collect();
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.wrapped_id)
-			.collect();
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_underlying_assets_ids();
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_wrapped_tokens_ids();
 }
 
 pub type AccountId = u64;
@@ -41,16 +31,6 @@ pub const ADMIN: AccountId = 0;
 pub fn admin() -> Origin {
 	Origin::signed(ADMIN)
 }
-
-pub const MNT: CurrencyId = CurrencyId::Native(TokenSymbol::MNT);
-pub const DOT: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::DOT);
-pub const KSM: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::KSM);
-pub const ETH: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::ETH);
-pub const BTC: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::BTC);
-pub const MDOT: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MDOT);
-pub const MKSM: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MKSM);
-pub const METH: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::METH);
-pub const MBTC: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MBTC);
 
 pub struct MockPriceSource;
 
@@ -83,7 +63,6 @@ impl mnt_token::Config for Runtime {
 	type PriceSource = MockPriceSource;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
-	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;

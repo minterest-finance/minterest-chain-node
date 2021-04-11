@@ -88,7 +88,6 @@ macro_rules! mock_impl_liquidity_pools_config {
 			type ModuleId = LiquidityPoolsModuleId;
 			type LiquidityPoolAccountId = LiquidityPoolAccountId;
 			type InitialExchangeRate = InitialExchangeRate;
-			type EnabledCurrencyPair = EnabledCurrencyPair;
 			type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 			type EnabledWrappedTokensId = EnabledWrappedTokensId;
 		}
