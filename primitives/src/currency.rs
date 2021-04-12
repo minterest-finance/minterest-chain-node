@@ -96,13 +96,15 @@ impl CurrencyId {
 	pub fn is_native_currency_id(&self) -> bool {
 		matches!(self, CurrencyId::Native(_))
 	}
+
 	pub fn is_enabled_underlying_asset_id(&self) -> bool {
 		matches!(self, CurrencyId::UnderlyingAsset(_))
 	}
+
 	pub fn is_enabled_wrapped_token_id(&self) -> bool {
 		matches!(self, CurrencyId::WrappedToken(_))
 	}
-	//TODO Option -> Result
+
 	pub fn get_underlying_asset_id_by_wrapped_id(&self) -> Option<CurrencyId> {
 		if self.is_enabled_wrapped_token_id() {
 			match self {
@@ -115,7 +117,7 @@ impl CurrencyId {
 			None
 		}
 	}
-	//TODO Option -> Result
+
 	pub fn get_wrapped_id_by_underlying_asset_id(&self) -> Option<CurrencyId> {
 		if self.is_enabled_underlying_asset_id() {
 			match self {

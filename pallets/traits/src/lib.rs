@@ -31,6 +31,7 @@ pub trait PoolsManager<AccountId> {
 	/// Return liquidity balance of `pool_id`.
 	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance;
 
+	// FIXME: Consider removing
 	/// Check if pool exists
 	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool;
 }
