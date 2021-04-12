@@ -17,6 +17,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 	FixedPointNumber,
 };
+use test_helper::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -39,65 +40,11 @@ frame_support::construct_runtime!(
 	}
 );
 
-parameter_types! {
-	pub const BlockHashCount: u64 = 250;
-	pub const SS58Prefix: u8 = 42;
-}
-
-impl system::Config for Test {
-	type BaseCallFilter = ();
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type Origin = Origin;
-	type Call = Call;
-	type Index = u64;
-	type BlockNumber = u64;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type AccountId = u64;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = ();
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = SS58Prefix;
-}
-
-parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		Default::default()
-	};
-}
-
-impl orml_tokens::Config for Test {
-	type Event = Event;
-	type Balance = Balance;
-	type Amount = Amount;
-	type CurrencyId = CurrencyId;
-	type WeightInfo = ();
-	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
-}
-
-parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
-}
-
-type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
-
-impl orml_currencies::Config for Test {
-	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Test>;
-	type NativeCurrency = NativeCurrency;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
-	type WeightInfo = ();
-}
+mock_impl_system_config!(Test);
+mock_impl_orml_tokens_config!(Test);
+mock_impl_orml_currencies_config!(Test, CurrencyId::MNT);
+mock_impl_liquidity_pools_config!(Test);
+mock_impl_dex_config!(Test);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
@@ -127,29 +74,6 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn lock_price(_currency_id: CurrencyId) {}
 
 	fn unlock_price(_currency_id: CurrencyId) {}
-}
-
-impl liquidity_pools::Config for Test {
-	type MultiCurrency = orml_tokens::Module<Test>;
-	type PriceSource = MockPriceSource;
-	type ModuleId = LiquidityPoolsModuleId;
-	type LiquidityPoolAccountId = LiquidityPoolAccountId;
-	type InitialExchangeRate = InitialExchangeRate;
-	type EnabledCurrencyPair = EnabledCurrencyPair;
-	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
-	type EnabledWrappedTokensId = EnabledWrappedTokensId;
-}
-
-parameter_types! {
-	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
-	pub DexAccountId: AccountId = DexModuleId::get().into_account();
-}
-
-impl dex::Config for Test {
-	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Test>;
-	type DexModuleId = DexModuleId;
-	type DexAccountId = DexAccountId;
 }
 
 parameter_types! {
@@ -184,9 +108,9 @@ where
 	type Extrinsic = Extrinsic;
 }
 
-type Amount = i128;
 type AccountId = u64;
 pub type BlockNumber = u64;
+pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ADMIN: AccountId = 0;
 pub fn admin() -> Origin {
 	Origin::signed(ADMIN)
@@ -197,6 +121,7 @@ pub fn alice() -> Origin {
 }
 
 pub struct ExternalityBuilder {
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
 	balancing_period: BlockNumber,
 }
@@ -204,11 +129,13 @@ pub struct ExternalityBuilder {
 impl Default for ExternalityBuilder {
 	fn default() -> Self {
 		Self {
+			endowed_accounts: vec![],
 			liquidation_pools: vec![(
 				CurrencyId::DOT,
 				LiquidationPoolData {
 					deviation_threshold: Rate::saturating_from_rational(1, 10),
 					balance_ratio: Rate::saturating_from_rational(2, 10),
+					max_ideal_balance: None,
 				},
 			)],
 			balancing_period: 600, // Blocks per 10 minutes
@@ -217,8 +144,20 @@ impl Default for ExternalityBuilder {
 }
 
 impl ExternalityBuilder {
+	pub fn liquidity_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts
+			.push((TestLiquidityPools::pools_account_id(), currency_id, balance));
+		self
+	}
+
 	pub fn build(self) -> TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+		orml_tokens::GenesisConfig::<Test> {
+			endowed_accounts: self.endowed_accounts,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 		liquidation_pools::GenesisConfig::<Test> {
 			liquidation_pools: self.liquidation_pools,

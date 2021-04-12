@@ -193,6 +193,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
 
 [[package]]
+name = "arrayvec"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a2f58b0bb10c380af2b26e57212856b8c9a59e0925b4c20f4a174a49734eaf7"
+
+[[package]]
 name = "asn1_der"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -925,6 +931,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -1396,6 +1403,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -2376,28 +2384,9 @@ dependencies = [
 
 [[package]]
 name = "hex-literal"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "961de220ec9a91af2e1e5bd80d02109155695e516771762381ef8581317066e0"
-dependencies = [
- "hex-literal-impl",
- "proc-macro-hack",
-]
-
-[[package]]
-name = "hex-literal"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5af1f635ef1bc545d78392b136bfe1c9809e029023c84a3638a864a10b8819c8"
-
-[[package]]
-name = "hex-literal-impl"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "853f769599eb31de176303197b7ba4973299c38c7a7604a6bc88c3eef05b9b46"
-dependencies = [
- "proc-macro-hack",
-]
 
 [[package]]
 name = "hex_fmt"
@@ -2756,6 +2745,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -3028,9 +3018,9 @@ checksum = "3576a87f2ba00f6f106fdfcd16db1d698d648a26ad8e0573cad8537c3c362d2a"
 
 [[package]]
 name = "libc"
-version = "0.2.92"
+version = "0.2.93"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56d855069fafbb9b344c0f962150cd2c1187975cb1c22c1522c240d8c4986714"
+checksum = "9385f66bf6105b241aa65a61cb923ef20efc665cb9f9bb50ac2f0c4b7f378d41"
 
 [[package]]
 name = "libgit2-sys"
@@ -3568,6 +3558,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -3590,6 +3581,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -3773,6 +3765,7 @@ dependencies = [
  "cargo-audit",
  "minterest-cli",
  "minterest-service",
+ "orml-oracle",
 ]
 
 [[package]]
@@ -3807,6 +3800,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -3844,6 +3838,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -3871,7 +3866,7 @@ dependencies = [
  "controller",
  "frame-benchmarking",
  "frame-system-rpc-runtime-api",
- "hex-literal 0.3.1",
+ "hex-literal",
  "liquidation-pools",
  "liquidity-pools",
  "minterest-model",
@@ -4005,8 +4000,8 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "orml-utilities",
  "pallet-traits",
- "pallet-treasury",
  "parity-scale-codec",
  "serde",
  "sp-arithmetic",
@@ -4014,6 +4009,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -4031,6 +4027,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -4162,7 +4159,7 @@ dependencies = [
  "frame-system",
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
- "hex-literal 0.3.1",
+ "hex-literal",
  "integration-tests",
  "liquidation-pools",
  "liquidity-pools",
@@ -4349,47 +4346,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "orml-auction"
-version = "0.4.1-dev"
-dependencies = [
- "frame-support",
- "frame-system",
- "funty",
- "orml-traits",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "orml-authority"
-version = "0.4.1-dev"
-dependencies = [
- "frame-support",
- "frame-system",
- "funty",
- "orml-traits",
- "pallet-scheduler",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "orml-benchmarking"
-version = "0.4.1-dev"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48e1164698a73adae07487ad50c334e1b738ef27398b249ec3ddea5689e904d2"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "funty",
- "hex-literal 0.2.1",
  "parity-scale-codec",
  "paste 0.1.18",
  "serde",
@@ -4402,33 +4367,17 @@ dependencies = [
 
 [[package]]
 name = "orml-currencies"
-version = "0.4.1-dev"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "204fa52ab72cf353879bf57a6cccc64d1fadf3d44246d98007b218cc22fc4d06"
 dependencies = [
  "frame-support",
  "frame-system",
  "funty",
- "orml-tokens",
  "orml-traits",
  "orml-utilities",
- "pallet-balances",
  "parity-scale-codec",
  "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "orml-gradually-update"
-version = "0.4.1-dev"
-dependencies = [
- "frame-support",
- "frame-system",
- "funty",
- "parity-scale-codec",
- "serde",
- "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
@@ -4436,7 +4385,9 @@ dependencies = [
 
 [[package]]
 name = "orml-oracle"
-version = "0.4.1-dev"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7510e1d419f1ed7a62d43a82808deed6927ee8bd116227c77782cceed28df68d"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4446,7 +4397,6 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-application-crypto",
- "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
@@ -4454,9 +4404,10 @@ dependencies = [
 
 [[package]]
 name = "orml-oracle-rpc"
-version = "0.4.1-dev"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f77c80556c314b6b0921a7bca04c6d0b34b1cd79deaa1c71df38086949ba075"
 dependencies = [
- "funty",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
@@ -4469,9 +4420,10 @@ dependencies = [
 
 [[package]]
 name = "orml-oracle-rpc-runtime-api"
-version = "0.4.1-dev"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c6219f6a91a7ee1b58049c5c7e31ac66c4f17dc58eff76c119484096f31eb73"
 dependencies = [
- "funty",
  "parity-scale-codec",
  "sp-api",
  "sp-std",
@@ -4479,25 +4431,25 @@ dependencies = [
 
 [[package]]
 name = "orml-tokens"
-version = "0.4.1-dev"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0321e56f921689c6c78bf2b68e3deb03172065ca8f306d4d8432d09c3569bb9d"
 dependencies = [
  "frame-support",
  "frame-system",
  "funty",
  "orml-traits",
- "pallet-elections-phragmen",
- "pallet-treasury",
  "parity-scale-codec",
  "serde",
- "sp-core",
- "sp-io",
  "sp-runtime",
  "sp-std",
 ]
 
 [[package]]
 name = "orml-traits"
-version = "0.4.1-dev"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18dd4788a7b96709d23081b1a33a5b8477cf25833f20b27b19908d5babdfe7ab"
 dependencies = [
  "frame-support",
  "funty",
@@ -4513,30 +4465,14 @@ dependencies = [
 
 [[package]]
 name = "orml-utilities"
-version = "0.4.1-dev"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f84d1a0ce4c65a8695cf8c41895c6161d2345214a4a413e674478f6a37968db"
 dependencies = [
  "frame-support",
- "frame-system",
  "funty",
  "parity-scale-codec",
  "serde",
- "serde_json",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "orml-vesting"
-version = "0.4.1-dev"
-dependencies = [
- "frame-support",
- "frame-system",
- "funty",
- "pallet-balances",
- "parity-scale-codec",
- "serde",
- "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
@@ -4619,21 +4555,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-elections-phragmen"
-version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3adf1233ea7b9129a40247ac04650bb6ccb3f8f6e714df75cb65ac65185fdd33"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "serde",
- "sp-npos-elections",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-grandpa"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4680,22 +4601,6 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "safe-mix",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-scheduler"
-version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11230ac868a04833d27a18f37d00572d26866f4718e9cce0557d698e3997b6d6"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "serde",
- "sp-io",
  "sp-runtime",
  "sp-std",
 ]
@@ -4817,22 +4722,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-treasury"
-version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d19f881664d42d1c33dd67e690d6bddd35d38723fcc099b19304f9723fc3070c"
-dependencies = [
- "frame-support",
- "frame-system",
- "impl-trait-for-tuples 0.2.1",
- "pallet-balances",
- "parity-scale-codec",
- "serde",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "parity-db"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4869,11 +4758,11 @@ dependencies = [
 
 [[package]]
 name = "parity-scale-codec"
-version = "2.0.1"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0cd3dab59b5cf4bc81069ade0fc470341a1ef3ad5fa73e5a8943bed2ec12b2e8"
+checksum = "731f4d179ed52b1c7eeb29baf29c604ea9301b889b23ce93660220a5465d5c6f"
 dependencies = [
- "arrayvec 0.5.2",
+ "arrayvec 0.7.0",
  "bitvec",
  "byte-slice-cast",
  "parity-scale-codec-derive",
@@ -4882,9 +4771,9 @@ dependencies = [
 
 [[package]]
 name = "parity-scale-codec-derive"
-version = "2.0.1"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa04976a81fde04924b40cc4036c4d12841e8bb04325a5cf2ada75731a150a7d"
+checksum = "f44c5f94427bd0b5076e8f7e15ca3f60a4d8ac0077e4793884e6fdfd8915344e"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -5830,6 +5719,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
@@ -7718,32 +7608,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sp-npos-elections"
-version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54e6e8b84ee0dc7bb65b55beba55ffbc17803222ab7c746a74f72fc5869c7320"
-dependencies = [
- "parity-scale-codec",
- "serde",
- "sp-arithmetic",
- "sp-core",
- "sp-npos-elections-compact",
- "sp-std",
-]
-
-[[package]]
-name = "sp-npos-elections-compact"
-version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "085fbb1aa72d85a17524047fc1e708bc3bd038b02b46dc7ac601fa39c8af93d3"
-dependencies = [
- "proc-macro-crate",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "sp-offchain"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8272,6 +8136,10 @@ checksum = "2dfed899f0eb03f32ee8c6a0aabdb8a7949659e3466561fc0adf54e26d88c5f4"
 dependencies = [
  "winapi-util",
 ]
+
+[[package]]
+name = "test-helper"
+version = "0.6.2"
 
 [[package]]
 name = "textwrap"
@@ -8828,9 +8696,9 @@ dependencies = [
 
 [[package]]
 name = "unicode-bidi"
-version = "0.3.4"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49f2bd0c6468a8230e1db229cff8029217cf623c767ea5d60bfbd42729ea54d5"
+checksum = "eeb8be209bb1c96b7c177c7420d26e04eccacb0eeae6b980e35fcb74678107e0"
 dependencies = [
  "matches",
 ]

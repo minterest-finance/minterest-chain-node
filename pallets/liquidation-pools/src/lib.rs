@@ -44,9 +44,13 @@ pub struct LiquidationPoolData {
 	/// Balance Ration represents the percentage of Working pool value to be covered by value in
 	/// Liquidation Poll.
 	pub balance_ratio: Rate,
+	/// Maximum ideal balance during pool balancing
+	pub max_ideal_balance: Option<Balance>,
 }
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
+
+type BalanceResult = sp_std::result::Result<Balance, DispatchError>;
 
 #[frame_support::pallet]
 pub mod module {
@@ -112,10 +116,12 @@ pub mod module {
 		LiquidationPoolsBalanced,
 		///  Balancing period has been successfully changed: \[new_period\]
 		BalancingPeriodChanged(T::BlockNumber),
-		///  Deviation Threshold has been successfully changed: \[new_threshold_value\]
-		DeviationThresholdChanged(Rate),
-		///  Balance ratio has been successfully changed: \[new_threshold_value\]
-		BalanceRatioChanged(Rate),
+		///  Deviation Threshold has been successfully changed: \[pool_id, new_threshold_value\]
+		DeviationThresholdChanged(CurrencyId, Rate),
+		///  Balance ratio has been successfully changed: \[pool_id, new_threshold_value\]
+		BalanceRatioChanged(CurrencyId, Rate),
+		///  Maximum ideal balance has been successfully changed: \[pool_id, new_threshold_value\]
+		MaxIdealBalanceChanged(CurrencyId, Option<Balance>),
 	}
 
 	/// Balancing pool frequency.
@@ -225,14 +231,14 @@ pub mod module {
 			// Write new value into storage.
 			LiquidationPoolsData::<T>::mutate(pool_id, |x| x.deviation_threshold = new_deviation_threshold);
 
-			Self::deposit_event(Event::DeviationThresholdChanged(new_deviation_threshold));
+			Self::deposit_event(Event::DeviationThresholdChanged(pool_id, new_deviation_threshold));
 
 			Ok(().into())
 		}
 
 		/// Set new value of balance ratio.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `balance_ratio`: New value of deviation threshold.
+		/// - `balance_ratio`: New value of balance ratio.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_balance_ratio())]
@@ -259,7 +265,34 @@ pub mod module {
 			// Write new value into storage.
 			LiquidationPoolsData::<T>::mutate(pool_id, |x| x.balance_ratio = new_balance_ratio);
 
-			Self::deposit_event(Event::BalanceRatioChanged(new_balance_ratio));
+			Self::deposit_event(Event::BalanceRatioChanged(pool_id, new_balance_ratio));
+
+			Ok(().into())
+		}
+
+		/// Set new value of maximum ideal balance.
+		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// - `max_ideal_balance`: New value of maximum ideal balance.
+		///
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_max_ideal_balance())]
+		#[transactional]
+		pub fn set_max_ideal_balance(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			max_ideal_balance: Option<Balance>,
+		) -> DispatchResultWithPostInfo {
+			T::UpdateOrigin::ensure_origin(origin)?;
+
+			ensure!(
+				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+
+			// Write new value into storage.
+			LiquidationPoolsData::<T>::mutate(pool_id, |x| x.max_ideal_balance = max_ideal_balance);
+
+			Self::deposit_event(Event::MaxIdealBalanceChanged(pool_id, max_ideal_balance));
 
 			Ok(().into())
 		}
@@ -371,21 +404,12 @@ impl<T: Config> Pallet<T> {
 				 -> sp_std::result::Result<(Vec<LiquidationInformation>, Balance, Balance), DispatchError> {
 					let oracle_price =
 						T::PriceSource::get_underlying_price(*pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-					let balance_ratio = Self::liquidation_pools_data(pool_id).balance_ratio;
-
 					// Liquidation pool balance in USD: liquidation_pool_balance * oracle_price
 					let liquidation_pool_balance = Rate::from_inner(Self::get_pool_available_liquidity(*pool_id))
 						.checked_mul(&oracle_price)
 						.map(|x| x.into_inner())
 						.ok_or(Error::<T>::BalanceOverflow)?;
-
-					// Liquidation pool ideal balance in USD: liquidity_pool_balance * balance_ratio * oracle_price
-					let ideal_balance =
-						Rate::from_inner(T::LiquidityPoolsManager::get_pool_available_liquidity(*pool_id))
-							.checked_mul(&balance_ratio)
-							.and_then(|v| v.checked_mul(&oracle_price))
-							.map(|x| x.into_inner())
-							.ok_or(Error::<T>::BalanceOverflow)?;
+					let ideal_balance = Self::calculate_ideal_balance(*pool_id)?;
 
 					// If the pool is not balanced:
 					// oversupply = liquidation_pool_balance - ideal_balance
@@ -511,6 +535,28 @@ impl<T: Config> Pallet<T> {
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 		Ok((max_supply_amount, target_amount))
+	}
+
+	/// Calculates ideal balance for pool balancing
+	/// - `pool_id`: PoolID for which the ideal balance is calculated.
+	///
+	/// Returns minimum of (liquidity_pool_balance * balance_ratio * oracle_price) and
+	/// max_ideal_balance
+	pub fn calculate_ideal_balance(pool_id: CurrencyId) -> BalanceResult {
+		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+		let balance_ratio = Self::liquidation_pools_data(pool_id).balance_ratio;
+
+		// Liquidation pool ideal balance in USD: liquidity_pool_balance * balance_ratio * oracle_price
+		let ideal_balance = Rate::from_inner(T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id))
+			.checked_mul(&balance_ratio)
+			.and_then(|v| v.checked_mul(&oracle_price))
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::BalanceOverflow)?;
+
+		match Self::liquidation_pools_data(pool_id).max_ideal_balance {
+			Some(max_ideal_balance) => Ok(ideal_balance.min(max_ideal_balance)),
+			None => Ok(ideal_balance),
+		}
 	}
 }
 

@@ -6,6 +6,7 @@ use crate::{
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
+use pallet_traits::PoolsManager;
 use sp_runtime::traits::AccountIdConversion;
 use sp_runtime::FixedPointNumber;
 use sp_std::prelude::*;
@@ -94,7 +95,12 @@ runtime_benchmarks! {
 		RawOrigin::None,
 		borrower_lookup,
 		CurrencyId::DOT
-	)
+	) verify {
+		assert_eq!(LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT), 30_000_008_251_425_000_000_000);
+		assert_eq!(LiquidityPools::get_pool_available_liquidity(CurrencyId::ETH), 3_249_991_216_225_000_000_000);
+		assert_eq!(LiquidityPools::get_pool_available_liquidity(CurrencyId::KSM), 0);
+		assert_eq!(LiquidityPools::get_pool_available_liquidity(CurrencyId::BTC), 0);
+	}
 }
 
 #[cfg(test)]

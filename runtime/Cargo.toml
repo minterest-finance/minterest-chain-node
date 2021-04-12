@@ -68,12 +68,12 @@ liquidation-pools = { path = "../pallets/liquidation-pools", default-features = 
 dex = { path = "../pallets/dex", default-features = false }
 
 # ORML dependencies
-orml-currencies = { path = "../orml/currencies", default-features = false }
-orml-tokens = { path = "../orml/tokens", default-features = false }
-orml-traits = { path = "../orml/traits", default-features = false }
-orml-oracle = { path = "../orml/oracle", default-features = false }
-orml-oracle-rpc-runtime-api = { path = "../orml/oracle/rpc/runtime-api", default-features = false }
-orml-benchmarking = { path = "../orml/benchmarking", default-features = false, optional = true }
+orml-currencies = { version = "0.4.0", default-features = false }
+orml-tokens = { version = "0.4.0", default-features = false }
+orml-traits = { version = "0.4.0", default-features = false }
+orml-oracle = { version = "0.4.0", default-features = false }
+orml-oracle-rpc-runtime-api = { version = "0.4.0", default-features = false }
+orml-benchmarking = { version = "0.4.0", default-features = false, optional = true }
 
 [features]
 default = ["std"]

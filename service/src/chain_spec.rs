@@ -455,6 +455,7 @@ fn testnet_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
 					},
 				),
 				(
@@ -462,6 +463,7 @@ fn testnet_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
 					},
 				),
 				(
@@ -469,6 +471,7 @@ fn testnet_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
 					},
 				),
 				(
@@ -476,6 +479,7 @@ fn testnet_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
 					},
 				),
 			],
@@ -507,7 +511,7 @@ fn testnet_genesis(
 			phantom: Default::default(),
 		}),
 		mnt_token: Some(MntTokenConfig {
-			mnt_rate: FixedU128::saturating_from_integer(10),
+			mnt_rate: 10 * DOLLARS,
 			minted_pools: vec![CurrencyId::DOT, CurrencyId::ETH, CurrencyId::KSM, CurrencyId::BTC],
 			phantom: Default::default(),
 		}),

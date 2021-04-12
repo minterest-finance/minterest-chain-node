@@ -2,30 +2,22 @@
 
 use crate as mnt_token;
 use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::*, parameter_types};
+use frame_system as system;
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
+use sp_core::H256;
 use sp_runtime::{
-	traits::{AccountIdConversion, Zero},
+	testing::Header,
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
 	FixedPointNumber, ModuleId,
 };
-parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		Default::default()
-	};
-}
-
-pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
-pub const BLOCKS_PER_YEAR: u128 = 5_256_000;
+use test_helper::*;
 
 parameter_types! {
-	pub const BlocksPerYear: u128 = BLOCKS_PER_YEAR;
-	pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
-	pub const BlockHashCount: u64 = 250;
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
@@ -49,79 +41,19 @@ pub const ADMIN: AccountId = 0;
 pub fn admin() -> Origin {
 	Origin::signed(ADMIN)
 }
-
-impl frame_system::Config for Runtime {
-	type BaseCallFilter = ();
-	type Origin = Origin;
-	type Index = u64;
-	type BlockNumber = u64;
-	type Call = Call;
-	type Hash = sp_runtime::testing::H256;
-	type Hashing = sp_runtime::traits::BlakeTwo256;
-	type AccountId = u64;
-	type Lookup = sp_runtime::traits::IdentityLookup<Self::AccountId>;
-	type Header = sp_runtime::testing::Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = ();
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
-}
-
-type Amount = i128;
-impl orml_tokens::Config for Runtime {
-	type Event = Event;
-	type Balance = Balance;
-	type Amount = Amount;
-	type CurrencyId = CurrencyId;
-	type WeightInfo = ();
-	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
-}
-
-type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
-impl orml_currencies::Config for Runtime {
-	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Runtime>;
-	type NativeCurrency = NativeCurrency;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
-	type WeightInfo = ();
+ord_parameter_types! {
+	pub const ZeroAdmin: AccountId = 0;
 }
 
 pub struct MockPriceSource;
 
-impl liquidity_pools::Config for Runtime {
-	type MultiCurrency = orml_tokens::Module<Runtime>;
-	type PriceSource = MockPriceSource;
-	type ModuleId = LiquidityPoolsModuleId;
-	type LiquidityPoolAccountId = LiquidityPoolAccountId;
-	type InitialExchangeRate = InitialExchangeRate;
-	type EnabledCurrencyPair = EnabledCurrencyPair;
-	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
-	type EnabledWrappedTokensId = EnabledWrappedTokensId;
-}
+mock_impl_system_config!(Runtime);
+mock_impl_orml_tokens_config!(Runtime);
+mock_impl_orml_currencies_config!(Runtime, CurrencyId::MNT);
+mock_impl_liquidity_pools_config!(Runtime);
+mock_impl_minterest_model_config!(Runtime, ZeroAdmin);
+mock_impl_controller_config!(Runtime, ZeroAdmin); 
 
-impl minterest_model::Config for Runtime {
-	type Event = Event;
-	type BlocksPerYear = BlocksPerYear;
-	type ModelUpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-	type WeightInfo = ();
-}
-
-impl controller::Config for Runtime {
-	type Event = Event;
-	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
-	type MaxBorrowCap = MaxBorrowCap;
-	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-	type ControllerWeightInfo = ();
-}
 
 impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
@@ -139,9 +71,6 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
-ord_parameter_types! {
-	pub const ZeroAdmin: AccountId = 0;
-}
 
 construct_runtime!(
 	pub enum Runtime where
