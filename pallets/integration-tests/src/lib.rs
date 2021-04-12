@@ -11,7 +11,10 @@ mod tests {
 	use frame_support::{assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
 	use frame_system::{self as system, offchain::SendTransactionTypes, EnsureSignedBy};
 	use liquidity_pools::{Pool, PoolUserData};
-	pub use minterest_primitives::currency::{BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MNT};
+	pub use minterest_primitives::currency::{
+		CurrencyType::{UnderlyingAsset, WrappedToken},
+		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MNT,
+	};
 	use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 	use orml_currencies::Currency;
 	use orml_traits::{parameter_type_with_key, MultiCurrency};
@@ -71,8 +74,8 @@ mod tests {
 		pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 		pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 		pub InitialExchangeRate: Rate = Rate::one();
-		pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_underlying_assets_ids();
-		pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_wrapped_tokens_ids();
+		pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
+		pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 	}
 
 	pub struct WhitelistMembers;

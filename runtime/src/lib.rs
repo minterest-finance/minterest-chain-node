@@ -16,8 +16,7 @@ mod tests;
 mod weights;
 mod weights_test;
 
-pub use controller_rpc_runtime_api::PoolState;
-pub use controller_rpc_runtime_api::UserPoolBalanceData;
+pub use controller_rpc_runtime_api::{PoolState, UserPoolBalanceData};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::fg_primitives;
@@ -42,7 +41,10 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 pub use minterest_primitives::{
-	currency::{BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT},
+	currency::{
+		CurrencyType::{UnderlyingAsset, WrappedToken},
+		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
+	},
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index, Moment,
 	Operation, Price, Rate, Signature,
 };
@@ -394,8 +396,8 @@ impl orml_currencies::Config for Runtime {
 parameter_types! {
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub const InitialExchangeRate: Rate = INITIAL_EXCHANGE_RATE;
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_underlying_assets_ids();
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_wrapped_tokens_ids();
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
 impl liquidity_pools::Config for Runtime {

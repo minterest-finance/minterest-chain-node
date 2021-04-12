@@ -38,6 +38,7 @@ type BalanceResult = result::Result<Balance, DispatchError>;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
+	use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + controller::Config + SendTransactionTypes<Call<Self>> {
@@ -133,7 +134,7 @@ pub mod module {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_finalize(_block_number: T::BlockNumber) {
-			CurrencyId::get_enabled_underlying_assets_ids()
+			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 				.iter()
 				.for_each(|&underlying_id| {
 					Self::transfer_protocol_interest(underlying_id);

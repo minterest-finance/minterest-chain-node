@@ -51,6 +51,7 @@ mod mock;
 mod tests;
 
 pub mod weights;
+use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 pub use weights::WeightInfo;
 
 /// RiskManager metadata
@@ -347,7 +348,7 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 	fn _offchain_worker() -> Result<(), OffchainErr> {
 		// Get available assets list
-		let underlying_asset_ids: Vec<CurrencyId> = CurrencyId::get_enabled_underlying_assets_ids()
+		let underlying_asset_ids: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
 			.map(|&underlying_id| underlying_id)
 			.collect();

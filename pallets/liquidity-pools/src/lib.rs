@@ -10,6 +10,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{pallet_prelude::*, traits::Get};
+use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 use minterest_primitives::{Balance, CurrencyId, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
@@ -389,7 +390,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// - `who`: AccountId for which the pool array is returned.
 	pub fn get_is_collateral_pools(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
-		let mut pools: Vec<(CurrencyId, Balance)> = CurrencyId::get_enabled_underlying_assets_ids()
+		let mut pools: Vec<(CurrencyId, Balance)> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
 			.filter_map(|&pool_id| {
 				let wrapped_id = pool_id.get_wrapped_id_by_underlying_asset_id()?;

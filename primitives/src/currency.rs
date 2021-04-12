@@ -38,6 +38,24 @@ macro_rules! create_currency_id {
 			}
 		}
 
+		impl CurrencyId {
+			pub fn get_enabled_tokens_in_protocol(token_type: CurrencyType) -> Vec<CurrencyId> {
+				let mut enabled_tokens = vec![];
+				$(
+					if token_type == $ctype {
+						enabled_tokens.push(
+							match $ctype {
+								Native => CurrencyId::Native(TokenSymbol::$symbol),
+								UnderlyingAsset => CurrencyId::UnderlyingAsset(TokenSymbol::$symbol),
+								WrappedToken => CurrencyId::WrappedToken(TokenSymbol::$symbol),
+							}
+						);
+					}
+				)*
+				enabled_tokens
+			}
+		}
+
 		$(pub const $symbol: CurrencyId = match $ctype {
 			Native => CurrencyId::Native(TokenSymbol::$symbol),
 			UnderlyingAsset => CurrencyId::UnderlyingAsset(TokenSymbol::$symbol),
@@ -110,14 +128,6 @@ impl CurrencyId {
 			None
 		}
 	}
-	// TODO write dynamic
-	pub fn get_enabled_underlying_assets_ids() -> Vec<CurrencyId> {
-		vec![DOT, ETH, KSM, BTC]
-	}
-	// TODO write dynamic
-	pub fn get_enabled_wrapped_tokens_ids() -> Vec<CurrencyId> {
-		vec![MDOT, METH, MKSM, MBTC]
-	}
 }
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
@@ -167,18 +177,15 @@ mod tests {
 	}
 
 	#[test]
-	fn get_enabled_underlying_assets_ids_should_work() {
+	fn get_enabled_tokens_in_protocol_should_work() {
+		assert_eq!(CurrencyId::get_enabled_tokens_in_protocol(Native), vec![MNT]);
 		assert_eq!(
-			CurrencyId::get_enabled_underlying_assets_ids(),
-			vec![DOT, ETH, KSM, BTC]
+			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset),
+			vec![DOT, KSM, BTC, ETH]
 		);
-	}
-
-	#[test]
-	fn get_enabled_wrapped_tokens_ids_should_work() {
 		assert_eq!(
-			CurrencyId::get_enabled_wrapped_tokens_ids(),
-			vec![MDOT, METH, MKSM, MBTC]
+			CurrencyId::get_enabled_tokens_in_protocol(WrappedToken),
+			vec![MDOT, MKSM, MBTC, METH]
 		);
 	}
 }
