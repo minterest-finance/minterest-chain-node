@@ -387,7 +387,7 @@ impl<T: Config> Pallet<T> {
 		// mnt_supplier_index = mnt_supply_index
 		let supply_index = MntPoolsState::<T>::get(underlying_id).supply_state.index;
 
-		let mut supplier_index = MntSupplierIndex::<T>::get(underlying_id, supplier).unwrap_or_else(|| Rate::one());
+		let mut supplier_index = MntSupplierIndex::<T>::get(underlying_id, supplier).unwrap_or_else(Rate::one);
 
 		let delta_index = supply_index
 			.checked_sub(&supplier_index)

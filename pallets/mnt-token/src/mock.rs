@@ -52,8 +52,7 @@ mock_impl_orml_tokens_config!(Runtime);
 mock_impl_orml_currencies_config!(Runtime, CurrencyId::MNT);
 mock_impl_liquidity_pools_config!(Runtime);
 mock_impl_minterest_model_config!(Runtime, ZeroAdmin);
-mock_impl_controller_config!(Runtime, ZeroAdmin); 
-
+mock_impl_controller_config!(Runtime, ZeroAdmin);
 
 impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
@@ -70,7 +69,6 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
-
 
 construct_runtime!(
 	pub enum Runtime where

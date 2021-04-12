@@ -15,6 +15,7 @@ sp-runtime = { version = "3.0.0", default-features = false }
 sp-std = { version = "3.0.0", default-features = false }
 sp-arithmetic = { version = "3.0.0", default-features = false }
 
+orml-tokens = { version = "0.4.0", default-features = false }
 orml-utilities = { version = "0.4.0", default-features = false }
 orml-traits = { version = "0.4.0", default-features = false }
 
