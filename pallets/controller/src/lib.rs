@@ -10,7 +10,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, transactional};
-use frame_system::{ensure_signed, pallet_prelude::*};
+use frame_system::pallet_prelude::*;
 use liquidity_pools::Pool;
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
@@ -122,8 +122,6 @@ pub mod module {
 		InsufficientLiquidity,
 		/// Pool not found.
 		PoolNotFound,
-		/// Not enough balance to deposit or withdraw or repay.
-		NotEnoughBalance,
 		/// Balance exceeds maximum value.
 		/// Only happened when the balance went wrong and balance exceeds the integer type.
 		BalanceOverflow,
@@ -162,10 +160,6 @@ pub mod module {
 		OperationIsPaused(CurrencyId, Operation),
 		/// The operation is unpaused: \[pool_id, operation\]
 		OperationIsUnPaused(CurrencyId, Operation),
-		/// Interest balance replenished: \[pool_id, amount\]
-		DepositedInterest(CurrencyId, Balance),
-		/// Interest balance redeemed: \[pool_id, amount\]
-		RedeemedInterest(CurrencyId, Balance),
 		/// Borrow cap changed: \[pool_id, new_cap\]
 		BorrowCapChanged(CurrencyId, Option<Balance>),
 		/// Protocol operation mode switched: \[is_whitelist_mode\]
@@ -280,35 +274,6 @@ pub mod module {
 			});
 
 			Self::deposit_event(Event::OperationIsUnPaused(pool_id, operation));
-			Ok(().into())
-		}
-
-		// FIXME: unused functionality
-		/// Replenishes the interest balance.
-		#[pallet::weight(0)]
-		#[transactional]
-		pub fn deposit_interest(
-			origin: OriginFor<T>,
-			pool_id: CurrencyId,
-			amount: Balance,
-		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			Self::do_deposit_interest(&sender, pool_id, amount)?;
-			Self::deposit_event(Event::DepositedInterest(pool_id, amount));
-			Ok(().into())
-		}
-
-		/// Redeem the interest balance.
-		#[pallet::weight(0)]
-		#[transactional]
-		pub fn redeem_interest(
-			origin: OriginFor<T>,
-			pool_id: CurrencyId,
-			amount: Balance,
-		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			Self::do_redeem_interest(&sender, pool_id, amount)?;
-			Self::deposit_event(Event::RedeemedInterest(pool_id, amount));
 			Ok(().into())
 		}
 
@@ -931,64 +896,5 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(interest_factor)
-	}
-}
-
-// Admin functions
-impl<T: Config> Pallet<T> {
-	// FIXME It is possible to remove this function
-	/// Replenishes the protocol interest balance.
-	/// - `who`: Account ID of the administrator who replenishes the interest.
-	/// - `pool_id`: Pool ID of the replenishing pool.
-	/// - `amount`: Amount to replenish protocol interest in the pool.
-	fn do_deposit_interest(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
-		ensure!(pool_id.is_enabled_underlying_asset_id(), Error::<T>::PoolNotFound);
-
-		ensure!(
-			amount <= T::MultiCurrency::free_balance(pool_id, &who),
-			Error::<T>::NotEnoughBalance
-		);
-
-		// transfer amount to this pool
-		T::MultiCurrency::transfer(pool_id, &who, &T::LiquidityPoolsManager::pools_account_id(), amount)?;
-
-		// calculate new protocol interest balance
-		let current_interest_balance = T::LiquidityPoolsManager::get_pool_total_protocol_interest(pool_id);
-
-		let new_interest_balance = current_interest_balance
-			.checked_add(amount)
-			.ok_or(Error::<T>::BalanceOverflow)?;
-
-		<LiquidityPools<T>>::set_pool_total_protocol_interest(pool_id, new_interest_balance);
-
-		Ok(())
-	}
-
-	/// Burns the protocol interest balance.
-	/// - `who`: Account ID of the administrator who burns the interest.
-	/// - `pool_id`: Pool ID in which the interest is decreasing.
-	/// - `amount`: Amount to redeem protocol interest in the pool.
-	fn do_redeem_interest(who: &T::AccountId, pool_id: CurrencyId, amount: Balance) -> DispatchResult {
-		ensure!(pool_id.is_enabled_underlying_asset_id(), Error::<T>::PoolNotFound);
-
-		ensure!(
-			amount <= T::MultiCurrency::free_balance(pool_id, &T::LiquidityPoolsManager::pools_account_id()),
-			Error::<T>::NotEnoughBalance
-		);
-
-		// calculate new protocol interest balance
-		let current_total_protocol_interest = T::LiquidityPoolsManager::get_pool_total_protocol_interest(pool_id);
-		ensure!(amount <= current_total_protocol_interest, Error::<T>::NotEnoughBalance);
-
-		let new_interest_balance = current_total_protocol_interest
-			.checked_sub(amount)
-			.ok_or(Error::<T>::NotEnoughBalance)?;
-
-		<LiquidityPools<T>>::set_pool_total_protocol_interest(pool_id, new_interest_balance);
-
-		// transfer amount from this pool
-		T::MultiCurrency::transfer(pool_id, &T::LiquidityPoolsManager::pools_account_id(), &who, amount)?;
-
-		Ok(())
 	}
 }

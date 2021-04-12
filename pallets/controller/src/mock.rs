@@ -149,20 +149,6 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn pool_total_protocol_interest(mut self, pool_id: CurrencyId, total_protocol_interest: Balance) -> Self {
-		self.endowed_accounts
-			.push((TestPools::pools_account_id(), pool_id, total_protocol_interest));
-		self.pools.push((
-			pool_id,
-			Pool {
-				total_borrowed: Balance::zero(),
-				borrow_index: Rate::saturating_from_rational(1, 1),
-				total_protocol_interest,
-			},
-		));
-		self
-	}
-
 	pub fn pool_mock(mut self, pool_id: CurrencyId) -> Self {
 		self.pools.push((
 			pool_id,

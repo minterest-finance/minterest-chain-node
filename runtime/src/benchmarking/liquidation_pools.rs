@@ -20,6 +20,9 @@ runtime_benchmarks! {
 	set_balance_ratio {}: _(RawOrigin::Root, CurrencyId::DOT,  10u128.pow(18))
 	verify { assert_eq!(LiquidationPools::liquidation_pools_data(CurrencyId::DOT).balance_ratio, Rate::one()) }
 
+	set_max_ideal_balance {}: _(RawOrigin::Root, CurrencyId::DOT,  Some(10u128.pow(18)))
+	verify { assert_eq!(LiquidationPools::liquidation_pools_data(CurrencyId::DOT).max_ideal_balance, Some(10u128.pow(18))) }
+
 	balance_liquidation_pools {
 		set_balance(
 			CurrencyId::ETH,
@@ -58,6 +61,13 @@ mod tests {
 	fn test_set_balance_ratio() {
 		new_test_ext().execute_with(|| {
 			assert_ok!(test_benchmark_set_balance_ratio());
+		})
+	}
+
+	#[test]
+	fn test_set_max_ideal_balance() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(test_benchmark_set_max_ideal_balance());
 		})
 	}
 
