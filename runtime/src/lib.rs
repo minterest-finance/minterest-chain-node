@@ -114,6 +114,7 @@ parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
+	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
 }
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -463,6 +464,10 @@ impl risk_manager::Config for Runtime {
 	type RiskManagerWeightInfo = weights::risk_manager::WeightInfo<Runtime>;
 }
 
+parameter_types! {
+	pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
+}
+
 impl mnt_token::Config for Runtime {
 	type Event = Event;
 	type PriceSource = Prices;
@@ -472,6 +477,7 @@ impl mnt_token::Config for Runtime {
 	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 	type MultiCurrency = Currencies;
 	type ControllerAPI = Controller;
+	type MntTokenAccountId = MntTokenAccountId;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime

@@ -512,6 +512,7 @@ fn testnet_genesis(
 		}),
 		mnt_token: Some(MntTokenConfig {
 			mnt_rate: 10 * DOLLARS,
+			mnt_claim_treshold: 0, // disable by default
 			minted_pools: vec![CurrencyId::DOT, CurrencyId::ETH, CurrencyId::KSM, CurrencyId::BTC],
 			phantom: Default::default(),
 		}),

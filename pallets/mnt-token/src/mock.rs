@@ -20,6 +20,8 @@ use test_helper::*;
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
+	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
+	pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
 		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
@@ -95,6 +97,7 @@ impl mnt_token::Config for Runtime {
 	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 	type MultiCurrency = Currencies;
 	type ControllerAPI = Controller;
+	type MntTokenAccountId = MntTokenAccountId;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -148,6 +151,12 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn mnt_acc_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts
+			.push((MntToken::get_account_id(), currency_id, balance));
+		self
+	}
+
 	pub fn pool_user_data(
 		mut self,
 		pool_id: CurrencyId,
@@ -190,6 +199,7 @@ impl ExtBuilder {
 
 		mnt_token::GenesisConfig::<Runtime> {
 			mnt_rate: self.mnt_rate,
+			mnt_claim_treshold: 0, // disable by default
 			minted_pools: self.minted_pools,
 			phantom: PhantomData,
 		}

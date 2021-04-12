@@ -97,6 +97,10 @@ pub mod module {
 
 		/// Public API of controller pallet
 		type ControllerAPI: ControllerAPI<Self::AccountId>;
+
+		#[pallet::constant]
+		/// The Mnt-token's account id, keep assets that should be distributed to users
+		type MntTokenAccountId: Get<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -147,6 +151,11 @@ pub mod module {
 	#[pallet::getter(fn mnt_rate)]
 	type MntRate<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
+	/// The threshold above which the flywheel transfers MNT
+	#[pallet::storage]
+	#[pallet::getter(fn mnt_claim_treshold)]
+	type MntClaimTreshold<T: Config> = StorageValue<_, Balance, ValueQuery>;
+
 	/// MNT minting speed for each pool
 	/// Doubling this number shows how much MNT goes to all suppliers and borrowers of particular
 	/// pool.
@@ -180,6 +189,7 @@ pub mod module {
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub mnt_rate: Balance,
+		pub mnt_claim_treshold: Balance,
 		pub minted_pools: Vec<CurrencyId>,
 		pub phantom: PhantomData<T>,
 	}
@@ -189,6 +199,7 @@ pub mod module {
 		fn default() -> Self {
 			GenesisConfig {
 				mnt_rate: Balance::zero(),
+				mnt_claim_treshold: Balance::zero(),
 				minted_pools: vec![],
 				phantom: PhantomData,
 			}
@@ -199,6 +210,7 @@ pub mod module {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			MntRate::<T>::put(&self.mnt_rate);
+			MntClaimTreshold::<T>::put(&self.mnt_claim_treshold);
 			for currency_id in &self.minted_pools {
 				MntSpeeds::<T>::insert(currency_id, Balance::zero());
 				MntPoolsState::<T>::insert(currency_id, MntPoolState::new());
@@ -276,6 +288,11 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
+	/// Gets module account id.
+	fn get_account_id() -> T::AccountId {
+		T::MntTokenAccountId::get()
+	}
+
 	/// Distribute mnt token to borrower. It should be called after update_mnt_borrow_index
 	#[allow(dead_code)] // TODO remove this
 	fn distribute_borrower_mnt(underlying_id: CurrencyId, borrower: &T::AccountId) -> DispatchResult {
