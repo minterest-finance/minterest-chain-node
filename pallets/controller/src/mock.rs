@@ -7,8 +7,9 @@ use frame_system as system;
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
+pub use minterest_primitives::currency::{BTC, DOT, ETH, KSM, MDOT, METH, MNT};
 pub(crate) use minterest_primitives::Price;
-pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
+pub use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
@@ -47,7 +48,7 @@ ord_parameter_types! {
 
 mock_impl_system_config!(Runtime);
 mock_impl_orml_tokens_config!(Runtime);
-mock_impl_orml_currencies_config!(Runtime, CurrencyId::MNT);
+mock_impl_orml_currencies_config!(Runtime, MNT);
 mock_impl_liquidity_pools_config!(Runtime);
 mock_impl_minterest_model_config!(Runtime, OneAlice);
 
@@ -55,18 +56,8 @@ parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
-		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
-		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
-		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
-		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
-	];
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.underlying_id)
-			.collect();
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.wrapped_id)
-			.collect();
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_underlying_assets_ids();
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_wrapped_tokens_ids();
 }
 
 thread_local! {
@@ -207,19 +198,19 @@ impl ExtBuilder {
 	}
 
 	pub fn alice_deposit_60_dot(self) -> Self {
-		self.user_balance(ALICE, CurrencyId::DOT, dollars(40_u128))
-			.user_balance(ALICE, CurrencyId::MDOT, dollars(60_u128))
-			.pool_balance(CurrencyId::DOT, dollars(60_u128))
-			.pool_mock(CurrencyId::DOT)
-			.pool_user_data(CurrencyId::DOT, ALICE, Balance::zero(), Rate::zero(), false, 0)
+		self.user_balance(ALICE, DOT, dollars(40_u128))
+			.user_balance(ALICE, MDOT, dollars(60_u128))
+			.pool_balance(DOT, dollars(60_u128))
+			.pool_mock(DOT)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false, 0)
 	}
 
 	pub fn alice_deposit_20_eth(self) -> Self {
-		self.user_balance(ALICE, CurrencyId::ETH, dollars(80_u128))
-			.user_balance(ALICE, CurrencyId::METH, dollars(20_u128))
-			.pool_balance(CurrencyId::ETH, dollars(20_u128))
-			.pool_mock(CurrencyId::ETH)
-			.pool_user_data(CurrencyId::ETH, ALICE, Balance::zero(), Rate::zero(), false, 0)
+		self.user_balance(ALICE, ETH, dollars(80_u128))
+			.user_balance(ALICE, METH, dollars(20_u128))
+			.pool_balance(ETH, dollars(20_u128))
+			.pool_mock(ETH)
+			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), false, 0)
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
@@ -236,7 +227,7 @@ impl ExtBuilder {
 		controller::GenesisConfig::<Runtime> {
 			controller_dates: vec![
 				(
-					CurrencyId::DOT,
+					DOT,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
@@ -247,7 +238,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::ETH,
+					ETH,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
@@ -258,7 +249,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
@@ -271,7 +262,7 @@ impl ExtBuilder {
 			],
 			pause_keepers: vec![
 				(
-					CurrencyId::ETH,
+					ETH,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,
@@ -281,7 +272,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::DOT,
+					DOT,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,
@@ -291,7 +282,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					PauseKeeper {
 						deposit_paused: true,
 						redeem_paused: true,
@@ -301,7 +292,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,
@@ -326,7 +317,7 @@ impl ExtBuilder {
 		minterest_model::GenesisConfig {
 			minterest_model_dates: vec![
 				(
-					CurrencyId::DOT,
+					DOT,
 					MinterestModelData {
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::zero(),
@@ -335,7 +326,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::ETH,
+					ETH,
 					MinterestModelData {
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::zero(),
@@ -344,7 +335,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					MinterestModelData {
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::zero(),

@@ -7,7 +7,8 @@ use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
-use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
+pub use minterest_primitives::currency::{BTC, DOT, ETH, MDOT};
+use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
@@ -52,18 +53,8 @@ parameter_types! {
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
-		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
-		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
-		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
-		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
-	];
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.underlying_id)
-			.collect();
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.wrapped_id)
-			.collect();
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_underlying_assets_ids();
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_wrapped_tokens_ids();
 }
 
 pub struct WhitelistMembers;
@@ -163,7 +154,7 @@ impl ExtBuilder {
 		risk_manager::GenesisConfig {
 			risk_manager_dates: vec![
 				(
-					CurrencyId::DOT,
+					DOT,
 					RiskManagerData {
 						max_attempts: 3,
 						min_partial_liquidation_sum: ONE_HUNDRED * DOLLARS,
@@ -172,7 +163,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					RiskManagerData {
 						max_attempts: 3,
 						min_partial_liquidation_sum: ONE_HUNDRED * DOLLARS,
@@ -181,7 +172,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::ETH,
+					ETH,
 					RiskManagerData {
 						max_attempts: 3,
 						min_partial_liquidation_sum: ONE_HUNDRED * DOLLARS,

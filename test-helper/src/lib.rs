@@ -104,13 +104,12 @@ macro_rules! mock_impl_liquidation_pools_config {
 		impl liquidation_pools::Config for $target {
 			type Event = Event;
 			type MultiCurrency = orml_tokens::Module<$target>;
-			type PriceSource = MockPriceSource;
 			type UnsignedPriority = MockLiquidityPoolsPriority;
-			type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
+			type PriceSource = MockPriceSource;
 			type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 			type LiquidationPoolAccountId = LiquidationPoolAccountId;
-			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
 			type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
 			type Dex = dex::Module<$target>;
 			type LiquidationPoolsWeightInfo = ();
 		}

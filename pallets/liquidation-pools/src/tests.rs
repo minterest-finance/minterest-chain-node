@@ -29,13 +29,9 @@ fn set_balancing_period_should_work() {
 fn set_deviation_threshold_should_work() {
 	ExternalityBuilder::default().build().execute_with(|| {
 		// Can be set to 0.0
-		assert_ok!(TestLiquidationPools::set_deviation_threshold(
-			admin(),
-			CurrencyId::DOT,
-			0
-		));
+		assert_ok!(TestLiquidationPools::set_deviation_threshold(admin(), DOT, 0));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pools_data(CurrencyId::DOT).deviation_threshold,
+			TestLiquidationPools::liquidation_pools_data(DOT).deviation_threshold,
 			Rate::zero()
 		);
 		let expected_event = Event::liquidation_pools(crate::Event::DeviationThresholdChanged(Rate::zero()));
@@ -44,11 +40,11 @@ fn set_deviation_threshold_should_work() {
 		// Can be set to 1.0
 		assert_ok!(TestLiquidationPools::set_deviation_threshold(
 			admin(),
-			CurrencyId::DOT,
+			DOT,
 			1_000_000_000_000_000_000u128
 		));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pools_data(CurrencyId::DOT).deviation_threshold,
+			TestLiquidationPools::liquidation_pools_data(DOT).deviation_threshold,
 			Rate::one()
 		);
 		let expected_event = Event::liquidation_pools(crate::Event::DeviationThresholdChanged(Rate::one()));
@@ -56,19 +52,19 @@ fn set_deviation_threshold_should_work() {
 
 		// Can not be set grater than 1.0
 		assert_noop!(
-			TestLiquidationPools::set_deviation_threshold(admin(), CurrencyId::DOT, 2_000_000_000_000_000_000u128),
+			TestLiquidationPools::set_deviation_threshold(admin(), DOT, 2_000_000_000_000_000_000u128),
 			Error::<Test>::NotValidDeviationThresholdValue
 		);
 
 		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(
-			TestLiquidationPools::set_deviation_threshold(alice(), CurrencyId::DOT, 10),
+			TestLiquidationPools::set_deviation_threshold(alice(), DOT, 10),
 			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestLiquidationPools::set_deviation_threshold(admin(), CurrencyId::MDOT, 10),
+			TestLiquidationPools::set_deviation_threshold(admin(), MDOT, 10),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
@@ -78,9 +74,9 @@ fn set_deviation_threshold_should_work() {
 fn set_balance_ratio_should_work() {
 	ExternalityBuilder::default().build().execute_with(|| {
 		// Can be set to 0.0
-		assert_ok!(TestLiquidationPools::set_balance_ratio(admin(), CurrencyId::DOT, 0));
+		assert_ok!(TestLiquidationPools::set_balance_ratio(admin(), DOT, 0));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pools_data(CurrencyId::DOT).balance_ratio,
+			TestLiquidationPools::liquidation_pools_data(DOT).balance_ratio,
 			Rate::zero()
 		);
 		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(Rate::zero()));
@@ -89,11 +85,11 @@ fn set_balance_ratio_should_work() {
 		// Can be set to 1.0
 		assert_ok!(TestLiquidationPools::set_balance_ratio(
 			admin(),
-			CurrencyId::DOT,
+			DOT,
 			1_000_000_000_000_000_000u128
 		));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pools_data(CurrencyId::DOT).balance_ratio,
+			TestLiquidationPools::liquidation_pools_data(DOT).balance_ratio,
 			Rate::one()
 		);
 		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(Rate::one()));
@@ -101,19 +97,16 @@ fn set_balance_ratio_should_work() {
 
 		// Can not be set grater than 1.0
 		assert_noop!(
-			TestLiquidationPools::set_balance_ratio(admin(), CurrencyId::DOT, 2_000_000_000_000_000_000u128),
+			TestLiquidationPools::set_balance_ratio(admin(), DOT, 2_000_000_000_000_000_000u128),
 			Error::<Test>::NotValidBalanceRatioValue
 		);
 
 		// The dispatch origin of this call must be Root or half MinterestCouncil.
-		assert_noop!(
-			TestLiquidationPools::set_balance_ratio(alice(), CurrencyId::DOT, 10),
-			BadOrigin
-		);
+		assert_noop!(TestLiquidationPools::set_balance_ratio(alice(), DOT, 10), BadOrigin);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestLiquidationPools::set_balance_ratio(admin(), CurrencyId::MDOT, 10),
+			TestLiquidationPools::set_balance_ratio(admin(), MDOT, 10),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});

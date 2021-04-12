@@ -8,7 +8,8 @@ use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
-use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
+pub use minterest_primitives::currency::{BTC, DOT, ETH, KSM, MBTC, MDOT, MKSM, MNT};
+use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
@@ -56,24 +57,14 @@ parameter_types! {
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
-		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
-		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
-		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
-		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
-	];
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.underlying_id)
-			.collect();
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.wrapped_id)
-			.collect();
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_underlying_assets_ids();
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_wrapped_tokens_ids();
 }
 
 pub struct WhitelistMembers;
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
-mock_impl_orml_currencies_config!(Test, CurrencyId::MNT);
+mock_impl_orml_currencies_config!(Test, MNT);
 mock_impl_liquidity_pools_config!(Test);
 mock_impl_liquidation_pools_config!(Test);
 mock_impl_controller_config!(Test, OneAlice);
@@ -140,17 +131,17 @@ impl Default for ExtBuilder {
 		Self {
 			endowed_accounts: vec![
 				// seed: initial DOTs. Initial MINT to pay for gas.
-				(ALICE, CurrencyId::MNT, ONE_MILL_DOLLARS),
-				(ALICE, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
-				(ALICE, CurrencyId::ETH, ONE_HUNDRED_DOLLARS),
-				(ALICE, CurrencyId::KSM, ONE_HUNDRED_DOLLARS),
-				(BOB, CurrencyId::MNT, ONE_MILL_DOLLARS),
-				(BOB, CurrencyId::DOT, ONE_HUNDRED_DOLLARS),
+				(ALICE, MNT, ONE_MILL_DOLLARS),
+				(ALICE, DOT, ONE_HUNDRED_DOLLARS),
+				(ALICE, ETH, ONE_HUNDRED_DOLLARS),
+				(ALICE, KSM, ONE_HUNDRED_DOLLARS),
+				(BOB, MNT, ONE_MILL_DOLLARS),
+				(BOB, DOT, ONE_HUNDRED_DOLLARS),
 				// seed: initial interest, equal 10_000$
-				(TestPools::pools_account_id(), CurrencyId::ETH, TEN_THOUSAND_DOLLARS),
-				(TestPools::pools_account_id(), CurrencyId::DOT, TEN_THOUSAND_DOLLARS),
+				(TestPools::pools_account_id(), ETH, TEN_THOUSAND_DOLLARS),
+				(TestPools::pools_account_id(), DOT, TEN_THOUSAND_DOLLARS),
 				// seed: initial interest = 10_000$, initial pool balance = 1_000_000$
-				(TestPools::pools_account_id(), CurrencyId::KSM, ONE_MILL_DOLLARS),
+				(TestPools::pools_account_id(), KSM, ONE_MILL_DOLLARS),
 			],
 			pools: vec![],
 		}
@@ -193,7 +184,7 @@ impl ExtBuilder {
 			pools: self.pools,
 			pool_user_data: vec![
 				(
-					CurrencyId::DOT,
+					DOT,
 					ALICE,
 					PoolUserData {
 						total_borrowed: 0,
@@ -203,7 +194,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::ETH,
+					ETH,
 					ALICE,
 					PoolUserData {
 						total_borrowed: 0,
@@ -213,7 +204,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					ALICE,
 					PoolUserData {
 						total_borrowed: 0,
@@ -223,7 +214,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					ALICE,
 					PoolUserData {
 						total_borrowed: 0,
@@ -233,7 +224,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::DOT,
+					DOT,
 					BOB,
 					PoolUserData {
 						total_borrowed: 0,
@@ -243,7 +234,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					BOB,
 					PoolUserData {
 						total_borrowed: 0,
@@ -260,7 +251,7 @@ impl ExtBuilder {
 		controller::GenesisConfig::<Test> {
 			controller_dates: vec![
 				(
-					CurrencyId::ETH,
+					ETH,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
@@ -271,7 +262,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::DOT,
+					DOT,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
@@ -282,7 +273,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
@@ -293,7 +284,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
@@ -306,7 +297,7 @@ impl ExtBuilder {
 			],
 			pause_keepers: vec![
 				(
-					CurrencyId::ETH,
+					ETH,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,
@@ -316,7 +307,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::DOT,
+					DOT,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,
@@ -326,7 +317,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					PauseKeeper {
 						deposit_paused: true,
 						redeem_paused: true,
@@ -336,7 +327,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,

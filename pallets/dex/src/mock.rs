@@ -8,8 +8,8 @@ use frame_support::{construct_runtime, ord_parameter_types, parameter_types};
 use frame_system as system;
 use frame_system::offchain::SendTransactionTypes;
 use frame_system::EnsureSignedBy;
-use minterest_primitives::currency::TokenSymbol;
-pub(crate) use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
+pub use minterest_primitives::currency::DOT;
+pub(crate) use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
 pub(crate) use pallet_traits::{PoolsManager, PriceProvider};
 use sp_core::H256;
@@ -32,18 +32,8 @@ parameter_types! {
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
-		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
-		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
-		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
-		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
-	];
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.underlying_id)
-			.collect();
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.wrapped_id)
-			.collect();
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_underlying_assets_ids();
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_wrapped_tokens_ids();
 }
 
 mock_impl_system_config!(Runtime);
@@ -81,7 +71,6 @@ construct_runtime!(
 	}
 );
 
-pub const DOT: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::DOT);
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub fn dollars<T: Into<u128>>(d: T) -> Balance {
 	DOLLARS.saturating_mul(d.into())

@@ -88,7 +88,7 @@ impl CurrencyId {
 	pub fn get_underlying_asset_id_by_wrapped_id(&self) -> Option<CurrencyId> {
 		if self.is_enabled_wrapped_token_id() {
 			match self {
-				CurrencyId::UnderlyingAsset(currency_id) => Some(CurrencyId::WrappedToken(
+				CurrencyId::WrappedToken(currency_id) => Some(CurrencyId::UnderlyingAsset(
 					TokenSymbol::try_from(*currency_id as u8 - 1_u8).ok()?,
 				)),
 				_ => None,

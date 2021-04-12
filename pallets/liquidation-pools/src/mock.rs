@@ -4,8 +4,9 @@ use crate as liquidation_pools;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
 use frame_system::EnsureSignedBy;
+pub use minterest_primitives::currency::{DOT, MDOT, MNT};
 use minterest_primitives::Price;
-pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};
+pub use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
@@ -35,31 +36,23 @@ frame_support::construct_runtime!(
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		// Minterest pallets
 		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, ValidateUnsigned},
+		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestDex: dex::{Module, Storage, Call, Event<T>}
 	}
 );
 
 mock_impl_system_config!(Test);
+mock_impl_liquidity_pools_config!(Test);
 mock_impl_orml_tokens_config!(Test);
-mock_impl_orml_currencies_config!(Test, CurrencyId::MNT);
+mock_impl_orml_currencies_config!(Test, MNT);
 mock_impl_dex_config!(Test);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
-		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
-		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
-		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
-		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
-	];
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.underlying_id)
-			.collect();
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.wrapped_id)
-			.collect();
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_underlying_assets_ids();
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_wrapped_tokens_ids();
 }
 
 pub struct MockPriceSource;
@@ -86,7 +79,9 @@ ord_parameter_types! {
 
 impl Config for Test {
 	type Event = Event;
+	type MultiCurrency = orml_tokens::Module<Test>;
 	type UnsignedPriority = LiquidityPoolsPriority;
+	type PriceSource = MockPriceSource;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
@@ -126,7 +121,7 @@ impl Default for ExternalityBuilder {
 	fn default() -> Self {
 		Self {
 			liquidation_pools: vec![(
-				CurrencyId::DOT,
+				DOT,
 				LiquidationPoolData {
 					deviation_threshold: Rate::saturating_from_rational(1, 10),
 					balance_ratio: Rate::saturating_from_rational(2, 10),
