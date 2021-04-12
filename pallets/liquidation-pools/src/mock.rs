@@ -36,7 +36,7 @@ frame_support::construct_runtime!(
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		// Minterest pallets
 		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, ValidateUnsigned},
-		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
+		TestLiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestDex: dex::{Module, Storage, Call, Event<T>}
 	}
 );

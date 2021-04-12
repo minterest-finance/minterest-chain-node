@@ -49,8 +49,6 @@ pub struct LiquidationPoolData {
 	pub max_ideal_balance: Option<Balance>,
 }
 
-type LiquidityPools<T> = liquidity_pools::Module<T>;
-
 type BalanceResult = sp_std::result::Result<Balance, DispatchError>;
 
 #[frame_support::pallet]
@@ -292,7 +290,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_enabled_underlying_asset_id(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
