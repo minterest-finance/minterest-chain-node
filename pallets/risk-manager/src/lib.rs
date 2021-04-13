@@ -359,10 +359,7 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 	fn _offchain_worker() -> Result<(), OffchainErr> {
 		// Get available assets list
-		let underlying_asset_ids: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.iter()
-			.map(|&underlying_id| underlying_id)
-			.collect();
+		let underlying_asset_ids: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 
 		if underlying_asset_ids.len().is_zero() {
 			return Ok(());

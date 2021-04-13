@@ -2,7 +2,8 @@ use super::utils::{
 	enable_is_collateral, enable_whitelist_mode_a_add_member, set_balance, set_oracle_price_for_all_pools,
 };
 use crate::{
-	AccountId, Balance, Currencies, CurrencyId, LiquidityPools, LiquidityPoolsModuleId, Origin, Rate, Runtime, DOLLARS,
+	AccountId, Balance, Currencies, LiquidityPools, LiquidityPoolsModuleId, Origin, Rate, Runtime, BTC, DOLLARS, DOT,
+	ETH, KSM, MBTC, MDOT, METH, MKSM,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
@@ -22,59 +23,31 @@ fn hypothetical_liquidity_setup() -> Result<(AccountId, AccountId), &'static str
 	set_oracle_price_for_all_pools::<Runtime>(2, Origin::root(), 0)?;
 
 	// set balance for users
-	set_balance(CurrencyId::MDOT, &borrower, 10_000 * DOLLARS)?;
-	set_balance(CurrencyId::METH, &borrower, 10_000 * DOLLARS)?;
-	set_balance(CurrencyId::MKSM, &borrower, 10_000 * DOLLARS)?;
-	set_balance(CurrencyId::MBTC, &borrower, 30_000 * DOLLARS)?;
-	set_balance(CurrencyId::MDOT, &lender, 20_000 * DOLLARS)?;
+	set_balance(MDOT, &borrower, 10_000 * DOLLARS)?;
+	set_balance(METH, &borrower, 10_000 * DOLLARS)?;
+	set_balance(MKSM, &borrower, 10_000 * DOLLARS)?;
+	set_balance(MBTC, &borrower, 30_000 * DOLLARS)?;
+	set_balance(MDOT, &lender, 20_000 * DOLLARS)?;
 
 	// set balance for Pools
-	set_balance(
-		CurrencyId::DOT,
-		&LiquidityPoolsModuleId::get().into_account(),
-		20_000 * DOLLARS,
-	)?;
-	set_balance(
-		CurrencyId::BTC,
-		&LiquidityPoolsModuleId::get().into_account(),
-		20_000 * DOLLARS,
-	)?;
+	set_balance(DOT, &LiquidityPoolsModuleId::get().into_account(), 20_000 * DOLLARS)?;
+	set_balance(BTC, &LiquidityPoolsModuleId::get().into_account(), 20_000 * DOLLARS)?;
 
 	// enable pool as collateral
-	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::DOT)?;
-	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::ETH)?;
-	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::KSM)?;
-	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), CurrencyId::BTC)?;
+	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), DOT)?;
+	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), ETH)?;
+	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), KSM)?;
+	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), BTC)?;
 
 	// set borrow params
-	LiquidityPools::set_pool_total_borrowed(CurrencyId::DOT, 10_000 * DOLLARS);
-	LiquidityPools::set_user_total_borrowed_and_interest_index(
-		&borrower.clone(),
-		CurrencyId::DOT,
-		10_000 * DOLLARS,
-		Rate::one(),
-	);
-	LiquidityPools::set_pool_total_borrowed(CurrencyId::ETH, 10_000 * DOLLARS);
-	LiquidityPools::set_user_total_borrowed_and_interest_index(
-		&borrower.clone(),
-		CurrencyId::ETH,
-		10_000 * DOLLARS,
-		Rate::one(),
-	);
-	LiquidityPools::set_pool_total_borrowed(CurrencyId::KSM, 10_000 * DOLLARS);
-	LiquidityPools::set_user_total_borrowed_and_interest_index(
-		&borrower.clone(),
-		CurrencyId::KSM,
-		10_000 * DOLLARS,
-		Rate::one(),
-	);
-	LiquidityPools::set_pool_total_borrowed(CurrencyId::BTC, 10_000 * DOLLARS);
-	LiquidityPools::set_user_total_borrowed_and_interest_index(
-		&borrower.clone(),
-		CurrencyId::BTC,
-		10_000 * DOLLARS,
-		Rate::one(),
-	);
+	LiquidityPools::set_pool_total_borrowed(DOT, 10_000 * DOLLARS);
+	LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), DOT, 10_000 * DOLLARS, Rate::one());
+	LiquidityPools::set_pool_total_borrowed(ETH, 10_000 * DOLLARS);
+	LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), ETH, 10_000 * DOLLARS, Rate::one());
+	LiquidityPools::set_pool_total_borrowed(KSM, 10_000 * DOLLARS);
+	LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), KSM, 10_000 * DOLLARS, Rate::one());
+	LiquidityPools::set_pool_total_borrowed(BTC, 10_000 * DOLLARS);
+	LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), BTC, 10_000 * DOLLARS, Rate::one());
 	Ok((borrower, lender))
 }
 
@@ -88,105 +61,105 @@ runtime_benchmarks! {
 		// feed price for each pool
 		set_oracle_price_for_all_pools::<Runtime>(2, Origin::root(), 1)?;
 		// set balance for user
-		set_balance(CurrencyId::DOT, &lender, 10_000 * DOLLARS)?;
+		set_balance(DOT, &lender, 10_000 * DOLLARS)?;
 
 		enable_whitelist_mode_a_add_member(lender.clone())?;
-	}: _(RawOrigin::Signed(lender), CurrencyId::DOT, 10_000 * DOLLARS)
-	verify { assert_eq!(Currencies::free_balance(CurrencyId::DOT, &LiquidityPoolsModuleId::get().into_account() ), 10_000 * DOLLARS) }
+	}: _(RawOrigin::Signed(lender), DOT, 10_000 * DOLLARS)
+	verify { assert_eq!(Currencies::free_balance(DOT, &LiquidityPoolsModuleId::get().into_account() ), 10_000 * DOLLARS) }
 
 	redeem {
 		let (borrower, lender) = hypothetical_liquidity_setup()?;
 
 		enable_whitelist_mode_a_add_member(borrower.clone())?;
-	}: _(RawOrigin::Signed(borrower.clone()), CurrencyId::DOT)
-	verify { assert_eq!(Currencies::free_balance(CurrencyId::DOT, &borrower ), 10_000_000_009_000_000_000_000u128) }
+	}: _(RawOrigin::Signed(borrower.clone()), DOT)
+	verify { assert_eq!(Currencies::free_balance(DOT, &borrower ), 10_000_000_009_000_000_000_000u128) }
 
 	redeem_underlying {
 		let (borrower, lender) = hypothetical_liquidity_setup()?;
 
 		enable_whitelist_mode_a_add_member(borrower.clone())?;
-	}: _(RawOrigin::Signed(borrower.clone()), CurrencyId::DOT, 10_000 * DOLLARS)
-	verify { assert_eq!(Currencies::free_balance(CurrencyId::DOT, &borrower ), 10_000 * DOLLARS) }
+	}: _(RawOrigin::Signed(borrower.clone()), DOT, 10_000 * DOLLARS)
+	verify { assert_eq!(Currencies::free_balance(DOT, &borrower ), 10_000 * DOLLARS) }
 
 	redeem_wrapped {
 		let (borrower, lender) = hypothetical_liquidity_setup()?;
 
 		enable_whitelist_mode_a_add_member(borrower.clone())?;
-	}: _(RawOrigin::Signed(borrower.clone()), CurrencyId::MDOT, 10_000 * DOLLARS)
-	verify { assert_eq!(Currencies::free_balance(CurrencyId::DOT, &borrower ), 10_000_000_009_000_000_000_000u128) }
+	}: _(RawOrigin::Signed(borrower.clone()), MDOT, 10_000 * DOLLARS)
+	verify { assert_eq!(Currencies::free_balance(DOT, &borrower ), 10_000_000_009_000_000_000_000u128) }
 
 	borrow {
 		let (borrower, lender) = hypothetical_liquidity_setup()?;
 
 		enable_whitelist_mode_a_add_member(borrower.clone())?;
-	}: _(RawOrigin::Signed(borrower.clone()), CurrencyId::DOT, 10_000 * DOLLARS)
-	verify { assert_eq!(Currencies::free_balance(CurrencyId::DOT, &borrower ), 10_000 * DOLLARS) }
+	}: _(RawOrigin::Signed(borrower.clone()), DOT, 10_000 * DOLLARS)
+	verify { assert_eq!(Currencies::free_balance(DOT, &borrower ), 10_000 * DOLLARS) }
 
 	repay {
 		let borrower: AccountId = account("borrower", 0, SEED);
 		// set balance for user
-		set_balance(CurrencyId::DOT, &borrower, 20_000 * DOLLARS)?;
-		set_balance(CurrencyId::MDOT, &borrower, 12_000 * DOLLARS)?;
+		set_balance(DOT, &borrower, 20_000 * DOLLARS)?;
+		set_balance(MDOT, &borrower, 12_000 * DOLLARS)?;
 		// set borrow params
-		LiquidityPools::set_pool_total_borrowed(CurrencyId::DOT, 10_000 * DOLLARS);
-		LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), CurrencyId::DOT, 10_000 * DOLLARS, Rate::one());
+		LiquidityPools::set_pool_total_borrowed(DOT, 10_000 * DOLLARS);
+		LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), DOT, 10_000 * DOLLARS, Rate::one());
 
 		enable_whitelist_mode_a_add_member(borrower.clone())?;
-	}: _(RawOrigin::Signed(borrower.clone()), CurrencyId::DOT, 10_000 * DOLLARS)
-	verify { assert_eq!(LiquidityPools::pool_user_data(CurrencyId::DOT, borrower).total_borrowed, 1_728_000_000_000_000u128) }
+	}: _(RawOrigin::Signed(borrower.clone()), DOT, 10_000 * DOLLARS)
+	verify { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).total_borrowed, 1_728_000_000_000_000u128) }
 
 	repay_all {
 		let borrower:AccountId = account("borrower", 0, SEED);
 		// set balance for user
-		set_balance(CurrencyId::DOT, &borrower, 20_000 * DOLLARS)?;
-		set_balance(CurrencyId::MDOT, &borrower, 12_000 * DOLLARS)?;
+		set_balance(DOT, &borrower, 20_000 * DOLLARS)?;
+		set_balance(MDOT, &borrower, 12_000 * DOLLARS)?;
 		// set borrow params
-		LiquidityPools::set_pool_total_borrowed(CurrencyId::DOT, 10_000 * DOLLARS);
-		LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), CurrencyId::DOT, 10_000 * DOLLARS, Rate::one());
+		LiquidityPools::set_pool_total_borrowed(DOT, 10_000 * DOLLARS);
+		LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), DOT, 10_000 * DOLLARS, Rate::one());
 
 		enable_whitelist_mode_a_add_member(borrower.clone())?;
-	}: _(RawOrigin::Signed(borrower.clone()), CurrencyId::DOT)
-	verify { assert_eq!(LiquidityPools::pool_user_data(CurrencyId::DOT, borrower).total_borrowed, Balance::zero()) }
+	}: _(RawOrigin::Signed(borrower.clone()), DOT)
+	verify { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).total_borrowed, Balance::zero()) }
 
 	repay_on_behalf {
 		let borrower:AccountId = account("borrower", 0, SEED);
 		let lender:AccountId = account("lender", 0, SEED);
 		// set balance for users
-		set_balance(CurrencyId::DOT, &lender, 20_000 * DOLLARS)?;
-		set_balance(CurrencyId::MDOT, &borrower, 12_000 * DOLLARS)?;
+		set_balance(DOT, &lender, 20_000 * DOLLARS)?;
+		set_balance(MDOT, &borrower, 12_000 * DOLLARS)?;
 		// set borrow params
-		LiquidityPools::set_pool_total_borrowed(CurrencyId::DOT, 10_000 * DOLLARS);
-		LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), CurrencyId::DOT, 10_000 * DOLLARS, Rate::one());
+		LiquidityPools::set_pool_total_borrowed(DOT, 10_000 * DOLLARS);
+		LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), DOT, 10_000 * DOLLARS, Rate::one());
 
 		enable_whitelist_mode_a_add_member(lender.clone())?;
-	}: _(RawOrigin::Signed(lender.clone()), CurrencyId::DOT, borrower.clone(), 10_000 * DOLLARS)
-	verify { assert_eq!(LiquidityPools::pool_user_data(CurrencyId::DOT, borrower).total_borrowed, 1_728_000_000_000_000u128) }
+	}: _(RawOrigin::Signed(lender.clone()), DOT, borrower.clone(), 10_000 * DOLLARS)
+	verify { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).total_borrowed, 1_728_000_000_000_000u128) }
 
 	transfer_wrapped {
 		let (borrower, lender) = hypothetical_liquidity_setup()?;
 
 		enable_whitelist_mode_a_add_member(borrower.clone())?;
-	}: _(RawOrigin::Signed(borrower.clone()), lender.clone(), CurrencyId::MDOT, 10_000 * DOLLARS)
+	}: _(RawOrigin::Signed(borrower.clone()), lender.clone(), MDOT, 10_000 * DOLLARS)
 	verify  {
-		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &borrower ), Balance::zero());
-		assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &lender ), 30_000 * DOLLARS);
+		assert_eq!(Currencies::free_balance(MDOT, &borrower ), Balance::zero());
+		assert_eq!(Currencies::free_balance(MDOT, &lender ), 30_000 * DOLLARS);
 	 }
 
 	enable_is_collateral_test {
 		let borrower:AccountId = account("borrower", 0, SEED);
 		// set balance for users
-		set_balance(CurrencyId::MDOT, &borrower, 10_000 * DOLLARS)?;
+		set_balance(MDOT, &borrower, 10_000 * DOLLARS)?;
 
 		enable_whitelist_mode_a_add_member(borrower.clone())?;
-	}: enable_is_collateral(RawOrigin::Signed(borrower.clone()), CurrencyId::DOT)
-	verify  { assert_eq!(LiquidityPools::pool_user_data(CurrencyId::DOT, borrower).is_collateral, true) }
+	}: enable_is_collateral(RawOrigin::Signed(borrower.clone()), DOT)
+	verify  { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).is_collateral, true) }
 
 	disable_is_collateral {
 		let (borrower, lender) = hypothetical_liquidity_setup()?;
 
 		enable_whitelist_mode_a_add_member(borrower.clone())?;
-	}: _(RawOrigin::Signed(borrower.clone()), CurrencyId::DOT)
-	verify  { assert_eq!(LiquidityPools::pool_user_data(CurrencyId::DOT, borrower).is_collateral, false) }
+	}: _(RawOrigin::Signed(borrower.clone()), DOT)
+	verify  { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).is_collateral, false) }
 
 }
 

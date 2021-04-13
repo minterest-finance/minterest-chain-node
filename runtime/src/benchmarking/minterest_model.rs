@@ -1,4 +1,4 @@
-use crate::{CurrencyId, Rate, Runtime};
+use crate::{Rate, Runtime, DOT};
 
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
@@ -13,28 +13,28 @@ runtime_benchmarks! {
 	set_jump_multiplier_per_year {
 	}: _(
 		RawOrigin::Root,
-		CurrencyId::DOT,
+		DOT,
 		Rate::one()
 	)
 
 	set_base_rate_per_year {
 	}: _(
 		RawOrigin::Root,
-		CurrencyId::DOT,
+		DOT,
 		Rate::one()
 	)
 
 	set_multiplier_per_year {
 	}: _(
 		RawOrigin::Root,
-		CurrencyId::DOT,
+		DOT,
 		Rate::one()
 	)
 
 	set_kink {
 	}: _(
 		RawOrigin::Root,
-		CurrencyId::DOT,
+		DOT,
 		Rate::one()
 	)
 }
