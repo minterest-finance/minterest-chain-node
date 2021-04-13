@@ -30,7 +30,8 @@
     },
     "LiquidationPoolData": {
       "deviation_threshold": "Rate",
-      "balance_ratio": "Rate"
+      "balance_ratio": "Rate",
+      "max_ideal_balance": "Option<Balance>"
     },
     "PoolUserData" : {
       "total_borrowed": "Balance",
