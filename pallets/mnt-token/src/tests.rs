@@ -4,7 +4,7 @@ use super::Error;
 use crate::mock::*;
 use frame_support::{assert_noop, assert_ok};
 use minterest_primitives::{Balance, CurrencyId, Rate};
-use orml_traits::{BasicCurrency, MultiCurrency};
+use orml_traits::MultiCurrency;
 use sp_arithmetic::FixedPointNumber;
 use sp_runtime::traits::Zero;
 
@@ -13,41 +13,132 @@ const DOT: CurrencyId = CurrencyId::DOT;
 const ETH: CurrencyId = CurrencyId::ETH;
 const BTC: CurrencyId = CurrencyId::BTC;
 
+const MNT_PALLET_STARED_BALANCE: Balance = 1000000 * DOLLARS;
+
+fn get_mnt_account_balance(user: AccountId) -> Balance {
+	<Currencies as MultiCurrency<AccountId>>::total_balance(CurrencyId::MNT, &user)
+}
+
 /// Move flywheel and check borrower balance
-fn check_borrower(pool_id: CurrencyId, borrower: AccountId, expected_mnt: Balance) {
+fn check_borrower(
+	pool_id: CurrencyId,
+	borrower: AccountId,
+	expected_mnt_balance: Balance,
+	expected_mnt_in_storage: Balance,
+) {
 	assert_ok!(MntToken::update_mnt_borrow_index(pool_id));
 	assert_ok!(MntToken::distribute_borrower_mnt(pool_id, &borrower));
 
 	let pool_state = MntToken::mnt_pools_state(pool_id).borrow_state;
 	let borrower_index = MntToken::mnt_borrower_index(pool_id, borrower);
-	let borrower_accrued_mnt = MntToken::mnt_accrued(borrower);
-	assert_eq!(borrower_accrued_mnt, expected_mnt);
 	assert_eq!(borrower_index, pool_state.index);
+
+	assert_eq!(get_mnt_account_balance(borrower), expected_mnt_balance);
+	assert_eq!(MntToken::mnt_accrued(borrower), expected_mnt_in_storage);
 }
 
 /// Move flywheel and check supplier balance
-fn check_supplier_accrued(pool_id: CurrencyId, supplier: AccountId, expected_mnt: Balance) {
-	MntToken::update_mnt_supply_index(pool_id).unwrap();
-	MntToken::distribute_supplier_mnt(pool_id, &supplier).unwrap();
-	assert_eq!(MntToken::mnt_accrued(supplier), expected_mnt);
+fn check_supplier_accrued(
+	pool_id: CurrencyId,
+	supplier: AccountId,
+	expected_mnt_balance: Balance,
+	expected_mnt_in_storage: Balance,
+) {
+	assert_ok!(MntToken::update_mnt_supply_index(pool_id));
+	assert_ok!(MntToken::distribute_supplier_mnt(pool_id, &supplier));
+	assert_eq!(get_mnt_account_balance(supplier), expected_mnt_balance);
+	assert_eq!(MntToken::mnt_accrued(supplier), expected_mnt_in_storage);
 }
 
 #[test]
-fn native_currency_issuance_is_work() {
+fn distribute_mnt_to_borrower_with_treshold() {
 	ExtBuilder::default()
-		.mnt_acc_balance(1000000 * DOLLARS)
+		.enable_minting_for_all_pools()
+		.pool_total_borrowed(CurrencyId::DOT, 150_000 * DOLLARS)
+		.mnt_account_balance(MNT_PALLET_STARED_BALANCE)
+		.set_mnt_claim_treshold(20)
+		.pool_user_data(
+			CurrencyId::DOT,
+			ALICE,
+			150_000 * DOLLARS,
+			Rate::saturating_from_rational(15, 10), // because pool borrow index is hardcoded to 1.5 too
+			true,
+			0,
+		)
 		.build()
 		.execute_with(|| {
-			assert_eq!(MinterestToken::total_issuance(), 1000000 * DOLLARS);
+			// Award for ALICE is 10 per block
+			// So at first step awarded tokens should be keeped in internal storage
+			// At second it should be transfered to ALICE and so on.
+
+			let mnt_rate = 10 * DOLLARS;
+			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
+			// First interaction with protocol for distributers.
+			// This is started point to earn MNT token
+			assert_ok!(MntToken::update_mnt_borrow_index(DOT));
+			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &ALICE));
+			check_borrower(DOT, ALICE, 0, 0);
+
+			System::set_block_number(2);
+			// 10 tokens in internal storage
+			check_borrower(DOT, ALICE, 0, mnt_rate);
+
+			System::set_block_number(3);
+			// 20 tokens on account balance
+			check_borrower(DOT, ALICE, mnt_rate * 2, 0);
+
+			System::set_block_number(4);
+			// 10 tokens in internal storage and 20 on account balance
+			check_borrower(DOT, ALICE, mnt_rate * 2, mnt_rate);
+
+			System::set_block_number(5);
+			// 40 tokens on account balance
+			check_borrower(DOT, ALICE, mnt_rate * 4, 0);
+
+			assert_eq!(
+				MNT_PALLET_STARED_BALANCE - get_mnt_account_balance(ALICE),
+				get_mnt_account_balance(MntToken::get_account_id())
+			)
 		});
 }
 
 #[test]
-fn distribute_mnt_to_supplier_from_differt_pools() {
+fn distribute_mnt_to_supplier_with_treshold() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.mnt_acc_balance(1000000 * DOLLARS)
-		.set_mnt_claim_treshold(1)
+		.mnt_account_balance(MNT_PALLET_STARED_BALANCE)
+		.set_mnt_claim_treshold(20)
+		.pool_total_borrowed(CurrencyId::DOT, 100 * DOLLARS)
+		.set_mnt_rate(10)
+		.build()
+		.execute_with(|| {
+			// Award for ALICE is 10 per block
+			// So at first step awarded tokens should be keeped in internal storage
+			// At second it should be transfered to ALICE and so on.
+
+			// set total issuances
+			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MDOT, &ALICE, 100 * DOLLARS).unwrap();
+
+			check_supplier_accrued(DOT, ALICE, 0, 10 * DOLLARS);
+			System::set_block_number(2);
+			check_supplier_accrued(DOT, ALICE, 20 * DOLLARS, 0);
+			System::set_block_number(3);
+			check_supplier_accrued(DOT, ALICE, 20 * DOLLARS, 10 * DOLLARS);
+			System::set_block_number(4);
+			check_supplier_accrued(DOT, ALICE, 40 * DOLLARS, 0);
+			assert_eq!(
+				MNT_PALLET_STARED_BALANCE - get_mnt_account_balance(ALICE),
+				get_mnt_account_balance(MntToken::get_account_id())
+			)
+		});
+}
+
+#[test]
+fn distribute_mnt_to_supplier_from_different_pools() {
+	ExtBuilder::default()
+		.enable_minting_for_all_pools()
+		.mnt_account_balance(MNT_PALLET_STARED_BALANCE)
+		.set_mnt_claim_treshold(0)
 		.pool_total_borrowed(CurrencyId::DOT, 100 * DOLLARS)
 		.pool_total_borrowed(CurrencyId::KSM, 100 * DOLLARS)
 		.set_mnt_rate(10)
@@ -63,10 +154,15 @@ fn distribute_mnt_to_supplier_from_differt_pools() {
 			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MDOT, &ALICE, 100 * DOLLARS).unwrap();
 			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MKSM, &ALICE, 100 * DOLLARS).unwrap();
 
-			check_supplier_accrued(KSM, ALICE, ksm_mnt_speed);
-			check_supplier_accrued(DOT, ALICE, ksm_mnt_speed + dot_mnt_speed);
+			check_supplier_accrued(KSM, ALICE, ksm_mnt_speed, 0);
+			check_supplier_accrued(DOT, ALICE, ksm_mnt_speed + dot_mnt_speed, 0);
 			// The Block number wasn't changed, so we should get the same result without errors
-			check_supplier_accrued(DOT, ALICE, ksm_mnt_speed + dot_mnt_speed);
+			check_supplier_accrued(DOT, ALICE, ksm_mnt_speed + dot_mnt_speed, 0);
+
+			assert_eq!(
+				MNT_PALLET_STARED_BALANCE - get_mnt_account_balance(ALICE),
+				get_mnt_account_balance(MntToken::get_account_id())
+			)
 		});
 }
 
@@ -76,6 +172,8 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 		.enable_minting_for_all_pools()
 		.pool_total_borrowed(CurrencyId::DOT, 150_000 * DOLLARS)
 		.pool_total_borrowed(CurrencyId::KSM, 150_000 * DOLLARS)
+		.mnt_account_balance(MNT_PALLET_STARED_BALANCE)
+		.set_mnt_claim_treshold(0)
 		.pool_user_data(
 			CurrencyId::DOT,
 			ALICE,
@@ -114,8 +212,7 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 			assert_ok!(MntToken::distribute_borrower_mnt(KSM, &ALICE));
 			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &ALICE));
 
-			let borrower_accrued = MntToken::mnt_accrued(&ALICE);
-			assert_eq!(borrower_accrued, mnt_rate);
+			assert_eq!(get_mnt_account_balance(ALICE), mnt_rate);
 
 			let dot_mnt_speed = 2 * DOLLARS;
 			// Check event about distributing mnt tokens by DOT pool
@@ -127,6 +224,11 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 				borrower_index,
 			));
 			assert!(System::events().iter().any(|record| record.event == event));
+
+			assert_eq!(
+				MNT_PALLET_STARED_BALANCE - get_mnt_account_balance(ALICE),
+				get_mnt_account_balance(MntToken::get_account_id())
+			)
 		});
 }
 
@@ -134,6 +236,8 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 fn distribute_borrowers_mnt() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
+		.mnt_account_balance(MNT_PALLET_STARED_BALANCE)
+		.set_mnt_claim_treshold(0)
 		.pool_total_borrowed(CurrencyId::DOT, 150_000 * DOLLARS)
 		.pool_user_data(
 			CurrencyId::DOT,
@@ -173,8 +277,13 @@ fn distribute_borrowers_mnt() {
 			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &BOB));
 
 			System::set_block_number(2);
-			check_borrower(DOT, ALICE, 2 * DOLLARS);
-			check_borrower(DOT, BOB, 8 * DOLLARS);
+			check_borrower(DOT, ALICE, 2 * DOLLARS, 0);
+			check_borrower(DOT, BOB, 8 * DOLLARS, 0);
+
+			assert_eq!(
+				MNT_PALLET_STARED_BALANCE - get_mnt_account_balance(ALICE) - get_mnt_account_balance(BOB),
+				get_mnt_account_balance(MntToken::get_account_id())
+			)
 		});
 }
 
@@ -183,6 +292,8 @@ fn distribute_borrower_mnt() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
 		.pool_total_borrowed(CurrencyId::DOT, 150_000 * DOLLARS)
+		.mnt_account_balance(MNT_PALLET_STARED_BALANCE)
+		.set_mnt_claim_treshold(0)
 		.pool_user_data(
 			CurrencyId::DOT,
 			ALICE,
@@ -202,13 +313,18 @@ fn distribute_borrower_mnt() {
 
 			System::set_block_number(2);
 			// Alice account borrow balance is 150_000
-			check_borrower(DOT, ALICE, mnt_rate);
+			check_borrower(DOT, ALICE, mnt_rate, 0);
 
 			// block_delta == 2
 			System::set_block_number(4);
-			check_borrower(DOT, ALICE, mnt_rate * 3);
+			check_borrower(DOT, ALICE, mnt_rate * 3, 0);
 			// check twice, move flywheel again
-			check_borrower(DOT, ALICE, mnt_rate * 3);
+			check_borrower(DOT, ALICE, mnt_rate * 3, 0);
+
+			assert_eq!(
+				MNT_PALLET_STARED_BALANCE - get_mnt_account_balance(ALICE),
+				get_mnt_account_balance(MntToken::get_account_id())
+			)
 		});
 }
 
@@ -311,6 +427,8 @@ fn test_update_mnt_borrow_index_simple() {
 fn test_distribute_mnt_tokens_to_suppliers() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
+		.mnt_account_balance(MNT_PALLET_STARED_BALANCE)
+		.set_mnt_claim_treshold(0)
 		// total borrows needs to calculate mnt_speeds
 		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
 		.set_mnt_rate(10)
@@ -351,13 +469,14 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 			};
 
 			let check_supplier_award =
-				|supplier_id: AccountId, distributed_amount: Balance, total_acquired_mnt: Balance| {
+				|supplier_id: AccountId, distributed_amount: Balance, expected_user_mnt_balance: Balance| {
 					let pool_state = MntToken::mnt_pools_state(DOT);
-					let supplier_accrued = MntToken::mnt_accrued(supplier_id);
 					let supplier_index = MntToken::mnt_supplier_index(DOT, supplier_id).unwrap();
 					assert_eq!(supplier_index, pool_state.supply_state.index);
-					assert_eq!(supplier_accrued, total_acquired_mnt);
-					// check_supplier(DOT, supplier_id, total_acquired_mnt);
+					assert_eq!(get_mnt_account_balance(supplier_id), expected_user_mnt_balance);
+					// it should be 0 because treshold is 0
+					assert_eq!(MntToken::mnt_accrued(supplier_id), 0);
+
 					let supplier_index = MntToken::mnt_supplier_index(DOT, supplier_id).unwrap();
 					let event = Event::mnt_token(crate::Event::MntDistributedToSupplier(
 						CurrencyId::DOT,
@@ -388,6 +507,10 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 				bob_award_per_block * block_delta,
 				bob_award_per_block * current_block,
 			);
+			assert_eq!(
+				MNT_PALLET_STARED_BALANCE - get_mnt_account_balance(ALICE) - get_mnt_account_balance(BOB),
+				get_mnt_account_balance(MntToken::get_account_id())
+			)
 		});
 }
 

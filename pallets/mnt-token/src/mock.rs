@@ -5,7 +5,7 @@ use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::*, p
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{Amount, Balance, BlockNumber, CurrencyId, CurrencyPair, Price, Rate};
-use orml_currencies::{BasicCurrencyAdapter, Currency};
+use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
 use sp_runtime::{
@@ -47,6 +47,7 @@ ord_parameter_types! {
 
 pub struct MockPriceSource;
 
+// TODO USE mock_impl. Ticket? Also see on MockPriceSource.
 impl frame_system::Config for Runtime {
 	type BaseCallFilter = ();
 	type Origin = Origin;
@@ -72,9 +73,22 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = ();
 }
 
-// mock_impl_system_config!(Runtime);
 mock_impl_orml_tokens_config!(Runtime);
-mock_impl_orml_currencies_config!(Runtime, CurrencyId::MNT);
+
+pub type MinterestToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
+}
+
+// TODO mock impl
+impl orml_currencies::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type NativeCurrency = MinterestToken;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type WeightInfo = ();
+}
+
 mock_impl_liquidity_pools_config!(Runtime);
 mock_impl_minterest_model_config!(Runtime, ZeroAdmin);
 mock_impl_controller_config!(Runtime, ZeroAdmin);
@@ -112,7 +126,6 @@ construct_runtime!(
 	}
 );
 
-pub type MinterestToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 500;
 	pub const MaxLocks: u32 = 50;
@@ -137,7 +150,6 @@ impl mnt_token::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControllerAPI = Controller;
 	type MntTokenAccountId = MntTokenAccountId;
-	type NativeCurrency = MinterestToken;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -198,7 +210,7 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn mnt_acc_balance(mut self, balance: Balance) -> Self {
+	pub fn mnt_account_balance(mut self, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((MntToken::get_account_id(), CurrencyId::MNT, balance));
 		self
@@ -262,7 +274,7 @@ impl ExtBuilder {
 
 		mnt_token::GenesisConfig::<Runtime> {
 			mnt_rate: self.mnt_rate,
-			mnt_claim_treshold: self.mnt_claim_treshold, // disable by default
+			mnt_claim_treshold: self.mnt_claim_treshold,
 			minted_pools: self.minted_pools,
 			phantom: PhantomData,
 		}

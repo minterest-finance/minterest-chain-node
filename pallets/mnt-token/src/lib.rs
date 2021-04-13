@@ -9,7 +9,7 @@ use frame_support::{pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 pub use module::*;
-use orml_traits::{MultiCurrency, BasicCurrency};
+use orml_traits::MultiCurrency;
 use pallet_traits::{ControllerAPI, LiquidityPoolsManager, PriceProvider};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
@@ -101,8 +101,6 @@ pub mod module {
 		#[pallet::constant]
 		/// The Mnt-token's account id, keep assets that should be distributed to users
 		type MntTokenAccountId: Get<Self::AccountId>;
-
-		type NativeCurrency: BasicCurrency<Self::AccountId, Balance = Balance>;
 	}
 
 	#[pallet::error]
@@ -156,7 +154,7 @@ pub mod module {
 	/// The threshold above which the flywheel transfers MNT
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_claim_treshold)]
-	type MntClaimTreshold<T: Config> = StorageValue<_, Balance, ValueQuery>;
+	pub(crate) type MntClaimTreshold<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
 	/// MNT minting speed for each pool
 	/// Doubling this number shows how much MNT goes to all suppliers and borrowers of particular
@@ -337,7 +335,7 @@ impl<T: Config> Pallet<T> {
 			.checked_add(borrower_delta.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		MntAccrued::<T>::insert(borrower, borrower_mnt_accrued);
+		Self::transfer_mnt(borrower, borrower_mnt_accrued, MntClaimTreshold::<T>::get())?;
 
 		Self::deposit_event(Event::MntDistributedToBorrower(
 			underlying_id,
@@ -436,11 +434,8 @@ impl<T: Config> Pallet<T> {
 
 		supplier_index = supply_index;
 
-		MntAccrued::<T>::insert(supplier, supplier_mnt_accrued);
 		MntSupplierIndex::<T>::insert(underlying_id, supplier, supplier_index);
-
-
-		// println!("TOTAL BALANCE {:?}", T::NativeCurrency::total_issuance());
+		Self::transfer_mnt(supplier, supplier_mnt_accrued, MntClaimTreshold::<T>::get())?;
 
 		Self::deposit_event(Event::MntDistributedToSupplier(
 			underlying_id,
@@ -545,11 +540,16 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	fn transfer_mnt(user: &T::AccountId, user_accured: Balance, treshold: Balance) -> Balance {
-		// TODO
+	/// Transfer mnt tokens to user balance if it possible. Otherwise, put them into internal
+	/// storage
+	fn transfer_mnt(user: &T::AccountId, user_accured: Balance, treshold: Balance) -> DispatchResult {
 		if user_accured >= treshold && user_accured > 0 {
-			return 0;
+			// TODO check is currency in MNT pallet enough
+			T::MultiCurrency::transfer(CurrencyId::MNT, &Self::get_account_id(), &user, user_accured)?;
+			MntAccrued::<T>::remove(user); // set to 0
+		} else {
+			MntAccrued::<T>::insert(user, user_accured);
 		}
-		user_accured
+		Ok(())
 	}
 }
