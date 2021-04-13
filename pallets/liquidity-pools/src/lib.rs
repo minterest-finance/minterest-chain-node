@@ -189,7 +189,7 @@ impl<T: Config> Pallet<T> {
 	/// Returns `underlying_amount = wrapped_amount * exchange_rate`
 	pub fn convert_from_wrapped(wrapped_id: CurrencyId, wrapped_amount: Balance) -> BalanceResult {
 		let underlying_asset_id = wrapped_id
-			.get_underlying_asset_id_by_wrapped_id()
+			.underlying_asset_id()
 			.ok_or(Error::<T>::NotValidWrappedTokenId)?;
 		let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
 
@@ -209,7 +209,7 @@ impl<T: Config> Pallet<T> {
 	/// returns `exchange_rate` between a mToken and the underlying asset.
 	pub fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
 		let wrapped_asset_id = underlying_asset_id
-			.get_wrapped_id_by_underlying_asset_id()
+			.wrapped_token_id()
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 		// Current the total amount of cash the pool has.
 		let total_cash = Self::get_pool_available_liquidity(underlying_asset_id);
@@ -275,7 +275,7 @@ impl<T: Config> Pallet<T> {
 		total_borrowed: Balance,
 	) -> RateResult {
 		let wrapped_asset_id = underlying_asset_id
-			.get_wrapped_id_by_underlying_asset_id()
+			.wrapped_token_id()
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 		// Current the total amount of cash the pool has.
 		let total_cash = Self::get_pool_available_liquidity(underlying_asset_id);
@@ -393,7 +393,7 @@ impl<T: Config> Pallet<T> {
 		let mut pools: Vec<(CurrencyId, Balance)> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
 			.filter_map(|&pool_id| {
-				let wrapped_id = pool_id.get_wrapped_id_by_underlying_asset_id()?;
+				let wrapped_id = pool_id.wrapped_token_id()?;
 
 				// only collateral pools.
 				if !Self::pool_user_data(pool_id, who).is_collateral {

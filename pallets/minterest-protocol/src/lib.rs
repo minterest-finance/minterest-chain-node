@@ -250,7 +250,7 @@ pub mod module {
 			}
 
 			let underlying_asset_id = wrapped_id
-				.get_underlying_asset_id_by_wrapped_id()
+				.underlying_asset_id()
 				.ok_or(Error::<T>::NotValidWrappedTokenId)?;
 			let (underlying_amount, wrapped_id, _) =
 				Self::do_redeem(&who, underlying_asset_id, Balance::zero(), wrapped_amount, false)?;
@@ -396,7 +396,7 @@ pub mod module {
 
 			// If user does not have assets in the pool, then he cannot enable as collateral the pool.
 			let wrapped_id = pool_id
-				.get_wrapped_id_by_underlying_asset_id()
+				.wrapped_token_id()
 				.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &sender);
 			ensure!(!user_wrapped_balance.is_zero(), Error::<T>::IsCollateralCannotBeEnabled);
@@ -427,7 +427,7 @@ pub mod module {
 			);
 
 			let wrapped_id = pool_id
-				.get_wrapped_id_by_underlying_asset_id()
+				.wrapped_token_id()
 				.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 			let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &sender);
 			let user_balance_disabled_asset =
@@ -470,7 +470,7 @@ impl<T: Config> Pallet<T> {
 		);
 
 		let wrapped_id = underlying_asset_id
-			.get_wrapped_id_by_underlying_asset_id()
+			.wrapped_token_id()
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
 		let wrapped_amount = <LiquidityPools<T>>::convert_to_wrapped(underlying_asset_id, underlying_amount)?;
@@ -502,7 +502,7 @@ impl<T: Config> Pallet<T> {
 		<Controller<T>>::accrue_interest_rate(underlying_asset_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
 		let wrapped_id = underlying_asset_id
-			.get_wrapped_id_by_underlying_asset_id()
+			.wrapped_token_id()
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
 		let wrapped_amount = match (underlying_amount, wrapped_amount, all_assets) {
@@ -688,7 +688,7 @@ impl<T: Config> Pallet<T> {
 
 		// Fail if invalid token id
 		let underlying_asset_id = wrapped_id
-			.get_underlying_asset_id_by_wrapped_id()
+			.underlying_asset_id()
 			.ok_or(Error::<T>::NotValidWrappedTokenId)?;
 
 		// Fail if transfer is not allowed

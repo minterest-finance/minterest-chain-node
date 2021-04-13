@@ -105,7 +105,7 @@ impl CurrencyId {
 		matches!(self, CurrencyId::WrappedToken(_))
 	}
 
-	pub fn get_underlying_asset_id_by_wrapped_id(&self) -> Option<CurrencyId> {
+	pub fn underlying_asset_id(&self) -> Option<CurrencyId> {
 		if self.is_enabled_wrapped_token_id() {
 			match self {
 				CurrencyId::WrappedToken(currency_id) => Some(CurrencyId::UnderlyingAsset(
@@ -118,7 +118,7 @@ impl CurrencyId {
 		}
 	}
 
-	pub fn get_wrapped_id_by_underlying_asset_id(&self) -> Option<CurrencyId> {
+	pub fn wrapped_token_id(&self) -> Option<CurrencyId> {
 		if self.is_enabled_underlying_asset_id() {
 			match self {
 				CurrencyId::UnderlyingAsset(currency_id) => Some(CurrencyId::WrappedToken(
@@ -165,17 +165,17 @@ mod tests {
 	}
 
 	#[test]
-	fn get_wrapped_id_by_underlying_asset_id_should_work() {
-		assert_eq!(MNT.get_wrapped_id_by_underlying_asset_id(), None);
-		assert_eq!(DOT.get_wrapped_id_by_underlying_asset_id(), Some(MDOT));
-		assert_eq!(METH.get_wrapped_id_by_underlying_asset_id(), None);
+	fn wrapped_token_id_should_work() {
+		assert_eq!(MNT.wrapped_token_id(), None);
+		assert_eq!(DOT.wrapped_token_id(), Some(MDOT));
+		assert_eq!(METH.wrapped_token_id(), None);
 	}
 
 	#[test]
 	fn get_underlying_asset_id_by_wrapped_id_should_work() {
-		assert_eq!(MNT.get_underlying_asset_id_by_wrapped_id(), None);
-		assert_eq!(MDOT.get_underlying_asset_id_by_wrapped_id(), Some(DOT));
-		assert_eq!(ETH.get_underlying_asset_id_by_wrapped_id(), None);
+		assert_eq!(MNT.underlying_asset_id(), None);
+		assert_eq!(MDOT.underlying_asset_id(), Some(DOT));
+		assert_eq!(ETH.underlying_asset_id(), None);
 	}
 
 	#[test]

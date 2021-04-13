@@ -475,9 +475,7 @@ impl<T: Config> Pallet<T> {
 
 		// For each tokens the account is in
 		for asset in m_tokens_ids.into_iter() {
-			let underlying_asset = asset
-				.get_underlying_asset_id_by_wrapped_id()
-				.ok_or(Error::<T>::NotValidWrappedTokenId)?;
+			let underlying_asset = asset.underlying_asset_id().ok_or(Error::<T>::NotValidWrappedTokenId)?;
 
 			// Read the balances and exchange rate from the cToken
 			let borrow_balance = Self::borrow_balance_stored(account, underlying_asset)?;
@@ -670,9 +668,7 @@ impl<T: Config> Pallet<T> {
 				.try_fold(
 					(Balance::zero(), Balance::zero()),
 					|current_value, &pool_id| -> result::Result<(Balance, Balance), DispatchError> {
-						let wrapped_id = pool_id
-							.get_wrapped_id_by_underlying_asset_id()
-							.ok_or(Error::<T>::PoolNotFound)?;
+						let wrapped_id = pool_id.wrapped_token_id().ok_or(Error::<T>::PoolNotFound)?;
 
 						// Check if user has / had borrowed wrapped tokens in the pool
 						let wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &who);

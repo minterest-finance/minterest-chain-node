@@ -543,7 +543,7 @@ impl<T: Config> Pallet<T> {
 				<Controller<T>>::accrue_interest_rate(collateral_pool_id)?;
 
 				let wrapped_id = collateral_pool_id
-					.get_wrapped_id_by_underlying_asset_id()
+					.wrapped_token_id()
 					.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 				let balance_wrapped_token = T::MultiCurrency::free_balance(wrapped_id, &borrower);
 
