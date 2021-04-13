@@ -222,7 +222,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				pool_id.is_enabled_underlying_asset_id(),
+				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -256,7 +256,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				pool_id.is_enabled_underlying_asset_id(),
+				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -290,7 +290,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				pool_id.is_enabled_underlying_asset_id(),
+				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -580,8 +580,8 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	}
 
 	/// Check if pool exists
-	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
-		LiquidationPoolsData::<T>::contains_key(underlying_asset_id)
+	fn pool_exists(underlying_asset: &CurrencyId) -> bool {
+		LiquidationPoolsData::<T>::contains_key(underlying_asset)
 	}
 }
 

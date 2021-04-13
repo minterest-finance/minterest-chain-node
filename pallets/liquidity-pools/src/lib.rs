@@ -166,11 +166,11 @@ impl<T: Config> Pallet<T> {
 	/// Converts a specified number of underlying assets into wrapped tokens.
 	/// The calculation is based on the exchange rate.
 	///
-	/// - `underlying_asset_id`: CurrencyId of underlying assets to be converted to wrapped tokens.
+	/// - `underlying_asset`: CurrencyId of underlying assets to be converted to wrapped tokens.
 	/// - `underlying_amount`: The amount of underlying assets to be converted to wrapped tokens.
 	/// Returns `wrapped_amount = underlying_amount / exchange_rate`
-	pub fn convert_to_wrapped(underlying_asset_id: CurrencyId, underlying_amount: Balance) -> BalanceResult {
-		let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
+	pub fn convert_to_wrapped(underlying_asset: CurrencyId, underlying_amount: Balance) -> BalanceResult {
+		let exchange_rate = Self::get_exchange_rate(underlying_asset)?;
 
 		let wrapped_amount = Rate::from_inner(underlying_amount)
 			.checked_div(&exchange_rate)
@@ -188,10 +188,10 @@ impl<T: Config> Pallet<T> {
 	///
 	/// Returns `underlying_amount = wrapped_amount * exchange_rate`
 	pub fn convert_from_wrapped(wrapped_id: CurrencyId, wrapped_amount: Balance) -> BalanceResult {
-		let underlying_asset_id = wrapped_id
-			.underlying_asset_id()
+		let underlying_asset = wrapped_id
+			.underlying_asset()
 			.ok_or(Error::<T>::NotValidWrappedTokenId)?;
-		let exchange_rate = Self::get_exchange_rate(underlying_asset_id)?;
+		let exchange_rate = Self::get_exchange_rate(underlying_asset)?;
 
 		let underlying_amount = Rate::from_inner(wrapped_amount)
 			.checked_mul(&exchange_rate)
@@ -203,22 +203,22 @@ impl<T: Config> Pallet<T> {
 
 	/// Gets the exchange rate between a mToken and the underlying asset.
 	/// This function does not accrue interest before calculating the exchange rate.
-	/// - `underlying_asset_id`: CurrencyId of underlying assets for which the exchange rate
+	/// - `underlying_asset`: CurrencyId of underlying assets for which the exchange rate
 	/// is calculated.
 	///
 	/// returns `exchange_rate` between a mToken and the underlying asset.
-	pub fn get_exchange_rate(underlying_asset_id: CurrencyId) -> RateResult {
-		let wrapped_asset_id = underlying_asset_id
-			.wrapped_token_id()
+	pub fn get_exchange_rate(underlying_asset: CurrencyId) -> RateResult {
+		let wrapped_asset_id = underlying_asset
+			.wrapped_asset()
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 		// Current the total amount of cash the pool has.
-		let total_cash = Self::get_pool_available_liquidity(underlying_asset_id);
+		let total_cash = Self::get_pool_available_liquidity(underlying_asset);
 
 		// Current total number of tokens in circulation.
 		let total_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
 
 		// Current pool data.
-		let pool_data = Self::get_pool_data(underlying_asset_id);
+		let pool_data = Self::get_pool_data(underlying_asset);
 
 		let current_exchange_rate = Self::calculate_exchange_rate(
 			total_cash,
@@ -267,18 +267,18 @@ impl<T: Config> Pallet<T> {
 	/// Gets the exchange rate between a mToken and the underlying asset.
 	/// This function uses total_protocol_interest and total_borrowed values calculated beforehand
 	///
-	/// - `underlying_asset_id`: CurrencyId of underlying assets for which the exchange rate
+	/// - `underlying_asset`: CurrencyId of underlying assets for which the exchange rate
 	/// is calculated.
 	pub fn get_exchange_rate_by_interest_params(
-		underlying_asset_id: CurrencyId,
+		underlying_asset: CurrencyId,
 		total_protocol_interest: Balance,
 		total_borrowed: Balance,
 	) -> RateResult {
-		let wrapped_asset_id = underlying_asset_id
-			.wrapped_token_id()
+		let wrapped_asset_id = underlying_asset
+			.wrapped_asset()
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 		// Current the total amount of cash the pool has.
-		let total_cash = Self::get_pool_available_liquidity(underlying_asset_id);
+		let total_cash = Self::get_pool_available_liquidity(underlying_asset);
 
 		// Current total number of tokens in circulation.
 		let total_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
@@ -371,9 +371,9 @@ impl<T: Config> Pallet<T> {
 	// TODO: Maybe implement using a binary tree?
 	/// Get list of users with active loan positions for a particular pool.
 	pub fn get_pool_members_with_loans(
-		underlying_asset_id: CurrencyId,
+		underlying_asset: CurrencyId,
 	) -> result::Result<Vec<T::AccountId>, DispatchError> {
-		let user_vec: Vec<T::AccountId> = PoolUserParams::<T>::iter_prefix(underlying_asset_id)
+		let user_vec: Vec<T::AccountId> = PoolUserParams::<T>::iter_prefix(underlying_asset)
 			.filter(|(_, pool_user_data)| !pool_user_data.total_borrowed.is_zero())
 			.map(|(account, _)| account)
 			.collect();
@@ -393,7 +393,7 @@ impl<T: Config> Pallet<T> {
 		let mut pools: Vec<(CurrencyId, Balance)> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
 			.filter_map(|&pool_id| {
-				let wrapped_id = pool_id.wrapped_token_id()?;
+				let wrapped_id = pool_id.wrapped_asset()?;
 
 				// only collateral pools.
 				if !Self::pool_user_data(pool_id, who).is_collateral {
@@ -507,8 +507,8 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	}
 
 	/// Check if pool exists
-	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool {
-		Pools::<T>::contains_key(underlying_asset_id)
+	fn pool_exists(underlying_asset: &CurrencyId) -> bool {
+		Pools::<T>::contains_key(underlying_asset)
 	}
 }
 

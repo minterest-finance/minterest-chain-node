@@ -108,7 +108,7 @@ pub mod module {
 			T::LockOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				currency_id.is_enabled_underlying_asset_id(),
+				currency_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -127,7 +127,7 @@ pub mod module {
 			T::LockOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				currency_id.is_enabled_underlying_asset_id(),
+				currency_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
