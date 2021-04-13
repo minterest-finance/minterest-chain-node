@@ -475,6 +475,7 @@ impl mnt_token::Config for Runtime {
 	type LiquidityPoolsManager = LiquidityPools;
 	type EnabledCurrencyPair = EnabledCurrencyPair;
 	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
+	type NativeCurrency = MinterestToken;
 	type MultiCurrency = Currencies;
 	type ControllerAPI = Controller;
 	type MntTokenAccountId = MntTokenAccountId;

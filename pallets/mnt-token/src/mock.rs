@@ -2,17 +2,14 @@
 
 use crate as mnt_token;
 use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::*, parameter_types};
-use frame_system as system;
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
-use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
-use orml_currencies::Currency;
+use minterest_primitives::{Amount, Balance, BlockNumber, CurrencyId, CurrencyPair, Price, Rate};
+use orml_currencies::{BasicCurrencyAdapter, Currency};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
-use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
+	traits::{AccountIdConversion, Zero},
 	FixedPointNumber, ModuleId,
 };
 use test_helper::*;
@@ -45,11 +42,37 @@ pub fn admin() -> Origin {
 }
 ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
+	pub const BlockHashCount: u64 = 250;
 }
 
 pub struct MockPriceSource;
 
-mock_impl_system_config!(Runtime);
+impl frame_system::Config for Runtime {
+	type BaseCallFilter = ();
+	type Origin = Origin;
+	type Index = u64;
+	type BlockNumber = u64;
+	type Call = Call;
+	type Hash = sp_runtime::testing::H256;
+	type Hashing = sp_runtime::traits::BlakeTwo256;
+	type AccountId = u64;
+	type Lookup = sp_runtime::traits::IdentityLookup<Self::AccountId>;
+	type Header = sp_runtime::testing::Header;
+	type Event = Event;
+	type BlockHashCount = BlockHashCount;
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
+	type Version = ();
+	type PalletInfo = PalletInfo;
+	type AccountData = pallet_balances::AccountData<Balance>;
+	type OnNewAccount = ();
+	type OnKilledAccount = ();
+	type SystemWeightInfo = ();
+	type SS58Prefix = ();
+}
+
+// mock_impl_system_config!(Runtime);
 mock_impl_orml_tokens_config!(Runtime);
 mock_impl_orml_currencies_config!(Runtime, CurrencyId::MNT);
 mock_impl_liquidity_pools_config!(Runtime);
@@ -80,6 +103,7 @@ construct_runtime!(
 	{
 		System: frame_system::{Module, Call, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
@@ -87,6 +111,21 @@ construct_runtime!(
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 	}
 );
+
+pub type MinterestToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+parameter_types! {
+	pub const ExistentialDeposit: u128 = 500;
+	pub const MaxLocks: u32 = 50;
+}
+impl pallet_balances::Config for Runtime {
+	type MaxLocks = MaxLocks;
+	type Balance = Balance;
+	type Event = Event;
+	type DustRemoval = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+}
 
 impl mnt_token::Config for Runtime {
 	type Event = Event;
@@ -98,6 +137,7 @@ impl mnt_token::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControllerAPI = Controller;
 	type MntTokenAccountId = MntTokenAccountId;
+	type NativeCurrency = MinterestToken;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -109,6 +149,7 @@ pub struct ExtBuilder {
 	minted_pools: Vec<CurrencyId>,
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	mnt_rate: Balance,
+	mnt_claim_treshold: Balance,
 }
 
 pub const ALICE: AccountId = 1;
@@ -123,6 +164,7 @@ impl Default for ExtBuilder {
 			minted_pools: vec![],
 			pool_user_data: vec![],
 			endowed_accounts: vec![],
+			mnt_claim_treshold: Balance::zero(),
 			mnt_rate: Balance::zero(),
 		}
 	}
@@ -139,6 +181,11 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn set_mnt_claim_treshold(mut self, treshold: u128) -> Self {
+		self.mnt_claim_treshold = treshold * DOLLARS;
+		self
+	}
+
 	pub fn pool_total_borrowed(mut self, pool_id: CurrencyId, total_borrowed: Balance) -> Self {
 		self.pools.push((
 			pool_id,
@@ -151,9 +198,9 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn mnt_acc_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+	pub fn mnt_acc_balance(mut self, balance: Balance) -> Self {
 		self.endowed_accounts
-			.push((MntToken::get_account_id(), currency_id, balance));
+			.push((MntToken::get_account_id(), CurrencyId::MNT, balance));
 		self
 	}
 
@@ -191,15 +238,31 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
+		pallet_balances::GenesisConfig::<Runtime> {
+			balances: self
+				.endowed_accounts
+				.clone()
+				.into_iter()
+				.filter(|(_, currency_id, _)| *currency_id == CurrencyId::MNT)
+				.map(|(account_id, _, initial_balance)| (account_id, initial_balance))
+				.collect::<Vec<_>>(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 		orml_tokens::GenesisConfig::<Runtime> {
-			endowed_accounts: self.endowed_accounts,
+			endowed_accounts: self
+				.endowed_accounts
+				.into_iter()
+				.filter(|(_, currency_id, _)| *currency_id != CurrencyId::MNT)
+				.collect::<Vec<_>>(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
 
 		mnt_token::GenesisConfig::<Runtime> {
 			mnt_rate: self.mnt_rate,
-			mnt_claim_treshold: 0, // disable by default
+			mnt_claim_treshold: self.mnt_claim_treshold, // disable by default
 			minted_pools: self.minted_pools,
 			phantom: PhantomData,
 		}

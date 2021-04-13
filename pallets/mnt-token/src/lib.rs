@@ -9,7 +9,7 @@ use frame_support::{pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
 pub use module::*;
-use orml_traits::MultiCurrency;
+use orml_traits::{MultiCurrency, BasicCurrency};
 use pallet_traits::{ControllerAPI, LiquidityPoolsManager, PriceProvider};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
@@ -101,6 +101,8 @@ pub mod module {
 		#[pallet::constant]
 		/// The Mnt-token's account id, keep assets that should be distributed to users
 		type MntTokenAccountId: Get<Self::AccountId>;
+
+		type NativeCurrency: BasicCurrency<Self::AccountId, Balance = Balance>;
 	}
 
 	#[pallet::error]
@@ -437,6 +439,9 @@ impl<T: Config> Pallet<T> {
 		MntAccrued::<T>::insert(supplier, supplier_mnt_accrued);
 		MntSupplierIndex::<T>::insert(underlying_id, supplier, supplier_index);
 
+
+		// println!("TOTAL BALANCE {:?}", T::NativeCurrency::total_issuance());
+
 		Self::deposit_event(Event::MntDistributedToSupplier(
 			underlying_id,
 			supplier.clone(),
@@ -538,5 +543,13 @@ impl<T: Config> Pallet<T> {
 			MntSpeeds::<T>::insert(currency_id, pool_mnt_speed.into_inner());
 		}
 		Ok(())
+	}
+
+	fn transfer_mnt(user: &T::AccountId, user_accured: Balance, treshold: Balance) -> Balance {
+		// TODO
+		if user_accured >= treshold && user_accured > 0 {
+			return 0;
+		}
+		user_accured
 	}
 }

@@ -4,7 +4,7 @@ use super::Error;
 use crate::mock::*;
 use frame_support::{assert_noop, assert_ok};
 use minterest_primitives::{Balance, CurrencyId, Rate};
-use orml_traits::MultiCurrency;
+use orml_traits::{BasicCurrency, MultiCurrency};
 use sp_arithmetic::FixedPointNumber;
 use sp_runtime::traits::Zero;
 
@@ -33,9 +33,21 @@ fn check_supplier_accrued(pool_id: CurrencyId, supplier: AccountId, expected_mnt
 }
 
 #[test]
+fn native_currency_issuance_is_work() {
+	ExtBuilder::default()
+		.mnt_acc_balance(1000000 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			assert_eq!(MinterestToken::total_issuance(), 1000000 * DOLLARS);
+		});
+}
+
+#[test]
 fn distribute_mnt_to_supplier_from_differt_pools() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
+		.mnt_acc_balance(1000000 * DOLLARS)
+		.set_mnt_claim_treshold(1)
 		.pool_total_borrowed(CurrencyId::DOT, 100 * DOLLARS)
 		.pool_total_borrowed(CurrencyId::KSM, 100 * DOLLARS)
 		.set_mnt_rate(10)

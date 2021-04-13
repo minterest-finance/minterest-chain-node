@@ -4001,6 +4001,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "orml-utilities",
+ "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
  "serde",

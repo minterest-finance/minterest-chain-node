@@ -25,6 +25,8 @@ minterest-model = { path = "../minterest-model", default-features = false }
 controller = { path = "../controller", default-features = false }
 
 [dev-dependencies]
+pallet-balances = "3.0.0"
+
 sp-core = "3.0.0"
 sp-io = "3.0.0"
 sp-runtime = { version = "3.0.0"}
@@ -38,6 +40,7 @@ minterest-primitives = { path = "../../primitives" }
 minterest-model = { path = "../minterest-model" }
 controller = { path = "../controller" }
 test-helper = { path = "../../test-helper" }
+
 
 [features]
 default = ["std"]
