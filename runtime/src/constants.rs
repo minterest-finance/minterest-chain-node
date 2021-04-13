@@ -35,3 +35,27 @@ pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: minterest_primitives::Balance = 
 
 /// Initial exchange rate: 100%
 pub const INITIAL_EXCHANGE_RATE: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+
+pub mod fee {
+	use frame_support::weights::constants::ExtrinsicBaseWeight;
+	use frame_support::weights::{WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial};
+	use minterest_primitives::Balance;
+	use smallvec::smallvec;
+	use sp_runtime::Perbill;
+
+	pub struct WeightToFee;
+	impl WeightToFeePolynomial for WeightToFee {
+		type Balance = Balance;
+		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+			// Extrinsic base weight is mapped to 0.43 MNT
+			let p = 426_974_397_875_000_000;
+			let q = Balance::from(ExtrinsicBaseWeight::get()); // 125_000_000
+			smallvec![WeightToFeeCoefficient {
+				degree: 1,
+				negative: false,
+				coeff_frac: Perbill::zero(), // zero
+				coeff_integer: p / q,        // 3_415_795_183
+			}]
+		}
+	}
+}
