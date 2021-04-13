@@ -21,7 +21,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	FixedPointNumber,
 };
-use test_helper::*;
+pub use test_helper::*;
 
 pub type AccountId = u64;
 

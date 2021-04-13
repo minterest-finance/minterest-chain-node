@@ -4197,6 +4197,7 @@ dependencies = [
  "sp-version",
  "static_assertions",
  "substrate-wasm-builder",
+ "test-helper",
 ]
 
 [[package]]
@@ -8135,6 +8136,9 @@ dependencies = [
 [[package]]
 name = "test-helper"
 version = "0.6.2"
+dependencies = [
+ "minterest-primitives",
+]
 
 [[package]]
 name = "textwrap"

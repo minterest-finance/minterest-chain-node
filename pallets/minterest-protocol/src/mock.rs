@@ -8,10 +8,7 @@ use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
-pub use minterest_primitives::currency::{
-	CurrencyType::{UnderlyingAsset, WrappedToken},
-	BTC, DOT, ETH, KSM, MBTC, MDOT, MKSM, MNT,
-};
+pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
@@ -23,7 +20,7 @@ use sp_runtime::{
 	FixedPointNumber, ModuleId,
 };
 use sp_std::cell::RefCell;
-use test_helper::*;
+pub use test_helper::*;
 
 pub type AccountId = u64;
 

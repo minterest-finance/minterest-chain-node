@@ -5,7 +5,7 @@ use crate as liquidity_pools;
 use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::parameter_types;
 use frame_system as system;
-pub use minterest_primitives::currency::{CurrencyType::WrappedToken, BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT};
+pub use minterest_primitives::currency::CurrencyType::WrappedToken;
 use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId};
 use orml_currencies::Currency;
@@ -15,7 +15,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use test_helper::*;
+pub use test_helper::*;
 
 pub type AccountId = u64;
 

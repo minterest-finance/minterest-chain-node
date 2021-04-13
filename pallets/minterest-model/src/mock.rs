@@ -5,7 +5,6 @@ use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
 use frame_system::EnsureSignedBy;
 use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
-pub use minterest_primitives::currency::{BTC, DOT, KSM, MDOT};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
@@ -16,7 +15,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 	ModuleId,
 };
-use test_helper::*;
+pub use test_helper::*;
 
 pub type AccountId = u64;
 

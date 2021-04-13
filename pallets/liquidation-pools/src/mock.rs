@@ -4,7 +4,6 @@ use crate as liquidation_pools;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
 use frame_system::EnsureSignedBy;
-pub use minterest_primitives::currency::{DOT, MDOT, MNT};
 use minterest_primitives::Price;
 pub use minterest_primitives::{currency::CurrencyType::WrappedToken, Balance, CurrencyId, Rate};
 use orml_currencies::Currency;
@@ -18,7 +17,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 	FixedPointNumber,
 };
-use test_helper::*;
+pub use test_helper::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;

@@ -12,12 +12,12 @@ use frame_support::{
 use liquidation_pools::{LiquidationPoolData, Sales};
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
-pub use minterest_primitives::currency::{BTC, DOT, ETH, KSM, MDOT, METH, MNT};
 use minterest_primitives::{CurrencyId, Operation, Price};
 use orml_traits::MultiCurrency;
 use pallet_traits::{DEXManager, PoolsManager, PriceProvider};
 use risk_manager::RiskManagerData;
 use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};
+use test_helper::{BTC, DOT, ETH, KSM, MDOT, METH, MNT};
 
 mod balancing_pools_tests;
 mod dexes_tests;

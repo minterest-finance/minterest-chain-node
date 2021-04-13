@@ -7,7 +7,6 @@ use frame_system as system;
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
-pub use minterest_primitives::currency::{BTC, DOT, ETH, KSM, MDOT, METH, MNT};
 pub(crate) use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_currencies::Currency;
@@ -19,7 +18,7 @@ use sp_runtime::{
 	FixedPointNumber, ModuleId,
 };
 use sp_std::cell::RefCell;
-use test_helper::*;
+pub use test_helper::*;
 
 pub type AccountId = u64;
 
