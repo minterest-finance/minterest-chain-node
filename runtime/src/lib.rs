@@ -231,11 +231,11 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-	pub const TransactionByteFee: Balance = 3_570_000_000_000_000;
+	pub TransactionByteFee: Balance = 3_570_000_000_000_000;
 	pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(25);
+	pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(1, 100_000);
 	// FIXME: Temporary value to get multiplier equal to 1
-	pub AdjustmentVariable: Multiplier = Multiplier::zero();
-	pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000_000u128);
+	pub MinimumMultiplier: Multiplier = Multiplier::one();
 }
 
 impl pallet_transaction_payment::Config for Runtime {
