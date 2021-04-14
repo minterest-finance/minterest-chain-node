@@ -122,7 +122,7 @@ pub mod module {
 		BalanceRatioChanged(CurrencyId, Rate),
 		///  Maximum ideal balance has been successfully changed: \[pool_id, new_threshold_value\]
 		MaxIdealBalanceChanged(CurrencyId, Option<Balance>),
-		///  Balance has been successfully updated
+		///  Balance has been successfully updated: \[pool_id, by_amount]
 		BalanceUpdated(CurrencyId, Amount),
 	}
 
@@ -324,19 +324,23 @@ pub mod module {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::LiquidationPoolsWeightInfo::balance_liquidation_pools())] //FIXME
+		/// Updates balance of liquidation pool
+		/// 
+		/// - `pool_id`: PoolID to update
+		/// - `by_amount`: value to change the balance. If positive do add, else do remove.
+		#[pallet::weight(10_000)] // Stub, function is for dev purposes only.
 		#[transactional]
 		pub fn update_balance(
 			origin: OriginFor<T>,
-			currency_id: CurrencyId,
+			pool_id: CurrencyId,
 			by_amount: Amount,
 		) -> DispatchResultWithPostInfo {
-			let _ = ensure_none(origin)?;
+			let _ = T::UpdateOrigin::ensure_origin(origin)?;
 			let module_account_id = Self::pools_account_id();
 
-			T::MultiCurrency::update_balance(currency_id, &module_account_id, by_amount)?;
+			T::MultiCurrency::update_balance(pool_id, &module_account_id, by_amount)?;
 
-			Self::deposit_event(Event::BalanceUpdated(currency_id, by_amount));
+			Self::deposit_event(Event::BalanceUpdated(pool_id, by_amount));
 			Ok(().into())
 		}
 	}

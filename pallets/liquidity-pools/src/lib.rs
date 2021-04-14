@@ -464,7 +464,7 @@ impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 	/// - `account_borrows`: The borrow balance of account.
 	///
 	/// calculates: `account_borrows_new = account_borrows + borrow_amount`,
-	///	         `total_borrows_new = total_borrows + borrow_amount`.
+	///             `total_borrows_new = total_borrows + borrow_amount`.
 	fn update_state_on_borrow(
 		who: &T::AccountId,
 		pool_id: CurrencyId,
