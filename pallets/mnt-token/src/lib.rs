@@ -25,6 +25,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub mod weights;
+pub use weights::WeightInfo;
+
 /// Representation of supply/borrow pool state
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
@@ -101,6 +104,9 @@ pub mod module {
 		#[pallet::constant]
 		/// The Mnt-token's account id, keep assets that should be distributed to users
 		type MntTokenAccountId: Get<Self::AccountId>;
+
+		/// Weight information for the extrinsics.
+		type ProtocolWeightInfo: WeightInfo;
 	}
 
 	#[pallet::error]
@@ -228,7 +234,7 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(10_000)]
+		#[pallet::weight(T::ProtocolWeightInfo::enable_mnt_minting())]
 		#[transactional]
 		/// Enable MNT minting for pool and recalculate MntSpeeds
 		pub fn enable_mnt_minting(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
@@ -250,7 +256,7 @@ pub mod module {
 			Ok(().into())
 		}
 
-		#[pallet::weight(10_000)]
+		#[pallet::weight(T::ProtocolWeightInfo::disable_mnt_minting())]
 		#[transactional]
 		/// Disable MNT minting for pool and recalculate MntSpeeds
 		pub fn disable_mnt_minting(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
@@ -272,7 +278,7 @@ pub mod module {
 			Ok(().into())
 		}
 
-		#[pallet::weight(10_000)]
+		#[pallet::weight(T::ProtocolWeightInfo::set_mnt_rate())]
 		#[transactional]
 		/// Set MNT rate and recalculate MntSpeeds distribution
 		pub fn set_mnt_rate(origin: OriginFor<T>, rate: Balance) -> DispatchResultWithPostInfo {

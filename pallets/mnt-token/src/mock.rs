@@ -125,6 +125,7 @@ impl mnt_token::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControllerAPI = Controller;
 	type MntTokenAccountId = MntTokenAccountId;
+	type ProtocolWeightInfo = ();
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;

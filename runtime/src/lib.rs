@@ -478,6 +478,7 @@ impl mnt_token::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControllerAPI = Controller;
 	type MntTokenAccountId = MntTokenAccountId;
+	type ProtocolWeightInfo = weights::mnt_token::WeightInfo<Runtime>;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -826,6 +827,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, risk_manager, benchmarking::risk_manager);
 			add_benchmark!(params, batches, liquidation_pools, benchmarking::liquidation_pools);
 			add_benchmark!(params, batches, minterest_protocol, benchmarking::minterest_protocol);
+			add_benchmark!(params, batches, mnt_token, benchmarking::mnt_token);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
