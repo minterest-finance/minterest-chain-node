@@ -5,7 +5,6 @@
 use super::*;
 use crate as dex;
 use frame_support::{construct_runtime, ord_parameter_types, parameter_types};
-use frame_system as system;
 use frame_system::offchain::SendTransactionTypes;
 use frame_system::EnsureSignedBy;
 pub(crate) use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};

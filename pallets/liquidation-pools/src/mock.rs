@@ -2,7 +2,6 @@
 use super::*;
 use crate as liquidation_pools;
 use frame_support::{ord_parameter_types, parameter_types};
-use frame_system as system;
 use frame_system::EnsureSignedBy;
 use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate};

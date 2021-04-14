@@ -163,7 +163,6 @@ pub mod module {
 	#[pallet::getter(fn mnt_speeds)]
 	pub(crate) type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Balance, ValueQuery>;
 
-	// TODO Could I merge MntSpeeds and MntPoolsState storage into one?
 	/// Index + block_number need for generating and distributing new MNT tokens for pool
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_pools_state)]
@@ -544,7 +543,9 @@ impl<T: Config> Pallet<T> {
 	/// storage
 	fn transfer_mnt(user: &T::AccountId, user_accured: Balance, treshold: Balance) -> DispatchResult {
 		if user_accured >= treshold && user_accured > 0 {
-			// TODO check is currency in MNT pallet enough
+			// TODO check is currency in MNT pallet enough.
+			// Need to discuss what we should do.
+			// Erorr/Event/save money to MntAccrued/stop producing mnt tokens
 			T::MultiCurrency::transfer(CurrencyId::MNT, &Self::get_account_id(), &user, user_accured)?;
 			MntAccrued::<T>::remove(user); // set to 0
 		} else {

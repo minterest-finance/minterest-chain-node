@@ -4,7 +4,6 @@ use crate as risk_manager;
 use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::traits::Contains;
 use frame_support::{ord_parameter_types, parameter_types};
-use frame_system as system;
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};

@@ -9,7 +9,8 @@ use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
 use sp_runtime::{
-	traits::{AccountIdConversion, Zero},
+	testing::{Header, H256},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
 	FixedPointNumber, ModuleId,
 };
 use test_helper::*;
@@ -47,32 +48,7 @@ ord_parameter_types! {
 
 pub struct MockPriceSource;
 
-// TODO USE mock_impl. Ticket? Also see on MockPriceSource.
-impl frame_system::Config for Runtime {
-	type BaseCallFilter = ();
-	type Origin = Origin;
-	type Index = u64;
-	type BlockNumber = u64;
-	type Call = Call;
-	type Hash = sp_runtime::testing::H256;
-	type Hashing = sp_runtime::traits::BlakeTwo256;
-	type AccountId = u64;
-	type Lookup = sp_runtime::traits::IdentityLookup<Self::AccountId>;
-	type Header = sp_runtime::testing::Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
-}
-
+mock_impl_system_config!(Runtime, pallet_balances::AccountData<Balance>);
 mock_impl_orml_tokens_config!(Runtime);
 
 pub type MinterestToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
@@ -80,7 +56,6 @@ parameter_types! {
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
 }
 
-// TODO mock impl
 impl orml_currencies::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
@@ -167,7 +142,6 @@ pub struct ExtBuilder {
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
-// pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
 
 impl Default for ExtBuilder {
 	fn default() -> Self {

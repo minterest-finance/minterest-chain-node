@@ -4,7 +4,6 @@ use super::*;
 use crate as liquidity_pools;
 use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::parameter_types;
-use frame_system as system;
 use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair};
 use orml_currencies::Currency;

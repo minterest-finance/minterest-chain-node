@@ -6,13 +6,17 @@
 
 #[macro_export]
 macro_rules! mock_impl_system_config {
-	($target:ty) => {
+	($target: ty) => {
+		mock_impl_system_config!($target, ());
+	};
+
+	($target:ty, $account_data:ty) => {
 		parameter_types! {
 			pub const MockBlockHashCount: u64 = 250;
 			pub const MockSS58Prefix: u8 = 42;
 		}
 
-		impl system::Config for $target {
+		impl frame_system::Config for $target {
 			type BaseCallFilter = ();
 			type BlockWeights = ();
 			type BlockLength = ();
@@ -30,7 +34,7 @@ macro_rules! mock_impl_system_config {
 			type BlockHashCount = MockBlockHashCount;
 			type Version = ();
 			type PalletInfo = PalletInfo;
-			type AccountData = ();
+			type AccountData = $account_data;
 			type OnNewAccount = ();
 			type OnKilledAccount = ();
 			type SystemWeightInfo = ();

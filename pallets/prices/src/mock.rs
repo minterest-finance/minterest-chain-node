@@ -3,7 +3,7 @@
 use super::*;
 use crate as module_prices;
 use frame_support::{ord_parameter_types, parameter_types};
-use frame_system::{self as system, EnsureSignedBy};
+use frame_system::EnsureSignedBy;
 use minterest_primitives::{CurrencyId, CurrencyPair};
 use sp_core::H256;
 use sp_runtime::testing::Header;

@@ -3,7 +3,6 @@
 use super::*;
 use crate as controller;
 use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
-use frame_system as system;
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
