@@ -382,18 +382,18 @@ fn borrow_allowed_should_work() {
 #[test]
 fn is_operation_allowed_should_work() {
 	ExtBuilder::default().pool_mock(DOT).build().execute_with(|| {
-		assert_eq!(Controller::is_operation_allowed(DOT, Operation::Deposit), true);
-		assert_eq!(Controller::is_operation_allowed(DOT, Operation::Redeem), true);
-		assert_eq!(Controller::is_operation_allowed(DOT, Operation::Borrow), true);
-		assert_eq!(Controller::is_operation_allowed(DOT, Operation::Repay), true);
+		assert!(Controller::is_operation_allowed(DOT, Operation::Deposit));
+		assert!(Controller::is_operation_allowed(DOT, Operation::Redeem));
+		assert!(Controller::is_operation_allowed(DOT, Operation::Borrow));
+		assert!(Controller::is_operation_allowed(DOT, Operation::Repay));
 
 		assert_ok!(Controller::pause_operation(alice(), DOT, Operation::Deposit));
 		assert_ok!(Controller::pause_operation(alice(), DOT, Operation::Redeem));
 
-		assert_eq!(Controller::is_operation_allowed(DOT, Operation::Deposit), false);
-		assert_eq!(Controller::is_operation_allowed(DOT, Operation::Redeem), false);
-		assert_eq!(Controller::is_operation_allowed(DOT, Operation::Borrow), true);
-		assert_eq!(Controller::is_operation_allowed(DOT, Operation::Repay), true);
+		assert!(!Controller::is_operation_allowed(DOT, Operation::Deposit));
+		assert!(!Controller::is_operation_allowed(DOT, Operation::Redeem));
+		assert!(Controller::is_operation_allowed(DOT, Operation::Borrow));
+		assert!(Controller::is_operation_allowed(DOT, Operation::Repay));
 	});
 }
 
@@ -519,11 +519,11 @@ fn set_collateral_factor_should_work() {
 #[test]
 fn pause_operation_should_work() {
 	ExtBuilder::default().pool_mock(DOT).build().execute_with(|| {
-		assert_eq!(Controller::pause_keepers(&DOT).deposit_paused, false);
-		assert_eq!(Controller::pause_keepers(&DOT).redeem_paused, false);
-		assert_eq!(Controller::pause_keepers(&DOT).borrow_paused, false);
-		assert_eq!(Controller::pause_keepers(&DOT).repay_paused, false);
-		assert_eq!(Controller::pause_keepers(&DOT).transfer_paused, false);
+		assert!(!Controller::pause_keepers(&DOT).deposit_paused);
+		assert!(!Controller::pause_keepers(&DOT).redeem_paused);
+		assert!(!Controller::pause_keepers(&DOT).borrow_paused);
+		assert!(!Controller::pause_keepers(&DOT).repay_paused);
+		assert!(!Controller::pause_keepers(&DOT).transfer_paused);
 
 		assert_ok!(Controller::pause_operation(alice(), DOT, Operation::Deposit));
 		let expected_event = Event::controller(crate::Event::OperationIsPaused(DOT, Operation::Deposit));
@@ -545,11 +545,11 @@ fn pause_operation_should_work() {
 		let expected_event = Event::controller(crate::Event::OperationIsPaused(DOT, Operation::Transfer));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
-		assert_eq!(Controller::pause_keepers(&DOT).deposit_paused, true);
-		assert_eq!(Controller::pause_keepers(&DOT).redeem_paused, true);
-		assert_eq!(Controller::pause_keepers(&DOT).borrow_paused, true);
-		assert_eq!(Controller::pause_keepers(&DOT).repay_paused, true);
-		assert_eq!(Controller::pause_keepers(&DOT).transfer_paused, true);
+		assert!(Controller::pause_keepers(&DOT).deposit_paused);
+		assert!(Controller::pause_keepers(&DOT).redeem_paused);
+		assert!(Controller::pause_keepers(&DOT).borrow_paused);
+		assert!(Controller::pause_keepers(&DOT).repay_paused);
+		assert!(Controller::pause_keepers(&DOT).transfer_paused);
 
 		assert_noop!(Controller::pause_operation(bob(), DOT, Operation::Deposit), BadOrigin);
 		assert_noop!(
@@ -566,11 +566,11 @@ fn resume_operation_should_work() {
 		.pool_mock(KSM)
 		.build()
 		.execute_with(|| {
-			assert_eq!(Controller::pause_keepers(&KSM).deposit_paused, true);
-			assert_eq!(Controller::pause_keepers(&KSM).redeem_paused, true);
-			assert_eq!(Controller::pause_keepers(&KSM).borrow_paused, true);
-			assert_eq!(Controller::pause_keepers(&KSM).repay_paused, true);
-			assert_eq!(Controller::pause_keepers(&KSM).transfer_paused, true);
+			assert!(Controller::pause_keepers(&KSM).deposit_paused);
+			assert!(Controller::pause_keepers(&KSM).redeem_paused);
+			assert!(Controller::pause_keepers(&KSM).borrow_paused);
+			assert!(Controller::pause_keepers(&KSM).repay_paused);
+			assert!(Controller::pause_keepers(&KSM).transfer_paused);
 
 			assert_ok!(Controller::resume_operation(alice(), KSM, Operation::Deposit));
 			let expected_event = Event::controller(crate::Event::OperationIsUnPaused(KSM, Operation::Deposit));
@@ -592,11 +592,11 @@ fn resume_operation_should_work() {
 			let expected_event = Event::controller(crate::Event::OperationIsUnPaused(KSM, Operation::Transfer));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_eq!(Controller::pause_keepers(&KSM).deposit_paused, false);
-			assert_eq!(Controller::pause_keepers(&KSM).redeem_paused, false);
-			assert_eq!(Controller::pause_keepers(&KSM).borrow_paused, false);
-			assert_eq!(Controller::pause_keepers(&KSM).repay_paused, false);
-			assert_eq!(Controller::pause_keepers(&KSM).transfer_paused, false);
+			assert!(!Controller::pause_keepers(&KSM).deposit_paused);
+			assert!(!Controller::pause_keepers(&KSM).redeem_paused);
+			assert!(!Controller::pause_keepers(&KSM).borrow_paused);
+			assert!(!Controller::pause_keepers(&KSM).repay_paused);
+			assert!(!Controller::pause_keepers(&KSM).transfer_paused);
 
 			assert_noop!(Controller::resume_operation(bob(), DOT, Operation::Deposit), BadOrigin);
 			assert_noop!(
@@ -612,13 +612,13 @@ fn switch_whitelist_mode_should_work() {
 		assert_ok!(Controller::switch_whitelist_mode(alice()));
 		let expected_event = Event::controller(crate::Event::ProtocolOperationModeSwitched(true));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
-		assert_eq!(Controller::whitelist_mode(), true);
+		assert!(Controller::whitelist_mode());
 
 		assert_ok!(Controller::switch_whitelist_mode(alice()));
-		assert_eq!(Controller::whitelist_mode(), false);
+		assert!(!Controller::whitelist_mode());
 
 		assert_noop!(Controller::switch_whitelist_mode(bob()), BadOrigin);
-		assert_eq!(Controller::whitelist_mode(), false);
+		assert!(!Controller::whitelist_mode());
 	});
 }
 
