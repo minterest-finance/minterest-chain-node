@@ -12,7 +12,7 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, traits::Get, transactional};
 use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
 use frame_system::pallet_prelude::*;
-use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate, Amount};
+use minterest_primitives::{Amount, Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::{MultiCurrency, MultiCurrencyExtended};
 use pallet_traits::DEXManager;
 use pallet_traits::{PoolsManager, PriceProvider};
@@ -122,8 +122,8 @@ pub mod module {
 		BalanceRatioChanged(CurrencyId, Rate),
 		///  Maximum ideal balance has been successfully changed: \[pool_id, new_threshold_value\]
 		MaxIdealBalanceChanged(CurrencyId, Option<Balance>),
-        ///  Balance has been successfully updated
-        BalanceUpdated(CurrencyId, Amount),
+		///  Balance has been successfully updated
+		BalanceUpdated(CurrencyId, Amount),
 	}
 
 	/// Balancing pool frequency.
@@ -324,21 +324,21 @@ pub mod module {
 			Ok(().into())
 		}
 
-        #[pallet::weight(T::LiquidationPoolsWeightInfo::balance_liquidation_pools())] //FIXME
+		#[pallet::weight(T::LiquidationPoolsWeightInfo::balance_liquidation_pools())] //FIXME
 		#[transactional]
-        pub fn update_balance(
-            origin: OriginFor<T>,
-            currency_id: CurrencyId, 
-            by_amount: Amount,
-        ) -> DispatchResultWithPostInfo {
-            let _ = ensure_none(origin)?;
-            let module_account_id = Self::pools_account_id();
+		pub fn update_balance(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			by_amount: Amount,
+		) -> DispatchResultWithPostInfo {
+			let _ = ensure_none(origin)?;
+			let module_account_id = Self::pools_account_id();
 
-            T::MultiCurrency::update_balance(currency_id, &module_account_id, by_amount)?;
-                        
-            Self::deposit_event(Event::BalanceUpdated(currency_id, by_amount));            
-            Ok(().into())            
-        }
+			T::MultiCurrency::update_balance(currency_id, &module_account_id, by_amount)?;
+
+			Self::deposit_event(Event::BalanceUpdated(currency_id, by_amount));
+			Ok(().into())
+		}
 	}
 }
 

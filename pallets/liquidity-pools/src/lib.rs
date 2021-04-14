@@ -10,7 +10,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{pallet_prelude::*, traits::Get};
-use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Rate, Amount};
+use minterest_primitives::{Amount, Balance, CurrencyId, CurrencyPair, Rate};
 pub use module::*;
 use orml_traits::{MultiCurrency, MultiCurrencyExtended};
 use pallet_traits::{Borrowing, LiquidityPoolsManager, PoolsManager, PriceProvider};
@@ -70,7 +70,12 @@ pub mod module {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// The `MultiCurrency` implementation.
-		type MultiCurrency: MultiCurrencyExtended<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId, Amount = Amount>;
+		type MultiCurrency: MultiCurrencyExtended<
+			Self::AccountId,
+			Balance = Balance,
+			CurrencyId = CurrencyId,
+			Amount = Amount,
+		>;
 
 		/// Start exchange rate.
 		type InitialExchangeRate: Get<Rate>;
@@ -459,7 +464,7 @@ impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 	/// - `account_borrows`: The borrow balance of account.
 	///
 	/// calculates: `account_borrows_new = account_borrows + borrow_amount`,
-	///             `total_borrows_new = total_borrows + borrow_amount`.
+	///	         `total_borrows_new = total_borrows + borrow_amount`.
 	fn update_state_on_borrow(
 		who: &T::AccountId,
 		pool_id: CurrencyId,
