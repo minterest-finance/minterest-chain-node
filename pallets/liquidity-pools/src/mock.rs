@@ -5,8 +5,9 @@ use crate as liquidity_pools;
 use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::parameter_types;
 use frame_system as system;
+pub use minterest_primitives::currency::CurrencyType::WrappedToken;
 use minterest_primitives::Price;
-pub use minterest_primitives::{Balance, CurrencyId, CurrencyPair};
+pub use minterest_primitives::{Balance, CurrencyId};
 use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
@@ -14,7 +15,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use test_helper::*;
+pub use test_helper::*;
 
 pub type AccountId = u64;
 
@@ -37,25 +38,15 @@ frame_support::construct_runtime!(
 
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
-mock_impl_orml_currencies_config!(Test, CurrencyId::MNT);
+mock_impl_orml_currencies_config!(Test, MNT);
 mock_impl_liquidity_pools_config!(Test);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
-		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
-		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
-		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
-		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
-	];
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.underlying_id)
-			.collect();
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.wrapped_id)
-			.collect();
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
 pub struct MockPriceSource;

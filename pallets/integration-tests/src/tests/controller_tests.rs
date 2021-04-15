@@ -16,63 +16,51 @@ mod tests {
 	#[test]
 	fn disable_is_collateral_internal_fails_if_not_cover_borrowing() {
 		ExtBuilder::default()
-			.pool_initial(CurrencyId::DOT)
-			.pool_initial(CurrencyId::BTC)
-			.pool_initial(CurrencyId::ETH)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::BTC, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
-			.pool_user_data(CurrencyId::BTC, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
-			.pool_user_data(CurrencyId::ETH, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
+			.pool_initial(DOT)
+			.pool_initial(BTC)
+			.pool_initial(ETH)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, BTC, ONE_HUNDRED)
+			.user_balance(ALICE, ETH, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
+			.pool_user_data(BTC, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
+			.pool_user_data(ETH, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
 			.build()
 			.execute_with(|| {
 				// ALICE deposit 60 DOT, 50 BTC, 40 ETH.
-				assert_ok!(MinterestProtocol::deposit_underlying(
-					alice(),
-					CurrencyId::DOT,
-					60 * DOLLARS
-				));
-				assert_ok!(MinterestProtocol::deposit_underlying(
-					alice(),
-					CurrencyId::BTC,
-					50 * DOLLARS
-				));
-				assert_ok!(MinterestProtocol::deposit_underlying(
-					alice(),
-					CurrencyId::ETH,
-					40 * DOLLARS
-				));
+				assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 60 * DOLLARS));
+				assert_ok!(MinterestProtocol::deposit_underlying(alice(), BTC, 50 * DOLLARS));
+				assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 40 * DOLLARS));
 
 				System::set_block_number(11);
 
 				// Alice enable her assets in pools as collateral.
-				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), CurrencyId::DOT));
-				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), CurrencyId::BTC));
-				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), CurrencyId::ETH));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), BTC));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
 
 				System::set_block_number(21);
 
 				// Alice transfer her 50 MBTC to BOB.
-				assert_ok!(Currencies::transfer(alice(), BOB, CurrencyId::MBTC, 50 * DOLLARS));
+				assert_ok!(Currencies::transfer(alice(), BOB, MBTC, 50 * DOLLARS));
 
 				System::set_block_number(31);
 
 				// Alice borrow 50 BTC.
-				assert_ok!(MinterestProtocol::borrow(alice(), CurrencyId::BTC, 50 * DOLLARS));
+				assert_ok!(MinterestProtocol::borrow(alice(), BTC, 50 * DOLLARS));
 
 				System::set_block_number(41);
 
 				// Alice can't disable DOT as collateral (because ETH won't cover the borrowing).
 				assert_noop!(
-					MinterestProtocol::disable_is_collateral(alice(), CurrencyId::DOT),
+					MinterestProtocol::disable_is_collateral(alice(), DOT),
 					MinterestProtocolError::<Test>::IsCollateralCannotBeDisabled
 				);
 
 				System::set_block_number(51);
 
 				// Alice can disable ETH as collateral (because DOT will cover the borrowing);
-				assert_ok!(MinterestProtocol::disable_is_collateral(alice(), CurrencyId::ETH));
+				assert_ok!(MinterestProtocol::disable_is_collateral(alice(), ETH));
 			});
 	}
 
@@ -85,16 +73,16 @@ mod tests {
 	#[test]
 	fn set_protocol_interest_factor_greater_than_zero() {
 		ExtBuilder::default()
-			.pool_initial(CurrencyId::DOT)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_initial(DOT)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
 				let alice_deposited_amount = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount
 				));
 
@@ -104,39 +92,39 @@ mod tests {
 				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_borrowed_amount_in_dot
 				));
 
 				// Checking pool available liquidity
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					TestPools::get_pool_available_liquidity(DOT),
 					alice_deposited_amount - alice_borrowed_amount_in_dot
 				);
 				// Checking total interest for DOT pool.
-				assert_eq!(TestPools::pools(CurrencyId::DOT).total_protocol_interest, BALANCE_ZERO);
+				assert_eq!(TestPools::pools(DOT).total_protocol_interest, BALANCE_ZERO);
 
 				System::set_block_number(10);
 
 				// Set interest factor equal 0.5.
 				assert_ok!(TestController::set_protocol_interest_factor(
 					admin(),
-					CurrencyId::DOT,
+					DOT,
 					Rate::saturating_from_rational(1, 2)
 				));
 
 				// Alice repay full loan in DOTs.
-				assert_ok!(MinterestProtocol::repay_all(Origin::signed(ALICE), CurrencyId::DOT));
+				assert_ok!(MinterestProtocol::repay_all(Origin::signed(ALICE), DOT));
 
 				let expected_interest_accumulated: Balance = 720_000_000_000_000;
 
 				// Checking pool available liquidity
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					TestPools::get_pool_available_liquidity(DOT),
 					alice_deposited_amount + expected_interest_accumulated
 				);
 				assert_eq!(
-					TestPools::pools(CurrencyId::DOT).total_protocol_interest,
+					TestPools::pools(DOT).total_protocol_interest,
 					BALANCE_ZERO + (expected_interest_accumulated / 2)
 				);
 			});
@@ -151,16 +139,16 @@ mod tests {
 	#[test]
 	fn set_protocol_interest_factor_equal_zero() {
 		ExtBuilder::default()
-			.pool_initial(CurrencyId::DOT)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_initial(DOT)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
 				let alice_deposited_amount = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount
 				));
 
@@ -170,32 +158,28 @@ mod tests {
 				let alice_borrowed_amount_in_dot = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_borrowed_amount_in_dot
 				));
 
 				// Checking pool available liquidity
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					TestPools::get_pool_available_liquidity(DOT),
 					alice_deposited_amount - alice_borrowed_amount_in_dot
 				);
 				// Checking total interest for DOT pool.
-				assert_eq!(TestPools::pools(CurrencyId::DOT).total_protocol_interest, BALANCE_ZERO);
+				assert_eq!(TestPools::pools(DOT).total_protocol_interest, BALANCE_ZERO);
 
 				System::set_block_number(10);
 
 				// Set interest factor equal to zero.
-				assert_ok!(TestController::set_protocol_interest_factor(
-					admin(),
-					CurrencyId::DOT,
-					RATE_ZERO
-				));
+				assert_ok!(TestController::set_protocol_interest_factor(admin(), DOT, RATE_ZERO));
 
 				// Alice repay full loan in DOTs.
-				assert_ok!(MinterestProtocol::repay_all(Origin::signed(ALICE), CurrencyId::DOT));
+				assert_ok!(MinterestProtocol::repay_all(Origin::signed(ALICE), DOT));
 
 				// Checking pool total interest.
-				assert_eq!(TestPools::pools(CurrencyId::DOT).total_protocol_interest, BALANCE_ZERO);
+				assert_eq!(TestPools::pools(DOT).total_protocol_interest, BALANCE_ZERO);
 			});
 	}
 }

@@ -76,6 +76,9 @@ orml-oracle = { version = "0.4.0", default-features = false }
 orml-oracle-rpc-runtime-api = { version = "0.4.0", default-features = false }
 orml-benchmarking = { version = "0.4.0", default-features = false, optional = true }
 
+[dev-dependencies]
+test-helper = { path = "../test-helper" }
+
 [features]
 default = ["std"]
 runtime-benchmarks = [

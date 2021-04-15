@@ -8,17 +8,17 @@ mod tests {
 	#[test]
 	fn deposit_underlying_with_supplied_interest_should_work() {
 		ExtBuilder::default()
-			.pool_initial(CurrencyId::DOT)
-			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
+			.pool_initial(DOT)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.user_balance(BOB, DOT, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::DOT,
+					DOT,
 					ONE_HUNDRED
 				));
 
@@ -26,27 +26,27 @@ mod tests {
 				let alice_deposited_amount = 60_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount
 				));
 
 				// Calculate expected amount of wrapped tokens for Alice
 				let alice_expected_amount_wrapped_tokens =
-					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount).unwrap();
+					TestPools::convert_to_wrapped(DOT, alice_deposited_amount).unwrap();
 
 				// Checking pool available liquidity increased by 60 000
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					TestPools::get_pool_available_liquidity(DOT),
 					ONE_HUNDRED + alice_deposited_amount
 				);
 
 				// Checking current free balance for DOT && MDOT
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					Currencies::free_balance(MDOT, &ALICE),
 					alice_expected_amount_wrapped_tokens
 				);
 
@@ -56,34 +56,28 @@ mod tests {
 				let bob_deposited_amount = ONE_HUNDRED;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(BOB),
-					CurrencyId::DOT,
+					DOT,
 					bob_deposited_amount
 				));
 
 				// Calculate expected amount of wrapped tokens for Bob
 				let bob_expected_amount_wrapped_tokens =
-					TestPools::convert_to_wrapped(CurrencyId::DOT, bob_deposited_amount).unwrap();
+					TestPools::convert_to_wrapped(DOT, bob_deposited_amount).unwrap();
 
 				// Checking pool available liquidity increased by 60 000
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					TestPools::get_pool_available_liquidity(DOT),
 					ONE_HUNDRED + alice_deposited_amount + bob_deposited_amount
 				);
 
 				// Checking current free balance for DOT && MDOT
-				assert_eq!(Currencies::free_balance(CurrencyId::DOT, &ALICE), 40_000 * DOLLARS);
+				assert_eq!(Currencies::free_balance(DOT, &ALICE), 40_000 * DOLLARS);
+				assert_eq!(Currencies::free_balance(DOT, &BOB), ONE_HUNDRED - bob_deposited_amount);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &BOB),
-					ONE_HUNDRED - bob_deposited_amount
-				);
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					Currencies::free_balance(MDOT, &ALICE),
 					alice_expected_amount_wrapped_tokens
 				);
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::MDOT, &BOB),
-					bob_expected_amount_wrapped_tokens
-				);
+				assert_eq!(Currencies::free_balance(MDOT, &BOB), bob_expected_amount_wrapped_tokens);
 			});
 	}
 
@@ -91,25 +85,21 @@ mod tests {
 	fn deposit_underlying_overflow_while_convert_underline_to_wrap_should_work() {
 		ExtBuilder::default()
 			// Set genesis to get exchange rate 0,00000000000000001
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::MDOT, DOLLARS)
-			.pool_initial(CurrencyId::DOT)
-			.pool_balance(CurrencyId::DOT, 5)
-			.pool_total_borrowed(CurrencyId::DOT, 5)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, MDOT, DOLLARS)
+			.pool_initial(DOT)
+			.pool_balance(DOT, 5)
+			.pool_total_borrowed(DOT, 5)
 			.build()
 			.execute_with(|| {
 				// Alice try to deposit ONE_HUNDRED to DOT pool
 				assert_noop!(
-					MinterestProtocol::deposit_underlying(Origin::signed(ALICE), CurrencyId::DOT, ONE_HUNDRED),
+					MinterestProtocol::deposit_underlying(Origin::signed(ALICE), DOT, ONE_HUNDRED),
 					liquidity_pools::Error::<Test>::ConversionError
 				);
 
 				// Alice deposit to DOT pool.
-				assert_ok!(MinterestProtocol::deposit_underlying(
-					Origin::signed(ALICE),
-					CurrencyId::DOT,
-					100
-				));
+				assert_ok!(MinterestProtocol::deposit_underlying(Origin::signed(ALICE), DOT, 100));
 			});
 	}
 
@@ -128,18 +118,18 @@ mod tests {
 	#[test]
 	fn redeem_underlying_with_current_currency_borrowing() {
 		ExtBuilder::default()
-			.pool_initial(CurrencyId::DOT)
-			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_user_data(CurrencyId::ETH, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_initial(DOT)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, ETH, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_user_data(ETH, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::DOT,
+					DOT,
 					ONE_HUNDRED
 				));
 
@@ -147,7 +137,7 @@ mod tests {
 				let alice_deposited_amount_in_dot = 60_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount_in_dot
 				));
 
@@ -157,7 +147,7 @@ mod tests {
 				let alice_deposited_amount_in_eth = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::ETH,
+					ETH,
 					alice_deposited_amount_in_eth
 				));
 
@@ -167,58 +157,51 @@ mod tests {
 				let alice_borrowed_amount_in_dot = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_borrowed_amount_in_dot
 				));
 
 				// Checking pool available liquidity
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					TestPools::get_pool_available_liquidity(DOT),
 					ONE_HUNDRED + alice_deposited_amount_in_dot - alice_borrowed_amount_in_dot
 				);
 
 				// Checking Alice's free balance DOT && MDOT.
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot + alice_borrowed_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
+					Currencies::free_balance(ETH, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_eth
 				);
 				let expected_amount_wrapped_tokens_in_dot =
-					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::convert_to_wrapped(DOT, alice_deposited_amount_in_dot).unwrap();
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
 				);
 				let expected_amount_wrapped_tokens_in_eth =
-					TestPools::convert_to_wrapped(CurrencyId::ETH, alice_deposited_amount_in_eth).unwrap();
+					TestPools::convert_to_wrapped(ETH, alice_deposited_amount_in_eth).unwrap();
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::METH, &ALICE),
+					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth
 				);
 
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
+					TestPools::pool_user_data(DOT, ALICE).total_borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::DOT).total_borrowed,
-					alice_borrowed_amount_in_dot
-				);
+				assert_eq!(TestPools::pools(DOT).total_borrowed, alice_borrowed_amount_in_dot);
 
 				System::set_block_number(4);
 
 				// Alice try to redeem all from DOT pool
 				assert_noop!(
-					MinterestProtocol::redeem_underlying(
-						Origin::signed(ALICE),
-						CurrencyId::DOT,
-						alice_deposited_amount_in_dot
-					),
+					MinterestProtocol::redeem_underlying(Origin::signed(ALICE), DOT, alice_deposited_amount_in_dot),
 					controller::Error::<Test>::InsufficientLiquidity
 				);
 
@@ -228,7 +211,7 @@ mod tests {
 				let alice_deposited_amount_in_eth_secondary = 10_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::ETH,
+					ETH,
 					alice_deposited_amount_in_eth_secondary
 				));
 
@@ -238,38 +221,38 @@ mod tests {
 				let expected_amount_redeemed_underlying_assets = 60_000_000_142_382_812_500_000;
 				assert_ok!(MinterestProtocol::redeem_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					expected_amount_redeemed_underlying_assets
 				));
 
 				// Checking free balance DOT/MDOT && ETH/METH for user.
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot
 						+ alice_borrowed_amount_in_dot
 						+ expected_amount_redeemed_underlying_assets
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
+					Currencies::free_balance(ETH, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_eth - alice_deposited_amount_in_eth_secondary
 				);
 
-				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
+				assert_eq!(Currencies::free_balance(MDOT, &ALICE), 0);
 				let expected_amount_wrapped_tokens_in_eth_summary = expected_amount_wrapped_tokens_in_eth
-					+ TestPools::convert_to_wrapped(CurrencyId::ETH, alice_deposited_amount_in_eth_secondary).unwrap();
+					+ TestPools::convert_to_wrapped(ETH, alice_deposited_amount_in_eth_secondary).unwrap();
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::METH, &ALICE),
+					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth_summary
 				);
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
+					TestPools::pool_user_data(DOT, ALICE).total_borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
 				let expected_borrow_interest_accumulated = 421875000000000;
 				assert_eq!(
-					TestPools::pools(CurrencyId::DOT).total_borrowed,
+					TestPools::pools(DOT).total_borrowed,
 					alice_borrowed_amount_in_dot + expected_borrow_interest_accumulated
 				);
 
@@ -279,7 +262,7 @@ mod tests {
 				assert_noop!(
 					MinterestProtocol::redeem_underlying(
 						Origin::signed(ALICE),
-						CurrencyId::ETH,
+						ETH,
 						alice_deposited_amount_in_eth + alice_deposited_amount_in_eth_secondary
 					),
 					controller::Error::<Test>::InsufficientLiquidity
@@ -297,29 +280,29 @@ mod tests {
 	#[test]
 	fn redeem_underlying_with_another_currency_borrowing() {
 		ExtBuilder::default()
-			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, ETH, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_balance(DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::DOT,
+					DOT,
 					ONE_HUNDRED
 				));
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::ETH,
+					ETH,
 					ONE_HUNDRED
 				));
 				// Alice deposit to DOT pool
 				let alice_deposited_amount_in_dot = 60_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount_in_dot
 				));
 
@@ -329,63 +312,47 @@ mod tests {
 				let alice_borrowed_amount_in_eth = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
-					CurrencyId::ETH,
+					ETH,
 					alice_borrowed_amount_in_eth
 				));
 
 				// Checking free balance DOT && ETH for user.
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot
 				);
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// // Checking total borrow for ETH pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::ETH).total_borrowed,
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(3);
 
 				// Alice redeem all DOTs
 				assert_noop!(
-					MinterestProtocol::redeem_underlying(
-						Origin::signed(ALICE),
-						CurrencyId::DOT,
-						alice_deposited_amount_in_dot
-					),
+					MinterestProtocol::redeem_underlying(Origin::signed(ALICE), DOT, alice_deposited_amount_in_dot),
 					controller::Error::<Test>::HypotheticalLiquidityCalculationError
 				);
 
 				// Checking free balance DOT && ETH for user.
 				// Expected previously values
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot
 				);
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::ETH).total_borrowed,
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
 			});
 	}
 
@@ -404,19 +371,19 @@ mod tests {
 	#[test]
 	fn redeem_underlying_with_third_currency_borrowing() {
 		ExtBuilder::default()
-			.pool_initial(CurrencyId::DOT)
-			.pool_initial(CurrencyId::ETH)
-			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::BTC, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_user_data(CurrencyId::BTC, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_initial(DOT)
+			.pool_initial(ETH)
+			.user_balance(ADMIN, ETH, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, BTC, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_user_data(BTC, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::ETH,
+					ETH,
 					ONE_HUNDRED
 				));
 
@@ -424,7 +391,7 @@ mod tests {
 				let alice_deposited_amount_in_dot = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount_in_dot
 				));
 
@@ -434,7 +401,7 @@ mod tests {
 				let alice_deposited_amount_in_btc = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::BTC,
+					BTC,
 					alice_deposited_amount_in_btc
 				));
 
@@ -444,7 +411,7 @@ mod tests {
 				let alice_borrowed_amount_in_eth = 70_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
-					CurrencyId::ETH,
+					ETH,
 					alice_borrowed_amount_in_eth
 				));
 
@@ -452,35 +419,25 @@ mod tests {
 
 				// Checking free balance DOT && ETH && BTC for user.
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::BTC, &ALICE),
+					Currencies::free_balance(BTC, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_btc
 				);
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::ETH).total_borrowed,
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
 
 				// Alice try to redeem all DOTs
 				assert_noop!(
-					MinterestProtocol::redeem_underlying(
-						Origin::signed(ALICE),
-						CurrencyId::DOT,
-						alice_deposited_amount_in_dot
-					),
+					MinterestProtocol::redeem_underlying(Origin::signed(ALICE), DOT, alice_deposited_amount_in_dot),
 					controller::Error::<Test>::InsufficientLiquidity
 				);
 
@@ -490,50 +447,44 @@ mod tests {
 				let alice_deposited_amount_in_btc_secondary = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::BTC,
+					BTC,
 					alice_deposited_amount_in_btc_secondary
 				));
 
 				System::set_block_number(6);
 
 				// Alice redeem all DOTs
-				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(CurrencyId::MDOT, &ALICE);
+				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(MDOT, &ALICE);
 				let alice_redeemed_amount_in_dot =
-					TestPools::convert_from_wrapped(CurrencyId::MDOT, alice_current_balance_amount_in_m_dot).unwrap();
+					TestPools::convert_from_wrapped(MDOT, alice_current_balance_amount_in_m_dot).unwrap();
 				assert_ok!(MinterestProtocol::redeem_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_redeemed_amount_in_dot
 				));
 
 				// Checking pool available liquidity.
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					TestPools::get_pool_available_liquidity(DOT),
 					alice_deposited_amount_in_dot - alice_redeemed_amount_in_dot
 				);
 				// Checking free balance DOT && ETH && BTC for user.
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot + alice_redeemed_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::BTC, &ALICE),
+					Currencies::free_balance(BTC, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_btc - alice_deposited_amount_in_btc_secondary
 				);
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::ETH).total_borrowed,
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(7);
 
@@ -541,7 +492,7 @@ mod tests {
 				assert_noop!(
 					MinterestProtocol::redeem_underlying(
 						Origin::signed(ALICE),
-						CurrencyId::BTC,
+						BTC,
 						alice_deposited_amount_in_btc_secondary
 					),
 					controller::Error::<Test>::InsufficientLiquidity
@@ -561,19 +512,19 @@ mod tests {
 	#[test]
 	fn redeem_underlying_over_interest() {
 		ExtBuilder::default()
-			.pool_initial(CurrencyId::DOT)
-			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(BOB, CurrencyId::BTC, ONE_HUNDRED)
-			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
-			.pool_user_data(CurrencyId::BTC, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_initial(DOT)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.user_balance(BOB, BTC, ONE_HUNDRED)
+			.user_balance(BOB, DOT, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
+			.pool_user_data(BTC, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::DOT,
+					DOT,
 					10_000 * DOLLARS
 				));
 
@@ -581,7 +532,7 @@ mod tests {
 				let alice_deposited_amount_in_dot = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount_in_dot
 				));
 
@@ -591,7 +542,7 @@ mod tests {
 				let bob_deposited_amount_in_btc = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(BOB),
-					CurrencyId::BTC,
+					BTC,
 					bob_deposited_amount_in_btc
 				));
 
@@ -601,7 +552,7 @@ mod tests {
 				let bob_borrowed_amount_in_dot = 15_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(BOB),
-					CurrencyId::DOT,
+					DOT,
 					bob_borrowed_amount_in_dot
 				));
 
@@ -611,26 +562,26 @@ mod tests {
 				let bob_deposited_amount_in_dot = 10_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(BOB),
-					CurrencyId::DOT,
+					DOT,
 					bob_deposited_amount_in_dot
 				));
 
 				System::set_block_number(5);
 
 				// Alice redeem all DOTs.
-				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(CurrencyId::MDOT, &ALICE);
+				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(MDOT, &ALICE);
 				// Expected exchange rate 1000000006581250024
 				let alice_redeemed_amount_in_dot =
-					TestPools::convert_from_wrapped(CurrencyId::MDOT, alice_current_balance_amount_in_m_dot).unwrap();
+					TestPools::convert_from_wrapped(MDOT, alice_current_balance_amount_in_m_dot).unwrap();
 				assert_ok!(MinterestProtocol::redeem_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_redeemed_amount_in_dot
 				));
 
 				// Checking pool available liquidity.
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					TestPools::get_pool_available_liquidity(DOT),
 					10_000 * DOLLARS + alice_deposited_amount_in_dot - alice_redeemed_amount_in_dot
 						+ bob_deposited_amount_in_dot
 						- bob_borrowed_amount_in_dot
@@ -638,15 +589,15 @@ mod tests {
 
 				// Checking free balance DOT && BTC for user.
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot + alice_redeemed_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &BOB),
+					Currencies::free_balance(DOT, &BOB),
 					ONE_HUNDRED + bob_borrowed_amount_in_dot - bob_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::BTC, &BOB),
+					Currencies::free_balance(BTC, &BOB),
 					ONE_HUNDRED - bob_deposited_amount_in_btc
 				);
 			});
@@ -666,19 +617,19 @@ mod tests {
 	#[test]
 	fn redeem_with_current_currency_borrowing() {
 		ExtBuilder::default()
-			.pool_initial(CurrencyId::DOT)
-			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
-			.user_balance(BOB, CurrencyId::DOT, 100_000_000 * DOLLARS)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_user_data(CurrencyId::ETH, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_initial(DOT)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, ETH, ONE_HUNDRED)
+			.user_balance(BOB, DOT, 100_000_000 * DOLLARS)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_user_data(ETH, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::DOT,
+					DOT,
 					ONE_HUNDRED
 				));
 
@@ -686,7 +637,7 @@ mod tests {
 				let alice_deposited_amount_in_dot = 60_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount_in_dot
 				));
 
@@ -696,7 +647,7 @@ mod tests {
 				let alice_deposited_amount_in_eth = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::ETH,
+					ETH,
 					alice_deposited_amount_in_eth
 				));
 
@@ -706,54 +657,51 @@ mod tests {
 				let alice_borrowed_amount_in_dot = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_borrowed_amount_in_dot
 				));
 
 				// Checking pool available liquidity
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					TestPools::get_pool_available_liquidity(DOT),
 					ONE_HUNDRED + alice_deposited_amount_in_dot - alice_borrowed_amount_in_dot
 				);
 
 				// Checking free balance DOT && MDOT in pool.
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot + alice_borrowed_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
+					Currencies::free_balance(ETH, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_eth
 				);
 				let expected_amount_wrapped_tokens_in_dot =
-					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::convert_to_wrapped(DOT, alice_deposited_amount_in_dot).unwrap();
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
 				);
 				let expected_amount_wrapped_tokens_in_eth =
-					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_eth).unwrap();
+					TestPools::convert_to_wrapped(DOT, alice_deposited_amount_in_eth).unwrap();
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::METH, &ALICE),
+					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth
 				);
 
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
+					TestPools::pool_user_data(DOT, ALICE).total_borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::DOT).total_borrowed,
-					alice_borrowed_amount_in_dot
-				);
+				assert_eq!(TestPools::pools(DOT).total_borrowed, alice_borrowed_amount_in_dot);
 
 				System::set_block_number(4);
 
 				// Alice try to redeem all from DOT pool
 				assert_noop!(
-					MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT),
+					MinterestProtocol::redeem(Origin::signed(ALICE), DOT),
 					controller::Error::<Test>::InsufficientLiquidity
 				);
 
@@ -763,7 +711,7 @@ mod tests {
 				let alice_deposited_amount_in_eth_secondary = 10_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::ETH,
+					ETH,
 					alice_deposited_amount_in_eth_secondary
 				));
 
@@ -771,45 +719,45 @@ mod tests {
 				let bob_deposited_amount_in_dot = 10_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(BOB),
-					CurrencyId::DOT,
+					DOT,
 					bob_deposited_amount_in_dot
 				));
 
 				System::set_block_number(6);
 
 				// Alice redeem all DOTs
-				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT));
+				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), DOT));
 
 				// Checking free balance DOT/MDOT && ETH/METH in pool.
 				let expected_amount_redeemed_underlying_assets = 60000000136963397880000;
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot
 						+ alice_borrowed_amount_in_dot
 						+ expected_amount_redeemed_underlying_assets
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
+					Currencies::free_balance(ETH, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_eth - alice_deposited_amount_in_eth_secondary
 				);
 
-				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
+				assert_eq!(Currencies::free_balance(MDOT, &ALICE), 0);
 				let expected_amount_wrapped_tokens_in_eth_summary = expected_amount_wrapped_tokens_in_eth
-					+ TestPools::convert_to_wrapped(CurrencyId::ETH, alice_deposited_amount_in_eth_secondary).unwrap();
+					+ TestPools::convert_to_wrapped(ETH, alice_deposited_amount_in_eth_secondary).unwrap();
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::METH, &ALICE),
+					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth_summary
 				);
 
 				// Checking total borrow for Alice DOT pool
 				let expected_amount_accumulated_in_dot = 413602942444485;
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
+					TestPools::pool_user_data(DOT, ALICE).total_borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
 				assert_eq!(
-					TestPools::pools(CurrencyId::DOT).total_borrowed,
+					TestPools::pools(DOT).total_borrowed,
 					alice_borrowed_amount_in_dot + expected_amount_accumulated_in_dot
 				);
 
@@ -817,7 +765,7 @@ mod tests {
 
 				// Alice try to redeem all from ETH pool
 				assert_noop!(
-					MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::ETH),
+					MinterestProtocol::redeem(Origin::signed(ALICE), ETH),
 					controller::Error::<Test>::InsufficientLiquidity
 				);
 			});
@@ -833,29 +781,29 @@ mod tests {
 	#[test]
 	fn redeem_with_another_currency_borrowing() {
 		ExtBuilder::default()
-			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_balance(CurrencyId::DOT, BALANCE_ZERO)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, ETH, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_balance(DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::DOT,
+					DOT,
 					ONE_HUNDRED
 				));
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::ETH,
+					ETH,
 					ONE_HUNDRED
 				));
 				// Alice deposit to DOT pool
 				let alice_deposited_amount_in_dot = 60_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount_in_dot
 				));
 
@@ -865,59 +813,47 @@ mod tests {
 				let alice_borrowed_amount_in_eth = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
-					CurrencyId::ETH,
+					ETH,
 					alice_borrowed_amount_in_eth
 				));
 
 				// Checking free balance DOT && ETH for user.
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot
 				);
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// // Checking total borrow for ETH pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::ETH).total_borrowed,
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(3);
 
 				// Alice redeem all DOTs
 				assert_noop!(
-					MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT),
+					MinterestProtocol::redeem(Origin::signed(ALICE), DOT),
 					controller::Error::<Test>::HypotheticalLiquidityCalculationError
 				);
 
 				// Checking free balance DOT && ETH for user.
 				// Expected previously values
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot
 				);
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::ETH).total_borrowed,
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
 			});
 	}
 
@@ -936,19 +872,19 @@ mod tests {
 	#[test]
 	fn redeem_with_third_currency_borrowing() {
 		ExtBuilder::default()
-			.pool_initial(CurrencyId::DOT)
-			.pool_initial(CurrencyId::ETH)
-			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::BTC, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_user_data(CurrencyId::BTC, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_initial(DOT)
+			.pool_initial(ETH)
+			.user_balance(ADMIN, ETH, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, BTC, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_user_data(BTC, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::ETH,
+					ETH,
 					ONE_HUNDRED
 				));
 
@@ -956,7 +892,7 @@ mod tests {
 				let alice_deposited_amount_in_dot = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount_in_dot
 				));
 
@@ -966,7 +902,7 @@ mod tests {
 				let alice_deposited_amount_in_btc = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::BTC,
+					BTC,
 					alice_deposited_amount_in_btc
 				));
 
@@ -976,39 +912,33 @@ mod tests {
 				let alice_borrowed_amount_in_eth = 70_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
-					CurrencyId::ETH,
+					ETH,
 					alice_borrowed_amount_in_eth
 				));
 
 				// Checking free balance DOT && ETH && BTC for user.
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::BTC, &ALICE),
+					Currencies::free_balance(BTC, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_btc
 				);
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::ETH).total_borrowed,
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(4);
 
 				// Alice try to redeem all DOTs
 				assert_noop!(
-					MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT),
+					MinterestProtocol::redeem(Origin::signed(ALICE), DOT),
 					controller::Error::<Test>::InsufficientLiquidity
 				);
 
@@ -1018,47 +948,41 @@ mod tests {
 				let alice_deposited_amount_in_btc_secondary = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::BTC,
+					BTC,
 					alice_deposited_amount_in_btc_secondary
 				));
 
 				System::set_block_number(6);
 
 				// Alice redeem all DOTs
-				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(CurrencyId::MDOT, &ALICE);
+				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(MDOT, &ALICE);
 				let alice_redeemed_amount_in_dot =
-					TestPools::convert_from_wrapped(CurrencyId::MDOT, alice_current_balance_amount_in_m_dot).unwrap();
-				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT));
+					TestPools::convert_from_wrapped(MDOT, alice_current_balance_amount_in_m_dot).unwrap();
+				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), DOT));
 
 				// Checking free balance DOT && ETH && BTC for user.
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot + alice_redeemed_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::BTC, &ALICE),
+					Currencies::free_balance(BTC, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_btc - alice_deposited_amount_in_btc_secondary
 				);
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::ETH).total_borrowed,
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(7);
 
 				// Alice try to redeem all BTC.
 				assert_noop!(
-					MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::BTC),
+					MinterestProtocol::redeem(Origin::signed(ALICE), BTC),
 					controller::Error::<Test>::InsufficientLiquidity
 				);
 			});
@@ -1075,27 +999,27 @@ mod tests {
 	#[test]
 	fn redeem_over_interest() {
 		ExtBuilder::default()
-			.pool_initial(CurrencyId::DOT)
-			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(BOB, CurrencyId::BTC, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
-			.pool_user_data(CurrencyId::DOT, BOB, BALANCE_ZERO, RATE_ZERO, false, 0)
-			.pool_user_data(CurrencyId::BTC, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_initial(DOT)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.user_balance(BOB, DOT, ONE_HUNDRED)
+			.user_balance(BOB, BTC, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
+			.pool_user_data(DOT, BOB, BALANCE_ZERO, RATE_ZERO, false, 0)
+			.pool_user_data(BTC, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				// Set initial balance in pool
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::DOT,
+					DOT,
 					10_000 * DOLLARS
 				));
 				// Alice deposit to DOT pool
 				let alice_deposited_amount_in_dot = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount_in_dot
 				));
 
@@ -1105,7 +1029,7 @@ mod tests {
 				let bob_deposited_amount_in_btc = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(BOB),
-					CurrencyId::BTC,
+					BTC,
 					bob_deposited_amount_in_btc
 				));
 
@@ -1113,7 +1037,7 @@ mod tests {
 				let bob_deposited_amount_in_dot = 10_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(BOB),
-					CurrencyId::DOT,
+					DOT,
 					bob_deposited_amount_in_dot
 				));
 
@@ -1123,23 +1047,23 @@ mod tests {
 				let bob_borrowed_amount_in_dot = 15_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(BOB),
-					CurrencyId::DOT,
+					DOT,
 					bob_borrowed_amount_in_dot
 				));
 
 				System::set_block_number(4);
 
 				// Alice redeem all DOTs.
-				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(CurrencyId::MDOT, &ALICE);
+				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(MDOT, &ALICE);
 
-				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), CurrencyId::DOT));
+				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), DOT));
 
 				let alice_redeemed_amount_in_dot =
-					TestPools::convert_from_wrapped(CurrencyId::MDOT, alice_current_balance_amount_in_m_dot).unwrap();
+					TestPools::convert_from_wrapped(MDOT, alice_current_balance_amount_in_m_dot).unwrap();
 
 				// Checking pool available liquidity.
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					TestPools::get_pool_available_liquidity(DOT),
 					10_000 * DOLLARS + alice_deposited_amount_in_dot - alice_redeemed_amount_in_dot
 						+ bob_deposited_amount_in_dot
 						- bob_borrowed_amount_in_dot
@@ -1147,15 +1071,15 @@ mod tests {
 
 				// Checking free balance DOT && BTC for user.
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot + alice_redeemed_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &BOB),
+					Currencies::free_balance(DOT, &BOB),
 					ONE_HUNDRED + bob_borrowed_amount_in_dot - bob_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::BTC, &BOB),
+					Currencies::free_balance(BTC, &BOB),
 					ONE_HUNDRED - bob_deposited_amount_in_btc
 				);
 			});
@@ -1167,28 +1091,28 @@ mod tests {
 	#[test]
 	fn borrow_with_insufficient_collateral_no_deposits() {
 		ExtBuilder::default()
-			.pool_initial(CurrencyId::DOT)
-			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_initial(DOT)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::DOT,
+					DOT,
 					ONE_HUNDRED
 				));
 
 				// Alice try to borrow from DOT pool
 				let alice_borrowed_amount_in_dot = 50_000 * DOLLARS;
 				assert_noop!(
-					MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::DOT, alice_borrowed_amount_in_dot),
+					MinterestProtocol::borrow(Origin::signed(ALICE), DOT, alice_borrowed_amount_in_dot),
 					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				// Checking pool available liquidity
-				assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::DOT), ONE_HUNDRED);
+				assert_eq!(TestPools::get_pool_available_liquidity(DOT), ONE_HUNDRED);
 			});
 	}
 
@@ -1202,21 +1126,21 @@ mod tests {
 	#[test]
 	fn borrow_without_collateral_in_second_currency() {
 		ExtBuilder::default()
-			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, ETH, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::DOT,
+					DOT,
 					ONE_HUNDRED
 				));
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::ETH,
+					ETH,
 					ONE_HUNDRED
 				));
 
@@ -1224,7 +1148,7 @@ mod tests {
 				let alice_deposited_amount = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount
 				));
 
@@ -1233,16 +1157,16 @@ mod tests {
 				// Alice try to borrow from ETH pool
 				let alice_borrowed_amount = 50_000 * DOLLARS;
 				assert_noop!(
-					MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::ETH, alice_borrowed_amount),
+					MinterestProtocol::borrow(Origin::signed(ALICE), ETH, alice_borrowed_amount),
 					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				// Checking pool available liquidity
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					TestPools::get_pool_available_liquidity(DOT),
 					ONE_HUNDRED + alice_deposited_amount
 				);
-				assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::ETH), ONE_HUNDRED);
+				assert_eq!(TestPools::get_pool_available_liquidity(ETH), ONE_HUNDRED);
 			});
 	}
 
@@ -1256,28 +1180,28 @@ mod tests {
 	#[test]
 	fn borrow_with_insufficient_collateral_in_second_currency() {
 		ExtBuilder::default()
-			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, ETH, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::DOT,
+					DOT,
 					ONE_HUNDRED
 				));
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::ETH,
+					ETH,
 					ONE_HUNDRED
 				));
 				// Alice deposit to DOT pool
 				let alice_deposited_amount = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount
 				));
 
@@ -1286,16 +1210,16 @@ mod tests {
 				// Alice try to borrow from ETH pool
 				let alice_borrowed_amount = 50_000 * DOLLARS;
 				assert_noop!(
-					MinterestProtocol::borrow(Origin::signed(ALICE), CurrencyId::ETH, alice_borrowed_amount),
+					MinterestProtocol::borrow(Origin::signed(ALICE), ETH, alice_borrowed_amount),
 					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				// Checking pool available liquidity
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					TestPools::get_pool_available_liquidity(DOT),
 					ONE_HUNDRED + alice_deposited_amount
 				);
-				assert_eq!(TestPools::get_pool_available_liquidity(CurrencyId::ETH), ONE_HUNDRED);
+				assert_eq!(TestPools::get_pool_available_liquidity(ETH), ONE_HUNDRED);
 			});
 	}
 
@@ -1309,28 +1233,28 @@ mod tests {
 	#[test]
 	fn borrow_with_sufficient_collateral_in_second_currency() {
 		ExtBuilder::default()
-			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, ETH, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::DOT,
+					DOT,
 					ONE_HUNDRED
 				));
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::ETH,
+					ETH,
 					ONE_HUNDRED
 				));
 				// Alice deposit to DOT pool
 				let alice_deposited_amount = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount
 				));
 
@@ -1340,27 +1264,27 @@ mod tests {
 				let alice_borrowed_amount = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
-					CurrencyId::ETH,
+					ETH,
 					alice_borrowed_amount
 				));
 
 				// Checking pool available liquidity
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					TestPools::get_pool_available_liquidity(DOT),
 					ONE_HUNDRED + alice_deposited_amount
 				);
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::ETH),
+					TestPools::get_pool_available_liquidity(ETH),
 					ONE_HUNDRED - alice_borrowed_amount
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount
 				);
-				assert_eq!(Currencies::free_balance(CurrencyId::ETH, &ALICE), alice_borrowed_amount);
-				assert_eq!(TestPools::pools(CurrencyId::ETH).total_borrowed, alice_borrowed_amount);
+				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount);
+				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount);
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::ETH, &ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, &ALICE).total_borrowed,
 					alice_borrowed_amount
 				);
 			});
@@ -1381,39 +1305,39 @@ mod tests {
 	#[test]
 	fn borrow_with_borrow_cap() {
 		ExtBuilder::default()
-			.pool_initial(CurrencyId::DOT)
-			.pool_initial(CurrencyId::ETH)
-			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(BOB, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_user_data(CurrencyId::DOT, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_initial(DOT)
+			.pool_initial(ETH)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, ETH, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.user_balance(BOB, DOT, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_user_data(DOT, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::DOT,
+					DOT,
 					ONE_HUNDRED
 				));
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::ETH,
+					ETH,
 					ONE_HUNDRED
 				));
 				// Alice deposit to DOT pool
 				let alice_deposited_amount = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount
 				));
 				// Bob deposit to DOT pool
 				let bob_deposited_amount = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(BOB),
-					CurrencyId::DOT,
+					DOT,
 					bob_deposited_amount
 				));
 
@@ -1422,7 +1346,7 @@ mod tests {
 				// ADMIN set borrow cap to 30 (in usd).
 				assert_ok!(TestController::set_borrow_cap(
 					Origin::signed(ADMIN),
-					CurrencyId::ETH,
+					ETH,
 					Some(30_000 * DOLLARS)
 				));
 
@@ -1432,7 +1356,7 @@ mod tests {
 				let alice_borrowed_amount_in_eth = 20_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
-					CurrencyId::ETH,
+					ETH,
 					alice_borrowed_amount_in_eth
 				));
 
@@ -1443,21 +1367,17 @@ mod tests {
 				// borrowed at the moment = 20
 				let over_borrow_cap_amount_in_eth = 20_000 * DOLLARS;
 				assert_noop!(
-					MinterestProtocol::borrow(Origin::signed(BOB), CurrencyId::ETH, over_borrow_cap_amount_in_eth),
+					MinterestProtocol::borrow(Origin::signed(BOB), ETH, over_borrow_cap_amount_in_eth),
 					controller::Error::<Test>::BorrowCapReached
 				);
 
 				// ADMIN disable borrow cap.
-				assert_ok!(TestController::set_borrow_cap(
-					Origin::signed(ADMIN),
-					CurrencyId::ETH,
-					None
-				));
+				assert_ok!(TestController::set_borrow_cap(Origin::signed(ADMIN), ETH, None));
 
 				// Bob try to borrow from ETH pool
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(BOB),
-					CurrencyId::ETH,
+					ETH,
 					over_borrow_cap_amount_in_eth
 				));
 			});
@@ -1478,25 +1398,25 @@ mod tests {
 	#[test]
 	fn transfer_wrapped_with_current_currency_borrowing() {
 		ExtBuilder::default()
-			.pool_initial(CurrencyId::DOT)
-			.pool_initial(CurrencyId::ETH)
-			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::ETH, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_user_data(CurrencyId::ETH, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_initial(DOT)
+			.pool_initial(ETH)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, ETH, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_user_data(ETH, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::DOT,
+					DOT,
 					ONE_HUNDRED
 				));
 				// Alice deposit 60 DOT to pool.
 				let alice_deposited_amount_in_dot = 60_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount_in_dot
 				));
 
@@ -1506,7 +1426,7 @@ mod tests {
 				let alice_deposited_amount_in_eth = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::ETH,
+					ETH,
 					alice_deposited_amount_in_eth
 				));
 
@@ -1516,48 +1436,45 @@ mod tests {
 				let alice_borrowed_amount_in_dot = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_borrowed_amount_in_dot
 				));
 
 				// Checking pool available liquidity
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					TestPools::get_pool_available_liquidity(DOT),
 					ONE_HUNDRED + alice_deposited_amount_in_dot - alice_borrowed_amount_in_dot
 				);
 
 				// Checking Alice's free balance DOT && MDOT.
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot + alice_borrowed_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
+					Currencies::free_balance(ETH, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_eth
 				);
 				let expected_amount_wrapped_tokens_in_dot =
-					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::convert_to_wrapped(DOT, alice_deposited_amount_in_dot).unwrap();
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
 				);
 				let expected_amount_wrapped_tokens_in_eth =
-					TestPools::convert_to_wrapped(CurrencyId::ETH, alice_deposited_amount_in_eth).unwrap();
+					TestPools::convert_to_wrapped(ETH, alice_deposited_amount_in_eth).unwrap();
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::METH, &ALICE),
+					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth
 				);
 
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
+					TestPools::pool_user_data(DOT, ALICE).total_borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::DOT).total_borrowed,
-					alice_borrowed_amount_in_dot
-				);
+				assert_eq!(TestPools::pools(DOT).total_borrowed, alice_borrowed_amount_in_dot);
 
 				System::set_block_number(4);
 
@@ -1566,7 +1483,7 @@ mod tests {
 					MinterestProtocol::transfer_wrapped(
 						Origin::signed(ALICE),
 						BOB,
-						CurrencyId::MDOT,
+						MDOT,
 						expected_amount_wrapped_tokens_in_dot
 					),
 					controller::Error::<Test>::InsufficientLiquidity
@@ -1578,7 +1495,7 @@ mod tests {
 				let alice_deposited_amount_in_eth_secondary = 10_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::ETH,
+					ETH,
 					alice_deposited_amount_in_eth_secondary
 				));
 
@@ -1587,38 +1504,35 @@ mod tests {
 				assert_ok!(MinterestProtocol::transfer_wrapped(
 					Origin::signed(ALICE),
 					BOB,
-					CurrencyId::MDOT,
+					MDOT,
 					expected_amount_wrapped_tokens_in_dot
 				));
 
 				// Checking MDOT free balance for ALICE and BOB.
-				assert_eq!(Currencies::free_balance(CurrencyId::MDOT, &ALICE), 0);
+				assert_eq!(Currencies::free_balance(MDOT, &ALICE), 0);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::MDOT, &BOB),
+					Currencies::free_balance(MDOT, &BOB),
 					expected_amount_wrapped_tokens_in_dot
 				);
 
 				// Checking ALICE ETH/METH balance
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
+					Currencies::free_balance(ETH, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_eth - alice_deposited_amount_in_eth_secondary
 				);
 				let expected_amount_wrapped_tokens_in_eth_summary = expected_amount_wrapped_tokens_in_eth
-					+ TestPools::convert_to_wrapped(CurrencyId::ETH, alice_deposited_amount_in_eth_secondary).unwrap();
+					+ TestPools::convert_to_wrapped(ETH, alice_deposited_amount_in_eth_secondary).unwrap();
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::METH, &ALICE),
+					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth_summary
 				);
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::DOT, ALICE).total_borrowed,
+					TestPools::pool_user_data(DOT, ALICE).total_borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::DOT).total_borrowed,
-					alice_borrowed_amount_in_dot
-				);
+				assert_eq!(TestPools::pools(DOT).total_borrowed, alice_borrowed_amount_in_dot);
 
 				System::set_block_number(7);
 
@@ -1627,7 +1541,7 @@ mod tests {
 					MinterestProtocol::transfer_wrapped(
 						Origin::signed(ALICE),
 						BOB,
-						CurrencyId::METH,
+						METH,
 						expected_amount_wrapped_tokens_in_eth_summary
 					),
 					controller::Error::<Test>::InsufficientLiquidity
@@ -1645,29 +1559,29 @@ mod tests {
 	#[test]
 	fn transfer_wrapped_with_another_currency_borrowing() {
 		ExtBuilder::default()
-			.pool_initial(CurrencyId::DOT)
-			.pool_initial(CurrencyId::ETH)
-			.user_balance(ADMIN, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_initial(DOT)
+			.pool_initial(ETH)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, ETH, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::DOT,
+					DOT,
 					ONE_HUNDRED
 				));
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::ETH,
+					ETH,
 					ONE_HUNDRED
 				));
 				// Alice deposit to DOT pool
 				let alice_deposited_amount_in_dot = 60_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount_in_dot
 				));
 
@@ -1677,35 +1591,29 @@ mod tests {
 				let alice_borrowed_amount_in_eth = 50_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
-					CurrencyId::ETH,
+					ETH,
 					alice_borrowed_amount_in_eth
 				));
 
 				// Checking free balance DOT/MDOT && ETH for user.
 				let expected_amount_wrapped_tokens_in_dot =
-					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::convert_to_wrapped(DOT, alice_deposited_amount_in_dot).unwrap();
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot
 				);
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// // Checking total borrow for ETH pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::ETH).total_borrowed,
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(3);
 
@@ -1714,7 +1622,7 @@ mod tests {
 					MinterestProtocol::transfer_wrapped(
 						Origin::signed(ALICE),
 						BOB,
-						CurrencyId::MDOT,
+						MDOT,
 						expected_amount_wrapped_tokens_in_dot
 					),
 					controller::Error::<Test>::InsufficientLiquidity
@@ -1723,28 +1631,22 @@ mod tests {
 				// Checking free balance DOT && ETH for user.
 				// Expected previously values
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot
 				);
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::ETH).total_borrowed,
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
 			});
 	}
 
@@ -1764,26 +1666,26 @@ mod tests {
 	#[test]
 	fn transfer_wrapped_with_third_currency_borrowing() {
 		ExtBuilder::default()
-			.pool_initial(CurrencyId::DOT)
-			.pool_initial(CurrencyId::ETH)
-			.pool_initial(CurrencyId::BTC)
-			.user_balance(ADMIN, CurrencyId::ETH, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::DOT, ONE_HUNDRED)
-			.user_balance(ALICE, CurrencyId::BTC, ONE_HUNDRED)
-			.pool_user_data(CurrencyId::DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_user_data(CurrencyId::BTC, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_initial(DOT)
+			.pool_initial(ETH)
+			.pool_initial(BTC)
+			.user_balance(ADMIN, ETH, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, BTC, ONE_HUNDRED)
+			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.pool_user_data(BTC, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
 			.execute_with(|| {
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ADMIN),
-					CurrencyId::ETH,
+					ETH,
 					ONE_HUNDRED
 				));
 				// Alice deposit to DOT pool
 				let alice_deposited_amount_in_dot = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::DOT,
+					DOT,
 					alice_deposited_amount_in_dot
 				));
 
@@ -1793,7 +1695,7 @@ mod tests {
 				let alice_deposited_amount_in_btc = 40_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::BTC,
+					BTC,
 					alice_deposited_amount_in_btc
 				));
 
@@ -1803,7 +1705,7 @@ mod tests {
 				let alice_borrowed_amount_in_eth = 70_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::borrow(
 					Origin::signed(ALICE),
-					CurrencyId::ETH,
+					ETH,
 					alice_borrowed_amount_in_eth
 				));
 
@@ -1811,40 +1713,34 @@ mod tests {
 
 				// Checking free balance DOT/MDOT && ETH && BTC for user.
 				let expected_amount_wrapped_tokens_in_dot =
-					TestPools::convert_to_wrapped(CurrencyId::DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::convert_to_wrapped(DOT, alice_deposited_amount_in_dot).unwrap();
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::BTC, &ALICE),
+					Currencies::free_balance(BTC, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_btc
 				);
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::ETH).total_borrowed,
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
 
 				// Alice try to transfer all MDOTs
 				assert_noop!(
 					MinterestProtocol::transfer_wrapped(
 						Origin::signed(ALICE),
 						BOB,
-						CurrencyId::MDOT,
+						MDOT,
 						expected_amount_wrapped_tokens_in_dot
 					),
 					controller::Error::<Test>::InsufficientLiquidity
@@ -1856,7 +1752,7 @@ mod tests {
 				let alice_deposited_amount_in_btc_secondary = 30_000 * DOLLARS;
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					Origin::signed(ALICE),
-					CurrencyId::BTC,
+					BTC,
 					alice_deposited_amount_in_btc_secondary
 				));
 
@@ -1867,7 +1763,7 @@ mod tests {
 					MinterestProtocol::transfer_wrapped(
 						Origin::signed(ALICE),
 						BOB,
-						CurrencyId::MDOT,
+						MDOT,
 						expected_amount_wrapped_tokens_in_dot
 					),
 					controller::Error::<Test>::InsufficientLiquidity
@@ -1878,61 +1774,52 @@ mod tests {
 				assert_ok!(MinterestProtocol::transfer_wrapped(
 					Origin::signed(ALICE),
 					BOB,
-					CurrencyId::MDOT,
+					MDOT,
 					transfer_amount_in_m_dot
 				));
 
 				// Checking MDOT free balance for ALICE and BOB.
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::MDOT, &ALICE),
+					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot - transfer_amount_in_m_dot
 				);
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::MDOT, &BOB),
-					transfer_amount_in_m_dot
-				);
+				assert_eq!(Currencies::free_balance(MDOT, &BOB), transfer_amount_in_m_dot);
 
 				// Checking pool available liquidity.
 				assert_eq!(
-					TestPools::get_pool_available_liquidity(CurrencyId::DOT),
+					TestPools::get_pool_available_liquidity(DOT),
 					alice_deposited_amount_in_dot
 				);
 				// Checking free balance DOT && ETH && BTC for user.
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::DOT, &ALICE),
+					Currencies::free_balance(DOT, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(CurrencyId::BTC, &ALICE),
+					Currencies::free_balance(BTC, &ALICE),
 					ONE_HUNDRED - alice_deposited_amount_in_btc - alice_deposited_amount_in_btc_secondary
 				);
-				assert_eq!(
-					Currencies::free_balance(CurrencyId::ETH, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(CurrencyId::ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(
-					TestPools::pools(CurrencyId::ETH).total_borrowed,
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(7);
 
 				let total_alice_deposited_amount_in_btc =
 					alice_deposited_amount_in_btc + alice_deposited_amount_in_btc_secondary;
 				let expected_amount_wrapped_tokens_in_btc =
-					TestPools::convert_to_wrapped(CurrencyId::BTC, total_alice_deposited_amount_in_btc).unwrap();
+					TestPools::convert_to_wrapped(BTC, total_alice_deposited_amount_in_btc).unwrap();
 				// Alice try to transfer all MBTC.
 				assert_noop!(
 					MinterestProtocol::transfer_wrapped(
 						Origin::signed(ALICE),
 						BOB,
-						CurrencyId::MBTC,
+						MBTC,
 						expected_amount_wrapped_tokens_in_btc
 					),
 					controller::Error::<Test>::InsufficientLiquidity

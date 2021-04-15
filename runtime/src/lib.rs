@@ -17,8 +17,7 @@ mod weights;
 mod weights_test;
 
 use crate::constants::fee::WeightToFee;
-pub use controller_rpc_runtime_api::PoolState;
-pub use controller_rpc_runtime_api::UserPoolBalanceData;
+pub use controller_rpc_runtime_api::{PoolState, UserPoolBalanceData};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::fg_primitives;
@@ -43,8 +42,12 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 pub use minterest_primitives::{
-	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, CurrencyPair, DataProviderId, DigestItem, Hash,
-	Index, Moment, Operation, Price, Rate, Signature,
+	currency::{
+		CurrencyType::{UnderlyingAsset, WrappedToken},
+		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
+	},
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index, Moment,
+	Operation, Price, Rate, Signature,
 };
 
 // A few exports that help ease life for downstream crates.
@@ -382,7 +385,7 @@ impl orml_tokens::Config for Runtime {
 }
 
 parameter_types! {
-	pub const GetMinterestCurrencyId: CurrencyId = CurrencyId::MNT;
+	pub const GetMinterestCurrencyId: CurrencyId = MNT;
 }
 
 pub type MinterestToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
@@ -398,18 +401,8 @@ impl orml_currencies::Config for Runtime {
 parameter_types! {
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub const InitialExchangeRate: Rate = INITIAL_EXCHANGE_RATE;
-	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
-		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
-		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
-		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
-		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
-	];
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.underlying_id)
-			.collect();
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.wrapped_id)
-			.collect();
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
 impl liquidity_pools::Config for Runtime {
@@ -418,7 +411,6 @@ impl liquidity_pools::Config for Runtime {
 	type ModuleId = LiquidityPoolsModuleId;
 	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
-	type EnabledCurrencyPair = EnabledCurrencyPair;
 	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
@@ -439,7 +431,6 @@ impl module_prices::Config for Runtime {
 	type Event = Event;
 	type Source = AggregatedDataProvider;
 	type LockOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
-	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 	type WeightInfo = weights::prices::WeightInfo<Runtime>;
 }
 
@@ -473,7 +464,6 @@ impl mnt_token::Config for Runtime {
 	type PriceSource = Prices;
 	type UpdateOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type LiquidityPoolsManager = LiquidityPools;
-	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -490,7 +480,9 @@ parameter_types! {
 
 impl liquidation_pools::Config for Runtime {
 	type Event = Event;
+	type MultiCurrency = Currencies;
 	type UnsignedPriority = LiquidityPoolsPriority;
+	type PriceSource = Prices;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
