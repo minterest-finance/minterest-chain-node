@@ -4,13 +4,13 @@ use super::*;
 Description of scenario #1:
 
 Collateral factor = 90% for all pools.
-Alice - depositer, Bob - borrower.
-1. Bob made a deposit into the system and set as collateral DOT and ETH.
+Alice - supplier, Bob - borrower.
+1. Bob made DOT and ETH deposit into the system and set both as collateral.
 2. Bob borrowed BTC.
 3. Ethereum price decreased.
 4. The first partial liquidation.
-5. Bob withdrew all the collateral DOT.
-6. Bob withdrew BTC and left only 1 bitcoin in the protocol.
+5. Bob redeems all the collateral DOT.
+6. Bob redeems ETH and left only 1 token in the protocol.
 7. Bitcoin price has increased.
 8. Complete liquidation.
  */
@@ -210,7 +210,7 @@ fn complete_liquidation_one_collateral_should_work() {
 		.pool_total_borrowed(DOT, dollars(90_000))
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), DOT));
@@ -258,7 +258,7 @@ fn complete_liquidation_multi_collateral_should_work() {
 		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), DOT));
@@ -305,7 +305,7 @@ fn partial_liquidation_one_collateral_should_work() {
 		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), DOT));
@@ -353,7 +353,7 @@ fn partial_liquidation_multi_collateral_should_work() {
 		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), DOT));
@@ -389,7 +389,7 @@ fn partial_liquidation_multi_collateral_should_work() {
 		})
 }
 
-// The balance of liquidation pools is zero, therefore we expect a zero transaction error.
+// No liquidity in liquidation pools, therefore we expect a zero transaction error.
 #[test]
 fn complete_liquidation_should_not_work() {
 	ExtBuilder::default()
@@ -403,7 +403,7 @@ fn complete_liquidation_should_not_work() {
 		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_err!(
@@ -413,7 +413,7 @@ fn complete_liquidation_should_not_work() {
 		})
 }
 
-// The balance of liquidation pools is zero, therefore we expect a zero transaction error.
+// No liquidity in liquidation pools, therefore we expect a zero transaction error.
 #[test]
 fn partial_liquidation_should_not_work() {
 	ExtBuilder::default()
@@ -427,7 +427,7 @@ fn partial_liquidation_should_not_work() {
 		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_err!(
@@ -437,9 +437,8 @@ fn partial_liquidation_should_not_work() {
 		})
 }
 
-// If the liquidation pool does not have enough funds to pay off the debt, then the
-// liquidation pool repays the amount of assets available to it. The number of liquidation
-// attempts does not change.
+// If the liquidation pool does not have enough funds to pay off the whole debt, then it repays the
+// amount of assets available to it. The number of liquidation attempts stays intact.
 #[test]
 fn complete_liquidation_one_collateral_not_enough_balance_should_work() {
 	ExtBuilder::default()
@@ -451,7 +450,7 @@ fn complete_liquidation_one_collateral_not_enough_balance_should_work() {
 		.pool_total_borrowed(DOT, dollars(90_000))
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), DOT));
@@ -499,7 +498,7 @@ fn complete_liquidation_multi_collateral_not_enough_balance_should_work() {
 		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), DOT));
@@ -551,7 +550,7 @@ fn partial_liquidation_multi_collateral_not_enough_balance_should_work() {
 		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), DOT));
