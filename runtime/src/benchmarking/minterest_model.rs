@@ -42,33 +42,33 @@ runtime_benchmarks! {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::benchmarking::utils::tests::new_test_ext;
+	use crate::benchmarking::utils::tests::test_externalities;
 	use frame_support::assert_ok;
 
 	#[test]
 	fn test_set_jump_multiplier_per_block() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_jump_multiplier());
 		})
 	}
 
 	#[test]
 	fn test_set_base_rate_per_block() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_base_rate());
 		})
 	}
 
 	#[test]
 	fn test_set_multiplier_per_block() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_multiplier());
 		})
 	}
 
 	#[test]
 	fn test_set_kink() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_multiplier());
 		})
 	}

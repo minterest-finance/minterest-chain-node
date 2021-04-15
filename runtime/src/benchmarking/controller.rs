@@ -64,61 +64,61 @@ runtime_benchmarks! {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::benchmarking::utils::tests::new_test_ext;
+	use crate::benchmarking::utils::tests::test_externalities;
 	use frame_support::assert_ok;
 
 	#[test]
 	fn test_pause_operation() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_pause_operation());
 		})
 	}
 
 	#[test]
 	fn test_resume_operation() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_resume_operation());
 		})
 	}
 
 	#[test]
 	fn test_set_protocol_interest_factor() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_protocol_interest_factor());
 		})
 	}
 
 	#[test]
 	fn test_set_max_borrow_rate() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_max_borrow_rate());
 		})
 	}
 
 	#[test]
 	fn test_set_collateral_factor() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_collateral_factor());
 		})
 	}
 
 	#[test]
 	fn test_set_borrow_cap() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_borrow_cap());
 		})
 	}
 
 	#[test]
 	fn test_set_protocol_interest_threshold() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_protocol_interest_threshold());
 		})
 	}
 
 	#[test]
 	fn test_switch_whitelist_mode() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_switch_whitelist_mode());
 		})
 	}

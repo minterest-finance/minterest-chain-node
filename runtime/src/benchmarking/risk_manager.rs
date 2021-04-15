@@ -106,40 +106,40 @@ runtime_benchmarks! {
 #[cfg(test)]
 pub mod tests {
 	use super::*;
-	use crate::benchmarking::utils::tests::new_test_ext;
+	use crate::benchmarking::utils::tests::test_externalities;
 	use frame_support::assert_ok;
 
 	#[test]
 	fn test_set_max_attempts() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_max_attempts());
 		})
 	}
 
 	#[test]
 	fn test_set_min_partial_liquidation_sum() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_min_partial_liquidation_sum());
 		})
 	}
 
 	#[test]
 	fn test_set_threshold() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_threshold());
 		})
 	}
 
 	#[test]
 	fn test_set_liquidation_fee() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_liquidation_fee());
 		})
 	}
 
 	#[test]
 	fn test_liquidate() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_liquidate());
 		})
 	}

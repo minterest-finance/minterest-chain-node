@@ -26,8 +26,8 @@ fn base_rate_per_block_equal_max_value() -> MinterestModelData {
 
 #[test]
 fn set_base_rate_should_work() {
-	new_test_ext().execute_with(|| {
-		// Set Base rate per block equal 2.0: (10_512_000 / 1) / 5_256_000
+	test_externalities().execute_with(|| {
+		// Set Base rate per block equal to 2.0: (10_512_000 / 1) / 5_256_000
 		assert_ok!(TestMinterestModel::set_base_rate(
 			alice(),
 			CurrencyId::DOT,
@@ -51,7 +51,7 @@ fn set_base_rate_should_work() {
 			Rate::zero()
 		);
 
-		// ALICE set Baser rate per block equal 0,000000009: (47_304 / 1_000_000) / 5_256_000
+		// ALICE set Base rate per block equal to 0,000000009: (47_304 / 1_000_000) / 5_256_000
 		assert_ok!(TestMinterestModel::set_base_rate(
 			alice(),
 			CurrencyId::DOT,
@@ -89,8 +89,8 @@ fn set_base_rate_should_work() {
 
 #[test]
 fn set_multiplier_should_work() {
-	new_test_ext().execute_with(|| {
-		// Set Multiplier per block equal 2.0: (10_512_000 / 1) / 5_256_000
+	test_externalities().execute_with(|| {
+		// Set Multiplier per block equal to 2.0: (10_512_000 / 1) / 5_256_000
 		assert_ok!(TestMinterestModel::set_multiplier(
 			alice(),
 			CurrencyId::DOT,
@@ -115,7 +115,7 @@ fn set_multiplier_should_work() {
 			Rate::zero()
 		);
 
-		// Alice set Multiplier per block equal 0,000_000_009: (47_304 / 1_000_000) / 5_256_000
+		// Alice set Multiplier per block equal to 0,000_000_009: (47_304 / 1_000_000) / 5_256_000
 		assert_ok!(TestMinterestModel::set_multiplier(
 			alice(),
 			CurrencyId::DOT,
@@ -153,8 +153,8 @@ fn set_multiplier_should_work() {
 
 #[test]
 fn set_jump_multiplier_should_work() {
-	new_test_ext().execute_with(|| {
-		// Set Jump multiplier per block equal 2.0: (10_512_000 / 1) / 5_256_000
+	test_externalities().execute_with(|| {
+		// Set Jump multiplier per block equal to 2.0: (10_512_000 / 1) / 5_256_000
 		assert_ok!(TestMinterestModel::set_jump_multiplier(
 			alice(),
 			CurrencyId::DOT,
@@ -178,7 +178,7 @@ fn set_jump_multiplier_should_work() {
 			Rate::zero()
 		);
 
-		// Alice set Jump multiplier per block equal 0,000_000_009: (47_304 / 1_000_000) / 5_256_000
+		// Alice set Jump multiplier per block equal to 0,000_000_009: (47_304 / 1_000_000) / 5_256_000
 		assert_ok!(TestMinterestModel::set_jump_multiplier(
 			alice(),
 			CurrencyId::DOT,
@@ -205,7 +205,7 @@ fn set_jump_multiplier_should_work() {
 
 #[test]
 fn set_kink_should_work() {
-	new_test_ext().execute_with(|| {
+	test_externalities().execute_with(|| {
 		assert_ok!(TestMinterestModel::set_kink(
 			alice(),
 			CurrencyId::DOT,
@@ -230,7 +230,7 @@ fn set_kink_should_work() {
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 
-		// Parameter `kink` cannot be more than one.
+		// Parameter `kink` cannot be larger than one.
 		assert_noop!(
 			TestMinterestModel::set_kink(alice(), CurrencyId::DOT, Rate::saturating_from_rational(11, 10)),
 			Error::<Test>::KinkCannotBeMoreThanOne
@@ -240,8 +240,8 @@ fn set_kink_should_work() {
 
 #[test]
 fn calculate_borrow_interest_rate_should_work() {
-	new_test_ext().execute_with(|| {
-		// Utilization rate less or equal than kink:
+	test_externalities().execute_with(|| {
+		// Utilization rate less or equal to kink:
 		// utilization_rate = 0.42
 		// borrow_interest_rate = 0,42 * multiplier_per_block + base_rate_per_block
 		assert_eq!(
@@ -265,7 +265,7 @@ fn calculate_borrow_interest_rate_should_work() {
 
 #[test]
 fn calculate_borrow_interest_rate_fails_if_overflow_kink_mul_multiplier() {
-	new_test_ext().execute_with(|| {
+	test_externalities().execute_with(|| {
 		let minterest_model_data = multiplier_per_block_equal_max_value();
 		<MinterestModelParams<Test>>::insert(CurrencyId::KSM, minterest_model_data.clone());
 		// utilization_rate > kink.
@@ -282,7 +282,7 @@ fn calculate_borrow_interest_rate_fails_if_overflow_kink_mul_multiplier() {
 
 #[test]
 fn calculate_borrow_interest_rate_fails_if_overflow_add_base_rate_per_block() {
-	new_test_ext().execute_with(|| {
+	test_externalities().execute_with(|| {
 		let minterest_model_data = base_rate_per_block_equal_max_value();
 		<MinterestModelParams<Test>>::insert(CurrencyId::KSM, minterest_model_data.clone());
 		// utilization_rate > kink.
