@@ -16,6 +16,7 @@ mod tests;
 mod weights;
 mod weights_test;
 
+pub use controller_rpc_runtime_api::HypotheticalLiquidityData;
 pub use controller_rpc_runtime_api::PoolState;
 pub use controller_rpc_runtime_api::UserPoolBalanceData;
 use orml_currencies::BasicCurrencyAdapter;
@@ -766,7 +767,7 @@ impl_runtime_apis! {
 			underlying_to_borrow: CurrencyId,
 			redeem_amount: Balance,
 			borrow_amount: Balance,
-		) -> Option<Amount> {
+		) -> Option<HypotheticalLiquidityData> {
 			let (excess, shortfall) = Controller::get_hypothetical_account_liquidity(
 				&account_id,
 				underlying_to_borrow,
@@ -786,7 +787,7 @@ impl_runtime_apis! {
 				}
 			};
 
-			Some(res)
+			Some(HypotheticalLiquidityData{ liquidity: res })
 		}
 
 		fn is_admin(caller: AccountId) -> Option<bool> {

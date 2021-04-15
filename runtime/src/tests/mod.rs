@@ -7,6 +7,7 @@ use crate::{
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
+use controller_rpc_runtime_api::HypotheticalLiquidityData;
 use controller_rpc_runtime_api::PoolState;
 use controller_rpc_runtime_api::UserPoolBalanceData;
 use frame_support::{assert_err, assert_noop, assert_ok, parameter_types};
@@ -377,7 +378,7 @@ fn get_hypothetical_account_liquidity_rpc(
 	underlying_to_borrow: CurrencyId,
 	redeem_amount: Balance,
 	borrow_amount: Balance,
-) -> Option<Amount> {
+) -> Option<HypotheticalLiquidityData> {
 	<Runtime as ControllerApi<Block, AccountId, Balance>>::get_hypothetical_account_liquidity(
 		account_id,
 		underlying_to_borrow,

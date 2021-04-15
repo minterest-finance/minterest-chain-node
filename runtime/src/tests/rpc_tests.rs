@@ -331,15 +331,15 @@ fn test_get_hypothetical_account_liquidity_rpc() {
 
 			assert_eq!(
 				get_hypothetical_account_liquidity_rpc(ALICE::get(), CurrencyId::DOT, 5, 0),
-				Some(-9)
+				Some(HypotheticalLiquidityData { liquidity: -9 })
 			);
 			assert_eq!(
 				get_hypothetical_account_liquidity_rpc(ALICE::get(), CurrencyId::DOT, 60, 0),
-				Some(-108)
+				Some(HypotheticalLiquidityData { liquidity: -108 })
 			);
 			assert_eq!(
 				get_hypothetical_account_liquidity_rpc(ALICE::get(), CurrencyId::DOT, 200, 0),
-				Some(-360)
+				Some(HypotheticalLiquidityData { liquidity: -360 })
 			);
 		});
 }

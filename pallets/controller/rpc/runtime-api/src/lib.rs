@@ -33,6 +33,14 @@ pub struct UserPoolBalanceData {
 	pub total_borrowed: Balance,
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Eq, PartialEq, Default, RuntimeDebug)]
+pub struct HypotheticalLiquidityData {
+	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
+	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
+	pub liquidity: Amount,
+}
+
 #[cfg(feature = "std")]
 fn serialize_as_string<S: Serializer, T: std::fmt::Display>(t: &T, serializer: S) -> Result<S::Ok, S::Error> {
 	serializer.serialize_str(&t.to_string())
@@ -62,7 +70,7 @@ sp_api::decl_runtime_apis! {
 			underlying_to_borrow: CurrencyId,
 			redeem_amount: Balance,
 			borrow_amount: Balance,
-		) -> Option<Amount>;
+		) -> Option<HypotheticalLiquidityData>;
 
 		fn is_admin(caller: AccountId) -> Option<bool>;
 	}

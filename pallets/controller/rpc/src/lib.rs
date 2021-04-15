@@ -1,10 +1,12 @@
 //! RPC interface for the controller pallet.
 
 use codec::Codec;
-pub use controller_rpc_runtime_api::{ControllerApi as ControllerRuntimeApi, PoolState, UserPoolBalanceData};
+pub use controller_rpc_runtime_api::{
+	ControllerApi as ControllerRuntimeApi, HypotheticalLiquidityData, PoolState, UserPoolBalanceData,
+};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use minterest_primitives::{Amount, Balance, CurrencyId};
+use minterest_primitives::{Balance, CurrencyId};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
@@ -26,7 +28,7 @@ pub trait ControllerApi<BlockHash, AccountId, Balance> {
 		redeem_amount: Balance,
 		borrow_amount: Balance,
 		at: Option<BlockHash>,
-	) -> Result<Option<Amount>>;
+	) -> Result<Option<HypotheticalLiquidityData>>;
 
 	#[rpc(name = "controller_isAdmin")]
 	fn is_admin(&self, caller: AccountId, at: Option<BlockHash>) -> Result<Option<bool>>;
@@ -107,7 +109,7 @@ where
 		redeem_amount: Balance,
 		borrow_amount: Balance,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<Option<Amount>> {
+	) -> Result<Option<HypotheticalLiquidityData>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
