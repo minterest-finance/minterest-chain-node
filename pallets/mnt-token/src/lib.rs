@@ -409,7 +409,7 @@ impl<T: Config> Pallet<T> {
 		// mnt_supplier_index = mnt_supply_index
 		let supply_index = MntPoolsState::<T>::get(underlying_id).supply_state.index;
 
-		let mut supplier_index = MntSupplierIndex::<T>::get(underlying_id, supplier).unwrap_or_else(Rate::one);
+		let supplier_index = MntSupplierIndex::<T>::get(underlying_id, supplier).unwrap_or_else(Rate::one);
 
 		let delta_index = supply_index
 			.checked_sub(&supplier_index)
@@ -437,9 +437,7 @@ impl<T: Config> Pallet<T> {
 			.checked_add(supplier_delta.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		supplier_index = supply_index;
-
-		MntSupplierIndex::<T>::insert(underlying_id, supplier, supplier_index);
+		MntSupplierIndex::<T>::insert(underlying_id, supplier, supply_index);
 		Self::transfer_mnt(supplier, supplier_mnt_accrued, MntClaimTreshold::<T>::get())?;
 
 		Self::deposit_event(Event::MntDistributedToSupplier(
@@ -546,16 +544,20 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Transfer mnt tokens to user balance if it possible. Otherwise, put them into internal
-	/// storage
-	fn transfer_mnt(user: &T::AccountId, user_accured: Balance, treshold: Balance) -> DispatchResult {
-		if user_accured >= treshold && user_accured > 0 {
+	/// storage.
+	///
+	/// - `user`: MNT tokens recipient.
+	/// - `user_accrued`: The total amount of accrued tokens.
+	/// - `threshold`: The threshold above which the flywheel transfers MNT.
+	fn transfer_mnt(user: &T::AccountId, user_accrued: Balance, threshold: Balance) -> DispatchResult {
+		if user_accrued >= threshold && user_accrued > 0 {
 			// TODO check is currency in MNT pallet enough.
 			// Need to discuss what we should do.
 			// Erorr/Event/save money to MntAccrued/stop producing mnt tokens
-			T::MultiCurrency::transfer(CurrencyId::MNT, &Self::get_account_id(), &user, user_accured)?;
+			T::MultiCurrency::transfer(CurrencyId::MNT, &Self::get_account_id(), &user, user_accrued)?;
 			MntAccrued::<T>::remove(user); // set to 0
 		} else {
-			MntAccrued::<T>::insert(user, user_accured);
+			MntAccrued::<T>::insert(user, user_accrued);
 		}
 		Ok(())
 	}
