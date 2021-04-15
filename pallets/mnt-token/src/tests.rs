@@ -8,15 +8,10 @@ use orml_traits::MultiCurrency;
 use sp_arithmetic::FixedPointNumber;
 use sp_runtime::traits::Zero;
 
-const KSM: CurrencyId = CurrencyId::KSM;
-const DOT: CurrencyId = CurrencyId::DOT;
-const ETH: CurrencyId = CurrencyId::ETH;
-const BTC: CurrencyId = CurrencyId::BTC;
-
 const MNT_PALLET_START_BALANCE: Balance = 1000000 * DOLLARS;
 
 fn get_mnt_account_balance(user: AccountId) -> Balance {
-	<Currencies as MultiCurrency<AccountId>>::total_balance(CurrencyId::MNT, &user)
+	<Currencies as MultiCurrency<AccountId>>::total_balance(MNT, &user)
 }
 
 /// Move flywheel and check borrower balance
@@ -54,11 +49,11 @@ fn check_supplier_accrued(
 fn distribute_mnt_to_borrower_with_treshold() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 150_000 * DOLLARS)
+		.pool_total_borrowed(DOT, 150_000 * DOLLARS)
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_treshold(20)
 		.pool_user_data(
-			CurrencyId::DOT,
+			DOT,
 			ALICE,
 			150_000 * DOLLARS,
 			Rate::saturating_from_rational(15, 10), // because pool borrow index is hardcoded to 1.5 too
@@ -108,7 +103,7 @@ fn distribute_mnt_to_supplier_with_treshold() {
 		.enable_minting_for_all_pools()
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_treshold(20)
-		.pool_total_borrowed(CurrencyId::DOT, 100 * DOLLARS)
+		.pool_total_borrowed(DOT, 100 * DOLLARS)
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
@@ -117,7 +112,7 @@ fn distribute_mnt_to_supplier_with_treshold() {
 			// At the second it should be transferred to ALICE and so on.
 
 			// set total issuances
-			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MDOT, &ALICE, 100 * DOLLARS).unwrap();
+			<Currencies as MultiCurrency<AccountId>>::deposit(MDOT, &ALICE, 100 * DOLLARS).unwrap();
 
 			check_supplier_accrued(DOT, ALICE, 0, 10 * DOLLARS);
 			System::set_block_number(2);
@@ -139,8 +134,8 @@ fn distribute_mnt_to_supplier_from_different_pools() {
 		.enable_minting_for_all_pools()
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_treshold(0)
-		.pool_total_borrowed(CurrencyId::DOT, 100 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 100 * DOLLARS)
+		.pool_total_borrowed(DOT, 100 * DOLLARS)
+		.pool_total_borrowed(KSM, 100 * DOLLARS)
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
@@ -151,8 +146,8 @@ fn distribute_mnt_to_supplier_from_different_pools() {
 			assert_eq!(MntToken::mnt_speeds(KSM), ksm_mnt_speed);
 
 			// set total issuances
-			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MDOT, &ALICE, 100 * DOLLARS).unwrap();
-			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MKSM, &ALICE, 100 * DOLLARS).unwrap();
+			<Currencies as MultiCurrency<AccountId>>::deposit(MDOT, &ALICE, 100 * DOLLARS).unwrap();
+			<Currencies as MultiCurrency<AccountId>>::deposit(MKSM, &ALICE, 100 * DOLLARS).unwrap();
 
 			check_supplier_accrued(KSM, ALICE, ksm_mnt_speed, 0);
 			check_supplier_accrued(DOT, ALICE, ksm_mnt_speed + dot_mnt_speed, 0);
@@ -170,12 +165,12 @@ fn distribute_mnt_to_supplier_from_different_pools() {
 fn distribute_mnt_to_borrower_from_different_pools() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 150_000 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 150_000 * DOLLARS)
+		.pool_total_borrowed(DOT, 150_000 * DOLLARS)
+		.pool_total_borrowed(KSM, 150_000 * DOLLARS)
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_treshold(0)
 		.pool_user_data(
-			CurrencyId::DOT,
+			DOT,
 			ALICE,
 			150_000 * DOLLARS,
 			Rate::saturating_from_rational(15, 10), // because pool borrow index is hardcoded to 1.5
@@ -183,7 +178,7 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 			0,
 		)
 		.pool_user_data(
-			CurrencyId::KSM,
+			KSM,
 			ALICE,
 			150_000 * DOLLARS,
 			Rate::saturating_from_rational(15, 10), // because pool borrow index is hardcoded to 1.5
@@ -218,7 +213,7 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 			// Check event about distributing mnt tokens by DOT pool
 			let borrower_index = MntToken::mnt_borrower_index(DOT, ALICE);
 			let event = Event::mnt_token(crate::Event::MntDistributedToBorrower(
-				CurrencyId::DOT,
+				DOT,
 				ALICE,
 				dot_mnt_speed,
 				borrower_index,
@@ -238,9 +233,9 @@ fn distribute_borrowers_mnt() {
 		.enable_minting_for_all_pools()
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_treshold(0)
-		.pool_total_borrowed(CurrencyId::DOT, 150_000 * DOLLARS)
+		.pool_total_borrowed(DOT, 150_000 * DOLLARS)
 		.pool_user_data(
-			CurrencyId::DOT,
+			DOT,
 			ALICE,
 			30_000 * DOLLARS,
 			Rate::saturating_from_rational(15, 10), // because pool borrow index is hardcoded to 1.5
@@ -248,7 +243,7 @@ fn distribute_borrowers_mnt() {
 			0,
 		)
 		.pool_user_data(
-			CurrencyId::DOT,
+			DOT,
 			BOB,
 			120_000 * DOLLARS,
 			Rate::saturating_from_rational(15, 10), // because pool borrow index is hardcoded to 1.5
@@ -291,11 +286,11 @@ fn distribute_borrowers_mnt() {
 fn distribute_borrower_mnt() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 150_000 * DOLLARS)
+		.pool_total_borrowed(DOT, 150_000 * DOLLARS)
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_treshold(0)
 		.pool_user_data(
-			CurrencyId::DOT,
+			DOT,
 			ALICE,
 			150_000 * DOLLARS,
 			Rate::saturating_from_rational(15, 10), // because pool borrow index is hardcoded to 1.5 too
@@ -332,10 +327,10 @@ fn distribute_borrower_mnt() {
 fn test_update_mnt_borrow_index() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 10_000 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 20_000 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 30_000 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 40_000 * DOLLARS)
+		.pool_total_borrowed(DOT, 10_000 * DOLLARS)
+		.pool_total_borrowed(ETH, 20_000 * DOLLARS)
+		.pool_total_borrowed(KSM, 30_000 * DOLLARS)
+		.pool_total_borrowed(BTC, 40_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			let initial_index = Rate::saturating_from_integer(1);
@@ -388,7 +383,7 @@ fn test_update_mnt_borrow_index_simple() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
 		// total borrows needs to calculate mnt_speeds
-		.pool_total_borrowed(CurrencyId::DOT, 150_000 * DOLLARS)
+		.pool_total_borrowed(DOT, 150_000 * DOLLARS)
 		.set_mnt_rate(1)
 		.build()
 		.execute_with(|| {
@@ -430,7 +425,7 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_treshold(0)
 		// total borrows needs to calculate mnt_speeds
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
@@ -459,8 +454,8 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 			let bob_award_per_block = 8 * DOLLARS;
 
 			// set total issuances
-			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MDOT, &ALICE, alice_balance).unwrap();
-			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MDOT, &BOB, bob_balance).unwrap();
+			<Currencies as MultiCurrency<AccountId>>::deposit(MDOT, &ALICE, alice_balance).unwrap();
+			<Currencies as MultiCurrency<AccountId>>::deposit(MDOT, &BOB, bob_balance).unwrap();
 
 			let move_flywheel = || {
 				MntToken::update_mnt_supply_index(DOT).unwrap();
@@ -479,7 +474,7 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 
 					let supplier_index = MntToken::mnt_supplier_index(DOT, supplier_id).unwrap();
 					let event = Event::mnt_token(crate::Event::MntDistributedToSupplier(
-						CurrencyId::DOT,
+						DOT,
 						supplier_id,
 						distributed_amount,
 						supplier_index,
@@ -519,10 +514,10 @@ fn test_update_mnt_supply_index() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
 		// total borrows needs to calculate mnt_speeds
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 50 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
@@ -536,10 +531,10 @@ fn test_update_mnt_supply_index() {
 			let meth_total_issuance = 20 * DOLLARS;
 			let mksm_total_issuance = 30 * DOLLARS;
 			let mbtc_total_issuance = 40 * DOLLARS;
-			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MDOT, &ALICE, mdot_total_issuance).unwrap();
-			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::METH, &ALICE, meth_total_issuance).unwrap();
-			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MKSM, &ALICE, mksm_total_issuance).unwrap();
-			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::MBTC, &ALICE, mbtc_total_issuance).unwrap();
+			<Currencies as MultiCurrency<AccountId>>::deposit(MDOT, &ALICE, mdot_total_issuance).unwrap();
+			<Currencies as MultiCurrency<AccountId>>::deposit(METH, &ALICE, meth_total_issuance).unwrap();
+			<Currencies as MultiCurrency<AccountId>>::deposit(MKSM, &ALICE, mksm_total_issuance).unwrap();
+			<Currencies as MultiCurrency<AccountId>>::deposit(MBTC, &ALICE, mbtc_total_issuance).unwrap();
 
 			let dot_mnt_speed = 714285714285714280;
 			assert_eq!(MntToken::mnt_speeds(DOT), dot_mnt_speed);
@@ -570,7 +565,7 @@ fn test_update_mnt_supply_index() {
 fn test_update_mnt_supply_index_simple() {
 	ExtBuilder::default()
 		// total_borrow shouldn't be zero at least for one market to calculate mnt speeds
-		.pool_total_borrowed(CurrencyId::ETH, 150_000 * DOLLARS)
+		.pool_total_borrowed(ETH, 150_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Input parameters:
@@ -579,7 +574,7 @@ fn test_update_mnt_supply_index_simple() {
 			// *mnt_speed = mnt_rate because the only one pool is included
 
 			// set total_issuance to 20
-			<Currencies as MultiCurrency<AccountId>>::deposit(CurrencyId::METH, &ALICE, 20 * DOLLARS).unwrap();
+			<Currencies as MultiCurrency<AccountId>>::deposit(METH, &ALICE, 20 * DOLLARS).unwrap();
 			let mnt_rate = 10 * DOLLARS;
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
 			assert_ok!(MntToken::enable_mnt_minting(admin(), ETH));
@@ -604,10 +599,10 @@ fn test_update_mnt_supply_index_simple() {
 fn test_mnt_speed_calculation() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 50 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			let mnt_rate = 10 * DOLLARS;
@@ -668,10 +663,10 @@ fn test_mnt_speed_calculation() {
 fn test_mnt_speed_calculaction_with_zero_borrowed() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 0 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 0 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
@@ -713,10 +708,10 @@ fn test_disable_mnt_minting() {
 	// 2. Enable MNT minting for disabled pool
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 50 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
@@ -754,10 +749,10 @@ fn test_disable_mnt_minting() {
 fn test_disable_generating_all_mnt_tokens() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 50 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			assert_ok!(MntToken::set_mnt_rate(admin(), Balance::zero()));
@@ -773,10 +768,10 @@ fn test_disable_generating_all_mnt_tokens() {
 fn test_set_mnt_rate() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 50 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			let test = |new_rate: Balance| {
@@ -796,10 +791,10 @@ fn test_set_mnt_rate() {
 #[test]
 fn test_minting_enable_disable() {
 	ExtBuilder::default()
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 50 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
@@ -840,10 +835,10 @@ fn test_minting_enable_disable() {
 fn test_calculate_enabled_pools_utilities() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
-		.pool_total_borrowed(CurrencyId::DOT, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::ETH, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::KSM, 50 * DOLLARS)
-		.pool_total_borrowed(CurrencyId::BTC, 50 * DOLLARS)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 50 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Amount tokens: 50 for each currency
@@ -861,7 +856,7 @@ fn test_calculate_enabled_pools_utilities() {
 #[test]
 fn test_calculate_enabled_pools_utilities_fail() {
 	ExtBuilder::default().build().execute_with(|| {
-		let non_existent_liquidity_pool = CurrencyId::MNT;
+		let non_existent_liquidity_pool = MNT;
 		assert_noop!(
 			MntToken::enable_mnt_minting(admin(), non_existent_liquidity_pool),
 			Error::<Runtime>::NotValidUnderlyingAssetId

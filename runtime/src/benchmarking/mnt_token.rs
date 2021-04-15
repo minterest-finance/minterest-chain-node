@@ -1,16 +1,17 @@
-use crate::{CurrencyId, MntToken, Runtime, DOLLARS};
+use crate::{MntToken, Runtime, BTC, DOLLARS, DOT};
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
 use sp_std::prelude::*;
+
 runtime_benchmarks! {
 	{ Runtime, mnt_token }
 
 	_ {}
 	set_mnt_rate {}: _(RawOrigin::Root, 15 * DOLLARS)
-	disable_mnt_minting {}: _(RawOrigin::Root, CurrencyId::BTC)
+	disable_mnt_minting {}: _(RawOrigin::Root, BTC)
 	enable_mnt_minting {
-		 MntToken::disable_mnt_minting(RawOrigin::Root.into(), CurrencyId::DOT).unwrap();
-	}: _(RawOrigin::Root, CurrencyId::DOT)
+		 MntToken::disable_mnt_minting(RawOrigin::Root.into(), DOT).unwrap();
+	}: _(RawOrigin::Root, DOT)
 }
 
 // TODO

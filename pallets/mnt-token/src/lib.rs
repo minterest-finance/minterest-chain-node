@@ -7,7 +7,8 @@
 
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
-use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
+use minterest_primitives::currency::MNT;
+use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{ControllerAPI, LiquidityPoolsManager, PriceProvider};
@@ -88,12 +89,6 @@ pub mod module {
 
 		/// The price source of currencies
 		type PriceSource: PriceProvider<CurrencyId>;
-
-		/// Enabled underlying asset IDs.
-		type EnabledUnderlyingAssetsIds: Get<Vec<CurrencyId>>;
-
-		/// Enabled currency pairs.
-		type EnabledCurrencyPair: Get<Vec<CurrencyPair>>;
 
 		/// The `MultiCurrency` implementation for wrapped.
 		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
@@ -240,9 +235,7 @@ pub mod module {
 		pub fn enable_mnt_minting(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
-				T::EnabledUnderlyingAssetsIds::get()
-					.into_iter()
-					.any(|asset_id| asset_id == currency_id),
+				currency_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 			ensure!(
@@ -262,9 +255,7 @@ pub mod module {
 		pub fn disable_mnt_minting(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
-				T::EnabledUnderlyingAssetsIds::get()
-					.into_iter()
-					.any(|asset_id| asset_id == currency_id),
+				currency_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 			ensure!(
@@ -420,12 +411,9 @@ impl<T: Config> Pallet<T> {
 			.checked_sub(&supplier_index)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		// This should be reworked. TODO MIN-185
-		let wrapped_asset_id = T::EnabledCurrencyPair::get()
-			.iter()
-			.find(|currency_pair| currency_pair.underlying_id == underlying_id)
-			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?
-			.wrapped_id;
+		let wrapped_asset_id = underlying_id
+			.wrapped_asset()
+			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
 		// We use total_balance (not free balance). Because sum of balances should be equal to
 		// total_issuance. Otherwise, mnt_rate calculation will not be correct.
@@ -477,12 +465,9 @@ impl<T: Config> Pallet<T> {
 
 		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
 		if !mnt_speed.is_zero() {
-			// This should be reworked. TODO MIN-185
-			let wrapped_asset_id = T::EnabledCurrencyPair::get()
-				.iter()
-				.find(|currency_pair| currency_pair.underlying_id == underlying_id)
-				.ok_or(Error::<T>::NotValidUnderlyingAssetId)?
-				.wrapped_id;
+			let wrapped_asset_id = underlying_id
+				.wrapped_asset()
+				.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
 			let block_delta_as_u128 = TryInto::<u128>::try_into(block_delta).or(Err(Error::<T>::InternalError))?;
 
@@ -561,7 +546,7 @@ impl<T: Config> Pallet<T> {
 			// TODO check is currency in MNT pallet enough.
 			// Need to discuss what we should do.
 			// Erorr/Event/save money to MntAccrued/stop producing mnt tokens
-			T::MultiCurrency::transfer(CurrencyId::MNT, &Self::get_account_id(), &user, user_accrued)?;
+			T::MultiCurrency::transfer(MNT, &Self::get_account_id(), &user, user_accrued)?;
 			MntAccrued::<T>::remove(user); // set to 0
 		} else {
 			MntAccrued::<T>::insert(user, user_accrued);

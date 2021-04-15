@@ -30,12 +30,6 @@ Install Rust:
 curl https://sh.rustup.rs -sSf | sh
 ```
 
-Make sure you have `submodule.recurse` set to true to make life with submodule easier.
-
-```bash
-git config --global submodule.recurse true
-```
-
 ### Makefile
 
 This project uses a [Makefile](Makefile) to document helpful commands and make it easier to execute

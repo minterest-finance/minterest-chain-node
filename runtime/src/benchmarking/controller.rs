@@ -1,4 +1,4 @@
-use crate::{Balance, CurrencyId, Operation, Rate, Runtime};
+use crate::{Balance, Operation, Rate, Runtime, DOT};
 
 use frame_system::RawOrigin;
 use orml_benchmarking::{runtime_benchmarks, Zero};
@@ -13,46 +13,46 @@ runtime_benchmarks! {
 	pause_operation {
 	}: _(
 		RawOrigin::Root,
-		CurrencyId::DOT,
+		DOT,
 		Operation::Deposit
 	)
 
 	resume_operation {
 	}: _(
 		RawOrigin::Root,
-		CurrencyId::DOT,
+		DOT,
 		Operation::Deposit
 	)
 
 	set_protocol_interest_factor {
 	}: _(
 		RawOrigin::Root,
-		CurrencyId::DOT,
+		DOT,
 		Rate::one()
 	)
 
 	set_max_borrow_rate {
 	}: _(
 		RawOrigin::Root,
-		CurrencyId::DOT,
+		DOT,
 		Rate::one()
 	)
 
 	set_collateral_factor {}: _(
 		RawOrigin::Root,
-		CurrencyId::DOT,
+		DOT,
 		Rate::one()
 	)
 
 	set_borrow_cap {}: _(
 		RawOrigin::Root,
-		CurrencyId::DOT,
+		DOT,
 		Some(0u128)
 	)
 
 	set_protocol_interest_threshold {}: _(
 		RawOrigin::Root,
-		CurrencyId::DOT,
+		DOT,
 		Balance::zero()
 	)
 

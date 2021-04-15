@@ -1,25 +1,23 @@
 use crate::{
-	AccountId, Balance, Block, Controller, Currencies,
-	CurrencyId::{self, *},
-	Dex, EnabledUnderlyingAssetsIds, Event, LiquidationPools, LiquidityPools, MinterestCouncilMembership,
-	MinterestOracle, MinterestProtocol, Prices, Rate, RiskManager, Runtime, System, WhitelistCouncilMembership,
-	DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+	AccountId, Balance, Block, Controller, Currencies, Dex, EnabledUnderlyingAssetsIds, Event, LiquidationPools,
+	LiquidityPools, MinterestCouncilMembership, MinterestOracle, MinterestProtocol, Prices, Rate, RiskManager, Runtime,
+	System, WhitelistCouncilMembership, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 };
 use controller::{ControllerData, PauseKeeper};
-use controller_rpc_runtime_api::runtime_decl_for_ControllerApi::ControllerApi;
-use controller_rpc_runtime_api::PoolState;
-use controller_rpc_runtime_api::UserPoolBalanceData;
-use frame_support::{assert_err, assert_noop, assert_ok, parameter_types};
-use frame_support::{error::BadOrigin, pallet_prelude::GenesisBuild, traits::OnFinalize};
+use controller_rpc_runtime_api::{runtime_decl_for_ControllerApi::ControllerApi, PoolState, UserPoolBalanceData};
+use frame_support::{
+	assert_err, assert_noop, assert_ok, error::BadOrigin, pallet_prelude::GenesisBuild, parameter_types,
+	traits::OnFinalize,
+};
 use liquidation_pools::{LiquidationPoolData, Sales};
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
-use minterest_primitives::{Operation, Price};
+use minterest_primitives::{CurrencyId, Operation, Price};
 use orml_traits::MultiCurrency;
 use pallet_traits::{DEXManager, PoolsManager, PriceProvider};
 use risk_manager::RiskManagerData;
-use sp_runtime::traits::Zero;
-use sp_runtime::{DispatchResult, FixedPointNumber};
+use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};
+use test_helper::{BTC, DOT, ETH, KSM, MDOT, METH, MNT};
 
 mod balancing_pools_tests;
 mod dexes_tests;
@@ -48,18 +46,18 @@ impl Default for ExtBuilder {
 		Self {
 			endowed_accounts: vec![
 				// seed: initial assets. Initial MINT to pay for gas.
-				(ALICE::get(), CurrencyId::MNT, 100_000 * DOLLARS),
-				(ALICE::get(), CurrencyId::DOT, 100_000 * DOLLARS),
-				(ALICE::get(), CurrencyId::ETH, 100_000 * DOLLARS),
-				(ALICE::get(), CurrencyId::BTC, 100_000 * DOLLARS),
-				(BOB::get(), CurrencyId::MNT, 100_000 * DOLLARS),
-				(BOB::get(), CurrencyId::DOT, 100_000 * DOLLARS),
-				(BOB::get(), CurrencyId::ETH, 100_000 * DOLLARS),
-				(BOB::get(), CurrencyId::BTC, 100_000 * DOLLARS),
-				(CHARLIE::get(), CurrencyId::MNT, 100_000 * DOLLARS),
-				(CHARLIE::get(), CurrencyId::DOT, 100_000 * DOLLARS),
-				(CHARLIE::get(), CurrencyId::ETH, 100_000 * DOLLARS),
-				(CHARLIE::get(), CurrencyId::BTC, 100_000 * DOLLARS),
+				(ALICE::get(), MNT, 100_000 * DOLLARS),
+				(ALICE::get(), DOT, 100_000 * DOLLARS),
+				(ALICE::get(), ETH, 100_000 * DOLLARS),
+				(ALICE::get(), BTC, 100_000 * DOLLARS),
+				(BOB::get(), MNT, 100_000 * DOLLARS),
+				(BOB::get(), DOT, 100_000 * DOLLARS),
+				(BOB::get(), ETH, 100_000 * DOLLARS),
+				(BOB::get(), BTC, 100_000 * DOLLARS),
+				(CHARLIE::get(), MNT, 100_000 * DOLLARS),
+				(CHARLIE::get(), DOT, 100_000 * DOLLARS),
+				(CHARLIE::get(), ETH, 100_000 * DOLLARS),
+				(CHARLIE::get(), BTC, 100_000 * DOLLARS),
 			],
 			pools: vec![],
 			pool_user_data: vec![],
@@ -268,7 +266,7 @@ impl ExtBuilder {
 		risk_manager::GenesisConfig {
 			risk_manager_dates: vec![
 				(
-					CurrencyId::DOT,
+					DOT,
 					RiskManagerData {
 						max_attempts: 3,
 						min_partial_liquidation_sum: 100_000 * DOLLARS,
@@ -277,7 +275,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::ETH,
+					ETH,
 					RiskManagerData {
 						max_attempts: 3,
 						min_partial_liquidation_sum: 100_000 * DOLLARS,
@@ -286,7 +284,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					RiskManagerData {
 						max_attempts: 3,
 						min_partial_liquidation_sum: 100_000 * DOLLARS,
@@ -310,7 +308,7 @@ impl ExtBuilder {
 			balancing_period: 30, // Blocks per 3 minutes.
 			liquidation_pools: vec![
 				(
-					CurrencyId::DOT,
+					DOT,
 					LiquidationPoolData {
 						deviation_threshold: Rate::saturating_from_rational(1, 10),
 						balance_ratio: Rate::saturating_from_rational(2, 10),
@@ -318,7 +316,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::ETH,
+					ETH,
 					LiquidationPoolData {
 						deviation_threshold: Rate::saturating_from_rational(1, 10),
 						balance_ratio: Rate::saturating_from_rational(2, 10),
@@ -326,7 +324,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					LiquidationPoolData {
 						deviation_threshold: Rate::saturating_from_rational(1, 10),
 						balance_ratio: Rate::saturating_from_rational(2, 10),
@@ -334,7 +332,7 @@ impl ExtBuilder {
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					LiquidationPoolData {
 						deviation_threshold: Rate::saturating_from_rational(1, 10),
 						balance_ratio: Rate::saturating_from_rational(2, 10),

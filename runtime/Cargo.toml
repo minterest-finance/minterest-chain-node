@@ -51,6 +51,7 @@ sp-session = { default-features = false, version = '3.0.0' }
 sp-std = { default-features = false, version = '3.0.0' }
 sp-transaction-pool = { default-features = false, version = '3.0.0' }
 sp-version = { default-features = false, version = '3.0.0' }
+smallvec = { default-features = false, version = '1.6.0' }
 
 # local dependencies
 mnt-token = { path = "../pallets/mnt-token", default-features = false }
@@ -74,6 +75,9 @@ orml-traits = { version = "0.4.0", default-features = false }
 orml-oracle = { version = "0.4.0", default-features = false }
 orml-oracle-rpc-runtime-api = { version = "0.4.0", default-features = false }
 orml-benchmarking = { version = "0.4.0", default-features = false, optional = true }
+
+[dev-dependencies]
+test-helper = { path = "../test-helper" }
 
 [features]
 default = ["std"]
