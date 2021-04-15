@@ -122,7 +122,7 @@ pub mod module {
 		BalanceRatioChanged(CurrencyId, Rate),
 		///  Maximum ideal balance has been successfully changed: \[pool_id, new_threshold_value\]
 		MaxIdealBalanceChanged(CurrencyId, Option<Balance>),
-		///  Balance has been successfully updated: \[pool_id, by_amount]
+		///  Balance has been successfully updated: \[pool_id, by_amount\]
 		BalanceUpdated(CurrencyId, Amount),
 	}
 

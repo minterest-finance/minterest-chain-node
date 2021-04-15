@@ -214,3 +214,58 @@ fn calculate_ideal_balance_should_work() {
 			);
 		});
 }
+
+#[test]
+fn update_balance_should_work() {
+	ExternalityBuilder::default()
+		.liquidity_pool_balance(CurrencyId::DOT, 500_000)
+		.build()
+		.execute_with(|| {
+			// Check that update balance work correctly with addition
+			// Liquidity pool value: 500000
+			// by_amount 10000
+			// Expected balance 510000
+			let by_amount = 10000;
+			assert_eq!(TestLiquidationPools::update_balance(
+					admin(),
+					CurrencyId::DOT,
+					by_amount),
+				Ok(().into()));
+
+			let expected_event = Event::liquidation_pools(crate::Event::BalanceUpdated(CurrencyId::DOT, by_amount));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
+			assert_eq!(TestLiquidationPools::get_pool_available_liquidity(CurrencyId::DOT), 510000);
+			// Check that update balance work correctly with substraction
+			// Liquidity pool value: 510000
+			// by_amount -10000
+			// Expected balance 500000
+			let by_amount = -10000;
+			assert_eq!(TestLiquidationPools::update_balance(
+				admin(),
+				CurrencyId::DOT,
+				by_amount),
+			Ok(().into()));
+
+			let expected_event = Event::liquidation_pools(crate::Event::BalanceUpdated(CurrencyId::DOT, by_amount));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
+			assert_eq!(TestLiquidationPools::get_pool_available_liquidity(CurrencyId::DOT), 500000);
+			// Check that update balance work correctly with zero by_amount vavue
+			// Liquidity pool value: 500000
+			// by_amount 0
+			// Expected balance 500000
+			let by_amount = 0;
+			assert_eq!(TestLiquidationPools::update_balance(
+				admin(),
+				CurrencyId::DOT,
+				by_amount),
+			Ok(().into()));
+
+			let expected_event = Event::liquidation_pools(crate::Event::BalanceUpdated(CurrencyId::DOT, by_amount));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
+			assert_eq!(TestLiquidationPools::get_pool_available_liquidity(CurrencyId::DOT), 500000);
+	
+	});
+}
