@@ -362,9 +362,9 @@ impl<T: Config> Pallet<T> {
 		// borrow_state.block_number = current_block_number
 
 		let current_block = frame_system::Module::<T>::block_number();
-		let mut borrow_state = MntPoolsState::<T>::get(underlying_id).borrow_state;
+		let mut pool_state = MntPoolsState::<T>::get(underlying_id);
 		let block_delta = current_block
-			.checked_sub(&borrow_state.block_number)
+			.checked_sub(&pool_state.borrow_state.block_number)
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		if block_delta.is_zero() {
@@ -391,13 +391,16 @@ impl<T: Config> Pallet<T> {
 				.checked_div(&borrow_amount)
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			borrow_state.index = borrow_state.index.checked_add(&ratio).ok_or(Error::<T>::NumOverflow)?;
+			pool_state.borrow_state.index = pool_state
+				.borrow_state
+				.index
+				.checked_add(&ratio)
+				.ok_or(Error::<T>::NumOverflow)?;
 		}
-		borrow_state.block_number = current_block;
-		MntPoolsState::<T>::try_mutate(underlying_id, |pool| -> DispatchResult {
-			pool.borrow_state = borrow_state;
-			Ok(())
-		})
+
+		pool_state.borrow_state.block_number = current_block;
+		MntPoolsState::<T>::insert(underlying_id, pool_state);
+		Ok(())
 	}
 
 	/// Distribute mnt token to supplier. It should be called after update_mnt_supply_index
@@ -460,9 +463,9 @@ impl<T: Config> Pallet<T> {
 		// supply_state.block_number = current_block_number
 
 		let current_block = frame_system::Module::<T>::block_number();
-		let mut supply_state = MntPoolsState::<T>::get(underlying_id).supply_state;
+		let mut pool_state = MntPoolsState::<T>::get(underlying_id);
 		let block_delta = current_block
-			.checked_sub(&supply_state.block_number)
+			.checked_sub(&pool_state.supply_state.block_number)
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		if block_delta.is_zero() {
@@ -489,14 +492,16 @@ impl<T: Config> Pallet<T> {
 
 			let ratio = Rate::checked_from_rational(mnt_accrued, total_tokens_supply).ok_or(Error::<T>::NumOverflow)?;
 
-			supply_state.index = supply_state.index.checked_add(&ratio).ok_or(Error::<T>::NumOverflow)?;
+			pool_state.supply_state.index = pool_state
+				.supply_state
+				.index
+				.checked_add(&ratio)
+				.ok_or(Error::<T>::NumOverflow)?;
 		}
-		supply_state.block_number = current_block;
+		pool_state.supply_state.block_number = current_block;
 
-		MntPoolsState::<T>::try_mutate(underlying_id, |pool| -> DispatchResult {
-			pool.supply_state = supply_state;
-			Ok(())
-		})
+		MntPoolsState::<T>::insert(underlying_id, pool_state);
+		Ok(())
 	}
 
 	/// Calculate utilities for enabled pools and sum of all pools utilities
