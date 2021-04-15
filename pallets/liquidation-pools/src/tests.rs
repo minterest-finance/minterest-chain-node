@@ -215,10 +215,7 @@ fn update_balance_should_work() {
 			let expected_event = Event::liquidation_pools(crate::Event::BalanceUpdated(DOT, by_amount));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_eq!(
-				TestLiquidationPools::get_pool_available_liquidity(DOT),
-				510000
-			);
+			assert_eq!(TestLiquidationPools::get_pool_available_liquidity(DOT), 510000);
 			// Check that update balance work correctly with substraction
 			// Liquidity pool value: 510000
 			// by_amount -10000
@@ -232,10 +229,7 @@ fn update_balance_should_work() {
 			let expected_event = Event::liquidation_pools(crate::Event::BalanceUpdated(DOT, by_amount));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_eq!(
-				TestLiquidationPools::get_pool_available_liquidity(DOT),
-				500000
-			);
+			assert_eq!(TestLiquidationPools::get_pool_available_liquidity(DOT), 500000);
 			// Check that update balance work correctly with zero by_amount vavue
 			// Liquidity pool value: 500000
 			// by_amount 0
@@ -249,9 +243,6 @@ fn update_balance_should_work() {
 			let expected_event = Event::liquidation_pools(crate::Event::BalanceUpdated(DOT, by_amount));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_eq!(
-				TestLiquidationPools::get_pool_available_liquidity(DOT),
-				500000
-			);
+			assert_eq!(TestLiquidationPools::get_pool_available_liquidity(DOT), 500000);
 		});
 }
