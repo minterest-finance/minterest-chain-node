@@ -6,27 +6,24 @@ pub use controller_rpc_runtime_api::{
 };
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use minterest_primitives::{Balance, CurrencyId};
+use minterest_primitives::CurrencyId;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
 
 #[rpc]
-pub trait ControllerApi<BlockHash, AccountId, Balance> {
+pub trait ControllerApi<BlockHash, AccountId> {
 	#[rpc(name = "controller_liquidityPoolState")]
 	fn liquidity_pool_state(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<PoolState>>;
 
 	#[rpc(name = "controller_userBalanceInfo")]
 	fn get_user_balance(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<UserPoolBalanceData>>;
 
-	#[rpc(name = "controller_hypotheticalAccountLiquidity")]
+	#[rpc(name = "controller_accountLiquidity")]
 	fn get_hypothetical_account_liquidity(
 		&self,
 		account_id: AccountId,
-		underlying_to_borrow: CurrencyId,
-		redeem_amount: Balance,
-		borrow_amount: Balance,
 		at: Option<BlockHash>,
 	) -> Result<Option<HypotheticalLiquidityData>>;
 
@@ -62,11 +59,11 @@ impl From<Error> for i64 {
 	}
 }
 
-impl<C, Block, AccountId> ControllerApi<<Block as BlockT>::Hash, AccountId, Balance> for Controller<C, Block>
+impl<C, Block, AccountId> ControllerApi<<Block as BlockT>::Hash, AccountId> for Controller<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-	C::Api: ControllerRuntimeApi<Block, AccountId, Balance>,
+	C::Api: ControllerRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
 {
 	fn liquidity_pool_state(
@@ -105,16 +102,13 @@ where
 	fn get_hypothetical_account_liquidity(
 		&self,
 		account_id: AccountId,
-		underlying_to_borrow: CurrencyId,
-		redeem_amount: Balance,
-		borrow_amount: Balance,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> Result<Option<HypotheticalLiquidityData>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
-		api.get_hypothetical_account_liquidity(&at, account_id, underlying_to_borrow, redeem_amount, borrow_amount)
+		api.get_hypothetical_account_liquidity(&at, account_id)
 			.map_err(|e| RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
 				message: "Unable to get hypothetical account liquidity.".into(),

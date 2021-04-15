@@ -365,29 +365,19 @@ fn dex_balance(pool_id: CurrencyId) -> Balance {
 }
 
 fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
-	<Runtime as ControllerApi<Block, AccountId, Balance>>::liquidity_pool_state(currency_id)
+	<Runtime as ControllerApi<Block, AccountId>>::liquidity_pool_state(currency_id)
 }
 
 fn get_total_supply_and_borrowed_usd_balance_rpc(account_id: AccountId) -> Option<UserPoolBalanceData> {
-	<Runtime as ControllerApi<Block, AccountId, Balance>>::get_total_supply_and_borrowed_usd_balance(account_id)
+	<Runtime as ControllerApi<Block, AccountId>>::get_total_supply_and_borrowed_usd_balance(account_id)
 }
 
-fn get_hypothetical_account_liquidity_rpc(
-	account_id: AccountId,
-	underlying_to_borrow: CurrencyId,
-	redeem_amount: Balance,
-	borrow_amount: Balance,
-) -> Option<HypotheticalLiquidityData> {
-	<Runtime as ControllerApi<Block, AccountId, Balance>>::get_hypothetical_account_liquidity(
-		account_id,
-		underlying_to_borrow,
-		redeem_amount,
-		borrow_amount,
-	)
+fn get_hypothetical_account_liquidity_rpc(account_id: AccountId) -> Option<HypotheticalLiquidityData> {
+	<Runtime as ControllerApi<Block, AccountId>>::get_hypothetical_account_liquidity(account_id)
 }
 
 fn is_admin_rpc(caller: AccountId) -> Option<bool> {
-	<Runtime as ControllerApi<Block, AccountId, Balance>>::is_admin(caller)
+	<Runtime as ControllerApi<Block, AccountId>>::is_admin(caller)
 }
 
 fn dollars(amount: u128) -> u128 {

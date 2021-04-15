@@ -56,21 +56,15 @@ fn deserialize_from_string<'de, D: Deserializer<'de>, T: std::str::FromStr>(dese
 // Here we declare the runtime API. It is implemented it the `impl` block in
 // runtime amalgamator file (the `runtime/src/lib.rs`)
 sp_api::decl_runtime_apis! {
-	pub trait ControllerApi<AccountId, Balance>
+	pub trait ControllerApi<AccountId>
 	where
 		AccountId: Codec,
-		Balance: Codec,
 	{
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState>;
 
 		fn get_total_supply_and_borrowed_usd_balance(account_id: AccountId) -> Option<UserPoolBalanceData>;
 
-		fn get_hypothetical_account_liquidity(
-			account_id: AccountId,
-			underlying_to_borrow: CurrencyId,
-			redeem_amount: Balance,
-			borrow_amount: Balance,
-		) -> Option<HypotheticalLiquidityData>;
+		fn get_hypothetical_account_liquidity(account_id: AccountId) -> Option<HypotheticalLiquidityData>;
 
 		fn is_admin(caller: AccountId) -> Option<bool>;
 	}

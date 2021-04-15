@@ -744,7 +744,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl controller_rpc_runtime_api::ControllerApi<Block, AccountId, Balance> for Runtime {
+	impl controller_rpc_runtime_api::ControllerApi<Block, AccountId> for Runtime {
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState> {
 			let exchange_rate = Controller::get_liquidity_pool_exchange_rate(pool_id)?;
 			let (borrow_rate, supply_rate) = Controller::get_liquidity_pool_borrow_and_supply_rates(pool_id)?;
@@ -758,29 +758,14 @@ impl_runtime_apis! {
 			Some(UserPoolBalanceData {total_supply, total_borrowed})
 		}
 
-		fn get_hypothetical_account_liquidity(
-			account_id: AccountId,
-			underlying_to_borrow: CurrencyId,
-			redeem_amount: Balance,
-			borrow_amount: Balance,
-		) -> Option<HypotheticalLiquidityData> {
-			let (excess, shortfall) = Controller::get_hypothetical_account_liquidity(
-				&account_id,
-				underlying_to_borrow,
-				redeem_amount,
-				borrow_amount
-			).ok()?;
-
+		fn get_hypothetical_account_liquidity(account_id: AccountId) -> Option<HypotheticalLiquidityData> {
+			let (excess, shortfall) = Controller::get_hypothetical_account_liquidity(&account_id, MNT, 0, 0).ok()?;
 			let res = match excess.cmp(&shortfall) {
 				Ordering::Less => {
-					let diff = shortfall.checked_sub(excess)?;
-					let amount = Amount::try_from(diff).ok()?;
+					let amount = Amount::try_from(shortfall).ok()?;
 					amount.checked_neg()?
 				},
-				_ => {
-					let diff = excess.checked_sub(shortfall)?;
-					Amount::try_from(diff).ok()?
-				}
+				_ => Amount::try_from(excess).ok()?
 			};
 
 			Some(HypotheticalLiquidityData{ liquidity: res })

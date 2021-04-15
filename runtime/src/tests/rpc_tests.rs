@@ -329,17 +329,41 @@ fn test_get_hypothetical_account_liquidity_rpc() {
 			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
+			System::set_block_number(20);
+
 			assert_eq!(
-				get_hypothetical_account_liquidity_rpc(ALICE::get(), DOT, 5, 0),
-				Some(HypotheticalLiquidityData { liquidity: -9 })
+				get_hypothetical_account_liquidity_rpc(ALICE::get()),
+				Some(HypotheticalLiquidityData { liquidity: 0 })
 			);
 			assert_eq!(
-				get_hypothetical_account_liquidity_rpc(ALICE::get(), DOT, 60, 0),
-				Some(HypotheticalLiquidityData { liquidity: -108 })
+				get_hypothetical_account_liquidity_rpc(BOB::get()),
+				Some(HypotheticalLiquidityData { liquidity: 0 })
 			);
+
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
+			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(50_000)));
+
+			// Check positive liquidity
 			assert_eq!(
-				get_hypothetical_account_liquidity_rpc(ALICE::get(), DOT, 200, 0),
-				Some(HypotheticalLiquidityData { liquidity: -360 })
+				get_hypothetical_account_liquidity_rpc(BOB::get()),
+				Some(HypotheticalLiquidityData {
+					liquidity: 116_000_000_000_000_000_000_000
+				})
+			);
+
+			System::set_block_number(100_000_000);
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, 1));
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, 1));
+
+			// Check negative liquidity
+			assert_eq!(
+				get_hypothetical_account_liquidity_rpc(BOB::get()),
+				Some(HypotheticalLiquidityData {
+					liquidity: -212_319_934_335_999_999_999_998
+				})
 			);
 		});
 }
