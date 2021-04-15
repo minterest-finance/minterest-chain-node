@@ -32,7 +32,7 @@ mod mock;
 mod tests;
 
 pub mod weights;
-use minterest_primitives::arithmetic::checked_acc_and_add_mul;
+use minterest_primitives::arithmetic::sum_with_mult_result;
 pub use weights::WeightInfo;
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -512,12 +512,12 @@ impl<T: Config> Pallet<T> {
 				let m_token_balance = T::MultiCurrency::free_balance(asset, account);
 
 				// sum_collateral += tokens_to_denom * m_token_balance
-				sum_collateral = checked_acc_and_add_mul(sum_collateral, m_token_balance, tokens_to_denom)
+				sum_collateral = sum_with_mult_result(sum_collateral, m_token_balance, tokens_to_denom)
 					.map_err(|_| Error::<T>::CollateralBalanceOverflow)?;
 			}
 
 			// sum_borrow_plus_effects += oracle_price * borrow_balance
-			sum_borrow_plus_effects = checked_acc_and_add_mul(sum_borrow_plus_effects, borrow_balance, oracle_price)
+			sum_borrow_plus_effects = sum_with_mult_result(sum_borrow_plus_effects, borrow_balance, oracle_price)
 				.map_err(|_| Error::<T>::BalanceOverflow)?;
 
 			// Calculate effects of interacting with Underlying Asset Modify.
@@ -526,14 +526,14 @@ impl<T: Config> Pallet<T> {
 				if redeem_amount > 0 {
 					// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
 					sum_borrow_plus_effects =
-						checked_acc_and_add_mul(sum_borrow_plus_effects, redeem_amount, tokens_to_denom)
+						sum_with_mult_result(sum_borrow_plus_effects, redeem_amount, tokens_to_denom)
 							.map_err(|_| Error::<T>::BalanceOverflow)?;
 				};
 				// borrow effect
 				if borrow_amount > 0 {
 					// sum_borrow_plus_effects += oracle_price * borrow_amount
 					sum_borrow_plus_effects =
-						checked_acc_and_add_mul(sum_borrow_plus_effects, borrow_amount, oracle_price)
+						sum_with_mult_result(sum_borrow_plus_effects, borrow_amount, oracle_price)
 							.map_err(|_| Error::<T>::BalanceOverflow)?;
 				}
 			}
@@ -820,7 +820,7 @@ impl<T: Config> Pallet<T> {
 			.checked_add(pool_data.total_borrowed)
 			.ok_or(Error::<T>::BorrowBalanceOverflow)?;
 
-		let total_protocol_interest = checked_acc_and_add_mul(
+		let total_protocol_interest = sum_with_mult_result(
 			pool_data.total_protocol_interest,
 			interest_accumulated,
 			protocol_interest_factor,
