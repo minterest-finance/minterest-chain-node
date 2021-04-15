@@ -66,16 +66,16 @@ runtime_benchmarks! {
 		set_balance(MBTC, &borrower, 10_000 * DOLLARS)?;
 		set_balance(MDOT, &lender, 30_000 * DOLLARS)?;
 
-		// set balance for LiquidityPools
+		// set balance for Liquidity Pool
 		set_balance(DOT, &liquidity_pool_account_id, 5_000 * DOLLARS)?;
 		set_balance(ETH, &liquidity_pool_account_id, 10_000 * DOLLARS)?;
 		set_balance(KSM, &liquidity_pool_account_id, 10_000 * DOLLARS)?;
 		set_balance(BTC, &liquidity_pool_account_id, 10_000 * DOLLARS)?;
 
-		// set balance for LiquidationPools
+		// set balance for Liquidation Pool
 		set_balance(DOT, &liquidation_pool_account_id, 40_000 * DOLLARS)?;
 
-		// enable pool as collateral
+		// enable pools as collateral
 		enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), DOT)?;
 		enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), ETH)?;
 		enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), KSM)?;
@@ -89,7 +89,7 @@ runtime_benchmarks! {
 		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).total_borrowed, 35_000 * DOLLARS);
 		assert_eq!(LiquidityPools::pools(DOT).total_borrowed, 35_000 * DOLLARS);
 
-		// set next block number for accrue_interest works
+		// set next block number for accrue_interest to work
 		System::set_block_number(2);
 	}: _(
 		RawOrigin::None,

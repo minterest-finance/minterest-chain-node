@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn whitelist_mode_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		// Set price = 2.00 USD for all polls.
+		// Set price = 2.00 USD for all pools.
 		assert_ok!(set_oracle_price_for_all_pools(2));
 		System::set_block_number(1);
 		assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(10_000)));
@@ -14,7 +14,7 @@ fn whitelist_mode_should_work() {
 		));
 		System::set_block_number(3);
 
-		// In whitelist mode, only members 'WhitelistCouncil' can work with protocols.
+		// In whitelist mode only members of 'WhitelistCouncil' can work with protocols.
 		assert_noop!(
 			MinterestProtocol::deposit_underlying(bob(), DOT, dollars(5_000)),
 			BadOrigin
@@ -41,7 +41,7 @@ fn protocol_interest_transfer_should_work() {
 		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			// Set interest factor equal 0.75.

@@ -146,7 +146,7 @@ fn balance_liquidation_pools_should_work() {
 			];
 			assert_eq!(our_events, expected_events);
 
-			// Liquidation Pool balances in assets
+			// Liquidation Pool balances
 			assert_eq!(liquidation_pool_balance(DOT), 100_000 * DOLLARS);
 			assert_eq!(liquidation_pool_balance(KSM), 200_000 * DOLLARS);
 			assert_eq!(liquidation_pool_balance(ETH), 200_000 * DOLLARS);
@@ -219,7 +219,7 @@ fn balance_liquidation_pools_two_pools_should_work_test() {
 
 			assert_eq!(our_events, expected_events);
 
-			// Liquidation Pool balances in assets
+			// Liquidation Pool balances
 			assert_eq!(liquidation_pool_balance(DOT), 110_000 * DOLLARS);
 			assert_eq!(liquidation_pool_balance(ETH), 60_000 * DOLLARS);
 		});

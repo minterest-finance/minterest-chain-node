@@ -1,5 +1,5 @@
 use super::utils::{
-	enable_is_collateral, enable_whitelist_mode_a_add_member, set_balance, set_oracle_price_for_all_pools,
+	enable_is_collateral, enable_whitelist_mode_and_add_member, set_balance, set_oracle_price_for_all_pools,
 };
 use crate::{
 	AccountId, Balance, Currencies, LiquidityPools, LiquidityPoolsModuleId, Origin, Rate, Runtime, BTC, DOLLARS, DOT,
@@ -63,35 +63,35 @@ runtime_benchmarks! {
 		// set balance for user
 		set_balance(DOT, &lender, 10_000 * DOLLARS)?;
 
-		enable_whitelist_mode_a_add_member(lender.clone())?;
+		enable_whitelist_mode_and_add_member(lender.clone())?;
 	}: _(RawOrigin::Signed(lender), DOT, 10_000 * DOLLARS)
 	verify { assert_eq!(Currencies::free_balance(DOT, &LiquidityPoolsModuleId::get().into_account() ), 10_000 * DOLLARS) }
 
 	redeem {
 		let (borrower, lender) = hypothetical_liquidity_setup()?;
 
-		enable_whitelist_mode_a_add_member(borrower.clone())?;
+		enable_whitelist_mode_and_add_member(borrower.clone())?;
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
 	verify { assert_eq!(Currencies::free_balance(DOT, &borrower ), 10_000_000_009_000_000_000_000u128) }
 
 	redeem_underlying {
 		let (borrower, lender) = hypothetical_liquidity_setup()?;
 
-		enable_whitelist_mode_a_add_member(borrower.clone())?;
+		enable_whitelist_mode_and_add_member(borrower.clone())?;
 	}: _(RawOrigin::Signed(borrower.clone()), DOT, 10_000 * DOLLARS)
 	verify { assert_eq!(Currencies::free_balance(DOT, &borrower ), 10_000 * DOLLARS) }
 
 	redeem_wrapped {
 		let (borrower, lender) = hypothetical_liquidity_setup()?;
 
-		enable_whitelist_mode_a_add_member(borrower.clone())?;
+		enable_whitelist_mode_and_add_member(borrower.clone())?;
 	}: _(RawOrigin::Signed(borrower.clone()), MDOT, 10_000 * DOLLARS)
 	verify { assert_eq!(Currencies::free_balance(DOT, &borrower ), 10_000_000_009_000_000_000_000u128) }
 
 	borrow {
 		let (borrower, lender) = hypothetical_liquidity_setup()?;
 
-		enable_whitelist_mode_a_add_member(borrower.clone())?;
+		enable_whitelist_mode_and_add_member(borrower.clone())?;
 	}: _(RawOrigin::Signed(borrower.clone()), DOT, 10_000 * DOLLARS)
 	verify { assert_eq!(Currencies::free_balance(DOT, &borrower ), 10_000 * DOLLARS) }
 
@@ -104,7 +104,7 @@ runtime_benchmarks! {
 		LiquidityPools::set_pool_total_borrowed(DOT, 10_000 * DOLLARS);
 		LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), DOT, 10_000 * DOLLARS, Rate::one());
 
-		enable_whitelist_mode_a_add_member(borrower.clone())?;
+		enable_whitelist_mode_and_add_member(borrower.clone())?;
 	}: _(RawOrigin::Signed(borrower.clone()), DOT, 10_000 * DOLLARS)
 	verify { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).total_borrowed, 1_728_000_000_000_000u128) }
 
@@ -117,7 +117,7 @@ runtime_benchmarks! {
 		LiquidityPools::set_pool_total_borrowed(DOT, 10_000 * DOLLARS);
 		LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), DOT, 10_000 * DOLLARS, Rate::one());
 
-		enable_whitelist_mode_a_add_member(borrower.clone())?;
+		enable_whitelist_mode_and_add_member(borrower.clone())?;
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
 	verify { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).total_borrowed, Balance::zero()) }
 
@@ -131,14 +131,14 @@ runtime_benchmarks! {
 		LiquidityPools::set_pool_total_borrowed(DOT, 10_000 * DOLLARS);
 		LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), DOT, 10_000 * DOLLARS, Rate::one());
 
-		enable_whitelist_mode_a_add_member(lender.clone())?;
+		enable_whitelist_mode_and_add_member(lender.clone())?;
 	}: _(RawOrigin::Signed(lender.clone()), DOT, borrower.clone(), 10_000 * DOLLARS)
 	verify { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).total_borrowed, 1_728_000_000_000_000u128) }
 
 	transfer_wrapped {
 		let (borrower, lender) = hypothetical_liquidity_setup()?;
 
-		enable_whitelist_mode_a_add_member(borrower.clone())?;
+		enable_whitelist_mode_and_add_member(borrower.clone())?;
 	}: _(RawOrigin::Signed(borrower.clone()), lender.clone(), MDOT, 10_000 * DOLLARS)
 	verify  {
 		assert_eq!(Currencies::free_balance(MDOT, &borrower ), Balance::zero());
@@ -150,14 +150,14 @@ runtime_benchmarks! {
 		// set balance for users
 		set_balance(MDOT, &borrower, 10_000 * DOLLARS)?;
 
-		enable_whitelist_mode_a_add_member(borrower.clone())?;
+		enable_whitelist_mode_and_add_member(borrower.clone())?;
 	}: enable_is_collateral(RawOrigin::Signed(borrower.clone()), DOT)
 	verify  { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).is_collateral, true) }
 
 	disable_is_collateral {
 		let (borrower, lender) = hypothetical_liquidity_setup()?;
 
-		enable_whitelist_mode_a_add_member(borrower.clone())?;
+		enable_whitelist_mode_and_add_member(borrower.clone())?;
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
 	verify  { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).is_collateral, false) }
 
