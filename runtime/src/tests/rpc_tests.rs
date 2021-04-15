@@ -7,7 +7,7 @@ fn demo_scenario_n2_without_interest_using_rpc_should_work() {
 		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 100_000 * DOLLARS));
@@ -178,7 +178,7 @@ fn test_rates_using_rpc() {
 		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(100_000)));
@@ -254,7 +254,7 @@ fn test_user_balance_using_rpc() {
 		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_eq!(
@@ -353,7 +353,7 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
@@ -394,7 +394,7 @@ fn test_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc
 		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
@@ -435,7 +435,7 @@ fn test_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rp
 		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
@@ -475,7 +475,7 @@ fn test_total_borrowed_difference_is_ok_before_and_after_deposit_using_balance_r
 		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
