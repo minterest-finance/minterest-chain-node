@@ -87,7 +87,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	minterest_model::GenesisConfig {
-		minterest_model_dates: vec![
+		minterest_model_params: vec![
 			(
 				CurrencyId::DOT,
 				MinterestModelData {

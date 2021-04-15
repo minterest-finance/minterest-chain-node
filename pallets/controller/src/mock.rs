@@ -310,7 +310,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		minterest_model::GenesisConfig {
-			minterest_model_dates: vec![
+			minterest_model_params: vec![
 				(
 					CurrencyId::DOT,
 					MinterestModelData {

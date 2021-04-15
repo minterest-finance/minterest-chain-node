@@ -34,10 +34,10 @@ fn set_base_rate_per_year_should_work() {
 			Rate::saturating_from_rational(10_512_000, 1)
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).base_rate_per_block,
+			TestMinterestModel::minterest_model_params(CurrencyId::DOT).base_rate_per_block,
 			Rate::saturating_from_rational(2, 1)
 		);
-		let expected_event = Event::minterest_model(crate::Event::BaseRatePerBlockHasChanged);
+		let expected_event = Event::minterest_model(crate::Event::BaseRatePerBlockChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 0.0: (0 / 10) / 5_256_000
@@ -47,7 +47,7 @@ fn set_base_rate_per_year_should_work() {
 			Rate::zero()
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).base_rate_per_block,
+			TestMinterestModel::minterest_model_params(CurrencyId::DOT).base_rate_per_block,
 			Rate::zero()
 		);
 
@@ -58,7 +58,7 @@ fn set_base_rate_per_year_should_work() {
 			Rate::saturating_from_rational(47304, 1_000_000)
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).base_rate_per_block,
+			TestMinterestModel::minterest_model_params(CurrencyId::DOT).base_rate_per_block,
 			Rate::from_inner(9_000_000_000)
 		);
 
@@ -97,10 +97,10 @@ fn set_multiplier_per_year_should_work() {
 			Rate::saturating_from_rational(10_512_000, 1)
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).multiplier_per_block,
+			TestMinterestModel::minterest_model_params(CurrencyId::DOT).multiplier_per_block,
 			Rate::saturating_from_rational(2, 1)
 		);
-		let expected_event = Event::minterest_model(crate::Event::MultiplierPerBlockHasChanged);
+		let expected_event = Event::minterest_model(crate::Event::MultiplierPerBlockChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 0.0 if Base rate per block grater than zero: (0 / 10) / 5_256_000
@@ -115,7 +115,7 @@ fn set_multiplier_per_year_should_work() {
 			Rate::zero()
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).multiplier_per_block,
+			TestMinterestModel::minterest_model_params(CurrencyId::DOT).multiplier_per_block,
 			Rate::zero()
 		);
 
@@ -126,7 +126,7 @@ fn set_multiplier_per_year_should_work() {
 			Rate::saturating_from_rational(47304, 1_000_000)
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).multiplier_per_block,
+			TestMinterestModel::minterest_model_params(CurrencyId::DOT).multiplier_per_block,
 			Rate::from_inner(9_000_000_000)
 		);
 
@@ -165,10 +165,10 @@ fn set_jump_multiplier_per_year_should_work() {
 			Rate::saturating_from_rational(10_512_000, 1)
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).jump_multiplier_per_block,
+			TestMinterestModel::minterest_model_params(CurrencyId::DOT).jump_multiplier_per_block,
 			Rate::saturating_from_rational(2, 1)
 		);
-		let expected_event = Event::minterest_model(crate::Event::JumpMultiplierPerBlockHasChanged);
+		let expected_event = Event::minterest_model(crate::Event::JumpMultiplierPerBlockChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 0.0: (0 / 10) / 5_256_000
@@ -178,7 +178,7 @@ fn set_jump_multiplier_per_year_should_work() {
 			Rate::zero()
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).jump_multiplier_per_block,
+			TestMinterestModel::minterest_model_params(CurrencyId::DOT).jump_multiplier_per_block,
 			Rate::zero()
 		);
 
@@ -189,7 +189,7 @@ fn set_jump_multiplier_per_year_should_work() {
 			Rate::saturating_from_rational(47_304, 1_000_000)
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).jump_multiplier_per_block,
+			TestMinterestModel::minterest_model_params(CurrencyId::DOT).jump_multiplier_per_block,
 			Rate::from_inner(9_000_000_000)
 		);
 
@@ -216,10 +216,10 @@ fn set_kink_should_work() {
 			Rate::saturating_from_rational(8, 10)
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(CurrencyId::DOT).kink,
+			TestMinterestModel::minterest_model_params(CurrencyId::DOT).kink,
 			Rate::saturating_from_rational(8, 10)
 		);
-		let expected_event = Event::minterest_model(crate::Event::KinkHasChanged);
+		let expected_event = Event::minterest_model(crate::Event::KinkChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Root or half MinterestCouncil.
