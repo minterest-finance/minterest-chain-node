@@ -10,8 +10,8 @@
 
 use codec::{Decode, Encode};
 use frame_support::{pallet_prelude::*, traits::Get};
-use minterest_primitives::{Amount, Balance, CurrencyId, Rate};
 use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
+use minterest_primitives::{Amount, Balance, CurrencyId, Rate};
 pub use module::*;
 use orml_traits::{MultiCurrency, MultiCurrencyExtended};
 use pallet_traits::{Borrowing, LiquidityPoolsManager, PoolsManager, PriceProvider};
