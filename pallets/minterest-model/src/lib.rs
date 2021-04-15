@@ -99,7 +99,6 @@ pub mod module {
 		KinkChanged,
 	}
 
-	/// Bookmark
 	/// The Minterest Model data information: `(kink, base_rate_per_block, multiplier_per_block,
 	/// jump_multiplier_per_block)`.
 	#[pallet::storage]
@@ -170,7 +169,7 @@ pub mod module {
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_jump_multiplier_per_year(
+		pub fn set_jump_multiplier(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			jump_multiplier_rate_per_year: Rate,
@@ -203,7 +202,7 @@ pub mod module {
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_base_rate_per_year(
+		pub fn set_base_rate(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			base_rate_per_year: Rate,
@@ -243,7 +242,7 @@ pub mod module {
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_multiplier_per_year(
+		pub fn set_multiplier(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			multiplier_per_year: Rate,

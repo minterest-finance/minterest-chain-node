@@ -10,21 +10,21 @@ runtime_benchmarks! {
 
 	_ {}
 
-	set_jump_multiplier_per_year {
+	set_jump_multiplier {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
 		Rate::one()
 	)
 
-	set_base_rate_per_year {
+	set_base_rate {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
 		Rate::one()
 	)
 
-	set_multiplier_per_year {
+	set_multiplier {
 	}: _(
 		RawOrigin::Root,
 		CurrencyId::DOT,
@@ -48,28 +48,28 @@ mod tests {
 	#[test]
 	fn test_set_jump_multiplier_per_block() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_jump_multiplier_per_year());
+			assert_ok!(test_benchmark_set_jump_multiplier());
 		})
 	}
 
 	#[test]
 	fn test_set_base_rate_per_block() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_base_rate_per_year());
+			assert_ok!(test_benchmark_set_base_rate());
 		})
 	}
 
 	#[test]
 	fn test_set_multiplier_per_block() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_multiplier_per_year());
+			assert_ok!(test_benchmark_set_multiplier());
 		})
 	}
 
 	#[test]
 	fn test_set_kink() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_multiplier_per_year());
+			assert_ok!(test_benchmark_set_multiplier());
 		})
 	}
 }
