@@ -326,7 +326,7 @@ fn test_get_hypothetical_account_liquidity_rpc() {
 		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
-			// Set price = 2.00 USD for all polls.
+			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_eq!(
