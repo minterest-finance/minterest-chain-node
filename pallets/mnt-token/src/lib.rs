@@ -32,18 +32,18 @@ pub use weights::WeightInfo;
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct MntState<T: Config> {
-	/// Index that represents MNT tokens that distributes for whole pool.
-	/// There is calculation MNT tokens for each user based on this index.
-	pub index: FixedU128,
+	/// Index that represents MNT tokens distribution for the whole pool.
+	/// User MNT tokens distribution is based on this index.
+	pub mnt_distribution_index: FixedU128,
 	/// The block number the index was last updated at
-	pub block_number: T::BlockNumber,
+	pub index_updated_at_block: T::BlockNumber,
 }
 
 impl<T: Config> MntState<T> {
 	fn new() -> MntState<T> {
 		MntState {
-			index: Rate::one(), // initial index
-			block_number: frame_system::Module::<T>::block_number(),
+			mnt_distribution_index: Rate::one(), // initial index
+			index_updated_at_block: frame_system::Module::<T>::block_number(),
 		}
 	}
 }
@@ -163,7 +163,7 @@ pub mod module {
 	pub(crate) type MntClaimTreshold<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
 	/// MNT minting speed for each pool
-	/// Doubling this number shows how much MNT goes to all suppliers and borrowers of particular
+	/// Doubling this number shows how much MNT goes to all suppliers and borrowers of a particular
 	/// pool.
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_speeds)]
@@ -180,7 +180,7 @@ pub mod module {
 	pub(crate) type MntSupplierIndex<T: Config> =
 		StorageDoubleMap<_, Twox64Concat, CurrencyId, Twox64Concat, T::AccountId, Rate, OptionQuery>;
 
-	/// Place where accrued MNT token are keeping for each user
+	/// Place where accrued MNT tokens are kept for each user
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_accrued)]
 	pub(crate) type MntAccrued<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Balance, ValueQuery>;
@@ -301,16 +301,16 @@ impl<T: Config> Pallet<T> {
 	/// Distribute mnt token to borrower. It should be called after update_mnt_borrow_index
 	#[allow(dead_code)] // TODO remove this
 	fn distribute_borrower_mnt(underlying_id: CurrencyId, borrower: &T::AccountId) -> DispatchResult {
-		// borrower_amount = account_borrow_balance / pool_borrow_index
-		// delta_index = pool_borrow_index - borrower_index
+		// borrower_amount = account_borrow_balance / liquidity_pool_borrow_index
+		// delta_index = mnt_distribution_index(for current pool) - borrower_index
 		// borrower_delta = borrower_amount * delta_index
 		// borrower_accrued += borrower_delta
-		// borrower_index = borrow_index
+		// borrower_index = mnt_distribution_index(for current pool)
 
 		let borrower_index = MntBorrowerIndex::<T>::get(underlying_id, borrower);
 		let pool_borrow_state = MntPoolsState::<T>::get(underlying_id).borrow_state;
 		// Update borrower index
-		MntBorrowerIndex::<T>::insert(underlying_id, borrower, pool_borrow_state.index);
+		MntBorrowerIndex::<T>::insert(underlying_id, borrower, pool_borrow_state.mnt_distribution_index);
 		if borrower_index.is_zero() {
 			// This is first interaction with protocol
 			return Ok(());
@@ -323,7 +323,7 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		let delta_index = pool_borrow_state
-			.index
+			.mnt_distribution_index
 			.checked_sub(&borrower_index)
 			.ok_or(Error::<T>::NumOverflow)?;
 
@@ -346,7 +346,7 @@ impl<T: Config> Pallet<T> {
 			underlying_id,
 			borrower.clone(),
 			borrower_delta.into_inner(),
-			pool_borrow_state.index,
+			pool_borrow_state.mnt_distribution_index,
 		));
 		Ok(())
 	}
@@ -354,17 +354,17 @@ impl<T: Config> Pallet<T> {
 	/// Update mnt borrow index for pool
 	#[allow(dead_code)] // TODO remove this
 	fn update_mnt_borrow_index(underlying_id: CurrencyId) -> DispatchResult {
-		// block_delta = current_block_number - bottow_state.block_number
+		// block_delta = current_block_number - bottow_state.index_updated_at_block
 		// mnt_accrued = delta_blocks * mnt_speed
-		// borrow_amount - mtoken.total_borrows() / market_borrow_index
+		// borrow_amount - mtoken.total_borrows() / liquidity_pool_borrow_index
 		// ratio = mnt_accrued / borrow_amount
-		// borrow_state.index += ratio
-		// borrow_state.block_number = current_block_number
+		// borrow_state.mnt_distribution_index(for current pool) += ratio
+		// borrow_state.index_updated_at_block = current_block_number
 
 		let current_block = frame_system::Module::<T>::block_number();
 		let mut pool_state = MntPoolsState::<T>::get(underlying_id);
 		let block_delta = current_block
-			.checked_sub(&pool_state.borrow_state.block_number)
+			.checked_sub(&pool_state.borrow_state.index_updated_at_block)
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		if block_delta.is_zero() {
@@ -391,14 +391,14 @@ impl<T: Config> Pallet<T> {
 				.checked_div(&borrow_amount)
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			pool_state.borrow_state.index = pool_state
+			pool_state.borrow_state.mnt_distribution_index = pool_state
 				.borrow_state
-				.index
+				.mnt_distribution_index
 				.checked_add(&ratio)
 				.ok_or(Error::<T>::NumOverflow)?;
 		}
 
-		pool_state.borrow_state.block_number = current_block;
+		pool_state.borrow_state.index_updated_at_block = current_block;
 		MntPoolsState::<T>::insert(underlying_id, pool_state);
 		Ok(())
 	}
@@ -406,11 +406,13 @@ impl<T: Config> Pallet<T> {
 	/// Distribute mnt token to supplier. It should be called after update_mnt_supply_index
 	#[allow(dead_code)] // TODO remove this
 	fn distribute_supplier_mnt(underlying_id: CurrencyId, supplier: &T::AccountId) -> DispatchResult {
-		// delta_index = mnt_supply_index - mnt_supplier_index
+		// delta_index = mnt_distribution_index - mnt_supplier_index
 		// supplier_delta = supplier_mtoken_balance * delta_index
 		// supplier_mnt_balance += supplier_delta
-		// mnt_supplier_index = mnt_supply_index
-		let supply_index = MntPoolsState::<T>::get(underlying_id).supply_state.index;
+		// mnt_supplier_index = mnt_distribution_index
+		let supply_index = MntPoolsState::<T>::get(underlying_id)
+			.supply_state
+			.mnt_distribution_index;
 
 		let supplier_index = MntSupplierIndex::<T>::get(underlying_id, supplier).unwrap_or_else(Rate::one);
 
@@ -419,16 +421,16 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		// This should be reworked. TODO MIN-185
-		let wrapped_id = T::EnabledCurrencyPair::get()
+		let wrapped_asset_id = T::EnabledCurrencyPair::get()
 			.iter()
 			.find(|currency_pair| currency_pair.underlying_id == underlying_id)
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?
 			.wrapped_id;
 
 		// We use total_balance (not free balance). Because sum of balances should be equal to
-		// total_issuance. Otherwise, mnt_rate calculating will not correct.
+		// total_issuance. Otherwise, mnt_rate calculation will not be correct.
 		// (see total_tokens_supply in update_mnt_supply_index)
-		let supplier_balance = Rate::from_inner(T::MultiCurrency::total_balance(wrapped_id, supplier));
+		let supplier_balance = Rate::from_inner(T::MultiCurrency::total_balance(wrapped_asset_id, supplier));
 
 		let supplier_delta = delta_index
 			.checked_mul(&supplier_balance)
@@ -456,16 +458,16 @@ impl<T: Config> Pallet<T> {
 	/// Update mnt supply index for pool
 	#[allow(dead_code)] // TODO remove this
 	fn update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult {
-		// block_delta = current_block_number - supply_state.block_number
+		// block_delta = current_block_number - supply_state.index_updated_at_block
 		// mnt_accrued = block_delta * mnt_speed
 		// ratio = mnt_accrued / mtoken.total_supply()
-		// supply_state.index += ratio
-		// supply_state.block_number = current_block_number
+		// supply_state.mnt_distribution_index += ratio
+		// supply_state.index_updated_at_block = current_block_number
 
 		let current_block = frame_system::Module::<T>::block_number();
 		let mut pool_state = MntPoolsState::<T>::get(underlying_id);
 		let block_delta = current_block
-			.checked_sub(&pool_state.supply_state.block_number)
+			.checked_sub(&pool_state.supply_state.index_updated_at_block)
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		if block_delta.is_zero() {
@@ -476,7 +478,7 @@ impl<T: Config> Pallet<T> {
 		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
 		if !mnt_speed.is_zero() {
 			// This should be reworked. TODO MIN-185
-			let wrapped_id = T::EnabledCurrencyPair::get()
+			let wrapped_asset_id = T::EnabledCurrencyPair::get()
 				.iter()
 				.find(|currency_pair| currency_pair.underlying_id == underlying_id)
 				.ok_or(Error::<T>::NotValidUnderlyingAssetId)?
@@ -488,17 +490,17 @@ impl<T: Config> Pallet<T> {
 				.checked_mul(block_delta_as_u128)
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			let total_tokens_supply = T::MultiCurrency::total_issuance(wrapped_id);
+			let total_tokens_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
 
 			let ratio = Rate::checked_from_rational(mnt_accrued, total_tokens_supply).ok_or(Error::<T>::NumOverflow)?;
 
-			pool_state.supply_state.index = pool_state
+			pool_state.supply_state.mnt_distribution_index = pool_state
 				.supply_state
-				.index
+				.mnt_distribution_index
 				.checked_add(&ratio)
 				.ok_or(Error::<T>::NumOverflow)?;
 		}
-		pool_state.supply_state.block_number = current_block;
+		pool_state.supply_state.index_updated_at_block = current_block;
 
 		MntPoolsState::<T>::insert(underlying_id, pool_state);
 		Ok(())
