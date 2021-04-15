@@ -319,6 +319,31 @@ fn test_user_balance_using_rpc() {
 		});
 }
 
+#[test]
+fn test_get_hypothetical_account_liquidity_rpc() {
+	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
+		.build()
+		.execute_with(|| {
+			// Set price = 2.00 USD for all polls.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
+			assert_eq!(
+				get_hypothetical_account_liquidity_rpc(ALICE::get(), CurrencyId::DOT, 5, 0),
+				Some(-9)
+			);
+			assert_eq!(
+				get_hypothetical_account_liquidity_rpc(ALICE::get(), CurrencyId::DOT, 60, 0),
+				Some(-108)
+			);
+			assert_eq!(
+				get_hypothetical_account_liquidity_rpc(ALICE::get(), CurrencyId::DOT, 200, 0),
+				Some(-360)
+			);
+		});
+}
+
 /// Test that free balance has increased by a (total_supply - total_borrowed) after repay all and
 /// redeem
 #[test]

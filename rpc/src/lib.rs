@@ -27,7 +27,7 @@ where
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api:
 		orml_oracle_rpc::OracleRuntimeApi<Block, DataProviderId, CurrencyId, node_minterest_runtime::TimeStampedPrice>,
-	C::Api: controller_rpc::ControllerRuntimeApi<Block, AccountId>,
+	C::Api: controller_rpc::ControllerRuntimeApi<Block, AccountId, Balance>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + 'static,
 {

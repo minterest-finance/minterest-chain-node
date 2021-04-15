@@ -36,7 +36,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchResult, ModuleId,
 };
-use sp_std::prelude::*;
+use sp_std::{cmp::Ordering, convert::TryFrom, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -747,7 +747,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl controller_rpc_runtime_api::ControllerApi<Block, AccountId> for Runtime {
+	impl controller_rpc_runtime_api::ControllerApi<Block, AccountId, Balance> for Runtime {
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState> {
 			let exchange_rate = Controller::get_liquidity_pool_exchange_rate(pool_id)?;
 			let (borrow_rate, supply_rate) = Controller::get_liquidity_pool_borrow_and_supply_rates(pool_id)?;
@@ -759,6 +759,34 @@ impl_runtime_apis! {
 			let (total_supply, total_borrowed) = Controller::get_total_supply_and_borrowed_usd_balance(&account_id).ok()?;
 
 			Some(UserPoolBalanceData {total_supply, total_borrowed})
+		}
+
+		fn get_hypothetical_account_liquidity(
+			account_id: AccountId,
+			underlying_to_borrow: CurrencyId,
+			redeem_amount: Balance,
+			borrow_amount: Balance,
+		) -> Option<Amount> {
+			let (excess, shortfall) = Controller::get_hypothetical_account_liquidity(
+				&account_id,
+				underlying_to_borrow,
+				redeem_amount,
+				borrow_amount
+			).ok()?;
+
+			let res = match excess.cmp(&shortfall) {
+				Ordering::Less => {
+					let diff = shortfall.checked_sub(excess)?;
+					let amount = Amount::try_from(diff).ok()?;
+					amount.checked_neg()?
+				},
+				_ => {
+					let diff = excess.checked_sub(shortfall)?;
+					Amount::try_from(diff).ok()?
+				}
+			};
+
+			Some(res)
 		}
 
 		fn is_admin(caller: AccountId) -> Option<bool> {
