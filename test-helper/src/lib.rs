@@ -66,12 +66,12 @@ macro_rules! mock_impl_orml_tokens_config {
 
 #[macro_export]
 macro_rules! mock_impl_orml_currencies_config {
-	($target:ty, $currency_id:expr) => {
+	($target:ty, $native_currency:ty) => {
 		parameter_types! {
-			pub const MockGetNativeCurrencyId: CurrencyId = $currency_id;
+			pub const MockGetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
 		}
 
-		type MockNativeCurrency = Currency<$target, MockGetNativeCurrencyId>;
+		type MockNativeCurrency = $native_currency;
 
 		impl orml_currencies::Config for $target {
 			type Event = Event;
@@ -80,6 +80,10 @@ macro_rules! mock_impl_orml_currencies_config {
 			type GetNativeCurrencyId = MockGetNativeCurrencyId;
 			type WeightInfo = ();
 		}
+	};
+
+	($target:ty) => {
+		mock_impl_orml_currencies_config!($target, Currency<$target, MockGetNativeCurrencyId>);
 	};
 }
 

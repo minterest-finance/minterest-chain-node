@@ -46,7 +46,7 @@ ord_parameter_types! {
 
 mock_impl_system_config!(Runtime);
 mock_impl_orml_tokens_config!(Runtime);
-mock_impl_orml_currencies_config!(Runtime, CurrencyId::MNT);
+mock_impl_orml_currencies_config!(Runtime);
 mock_impl_liquidity_pools_config!(Runtime);
 mock_impl_minterest_model_config!(Runtime, OneAlice);
 

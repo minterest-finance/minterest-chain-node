@@ -72,7 +72,7 @@ parameter_types! {
 pub struct WhitelistMembers;
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
-mock_impl_orml_currencies_config!(Test, CurrencyId::MNT);
+mock_impl_orml_currencies_config!(Test);
 mock_impl_liquidity_pools_config!(Test);
 mock_impl_liquidation_pools_config!(Test);
 mock_impl_controller_config!(Test, OneAlice);

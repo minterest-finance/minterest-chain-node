@@ -47,23 +47,11 @@ ord_parameter_types! {
 }
 
 pub struct MockPriceSource;
+pub type MinterestToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 
 mock_impl_system_config!(Runtime, pallet_balances::AccountData<Balance>);
 mock_impl_orml_tokens_config!(Runtime);
-
-pub type MinterestToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
-parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::MNT;
-}
-
-impl orml_currencies::Config for Runtime {
-	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Runtime>;
-	type NativeCurrency = MinterestToken;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
-	type WeightInfo = ();
-}
-
+mock_impl_orml_currencies_config!(Runtime, MinterestToken);
 mock_impl_liquidity_pools_config!(Runtime);
 mock_impl_minterest_model_config!(Runtime, ZeroAdmin);
 mock_impl_controller_config!(Runtime, ZeroAdmin);
