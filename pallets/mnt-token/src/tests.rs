@@ -11,7 +11,7 @@ use sp_runtime::traits::Zero;
 const MNT_PALLET_START_BALANCE: Balance = 1000000 * DOLLARS;
 
 fn get_mnt_account_balance(user: AccountId) -> Balance {
-	<Currencies as MultiCurrency<AccountId>>::total_balance(MNT, &user)
+	Currencies::total_balance(MNT, &user)
 }
 
 /// Move flywheel and check borrower balance
@@ -112,7 +112,7 @@ fn distribute_mnt_to_supplier_with_treshold() {
 			// At the second it should be transferred to ALICE and so on.
 
 			// set total issuances
-			<Currencies as MultiCurrency<AccountId>>::deposit(MDOT, &ALICE, 100 * DOLLARS).unwrap();
+			Currencies::deposit(MDOT, &ALICE, 100 * DOLLARS).unwrap();
 
 			check_supplier_accrued(DOT, ALICE, 0, 10 * DOLLARS);
 			System::set_block_number(2);
@@ -146,8 +146,8 @@ fn distribute_mnt_to_supplier_from_different_pools() {
 			assert_eq!(MntToken::mnt_speeds(KSM), ksm_mnt_speed);
 
 			// set total issuances
-			<Currencies as MultiCurrency<AccountId>>::deposit(MDOT, &ALICE, 100 * DOLLARS).unwrap();
-			<Currencies as MultiCurrency<AccountId>>::deposit(MKSM, &ALICE, 100 * DOLLARS).unwrap();
+			Currencies::deposit(MDOT, &ALICE, 100 * DOLLARS).unwrap();
+			Currencies::deposit(MKSM, &ALICE, 100 * DOLLARS).unwrap();
 
 			check_supplier_accrued(KSM, ALICE, ksm_mnt_speed, 0);
 			check_supplier_accrued(DOT, ALICE, ksm_mnt_speed + dot_mnt_speed, 0);
@@ -454,8 +454,8 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 			let bob_award_per_block = 8 * DOLLARS;
 
 			// set total issuances
-			<Currencies as MultiCurrency<AccountId>>::deposit(MDOT, &ALICE, alice_balance).unwrap();
-			<Currencies as MultiCurrency<AccountId>>::deposit(MDOT, &BOB, bob_balance).unwrap();
+			Currencies::deposit(MDOT, &ALICE, alice_balance).unwrap();
+			Currencies::deposit(MDOT, &BOB, bob_balance).unwrap();
 
 			let move_flywheel = || {
 				MntToken::update_mnt_supply_index(DOT).unwrap();
@@ -531,10 +531,10 @@ fn test_update_mnt_supply_index() {
 			let meth_total_issuance = 20 * DOLLARS;
 			let mksm_total_issuance = 30 * DOLLARS;
 			let mbtc_total_issuance = 40 * DOLLARS;
-			<Currencies as MultiCurrency<AccountId>>::deposit(MDOT, &ALICE, mdot_total_issuance).unwrap();
-			<Currencies as MultiCurrency<AccountId>>::deposit(METH, &ALICE, meth_total_issuance).unwrap();
-			<Currencies as MultiCurrency<AccountId>>::deposit(MKSM, &ALICE, mksm_total_issuance).unwrap();
-			<Currencies as MultiCurrency<AccountId>>::deposit(MBTC, &ALICE, mbtc_total_issuance).unwrap();
+			Currencies::deposit(MDOT, &ALICE, mdot_total_issuance).unwrap();
+			Currencies::deposit(METH, &ALICE, meth_total_issuance).unwrap();
+			Currencies::deposit(MKSM, &ALICE, mksm_total_issuance).unwrap();
+			Currencies::deposit(MBTC, &ALICE, mbtc_total_issuance).unwrap();
 
 			let dot_mnt_speed = 714285714285714280;
 			assert_eq!(MntToken::mnt_speeds(DOT), dot_mnt_speed);
@@ -545,7 +545,7 @@ fn test_update_mnt_supply_index() {
 			let btc_mnt_speed = 4285714285714285710;
 			assert_eq!(MntToken::mnt_speeds(BTC), btc_mnt_speed);
 
-			let check_supply_index = |underlying_id: CurrencyId, mnt_speed: Balance, total_issuance: u128| {
+			let check_supply_index = |underlying_id: CurrencyId, mnt_speed: Balance, total_issuance: Balance| {
 				MntToken::update_mnt_supply_index(underlying_id).unwrap();
 				let pool_state = MntToken::mnt_pools_state(underlying_id);
 				assert_eq!(
@@ -574,7 +574,7 @@ fn test_update_mnt_supply_index_simple() {
 			// *mnt_speed = mnt_rate because the only one pool is included
 
 			// set total_issuance to 20
-			<Currencies as MultiCurrency<AccountId>>::deposit(METH, &ALICE, 20 * DOLLARS).unwrap();
+			Currencies::deposit(METH, &ALICE, 20 * DOLLARS).unwrap();
 			let mnt_rate = 10 * DOLLARS;
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
 			assert_ok!(MntToken::enable_mnt_minting(admin(), ETH));
