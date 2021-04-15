@@ -17,7 +17,6 @@ frame-system = { default-features = false, version = '3.0.0' }
 orml-utilities = { version = "0.4.0", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
-liquidity-pools = { path = "../liquidity-pools", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = '3.0.0' }
@@ -26,7 +25,6 @@ sp-io = { version = '3.0.0' }
 orml-tokens = { version = "0.4.0" }
 orml-traits = { version = "0.4.0" }
 
-liquidity-pools = { path = "../liquidity-pools" }
 pallet-traits = { path = "../traits" }
 test-helper = { path = "../../test-helper" }
 
@@ -44,5 +42,4 @@ std = [
     "orml-utilities/std",
 
     "minterest-primitives/std",
-    "liquidity-pools/std",
 ]

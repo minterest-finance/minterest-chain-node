@@ -51,6 +51,7 @@ mod mock;
 mod tests;
 
 pub mod weights;
+use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 pub use weights::WeightInfo;
 
 /// RiskManager metadata
@@ -237,7 +238,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -264,7 +265,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -289,7 +290,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -316,7 +317,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -358,12 +359,9 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 	fn _offchain_worker() -> Result<(), OffchainErr> {
 		// Get available assets list
-		let underlying_asset_ids: Vec<CurrencyId> = <T as liquidity_pools::Config>::EnabledCurrencyPair::get()
-			.iter()
-			.map(|currency_pair| currency_pair.underlying_id)
-			.collect();
+		let underlying_assets: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 
-		if underlying_asset_ids.len().is_zero() {
+		if underlying_assets.len().is_zero() {
 			return Ok(());
 		}
 
@@ -388,7 +386,7 @@ impl<T: Config> Pallet<T> {
 			} else {
 				let random_seed = sp_io::offchain::random_seed();
 				let mut rng = RandomNumberGenerator::<BlakeTwo256>::new(BlakeTwo256::hash(&random_seed[..]));
-				(rng.pick_u32(underlying_asset_ids.len().saturating_sub(1) as u32), None)
+				(rng.pick_u32(underlying_assets.len().saturating_sub(1) as u32), None)
 			};
 
 		// Get the max iterations config
@@ -396,7 +394,7 @@ impl<T: Config> Pallet<T> {
 			.get::<u32>()
 			.unwrap_or(Some(DEFAULT_MAX_ITERATIONS));
 
-		let currency_id = underlying_asset_ids[(collateral_position as usize)];
+		let currency_id = underlying_assets[(collateral_position as usize)];
 
 		// Get list of users that have an active loan for current pool
 		let pool_members =
@@ -544,7 +542,9 @@ impl<T: Config> Pallet<T> {
 			if !seize_amount.is_zero() {
 				<Controller<T>>::accrue_interest_rate(collateral_pool_id)?;
 
-				let wrapped_id = <LiquidityPools<T>>::get_wrapped_id_by_underlying_asset_id(&collateral_pool_id)?;
+				let wrapped_id = collateral_pool_id
+					.wrapped_asset()
+					.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 				let balance_wrapped_token = T::MultiCurrency::free_balance(wrapped_id, &borrower);
 
 				// Get the exchange rate, read price for collateral pool and calculate the number

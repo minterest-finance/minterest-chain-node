@@ -3,16 +3,17 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
+pub use currency::CurrencyId;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
 	FixedU128, MultiSignature, RuntimeDebug,
 };
 
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 pub mod arithmetic;
+pub mod currency;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -66,36 +67,6 @@ pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
 
 /// An instant or duration in time.
 pub type Moment = u64;
-
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum CurrencyId {
-	MNT = 0,
-	DOT,
-	KSM,
-	BTC,
-	ETH,
-	MDOT,
-	MKSM,
-	MBTC,
-	METH,
-}
-
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct CurrencyPair {
-	pub underlying_id: CurrencyId,
-	pub wrapped_id: CurrencyId,
-}
-
-impl CurrencyPair {
-	pub fn new(underlying_id: CurrencyId, wrapped_id: CurrencyId) -> Self {
-		Self {
-			underlying_id,
-			wrapped_id,
-		}
-	}
-}
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]

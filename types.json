@@ -1,18 +1,32 @@
 {
   "CUSTOM_TYPES": {
     "Address": "MultiAddress",
-    "CurrencyId": {
+    "TokenSymbol": {
+      "_enum": {
+        "MNT": 0,
+        "DOT": 1,
+        "MDOT": 2,
+        "KSM": 3,
+        "MKSM": 4,
+        "BTC": 5,
+        "MBTC": 6,
+        "ETH": 7,
+        "METH": 8
+      }
+    },
+    "CurrencyType": {
       "_enum": [
-        "MNT",
-        "DOT",
-        "KSM",
-        "BTC",
-        "ETH",
-        "MDOT",
-        "MKSM",
-        "MBTC",
-        "METH"
+        "Native",
+        "UnderlyingAsset",
+        "WrappedToken"
       ]
+    },
+    "CurrencyId": {
+      "_enum": {
+        "Native": "TokenSymbol",
+        "UnderlyingAsset": "TokenSymbol",
+        "WrappedToken": "TokenSymbol"
+      }
     },
     "Operation": {
       "_enum": [
@@ -70,10 +84,6 @@
       "base_rate_per_block": "Rate",
       "multiplier_per_block": "Rate",
       "jump_multiplier_per_block": "Rate"
-    },
-    "CurrencyPair":  {
-      "underlying_id": "CurrencyId",
-      "wrapped_id": "CurrencyId"
     },
     "PoolState": {
       "exchange_rate": "Rate",

@@ -1,6 +1,6 @@
 use crate::{
 	AccountId, Balance, Currencies, CurrencyId, EnabledUnderlyingAssetsIds, MinterestOracle, MinterestProtocol, Origin,
-	Price, Runtime, Vec, WhitelistCouncilMembership,
+	Price, Runtime, Vec, WhitelistCouncilMembership, BTC, DOT, ETH, KSM,
 };
 
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
@@ -68,7 +68,7 @@ pub mod tests {
 		liquidity_pools::GenesisConfig::<Runtime> {
 			pools: vec![
 				(
-					CurrencyId::ETH,
+					ETH,
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
@@ -76,7 +76,7 @@ pub mod tests {
 					},
 				),
 				(
-					CurrencyId::DOT,
+					DOT,
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
@@ -84,7 +84,7 @@ pub mod tests {
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
@@ -92,7 +92,7 @@ pub mod tests {
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
@@ -108,7 +108,7 @@ pub mod tests {
 		controller::GenesisConfig::<Runtime> {
 			controller_dates: vec![
 				(
-					CurrencyId::ETH,
+					ETH,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
@@ -119,7 +119,7 @@ pub mod tests {
 					},
 				),
 				(
-					CurrencyId::DOT,
+					DOT,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
@@ -130,7 +130,7 @@ pub mod tests {
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
@@ -141,7 +141,7 @@ pub mod tests {
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
@@ -154,7 +154,7 @@ pub mod tests {
 			],
 			pause_keepers: vec![
 				(
-					CurrencyId::ETH,
+					ETH,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,
@@ -164,7 +164,7 @@ pub mod tests {
 					},
 				),
 				(
-					CurrencyId::DOT,
+					DOT,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,
@@ -174,7 +174,7 @@ pub mod tests {
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,
@@ -184,7 +184,7 @@ pub mod tests {
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,
@@ -202,7 +202,7 @@ pub mod tests {
 		minterest_model::GenesisConfig {
 			minterest_model_params: vec![
 				(
-					CurrencyId::ETH,
+					ETH,
 					MinterestModelData {
 						kink: Rate::saturating_from_rational(8, 10), // 0.8 = 80 %
 						base_rate_per_block: Rate::zero(),
@@ -211,7 +211,7 @@ pub mod tests {
 					},
 				),
 				(
-					CurrencyId::DOT,
+					DOT,
 					MinterestModelData {
 						kink: Rate::saturating_from_rational(8, 10), // 0.8 = 80 %
 						base_rate_per_block: Rate::zero(),
@@ -220,7 +220,7 @@ pub mod tests {
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					MinterestModelData {
 						kink: Rate::saturating_from_rational(8, 10), // 0.8 = 80 %
 						base_rate_per_block: Rate::zero(),
@@ -229,7 +229,7 @@ pub mod tests {
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					MinterestModelData {
 						kink: Rate::saturating_from_rational(8, 10), // 0.8 = 80 %
 						base_rate_per_block: Rate::zero(),
@@ -245,7 +245,7 @@ pub mod tests {
 		risk_manager::GenesisConfig {
 			risk_manager_dates: vec![
 				(
-					CurrencyId::ETH,
+					ETH,
 					RiskManagerData {
 						max_attempts: 2,
 						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
@@ -254,7 +254,7 @@ pub mod tests {
 					},
 				),
 				(
-					CurrencyId::DOT,
+					DOT,
 					RiskManagerData {
 						max_attempts: 2,
 						min_partial_liquidation_sum: 100_000 * DOLLARS, // In USD. FIXME: temporary value.
@@ -263,7 +263,7 @@ pub mod tests {
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					RiskManagerData {
 						max_attempts: 2,
 						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
@@ -272,7 +272,7 @@ pub mod tests {
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					RiskManagerData {
 						max_attempts: 2,
 						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.

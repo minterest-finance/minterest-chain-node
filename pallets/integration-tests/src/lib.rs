@@ -11,10 +11,10 @@ mod tests {
 	use frame_support::{assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
 	use frame_system::{self as system, offchain::SendTransactionTypes, EnsureSignedBy};
 	use liquidity_pools::{Pool, PoolUserData};
-	use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
+	pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
+	use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 	use orml_currencies::Currency;
-	use orml_traits::parameter_type_with_key;
-	use orml_traits::MultiCurrency;
+	use orml_traits::{parameter_type_with_key, MultiCurrency};
 	use sp_core::H256;
 	use sp_runtime::{
 		testing::{Header, TestXt},
@@ -71,24 +71,14 @@ mod tests {
 		pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 		pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 		pub InitialExchangeRate: Rate = Rate::one();
-		pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
-			CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
-			CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
-			CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
-			CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
-		];
-		pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-				.map(|currency_pair| currency_pair.underlying_id)
-				.collect();
-		pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-				.map(|currency_pair| currency_pair.wrapped_id)
-				.collect();
+		pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
+		pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 	}
 
 	pub struct WhitelistMembers;
 	mock_impl_system_config!(Test);
 	mock_impl_orml_tokens_config!(Test);
-	mock_impl_orml_currencies_config!(Test, CurrencyId::MNT);
+	mock_impl_orml_currencies_config!(Test, MNT);
 	mock_impl_liquidity_pools_config!(Test);
 	mock_impl_liquidation_pools_config!(Test);
 	mock_impl_controller_config!(Test, ZeroAdmin);
@@ -228,7 +218,7 @@ mod tests {
 			controller::GenesisConfig::<Test> {
 				controller_dates: vec![
 					(
-						CurrencyId::DOT,
+						DOT,
 						ControllerData {
 							last_interest_accrued_block: 0,
 							protocol_interest_factor: Rate::saturating_from_rational(1, 10),
@@ -239,7 +229,7 @@ mod tests {
 						},
 					),
 					(
-						CurrencyId::ETH,
+						ETH,
 						ControllerData {
 							last_interest_accrued_block: 0,
 							protocol_interest_factor: Rate::saturating_from_rational(1, 10),
@@ -250,7 +240,7 @@ mod tests {
 						},
 					),
 					(
-						CurrencyId::BTC,
+						BTC,
 						ControllerData {
 							last_interest_accrued_block: 0,
 							protocol_interest_factor: Rate::saturating_from_rational(1, 10),
@@ -263,7 +253,7 @@ mod tests {
 				],
 				pause_keepers: vec![
 					(
-						CurrencyId::ETH,
+						ETH,
 						PauseKeeper {
 							deposit_paused: false,
 							redeem_paused: false,
@@ -273,7 +263,7 @@ mod tests {
 						},
 					),
 					(
-						CurrencyId::DOT,
+						DOT,
 						PauseKeeper {
 							deposit_paused: false,
 							redeem_paused: false,
@@ -283,7 +273,7 @@ mod tests {
 						},
 					),
 					(
-						CurrencyId::KSM,
+						KSM,
 						PauseKeeper {
 							deposit_paused: true,
 							redeem_paused: true,
@@ -293,7 +283,7 @@ mod tests {
 						},
 					),
 					(
-						CurrencyId::BTC,
+						BTC,
 						PauseKeeper {
 							deposit_paused: false,
 							redeem_paused: false,
@@ -318,7 +308,7 @@ mod tests {
 			minterest_model::GenesisConfig {
 				minterest_model_params: vec![
 					(
-						CurrencyId::DOT,
+						DOT,
 						MinterestModelData {
 							kink: Rate::saturating_from_rational(8, 10),
 							base_rate_per_block: Rate::zero(),
@@ -327,7 +317,7 @@ mod tests {
 						},
 					),
 					(
-						CurrencyId::ETH,
+						ETH,
 						MinterestModelData {
 							kink: Rate::saturating_from_rational(8, 10),
 							base_rate_per_block: Rate::zero(),
@@ -336,7 +326,7 @@ mod tests {
 						},
 					),
 					(
-						CurrencyId::BTC,
+						BTC,
 						MinterestModelData {
 							kink: Rate::saturating_from_rational(8, 10),
 							base_rate_per_block: Rate::zero(),

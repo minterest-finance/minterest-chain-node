@@ -37,8 +37,8 @@ fn whitelist_mode_should_work() {
 #[test]
 fn protocol_interest_transfer_should_work() {
 	ExtBuilder::default()
-		.pool_initial(CurrencyId::DOT)
-		.pool_initial(CurrencyId::ETH)
+		.pool_initial(DOT)
+		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all pools.
@@ -47,7 +47,7 @@ fn protocol_interest_transfer_should_work() {
 			// Set interest factor equal 0.75.
 			assert_ok!(Controller::set_protocol_interest_factor(
 				origin_root(),
-				CurrencyId::DOT,
+				DOT,
 				Rate::saturating_from_rational(3, 4)
 			));
 
@@ -73,10 +73,7 @@ fn protocol_interest_transfer_should_work() {
 			System::set_block_number(20);
 
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(100_000)));
-			assert_eq!(
-				LiquidityPools::pools(CurrencyId::DOT).total_protocol_interest,
-				Balance::zero()
-			);
+			assert_eq!(LiquidityPools::pools(DOT).total_protocol_interest, Balance::zero());
 
 			System::set_block_number(1000);
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(10_000)));
@@ -84,7 +81,7 @@ fn protocol_interest_transfer_should_work() {
 			MinterestProtocol::on_finalize(1000);
 			// Not reached threshold, pool balances should stay the same
 			assert_eq!(
-				LiquidityPools::pools(CurrencyId::DOT).total_protocol_interest,
+				LiquidityPools::pools(DOT).total_protocol_interest,
 				441_000_000_000_000_000u128
 			);
 
@@ -95,27 +92,24 @@ fn protocol_interest_transfer_should_work() {
 
 			let total_protocol_interest: Balance = 3_645_120_550_951_706_945_733;
 			assert_eq!(
-				LiquidityPools::pools(CurrencyId::DOT).total_protocol_interest,
+				LiquidityPools::pools(DOT).total_protocol_interest,
 				total_protocol_interest
 			);
 
-			let liquidity_pool_dot_balance = LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT);
-			let liquidation_pool_dot_balance = LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT);
+			let liquidity_pool_dot_balance = LiquidityPools::get_pool_available_liquidity(DOT);
+			let liquidation_pool_dot_balance = LiquidationPools::get_pool_available_liquidity(DOT);
 
 			// Threshold is reached. Transfer total_protocol_interest to liquidation pool
 			MinterestProtocol::on_finalize(10000000);
 
 			let transferred_to_liquidation_pool = total_protocol_interest;
+			assert_eq!(LiquidityPools::pools(DOT).total_protocol_interest, Balance::zero());
 			assert_eq!(
-				LiquidityPools::pools(CurrencyId::DOT).total_protocol_interest,
-				Balance::zero()
-			);
-			assert_eq!(
-				LiquidityPools::get_pool_available_liquidity(CurrencyId::DOT),
+				LiquidityPools::get_pool_available_liquidity(DOT),
 				liquidity_pool_dot_balance - transferred_to_liquidation_pool
 			);
 			assert_eq!(
-				LiquidationPools::get_pool_available_liquidity(CurrencyId::DOT),
+				LiquidationPools::get_pool_available_liquidity(DOT),
 				liquidation_pool_dot_balance + transferred_to_liquidation_pool
 			);
 		});
