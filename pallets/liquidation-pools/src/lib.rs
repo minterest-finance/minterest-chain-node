@@ -61,7 +61,12 @@ pub mod module {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// The `MultiCurrency` implementation.
-		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
+		type MultiCurrency: MultiCurrencyExtended<
+			Self::AccountId,
+			Balance = Balance,
+			CurrencyId = CurrencyId,
+			Amount = Amount,
+		>;
 
 		/// A configuration for base priority of unsigned transactions.
 		///

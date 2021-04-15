@@ -11,9 +11,9 @@
 use codec::{Decode, Encode};
 use frame_support::{pallet_prelude::*, traits::Get};
 use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
-use minterest_primitives::{Amount, Balance, CurrencyId, Rate};
+use minterest_primitives::{Balance, CurrencyId, Rate};
 pub use module::*;
-use orml_traits::{MultiCurrency, MultiCurrencyExtended};
+use orml_traits::MultiCurrency;
 use pallet_traits::{Borrowing, LiquidityPoolsManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -70,12 +70,7 @@ pub mod module {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// The `MultiCurrency` implementation.
-		type MultiCurrency: MultiCurrencyExtended<
-			Self::AccountId,
-			Balance = Balance,
-			CurrencyId = CurrencyId,
-			Amount = Amount,
-		>;
+		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 
 		/// Start exchange rate.
 		type InitialExchangeRate: Get<Rate>;
