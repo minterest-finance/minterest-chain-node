@@ -46,7 +46,6 @@ pub struct MinterestModelData {
 	pub jump_multiplier_per_block: Rate,
 }
 
-type LiquidityPools<T> = liquidity_pools::Module<T>;
 type RateResult = result::Result<Rate, DispatchError>;
 
 #[frame_support::pallet]
@@ -54,7 +53,7 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + liquidity_pools::Config {
+	pub trait Config: frame_system::Config {
 		/// The overarching event type.
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -177,7 +176,7 @@ pub mod module {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -210,7 +209,7 @@ pub mod module {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -250,7 +249,7 @@ pub mod module {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -283,7 +282,7 @@ pub mod module {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				<LiquidityPools<T>>::is_enabled_underlying_asset_id(pool_id),
+				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -300,17 +299,17 @@ pub mod module {
 
 impl<T: Config> Pallet<T> {
 	/// Calculates the current borrow rate per block.
-	/// - `underlying_asset_id`: Asset ID for which the borrow interest rate is calculated.
+	/// - `underlying_asset`: Asset ID for which the borrow interest rate is calculated.
 	/// - `utilization_rate`: Current Utilization rate value.
 	///
 	/// returns `borrow_interest_rate`.
-	pub fn calculate_borrow_interest_rate(underlying_asset_id: CurrencyId, utilization_rate: Rate) -> RateResult {
+	pub fn calculate_borrow_interest_rate(underlying_asset: CurrencyId, utilization_rate: Rate) -> RateResult {
 		let MinterestModelData {
 			kink,
 			base_rate_per_block,
 			multiplier_per_block,
 			jump_multiplier_per_block,
-		} = Self::minterest_model_dates(underlying_asset_id);
+		} = Self::minterest_model_dates(underlying_asset);
 
 		// if utilization_rate > kink:
 		// normal_rate = kink * multiplier_per_block + base_rate_per_block

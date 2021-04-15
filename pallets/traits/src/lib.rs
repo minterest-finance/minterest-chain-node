@@ -9,7 +9,7 @@ pub trait Borrowing<AccountId> {
 	/// Updates the state of the core as a consequence of a borrow action.
 	fn update_state_on_borrow(
 		who: &AccountId,
-		underlying_asset_id: CurrencyId,
+		underlying_asset: CurrencyId,
 		amount_borrowed: Balance,
 		account_borrows: Balance,
 	) -> DispatchResult;
@@ -17,7 +17,7 @@ pub trait Borrowing<AccountId> {
 	/// updates the state of the core as a consequence of a repay action.
 	fn update_state_on_repay(
 		who: &AccountId,
-		underlying_asset_id: CurrencyId,
+		underlying_asset: CurrencyId,
 		repay_amount: Balance,
 		account_borrows: Balance,
 	) -> DispatchResult;
@@ -31,8 +31,9 @@ pub trait PoolsManager<AccountId> {
 	/// Return liquidity balance of `pool_id`.
 	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance;
 
+	// FIXME: Consider removing
 	/// Check if pool exists
-	fn pool_exists(underlying_asset_id: &CurrencyId) -> bool;
+	fn pool_exists(underlying_asset: &CurrencyId) -> bool;
 }
 
 /// Provides liquidity pool functionality

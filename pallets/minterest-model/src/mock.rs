@@ -4,7 +4,8 @@ use crate as minterest_model;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
 use frame_system::EnsureSignedBy;
-use minterest_primitives::{Balance, CurrencyId, CurrencyPair, Price, Rate};
+use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
+use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
 use sp_core::H256;
@@ -14,7 +15,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 	ModuleId,
 };
-use test_helper::*;
+pub use test_helper::*;
 
 pub type AccountId = u64;
 
@@ -31,7 +32,6 @@ frame_support::construct_runtime!(
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
-		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 	}
 );
 
@@ -41,25 +41,14 @@ ord_parameter_types! {
 
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
-mock_impl_liquidity_pools_config!(Test);
 mock_impl_minterest_model_config!(Test, OneAlice);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
-		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
-		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
-		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
-		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
-	];
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.underlying_id)
-			.collect();
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.wrapped_id)
-			.collect();
+	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
+	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
 pub struct MockPriceSource;
@@ -89,7 +78,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	minterest_model::GenesisConfig {
 		minterest_model_dates: vec![
 			(
-				CurrencyId::DOT,
+				DOT,
 				MinterestModelData {
 					kink: Rate::saturating_from_rational(8, 10),
 					base_rate_per_block: Rate::zero(),
@@ -98,7 +87,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 				},
 			),
 			(
-				CurrencyId::KSM,
+				KSM,
 				MinterestModelData {
 					kink: Rate::saturating_from_rational(8, 10),
 					base_rate_per_block: Rate::zero(),
@@ -107,7 +96,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 				},
 			),
 			(
-				CurrencyId::BTC,
+				BTC,
 				MinterestModelData {
 					kink: Rate::saturating_from_rational(8, 10),
 					base_rate_per_block: Rate::zero(),
