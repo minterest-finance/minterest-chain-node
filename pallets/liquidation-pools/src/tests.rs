@@ -207,10 +207,7 @@ fn update_balance_should_work() {
 			// by_amount 10000
 			// Expected balance 510000
 			let by_amount = 10000;
-			assert_eq!(
-				TestLiquidationPools::update_balance(admin(), DOT, by_amount),
-				Ok(().into())
-			);
+			assert_ok!(TestLiquidationPools::update_balance(admin(), DOT, by_amount));
 
 			let expected_event = Event::liquidation_pools(crate::Event::BalanceUpdated(DOT, by_amount));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
@@ -221,10 +218,7 @@ fn update_balance_should_work() {
 			// by_amount -10000
 			// Expected balance 500000
 			let by_amount = -10000;
-			assert_eq!(
-				TestLiquidationPools::update_balance(admin(), DOT, by_amount),
-				Ok(().into())
-			);
+			assert_ok!(TestLiquidationPools::update_balance(admin(), DOT, by_amount));
 
 			let expected_event = Event::liquidation_pools(crate::Event::BalanceUpdated(DOT, by_amount));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
