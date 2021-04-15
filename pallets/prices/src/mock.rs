@@ -4,12 +4,12 @@ use super::*;
 use crate as module_prices;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system::{self as system, EnsureSignedBy};
-use minterest_primitives::{CurrencyId, CurrencyPair};
+use minterest_primitives::CurrencyId;
 use sp_core::H256;
 use sp_runtime::testing::Header;
 use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
 use sp_runtime::FixedPointNumber;
-use test_helper::mock_impl_system_config;
+pub use test_helper::{mock_impl_system_config, BTC, DOT, ETH, KSM, MDOT, MNT};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -32,11 +32,11 @@ pub struct MockDataProvider;
 impl DataProvider<CurrencyId, Price> for MockDataProvider {
 	fn get(currency_id: &CurrencyId) -> Option<Price> {
 		match currency_id {
-			&CurrencyId::MNT => Some(Price::zero()),
-			&CurrencyId::BTC => Some(Price::saturating_from_integer(48_000)),
-			&CurrencyId::DOT => Some(Price::saturating_from_integer(40)),
-			&CurrencyId::ETH => Some(Price::saturating_from_integer(1_500)),
-			&CurrencyId::KSM => Some(Price::saturating_from_integer(250)),
+			&MNT => Some(Price::zero()),
+			&BTC => Some(Price::saturating_from_integer(48_000)),
+			&DOT => Some(Price::saturating_from_integer(40)),
+			&ETH => Some(Price::saturating_from_integer(1_500)),
+			&KSM => Some(Price::saturating_from_integer(250)),
 			_ => None,
 		}
 	}
@@ -52,23 +52,10 @@ ord_parameter_types! {
 	pub const One: AccountId = 1;
 }
 
-parameter_types! {
-	pub EnabledCurrencyPair: Vec<CurrencyPair> = vec![
-		CurrencyPair::new(CurrencyId::DOT, CurrencyId::MDOT),
-		CurrencyPair::new(CurrencyId::KSM, CurrencyId::MKSM),
-		CurrencyPair::new(CurrencyId::BTC, CurrencyId::MBTC),
-		CurrencyPair::new(CurrencyId::ETH, CurrencyId::METH),
-	];
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = EnabledCurrencyPair::get().iter()
-			.map(|currency_pair| currency_pair.underlying_id)
-			.collect();
-}
-
 impl module_prices::Config for Test {
 	type Event = Event;
 	type Source = MockDataProvider;
 	type LockOrigin = EnsureSignedBy<One, AccountId>;
-	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 	type WeightInfo = ();
 }
 

@@ -3,6 +3,17 @@
 //! ## Overview
 //!
 //! Contains macros with mocked implementations of several modules config traits
+use minterest_primitives::{currency::TokenSymbol, CurrencyId};
+
+pub const MNT: CurrencyId = CurrencyId::Native(TokenSymbol::MNT);
+pub const DOT: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::DOT);
+pub const MDOT: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MDOT);
+pub const KSM: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::KSM);
+pub const MKSM: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MKSM);
+pub const BTC: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::BTC);
+pub const MBTC: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MBTC);
+pub const ETH: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::ETH);
+pub const METH: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::METH);
 
 #[macro_export]
 macro_rules! mock_impl_system_config {
@@ -88,7 +99,6 @@ macro_rules! mock_impl_liquidity_pools_config {
 			type ModuleId = LiquidityPoolsModuleId;
 			type LiquidityPoolAccountId = LiquidityPoolAccountId;
 			type InitialExchangeRate = InitialExchangeRate;
-			type EnabledCurrencyPair = EnabledCurrencyPair;
 			type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 			type EnabledWrappedTokensId = EnabledWrappedTokensId;
 		}
@@ -104,11 +114,13 @@ macro_rules! mock_impl_liquidation_pools_config {
 
 		impl liquidation_pools::Config for $target {
 			type Event = Event;
+			type MultiCurrency = orml_tokens::Module<$target>;
 			type UnsignedPriority = MockLiquidityPoolsPriority;
+			type PriceSource = MockPriceSource;
 			type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 			type LiquidationPoolAccountId = LiquidationPoolAccountId;
-			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
 			type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
 			type Dex = dex::Module<$target>;
 			type LiquidationPoolsWeightInfo = ();
 		}

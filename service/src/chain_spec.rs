@@ -4,11 +4,11 @@ use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
-	AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, CurrencyId, GenesisConfig, GrandpaConfig,
+	AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, GenesisConfig, GrandpaConfig,
 	LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig, MinterestModelConfig,
 	MinterestOracleConfig, OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature, SudoConfig,
-	SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
-	WASM_BINARY,
+	SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM,
+	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -235,10 +235,10 @@ fn testnet_genesis(
 				.iter()
 				.flat_map(|x| {
 					vec![
-						(x.clone(), CurrencyId::DOT, INITIAL_BALANCE),
-						(x.clone(), CurrencyId::ETH, INITIAL_BALANCE),
-						(x.clone(), CurrencyId::KSM, INITIAL_BALANCE),
-						(x.clone(), CurrencyId::BTC, INITIAL_BALANCE),
+						(x.clone(), DOT, INITIAL_BALANCE),
+						(x.clone(), ETH, INITIAL_BALANCE),
+						(x.clone(), KSM, INITIAL_BALANCE),
+						(x.clone(), BTC, INITIAL_BALANCE),
 					]
 				})
 				.collect(),
@@ -246,7 +246,7 @@ fn testnet_genesis(
 		liquidity_pools: Some(LiquidityPoolsConfig {
 			pools: vec![
 				(
-					CurrencyId::ETH,
+					ETH,
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
@@ -254,7 +254,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::DOT,
+					DOT,
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
@@ -262,7 +262,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
@@ -270,7 +270,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					Pool {
 						total_borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
@@ -283,7 +283,7 @@ fn testnet_genesis(
 		controller: Some(ControllerConfig {
 			controller_dates: vec![
 				(
-					CurrencyId::ETH,
+					ETH,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
@@ -294,7 +294,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::DOT,
+					DOT,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
@@ -305,7 +305,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
@@ -316,7 +316,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
@@ -329,7 +329,7 @@ fn testnet_genesis(
 			],
 			pause_keepers: vec![
 				(
-					CurrencyId::ETH,
+					ETH,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,
@@ -339,7 +339,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::DOT,
+					DOT,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,
@@ -349,7 +349,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,
@@ -359,7 +359,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					PauseKeeper {
 						deposit_paused: false,
 						redeem_paused: false,
@@ -374,7 +374,7 @@ fn testnet_genesis(
 		minterest_model: Some(MinterestModelConfig {
 			minterest_model_dates: vec![
 				(
-					CurrencyId::ETH,
+					ETH,
 					MinterestModelData {
 						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
 						base_rate_per_block: FixedU128::zero(),
@@ -383,7 +383,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::DOT,
+					DOT,
 					MinterestModelData {
 						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
 						base_rate_per_block: FixedU128::zero(),
@@ -392,7 +392,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					MinterestModelData {
 						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
 						base_rate_per_block: FixedU128::zero(),
@@ -401,7 +401,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					MinterestModelData {
 						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
 						base_rate_per_block: FixedU128::zero(),
@@ -414,7 +414,7 @@ fn testnet_genesis(
 		risk_manager: Some(RiskManagerConfig {
 			risk_manager_dates: vec![
 				(
-					CurrencyId::ETH,
+					ETH,
 					RiskManagerData {
 						max_attempts: 2,
 						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
@@ -423,7 +423,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::DOT,
+					DOT,
 					RiskManagerData {
 						max_attempts: 2,
 						min_partial_liquidation_sum: 100_000 * DOLLARS, // In USD. FIXME: temporary value.
@@ -432,7 +432,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					RiskManagerData {
 						max_attempts: 2,
 						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
@@ -441,7 +441,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					RiskManagerData {
 						max_attempts: 2,
 						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
@@ -455,7 +455,7 @@ fn testnet_genesis(
 			balancing_period: 10, // FIXME: temporary value.
 			liquidation_pools: vec![
 				(
-					CurrencyId::DOT,
+					DOT,
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
@@ -463,7 +463,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::ETH,
+					ETH,
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
@@ -471,7 +471,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::BTC,
+					BTC,
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
@@ -479,7 +479,7 @@ fn testnet_genesis(
 					},
 				),
 				(
-					CurrencyId::KSM,
+					KSM,
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
@@ -490,10 +490,10 @@ fn testnet_genesis(
 		}),
 		module_prices: Some(PricesConfig {
 			locked_price: vec![
-				(CurrencyId::DOT, FixedU128::saturating_from_integer(2)),
-				(CurrencyId::KSM, FixedU128::saturating_from_integer(2)),
-				(CurrencyId::ETH, FixedU128::saturating_from_integer(2)),
-				(CurrencyId::BTC, FixedU128::saturating_from_integer(2)),
+				(DOT, FixedU128::saturating_from_integer(2)),
+				(KSM, FixedU128::saturating_from_integer(2)),
+				(ETH, FixedU128::saturating_from_integer(2)),
+				(BTC, FixedU128::saturating_from_integer(2)),
 			],
 		}),
 		pallet_collective_Instance1: Some(Default::default()),

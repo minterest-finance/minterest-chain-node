@@ -1,5 +1,5 @@
 use super::utils::set_balance;
-use crate::{CurrencyId, DexModuleId, LiquidationPools, LiquidationPoolsModuleId, Rate, Runtime, DOLLARS};
+use crate::{DexModuleId, LiquidationPools, LiquidationPoolsModuleId, Rate, Runtime, DOLLARS, DOT, ETH};
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
 use sp_runtime::traits::AccountIdConversion;
@@ -14,27 +14,27 @@ runtime_benchmarks! {
 	set_balancing_period {}: _(RawOrigin::Root, 100)
 	verify { assert_eq!(LiquidationPools::balancing_period(), 100) }
 
-	set_deviation_threshold {}: _(RawOrigin::Root, CurrencyId::DOT, 10u128.pow(18))
-	verify { assert_eq!(LiquidationPools::liquidation_pools_data(CurrencyId::DOT).deviation_threshold, Rate::one()) }
+	set_deviation_threshold {}: _(RawOrigin::Root, DOT, 10u128.pow(18))
+	verify { assert_eq!(LiquidationPools::liquidation_pools_data(DOT).deviation_threshold, Rate::one()) }
 
-	set_balance_ratio {}: _(RawOrigin::Root, CurrencyId::DOT,  10u128.pow(18))
-	verify { assert_eq!(LiquidationPools::liquidation_pools_data(CurrencyId::DOT).balance_ratio, Rate::one()) }
+	set_balance_ratio {}: _(RawOrigin::Root, DOT,  10u128.pow(18))
+	verify { assert_eq!(LiquidationPools::liquidation_pools_data(DOT).balance_ratio, Rate::one()) }
 
-	set_max_ideal_balance {}: _(RawOrigin::Root, CurrencyId::DOT,  Some(10u128.pow(18)))
-	verify { assert_eq!(LiquidationPools::liquidation_pools_data(CurrencyId::DOT).max_ideal_balance, Some(10u128.pow(18))) }
+	set_max_ideal_balance {}: _(RawOrigin::Root, DOT,  Some(10u128.pow(18)))
+	verify { assert_eq!(LiquidationPools::liquidation_pools_data(DOT).max_ideal_balance, Some(10u128.pow(18))) }
 
 	balance_liquidation_pools {
 		set_balance(
-			CurrencyId::ETH,
+			ETH,
 			&DexModuleId::get().into_account(),
 			20_000 * DOLLARS,
 		)?;
 		set_balance(
-			CurrencyId::DOT,
+			DOT,
 			&LiquidationPoolsModuleId::get().into_account(),
 			20_000 * DOLLARS,
 		)?;
-	}: _(RawOrigin::None, CurrencyId::DOT, CurrencyId::ETH, 10_000 * DOLLARS, 10_000 * DOLLARS)
+	}: _(RawOrigin::None, DOT, ETH, 10_000 * DOLLARS, 10_000 * DOLLARS)
 }
 
 #[cfg(test)]

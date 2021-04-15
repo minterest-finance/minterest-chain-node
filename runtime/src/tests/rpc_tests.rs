@@ -330,15 +330,15 @@ fn test_get_hypothetical_account_liquidity_rpc() {
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_eq!(
-				get_hypothetical_account_liquidity_rpc(ALICE::get(), CurrencyId::DOT, 5, 0),
+				get_hypothetical_account_liquidity_rpc(ALICE::get(), DOT, 5, 0),
 				Some(HypotheticalLiquidityData { liquidity: -9 })
 			);
 			assert_eq!(
-				get_hypothetical_account_liquidity_rpc(ALICE::get(), CurrencyId::DOT, 60, 0),
+				get_hypothetical_account_liquidity_rpc(ALICE::get(), DOT, 60, 0),
 				Some(HypotheticalLiquidityData { liquidity: -108 })
 			);
 			assert_eq!(
-				get_hypothetical_account_liquidity_rpc(ALICE::get(), CurrencyId::DOT, 200, 0),
+				get_hypothetical_account_liquidity_rpc(ALICE::get(), DOT, 200, 0),
 				Some(HypotheticalLiquidityData { liquidity: -360 })
 			);
 		});
