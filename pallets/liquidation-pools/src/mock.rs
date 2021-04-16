@@ -2,7 +2,6 @@
 use super::*;
 use crate as liquidation_pools;
 use frame_support::{ord_parameter_types, parameter_types};
-use frame_system as system;
 use frame_system::EnsureSignedBy;
 use minterest_primitives::Price;
 pub use minterest_primitives::{currency::CurrencyType::WrappedToken, Balance, CurrencyId, Rate};
@@ -43,7 +42,7 @@ frame_support::construct_runtime!(
 mock_impl_system_config!(Test);
 mock_impl_liquidity_pools_config!(Test);
 mock_impl_orml_tokens_config!(Test);
-mock_impl_orml_currencies_config!(Test, MNT);
+mock_impl_orml_currencies_config!(Test);
 mock_impl_dex_config!(Test);
 
 parameter_types! {

@@ -4018,12 +4018,17 @@ dependencies = [
 name = "mnt-token"
 version = "0.6.2"
 dependencies = [
+ "controller",
  "frame-support",
  "frame-system",
  "liquidity-pools",
+ "minterest-model",
  "minterest-primitives",
+ "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "orml-utilities",
+ "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
  "serde",

@@ -348,11 +348,6 @@ impl<T: Config> Pallet<T> {
 		Self::pools(pool_id)
 	}
 
-	/// Accumulator of the total earned interest rate since the opening of the pool
-	pub fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate {
-		Self::pools(pool_id).borrow_index
-	}
-
 	/// Global borrow_index as of the most recent balance-changing action
 	pub fn get_user_borrow_index(who: &T::AccountId, pool_id: CurrencyId) -> Rate {
 		Self::pool_user_data(pool_id, who).interest_index
@@ -521,5 +516,10 @@ impl<T: Config> LiquidityPoolsManager for Pallet<T> {
 	/// Gets current total amount of protocol interest of the underlying held in this pool.
 	fn get_pool_total_protocol_interest(pool_id: CurrencyId) -> Balance {
 		Self::pools(pool_id).total_protocol_interest
+	}
+
+	/// Accumulator of the total earned interest rate since the opening of the pool
+	fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate {
+		Self::pools(pool_id).borrow_index
 	}
 }

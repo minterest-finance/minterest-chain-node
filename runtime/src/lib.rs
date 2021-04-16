@@ -118,6 +118,7 @@ parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
+	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
 }
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -459,11 +460,19 @@ impl risk_manager::Config for Runtime {
 	type RiskManagerWeightInfo = weights::risk_manager::WeightInfo<Runtime>;
 }
 
+parameter_types! {
+	pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
+}
+
 impl mnt_token::Config for Runtime {
 	type Event = Event;
 	type PriceSource = Prices;
 	type UpdateOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type LiquidityPoolsManager = LiquidityPools;
+	type MultiCurrency = Currencies;
+	type ControllerAPI = Controller;
+	type MntTokenAccountId = MntTokenAccountId;
+	type ProtocolWeightInfo = weights::mnt_token::WeightInfo<Runtime>;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -827,6 +836,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, risk_manager, benchmarking::risk_manager);
 			add_benchmark!(params, batches, liquidation_pools, benchmarking::liquidation_pools);
 			add_benchmark!(params, batches, minterest_protocol, benchmarking::minterest_protocol);
+			add_benchmark!(params, batches, mnt_token, benchmarking::mnt_token);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

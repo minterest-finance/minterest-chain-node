@@ -14,7 +14,7 @@ use frame_system::pallet_prelude::*;
 use liquidity_pools::Pool;
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{LiquidityPoolsManager, PoolsManager, PriceProvider};
+use pallet_traits::{ControllerAPI, LiquidityPoolsManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;
@@ -448,9 +448,9 @@ impl<T: Config> Pallet<T> {
 	///
 	/// - `who`: The address whose balance should be calculated.
 	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
-	pub fn borrow_balance_stored(who: &T::AccountId, underlying_asset: CurrencyId) -> BalanceResult {
-		let pool_borrow_index = <LiquidityPools<T>>::get_pool_borrow_index(underlying_asset);
-		let borrow_balance = Self::calculate_borrow_balance(who, underlying_asset, pool_borrow_index)?;
+	pub fn borrow_balance_stored(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
+		let pool_borrow_index = T::LiquidityPoolsManager::get_pool_borrow_index(underlying_asset_id);
+		let borrow_balance = Self::calculate_borrow_balance(who, underlying_asset_id, pool_borrow_index)?;
 		Ok(borrow_balance)
 	}
 
@@ -888,5 +888,11 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(interest_factor)
+	}
+}
+
+impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
+	fn borrow_balance_stored(who: &T::AccountId, underlying_asset_id: CurrencyId) -> Result<Balance, DispatchError> {
+		Pallet::<T>::borrow_balance_stored(who, underlying_asset_id)
 	}
 }
