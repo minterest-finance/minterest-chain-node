@@ -94,6 +94,9 @@
 		"total_supply": "Balance",
 		"total_borrowed": "Balance"
 	},
+    "HypotheticalLiquidityData": {
+      "liquidity": "Amount"
+    },
     "OracleKey": "CurrencyId",
     "OracleValue": "Price",
     "DataProviderId": {
