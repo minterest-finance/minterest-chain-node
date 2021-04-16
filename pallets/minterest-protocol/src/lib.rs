@@ -2,7 +2,14 @@
 //!
 //! ## Overview
 //!
-//! TODO: add overview.
+//! This pallet provides ways for user to interact with Minterest protocol.
+//! User call deposit, redeem, borrow, repay and transfer tokens.
+//! Also user is able to enable/disable pool to be used as collateral.
+//! Every successful call of deposit/redeem/borrow/repay causes interest to be recalculated (for
+//! pool and user).
+//! In WhitelistMode only users from WhitelistMembers are able to call extrinsics of this module.
+//! Every time Minterest protocol interest reaches threshold (configured in Controller),
+//! it is transferred from liquidity to liquidation pool.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
