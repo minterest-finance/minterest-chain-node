@@ -17,7 +17,7 @@ mod weights;
 mod weights_test;
 
 use crate::constants::fee::WeightToFee;
-pub use controller_rpc_runtime_api::{PoolState, UserPoolBalanceData};
+pub use controller_rpc_runtime_api::{HypotheticalLiquidityData, PoolState, UserPoolBalanceData};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::fg_primitives;
@@ -36,7 +36,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchResult, FixedPointNumber, ModuleId,
 };
-use sp_std::prelude::*;
+use sp_std::{cmp::Ordering, convert::TryFrom, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -756,6 +756,19 @@ impl_runtime_apis! {
 			let (total_supply, total_borrowed) = Controller::get_total_supply_and_borrowed_usd_balance(&account_id).ok()?;
 
 			Some(UserPoolBalanceData {total_supply, total_borrowed})
+		}
+
+		fn get_hypothetical_account_liquidity(account_id: AccountId) -> Option<HypotheticalLiquidityData> {
+			let (excess, shortfall) = Controller::get_hypothetical_account_liquidity(&account_id, MNT, 0, 0).ok()?;
+			let res = match excess.cmp(&shortfall) {
+				Ordering::Less => {
+					let amount = Amount::try_from(shortfall).ok()?;
+					amount.checked_neg()?
+				},
+				_ => Amount::try_from(excess).ok()?
+			};
+
+			Some(HypotheticalLiquidityData{ liquidity: res })
 		}
 
 		fn is_admin(caller: AccountId) -> Option<bool> {
