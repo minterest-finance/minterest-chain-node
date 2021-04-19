@@ -372,7 +372,7 @@ fn testnet_genesis(
 			whitelist_mode: false,
 		}),
 		minterest_model: Some(MinterestModelConfig {
-			minterest_model_dates: vec![
+			minterest_model_params: vec![
 				(
 					ETH,
 					MinterestModelData {

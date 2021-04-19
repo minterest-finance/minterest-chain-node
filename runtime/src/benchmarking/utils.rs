@@ -61,8 +61,8 @@ pub mod tests {
 	use sp_runtime::traits::Zero;
 
 	// This GenesisConfig is a copy of testnet_genesis.
-	pub fn new_test_ext() -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default()
+	pub fn test_externalities() -> sp_io::TestExternalities {
+		let mut storage = frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
 			.unwrap();
 		liquidity_pools::GenesisConfig::<Runtime> {
@@ -102,7 +102,7 @@ pub mod tests {
 			],
 			pool_user_data: vec![],
 		}
-		.assimilate_storage(&mut t)
+		.assimilate_storage(&mut storage)
 		.unwrap();
 
 		controller::GenesisConfig::<Runtime> {
@@ -196,11 +196,11 @@ pub mod tests {
 			],
 			whitelist_mode: false,
 		}
-		.assimilate_storage(&mut t)
+		.assimilate_storage(&mut storage)
 		.unwrap();
 
 		minterest_model::GenesisConfig {
-			minterest_model_dates: vec![
+			minterest_model_params: vec![
 				(
 					ETH,
 					MinterestModelData {
@@ -239,7 +239,7 @@ pub mod tests {
 				),
 			],
 		}
-		.assimilate_storage::<Runtime>(&mut t)
+		.assimilate_storage::<Runtime>(&mut storage)
 		.unwrap();
 
 		risk_manager::GenesisConfig {
@@ -282,7 +282,7 @@ pub mod tests {
 				),
 			],
 		}
-		.assimilate_storage::<Runtime>(&mut t)
+		.assimilate_storage::<Runtime>(&mut storage)
 		.unwrap();
 
 		// TODO MIN-221. MNT pallet uses price oracle in build() function.
@@ -296,6 +296,6 @@ pub mod tests {
 		// .assimilate_storage(&mut t)
 		// .unwrap();
 
-		t.into()
+		storage.into()
 	}
 }

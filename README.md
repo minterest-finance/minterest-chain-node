@@ -101,12 +101,14 @@ To purge old chain data and run
 ```bash
 make restart
 ```
+# Update transaction weights
 
-Update ORML
+A great description of the weights system lies [here](https://substrate.dev/docs/en/knowledgebase/runtime/benchmarking).
 
-```bash
-make update
-```
+* Make sure to write or update benchmark tests. They should follow the longest and most read/write heavy path in the 
+  tested transaction to mark the maximum possible transaction weight. The tests are in [runtime/weights](/runtime/weights)
+* Build the app with ```cargo build --release --features runtime-benchmarks```.
+* Take the command, commented in the pallet related weights.rs file and execute it. The weights should be updated.
 
 # Versioning
 
