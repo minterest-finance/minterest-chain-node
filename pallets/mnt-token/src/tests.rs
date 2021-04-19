@@ -867,5 +867,78 @@ fn test_calculate_enabled_pools_utilities_fail() {
 
 #[test]
 fn transfer_mnt_should_work() {
-	ExtBuilder::default().build().execute_with(|| {});
+	ExtBuilder::default()
+		.set_mnt_claim_threshold(20)
+		.mnt_account_balance(MNT_PALLET_START_BALANCE)
+		.build()
+		.execute_with(|| {
+			// distribute_all == false, user_accrued < threshold:
+			// we do not perform the transfer.
+			let first_transfer = 10 * DOLLARS;
+			assert_ok!(MntToken::transfer_mnt(&ALICE, first_transfer, false));
+			assert_eq!(
+				get_mnt_account_balance(MntToken::get_account_id()),
+				MNT_PALLET_START_BALANCE
+			);
+			assert_eq!(get_mnt_account_balance(ALICE), Balance::zero());
+			assert_eq!(MntToken::mnt_accrued(ALICE), first_transfer);
+
+			// distribute_all == true, user_accrued > threshold:
+			// we perform the transfer.
+			let second_transfer = 200 * DOLLARS;
+			assert_ok!(MntToken::transfer_mnt(&ALICE, second_transfer, true));
+			assert_eq!(
+				get_mnt_account_balance(MntToken::get_account_id()),
+				MNT_PALLET_START_BALANCE - second_transfer
+			);
+			assert_eq!(get_mnt_account_balance(ALICE), second_transfer);
+			assert_eq!(MntToken::mnt_accrued(ALICE), Balance::zero());
+
+			// distribute_all == true, user_accrued == 0:
+			// we do not perform the transfer.
+			let third_transfer = Balance::zero();
+			assert_ok!(MntToken::transfer_mnt(&ALICE, third_transfer, true));
+			assert_eq!(
+				get_mnt_account_balance(MntToken::get_account_id()),
+				MNT_PALLET_START_BALANCE - second_transfer
+			);
+			assert_eq!(get_mnt_account_balance(ALICE), second_transfer);
+			assert_eq!(MntToken::mnt_accrued(ALICE), Balance::zero());
+
+			// distribute_all == true, user_accrued > threshold, user_accrued > MNT_pallet_balance:
+			// we do not perform the transfer.
+			let fourth_transfer = 10_000_000 * DOLLARS;
+			assert_ok!(MntToken::transfer_mnt(&ALICE, fourth_transfer, true));
+			assert_eq!(
+				get_mnt_account_balance(MntToken::get_account_id()),
+				MNT_PALLET_START_BALANCE - second_transfer
+			);
+			assert_eq!(get_mnt_account_balance(ALICE), second_transfer);
+			assert_eq!(MntToken::mnt_accrued(ALICE), Balance::zero());
+
+			// distribute_all == true, user_accrued < threshold:
+			// we perform the transfer.
+			let fifth_transfer = 10 * DOLLARS;
+			assert_ok!(MntToken::transfer_mnt(&ALICE, first_transfer, true));
+			assert_eq!(
+				get_mnt_account_balance(MntToken::get_account_id()),
+				MNT_PALLET_START_BALANCE - second_transfer - fifth_transfer
+			);
+			assert_eq!(get_mnt_account_balance(ALICE), second_transfer + fifth_transfer);
+			assert_eq!(MntToken::mnt_accrued(ALICE), Balance::zero());
+
+			// distribute_all == false, user_accrued > threshold:
+			// we perform the transfer.
+			let sixth_transfer = 500 * DOLLARS;
+			assert_ok!(MntToken::transfer_mnt(&ALICE, sixth_transfer, false));
+			assert_eq!(
+				get_mnt_account_balance(MntToken::get_account_id()),
+				MNT_PALLET_START_BALANCE - second_transfer - fifth_transfer - sixth_transfer
+			);
+			assert_eq!(
+				get_mnt_account_balance(ALICE),
+				second_transfer + fifth_transfer + sixth_transfer
+			);
+			assert_eq!(MntToken::mnt_accrued(ALICE), Balance::zero());
+		});
 }
