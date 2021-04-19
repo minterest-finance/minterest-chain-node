@@ -289,7 +289,7 @@ pub mod tests {
 		// That causes error during building this ext for tests
 		// mnt_token::GenesisConfig::<Runtime> {
 		// 	mnt_rate: 10 * DOLLARS,
-		// 	mnt_claim_treshold: 0, // disable by default
+		// 	mnt_claim_threshold: 0, // disable by default
 		// 	minted_pools: vec![CurrencyId::DOT, CurrencyId::ETH, CurrencyId::KSM, CurrencyId::BTC],
 		// 	phantom: Default::default(),
 		// }

@@ -117,7 +117,7 @@ pub struct ExtBuilder {
 	minted_pools: Vec<CurrencyId>,
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	mnt_rate: Balance,
-	mnt_claim_treshold: Balance,
+	mnt_claim_threshold: Balance,
 }
 
 pub const ALICE: AccountId = 1;
@@ -131,13 +131,18 @@ impl Default for ExtBuilder {
 			minted_pools: vec![],
 			pool_user_data: vec![],
 			endowed_accounts: vec![],
-			mnt_claim_treshold: Balance::zero(),
+			mnt_claim_threshold: Balance::zero(),
 			mnt_rate: Balance::zero(),
 		}
 	}
 }
 
 impl ExtBuilder {
+	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts.push((user, currency_id, balance));
+		self
+	}
+
 	pub fn enable_minting_for_all_pools(mut self) -> Self {
 		self.minted_pools = vec![KSM, DOT, ETH, BTC];
 		self
@@ -148,8 +153,8 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn set_mnt_claim_treshold(mut self, treshold: u128) -> Self {
-		self.mnt_claim_treshold = treshold * DOLLARS;
+	pub fn set_mnt_claim_threshold(mut self, threshold: u128) -> Self {
+		self.mnt_claim_threshold = threshold * DOLLARS;
 		self
 	}
 
@@ -228,7 +233,7 @@ impl ExtBuilder {
 
 		mnt_token::GenesisConfig::<Runtime> {
 			mnt_rate: self.mnt_rate,
-			mnt_claim_treshold: self.mnt_claim_treshold,
+			mnt_claim_threshold: self.mnt_claim_threshold,
 			minted_pools: self.minted_pools,
 			phantom: PhantomData,
 		}

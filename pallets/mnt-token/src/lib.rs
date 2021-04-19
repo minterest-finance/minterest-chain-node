@@ -108,19 +108,14 @@ pub mod module {
 	pub enum Error<T> {
 		/// Trying to enable already enabled minting for pool
 		MntMintingAlreadyEnabled,
-
 		/// Trying to disable MNT minting that wasn't enabled
 		MntMintingNotEnabled,
-
 		/// Arithmetic calculation overflow
 		NumOverflow,
-
 		/// Get underlying currency price is failed
 		GetUnderlyingPriceFail,
-
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
-
 		/// Error that never should happen
 		InternalError,
 	}
@@ -154,8 +149,8 @@ pub mod module {
 
 	/// The threshold above which the flywheel transfers MNT
 	#[pallet::storage]
-	#[pallet::getter(fn mnt_claim_treshold)]
-	pub(crate) type MntClaimTreshold<T: Config> = StorageValue<_, Balance, ValueQuery>;
+	#[pallet::getter(fn mnt_claim_threshold)]
+	pub(crate) type MntClaimThreshold<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
 	/// MNT minting speed for each pool
 	/// Doubling this number shows how much MNT goes to all suppliers and borrowers of a particular
@@ -189,7 +184,7 @@ pub mod module {
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub mnt_rate: Balance,
-		pub mnt_claim_treshold: Balance,
+		pub mnt_claim_threshold: Balance,
 		pub minted_pools: Vec<CurrencyId>,
 		pub phantom: PhantomData<T>,
 	}
@@ -199,7 +194,7 @@ pub mod module {
 		fn default() -> Self {
 			GenesisConfig {
 				mnt_rate: Balance::zero(),
-				mnt_claim_treshold: Balance::zero(),
+				mnt_claim_threshold: Balance::zero(),
 				minted_pools: vec![],
 				phantom: PhantomData,
 			}
@@ -210,7 +205,7 @@ pub mod module {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			MntRate::<T>::put(&self.mnt_rate);
-			MntClaimTreshold::<T>::put(&self.mnt_claim_treshold);
+			MntClaimThreshold::<T>::put(&self.mnt_claim_threshold);
 			for currency_id in &self.minted_pools {
 				MntSpeeds::<T>::insert(currency_id, Balance::zero());
 				MntPoolsState::<T>::insert(currency_id, MntPoolState::new());
@@ -291,7 +286,11 @@ impl<T: Config> Pallet<T> {
 
 	/// Distribute mnt token to borrower. It should be called after update_mnt_borrow_index
 	#[allow(dead_code)] // TODO remove this
-	fn distribute_borrower_mnt(underlying_id: CurrencyId, borrower: &T::AccountId) -> DispatchResult {
+	fn distribute_borrower_mnt(
+		underlying_id: CurrencyId,
+		borrower: &T::AccountId,
+		distribute_all: bool,
+	) -> DispatchResult {
 		// borrower_amount = account_borrow_balance / liquidity_pool_borrow_index
 		// delta_index = mnt_distribution_index(for current pool) - borrower_index
 		// borrower_delta = borrower_amount * delta_index
@@ -331,7 +330,7 @@ impl<T: Config> Pallet<T> {
 			.checked_add(borrower_delta.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		Self::transfer_mnt(borrower, borrower_mnt_accrued, MntClaimTreshold::<T>::get())?;
+		Self::transfer_mnt(borrower, borrower_mnt_accrued, distribute_all)?;
 
 		Self::deposit_event(Event::MntDistributedToBorrower(
 			underlying_id,
@@ -396,7 +395,11 @@ impl<T: Config> Pallet<T> {
 
 	/// Distribute mnt token to supplier. It should be called after update_mnt_supply_index
 	#[allow(dead_code)] // TODO remove this
-	fn distribute_supplier_mnt(underlying_id: CurrencyId, supplier: &T::AccountId) -> DispatchResult {
+	fn distribute_supplier_mnt(
+		underlying_id: CurrencyId,
+		supplier: &T::AccountId,
+		distribute_all: bool,
+	) -> DispatchResult {
 		// delta_index = mnt_distribution_index - mnt_supplier_index
 		// supplier_delta = supplier_mtoken_balance * delta_index
 		// supplier_mnt_balance += supplier_delta
@@ -431,7 +434,7 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		MntSupplierIndex::<T>::insert(underlying_id, supplier, supply_index);
-		Self::transfer_mnt(supplier, supplier_mnt_accrued, MntClaimTreshold::<T>::get())?;
+		Self::transfer_mnt(supplier, supplier_mnt_accrued, distribute_all)?;
 
 		Self::deposit_event(Event::MntDistributedToSupplier(
 			underlying_id,
@@ -520,7 +523,7 @@ impl<T: Config> Pallet<T> {
 	fn refresh_mnt_speeds() -> DispatchResult {
 		// TODO Add update indexes here when it will be implemented
 		let (pool_utilities, sum_of_all_utilities) = Self::calculate_enabled_pools_utilities()?;
-		if sum_of_all_utilities == Balance::zero() {
+		if sum_of_all_utilities.is_zero() {
 			// There is nothing to calculate.
 			return Ok(());
 		}
@@ -535,19 +538,26 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	/// Transfer mnt tokens to user balance if it possible. Otherwise, put them into internal
-	/// storage.
+	/// Transfer MNT tokens to user balance if they are above the threshold.
+	/// Otherwise, put them into internal storage.
 	///
 	/// - `user`: MNT tokens recipient.
 	/// - `user_accrued`: The total amount of accrued tokens.
-	/// - `threshold`: The threshold above which the flywheel transfers MNT.
-	fn transfer_mnt(user: &T::AccountId, user_accrued: Balance, threshold: Balance) -> DispatchResult {
+	/// - `distribute_all`:
+	fn transfer_mnt(user: &T::AccountId, user_accrued: Balance, distribute_all: bool) -> DispatchResult {
+		//TODO: Need to discuss what we should do.
+		// Erorr/Event/save money to MntAccrued/stop producing mnt tokens
+		let threshold = if distribute_all {
+			Balance::zero()
+		} else {
+			MntClaimThreshold::<T>::get()
+		};
+
 		if user_accrued >= threshold && user_accrued > 0 {
-			// TODO check is currency in MNT pallet enough.
-			// Need to discuss what we should do.
-			// Erorr/Event/save money to MntAccrued/stop producing mnt tokens
-			T::MultiCurrency::transfer(MNT, &Self::get_account_id(), &user, user_accrued)?;
-			MntAccrued::<T>::remove(user); // set to 0
+			if user_accrued <= T::MultiCurrency::free_balance(MNT, &Self::get_account_id()) {
+				T::MultiCurrency::transfer(MNT, &Self::get_account_id(), &user, user_accrued)?;
+				MntAccrued::<T>::remove(user); // set to 0
+			}
 		} else {
 			MntAccrued::<T>::insert(user, user_accrued);
 		}
