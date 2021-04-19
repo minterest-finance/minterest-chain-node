@@ -7,7 +7,7 @@
 #![allow(clippy::unnecessary_mut_passed)]
 
 use codec::{Codec, Decode, Encode};
-use minterest_primitives::{Balance, CurrencyId, Rate};
+use minterest_primitives::{Amount, Balance, CurrencyId, Rate};
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
 
@@ -33,6 +33,14 @@ pub struct UserPoolBalanceData {
 	pub total_borrowed: Balance,
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Eq, PartialEq, Default, RuntimeDebug)]
+pub struct HypotheticalLiquidityData {
+	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
+	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
+	pub liquidity: Amount,
+}
+
 #[cfg(feature = "std")]
 fn serialize_as_string<S: Serializer, T: std::fmt::Display>(t: &T, serializer: S) -> Result<S::Ok, S::Error> {
 	serializer.serialize_str(&t.to_string())
@@ -48,10 +56,15 @@ fn deserialize_from_string<'de, D: Deserializer<'de>, T: std::str::FromStr>(dese
 // Here we declare the runtime API. It is implemented it the `impl` block in
 // runtime amalgamator file (the `runtime/src/lib.rs`)
 sp_api::decl_runtime_apis! {
-	pub trait ControllerApi<AccountId> where AccountId: Codec {
+	pub trait ControllerApi<AccountId>
+	where
+		AccountId: Codec,
+	{
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState>;
 
 		fn get_total_supply_and_borrowed_usd_balance(account_id: AccountId) -> Option<UserPoolBalanceData>;
+
+		fn get_hypothetical_account_liquidity(account_id: AccountId) -> Option<HypotheticalLiquidityData>;
 
 		fn is_admin(caller: AccountId) -> Option<bool>;
 	}

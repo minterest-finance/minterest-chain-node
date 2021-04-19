@@ -17,13 +17,17 @@ pub const METH: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::METH);
 
 #[macro_export]
 macro_rules! mock_impl_system_config {
-	($target:ty) => {
+	($target: ty) => {
+		mock_impl_system_config!($target, ());
+	};
+
+	($target:ty, $account_data:ty) => {
 		parameter_types! {
 			pub const MockBlockHashCount: u64 = 250;
 			pub const MockSS58Prefix: u8 = 42;
 		}
 
-		impl system::Config for $target {
+		impl frame_system::Config for $target {
 			type BaseCallFilter = ();
 			type BlockWeights = ();
 			type BlockLength = ();
@@ -41,7 +45,7 @@ macro_rules! mock_impl_system_config {
 			type BlockHashCount = MockBlockHashCount;
 			type Version = ();
 			type PalletInfo = PalletInfo;
-			type AccountData = ();
+			type AccountData = $account_data;
 			type OnNewAccount = ();
 			type OnKilledAccount = ();
 			type SystemWeightInfo = ();
@@ -73,12 +77,12 @@ macro_rules! mock_impl_orml_tokens_config {
 
 #[macro_export]
 macro_rules! mock_impl_orml_currencies_config {
-	($target:ty, $currency_id:expr) => {
+	($target:ty, $native_currency:ty) => {
 		parameter_types! {
-			pub const MockGetNativeCurrencyId: CurrencyId = $currency_id;
+			pub const MockGetNativeCurrencyId: CurrencyId = MNT;
 		}
 
-		type MockNativeCurrency = Currency<$target, MockGetNativeCurrencyId>;
+		type MockNativeCurrency = $native_currency;
 
 		impl orml_currencies::Config for $target {
 			type Event = Event;
@@ -87,6 +91,10 @@ macro_rules! mock_impl_orml_currencies_config {
 			type GetNativeCurrencyId = MockGetNativeCurrencyId;
 			type WeightInfo = ();
 		}
+	};
+
+	($target:ty) => {
+		mock_impl_orml_currencies_config!($target, Currency<$target, MockGetNativeCurrencyId>);
 	};
 }
 

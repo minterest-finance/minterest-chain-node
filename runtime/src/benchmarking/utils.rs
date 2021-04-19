@@ -285,6 +285,17 @@ pub mod tests {
 		.assimilate_storage::<Runtime>(&mut storage)
 		.unwrap();
 
+		// TODO MIN-221. MNT pallet uses price oracle in build() function.
+		// That causes error during building this ext for tests
+		// mnt_token::GenesisConfig::<Runtime> {
+		// 	mnt_rate: 10 * DOLLARS,
+		// 	mnt_claim_treshold: 0, // disable by default
+		// 	minted_pools: vec![CurrencyId::DOT, CurrencyId::ETH, CurrencyId::KSM, CurrencyId::BTC],
+		// 	phantom: Default::default(),
+		// }
+		// .assimilate_storage(&mut t)
+		// .unwrap();
+
 		storage.into()
 	}
 }

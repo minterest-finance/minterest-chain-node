@@ -6,8 +6,8 @@ use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
 	AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, GenesisConfig, GrandpaConfig,
 	LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig, MinterestModelConfig,
-	MinterestOracleConfig, OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature, SudoConfig,
-	SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM,
+	MinterestOracleConfig, MntTokenConfig, OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig,
+	Signature, SudoConfig, SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM,
 	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
@@ -514,6 +514,11 @@ fn testnet_genesis(
 			members: Default::default(), // initialized by OperatorMembership
 			phantom: Default::default(),
 		}),
-		mnt_token: Some(Default::default()),
+		mnt_token: Some(MntTokenConfig {
+			mnt_rate: 10 * DOLLARS,
+			mnt_claim_treshold: 0, // disable by default
+			minted_pools: vec![DOT, ETH, KSM, BTC],
+			phantom: Default::default(),
+		}),
 	}
 }
