@@ -136,6 +136,11 @@ impl Default for ExternalityBuilder {
 }
 
 impl ExternalityBuilder {
+	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts.push((user, currency_id, balance));
+		self
+	}
+
 	pub fn liquidity_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((TestLiquidityPools::pools_account_id(), currency_id, balance));

@@ -12,8 +12,8 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, traits::Get, transactional};
 use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
 use frame_system::pallet_prelude::*;
-use minterest_primitives::{Amount, Balance, CurrencyId, OffchainErr, Rate};
-use orml_traits::{MultiCurrency, MultiCurrencyExtended};
+use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
+use orml_traits::MultiCurrency;
 use pallet_traits::DEXManager;
 use pallet_traits::{PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
@@ -61,12 +61,7 @@ pub mod module {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// The `MultiCurrency` implementation.
-		type MultiCurrency: MultiCurrencyExtended<
-			Self::AccountId,
-			Balance = Balance,
-			CurrencyId = CurrencyId,
-			Amount = Amount,
-		>;
+		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 
 		/// A configuration for base priority of unsigned transactions.
 		///
@@ -117,6 +112,10 @@ pub mod module {
 		PoolNotFound,
 		/// Not enough liquidation pool balance.
 		NotEnoughBalance,
+
+		NotEnoughLiquidityAvailable,
+
+		ZeroBalanceTransaction,
 	}
 
 	#[pallet::event]
@@ -132,8 +131,8 @@ pub mod module {
 		BalanceRatioChanged(CurrencyId, Rate),
 		///  Maximum ideal balance has been successfully changed: \[pool_id, new_threshold_value\]
 		MaxIdealBalanceChanged(CurrencyId, Option<Balance>),
-		///  Balance has been successfully updated: \[pool_id, by_amount\]
-		BalanceUpdated(CurrencyId, Amount),
+		///  Successfull transfer to liqudation pull: \[underlying_asset_id, underlying_amount, who\]
+		TransferToLiquidationPool(CurrencyId, Balance, T::AccountId),
 	}
 
 	/// Balancing pool frequency.
@@ -334,22 +333,35 @@ pub mod module {
 			Ok(().into())
 		}
 
-		/// Updates balance of liquidation pool
-		/// - `pool_id`: PoolID to update
-		/// - `by_amount`: value to change the balance. If positive do add, else do remove.
-		#[pallet::weight(10_000)] // Stub, function is for dev purposes only.
+		/// Seed the liquidation pool
+		/// - `underlying_asset_id`: currency of transfer
+		/// - `underlying_amount`: amount to transfer to liquidation pool
+		#[pallet::weight(T::LiquidationPoolsWeightInfo::transfer_to_liquidation_pool())]
 		#[transactional]
-		pub fn update_balance(
+		pub fn transfer_to_liquidation_pool(
 			origin: OriginFor<T>,
-			pool_id: CurrencyId,
-			by_amount: Amount,
+			underlying_asset_id: CurrencyId,
+			underlying_amount: Balance,
 		) -> DispatchResultWithPostInfo {
-			let _ = T::UpdateOrigin::ensure_origin(origin)?;
-			let module_account_id = Self::pools_account_id();
+			let who = ensure_signed(origin)?;
 
-			T::MultiCurrency::update_balance(pool_id, &module_account_id, by_amount)?;
+			ensure!(
+				underlying_asset_id.is_supported_underlying_asset(),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+			ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
+			ensure!(
+				underlying_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
+				Error::<T>::NotEnoughLiquidityAvailable
+			);
 
-			Self::deposit_event(Event::BalanceUpdated(pool_id, by_amount));
+			T::MultiCurrency::transfer(underlying_asset_id, &who, &Self::pools_account_id(), underlying_amount)?;
+
+			Self::deposit_event(Event::TransferToLiquidationPool(
+				underlying_asset_id,
+				underlying_amount,
+				who,
+			));
 			Ok(().into())
 		}
 	}
