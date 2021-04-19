@@ -2,7 +2,7 @@
 //!
 //! ## Overview
 //!
-//! TODO: add overview.
+//! Minterest Model pallet is responsible for storing and updating parameters related to economy.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]

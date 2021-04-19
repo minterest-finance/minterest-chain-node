@@ -2,7 +2,7 @@
 //!
 //! ## Overview
 //!
-//! TODO: add overview.
+//! Risk Manager pallet is responsible for automatic liquidation which is done by offchain worker.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]

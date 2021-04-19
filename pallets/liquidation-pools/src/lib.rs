@@ -3,6 +3,9 @@
 //! ## Overview
 //!
 //! Liquidation Pools are responsible for holding funds for automatic liquidation.
+//! This module has offchain worker implemented which is running periodically (interval is
+//! configured in BalancingPeriod).
+//! Offchain worker keeps pools in balance to avoid lack of funds for liquidation.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]

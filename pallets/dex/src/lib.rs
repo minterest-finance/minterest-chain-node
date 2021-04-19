@@ -2,7 +2,7 @@
 //!
 //! ## Overview
 //!
-//! TODO: add overview.
+//! This is a pallet for trading tokens during rebalancing.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]

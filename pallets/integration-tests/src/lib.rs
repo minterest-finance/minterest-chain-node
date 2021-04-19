@@ -2,7 +2,8 @@
 //!
 //! ## Overview
 //!
-//! TODO: add overview.
+//! Integration Tests pallet is responsible for checking complex test-cases with several pallets
+//! involved.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
