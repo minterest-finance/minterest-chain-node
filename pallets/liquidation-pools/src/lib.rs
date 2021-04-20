@@ -112,9 +112,9 @@ pub mod module {
 		PoolNotFound,
 		/// Not enough liquidation pool balance.
 		NotEnoughBalance,
-
+		/// There is not enough liquidity available on user balance.
 		NotEnoughLiquidityAvailable,
-
+		/// Transaction with zero balance is not allowed.
 		ZeroBalanceTransaction,
 	}
 

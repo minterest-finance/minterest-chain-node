@@ -203,7 +203,7 @@ fn transfer_to_liquidation_pool_should_work() {
 		.build()
 		.execute_with(|| {
 			let who = ensure_signed(admin());
-			// Check that trasfer to liquidation pool worfs correctly
+			//  Check that transfer to liquidation pool works correctly
 			// Liquidity pool value: 500_000
 			// Transfer amount: 20_000
 			assert_ok!(TestLiquidationPools::transfer_to_liquidation_pool(admin(), DOT, 20_000));
@@ -213,5 +213,29 @@ fn transfer_to_liquidation_pool_should_work() {
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_eq!(TestLiquidationPools::get_pool_available_liquidity(DOT), 520_000);
+
+			// Check that transfer with zero amount returns error.
+			//  Transfer amount: 0
+			//  Expected error: ZeroBalanceTransaction
+			assert_noop!(
+				TestLiquidationPools::transfer_to_liquidation_pool(admin(), DOT, 0),
+				Error::<Test>::ZeroBalanceTransaction
+			);
+
+			// Check thet transaction with unsuppurted asset returns error.
+			// Asset: MNT - native asset, underline assets are only allowed
+			// Expected error: NotValidUnderlyingAssetId
+			assert_noop!(
+				TestLiquidationPools::transfer_to_liquidation_pool(admin(), MNT, 20_000),
+				Error::<Test>::NotValidUnderlyingAssetId
+			);
+
+			// Check that attempt to transfer amount bigger that user balance returns error
+			// Transfer amount: 40_0000
+			// Balance: 0
+			assert_noop!(
+				TestLiquidationPools::transfer_to_liquidation_pool(admin(), DOT, 40_000),
+				Error::<Test>::NotEnoughLiquidityAvailable
+			);
 		});
 }
