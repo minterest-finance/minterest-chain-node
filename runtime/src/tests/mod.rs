@@ -4,7 +4,9 @@ use crate::{
 	System, WhitelistCouncilMembership, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 };
 use controller::{ControllerData, PauseKeeper};
-use controller_rpc_runtime_api::{runtime_decl_for_ControllerApi::ControllerApi, PoolState, UserPoolBalanceData};
+use controller_rpc_runtime_api::{
+	runtime_decl_for_ControllerApi::ControllerApi, HypotheticalLiquidityData, PoolState, UserPoolBalanceData,
+};
 use frame_support::{
 	assert_err, assert_noop, assert_ok, error::BadOrigin, pallet_prelude::GenesisBuild, parameter_types,
 	traits::OnFinalize,
@@ -230,7 +232,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		minterest_model::GenesisConfig {
-			minterest_model_dates: vec![
+			minterest_model_params: vec![
 				(
 					DOT,
 					MinterestModelData {
@@ -368,6 +370,10 @@ fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 
 fn get_total_supply_and_borrowed_usd_balance_rpc(account_id: AccountId) -> Option<UserPoolBalanceData> {
 	<Runtime as ControllerApi<Block, AccountId>>::get_total_supply_and_borrowed_usd_balance(account_id)
+}
+
+fn get_hypothetical_account_liquidity_rpc(account_id: AccountId) -> Option<HypotheticalLiquidityData> {
+	<Runtime as ControllerApi<Block, AccountId>>::get_hypothetical_account_liquidity(account_id)
 }
 
 fn is_admin_rpc(caller: AccountId) -> Option<bool> {

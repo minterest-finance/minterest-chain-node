@@ -4,7 +4,6 @@ use super::*;
 use crate as liquidity_pools;
 use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::parameter_types;
-use frame_system as system;
 pub use minterest_primitives::currency::CurrencyType::WrappedToken;
 use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId};
@@ -38,7 +37,7 @@ frame_support::construct_runtime!(
 
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
-mock_impl_orml_currencies_config!(Test, MNT);
+mock_impl_orml_currencies_config!(Test);
 mock_impl_liquidity_pools_config!(Test);
 
 parameter_types! {

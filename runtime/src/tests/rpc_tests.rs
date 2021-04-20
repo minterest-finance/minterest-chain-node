@@ -319,6 +319,55 @@ fn test_user_balance_using_rpc() {
 		});
 }
 
+#[test]
+fn test_get_hypothetical_account_liquidity_rpc() {
+	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
+		.build()
+		.execute_with(|| {
+			// Set price = 2.00 USD for all pools.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
+			System::set_block_number(20);
+
+			assert_eq!(
+				get_hypothetical_account_liquidity_rpc(ALICE::get()),
+				Some(HypotheticalLiquidityData { liquidity: 0 })
+			);
+			assert_eq!(
+				get_hypothetical_account_liquidity_rpc(BOB::get()),
+				Some(HypotheticalLiquidityData { liquidity: 0 })
+			);
+
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
+			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(50_000)));
+
+			// Check positive liquidity
+			assert_eq!(
+				get_hypothetical_account_liquidity_rpc(BOB::get()),
+				Some(HypotheticalLiquidityData {
+					liquidity: 116_000_000_000_000_000_000_000
+				})
+			);
+
+			System::set_block_number(100_000_000);
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, 1));
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, 1));
+
+			// Check negative liquidity
+			assert_eq!(
+				get_hypothetical_account_liquidity_rpc(BOB::get()),
+				Some(HypotheticalLiquidityData {
+					liquidity: -212_319_934_335_999_999_999_998
+				})
+			);
+		});
+}
+
 /// Test that free balance has increased by a (total_supply - total_borrowed) after repay all and
 /// redeem
 #[test]

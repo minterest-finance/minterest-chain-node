@@ -166,82 +166,82 @@ runtime_benchmarks! {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::benchmarking::utils::tests::new_test_ext;
+	use crate::benchmarking::utils::tests::test_externalities;
 	use frame_support::assert_ok;
 
 	#[test]
 	fn test_deposit_underlying() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_deposit_underlying());
 		})
 	}
 
 	#[test]
 	fn test_redeem() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_redeem());
 		})
 	}
 
 	#[test]
 	fn test_redeem_underlying() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_redeem_underlying());
 		})
 	}
 
 	#[test]
 	fn test_redeem_wrapped() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_redeem_wrapped());
 		})
 	}
 
 	#[test]
 	fn test_borrow() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_borrow());
 		})
 	}
 
 	#[test]
 	fn test_repay() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_repay());
 		})
 	}
 
 	#[test]
 	fn test_repay_all() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_repay_all());
 		})
 	}
 
 	#[test]
 	fn test_repay_on_behalf() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_repay_on_behalf());
 		})
 	}
 
 	#[test]
 	fn test_transfer_wrapped() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_transfer_wrapped());
 		})
 	}
 
 	#[test]
 	fn test_enable_is_collateral() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_enable_is_collateral_test());
 		})
 	}
 
 	#[test]
 	fn test_disable_is_collateral() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_disable_is_collateral());
 		})
 	}

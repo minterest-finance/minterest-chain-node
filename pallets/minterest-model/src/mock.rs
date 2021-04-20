@@ -2,7 +2,6 @@
 use super::*;
 use crate as minterest_model;
 use frame_support::{ord_parameter_types, parameter_types};
-use frame_system as system;
 use frame_system::EnsureSignedBy;
 use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
@@ -72,11 +71,11 @@ pub fn bob() -> Origin {
 	Origin::signed(BOB)
 }
 
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+pub fn test_externalities() -> sp_io::TestExternalities {
+	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	minterest_model::GenesisConfig {
-		minterest_model_dates: vec![
+		minterest_model_params: vec![
 			(
 				DOT,
 				MinterestModelData {
@@ -106,10 +105,10 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			),
 		],
 	}
-	.assimilate_storage::<Test>(&mut t)
+	.assimilate_storage::<Test>(&mut storage)
 	.unwrap();
 
-	let mut ext: sp_io::TestExternalities = t.into();
-	ext.execute_with(|| System::set_block_number(1));
-	ext
+	let mut test_externalities: sp_io::TestExternalities = storage.into();
+	test_externalities.execute_with(|| System::set_block_number(1));
+	test_externalities
 }

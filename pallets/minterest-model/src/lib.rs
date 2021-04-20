@@ -42,7 +42,7 @@ pub struct MinterestModelData {
 	/// The multiplier of utilization rate that gives the slope of the interest rate
 	pub multiplier_per_block: Rate,
 
-	/// The multiplierPerBlock after hitting a specified utilization point
+	/// The multiplier of utilization rate after hitting a specified utilization point - kink
 	pub jump_multiplier_per_block: Rate,
 }
 
@@ -89,32 +89,32 @@ pub mod module {
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event {
 		/// JumpMultiplierPerBlock has been successfully changed.
-		JumpMultiplierPerBlockHasChanged,
+		JumpMultiplierPerBlockChanged,
 		/// BaseRatePerBlock has been successfully changed.
-		BaseRatePerBlockHasChanged,
+		BaseRatePerBlockChanged,
 		/// MultiplierPerBlock has been successfully changed.
-		MultiplierPerBlockHasChanged,
+		MultiplierPerBlockChanged,
 		/// Parameter `kink` has been successfully changed.
-		KinkHasChanged,
+		KinkChanged,
 	}
 
 	/// The Minterest Model data information: `(kink, base_rate_per_block, multiplier_per_block,
 	/// jump_multiplier_per_block)`.
 	#[pallet::storage]
-	#[pallet::getter(fn minterest_model_dates)]
+	#[pallet::getter(fn minterest_model_params)]
 	pub(crate) type MinterestModelParams<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, MinterestModelData, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
-		pub minterest_model_dates: Vec<(CurrencyId, MinterestModelData)>,
+		pub minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
 	}
 
 	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
 		fn default() -> Self {
 			GenesisConfig {
-				minterest_model_dates: vec![],
+				minterest_model_params: vec![],
 			}
 		}
 	}
@@ -122,7 +122,7 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
-			self.minterest_model_dates
+			self.minterest_model_params
 				.iter()
 				.for_each(|(currency_id, minterest_model_data)| {
 					MinterestModelParams::<T>::insert(
@@ -168,7 +168,7 @@ pub mod module {
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_jump_multiplier_per_year(
+		pub fn set_jump_multiplier(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			jump_multiplier_rate_per_year: Rate,
@@ -188,7 +188,7 @@ pub mod module {
 			// Write the previously calculated values into storage.
 			MinterestModelParams::<T>::mutate(pool_id, |r| r.jump_multiplier_per_block = new_jump_multiplier_per_block);
 
-			Self::deposit_event(Event::JumpMultiplierPerBlockHasChanged);
+			Self::deposit_event(Event::JumpMultiplierPerBlockChanged);
 
 			Ok(().into())
 		}
@@ -201,7 +201,7 @@ pub mod module {
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_base_rate_per_year(
+		pub fn set_base_rate(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			base_rate_per_year: Rate,
@@ -220,7 +220,7 @@ pub mod module {
 			// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
 			if new_base_rate_per_block.is_zero() {
 				ensure!(
-					!Self::minterest_model_dates(pool_id).multiplier_per_block.is_zero(),
+					!Self::minterest_model_params(pool_id).multiplier_per_block.is_zero(),
 					Error::<T>::BaseRatePerBlockCannotBeZero
 				);
 			}
@@ -228,7 +228,7 @@ pub mod module {
 			// Write the previously calculated values into storage.
 			MinterestModelParams::<T>::mutate(pool_id, |r| r.base_rate_per_block = new_base_rate_per_block);
 
-			Self::deposit_event(Event::BaseRatePerBlockHasChanged);
+			Self::deposit_event(Event::BaseRatePerBlockChanged);
 
 			Ok(().into())
 		}
@@ -241,7 +241,7 @@ pub mod module {
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_multiplier_per_year(
+		pub fn set_multiplier(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			multiplier_per_year: Rate,
@@ -260,14 +260,14 @@ pub mod module {
 			// Multiplier per block cannot be set to 0 at the same time as Base rate per block .
 			if new_multiplier_per_block.is_zero() {
 				ensure!(
-					!Self::minterest_model_dates(pool_id).base_rate_per_block.is_zero(),
+					!Self::minterest_model_params(pool_id).base_rate_per_block.is_zero(),
 					Error::<T>::MultiplierPerBlockCannotBeZero
 				);
 			}
 
 			// Write the previously calculated values into storage.
 			MinterestModelParams::<T>::mutate(pool_id, |r| r.multiplier_per_block = new_multiplier_per_block);
-			Self::deposit_event(Event::MultiplierPerBlockHasChanged);
+			Self::deposit_event(Event::MultiplierPerBlockChanged);
 			Ok(().into())
 		}
 
@@ -290,7 +290,7 @@ pub mod module {
 
 			// Write the previously calculated values into storage.
 			MinterestModelParams::<T>::mutate(pool_id, |r| r.kink = kink);
-			Self::deposit_event(Event::KinkHasChanged);
+			Self::deposit_event(Event::KinkChanged);
 
 			Ok(().into())
 		}
@@ -309,7 +309,7 @@ impl<T: Config> Pallet<T> {
 			base_rate_per_block,
 			multiplier_per_block,
 			jump_multiplier_per_block,
-		} = Self::minterest_model_dates(underlying_asset);
+		} = Self::minterest_model_params(underlying_asset);
 
 		// if utilization_rate > kink:
 		// normal_rate = kink * multiplier_per_block + base_rate_per_block

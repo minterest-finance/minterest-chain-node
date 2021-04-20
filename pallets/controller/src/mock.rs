@@ -3,7 +3,6 @@
 use super::*;
 use crate as controller;
 use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
-use frame_system as system;
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
@@ -47,7 +46,7 @@ ord_parameter_types! {
 
 mock_impl_system_config!(Runtime);
 mock_impl_orml_tokens_config!(Runtime);
-mock_impl_orml_currencies_config!(Runtime, MNT);
+mock_impl_orml_currencies_config!(Runtime);
 mock_impl_liquidity_pools_config!(Runtime);
 mock_impl_minterest_model_config!(Runtime, OneAlice);
 
@@ -300,7 +299,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		minterest_model::GenesisConfig {
-			minterest_model_dates: vec![
+			minterest_model_params: vec![
 				(
 					DOT,
 					MinterestModelData {

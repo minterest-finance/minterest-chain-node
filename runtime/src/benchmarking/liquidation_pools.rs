@@ -46,40 +46,40 @@ runtime_benchmarks! {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::benchmarking::utils::tests::new_test_ext;
+	use crate::benchmarking::utils::tests::test_externalities;
 	use frame_support::assert_ok;
 
 	#[test]
 	fn test_set_balancing_period() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_balancing_period());
 		})
 	}
 
 	#[test]
 	fn test_set_deviation_threshold() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_deviation_threshold());
 		})
 	}
 
 	#[test]
 	fn test_set_balance_ratio() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_balance_ratio());
 		})
 	}
 
 	#[test]
 	fn test_set_max_ideal_balance() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_max_ideal_balance());
 		})
 	}
 
 	#[test]
 	fn test_balance_liquidation_pools() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_balance_liquidation_pools());
 		})
 	}

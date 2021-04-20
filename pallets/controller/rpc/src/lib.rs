@@ -1,7 +1,9 @@
 //! RPC interface for the controller pallet.
 
 use codec::Codec;
-pub use controller_rpc_runtime_api::{ControllerApi as ControllerRuntimeApi, PoolState, UserPoolBalanceData};
+pub use controller_rpc_runtime_api::{
+	ControllerApi as ControllerRuntimeApi, HypotheticalLiquidityData, PoolState, UserPoolBalanceData,
+};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
 use minterest_primitives::CurrencyId;
@@ -17,6 +19,13 @@ pub trait ControllerApi<BlockHash, AccountId> {
 
 	#[rpc(name = "controller_userBalanceInfo")]
 	fn get_user_balance(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<UserPoolBalanceData>>;
+
+	#[rpc(name = "controller_accountLiquidity")]
+	fn get_hypothetical_account_liquidity(
+		&self,
+		account_id: AccountId,
+		at: Option<BlockHash>,
+	) -> Result<Option<HypotheticalLiquidityData>>;
 
 	#[rpc(name = "controller_isAdmin")]
 	fn is_admin(&self, caller: AccountId, at: Option<BlockHash>) -> Result<Option<bool>>;
@@ -86,6 +95,23 @@ where
 			.map_err(|e| RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
 				message: "Unable to get balance info.".into(),
+				data: Some(format!("{:?}", e).into()),
+			})
+	}
+
+	fn get_hypothetical_account_liquidity(
+		&self,
+		account_id: AccountId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<Option<HypotheticalLiquidityData>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+		api.get_hypothetical_account_liquidity(&at, account_id)
+			.map_err(|e| RpcError {
+				code: ErrorCode::ServerError(Error::RuntimeError.into()),
+				message: "Unable to get hypothetical account liquidity.".into(),
 				data: Some(format!("{:?}", e).into()),
 			})
 	}

@@ -9,7 +9,7 @@
 #[cfg(test)]
 mod tests {
 	use frame_support::{assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
-	use frame_system::{self as system, offchain::SendTransactionTypes, EnsureSignedBy};
+	use frame_system::{offchain::SendTransactionTypes, EnsureSignedBy};
 	use liquidity_pools::{Pool, PoolUserData};
 	pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 	use minterest_primitives::{Balance, CurrencyId, Price, Rate};
@@ -78,7 +78,7 @@ mod tests {
 	pub struct WhitelistMembers;
 	mock_impl_system_config!(Test);
 	mock_impl_orml_tokens_config!(Test);
-	mock_impl_orml_currencies_config!(Test, MNT);
+	mock_impl_orml_currencies_config!(Test);
 	mock_impl_liquidity_pools_config!(Test);
 	mock_impl_liquidation_pools_config!(Test);
 	mock_impl_controller_config!(Test, ZeroAdmin);
@@ -306,7 +306,7 @@ mod tests {
 			.unwrap();
 
 			minterest_model::GenesisConfig {
-				minterest_model_dates: vec![
+				minterest_model_params: vec![
 					(
 						DOT,
 						MinterestModelData {

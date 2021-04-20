@@ -25,163 +25,159 @@ fn base_rate_per_block_equal_max_value() -> MinterestModelData {
 }
 
 #[test]
-fn set_base_rate_per_year_should_work() {
-	new_test_ext().execute_with(|| {
-		// Set Base rate per block equal 2.0: (10_512_000 / 1) / 5_256_000
-		assert_ok!(TestMinterestModel::set_base_rate_per_year(
+fn set_base_rate_should_work() {
+	test_externalities().execute_with(|| {
+		// Set Base rate per block equal to 2.0: (10_512_000 / 1) / 5_256_000
+		assert_ok!(TestMinterestModel::set_base_rate(
 			alice(),
 			DOT,
 			Rate::saturating_from_rational(10_512_000, 1)
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(DOT).base_rate_per_block,
+			TestMinterestModel::minterest_model_params(DOT).base_rate_per_block,
 			Rate::saturating_from_rational(2, 1)
 		);
-		let expected_event = Event::minterest_model(crate::Event::BaseRatePerBlockHasChanged);
+		let expected_event = Event::minterest_model(crate::Event::BaseRatePerBlockChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 0.0: (0 / 10) / 5_256_000
-		assert_ok!(TestMinterestModel::set_base_rate_per_year(alice(), DOT, Rate::zero()));
+		assert_ok!(TestMinterestModel::set_base_rate(alice(), DOT, Rate::zero()));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(DOT).base_rate_per_block,
+			TestMinterestModel::minterest_model_params(DOT).base_rate_per_block,
 			Rate::zero()
 		);
 
-		// ALICE set Baser rate per block equal 0,000000009: (47_304 / 1_000_000) / 5_256_000
-		assert_ok!(TestMinterestModel::set_base_rate_per_year(
+		// ALICE set Base rate per block equal to 0,000000009: (47_304 / 1_000_000) / 5_256_000
+		assert_ok!(TestMinterestModel::set_base_rate(
 			alice(),
 			DOT,
 			Rate::saturating_from_rational(47304, 1_000_000)
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(DOT).base_rate_per_block,
+			TestMinterestModel::minterest_model_params(DOT).base_rate_per_block,
 			Rate::from_inner(9_000_000_000)
 		);
 
 		// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
-		assert_ok!(TestMinterestModel::set_multiplier_per_year(alice(), DOT, Rate::zero()));
+		assert_ok!(TestMinterestModel::set_multiplier(alice(), DOT, Rate::zero()));
 		assert_noop!(
-			TestMinterestModel::set_base_rate_per_year(alice(), DOT, Rate::zero()),
+			TestMinterestModel::set_base_rate(alice(), DOT, Rate::zero()),
 			Error::<Test>::BaseRatePerBlockCannotBeZero
 		);
 
 		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(
-			TestMinterestModel::set_base_rate_per_year(bob(), DOT, Rate::from_inner(2)),
+			TestMinterestModel::set_base_rate(bob(), DOT, Rate::from_inner(2)),
 			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestMinterestModel::set_base_rate_per_year(alice(), MDOT, Rate::from_inner(2)),
+			TestMinterestModel::set_base_rate(alice(), MDOT, Rate::from_inner(2)),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
 }
 
 #[test]
-fn set_multiplier_per_year_should_work() {
-	new_test_ext().execute_with(|| {
-		// Set Multiplier per block equal 2.0: (10_512_000 / 1) / 5_256_000
-		assert_ok!(TestMinterestModel::set_multiplier_per_year(
+fn set_multiplier_should_work() {
+	test_externalities().execute_with(|| {
+		// Set Multiplier per block equal to 2.0: (10_512_000 / 1) / 5_256_000
+		assert_ok!(TestMinterestModel::set_multiplier(
 			alice(),
 			DOT,
 			Rate::saturating_from_rational(10_512_000, 1)
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(DOT).multiplier_per_block,
+			TestMinterestModel::minterest_model_params(DOT).multiplier_per_block,
 			Rate::saturating_from_rational(2, 1)
 		);
-		let expected_event = Event::minterest_model(crate::Event::MultiplierPerBlockHasChanged);
+		let expected_event = Event::minterest_model(crate::Event::MultiplierPerBlockChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 0.0 if Base rate per block grater than zero: (0 / 10) / 5_256_000
-		assert_ok!(TestMinterestModel::set_base_rate_per_year(alice(), DOT, Rate::one()));
-		assert_ok!(TestMinterestModel::set_multiplier_per_year(alice(), DOT, Rate::zero()));
+		assert_ok!(TestMinterestModel::set_base_rate(alice(), DOT, Rate::one()));
+		assert_ok!(TestMinterestModel::set_multiplier(alice(), DOT, Rate::zero()));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(DOT).multiplier_per_block,
+			TestMinterestModel::minterest_model_params(DOT).multiplier_per_block,
 			Rate::zero()
 		);
 
-		// Alice set Multiplier per block equal 0,000_000_009: (47_304 / 1_000_000) / 5_256_000
-		assert_ok!(TestMinterestModel::set_multiplier_per_year(
+		// Alice set Multiplier per block equal to 0,000_000_009: (47_304 / 1_000_000) / 5_256_000
+		assert_ok!(TestMinterestModel::set_multiplier(
 			alice(),
 			DOT,
 			Rate::saturating_from_rational(47304, 1_000_000)
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(DOT).multiplier_per_block,
+			TestMinterestModel::minterest_model_params(DOT).multiplier_per_block,
 			Rate::from_inner(9_000_000_000)
 		);
 
 		//  Multiplier per block cannot be set to 0 at the same time as Base rate per block.
-		assert_ok!(TestMinterestModel::set_base_rate_per_year(alice(), DOT, Rate::zero()));
+		assert_ok!(TestMinterestModel::set_base_rate(alice(), DOT, Rate::zero()));
 		assert_noop!(
-			TestMinterestModel::set_multiplier_per_year(alice(), DOT, Rate::zero()),
+			TestMinterestModel::set_multiplier(alice(), DOT, Rate::zero()),
 			Error::<Test>::MultiplierPerBlockCannotBeZero
 		);
 
 		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(
-			TestMinterestModel::set_multiplier_per_year(bob(), DOT, Rate::from_inner(2)),
+			TestMinterestModel::set_multiplier(bob(), DOT, Rate::from_inner(2)),
 			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestMinterestModel::set_base_rate_per_year(alice(), MDOT, Rate::from_inner(2)),
+			TestMinterestModel::set_base_rate(alice(), MDOT, Rate::from_inner(2)),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
 }
 
 #[test]
-fn set_jump_multiplier_per_year_should_work() {
-	new_test_ext().execute_with(|| {
-		// Set Jump multiplier per block equal 2.0: (10_512_000 / 1) / 5_256_000
-		assert_ok!(TestMinterestModel::set_jump_multiplier_per_year(
+fn set_jump_multiplier_should_work() {
+	test_externalities().execute_with(|| {
+		// Set Jump multiplier per block equal to 2.0: (10_512_000 / 1) / 5_256_000
+		assert_ok!(TestMinterestModel::set_jump_multiplier(
 			alice(),
 			DOT,
 			Rate::saturating_from_rational(10_512_000, 1)
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(DOT).jump_multiplier_per_block,
+			TestMinterestModel::minterest_model_params(DOT).jump_multiplier_per_block,
 			Rate::saturating_from_rational(2, 1)
 		);
-		let expected_event = Event::minterest_model(crate::Event::JumpMultiplierPerBlockHasChanged);
+		let expected_event = Event::minterest_model(crate::Event::JumpMultiplierPerBlockChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 0.0: (0 / 10) / 5_256_000
-		assert_ok!(TestMinterestModel::set_jump_multiplier_per_year(
-			alice(),
-			DOT,
-			Rate::zero()
-		));
+		assert_ok!(TestMinterestModel::set_jump_multiplier(alice(), DOT, Rate::zero()));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(DOT).jump_multiplier_per_block,
+			TestMinterestModel::minterest_model_params(DOT).jump_multiplier_per_block,
 			Rate::zero()
 		);
 
-		// Alice set Jump multiplier per block equal 0,000_000_009: (47_304 / 1_000_000) / 5_256_000
-		assert_ok!(TestMinterestModel::set_jump_multiplier_per_year(
+		// Alice set Jump multiplier per block equal to 0,000_000_009: (47_304 / 1_000_000) / 5_256_000
+		assert_ok!(TestMinterestModel::set_jump_multiplier(
 			alice(),
 			DOT,
 			Rate::saturating_from_rational(47_304, 1_000_000)
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(DOT).jump_multiplier_per_block,
+			TestMinterestModel::minterest_model_params(DOT).jump_multiplier_per_block,
 			Rate::from_inner(9_000_000_000)
 		);
 
 		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(
-			TestMinterestModel::set_jump_multiplier_per_year(bob(), DOT, Rate::from_inner(2)),
+			TestMinterestModel::set_jump_multiplier(bob(), DOT, Rate::from_inner(2)),
 			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestMinterestModel::set_base_rate_per_year(alice(), MDOT, Rate::from_inner(2)),
+			TestMinterestModel::set_base_rate(alice(), MDOT, Rate::from_inner(2)),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
@@ -189,17 +185,17 @@ fn set_jump_multiplier_per_year_should_work() {
 
 #[test]
 fn set_kink_should_work() {
-	new_test_ext().execute_with(|| {
+	test_externalities().execute_with(|| {
 		assert_ok!(TestMinterestModel::set_kink(
 			alice(),
 			DOT,
 			Rate::saturating_from_rational(8, 10)
 		));
 		assert_eq!(
-			TestMinterestModel::minterest_model_dates(DOT).kink,
+			TestMinterestModel::minterest_model_params(DOT).kink,
 			Rate::saturating_from_rational(8, 10)
 		);
-		let expected_event = Event::minterest_model(crate::Event::KinkHasChanged);
+		let expected_event = Event::minterest_model(crate::Event::KinkChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Root or half MinterestCouncil.
@@ -214,7 +210,7 @@ fn set_kink_should_work() {
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 
-		// Parameter `kink` cannot be more than one.
+		// Parameter `kink` cannot be larger than one.
 		assert_noop!(
 			TestMinterestModel::set_kink(alice(), DOT, Rate::saturating_from_rational(11, 10)),
 			Error::<Test>::KinkCannotBeMoreThanOne
@@ -224,8 +220,8 @@ fn set_kink_should_work() {
 
 #[test]
 fn calculate_borrow_interest_rate_should_work() {
-	new_test_ext().execute_with(|| {
-		// Utilization rate less or equal than kink:
+	test_externalities().execute_with(|| {
+		// Utilization rate less or equal to kink:
 		// utilization_rate = 0.42
 		// borrow_interest_rate = 0,42 * multiplier_per_block + base_rate_per_block
 		assert_eq!(
@@ -246,7 +242,7 @@ fn calculate_borrow_interest_rate_should_work() {
 
 #[test]
 fn calculate_borrow_interest_rate_fails_if_overflow_kink_mul_multiplier() {
-	new_test_ext().execute_with(|| {
+	test_externalities().execute_with(|| {
 		let minterest_model_data = multiplier_per_block_equal_max_value();
 		<MinterestModelParams<Test>>::insert(KSM, minterest_model_data.clone());
 		// utilization_rate > kink.
@@ -260,7 +256,7 @@ fn calculate_borrow_interest_rate_fails_if_overflow_kink_mul_multiplier() {
 
 #[test]
 fn calculate_borrow_interest_rate_fails_if_overflow_add_base_rate_per_block() {
-	new_test_ext().execute_with(|| {
+	test_externalities().execute_with(|| {
 		let minterest_model_data = base_rate_per_block_equal_max_value();
 		<MinterestModelParams<Test>>::insert(KSM, minterest_model_data.clone());
 		// utilization_rate > kink.
