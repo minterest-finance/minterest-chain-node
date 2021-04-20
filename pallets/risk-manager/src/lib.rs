@@ -3,6 +3,12 @@
 //! ## Overview
 //!
 //! Risk Manager pallet is responsible for automatic liquidation which is done by offchain worker.
+//! Liquidation occurs in the situations when user`s collateral is less then borrowed.
+//! In cases when there is enough borrowed assets and liquidation attempts hadn`t been exceeded
+//! partial liquidation is executed in order to minimize user`s losses.
+//! Except collateral assets confiscation, there is an additional amount defined by
+//! `liquidation_fee`, which is transferred from user`s collateral liquidity_pool to liquidation
+//! pool.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
