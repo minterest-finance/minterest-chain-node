@@ -138,11 +138,6 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
-		self.endowed_accounts.push((user, currency_id, balance));
-		self
-	}
-
 	pub fn enable_minting_for_all_pools(mut self) -> Self {
 		self.minted_pools = vec![KSM, DOT, ETH, BTC];
 		self
