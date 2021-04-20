@@ -366,7 +366,7 @@ fn test_update_mnt_borrow_index() {
 			assert_eq!(dot_mnt_speed + eth_mnt_speed + ksm_mnt_speed + btc_mnt_speed, mnt_rate);
 
 			let check_borrow_index = |underlying_id: CurrencyId, pool_mnt_speed: Balance, total_borrow: Balance| {
-				// FIXME: delete comment
+				System::set_block_number(2);
 				MntToken::refresh_mnt_speeds().unwrap();
 				// 1.5 current borrow_index. I use 15 in this function, that why I make total_borrow * 10
 				let borrow_total_amount = Rate::saturating_from_rational(total_borrow * 10, 15);
