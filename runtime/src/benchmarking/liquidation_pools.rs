@@ -86,7 +86,7 @@ mod tests {
 
 	#[test]
 	fn test_transfer_to_liquidation_pool() {
-		new_test_ext().execute_with(|| {
+		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_transfer_to_liquidation_pool());
 		})
 	}
