@@ -27,6 +27,8 @@ mod mock;
 mod tests;
 
 pub mod weights;
+use frame_support::sp_std::cmp::Ordering;
+use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 pub use weights::WeightInfo;
 
 /// Representation of supply/borrow pool state
@@ -170,16 +172,16 @@ pub mod module {
 	pub(crate) type MntSupplierIndex<T: Config> =
 		StorageDoubleMap<_, Twox64Concat, CurrencyId, Twox64Concat, T::AccountId, Rate, OptionQuery>;
 
-	/// Place where accrued MNT tokens are kept for each user
-	#[pallet::storage]
-	#[pallet::getter(fn mnt_accrued)]
-	pub(crate) type MntAccrued<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Balance, ValueQuery>;
-
 	/// Use for accruing MNT tokens for borrower
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_borrower_index)]
 	pub(crate) type MntBorrowerIndex<T: Config> =
 		StorageDoubleMap<_, Twox64Concat, CurrencyId, Twox64Concat, T::AccountId, Rate, ValueQuery>;
+
+	/// Place where accrued MNT tokens are kept for each user
+	#[pallet::storage]
+	#[pallet::getter(fn mnt_accrued)]
+	pub(crate) type MntAccrued<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Balance, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -344,7 +346,7 @@ impl<T: Config> Pallet<T> {
 	/// Update mnt borrow index for pool
 	#[allow(dead_code)] // TODO remove this
 	fn update_mnt_borrow_index(underlying_id: CurrencyId) -> DispatchResult {
-		// block_delta = current_block_number - bottow_state.index_updated_at_block
+		// block_delta = current_block_number - borrow_state.index_updated_at_block
 		// mnt_accrued = delta_blocks * mnt_speed
 		// borrow_amount - mtoken.total_borrows() / liquidity_pool_borrow_index
 		// ratio = mnt_accrued / borrow_amount
@@ -377,9 +379,12 @@ impl<T: Config> Pallet<T> {
 				.checked_div(&T::LiquidityPoolsManager::get_pool_borrow_index(underlying_id))
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			let ratio = Rate::from_inner(mnt_accrued)
-				.checked_div(&borrow_amount)
-				.ok_or(Error::<T>::NumOverflow)?;
+			let ratio = match borrow_amount.cmp(&Rate::zero()) {
+				Ordering::Greater => Rate::from_inner(mnt_accrued)
+					.checked_div(&borrow_amount)
+					.ok_or(Error::<T>::NumOverflow)?,
+				_ => Rate::zero(),
+			};
 
 			pool_state.borrow_state.mnt_distribution_index = pool_state
 				.borrow_state
@@ -480,7 +485,12 @@ impl<T: Config> Pallet<T> {
 
 			let total_tokens_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
 
-			let ratio = Rate::checked_from_rational(mnt_accrued, total_tokens_supply).ok_or(Error::<T>::NumOverflow)?;
+			let ratio = match total_tokens_supply.cmp(&Balance::zero()) {
+				Ordering::Greater => {
+					Rate::checked_from_rational(mnt_accrued, total_tokens_supply).ok_or(Error::<T>::NumOverflow)?
+				}
+				_ => Rate::zero(),
+			};
 
 			pool_state.supply_state.mnt_distribution_index = pool_state
 				.supply_state
@@ -519,14 +529,22 @@ impl<T: Config> Pallet<T> {
 		Ok((result, total_utility))
 	}
 
-	/// Recalculate MNT speeds
+	/// Recalcul`ate MNT speeds
 	fn refresh_mnt_speeds() -> DispatchResult {
-		// TODO Add update indexes here when it will be implemented
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.iter()
+			.try_for_each(|&pool_id| -> DispatchResult {
+				Self::update_mnt_supply_index(pool_id)?;
+				Self::update_mnt_borrow_index(pool_id)?;
+				Ok(())
+			})?;
+
 		let (pool_utilities, sum_of_all_utilities) = Self::calculate_enabled_pools_utilities()?;
 		if sum_of_all_utilities.is_zero() {
 			// There is nothing to calculate.
 			return Ok(());
 		}
+
 		let mnt_rate = Self::mnt_rate();
 		for (currency_id, utility) in pool_utilities {
 			let utility_fraction = Rate::saturating_from_rational(utility, sum_of_all_utilities);
@@ -554,7 +572,8 @@ impl<T: Config> Pallet<T> {
 		};
 
 		if user_accrued >= threshold && user_accrued > 0 {
-			if user_accrued <= T::MultiCurrency::free_balance(MNT, &Self::get_account_id()) {
+			let mnt_treasury_balance = T::MultiCurrency::free_balance(MNT, &Self::get_account_id());
+			if user_accrued <= mnt_treasury_balance {
 				T::MultiCurrency::transfer(MNT, &Self::get_account_id(), &user, user_accrued)?;
 				MntAccrued::<T>::remove(user); // set to 0
 			}

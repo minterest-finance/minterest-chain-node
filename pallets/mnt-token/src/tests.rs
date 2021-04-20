@@ -68,7 +68,7 @@ fn distribute_mnt_to_borrower_with_threshold() {
 
 			let mnt_rate = 10 * DOLLARS;
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
-			// First interaction with protocol for distributers.
+			// First interaction with protocol for distributors.
 			// This is a starting point to earn MNT token
 			assert_ok!(MntToken::update_mnt_borrow_index(DOT));
 			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &ALICE, false));
@@ -111,7 +111,7 @@ fn distribute_mnt_to_supplier_with_threshold() {
 			// So at the first step awarded tokens should be kept in internal storage
 			// At the second it should be transferred to ALICE and so on.
 
-			// set total issuances
+			// set total issuance
 			Currencies::deposit(MDOT, &ALICE, 100 * DOLLARS).unwrap();
 
 			check_supplier_accrued(DOT, ALICE, 0, 10 * DOLLARS);
@@ -145,7 +145,7 @@ fn distribute_mnt_to_supplier_from_different_pools() {
 			assert_eq!(MntToken::mnt_speeds(DOT), dot_mnt_speed);
 			assert_eq!(MntToken::mnt_speeds(KSM), ksm_mnt_speed);
 
-			// set total issuances
+			// set total issuance
 			Currencies::deposit(MDOT, &ALICE, 100 * DOLLARS).unwrap();
 			Currencies::deposit(MKSM, &ALICE, 100 * DOLLARS).unwrap();
 
@@ -185,14 +185,13 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 			true,
 			0,
 		)
-		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
 			// Check accruing mnt tokens from two pools for borrower
 			let mnt_rate = 10 * DOLLARS;
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
 
-			// First interaction with protocol for distributers.
+			// First interaction with protocol for distributors.
 			// This is a starting point to earn MNT token
 			assert_ok!(MntToken::update_mnt_borrow_index(DOT));
 			assert_ok!(MntToken::update_mnt_borrow_index(KSM));
@@ -253,20 +252,21 @@ fn distribute_borrowers_mnt() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
-			//
-			// There is only one pool included in minting process. So 10 mnt for this pool.
-			// Pool total borrow is 150_000. Alice borrowed 30_000 and BOB - 120_000
-			//
-			// This is a part of liquidity which belongs to Alice.
-			// 30 / 150 = 0.2.
-			//
-			// 10(mnt per block) * 0.2(alice part) = 2.
-			// This is how many MNT tokens per block Alice should acquire as a borrower.
-			//
-			// For Bob: 120 / 150 = 0.8; 0.8 * 10 = 8
+			/*
+			There is only one pool included in minting process. So 10 mnt for this pool.
+			Pool total borrow is 150_000. Alice borrowed 30_000 and BOB - 120_000
 
-			// First interaction with protocol for distributers.
-			// This is started point to earn MNT token
+			This is a part of liquidity which belongs to Alice.
+			30 / 150 = 0.2.
+
+			10(mnt per block) * 0.2(alice part) = 2.
+			This is how many MNT tokens per block Alice should acquire as a borrower.
+
+			For Bob: 120 / 150 = 0.8; 0.8 * 10 = 8
+
+			First interaction with protocol for distributors.
+			This is started point to earn MNT token
+			 */
 			assert_ok!(MntToken::update_mnt_borrow_index(DOT));
 			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &ALICE, false));
 			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &BOB, false));
@@ -301,7 +301,7 @@ fn distribute_borrower_mnt() {
 		.execute_with(|| {
 			let mnt_rate = 12 * DOLLARS;
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
-			// First interaction with protocol for distributers.
+			// First interaction with protocol for distributors.
 			// This is a starting point to earn MNT token
 			assert_ok!(MntToken::update_mnt_borrow_index(DOT));
 			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &ALICE, false));
@@ -339,10 +339,11 @@ fn test_update_mnt_borrow_index() {
 			// Input parameters:
 			// mnt_rate: 1
 			// Prices: DOT[0] = 0.5 USD, ETH[1] = 1.5 USD, KSM[2] = 2 USD, BTC[3] = 3 USD
-			// utilities: DOT = 5000, ETH = 30000, KSM = 60000, BTC = 120000
+			// utilities: DOT = $5000, ETH = $30000, KSM = $60000, BTC = $120000
 			// sum_of_all_pools_utilities = 215000
 
-			let (currency_utilities, total_utility) = MntToken::calculate_enabled_pools_utilities().unwrap();
+			let (currency_utilities, total_utility): (Vec<(CurrencyId, Balance)>, Balance) =
+				MntToken::calculate_enabled_pools_utilities().unwrap();
 			assert!(currency_utilities.contains(&(DOT, 5000 * DOLLARS)));
 			assert!(currency_utilities.contains(&(ETH, 30000 * DOLLARS)));
 			assert!(currency_utilities.contains(&(KSM, 60000 * DOLLARS)));
@@ -358,12 +359,16 @@ fn test_update_mnt_borrow_index() {
 			let ksm_mnt_speed = 279069767441860465;
 			// 0.558139534883720930
 			let btc_mnt_speed = 558139534883720930;
+			assert_eq!(MntToken::mnt_speeds(DOT), dot_mnt_speed);
 			assert_eq!(MntToken::mnt_speeds(BTC), btc_mnt_speed);
+			assert_eq!(MntToken::mnt_speeds(ETH), eth_mnt_speed);
+			assert_eq!(MntToken::mnt_speeds(KSM), ksm_mnt_speed);
 			assert_eq!(dot_mnt_speed + eth_mnt_speed + ksm_mnt_speed + btc_mnt_speed, mnt_rate);
 
-			let check_borrow_index = |underlying_id: CurrencyId, pool_mnt_speed: Balance, total_borrow: u128| {
-				MntToken::update_mnt_borrow_index(underlying_id).unwrap();
-				// 1.5 current borrow_index. I use 15 in this function, thats why I make total_borrow * 10
+			let check_borrow_index = |underlying_id: CurrencyId, pool_mnt_speed: Balance, total_borrow: Balance| {
+				// FIXME: delete comment
+				MntToken::refresh_mnt_speeds().unwrap();
+				// 1.5 current borrow_index. I use 15 in this function, that why I make total_borrow * 10
 				let borrow_total_amount = Rate::saturating_from_rational(total_borrow * 10, 15);
 
 				let expected_index = initial_index + Rate::from_inner(pool_mnt_speed) / borrow_total_amount;
@@ -387,27 +392,25 @@ fn test_update_mnt_borrow_index_simple() {
 		.set_mnt_rate(1)
 		.build()
 		.execute_with(|| {
-			//
-			// * Minting was enabled when block_number was equal to 0. Here block_number == 1.
-			// So block_delta = 1
-			//
+			/*
+			* Minting was enabled when block_number was equal to 0. Here block_number == 1.
+			So block_delta = 1
 
-			//
-			// Input parameters: mnt_speed = 1,
-			//					 total_borrowed = 150,
-			//                   pool_borrow_index = 1.5,
-			//                   mnt_acquired = delta_blocks * mnt_speed = 1
-			//
-			// This is how much currency was borrowed without interest
-			// borrow_total_amount = total_borrowed(150000) / pool_borrow_index(1.5)  = 100000
-			//
-			// How much MNT tokens were earned per block
-			// ratio = mnt_acquired / borrow_total_amount = 0.00001
-			//
-			// mnt_borrow_index = mnt_borrow_index(1 as initial value) + ratio(0.00001) = 1.00001
-			//
-			// *ratio is amount of MNT tokens for 1 borrowed token
-			//
+			Input parameters: 	mnt_speed = 1,
+								total_borrowed = 150,
+								   pool_borrow_index = 1.5,
+								   mnt_acquired = delta_blocks * mnt_speed = 1
+
+			This is how much currency was borrowed without interest
+			borrow_total_amount = total_borrowed(150000) / pool_borrow_index(1.5)  = 100000
+
+			How much MNT tokens were earned per block
+			ratio = mnt_acquired / borrow_total_amount = 0.00001
+
+			mnt_borrow_index = mnt_borrow_index(1 as initial value) + ratio(0.00001) = 1.00001
+
+			*ratio is amount of MNT tokens for 1 borrowed token
+			*/
 
 			MntToken::update_mnt_borrow_index(DOT).unwrap();
 			let pool_state = MntToken::mnt_pools_state(DOT);
@@ -524,7 +527,7 @@ fn test_update_mnt_supply_index() {
 			// So block_delta = 1
 			//
 
-			// set total issuances
+			// set total issuance
 			let mdot_total_issuance = 10 * DOLLARS;
 			let meth_total_issuance = 20 * DOLLARS;
 			let mksm_total_issuance = 30 * DOLLARS;
