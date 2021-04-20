@@ -2,7 +2,8 @@
 //!
 //! ## Overview
 //!
-//! This is a pallet for trading tokens during rebalancing.
+//! This is a pallet for trading tokens with DeXes. May be used when balancing Liquidation pools or
+//! buying back MNT tokens for re-distribution.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]

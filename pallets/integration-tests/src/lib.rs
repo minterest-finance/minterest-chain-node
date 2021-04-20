@@ -2,9 +2,9 @@
 //!
 //! ## Overview
 //!
-//! Integration Tests pallet is responsible for checking complex test-cases with several pallets
+//! Integration Tests pallet is responsible for checking complex test cases with several pallets
 //! involved.
-//! Tests are split to different files depending on what pallet they are related to. There also is
+//! Tests are split into different files depending on what pallet they are related to. There is also
 //! a scenario_tests.rs file which isn`t related to any particular pallet.
 
 #![cfg_attr(not(feature = "std"), no_std)]
