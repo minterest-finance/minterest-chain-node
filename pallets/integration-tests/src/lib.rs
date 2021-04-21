@@ -58,6 +58,7 @@ mod tests {
 			TestController: controller::{Module, Storage, Call, Event, Config<T>},
 			MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 			TestDex: dex::{Module, Storage, Call, Event<T>},
+			TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		}
 	);
 
@@ -68,8 +69,10 @@ mod tests {
 	parameter_types! {
 		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 		pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+		pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
 		pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 		pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
+		pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
 		pub InitialExchangeRate: Rate = Rate::one();
 		pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 		pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
@@ -85,6 +88,7 @@ mod tests {
 	mock_impl_minterest_model_config!(Test, ZeroAdmin);
 	mock_impl_dex_config!(Test);
 	mock_impl_minterest_protocol_config!(Test);
+	mock_impl_mnt_token_config!(Test, ZeroAdmin);
 
 	pub struct MockPriceSource;
 

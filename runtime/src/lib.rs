@@ -349,6 +349,7 @@ impl minterest_protocol::Config for Runtime {
 	type Borrowing = LiquidityPools;
 	type ManagerLiquidationPools = LiquidationPools;
 	type ManagerLiquidityPools = LiquidityPools;
+	type MntManager = MntToken;
 	type WhitelistMembers = WhitelistCouncilProvider;
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
 }
@@ -423,6 +424,7 @@ parameter_types! {
 impl controller::Config for Runtime {
 	type Event = Event;
 	type LiquidityPoolsManager = LiquidityPools;
+	type MntManager = MntToken;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type ControllerWeightInfo = weights::controller::WeightInfo<Runtime>;
@@ -472,7 +474,7 @@ impl mnt_token::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControllerAPI = Controller;
 	type MntTokenAccountId = MntTokenAccountId;
-	type ProtocolWeightInfo = weights::mnt_token::WeightInfo<Runtime>;
+	type MntTokenWeightInfo = weights::mnt_token::WeightInfo<Runtime>;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime

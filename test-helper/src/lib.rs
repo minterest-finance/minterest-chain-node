@@ -156,6 +156,7 @@ macro_rules! mock_impl_controller_config {
 		impl controller::Config for $target {
 			type Event = Event;
 			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
+			type MntManager = mnt_token::Module<$target>;
 			type MaxBorrowCap = MaxBorrowCap;
 			type UpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type ControllerWeightInfo = ();
@@ -204,6 +205,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type Borrowing = liquidity_pools::Module<$target>;
 			type ManagerLiquidationPools = liquidation_pools::Module<$target>;
 			type ManagerLiquidityPools = liquidity_pools::Module<$target>;
+			type MntManager = mnt_token::Module<$target>;
 			type WhitelistMembers = WhitelistMembers;
 			type ProtocolWeightInfo = ();
 		}
@@ -224,6 +226,22 @@ macro_rules! mock_impl_risk_manager_config {
 			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
 			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type RiskManagerWeightInfo = ();
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! mock_impl_mnt_token_config {
+	($target:ty, $acc:ident) => {
+		impl mnt_token::Config for $target {
+			type Event = Event;
+			type PriceSource = MockPriceSource;
+			type UpdateOrigin = EnsureSignedBy<$acc, AccountId>;
+			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
+			type MultiCurrency = orml_tokens::Module<$target>;
+			type ControllerAPI = controller::Module<$target>;
+			type MntTokenAccountId = MntTokenAccountId;
+			type MntTokenWeightInfo = ();
 		}
 	};
 }

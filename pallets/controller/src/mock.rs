@@ -37,6 +37,7 @@ frame_support::construct_runtime!(
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
+		TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -49,10 +50,13 @@ mock_impl_orml_tokens_config!(Runtime);
 mock_impl_orml_currencies_config!(Runtime);
 mock_impl_liquidity_pools_config!(Runtime);
 mock_impl_minterest_model_config!(Runtime, OneAlice);
+mock_impl_mnt_token_config!(Runtime, OneAlice);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
+	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
+	pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
@@ -85,6 +89,7 @@ parameter_types! {
 impl Config for Runtime {
 	type Event = Event;
 	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
+	type MntManager = MntToken;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
 	type ControllerWeightInfo = ();

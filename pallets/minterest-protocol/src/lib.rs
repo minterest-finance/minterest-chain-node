@@ -11,9 +11,10 @@
 use frame_support::traits::Contains;
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
+use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 use minterest_primitives::{Balance, CurrencyId, Operation};
 use orml_traits::MultiCurrency;
-use pallet_traits::{Borrowing, LiquidityPoolsManager, PoolsManager};
+use pallet_traits::{Borrowing, LiquidityPoolsManager, MntManager, PoolsManager};
 use sp_runtime::{
 	traits::{BadOrigin, Zero},
 	DispatchError, DispatchResult,
@@ -38,7 +39,6 @@ type BalanceResult = result::Result<Balance, DispatchError>;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + controller::Config + SendTransactionTypes<Call<Self>> {
@@ -53,6 +53,9 @@ pub mod module {
 
 		/// The basic liquidity pools.
 		type ManagerLiquidityPools: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
+
+		/// Provides MNT token distribution functionality.
+		type MntManager: MntManager<Self::AccountId>;
 
 		/// The origin which may call deposit/redeem/borrow/repay in Whitelist mode.
 		type WhitelistMembers: Contains<Self::AccountId>;
@@ -459,6 +462,9 @@ impl<T: Config> Pallet<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
+		<T as module::Config>::MntManager::update_mnt_supply_index(underlying_asset)?;
+		<T as module::Config>::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
+
 		// Fail if deposit not allowed
 		ensure!(
 			<Controller<T>>::is_operation_allowed(underlying_asset, Operation::Deposit),
@@ -641,6 +647,9 @@ impl<T: Config> Pallet<T> {
 			<Controller<T>>::is_operation_allowed(underlying_asset, Operation::Repay),
 			Error::<T>::OperationPaused
 		);
+
+		<T as module::Config>::MntManager::update_mnt_borrow_index(underlying_asset)?;
+		<T as module::Config>::MntManager::distribute_borrower_mnt(underlying_asset, borrower, false)?;
 
 		// Fetch the amount the borrower owes, with accumulated interest
 		let account_borrows = <Controller<T>>::borrow_balance_stored(&borrower, underlying_asset)?;
