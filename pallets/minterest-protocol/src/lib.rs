@@ -117,6 +117,9 @@ pub mod module {
 		/// underlying_asset, the_amount_repaid\]
 		Repaid(T::AccountId, CurrencyId, Balance),
 
+		/// Claimed the MNT accrued by holder: \[holder\]
+		Claimed(T::AccountId),
+
 		/// Transferred specified amount on a specified pool from one account to another:
 		/// \[who, receiver, wrapped_currency_id, wrapped_amount\]
 		Transferred(T::AccountId, T::AccountId, CurrencyId, Balance),
@@ -442,6 +445,16 @@ pub mod module {
 			Self::deposit_event(Event::PoolDisabledIsCollateral(sender, pool_id));
 			Ok(().into())
 		}
+
+		/// Claim all the MNT accrued by holder in the specified markets.
+		#[pallet::weight(10_000)]
+		#[transactional]
+		fn claim_mnt(origin: OriginFor<T>, pools: Vec<CurrencyId>) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			Self::do_claim(&who, pools)?;
+			Self::deposit_event(Event::Claimed(who));
+			Ok(().into())
+		}
 	}
 }
 
@@ -747,5 +760,22 @@ impl<T: Config> Pallet<T> {
 		} else {
 			Self::deposit_event(Event::ProtocolInterestTransferFailed(pool_id));
 		}
+	}
+
+	/// Claim all the MNT accrued by holder in the specified markets.
+	/// - `holder`: The AccountId to claim mnt for;
+	/// - `pools`: The vector of pools to claim MNT in.
+	fn do_claim(holder: &T::AccountId, pools: Vec<CurrencyId>) -> DispatchResult {
+		pools.iter().try_for_each(|&pool_id| -> DispatchResult {
+			ensure!(
+				pool_id.is_supported_underlying_asset(),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+			<T as module::Config>::MntManager::update_mnt_borrow_index(pool_id)?;
+			<T as module::Config>::MntManager::distribute_borrower_mnt(pool_id, holder, true)?;
+			<T as module::Config>::MntManager::update_mnt_supply_index(pool_id)?;
+			<T as module::Config>::MntManager::distribute_supplier_mnt(pool_id, holder, true)?;
+			Ok(())
+		})
 	}
 }
