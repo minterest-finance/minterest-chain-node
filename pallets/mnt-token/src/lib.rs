@@ -282,7 +282,7 @@ pub mod module {
 
 impl<T: Config> Pallet<T> {
 	/// Gets module account id.
-	fn get_account_id() -> T::AccountId {
+	pub fn get_account_id() -> T::AccountId {
 		T::MntTokenAccountId::get()
 	}
 
@@ -312,7 +312,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Recalcul`ate MNT speeds
-	fn refresh_mnt_speeds() -> DispatchResult {
+	pub fn refresh_mnt_speeds() -> DispatchResult {
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
 			.try_for_each(|&pool_id| -> DispatchResult {

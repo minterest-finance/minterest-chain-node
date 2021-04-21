@@ -35,6 +35,7 @@ mod tests {
 	mod liquidity_pools_tests;
 	mod minterest_model_tests;
 	mod minterest_protocol_tests;
+	mod mnt_token_tests;
 	mod scenario_tests;
 
 	pub type AccountId = u64;
@@ -135,6 +136,9 @@ mod tests {
 	pub fn alice() -> Origin {
 		Origin::signed(ALICE)
 	}
+	pub fn bob() -> Origin {
+		Origin::signed(BOB)
+	}
 
 	pub struct ExtBuilder {
 		endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -207,6 +211,12 @@ mod tests {
 					total_protocol_interest: Balance::zero(),
 				},
 			));
+			self
+		}
+
+		pub fn mnt_account_balance(mut self, balance: Balance) -> Self {
+			self.endowed_accounts
+				.push((TestMntToken::get_account_id(), MNT, balance));
 			self
 		}
 
@@ -341,6 +351,15 @@ mod tests {
 				],
 			}
 			.assimilate_storage::<Test>(&mut t)
+			.unwrap();
+
+			mnt_token::GenesisConfig::<Test> {
+				mnt_rate: 100_000_000_000_000_000, // 0.1
+				mnt_claim_threshold: 100 * DOLLARS,
+				minted_pools: vec![DOT, ETH],
+				phantom: Default::default(),
+			}
+			.assimilate_storage(&mut t)
 			.unwrap();
 
 			let mut ext = sp_io::TestExternalities::new(t);
