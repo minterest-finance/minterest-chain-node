@@ -1,5 +1,6 @@
 use super::utils::set_balance;
-use crate::{DexModuleId, LiquidationPools, LiquidationPoolsModuleId, Rate, Runtime, DOLLARS, DOT, ETH};
+use crate::{AccountId, DexModuleId, LiquidationPools, LiquidationPoolsModuleId, Rate, Runtime, DOLLARS, DOT, ETH};
+use frame_benchmarking::account;
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
 use sp_runtime::traits::AccountIdConversion;
@@ -22,6 +23,11 @@ runtime_benchmarks! {
 
 	set_max_ideal_balance {}: _(RawOrigin::Root, DOT,  Some(10u128.pow(18)))
 	verify { assert_eq!(LiquidationPools::liquidation_pools_data(DOT).max_ideal_balance, Some(10u128.pow(18))) }
+
+	transfer_to_liquidation_pool {
+		let who: AccountId = account("alice", 0, 0);
+		set_balance(DOT, &who, 20_000)?;
+	}: _(RawOrigin::Signed(who), DOT, 20_000)
 
 	balance_liquidation_pools {
 		set_balance(
@@ -75,6 +81,13 @@ mod tests {
 	fn test_balance_liquidation_pools() {
 		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_balance_liquidation_pools());
+		})
+	}
+
+	#[test]
+	fn test_transfer_to_liquidation_pool() {
+		test_externalities().execute_with(|| {
+			assert_ok!(test_benchmark_transfer_to_liquidation_pool());
 		})
 	}
 }
