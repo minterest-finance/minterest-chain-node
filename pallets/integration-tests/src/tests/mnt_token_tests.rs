@@ -47,78 +47,101 @@ mod tests {
 			.mnt_account_balance(ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
-				// Set initial balance
+				// Set initial state of pools for distribution MNT tokens.
 				assert_ok!(MinterestProtocol::deposit_underlying(admin(), DOT, ONE_HUNDRED));
 				assert_ok!(MinterestProtocol::deposit_underlying(admin(), ETH, ONE_HUNDRED));
 				assert_ok!(MinterestProtocol::deposit_underlying(admin(), BTC, ONE_HUNDRED));
+				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), DOT));
+				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), ETH));
+				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), BTC));
+				assert_ok!(MinterestProtocol::borrow(admin(), DOT, 50_000 * DOLLARS));
+				assert_ok!(MinterestProtocol::borrow(admin(), ETH, 50_000 * DOLLARS));
+				assert_ok!(MinterestProtocol::borrow(admin(), BTC, 50_000 * DOLLARS));
 
 				set_block_number_and_refresh_speeds(10);
 
-				// ALice deposit DOT and enable her assets in pools as collateral.
+				// ALice deposit DOT and enable her DOT pool as collateral.
 				assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, ONE_HUNDRED));
 				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+
 				set_block_number_and_refresh_speeds(20);
 
 				assert_ok!(MinterestProtocol::borrow(alice(), ETH, 50_000 * DOLLARS));
-				set_block_number_and_refresh_speeds(30);
-				// There are borrow only in the ETH pool, so its speed = mnt_rate = 0.1
-				test_mnt_speeds(0, 100_000_000_000_000_000, 0);
 
-				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT, ETH]));
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), 0);
+				// Accrued MNT tokens are equal to zero, since distribution occurs only at
+				// the moment of repeated user interaction with the protocol
+				// (deposit, redeem, borrow, repay, transfer, claim).
+				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
 				assert_eq!(Tokens::free_balance(MNT, &ALICE), Balance::zero());
 
-				// BOB deposit ETH and enable her assets in pools as collateral.
+				set_block_number_and_refresh_speeds(30);
+
+				// There are borrow in all pool, but BTC pool excluded from MNT distribution.
+				test_mnt_speeds(33_333_333_283_333_335, 66_666_666_716_666_664, 0);
+
+				// BOB deposit ETH and enable his assets in pools as collateral.
 				assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, ONE_HUNDRED));
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), 0);
 				assert_eq!(TestMntToken::mnt_accrued(BOB), 0);
+
 				set_block_number_and_refresh_speeds(40);
 
+				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![ETH]));
+				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
+				assert_eq!(Tokens::free_balance(MNT, &ALICE), 583_333_303_583_252_543);
+				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
+				assert_eq!(Tokens::free_balance(MNT, &ALICE), 1_249_999_968_987_352_566);
+
 				assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
+
 				set_block_number_and_refresh_speeds(50);
 
 				assert_ok!(MinterestProtocol::borrow(bob(), DOT, 20_000 * DOLLARS));
+
 				set_block_number_and_refresh_speeds(60);
 
-				test_mnt_speeds(28_571_427_653_061_254, 71_428_572_346_938_746, 0);
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), 0);
-				assert_eq!(TestMntToken::mnt_accrued(BOB), 0);
+				test_mnt_speeds(41_176_429_955_924_386, 58_823_570_044_075_613, 0);
 
 				assert_ok!(MinterestProtocol::borrow(alice(), BTC, 30_000 * DOLLARS));
+
 				set_block_number_and_refresh_speeds(70);
 
 				// The BTC pool is excluded from the MNT-token distribution, so its speed is zero.
-				test_mnt_speeds(28_571_427_653_061_254, 71_428_572_346_938_746, 0);
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), 0);
-				assert_eq!(TestMntToken::mnt_accrued(BOB), 0);
+				test_mnt_speeds(41_176_429_955_924_386, 58_823_570_044_075_613, 0);
+				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
 				assert_ok!(TestMntToken::enable_mnt_minting(admin(), BTC));
-				// DOT ~ 0.2; ETH ~ 0.5; BTC ~ 0.3
-				test_mnt_speeds(19_999_999_550_000_010, 50_000_001_124_999_974, 29_999_999_325_000_015);
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), 0);
-				assert_eq!(TestMntToken::mnt_accrued(BOB), 0);
+				test_mnt_speeds(27_999_980_560_014_495, 40_000_039_329_970_918, 31_999_980_110_014_586);
+				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
 				assert_ok!(MinterestProtocol::repay_all(alice(), ETH));
+
 				set_block_number_and_refresh_speeds(80);
 
-				// DOT = 0.4; ETH = 0; BTC = 0.6
-				test_mnt_speeds(40_000_000_000_000_000, 0, 60_000_000_000_000_000);
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), 3_714_285_723_469_350_000);
-				assert_eq!(TestMntToken::mnt_accrued(BOB), 0);
+				test_mnt_speeds(34_999_982_354_379_901, 25_000_034_903_116_419, 39_999_982_742_503_679);
+				assert_eq!(TestMntToken::mnt_accrued(ALICE), 960_784_860_312_994_443);
+				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
 				assert_ok!(MinterestProtocol::repay_all(alice(), BTC));
+
 				set_block_number_and_refresh_speeds(90);
 
-				test_mnt_speeds(100_000_000_000_000_000, 0, 0);
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), 4_014_285_716_719_350_000);
-				assert_eq!(TestMntToken::mnt_accrued(BOB), 0);
+				test_mnt_speeds(41_176_411_655_434_848, 29_411_778_501_715_166, 29_411_809_842_849_985);
+				assert_eq!(TestMntToken::mnt_accrued(ALICE), 1_080_784_765_813_049_532);
+				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
 				assert_ok!(MinterestProtocol::redeem(alice(), DOT));
+
 				set_block_number_and_refresh_speeds(100);
 
-				test_mnt_speeds(100_000_000_000_000_000, 0, 0);
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), 4_457_142_852_734_650_000);
-				assert_eq!(TestMntToken::mnt_accrued(BOB), 0);
+				assert_eq!(TestMntToken::mnt_accrued(ALICE), 193_499_967_121_418_2881);
+				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
+				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
+				assert_eq!(Tokens::free_balance(MNT, &ALICE), 3_184_999_640_201_535_447);
+				assert_ok!(MinterestProtocol::claim_mnt(bob(), vec![DOT]));
+				assert_eq!(Tokens::free_balance(MNT, &BOB), 510_531_665_008_614_425);
 			})
 	}
 }
