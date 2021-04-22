@@ -63,7 +63,10 @@ mod tests {
 				set_block_number_and_refresh_speeds(30);
 				// There are borrow only in the ETH pool, so its speed = mnt_rate = 0.1
 				test_mnt_speeds(0, 100_000_000_000_000_000, 0);
+
+				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT, ETH]));
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), 0);
+				assert_eq!(Tokens::free_balance(MNT, &ALICE), Balance::zero());
 
 				// BOB deposit ETH and enable her assets in pools as collateral.
 				assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, ONE_HUNDRED));

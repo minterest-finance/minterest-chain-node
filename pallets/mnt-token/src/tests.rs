@@ -5,6 +5,7 @@ use crate::mock::*;
 use frame_support::{assert_noop, assert_ok};
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
+use pallet_traits::MntManager;
 use sp_arithmetic::FixedPointNumber;
 use sp_runtime::traits::Zero;
 

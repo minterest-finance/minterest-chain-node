@@ -3,8 +3,7 @@
 use super::*;
 use crate as minterest_protocol;
 use controller::{ControllerData, PauseKeeper};
-use frame_support::pallet_prelude::GenesisBuild;
-use frame_support::{ord_parameter_types, parameter_types};
+use frame_support::{assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
@@ -133,18 +132,18 @@ impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
 			endowed_accounts: vec![
-				// seed: initial DOTs. Initial MINT to pay for gas.
-				(ALICE, MNT, ONE_MILL_DOLLARS),
+				// seed: initial DOTs
 				(ALICE, DOT, ONE_HUNDRED_DOLLARS),
 				(ALICE, ETH, ONE_HUNDRED_DOLLARS),
 				(ALICE, KSM, ONE_HUNDRED_DOLLARS),
-				(BOB, MNT, ONE_MILL_DOLLARS),
 				(BOB, DOT, ONE_HUNDRED_DOLLARS),
 				// seed: initial interest, equal 10_000$
 				(TestPools::pools_account_id(), ETH, TEN_THOUSAND_DOLLARS),
 				(TestPools::pools_account_id(), DOT, TEN_THOUSAND_DOLLARS),
 				// seed: initial interest = 10_000$, initial pool balance = 1_000_000$
 				(TestPools::pools_account_id(), KSM, ONE_MILL_DOLLARS),
+				// seed: initial MNT treasury = 1_000_000$
+				(TestMntToken::get_account_id(), MNT, ONE_MILL_DOLLARS),
 			],
 			pools: vec![],
 		}
@@ -345,8 +344,22 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
+		mnt_token::GenesisConfig::<Test> {
+			mnt_rate: 100_000_000_000_000_000, // 0.1
+			mnt_claim_threshold: 100 * DOLLARS,
+			minted_pools: vec![DOT, ETH],
+			phantom: Default::default(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 		let mut ext: sp_io::TestExternalities = t.into();
 		ext.execute_with(|| System::set_block_number(1));
 		ext
 	}
+}
+
+pub(crate) fn set_block_number_and_refresh_speeds(n: u64) {
+	System::set_block_number(n);
+	assert_ok!(TestMntToken::refresh_mnt_speeds());
 }

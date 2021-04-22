@@ -5778,6 +5778,7 @@ dependencies = [
  "minterest-model",
  "minterest-primitives",
  "minterest-protocol",
+ "mnt-token",
  "orml-tokens",
  "orml-traits",
  "orml-utilities",

@@ -447,9 +447,10 @@ pub mod module {
 		}
 
 		/// Claim all the MNT accrued by holder in the specified markets.
+		/// - `pools`: The vector of markets to claim MNT in
 		#[pallet::weight(10_000)]
 		#[transactional]
-		fn claim_mnt(origin: OriginFor<T>, pools: Vec<CurrencyId>) -> DispatchResultWithPostInfo {
+		pub fn claim_mnt(origin: OriginFor<T>, pools: Vec<CurrencyId>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			Self::do_claim(&who, pools)?;
 			Self::deposit_event(Event::Claimed(who));
