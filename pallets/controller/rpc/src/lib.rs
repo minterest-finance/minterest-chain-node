@@ -2,7 +2,7 @@
 
 use codec::Codec;
 pub use controller_rpc_runtime_api::{
-	ControllerApi as ControllerRuntimeApi, HypotheticalLiquidityData, PoolState, UserPoolBalanceData,
+	BalanceInfo, ControllerApi as ControllerRuntimeApi, HypotheticalLiquidityData, PoolState, UserPoolBalanceData,
 };
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
@@ -29,6 +29,9 @@ pub trait ControllerApi<BlockHash, AccountId> {
 
 	#[rpc(name = "controller_isAdmin")]
 	fn is_admin(&self, caller: AccountId, at: Option<BlockHash>) -> Result<Option<bool>>;
+
+	#[rpc(name = "controller_accountCollateral")]
+	fn get_user_total_collateral(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
 }
 
 /// A struct that implements the [`ControllerApi`].
@@ -122,6 +125,22 @@ where
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
 		api.is_admin(&at, caller).map_err(|e| RpcError {
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
+			message: "Unable to check if is an admin.".into(),
+			data: Some(format!("{:?}", e).into()),
+		})
+	}
+
+	fn get_user_total_collateral(
+		&self,
+		account_id: AccountId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<Option<BalanceInfo>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+		api.get_user_total_collateral(&at, account_id).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
 			message: "Unable to check if is an admin.".into(),
 			data: Some(format!("{:?}", e).into()),

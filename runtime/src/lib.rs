@@ -17,7 +17,7 @@ mod weights;
 mod weights_test;
 
 use crate::constants::fee::WeightToFee;
-pub use controller_rpc_runtime_api::{HypotheticalLiquidityData, PoolState, UserPoolBalanceData};
+pub use controller_rpc_runtime_api::{BalanceInfo, HypotheticalLiquidityData, PoolState, UserPoolBalanceData};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::fg_primitives;
@@ -782,6 +782,10 @@ impl_runtime_apis! {
 
 		fn is_admin(caller: AccountId) -> Option<bool> {
 				Some(MinterestCouncil::is_member(&caller))
+		}
+
+		fn get_user_total_collateral(account_id: AccountId) -> Option<BalanceInfo> {
+				Some(BalanceInfo{amount: Controller::get_user_total_collateral(account_id).ok()?})
 		}
 	}
 
