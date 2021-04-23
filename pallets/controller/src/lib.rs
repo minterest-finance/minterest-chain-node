@@ -716,6 +716,43 @@ impl<T: Config> Pallet<T> {
 				)?;
 		Ok((total_supply_balance, total_borrowed_balance))
 	}
+
+	pub fn get_user_total_collateral_x(who: T::AccountId) -> BalanceResult {
+		Ok(CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.iter()
+			.try_fold(Balance::zero(), |acc, &x| -> BalanceResult {
+				if !<LiquidityPools<T>>::check_user_available_collateral(&who, x) {
+					return Ok(acc);
+				}
+
+				let collateral_factor = Self::controller_dates(x).collateral_factor;
+				let wrapped_id = x.wrapped_asset().ok_or(Error::<T>::PoolNotFound)?;
+
+				let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
+
+				let current_block_number = <frame_system::Module<T>>::block_number();
+				let accrual_block_number_previous = Self::controller_dates(x).last_interest_accrued_block;
+				let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
+
+				let pool_data = Self::calculate_interest_params(x, block_delta)?;
+				let current_exchange_rate = <LiquidityPools<T>>::get_exchange_rate_by_interest_params(
+					x,
+					pool_data.total_protocol_interest,
+					pool_data.total_borrowed,
+				)?;
+
+				let oracle_price = T::PriceSource::get_underlying_price(x).ok_or(Error::<T>::InvalidFeedPrice)?;
+
+				let total_deposit_in_usd = Rate::from_inner(user_balance_wrapped_tokens)
+					.checked_mul(&current_exchange_rate)
+					.and_then(|x| x.checked_mul(&oracle_price))
+					.and_then(|x| x.checked_mul(&collateral_factor))
+					.map(|x| x.into_inner())
+					.ok_or(Error::<T>::NumOverflow)?;
+
+				Ok(acc + total_deposit_in_usd)
+			})?)
+	}
 }
 
 // Private methods
