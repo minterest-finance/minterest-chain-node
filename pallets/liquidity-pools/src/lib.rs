@@ -2,7 +2,11 @@
 //!
 //! ## Overview
 //!
-//! TODO: add overview.
+//! This pallet is managing information required for interest calculation.
+//! Besides every pool contains some amount of "dead money" which are stored in
+//! `total_protocol_interest`. These tokens don`t take part in protocol economy.
+//! Also it contains a set of helper functions for conversion between underlying asset and wrapped
+//! token.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]

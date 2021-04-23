@@ -2,7 +2,9 @@
 //!
 //! ## Overview
 //!
-//! TODO: add overview.
+//! Minterest Model pallet is responsible for storing and updating parameters related to economy.
+//! This pallet exposes `calculate_borrow_interest_rate` which is used to calculate borrow rate
+//! during interest calculations.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
