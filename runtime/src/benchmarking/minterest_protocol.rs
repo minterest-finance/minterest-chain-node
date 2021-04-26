@@ -1,10 +1,8 @@
-use super::utils::{
-	enable_is_collateral_mock, enable_whitelist_mode_and_add_member, set_balance, set_oracle_price_for_all_pools,
-};
+use super::utils::{enable_is_collateral_mock, enable_whitelist_mode_and_add_member, set_balance};
 use crate::{
-	AccountId, Balance, Currencies, EnabledUnderlyingAssetsIds, LiquidityPools, LiquidityPoolsModuleId,
-	MinterestProtocol, MntToken, MntTokenModuleId, Origin, Rate, Runtime, System, Tokens, BTC, DOLLARS, DOT, ETH, KSM,
-	MBTC, MDOT, METH, MKSM, MNT,
+	AccountId, Balance, Currencies, EnabledUnderlyingAssetsIds, EnabledWrappedTokensId, LiquidityPools,
+	LiquidityPoolsModuleId, MinterestProtocol, MntToken, MntTokenModuleId, Origin, Rate, Runtime, System, BTC, DOLLARS,
+	DOT, ETH, KSM, MDOT, MNT,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
@@ -21,14 +19,14 @@ pub const SEED: u32 = 0;
 fn hypothetical_liquidity_setup() -> Result<(AccountId, AccountId), &'static str> {
 	let borrower: AccountId = account("borrower", 0, SEED);
 	let lender: AccountId = account("lender", 0, SEED);
-	// feed price for each pool
-	set_oracle_price_for_all_pools::<Runtime>(2, Origin::root(), 0)?;
 
 	// set balance for users
-	set_balance(MDOT, &borrower, 10_000 * DOLLARS)?;
-	set_balance(METH, &borrower, 10_000 * DOLLARS)?;
-	set_balance(MKSM, &borrower, 10_000 * DOLLARS)?;
-	set_balance(MBTC, &borrower, 30_000 * DOLLARS)?;
+	EnabledWrappedTokensId::get()
+		.into_iter()
+		.try_for_each(|token_id| -> Result<(), &'static str> {
+			set_balance(token_id, &borrower, 10_000 * DOLLARS)?;
+			Ok(())
+		})?;
 	set_balance(MDOT, &lender, 20_000 * DOLLARS)?;
 
 	// set balance for Pools
@@ -36,20 +34,20 @@ fn hypothetical_liquidity_setup() -> Result<(AccountId, AccountId), &'static str
 	set_balance(BTC, &LiquidityPoolsModuleId::get().into_account(), 20_000 * DOLLARS)?;
 
 	// enable pool as collateral
-	enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), DOT)?;
-	enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), ETH)?;
-	enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), KSM)?;
-	enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), BTC)?;
-
-	// set borrow params
-	LiquidityPools::set_pool_total_borrowed(DOT, 10_000 * DOLLARS);
-	LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), DOT, 10_000 * DOLLARS, Rate::one());
-	LiquidityPools::set_pool_total_borrowed(ETH, 10_000 * DOLLARS);
-	LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), ETH, 10_000 * DOLLARS, Rate::one());
-	LiquidityPools::set_pool_total_borrowed(KSM, 10_000 * DOLLARS);
-	LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), KSM, 10_000 * DOLLARS, Rate::one());
-	LiquidityPools::set_pool_total_borrowed(BTC, 10_000 * DOLLARS);
-	LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), BTC, 10_000 * DOLLARS, Rate::one());
+	EnabledUnderlyingAssetsIds::get()
+		.into_iter()
+		.try_for_each(|asset_id| -> Result<(), &'static str> {
+			enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), asset_id)?;
+			// set borrow params
+			LiquidityPools::set_pool_total_borrowed(asset_id, 10_000 * DOLLARS);
+			LiquidityPools::set_user_total_borrowed_and_interest_index(
+				&borrower.clone(),
+				asset_id,
+				10_000 * DOLLARS,
+				Rate::one(),
+			);
+			Ok(())
+		})?;
 	Ok((borrower, lender))
 }
 
@@ -60,8 +58,6 @@ runtime_benchmarks! {
 
 	deposit_underlying {
 		let lender = account("lender", 0, SEED);
-		// feed price for each pool
-		set_oracle_price_for_all_pools::<Runtime>(2, Origin::root(), 1)?;
 		// set balance for user
 		set_balance(DOT, &lender, 10_000 * DOLLARS)?;
 
@@ -204,7 +200,14 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(borrower.clone()), vec![DOT, ETH, BTC, KSM])
 	verify {
-		// Initial balance 1_000_000 MNT + accrued MNT tokens: 500_000 MNT - gas payment.
+		/*
+		Accrued MNT:
+		Supply per pool: prev + speed_pool * block_delta * borrower_supply / total_supply
+		supply_balance = 0 + (2.5 * 50 * 0.5) * 4 = 250 MNT
+		Borrow: prev + speed_pool * block_delta * borrower_borrow / total_borrow
+		borrow_balance = 0 + (2.5 * 50 * 0.5) * 4 = 250 MNT
+		Initial balance 1_000_000 MNT + accrued MNT tokens: 500_000 MNT - gas payment.
+		 */
 		assert_eq!(Currencies::free_balance(MNT, &borrower), 1_000_499_999_967_375_001_870_120)
 	}
 
