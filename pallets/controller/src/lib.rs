@@ -2,7 +2,10 @@
 //!
 //! ## Overview
 //!
-//! TODO: add overview.
+//! Contains protocol settings and helper functions related to interest calculations.
+//! Also it is managing paused operations and whitelist mode. These are related to protocol
+//! security. In case of emergency some of protocol operations can be paused by authorized users.
+//! When Whitelist mode is enabled, protocol interaction is restricted to whitelist members only.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
