@@ -41,7 +41,7 @@ pub fn enable_is_collateral_mock<T: frame_system::Config<Origin = Origin>>(
 	Ok(().into())
 }
 
-pub fn enable_whitelist_mode_and_add_member(who: AccountId) -> DispatchResultWithPostInfo {
+pub fn enable_whitelist_mode_and_add_member(who: &AccountId) -> DispatchResultWithPostInfo {
 	controller::WhitelistMode::<Runtime>::put(true);
 	WhitelistCouncilMembership::add_member(RawOrigin::Root.into(), who.clone())?;
 	Ok(().into())
