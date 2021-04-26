@@ -212,7 +212,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 
 #[macro_export]
 macro_rules! mock_impl_risk_manager_config {
-	($target:ty, $acc:ident) => {
+	($target:ty, $acc:ident, $controller_api:ty) => {
 		parameter_types! {
 			pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
 		}
@@ -224,6 +224,7 @@ macro_rules! mock_impl_risk_manager_config {
 			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
 			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type RiskManagerWeightInfo = ();
+			type ControllerAPI = $controller_api;
 		}
 	};
 }

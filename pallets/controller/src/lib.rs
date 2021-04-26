@@ -892,7 +892,188 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
+	/// Return the borrow balance of account based on stored data.
+	///
+	/// - `who`: The address whose balance should be calculated.
+	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
 	fn borrow_balance_stored(who: &T::AccountId, underlying_asset_id: CurrencyId) -> Result<Balance, DispatchError> {
-		Pallet::<T>::borrow_balance_stored(who, underlying_asset_id)
+		let pool_borrow_index = T::LiquidityPoolsManager::get_pool_borrow_index(underlying_asset_id);
+		let borrow_balance = Self::calculate_borrow_balance(who, underlying_asset_id, pool_borrow_index)?;
+		Ok(borrow_balance)
+	}
+
+
+	/// Applies accrued interest to total borrows and protocol interest.
+	/// This calculates interest accrued from the last checkpointed block
+	/// up to the current block and writes new checkpoint to storage.
+	fn accrue_interest_rate(underlying_asset: CurrencyId) -> DispatchResult {
+		//Remember the initial block number.
+		let current_block_number = <frame_system::Module<T>>::block_number();
+		let accrual_block_number_previous = Self::controller_dates(underlying_asset).last_interest_accrued_block;
+		// Calculate the number of blocks elapsed since the last accrual
+		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
+		//Short-circuit accumulating 0 interest.
+		if block_delta == T::BlockNumber::zero() {
+			return Ok(());
+		}
+
+		let pool_data = Self::calculate_interest_params(underlying_asset, block_delta)?;
+		// Save new params
+		ControllerParams::<T>::mutate(underlying_asset, |data| {
+			data.last_interest_accrued_block = current_block_number
+		});
+		<LiquidityPools<T>>::set_pool_data(
+			underlying_asset,
+			pool_data.total_borrowed,
+			pool_data.borrow_index,
+			pool_data.total_protocol_interest,
+		)?;
+
+		Ok(())
+	}
+
+	/// Checks if a specific operation is allowed on a pool.
+	///
+	/// Return true - if operation is allowed, false - if operation is unallowed.
+	fn is_operation_allowed(pool_id: CurrencyId, operation: Operation) -> bool {
+		match operation {
+			Operation::Deposit => !Self::pause_keepers(pool_id).deposit_paused,
+			Operation::Redeem => !Self::pause_keepers(pool_id).redeem_paused,
+			Operation::Borrow => !Self::pause_keepers(pool_id).borrow_paused,
+			Operation::Repay => !Self::pause_keepers(pool_id).repay_paused,
+			Operation::Transfer => !Self::pause_keepers(pool_id).transfer_paused,
+		}
+	}
+
+	/// Checks if the account should be allowed to redeem tokens in the given pool.
+	///
+	/// - `underlying_asset` - The CurrencyId to verify the redeem against.
+	/// - `redeemer` -  The account which would redeem the tokens.
+	/// - `redeem_amount` - The number of mTokens to exchange for the underlying asset in the
+	/// pool.
+	///
+	/// Return Ok if the redeem is allowed.
+	fn redeem_allowed(underlying_asset: CurrencyId, redeemer: &T::AccountId, redeem_amount: Balance) -> DispatchResult {
+		if LiquidityPools::<T>::check_user_available_collateral(&redeemer, underlying_asset) {
+			let (_, shortfall) =
+				Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset, redeem_amount, 0)
+					.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
+
+			ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
+		}
+		Ok(())
+	}
+
+    /// Determine what the account liquidity would be if the given amounts were redeemed/borrowed.
+	///
+	/// - `account`: The account to determine liquidity.
+	/// - `underlying_asset`: The pool to hypothetically redeem/borrow.
+	/// - `redeem_amount`: The number of tokens to hypothetically redeem.
+	/// - `borrow_amount`: The amount of underlying to hypothetically borrow.
+	/// Returns (hypothetical account liquidity in excess of collateral requirements,
+	///          hypothetical account shortfall below collateral requirements).
+	fn get_hypothetical_account_liquidity(
+		account: &T::AccountId,
+		underlying_to_borrow: CurrencyId,
+		redeem_amount: Balance,
+		borrow_amount: Balance,
+	) -> LiquidityResult {
+		let m_tokens_ids: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
+
+		let mut sum_collateral = Balance::zero();
+		let mut sum_borrow_plus_effects = Balance::zero();
+
+		// For each tokens the account is in
+		for asset in m_tokens_ids.into_iter() {
+			let underlying_asset = asset.underlying_asset().ok_or(Error::<T>::NotValidWrappedTokenId)?;
+
+			// Read the balances and exchange rate from the cToken
+			let borrow_balance = Self::borrow_balance_stored(account, underlying_asset)?;
+			let exchange_rate = <LiquidityPools<T>>::get_exchange_rate(underlying_asset)?;
+			let collateral_factor = Self::controller_dates(underlying_asset).collateral_factor;
+
+			// Get the normalized price of the asset.
+			let oracle_price =
+				T::PriceSource::get_underlying_price(underlying_asset).ok_or(Error::<T>::InvalidFeedPrice)?;
+
+			// Pre-compute a conversion factor from tokens -> dollars (normalized price value)
+			// tokens_to_denom = collateral_factor * exchange_rate * oracle_price
+			let tokens_to_denom = collateral_factor
+				.checked_mul(&exchange_rate)
+				.and_then(|v| v.checked_mul(&oracle_price))
+				.ok_or(Error::<T>::NumOverflow)?;
+
+			if <LiquidityPools<T>>::check_user_available_collateral(&account, underlying_asset) {
+				let m_token_balance = T::MultiCurrency::free_balance(asset, account);
+
+				// sum_collateral += tokens_to_denom * m_token_balance
+				sum_collateral = sum_with_mult_result(sum_collateral, m_token_balance, tokens_to_denom)
+					.map_err(|_| Error::<T>::CollateralBalanceOverflow)?;
+			}
+
+			// sum_borrow_plus_effects += oracle_price * borrow_balance
+			sum_borrow_plus_effects = sum_with_mult_result(sum_borrow_plus_effects, borrow_balance, oracle_price)
+				.map_err(|_| Error::<T>::BalanceOverflow)?;
+
+			// Calculate effects of interacting with Underlying Asset Modify.
+			if underlying_to_borrow == underlying_asset {
+				// redeem effect
+				if redeem_amount > 0 {
+					// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
+					sum_borrow_plus_effects =
+						sum_with_mult_result(sum_borrow_plus_effects, redeem_amount, tokens_to_denom)
+							.map_err(|_| Error::<T>::BalanceOverflow)?;
+				};
+				// borrow effect
+				if borrow_amount > 0 {
+					// sum_borrow_plus_effects += oracle_price * borrow_amount
+					sum_borrow_plus_effects =
+						sum_with_mult_result(sum_borrow_plus_effects, borrow_amount, oracle_price)
+							.map_err(|_| Error::<T>::BalanceOverflow)?;
+				}
+			}
+		}
+
+		match sum_collateral.cmp(&sum_borrow_plus_effects) {
+			Ordering::Less => Ok((
+				0,
+				sum_borrow_plus_effects
+					.checked_sub(sum_collateral)
+					.ok_or(Error::<T>::InsufficientLiquidity)?,
+			)),
+			_ => Ok((
+				sum_collateral
+					.checked_sub(sum_borrow_plus_effects)
+					.ok_or(Error::<T>::InsufficientLiquidity)?,
+				0,
+			)),
+		}
+	}
+
+
+
+
+	/// Checks if the account should be allowed to borrow the underlying asset of the given pool.
+	///
+	/// - `underlying_asset` - The CurrencyId to verify the borrow against.
+	/// - `who` -  The account which would borrow the asset.
+	/// - `borrow_amount` - The amount of underlying assets the account would borrow.
+	///
+	/// Return Ok if the borrow is allowed.
+	fn borrow_allowed(underlying_asset: CurrencyId, who: &T::AccountId, borrow_amount: Balance) -> DispatchResult {
+		let borrow_cap_reached = Self::is_borrow_cap_reached(underlying_asset, borrow_amount)?;
+		ensure!(!borrow_cap_reached, Error::<T>::BorrowCapReached);
+
+		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, underlying_asset, 0, borrow_amount)
+			.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
+
+		ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
+
+		Ok(())
+	}
+
+	fn is_whitelist_mode_enabled() -> bool {
+		WhitelistMode::<T>::get()
+		// Self::WhitelistMode::<T>::get()
 	}
 }

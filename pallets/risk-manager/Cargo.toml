@@ -25,7 +25,6 @@ liquidity-pools = { path = "../liquidity-pools", default-features = false }
 minterest-protocol = { path = "../minterest-protocol", default-features = false }
 liquidation-pools = { path = "../liquidation-pools", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
-controller = { path = "../controller", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = '3.0.0' }
@@ -59,5 +58,4 @@ std = [
     "liquidity-pools/std",
     "minterest-protocol/std",
     "liquidation-pools/std",
-    "controller/std",
 ]

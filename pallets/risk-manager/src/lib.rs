@@ -18,7 +18,7 @@ use frame_system::{
 };
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{PoolsManager, PriceProvider};
+use pallet_traits::{ControllerAPI, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::{CheckedDiv, CheckedMul, One};
@@ -73,7 +73,6 @@ pub struct RiskManagerData {
 }
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
-type Controller<T> = controller::Module<T>;
 type MinterestProtocol<T> = minterest_protocol::Module<T>;
 
 pub struct LiquidationInfo {
@@ -106,6 +105,9 @@ pub mod module {
 
 		/// Pools are responsible for holding funds for automatic liquidation.
 		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
+
+		/// Public API of controller pallet
+		type ControllerAPI: ControllerAPI<Self::AccountId>;
 
 		/// The origin which may update risk manager parameters. Root can
 		/// always do this.
@@ -404,9 +406,9 @@ impl<T: Config> Pallet<T> {
 		let iteration_start_time = sp_io::offchain::timestamp();
 
 		for member in pool_members.into_iter() {
-			<Controller<T>>::accrue_interest_rate(currency_id).map_err(|_| OffchainErr::CheckFail)?;
+			T::ControllerAPI::accrue_interest_rate(currency_id).map_err(|_| OffchainErr::CheckFail)?;
 			// Checks if the liquidation should be allowed to occur.
-			let (_, shortfall) = <Controller<T>>::get_hypothetical_account_liquidity(&member, currency_id, 0, 0)
+			let (_, shortfall) = T::ControllerAPI::get_hypothetical_account_liquidity(&member, currency_id, 0, 0)
 				.map_err(|_| OffchainErr::CheckFail)?;
 
 			match shortfall.cmp(&Balance::zero()) {
@@ -462,7 +464,7 @@ impl<T: Config> Pallet<T> {
 	/// - `liquidated_pool_id`: the CurrencyId of the pool with loan, for which automatic
 	/// liquidation is performed.
 	pub fn liquidate_unsafe_loan(borrower: T::AccountId, liquidated_pool_id: CurrencyId) -> DispatchResult {
-		<Controller<T>>::accrue_interest_rate(liquidated_pool_id)?;
+		T::ControllerAPI::accrue_interest_rate(liquidated_pool_id)?;
 
 		// Read prices price for borrowed pool.
 		let price_borrowed =
@@ -470,7 +472,7 @@ impl<T: Config> Pallet<T> {
 
 		// Get borrower borrow balance and calculate total_repay_amount (in USD):
 		// total_repay_amount = borrow_balance * price_borrowed
-		let borrow_balance = <Controller<T>>::borrow_balance_stored(&borrower, liquidated_pool_id)?;
+		let borrow_balance = T::ControllerAPI::borrow_balance_stored(&borrower, liquidated_pool_id)?;
 		let total_repay_amount = Rate::from_inner(borrow_balance)
 			.checked_mul(&price_borrowed)
 			.map(|x| x.into_inner())
@@ -540,7 +542,7 @@ impl<T: Config> Pallet<T> {
 
 		for collateral_pool_id in collateral_pools.into_iter() {
 			if !seize_amount.is_zero() {
-				<Controller<T>>::accrue_interest_rate(collateral_pool_id)?;
+				T::ControllerAPI::accrue_interest_rate(collateral_pool_id)?;
 
 				let wrapped_id = collateral_pool_id
 					.wrapped_asset()

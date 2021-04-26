@@ -458,6 +458,7 @@ impl risk_manager::Config for Runtime {
 	type LiquidityPoolsManager = LiquidityPools;
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type RiskManagerWeightInfo = weights::risk_manager::WeightInfo<Runtime>;
+	type ControllerAPI = Controller;
 }
 
 parameter_types! {
