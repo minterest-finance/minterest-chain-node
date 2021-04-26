@@ -519,7 +519,7 @@ fn testnet_genesis(
 			mnt_rate: 10 * DOLLARS,
 			mnt_claim_threshold: 0, // disable by default
 			minted_pools: vec![DOT, ETH, KSM, BTC],
-			phantom: Default::default(),
+			_phantom: Default::default(),
 		}),
 	}
 }

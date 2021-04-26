@@ -2,16 +2,18 @@ use super::utils::{
 	enable_is_collateral_mock, enable_whitelist_mode_and_add_member, set_balance, set_oracle_price_for_all_pools,
 };
 use crate::{
-	AccountId, Balance, Currencies, LiquidityPools, LiquidityPoolsModuleId, Origin, Rate, Runtime, BTC, DOLLARS, DOT,
-	ETH, KSM, MBTC, MDOT, METH, MKSM,
+	AccountId, Balance, Currencies, EnabledUnderlyingAssetsIds, LiquidityPools, LiquidityPoolsModuleId,
+	MinterestProtocol, MntToken, MntTokenModuleId, Origin, Rate, Runtime, System, Tokens, BTC, DOLLARS, DOT, ETH, KSM,
+	MBTC, MDOT, METH, MKSM, MNT,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::AccountIdConversion;
-use sp_runtime::traits::Zero;
-use sp_runtime::FixedPointNumber;
+use sp_runtime::{
+	traits::{AccountIdConversion, Zero},
+	FixedPointNumber,
+};
 use sp_std::prelude::*;
 
 pub const SEED: u32 = 0;
@@ -162,10 +164,49 @@ runtime_benchmarks! {
 	verify  { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).is_collateral, false) }
 
 	claim_mnt {
-		let borrower:AccountId = account("borrower", 0, SEED);
+		let lender: AccountId = account("lender", 0, SEED);
+		let borrower: AccountId = account("borrower", 0, SEED);
+		enable_whitelist_mode_and_add_member(lender.clone())?;
+		enable_whitelist_mode_and_add_member(borrower.clone())?;
+
+		set_balance(
+			MNT,
+			&MntTokenModuleId::get().into_account(),
+			1_000_000 * DOLLARS,
+		)?;
+		set_balance(MNT, &lender, 1_000_000 * DOLLARS)?;
+		set_balance(MNT, &borrower, 1_000_000 * DOLLARS)?;
+
+		// set next block number and refresh speeds
+		System::set_block_number(10);
+		MntToken::refresh_mnt_speeds()?;
+
+		EnabledUnderlyingAssetsIds::get().into_iter().try_for_each(|pool_id| -> Result<(), &'static str> {
+			set_balance(pool_id, &lender, 100_000 * DOLLARS)?;
+			MinterestProtocol::deposit_underlying(RawOrigin::Signed(lender.clone()).into(), pool_id, 100_000 * DOLLARS)?;
+			MinterestProtocol::enable_is_collateral(Origin::signed(lender.clone()).into(), pool_id)?;
+			MinterestProtocol::borrow(RawOrigin::Signed(lender.clone()).into(), pool_id, 50_000 * DOLLARS)?;
+			Ok(())
+		})?;
+
+		System::set_block_number(50);
+		MntToken::refresh_mnt_speeds()?;
+
+		EnabledUnderlyingAssetsIds::get().into_iter().try_for_each(|pool_id| -> Result<(), &'static str> {
+			set_balance(pool_id, &borrower, 100_000 * DOLLARS)?;
+			MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), pool_id, 100_000 * DOLLARS)?;
+			MinterestProtocol::enable_is_collateral(Origin::signed(borrower.clone()).into(), pool_id)?;
+			MinterestProtocol::borrow(RawOrigin::Signed(borrower.clone()).into(), pool_id, 50_000 * DOLLARS)?;
+			Ok(())
+		})?;
+
+		System::set_block_number(100);
 
 	}: _(RawOrigin::Signed(borrower.clone()), vec![DOT, ETH, BTC, KSM])
-	verify {  }
+	verify {
+		// Initial balance 1_000_000 MNT + accrued MNT tokens: 500_000 MNT - gas payment.
+		assert_eq!(Currencies::free_balance(MNT, &borrower), 1_000_499_999_967_375_001_870_120)
+	}
 
 }
 
