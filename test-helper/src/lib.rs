@@ -207,7 +207,6 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type WhitelistMembers = WhitelistMembers;
 			type ProtocolWeightInfo = ();
 			type ControllerAPI = $controller_api;
-			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
 		}
 	};
 }

@@ -13,7 +13,7 @@ use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
 use minterest_primitives::{Balance, CurrencyId, Operation};
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerAPI, Borrowing, LiquidityPoolsManager, PoolsManager};
+use pallet_traits::{Borrowing, ControllerAPI, LiquidityPoolsManager, PoolsManager};
 use sp_runtime::{
 	traits::{BadOrigin, Zero},
 	DispatchError, DispatchResult,
@@ -61,9 +61,6 @@ pub mod module {
 
 		/// Public API of controller pallet
 		type ControllerAPI: ControllerAPI<Self::AccountId>;
-
-		/// Provides Liquidity Pool functionality
-		type LiquidityPoolsManager: LiquidityPoolsManager;
 	}
 
 	#[pallet::error]
@@ -714,7 +711,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn transfer_protocol_interest(pool_id: CurrencyId) {
-		let total_protocol_interest = T::LiquidityPoolsManager::get_pool_total_protocol_interest(pool_id);
+		let total_protocol_interest = T::ManagerLiquidityPools::get_pool_total_protocol_interest(pool_id);
 		if total_protocol_interest < T::ControllerAPI::get_protocol_interest_treshold(pool_id) {
 			return;
 		}
