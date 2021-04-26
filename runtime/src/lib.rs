@@ -351,6 +351,7 @@ impl minterest_protocol::Config for Runtime {
 	type ManagerLiquidityPools = LiquidityPools;
 	type WhitelistMembers = WhitelistCouncilProvider;
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
+	type ControllerAPI = Controller;
 }
 
 pub struct WhitelistCouncilProvider;

@@ -1072,8 +1072,14 @@ impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
 		Ok(())
 	}
 
+	/// Protocol operation mode. In whitelist mode, only members 'WhitelistCouncil' can work with
+	/// protocols.
 	fn is_whitelist_mode_enabled() -> bool {
 		WhitelistMode::<T>::get()
-		// Self::WhitelistMode::<T>::get()
+	}
+
+	/// Return minimum protocol interest needed to transfer it to liquidation pool
+	fn get_protocol_interest_treshold(pool_id: CurrencyId) -> Balance {
+		Self::controller_dates(pool_id).protocol_interest_threshold
 	}
 }

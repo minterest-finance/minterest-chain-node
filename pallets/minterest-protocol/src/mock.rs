@@ -69,7 +69,7 @@ mock_impl_liquidation_pools_config!(Test);
 mock_impl_controller_config!(Test, OneAlice);
 mock_impl_minterest_model_config!(Test, OneAlice);
 mock_impl_dex_config!(Test);
-mock_impl_minterest_protocol_config!(Test);
+mock_impl_minterest_protocol_config!(Test, Controller);
 
 pub struct MockPriceSource;
 

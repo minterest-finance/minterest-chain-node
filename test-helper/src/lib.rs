@@ -198,7 +198,7 @@ macro_rules! mock_impl_dex_config {
 
 #[macro_export]
 macro_rules! mock_impl_minterest_protocol_config {
-	($target:ty) => {
+	($target:ty, $controller_api:ty) => {
 		impl minterest_protocol::Config for $target {
 			type Event = Event;
 			type Borrowing = liquidity_pools::Module<$target>;
@@ -206,6 +206,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type ManagerLiquidityPools = liquidity_pools::Module<$target>;
 			type WhitelistMembers = WhitelistMembers;
 			type ProtocolWeightInfo = ();
+			type ControllerAPI = $controller_api;
 		}
 	};
 }

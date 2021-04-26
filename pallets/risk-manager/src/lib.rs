@@ -406,10 +406,12 @@ impl<T: Config> Pallet<T> {
 		let iteration_start_time = sp_io::offchain::timestamp();
 
 		for member in pool_members.into_iter() {
-			T::ControllerAPI::accrue_interest_rate(currency_id).map_err(|_| OffchainErr::CheckFail)?;
-			// Checks if the liquidation should be allowed to occur.
-			let (_, shortfall) = T::ControllerAPI::get_hypothetical_account_liquidity(&member, currency_id, 0, 0)
+			<T as module::Config>::ControllerAPI::accrue_interest_rate(currency_id)
 				.map_err(|_| OffchainErr::CheckFail)?;
+			// Checks if the liquidation should be allowed to occur.
+			let (_, shortfall) =
+				<T as module::Config>::ControllerAPI::get_hypothetical_account_liquidity(&member, currency_id, 0, 0)
+					.map_err(|_| OffchainErr::CheckFail)?;
 
 			match shortfall.cmp(&Balance::zero()) {
 				Ordering::Equal => continue,
@@ -464,7 +466,7 @@ impl<T: Config> Pallet<T> {
 	/// - `liquidated_pool_id`: the CurrencyId of the pool with loan, for which automatic
 	/// liquidation is performed.
 	pub fn liquidate_unsafe_loan(borrower: T::AccountId, liquidated_pool_id: CurrencyId) -> DispatchResult {
-		T::ControllerAPI::accrue_interest_rate(liquidated_pool_id)?;
+		<T as module::Config>::ControllerAPI::accrue_interest_rate(liquidated_pool_id)?;
 
 		// Read prices price for borrowed pool.
 		let price_borrowed =
@@ -472,7 +474,8 @@ impl<T: Config> Pallet<T> {
 
 		// Get borrower borrow balance and calculate total_repay_amount (in USD):
 		// total_repay_amount = borrow_balance * price_borrowed
-		let borrow_balance = T::ControllerAPI::borrow_balance_stored(&borrower, liquidated_pool_id)?;
+		let borrow_balance =
+			<T as module::Config>::ControllerAPI::borrow_balance_stored(&borrower, liquidated_pool_id)?;
 		let total_repay_amount = Rate::from_inner(borrow_balance)
 			.checked_mul(&price_borrowed)
 			.map(|x| x.into_inner())
@@ -542,7 +545,7 @@ impl<T: Config> Pallet<T> {
 
 		for collateral_pool_id in collateral_pools.into_iter() {
 			if !seize_amount.is_zero() {
-				T::ControllerAPI::accrue_interest_rate(collateral_pool_id)?;
+				<T as module::Config>::ControllerAPI::accrue_interest_rate(collateral_pool_id)?;
 
 				let wrapped_id = collateral_pool_id
 					.wrapped_asset()
