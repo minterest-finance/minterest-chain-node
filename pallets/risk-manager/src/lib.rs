@@ -94,6 +94,10 @@ pub mod module {
 	pub trait Config: frame_system::Config + minterest_protocol::Config + SendTransactionTypes<Call<Self>> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
+		/// The origin which may update MNT token parameters. Root can
+		/// always do this.
+		type UpdateOrigin: EnsureOrigin<Self::Origin>;
+
 		/// A configuration for base priority of unsigned transactions.
 		///
 		/// This is exposed so that it can be tuned for particular runtime, when

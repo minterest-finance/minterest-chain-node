@@ -207,6 +207,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type WhitelistMembers = WhitelistMembers;
 			type ProtocolWeightInfo = ();
 			type ControllerAPI = $controller_api;
+			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
 		}
 	};
 }
@@ -226,6 +227,7 @@ macro_rules! mock_impl_risk_manager_config {
 			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type RiskManagerWeightInfo = ();
 			type ControllerAPI = $controller_api;
+			type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 		}
 	};
 }

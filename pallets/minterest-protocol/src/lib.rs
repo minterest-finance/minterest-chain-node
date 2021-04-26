@@ -40,7 +40,7 @@ pub mod module {
 	use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + controller::Config + SendTransactionTypes<Call<Self>> {
+	pub trait Config: frame_system::Config + liquidity_pools::Config + SendTransactionTypes<Call<Self>> {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -61,6 +61,9 @@ pub mod module {
 
 		/// Public API of controller pallet
 		type ControllerAPI: ControllerAPI<Self::AccountId>;
+
+		/// Provides Liquidity Pool functionality
+		type LiquidityPoolsManager: LiquidityPoolsManager;
 	}
 
 	#[pallet::error]
