@@ -26,7 +26,7 @@ use sp_runtime::{
 	traits::{BadOrigin, Zero},
 	DispatchError, DispatchResult,
 };
-use sp_std::result;
+use sp_std::{result, vec::Vec};
 
 pub use module::*;
 
@@ -455,7 +455,7 @@ pub mod module {
 
 		/// Claim all the MNT accrued by holder in the specified markets.
 		/// - `pools`: The vector of markets to claim MNT in
-		#[pallet::weight(10_000)]
+		#[pallet::weight(T::ProtocolWeightInfo::claim_mnt())]
 		#[transactional]
 		pub fn claim_mnt(origin: OriginFor<T>, pools: Vec<CurrencyId>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;

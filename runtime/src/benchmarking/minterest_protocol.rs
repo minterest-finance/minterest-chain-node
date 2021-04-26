@@ -161,6 +161,12 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
 	verify  { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).is_collateral, false) }
 
+	claim_mnt {
+		let borrower:AccountId = account("borrower", 0, SEED);
+
+	}: _(RawOrigin::Signed(borrower.clone()), vec![DOT, ETH, BTC, KSM])
+	verify {  }
+
 }
 
 #[cfg(test)]
