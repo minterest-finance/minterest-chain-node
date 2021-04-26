@@ -726,8 +726,6 @@ impl<T: Config> Pallet<T> {
 		// Fail if transfer_amount is not available for redeem
 		<Controller<T>>::redeem_allowed(underlying_asset, &who, transfer_amount)?;
 
-		<T as module::Config>::MntManager::update_mnt_supply_index(underlying_asset)?;
-		<T as module::Config>::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
 		<T as module::Config>::MntManager::distribute_supplier_mnt(underlying_asset, receiver, false)?;
 
 		// Fail if not enough free balance

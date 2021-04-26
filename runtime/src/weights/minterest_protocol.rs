@@ -28,62 +28,62 @@ use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> minterest_protocol::WeightInfo for WeightInfo<T> {
 	fn deposit_underlying() -> Weight {
-		(274_921_000 as Weight)
+		(355_062_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(17 as Weight))
 			.saturating_add(T::DbWeight::get().writes(11 as Weight))
 	}
 	fn redeem() -> Weight {
-		(549_471_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(39 as Weight))
-			.saturating_add(T::DbWeight::get().writes(10 as Weight))
+		(566_876_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(40 as Weight))
+			.saturating_add(T::DbWeight::get().writes(11 as Weight))
 	}
 	fn redeem_underlying() -> Weight {
-		(546_380_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(39 as Weight))
-			.saturating_add(T::DbWeight::get().writes(10 as Weight))
+		(581_489_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(40 as Weight))
+			.saturating_add(T::DbWeight::get().writes(11 as Weight))
 	}
 	fn redeem_wrapped() -> Weight {
-		(529_252_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(39 as Weight))
-			.saturating_add(T::DbWeight::get().writes(10 as Weight))
+		(565_565_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(40 as Weight))
+			.saturating_add(T::DbWeight::get().writes(11 as Weight))
 	}
 	fn borrow() -> Weight {
-		(464_650_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(37 as Weight))
-			.saturating_add(T::DbWeight::get().writes(8 as Weight))
+		(623_436_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(40 as Weight))
+			.saturating_add(T::DbWeight::get().writes(10 as Weight))
 	}
 	fn repay() -> Weight {
-		(212_322_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(13 as Weight))
-			.saturating_add(T::DbWeight::get().writes(8 as Weight))
+		(384_299_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(16 as Weight))
+			.saturating_add(T::DbWeight::get().writes(10 as Weight))
 	}
 	fn repay_all() -> Weight {
-		(212_250_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(13 as Weight))
-			.saturating_add(T::DbWeight::get().writes(8 as Weight))
+		(353_910_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(16 as Weight))
+			.saturating_add(T::DbWeight::get().writes(10 as Weight))
 	}
 	fn repay_on_behalf() -> Weight {
-		(206_991_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(13 as Weight))
-			.saturating_add(T::DbWeight::get().writes(8 as Weight))
+		(392_520_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(16 as Weight))
+			.saturating_add(T::DbWeight::get().writes(10 as Weight))
 	}
 	fn transfer_wrapped() -> Weight {
-		(464_942_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(40 as Weight))
-			.saturating_add(T::DbWeight::get().writes(8 as Weight))
+		(567_970_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(42 as Weight))
+			.saturating_add(T::DbWeight::get().writes(10 as Weight))
 	}
 	fn enable_is_collateral() -> Weight {
-		(53_132_000 as Weight)
+		(50_760_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 	fn disable_is_collateral() -> Weight {
-		(300_315_000 as Weight)
+		(285_852_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(30 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 	fn claim_mnt() -> Weight {
-		(1_064_030_000 as Weight)
+		(1_042_945_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(35 as Weight))
 			.saturating_add(T::DbWeight::get().writes(15 as Weight))
 	}
