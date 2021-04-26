@@ -230,7 +230,7 @@ impl ExtBuilder {
 			mnt_rate: self.mnt_rate,
 			mnt_claim_threshold: self.mnt_claim_threshold,
 			minted_pools: self.minted_pools,
-			phantom: PhantomData,
+			_phantom: PhantomData,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

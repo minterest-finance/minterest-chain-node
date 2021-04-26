@@ -495,6 +495,7 @@ fn testnet_genesis(
 				(ETH, FixedU128::saturating_from_integer(2)),
 				(BTC, FixedU128::saturating_from_integer(2)),
 			],
+			_phantom: Default::default(),
 		}),
 		pallet_collective_Instance1: Some(Default::default()),
 		pallet_membership_Instance1: Some(MinterestCouncilMembershipConfig {

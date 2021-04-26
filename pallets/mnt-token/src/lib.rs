@@ -188,7 +188,7 @@ pub mod module {
 		pub mnt_rate: Balance,
 		pub mnt_claim_threshold: Balance,
 		pub minted_pools: Vec<CurrencyId>,
-		pub phantom: PhantomData<T>,
+		pub _phantom: PhantomData<T>,
 	}
 
 	#[cfg(feature = "std")]
@@ -198,7 +198,7 @@ pub mod module {
 				mnt_rate: Balance::zero(),
 				mnt_claim_threshold: Balance::zero(),
 				minted_pools: vec![],
-				phantom: PhantomData,
+				_phantom: PhantomData,
 			}
 		}
 	}

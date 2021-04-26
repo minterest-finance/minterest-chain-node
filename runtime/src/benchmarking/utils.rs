@@ -33,7 +33,7 @@ pub fn set_balance(currency_id: CurrencyId, who: &AccountId, balance: Balance) -
 	Ok(().into())
 }
 
-pub fn enable_is_collateral<T: frame_system::Config<Origin = Origin>>(
+pub fn enable_is_collateral_mock<T: frame_system::Config<Origin = Origin>>(
 	origin: OriginFor<T>,
 	currency_id: CurrencyId,
 ) -> DispatchResultWithPostInfo {
@@ -59,6 +59,7 @@ pub mod tests {
 	use minterest_primitives::{Balance, Rate};
 	use risk_manager::RiskManagerData;
 	use sp_runtime::traits::Zero;
+	use sp_runtime::FixedU128;
 
 	// This GenesisConfig is a copy of testnet_genesis.
 	pub fn test_externalities() -> sp_io::TestExternalities {
@@ -285,15 +286,25 @@ pub mod tests {
 		.assimilate_storage::<Runtime>(&mut storage)
 		.unwrap();
 
-		// TODO MIN-221. MNT pallet uses price oracle in build() function.
-		// That causes error during building this ext for tests
+		module_prices::GenesisConfig::<Runtime> {
+			locked_price: vec![
+				(DOT, FixedU128::saturating_from_integer(2)),
+				(KSM, FixedU128::saturating_from_integer(2)),
+				(ETH, FixedU128::saturating_from_integer(2)),
+				(BTC, FixedU128::saturating_from_integer(2)),
+			],
+			_phantom: Default::default(),
+		}
+		.assimilate_storage(&mut storage)
+		.unwrap();
+
 		mnt_token::GenesisConfig::<Runtime> {
 			mnt_rate: 10 * DOLLARS,
 			mnt_claim_threshold: 0, // disable by default
 			minted_pools: vec![DOT, ETH, KSM, BTC],
-			phantom: Default::default(),
+			_phantom: Default::default(),
 		}
-		.assimilate_storage(&mut t)
+		.assimilate_storage(&mut storage)
 		.unwrap();
 
 		storage.into()

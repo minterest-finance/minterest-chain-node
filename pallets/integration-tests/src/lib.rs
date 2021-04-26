@@ -360,7 +360,7 @@ mod tests {
 				mnt_rate: 100_000_000_000_000_000, // 0.1
 				mnt_claim_threshold: 100 * DOLLARS,
 				minted_pools: vec![DOT, ETH],
-				phantom: Default::default(),
+				_phantom: Default::default(),
 			}
 			.assimilate_storage(&mut t)
 			.unwrap();

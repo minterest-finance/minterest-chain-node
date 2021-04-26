@@ -1,5 +1,5 @@
 use super::utils::{
-	enable_is_collateral, enable_whitelist_mode_and_add_member, set_balance, set_oracle_price_for_all_pools,
+	enable_is_collateral_mock, enable_whitelist_mode_and_add_member, set_balance, set_oracle_price_for_all_pools,
 };
 use crate::{
 	AccountId, Balance, Currencies, LiquidityPools, LiquidityPoolsModuleId, Origin, Rate, Runtime, BTC, DOLLARS, DOT,
@@ -34,10 +34,10 @@ fn hypothetical_liquidity_setup() -> Result<(AccountId, AccountId), &'static str
 	set_balance(BTC, &LiquidityPoolsModuleId::get().into_account(), 20_000 * DOLLARS)?;
 
 	// enable pool as collateral
-	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), DOT)?;
-	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), ETH)?;
-	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), KSM)?;
-	enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), BTC)?;
+	enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), DOT)?;
+	enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), ETH)?;
+	enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), KSM)?;
+	enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), BTC)?;
 
 	// set borrow params
 	LiquidityPools::set_pool_total_borrowed(DOT, 10_000 * DOLLARS);
@@ -145,13 +145,13 @@ runtime_benchmarks! {
 		assert_eq!(Currencies::free_balance(MDOT, &lender ), 30_000 * DOLLARS);
 	 }
 
-	enable_is_collateral_test {
+	enable_is_collateral {
 		let borrower:AccountId = account("borrower", 0, SEED);
 		// set balance for users
 		set_balance(MDOT, &borrower, 10_000 * DOLLARS)?;
 
 		enable_whitelist_mode_and_add_member(borrower.clone())?;
-	}: enable_is_collateral(RawOrigin::Signed(borrower.clone()), DOT)
+	}: _(RawOrigin::Signed(borrower.clone()), DOT)
 	verify  { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).is_collateral, true) }
 
 	disable_is_collateral {
@@ -241,7 +241,7 @@ mod tests {
 	#[test]
 	fn test_enable_is_collateral() {
 		test_externalities().execute_with(|| {
-			assert_ok!(test_benchmark_enable_is_collateral_test());
+			assert_ok!(test_benchmark_enable_is_collateral());
 		})
 	}
 
@@ -249,6 +249,13 @@ mod tests {
 	fn test_disable_is_collateral() {
 		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_disable_is_collateral());
+		})
+	}
+
+	#[test]
+	fn test_claim_mnt() {
+		test_externalities().execute_with(|| {
+			assert_ok!(test_benchmark_claim_mnt());
 		})
 	}
 }

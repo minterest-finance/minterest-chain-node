@@ -1,4 +1,4 @@
-use super::utils::{enable_is_collateral, lookup_of_account, set_balance, set_oracle_price_for_all_pools};
+use super::utils::{enable_is_collateral_mock, lookup_of_account, set_balance, set_oracle_price_for_all_pools};
 use crate::{
 	AccountId, LiquidationPoolsModuleId, LiquidityPools, LiquidityPoolsModuleId, Origin, Rate, Runtime, System, BTC,
 	DOLLARS, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM,
@@ -76,10 +76,10 @@ runtime_benchmarks! {
 		set_balance(DOT, &liquidation_pool_account_id, 40_000 * DOLLARS)?;
 
 		// enable pools as collateral
-		enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), DOT)?;
-		enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), ETH)?;
-		enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), KSM)?;
-		enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), BTC)?;
+		enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), DOT)?;
+		enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), ETH)?;
+		enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), KSM)?;
+		enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), BTC)?;
 
 		// set borrow params
 		LiquidityPools::set_pool_total_borrowed(DOT, 35_000 * DOLLARS);

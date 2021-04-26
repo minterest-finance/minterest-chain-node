@@ -54,7 +54,7 @@ pub trait WeightInfo {
 	fn repay_all() -> Weight;
 	fn repay_on_behalf() -> Weight;
 	fn transfer_wrapped() -> Weight;
-	fn enable_is_collateral_test() -> Weight;
+	fn enable_is_collateral() -> Weight;
 	fn disable_is_collateral() -> Weight;
 	fn claim_mnt() -> Weight;
 }
@@ -107,7 +107,7 @@ impl<T: frame_system::Config> WeightInfo for MinterestWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(40 as Weight))
 			.saturating_add(T::DbWeight::get().writes(8 as Weight))
 	}
-	fn enable_is_collateral_test() -> Weight {
+	fn enable_is_collateral() -> Weight {
 		(112_261_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
@@ -171,7 +171,7 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(40 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(8 as Weight))
 	}
-	fn enable_is_collateral_test() -> Weight {
+	fn enable_is_collateral() -> Weight {
 		(112_261_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
