@@ -553,6 +553,7 @@ fn get_user_total_collateral_rpc_should_work() {
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(50_000)));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), BTC, dollars(50_000)));
 			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
 			assert_eq!(
 				get_user_total_collateral_rpc(ALICE::get()),
