@@ -718,7 +718,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn get_user_total_collateral(who: T::AccountId) -> BalanceResult {
-		Ok(CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
 			.filter(|&pool_id| <LiquidityPools<T>>::check_user_available_collateral(&who, *pool_id))
 			.try_fold(Balance::zero(), |acc, &pool_id| -> BalanceResult {
@@ -748,7 +748,7 @@ impl<T: Config> Pallet<T> {
 					.ok_or(Error::<T>::NumOverflow)?;
 
 				Ok(acc + collateral_in_usd)
-			})?)
+			})
 	}
 }
 
