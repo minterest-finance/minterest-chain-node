@@ -3,6 +3,7 @@
 # https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/source-based-code-coverage.html
 
 # Requirements:
+# rustup component add llvm-tools-preview
 # cargo install rustfilt cargo-binutils
 # sudo apt install jq
 
@@ -38,8 +39,10 @@ for pallet_name in "${Pallets[@]}"; do
         --ignore-filename-regex='/.cargo/registry|toolchains/nightly|mock.rs|tests.rs' \
         --instr-profile=json5format.profdata  -summary-only  --object $bin_path)
     cov_result=$(echo $cov_sum | jq ".data[].files[] | select(.filename==\"pallets/$pallet_name/src/lib.rs\").summary |
-        {pallet: \"$pallet_name\", lines_coverage: .lines.percent, regions_coverage: .regions.percent}")
-
+            {pallet: \"$pallet_name\",
+            lines_coverage: .lines.percent,
+            regions_coverage: .regions.percent,
+            functions_coverage: .functions.percent}")
     summary=$(echo $summary | jq ".[length] |= . + $cov_result")
 done
 

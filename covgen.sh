@@ -3,6 +3,7 @@
 # https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/source-based-code-coverage.html
 
 # Requirements:
+# rustup component add llvm-tools-preview
 # cargo install cargo-binutils rustfilt
 # sudo apt install jq
 
@@ -27,7 +28,7 @@ cd ../..
 LLVM_PROFILE_FILE="formatjson5.profraw" $bin_path
 
 # Generate html coverage report
-cargo profdata -- merge -sparse  formatjson5.profraw -o json5format.profdata
+cargo profdata -- merge -sparse formatjson5.profraw -o json5format.profdata
 cargo cov -- show -Xdemangler=rustfilt $bin_path \
     --ignore-filename-regex='/.cargo/registry|toolchains/nightly|mock.rs|tests.rs' \
     --instr-profile=json5format.profdata -format=html -output-dir=./covgen/$1/
