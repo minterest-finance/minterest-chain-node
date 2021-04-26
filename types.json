@@ -97,6 +97,9 @@
     "HypotheticalLiquidityData": {
       "liquidity": "Amount"
     },
+    "BalanceInfo": {
+      "amount": "Balance"
+    },
     "OracleKey": "CurrencyId",
     "OracleValue": "Price",
     "DataProviderId": {
