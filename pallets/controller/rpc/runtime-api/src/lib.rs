@@ -41,6 +41,14 @@ pub struct HypotheticalLiquidityData {
 	pub liquidity: Amount,
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Eq, PartialEq, Encode, Decode, Default, RuntimeDebug)]
+pub struct BalanceInfo {
+	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
+	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
+	pub amount: Balance,
+}
+
 #[cfg(feature = "std")]
 fn serialize_as_string<S: Serializer, T: std::fmt::Display>(t: &T, serializer: S) -> Result<S::Ok, S::Error> {
 	serializer.serialize_str(&t.to_string())
@@ -67,5 +75,7 @@ sp_api::decl_runtime_apis! {
 		fn get_hypothetical_account_liquidity(account_id: AccountId) -> Option<HypotheticalLiquidityData>;
 
 		fn is_admin(caller: AccountId) -> Option<bool>;
+
+		fn get_user_total_collateral(account_id: AccountId) -> Option<BalanceInfo>;
 	}
 }

@@ -537,3 +537,130 @@ fn is_admin_should_work() {
 		assert_eq!(is_admin_rpc(BOB::get()), Some(false));
 	})
 }
+
+// Test RPC behavior after changing state by standard protocol operations and changing oracle
+// price for collateral asset.
+#[test]
+fn get_user_total_collateral_rpc_should_work() {
+	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
+		.pool_initial(BTC)
+		.pool_initial(KSM)
+		.build()
+		.execute_with(|| {
+			// Set price = 2.00 USD for all pools.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(50_000)));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), BTC, dollars(50_000)));
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+			assert_eq!(
+				get_user_total_collateral_rpc(ALICE::get()),
+				Some(BalanceInfo {
+					amount: dollars(90_000)
+				})
+			);
+
+			run_to_block(50);
+
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(50_000)));
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
+			assert_eq!(
+				get_user_total_collateral_rpc(ALICE::get()),
+				Some(BalanceInfo {
+					amount: dollars(180_000)
+				})
+			);
+
+			run_to_block(100);
+
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(100_000)));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::borrow(bob(), DOT, 70_000 * DOLLARS));
+
+			assert_eq!(
+				get_user_total_collateral_rpc(ALICE::get()),
+				Some(BalanceInfo {
+					amount: dollars(180_000)
+				})
+			);
+			assert_eq!(
+				get_user_total_collateral_rpc(BOB::get()),
+				Some(BalanceInfo {
+					amount: dollars(180_000)
+				})
+			);
+
+			run_to_block(200);
+
+			assert_eq!(
+				get_user_total_collateral_rpc(ALICE::get()),
+				Some(BalanceInfo {
+					amount: 180_000_015_876_000_000_000_000
+				})
+			);
+			assert_eq!(
+				get_user_total_collateral_rpc(BOB::get()),
+				Some(BalanceInfo {
+					amount: 180_000_031_752_000_000_000_000
+				})
+			);
+
+			run_to_block(300);
+
+			assert_ok!(MinterestProtocol::disable_is_collateral(alice(), ETH));
+
+			run_to_block(400);
+
+			assert_eq!(
+				get_user_total_collateral_rpc(ALICE::get()),
+				Some(BalanceInfo {
+					amount: 90_000_047_628_000_000_000_000
+				})
+			);
+			assert_eq!(
+				get_user_total_collateral_rpc(BOB::get()),
+				Some(BalanceInfo {
+					amount: 180_000_095_256_000_000_000_000
+				})
+			);
+
+			run_to_block(500);
+
+			assert_ok!(MinterestProtocol::transfer_wrapped(
+				alice(),
+				BOB::get(),
+				MDOT,
+				dollars(50_000)
+			));
+
+			run_to_block(600);
+
+			let expected_bob_collateral = 180_000_238_140_000_000_000_000 + dollars(90_000);
+
+			assert_eq!(
+				get_user_total_collateral_rpc(ALICE::get()),
+				Some(BalanceInfo { amount: 0 })
+			);
+			assert_eq!(
+				get_user_total_collateral_rpc(BOB::get()),
+				Some(BalanceInfo {
+					amount: expected_bob_collateral
+				})
+			);
+
+			// Change the price from 2 USD to 4 USD for DOT.
+			assert_ok!(MinterestOracle::feed_values(
+				origin_of(ORACLE1::get().clone()),
+				vec![(DOT, Rate::saturating_from_integer(4))]
+			));
+
+			assert_eq!(
+				get_user_total_collateral_rpc(BOB::get()),
+				Some(BalanceInfo {
+					amount: expected_bob_collateral * 2
+				})
+			);
+		})
+}
