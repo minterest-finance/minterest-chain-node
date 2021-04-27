@@ -142,7 +142,7 @@ where
 			self.client.info().best_hash));
 		api.get_user_total_collateral(&at, account_id).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
-			message: "Unable to check if is an admin.".into(),
+			message: "Unable to get total user collateral.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})
 	}
