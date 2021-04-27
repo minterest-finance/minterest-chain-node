@@ -5,7 +5,8 @@ use crate::{
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::{
-	runtime_decl_for_ControllerApi::ControllerApi, HypotheticalLiquidityData, PoolState, UserPoolBalanceData,
+	runtime_decl_for_ControllerApi::ControllerApi, BalanceInfo, HypotheticalLiquidityData, PoolState,
+	UserPoolBalanceData,
 };
 use frame_support::{
 	assert_err, assert_noop, assert_ok, error::BadOrigin, pallet_prelude::GenesisBuild, parameter_types,
@@ -378,6 +379,10 @@ fn get_hypothetical_account_liquidity_rpc(account_id: AccountId) -> Option<Hypot
 
 fn is_admin_rpc(caller: AccountId) -> Option<bool> {
 	<Runtime as ControllerApi<Block, AccountId>>::is_admin(caller)
+}
+
+fn get_user_total_collateral_rpc(account_id: AccountId) -> Option<BalanceInfo> {
+	<Runtime as ControllerApi<Block, AccountId>>::get_user_total_collateral(account_id)
 }
 
 fn dollars(amount: u128) -> u128 {
