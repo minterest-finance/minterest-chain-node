@@ -460,7 +460,6 @@ impl risk_manager::Config for Runtime {
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type RiskManagerWeightInfo = weights::risk_manager::WeightInfo<Runtime>;
 	type ControllerAPI = Controller;
-	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 
 parameter_types! {

@@ -94,10 +94,6 @@ pub mod module {
 	pub trait Config: frame_system::Config + minterest_protocol::Config + SendTransactionTypes<Call<Self>> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// The origin which may update MNT token parameters. Root can
-		/// always do this.
-		type UpdateOrigin: EnsureOrigin<Self::Origin>;
-
 		/// A configuration for base priority of unsigned transactions.
 		///
 		/// This is exposed so that it can be tuned for particular runtime, when
@@ -241,7 +237,7 @@ pub mod module {
 			pool_id: CurrencyId,
 			max_attempts: u8,
 		) -> DispatchResultWithPostInfo {
-			T::UpdateOrigin::ensure_origin(origin)?;
+			T::RiskManagerUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				pool_id.is_supported_underlying_asset(),
@@ -268,7 +264,7 @@ pub mod module {
 			pool_id: CurrencyId,
 			min_partial_liquidation_sum: Balance,
 		) -> DispatchResultWithPostInfo {
-			T::UpdateOrigin::ensure_origin(origin)?;
+			T::RiskManagerUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				pool_id.is_supported_underlying_asset(),
@@ -293,7 +289,7 @@ pub mod module {
 		#[pallet::weight(T::RiskManagerWeightInfo::set_threshold())]
 		#[transactional]
 		pub fn set_threshold(origin: OriginFor<T>, pool_id: CurrencyId, threshold: Rate) -> DispatchResultWithPostInfo {
-			T::UpdateOrigin::ensure_origin(origin)?;
+			T::RiskManagerUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				pool_id.is_supported_underlying_asset(),
@@ -320,7 +316,7 @@ pub mod module {
 			pool_id: CurrencyId,
 			liquidation_fee: Rate,
 		) -> DispatchResultWithPostInfo {
-			T::UpdateOrigin::ensure_origin(origin)?;
+			T::RiskManagerUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				pool_id.is_supported_underlying_asset(),
