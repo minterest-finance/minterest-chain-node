@@ -223,6 +223,7 @@ macro_rules! mock_impl_risk_manager_config {
 			type UnsignedPriority = RiskManagerPriority;
 			type LiquidationPoolsManager = liquidation_pools::Module<$target>;
 			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
+			type MntManager = mnt_token::Module<$target>;
 			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type RiskManagerWeightInfo = ();
 		}

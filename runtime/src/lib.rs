@@ -457,6 +457,7 @@ impl risk_manager::Config for Runtime {
 	type UnsignedPriority = RiskManagerPriority;
 	type LiquidationPoolsManager = LiquidationPools;
 	type LiquidityPoolsManager = LiquidityPools;
+	type MntManager = MntToken;
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type RiskManagerWeightInfo = weights::risk_manager::WeightInfo<Runtime>;
 }
