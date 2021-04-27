@@ -101,7 +101,7 @@ pub trait ControllerAPI<AccountId> {
 	fn borrow_allowed(underlying_asset_id: CurrencyId, who: &AccountId, borrow_amount: Balance) -> DispatchResult;
 
 	/// Return minimum protocol interest needed to transfer it to liquidation pool
-	fn get_protocol_interest_treshold(pool_id: CurrencyId) -> Balance;
+	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance;
 
 	/// Protocol operation mode. In whitelist mode, only members 'WhitelistCouncil' can work with
 	/// protocols.

@@ -893,7 +893,7 @@ impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
 	}
 
 	/// Return minimum protocol interest needed to transfer it to liquidation pool
-	fn get_protocol_interest_treshold(pool_id: CurrencyId) -> Balance {
+	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance {
 		Self::controller_dates(pool_id).protocol_interest_threshold
 	}
 }

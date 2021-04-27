@@ -712,7 +712,7 @@ impl<T: Config> Pallet<T> {
 
 	fn transfer_protocol_interest(pool_id: CurrencyId) {
 		let total_protocol_interest = T::ManagerLiquidityPools::get_pool_total_protocol_interest(pool_id);
-		if total_protocol_interest < T::ControllerAPI::get_protocol_interest_treshold(pool_id) {
+		if total_protocol_interest < T::ControllerAPI::get_protocol_interest_threshold(pool_id) {
 			return;
 		}
 
