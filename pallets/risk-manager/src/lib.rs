@@ -574,11 +574,6 @@ impl<T: Config> Pallet<T> {
 
 				<T as module::Config>::MntManager::update_mnt_supply_index(collateral_pool_id)?;
 				<T as module::Config>::MntManager::distribute_supplier_mnt(collateral_pool_id, &borrower, false)?;
-				<T as module::Config>::MntManager::distribute_supplier_mnt(
-					collateral_pool_id,
-					&liquidation_pool_account_id,
-					false,
-				)?;
 
 				// Check if there are enough collateral wrapped tokens to withdraw seize_tokens.
 				match balance_wrapped_token.cmp(&seize_tokens) {

@@ -1,4 +1,6 @@
-use super::utils::{enable_is_collateral_mock, enable_whitelist_mode_and_add_member, set_balance};
+use super::utils::{
+	enable_is_collateral_mock, enable_whitelist_mode_and_add_member, prepare_for_mnt_distribution, set_balance, SEED,
+};
 use crate::{
 	AccountId, Balance, Currencies, EnabledUnderlyingAssetsIds, EnabledWrappedTokensId, LiquidityPools,
 	LiquidityPoolsModuleId, MinterestProtocol, MntToken, MntTokenModuleId, Origin, Rate, Runtime, System, BTC, DOLLARS,
@@ -13,19 +15,6 @@ use sp_runtime::{
 	FixedPointNumber,
 };
 use sp_std::prelude::*;
-
-pub const SEED: u32 = 0;
-
-fn prepare_for_mnt_distribution() -> Result<(), &'static str> {
-	let helper: AccountId = account("helper", 0, SEED);
-	enable_whitelist_mode_and_add_member(&helper)?;
-	set_balance(DOT, &helper, 50_000 * DOLLARS)?;
-	set_balance(MNT, &MntTokenModuleId::get().into_account(), 1_000_000 * DOLLARS)?;
-	MinterestProtocol::deposit_underlying(RawOrigin::Signed(helper.clone()).into(), DOT, 50_000 * DOLLARS)?;
-	MinterestProtocol::enable_is_collateral(Origin::signed(helper.clone()).into(), DOT)?;
-	MinterestProtocol::borrow(RawOrigin::Signed(helper).into(), DOT, 10_000 * DOLLARS)?;
-	Ok(())
-}
 
 fn hypothetical_liquidity_setup(borrower: &AccountId, lender: &AccountId) -> Result<(), &'static str> {
 	// set balance for users
@@ -69,7 +58,7 @@ runtime_benchmarks! {
 	_ {}
 
 	deposit_underlying {
-		prepare_for_mnt_distribution()?;
+		prepare_for_mnt_distribution(vec![DOT])?;
 		let lender: AccountId = account("lender", 0, SEED);
 		enable_whitelist_mode_and_add_member(&lender)?;
 
@@ -91,7 +80,7 @@ runtime_benchmarks! {
 	}
 
 	redeem {
-		prepare_for_mnt_distribution()?;
+		prepare_for_mnt_distribution(vec![DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
@@ -111,7 +100,7 @@ runtime_benchmarks! {
 	}
 
 	redeem_underlying {
-		prepare_for_mnt_distribution()?;
+		prepare_for_mnt_distribution(vec![DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
@@ -131,7 +120,7 @@ runtime_benchmarks! {
 	}
 
 	redeem_wrapped {
-		prepare_for_mnt_distribution()?;
+		prepare_for_mnt_distribution(vec![DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
@@ -151,7 +140,7 @@ runtime_benchmarks! {
 	}
 
 	borrow {
-		prepare_for_mnt_distribution()?;
+		prepare_for_mnt_distribution(vec![DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
@@ -172,7 +161,7 @@ runtime_benchmarks! {
 	}
 
 	repay {
-		prepare_for_mnt_distribution()?;
+		prepare_for_mnt_distribution(vec![DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
 		enable_whitelist_mode_and_add_member(&borrower)?;
 		set_balance(DOT, &borrower, 100_000 * DOLLARS)?;
@@ -193,7 +182,7 @@ runtime_benchmarks! {
 	}
 
 	repay_all {
-		prepare_for_mnt_distribution()?;
+		prepare_for_mnt_distribution(vec![DOT])?;
 		let borrower:AccountId = account("borrower", 0, SEED);
 		enable_whitelist_mode_and_add_member(&borrower)?;
 		set_balance(DOT, &borrower, 100_000 * DOLLARS)?;
@@ -214,7 +203,7 @@ runtime_benchmarks! {
 	}
 
 	repay_on_behalf {
-		prepare_for_mnt_distribution()?;
+		prepare_for_mnt_distribution(vec![DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 		enable_whitelist_mode_and_add_member(&lender)?;
@@ -239,7 +228,7 @@ runtime_benchmarks! {
 	}
 
 	transfer_wrapped {
-		prepare_for_mnt_distribution()?;
+		prepare_for_mnt_distribution(vec![DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 

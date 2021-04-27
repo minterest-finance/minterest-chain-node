@@ -1,31 +1,20 @@
 use crate::{
-	AccountId, Balance, Currencies, CurrencyId, EnabledUnderlyingAssetsIds, MinterestOracle, MinterestProtocol, Origin,
-	Price, Runtime, Vec, WhitelistCouncilMembership, BTC, DOT, ETH, KSM,
+	AccountId, Balance, Currencies, CurrencyId, MinterestProtocol, MntTokenModuleId, Origin, Runtime, Vec,
+	WhitelistCouncilMembership, BTC, DOLLARS, DOT, ETH, KSM, MNT,
 };
 
+use frame_benchmarking::account;
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
-use frame_support::traits::OnFinalize;
 use frame_system::pallet_prelude::OriginFor;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use sp_runtime::{traits::StaticLookup, FixedPointNumber};
+use sp_runtime::traits::{AccountIdConversion, StaticLookup};
+use sp_runtime::FixedPointNumber;
+
+pub const SEED: u32 = 0;
 
 pub fn lookup_of_account(who: AccountId) -> <<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source {
 	<Runtime as frame_system::Config>::Lookup::unlookup(who)
-}
-
-pub fn set_oracle_price_for_all_pools<T: frame_system::Config<Origin = Origin>>(
-	price: u128,
-	origin: OriginFor<T>,
-	block: u32,
-) -> DispatchResultWithPostInfo {
-	let prices: Vec<(CurrencyId, Price)> = EnabledUnderlyingAssetsIds::get()
-		.into_iter()
-		.map(|pool_id| (pool_id, Price::saturating_from_integer(price)))
-		.collect();
-	MinterestOracle::on_finalize(block);
-	MinterestOracle::feed_values(origin.into(), prices)?;
-	Ok(().into())
 }
 
 pub fn set_balance(currency_id: CurrencyId, who: &AccountId, balance: Balance) -> DispatchResultWithPostInfo {
@@ -45,6 +34,19 @@ pub fn enable_whitelist_mode_and_add_member(who: &AccountId) -> DispatchResultWi
 	controller::WhitelistMode::<Runtime>::put(true);
 	WhitelistCouncilMembership::add_member(RawOrigin::Root.into(), who.clone())?;
 	Ok(().into())
+}
+
+pub(crate) fn prepare_for_mnt_distribution(pools: Vec<CurrencyId>) -> Result<(), &'static str> {
+	let helper: AccountId = account("helper", 0, SEED);
+	enable_whitelist_mode_and_add_member(&helper)?;
+	set_balance(MNT, &MntTokenModuleId::get().into_account(), 1_000_000 * DOLLARS)?;
+	pools.into_iter().try_for_each(|pool_id| -> Result<(), &'static str> {
+		set_balance(pool_id, &helper, 50_000 * DOLLARS)?;
+		MinterestProtocol::deposit_underlying(RawOrigin::Signed(helper.clone()).into(), pool_id, 50_000 * DOLLARS)?;
+		MinterestProtocol::enable_is_collateral(Origin::signed(helper.clone()).into(), pool_id)?;
+		MinterestProtocol::borrow(RawOrigin::Signed(helper.clone()).into(), pool_id, 10_000 * DOLLARS)?;
+		Ok(())
+	})
 }
 
 #[cfg(test)]
