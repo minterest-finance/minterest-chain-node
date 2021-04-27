@@ -2,7 +2,7 @@ use super::utils::{enable_is_collateral_mock, enable_whitelist_mode_and_add_memb
 use crate::{
 	AccountId, Balance, Currencies, EnabledUnderlyingAssetsIds, EnabledWrappedTokensId, LiquidityPools,
 	LiquidityPoolsModuleId, MinterestProtocol, MntToken, MntTokenModuleId, Origin, Rate, Runtime, System, BTC, DOLLARS,
-	DOT, ETH, KSM, MDOT, MNT,
+	DOT, ETH, KSM, MBTC, MDOT, MNT,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
@@ -32,7 +32,11 @@ fn hypothetical_liquidity_setup(borrower: &AccountId, lender: &AccountId) -> Res
 	EnabledWrappedTokensId::get()
 		.into_iter()
 		.try_for_each(|token_id| -> Result<(), &'static str> {
-			set_balance(token_id, borrower, 10_000 * DOLLARS)?;
+			if token_id == MBTC {
+				set_balance(token_id, borrower, 30_000 * DOLLARS)?;
+			} else {
+				set_balance(token_id, borrower, 10_000 * DOLLARS)?;
+			}
 			Ok(())
 		})?;
 	set_balance(MDOT, lender, 20_000 * DOLLARS)?;

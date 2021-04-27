@@ -29,6 +29,19 @@ mod tests {
 	// The test checks the parameters of the MNT token.
 	// Initial parameters: 	DOT + ETH - enabled in mnt minting;
 	// 						mnt_rate = 0.1 MNT per block;
+	// 1. Alice deposit() 100_000 DOT;
+	// 2. Alice borrow() 50_000 ETH;
+	// 3. Alice claim() [ETH];
+	// 4. Alice claim() [DOT];
+	// 5. Bob borrow() 20_000 DOT;
+	// 6. Alice borrow() 30_000 BTC;
+	// 7. Alice repay_all() ETH;
+	// 8. Alice transfer_wrapped() to Bob 50_000 MDOT;
+	// 9. Bob claim() [DOT];
+	// 10. Alice repay_all() BTC;
+	// 11. Alice redeem() 100_000 DOT;
+	// 12. Alice claim() [DOT];
+	// 13. Bob claim() [DOT];
 	#[test]
 	fn test_mnt_token_scenario_n_1() {
 		ExtBuilder::default()
@@ -89,6 +102,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![ETH]));
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
 				assert_eq!(Tokens::free_balance(MNT, &ALICE), 583_333_303_583_252_543);
+
 				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
 				assert_eq!(Tokens::free_balance(MNT, &ALICE), 1_249_999_968_987_352_566);
 
@@ -124,24 +138,41 @@ mod tests {
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), 960_784_860_312_994_443);
 				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
-				assert_ok!(MinterestProtocol::repay_all(alice(), BTC));
+				assert_ok!(MinterestProtocol::transfer_wrapped(
+					alice(),
+					BOB,
+					MDOT,
+					50_000 * DOLLARS
+				));
+				assert_ok!(MinterestProtocol::claim_mnt(bob(), vec![DOT]));
+				assert_eq!(Tokens::free_balance(MNT, &BOB), 292_884_845_268_385_804);
 
 				set_block_number_and_refresh_speeds(90);
 
-				test_mnt_speeds(41_176_411_655_434_848, 29_411_778_501_715_166, 29_411_809_842_849_985);
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), 1_080_784_765_813_049_532);
+				test_mnt_speeds(34_999_982_354_379_901, 25_000_034_903_116_419, 39_999_982_742_503_679);
+				assert_eq!(TestMntToken::mnt_accrued(ALICE), 1_639_999_855_537_001_155);
+				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
+
+				assert_ok!(MinterestProtocol::repay_all(alice(), BTC));
+
+				set_block_number_and_refresh_speeds(100);
+
+				test_mnt_speeds(41_176_394_739_223_584, 29_411_766_418_684_159, 29_411_838_842_092_256);
+				assert_eq!(TestMntToken::mnt_accrued(ALICE), 1_909_999_671_430_830_035);
 				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
 				assert_ok!(MinterestProtocol::redeem(alice(), DOT));
 
-				set_block_number_and_refresh_speeds(100);
+				set_block_number_and_refresh_speeds(110);
 
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), 193_499_967_121_418_2881);
+				assert_eq!(TestMntToken::mnt_accrued(ALICE), 2_084_999_578_418_583_309);
 				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
+
 				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
-				assert_eq!(Tokens::free_balance(MNT, &ALICE), 3_184_999_640_201_535_447);
+				assert_eq!(Tokens::free_balance(MNT, &ALICE), 3_334_999_547_405_935_875);
+
 				assert_ok!(MinterestProtocol::claim_mnt(bob(), vec![DOT]));
-				assert_eq!(Tokens::free_balance(MNT, &BOB), 510_531_665_008_614_425);
+				assert_eq!(Tokens::free_balance(MNT, &BOB), 922_786_119_436_287_883);
 			})
 	}
 }

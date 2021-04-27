@@ -483,8 +483,8 @@ impl<T: Config> Pallet<T> {
 
 		<Controller<T>>::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
-		<T as module::Config>::MntManager::update_mnt_supply_index(underlying_asset)?;
-		<T as module::Config>::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
+		T::MntManager::update_mnt_supply_index(underlying_asset)?;
+		T::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
 
 		// Fail if deposit not allowed
 		ensure!(
@@ -675,8 +675,8 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::OperationPaused
 		);
 
-		<T as module::Config>::MntManager::update_mnt_borrow_index(underlying_asset)?;
-		<T as module::Config>::MntManager::distribute_borrower_mnt(underlying_asset, borrower, false)?;
+		T::MntManager::update_mnt_borrow_index(underlying_asset)?;
+		T::MntManager::distribute_borrower_mnt(underlying_asset, borrower, false)?;
 
 		// Fetch the amount the borrower owes, with accumulated interest
 		let account_borrows = <Controller<T>>::borrow_balance_stored(&borrower, underlying_asset)?;
@@ -734,8 +734,7 @@ impl<T: Config> Pallet<T> {
 
 		T::MntManager::update_mnt_supply_index(underlying_asset)?;
 		T::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
-
-		<T as module::Config>::MntManager::distribute_supplier_mnt(underlying_asset, receiver, false)?;
+		T::MntManager::distribute_supplier_mnt(underlying_asset, receiver, false)?;
 
 		// Fail if not enough free balance
 		ensure!(
@@ -786,10 +785,10 @@ impl<T: Config> Pallet<T> {
 				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
-			<T as module::Config>::MntManager::update_mnt_borrow_index(pool_id)?;
-			<T as module::Config>::MntManager::distribute_borrower_mnt(pool_id, holder, true)?;
-			<T as module::Config>::MntManager::update_mnt_supply_index(pool_id)?;
-			<T as module::Config>::MntManager::distribute_supplier_mnt(pool_id, holder, true)?;
+			T::MntManager::update_mnt_borrow_index(pool_id)?;
+			T::MntManager::distribute_borrower_mnt(pool_id, holder, true)?;
+			T::MntManager::update_mnt_supply_index(pool_id)?;
+			T::MntManager::distribute_supplier_mnt(pool_id, holder, true)?;
 			Ok(())
 		})
 	}

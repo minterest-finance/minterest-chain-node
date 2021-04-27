@@ -49,6 +49,7 @@ mock_impl_orml_tokens_config!(Runtime);
 mock_impl_orml_currencies_config!(Runtime);
 mock_impl_liquidity_pools_config!(Runtime);
 mock_impl_minterest_model_config!(Runtime, OneAlice);
+mock_impl_controller_config!(Runtime, OneAlice);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
@@ -78,19 +79,6 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
-parameter_types! {
-	pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
-}
-
-impl Config for Runtime {
-	type Event = Event;
-	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
-	type MaxBorrowCap = MaxBorrowCap;
-	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
-	type ControllerWeightInfo = ();
-}
-
-pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
 pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
 
 pub struct ExtBuilder {
