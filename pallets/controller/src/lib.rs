@@ -17,7 +17,7 @@ use frame_system::pallet_prelude::*;
 use liquidity_pools::Pool;
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerAPI, LiquidityPoolsManager, MntManager, PoolsManager, PriceProvider};
+use pallet_traits::{ControllerAPI, LiquidityPoolsManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;
@@ -100,9 +100,6 @@ pub mod module {
 
 		/// Provides the basic liquidity pools manager and liquidity pool functionality.
 		type LiquidityPoolsManager: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
-
-		/// Provides MNT token distribution functionality.
-		type MntManager: MntManager<Self::AccountId>;
 
 		#[pallet::constant]
 		/// Maximum total borrow amount per pool in usd.
@@ -565,9 +562,6 @@ impl<T: Config> Pallet<T> {
 					.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 
 			ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
-
-			T::MntManager::update_mnt_supply_index(underlying_asset)?;
-			T::MntManager::distribute_supplier_mnt(underlying_asset, redeemer, false)?;
 		}
 		Ok(())
 	}
@@ -587,10 +581,6 @@ impl<T: Config> Pallet<T> {
 			.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 
 		ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
-
-		T::MntManager::update_mnt_borrow_index(underlying_asset)?;
-		T::MntManager::distribute_borrower_mnt(underlying_asset, who, false)?;
-
 		Ok(())
 	}
 

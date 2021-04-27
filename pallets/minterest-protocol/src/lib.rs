@@ -566,6 +566,9 @@ impl<T: Config> Pallet<T> {
 		);
 		<Controller<T>>::redeem_allowed(underlying_asset, &who, wrapped_amount)?;
 
+		T::MntManager::update_mnt_supply_index(underlying_asset)?;
+		T::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
+
 		T::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount)?;
 
 		T::MultiCurrency::transfer(
@@ -607,6 +610,9 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::OperationPaused
 		);
 		<Controller<T>>::borrow_allowed(underlying_asset, &who, borrow_amount)?;
+
+		T::MntManager::update_mnt_borrow_index(underlying_asset)?;
+		T::MntManager::distribute_borrower_mnt(underlying_asset, who, false)?;
 
 		// Fetch the amount the borrower owes, with accumulated interest.
 		let account_borrows = <Controller<T>>::borrow_balance_stored(&who, underlying_asset)?;

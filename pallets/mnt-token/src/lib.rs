@@ -343,7 +343,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// - `user`: MNT tokens recipient.
 	/// - `user_accrued`: The total amount of accrued tokens.
-	/// - `distribute_all`:
+	/// - `distribute_all`: boolean, distribute all or part of accrued MNT tokens.
 	fn transfer_mnt(user: &T::AccountId, user_accrued: Balance, distribute_all: bool) -> DispatchResult {
 		//TODO: Need to discuss what we should do.
 		// Erorr/Event/save money to MntAccrued/stop producing mnt tokens

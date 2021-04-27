@@ -939,7 +939,6 @@ dependencies = [
  "liquidity-pools",
  "minterest-model",
  "minterest-primitives",
- "mnt-token",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
