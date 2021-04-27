@@ -3,6 +3,9 @@
 //! ## Overview
 //!
 //! Liquidation Pools are responsible for holding funds for automatic liquidation.
+//! This module has offchain worker implemented which is running periodically (interval is
+//! configured in BalancingPeriod).
+//! Offchain worker keeps pools in balance to avoid lack of funds for liquidation.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
@@ -112,6 +115,10 @@ pub mod module {
 		PoolNotFound,
 		/// Not enough liquidation pool balance.
 		NotEnoughBalance,
+		/// There is not enough liquidity available on user balance.
+		NotEnoughLiquidityAvailable,
+		/// Transaction with zero balance is not allowed.
+		ZeroBalanceTransaction,
 	}
 
 	#[pallet::event]
@@ -127,6 +134,9 @@ pub mod module {
 		BalanceRatioChanged(CurrencyId, Rate),
 		///  Maximum ideal balance has been successfully changed: \[pool_id, new_threshold_value\]
 		MaxIdealBalanceChanged(CurrencyId, Option<Balance>),
+		///  Successfull transfer to liqudation pull: \[underlying_asset_id, underlying_amount,
+		/// who\]
+		TransferToLiquidationPool(CurrencyId, Balance, T::AccountId),
 	}
 
 	/// Balancing pool frequency.
@@ -324,6 +334,38 @@ pub mod module {
 				target_amount,
 			)?;
 			Self::deposit_event(Event::LiquidationPoolsBalanced);
+			Ok(().into())
+		}
+
+		/// Seed the liquidation pool
+		/// - `underlying_asset_id`: currency of transfer
+		/// - `underlying_amount`: amount to transfer to liquidation pool
+		#[pallet::weight(T::LiquidationPoolsWeightInfo::transfer_to_liquidation_pool())]
+		#[transactional]
+		pub fn transfer_to_liquidation_pool(
+			origin: OriginFor<T>,
+			underlying_asset_id: CurrencyId,
+			underlying_amount: Balance,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			ensure!(
+				underlying_asset_id.is_supported_underlying_asset(),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+			ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
+			ensure!(
+				underlying_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
+				Error::<T>::NotEnoughLiquidityAvailable
+			);
+
+			T::MultiCurrency::transfer(underlying_asset_id, &who, &Self::pools_account_id(), underlying_amount)?;
+
+			Self::deposit_event(Event::TransferToLiquidationPool(
+				underlying_asset_id,
+				underlying_amount,
+				who,
+			));
 			Ok(().into())
 		}
 	}

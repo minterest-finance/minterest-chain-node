@@ -17,7 +17,7 @@ mod weights;
 mod weights_test;
 
 use crate::constants::fee::WeightToFee;
-pub use controller_rpc_runtime_api::{HypotheticalLiquidityData, PoolState, UserPoolBalanceData};
+pub use controller_rpc_runtime_api::{BalanceInfo, HypotheticalLiquidityData, PoolState, UserPoolBalanceData};
 pub use minterest_primitives::{
 	currency::{
 		CurrencyType::{UnderlyingAsset, WrappedToken},
@@ -784,6 +784,10 @@ impl_runtime_apis! {
 
 		fn is_admin(caller: AccountId) -> Option<bool> {
 				Some(MinterestCouncil::is_member(&caller))
+		}
+
+		fn get_user_total_collateral(account_id: AccountId) -> Option<BalanceInfo> {
+				Some(BalanceInfo{amount: Controller::get_user_total_collateral(account_id).ok()?})
 		}
 	}
 
