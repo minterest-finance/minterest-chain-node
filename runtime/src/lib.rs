@@ -589,7 +589,6 @@ construct_runtime!(
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Module, Storage, Call, Event<T>},
-
 		// Dev
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 	}
@@ -791,7 +790,7 @@ impl_runtime_apis! {
 		CurrencyId,
 		TimeStampedPrice,
 	> for Runtime {
-		fn get_value(provider_id: DataProviderId ,key: CurrencyId) -> Option<TimeStampedPrice> {
+		fn get_value(provider_id: DataProviderId, key: CurrencyId) -> Option<TimeStampedPrice> {
 			match provider_id {
 				DataProviderId::Minterest => MinterestOracle::get_no_op(&key),
 				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_no_op(&key)
@@ -805,6 +804,17 @@ impl_runtime_apis! {
 			}
 		}
 	}
+
+	impl prices_rpc_runtime_api::PricesApi<Block> for Runtime {
+		fn  get_current_price(currency_id: CurrencyId) -> Option<Price> {
+			Prices::get_price(currency_id)
+		}
+
+		fn  get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
+			Prices::get_all_locked_prices()
+		}
+	}
+
 
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {

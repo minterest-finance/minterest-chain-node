@@ -3877,6 +3877,7 @@ dependencies = [
  "node-minterest-runtime",
  "orml-oracle-rpc",
  "pallet-transaction-payment-rpc",
+ "prices-rpc",
  "sc-rpc",
  "sc-rpc-api",
  "sp-api",
@@ -4231,6 +4232,7 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
+ "prices-rpc-runtime-api",
  "risk-manager",
  "serde",
  "smallvec 1.6.1",
@@ -5247,6 +5249,31 @@ name = "ppv-lite86"
 version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac74c624d6b2d21f425f752262f42188365d7b8ff1aff74c82e45136510a4857"
+
+[[package]]
+name = "prices-rpc"
+version = "0.1.0"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "minterest-primitives",
+ "prices-rpc-runtime-api",
+ "sc-rpc",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+]
+
+[[package]]
+name = "prices-rpc-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "minterest-primitives",
+ "orml-oracle",
+ "sp-api",
+ "sp-std",
+]
 
 [[package]]
 name = "primitive-types"

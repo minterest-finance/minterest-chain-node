@@ -1,0 +1,18 @@
+[package]
+name = "prices-rpc"
+version = "0.1.0"
+authors = ["Minterest <https://github.com/minterest-defi>"]
+edition = "2018"
+
+[dependencies]
+jsonrpc-core = "15.0"
+jsonrpc-core-client = "15.0"
+jsonrpc-derive = "15.0"
+
+sc-rpc = '3.0'
+sp-runtime = { version = "3.0.0" }
+sp-api = { version = "3.0.0" }
+sp-blockchain = { version = "3.0.0" }
+
+prices-rpc-runtime-api = { path = "runtime-api" }
+minterest-primitives = { path = "../../../primitives" }

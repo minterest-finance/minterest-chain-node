@@ -28,12 +28,14 @@ where
 	C::Api:
 		orml_oracle_rpc::OracleRuntimeApi<Block, DataProviderId, CurrencyId, node_minterest_runtime::TimeStampedPrice>,
 	C::Api: controller_rpc::ControllerRuntimeApi<Block, AccountId>,
+	C::Api: prices_rpc::PricesRuntimeApi<Block>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + 'static,
 {
 	use controller_rpc::{Controller, ControllerApi};
 	use orml_oracle_rpc::{Oracle, OracleApi};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
+	use prices_rpc::{Prices, PricesApi};
 	use substrate_frame_rpc_system::{FullSystem, SystemApi};
 
 	let mut io = jsonrpc_core::IoHandler::default();
@@ -55,8 +57,9 @@ where
 
 	io.extend_with(ControllerApi::to_delegate(Controller::new(client.clone())));
 
-	io.extend_with(OracleApi::to_delegate(Oracle::new(client)));
+	io.extend_with(OracleApi::to_delegate(Oracle::new(client.clone())));
 
+	io.extend_with(PricesApi::to_delegate(Prices::new(client)));
 	// Extend this RPC with a custom API by using the following syntax.
 	// `YourRpcStruct` should have a reference to a client, which is needed
 	// to call into the runtime.
