@@ -12,7 +12,6 @@
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
 use frame_support::{pallet_prelude::*, transactional};
-use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 use minterest_primitives::{CurrencyId, Price};
 use orml_traits::{DataFeeder, DataProvider};
 use pallet_traits::PriceProvider;
@@ -87,20 +86,6 @@ pub mod module {
 			self.locked_price
 				.iter()
 				.for_each(|(currency_id, price)| LockedPrice::<T>::insert(currency_id, price));
-		}
-	}
-
-	/// Wrappers for RPC calls
-	impl<T: Config> Pallet<T> {
-		pub fn get_price(currency_id: CurrencyId) -> Option<Price> {
-			<Pallet<T> as PriceProvider<CurrencyId>>::get_underlying_price(currency_id)
-		}
-
-		pub fn get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
-			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-				.iter()
-				.map(|&currency_id| (currency_id, Self::locked_price(currency_id)))
-				.collect()
 		}
 	}
 

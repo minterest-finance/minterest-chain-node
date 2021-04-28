@@ -69,7 +69,7 @@ pub use sp_runtime::{Perbill, Permill, Perquintill};
 pub use constants::{currency::*, time::*, *};
 use frame_support::traits::Contains;
 use frame_system::{EnsureOneOf, EnsureRoot};
-
+use pallet_traits::PriceProvider;
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -811,14 +811,16 @@ impl_runtime_apis! {
 
 	impl prices_rpc_runtime_api::PricesApi<Block> for Runtime {
 		fn  get_current_price(currency_id: CurrencyId) -> Option<Price> {
-			Prices::get_price(currency_id)
+			<module_prices::Module::<Runtime>>::get_underlying_price(currency_id)
 		}
 
 		fn  get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
-			Prices::get_all_locked_prices()
+			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+				.iter()
+				.map(|&currency_id| (currency_id, <module_prices::Module::<Runtime>>::locked_price(currency_id)))
+				.collect()
 		}
 	}
-
 
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {

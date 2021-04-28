@@ -17,18 +17,18 @@ use std::sync::Arc;
 #[rpc]
 /// Base trait for RPC interface of prices
 pub trait PricesApi<BlockHash> {
-	/// This function return price for currency.
+	/// This function returns a price for a currency.
 	/// If currency price has been locked, locked value will be returned.
-	/// Otherwise wil be returned value from Oracal RMS
+	/// Otherwise the value from Oracle RMS will be returned
 	///
 	///  - `&self` :  Self reference
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	#[rpc(name = "prices_getCurrentPrice")]
 	fn get_current_price(&self, at: Option<BlockHash>, currency_id: CurrencyId) -> Result<Option<Price>>;
 
-	/// This function return Vector containing prices for all currencies, been locked
-	/// In case some asset were not locked None will be returned for corresponding assets.
-	/// Function read prices values from lockal storage.
+	/// This function returns a Vector containing prices for all currencies been locked
+	/// In case some currency prices were not locked, None will be returned for corresponding currencies.
+	/// Function read prices values from local storage.
 	///
 	///  - `&self` :  Self reference
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.

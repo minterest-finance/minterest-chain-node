@@ -1,5 +1,5 @@
 //! Runtime API definition for prices pallet.
-//! Here we declare the runtime API. It is implemented it the `impl` block in
+//! Here we declare the runtime API. It is implemented in the `impl` block in
 //! runtime amalgamator file (the `runtime/src/lib.rs`)
 //!
 //! Corresponding RPC declaration: `pallets/prices/rpc/src/lib.rs`
