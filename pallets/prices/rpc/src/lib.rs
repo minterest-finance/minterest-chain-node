@@ -23,8 +23,6 @@ pub trait PricesApi<BlockHash> {
 	///
 	///  - `&self` :  Self reference
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
-	/// Example:
-	///
 	#[rpc(name = "prices_getCurrentPrice")]
 	fn get_current_price(&self, at: Option<BlockHash>, currency_id: CurrencyId) -> Result<Option<Price>>;
 
