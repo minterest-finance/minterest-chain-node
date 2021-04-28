@@ -8,7 +8,7 @@ use node_minterest_runtime::{
 	GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
 	MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, OperatorMembershipMinterestConfig, PricesConfig,
 	RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, BTC,
-	DOLLARS, DOT, ETH, KSM, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
+	DOLLARS, DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -218,7 +218,7 @@ fn testnet_genesis(
 				.chain(
 					get_all_modules_accounts()
 						.iter()
-						.next() // module mnt-tokens
+						.next() // mnt-token module
 						.map(|x| (x.clone(), INITIAL_TREASURY)),
 				)
 				.collect(),
@@ -236,8 +236,7 @@ fn testnet_genesis(
 		orml_tokens: Some(TokensConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
-				// liquidation_pools + DEXes
-				.chain(get_all_modules_accounts()[1..3].iter())
+				.chain(get_all_modules_accounts()[1..3].iter()) // liquidation_pools + DEXes
 				.flat_map(|x| {
 					vec![
 						(x.clone(), DOT, INITIAL_BALANCE),

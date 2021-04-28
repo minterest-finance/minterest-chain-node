@@ -121,7 +121,7 @@ parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 }
 
-// Do not change the order of modules. Used for genesis block.
+// Do not change the order of modules. Used for test genesis block.
 pub fn get_all_modules_accounts() -> Vec<AccountId> {
 	vec![
 		MntTokenModuleId::get().into_account(),

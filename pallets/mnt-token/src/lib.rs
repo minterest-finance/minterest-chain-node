@@ -34,7 +34,7 @@ mod tests;
 pub struct MntState<T: Config> {
 	/// Index that represents MNT tokens distribution for the whole pool.
 	/// User MNT tokens distribution is based on this index.
-	pub mnt_distribution_index: FixedU128,
+	pub mnt_distribution_index: Rate,
 	/// The block number the index was last updated at
 	pub index_updated_at_block: T::BlockNumber,
 }
