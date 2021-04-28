@@ -2,8 +2,8 @@ use super::utils::{
 	enable_whitelist_mode_and_add_member, lookup_of_account, prepare_for_mnt_distribution, set_balance, SEED,
 };
 use crate::{
-	AccountId, Currencies, EnabledUnderlyingAssetsIds, LiquidationPools, LiquidationPoolsModuleId, LiquidityPools,
-	MinterestProtocol, MntToken, Origin, Rate, Runtime, System, BTC, DOLLARS, DOT, ETH, KSM, MNT,
+	AccountId, Currencies, EnabledUnderlyingAssetsIds, LiquidationPoolsModuleId, LiquidityPools, MinterestProtocol,
+	MntToken, Origin, Rate, Runtime, System, BTC, DOLLARS, DOT, ETH, KSM, MNT,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;

@@ -5,7 +5,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
-use frame_support::{pallet_prelude::*, transactional};
+use frame_support::{pallet_prelude::*, sp_std::cmp::Ordering, transactional};
 use frame_system::pallet_prelude::*;
 use minterest_primitives::currency::MNT;
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
@@ -17,6 +17,8 @@ use sp_runtime::{
 	DispatchResult, FixedPointNumber, FixedU128,
 };
 use sp_std::{convert::TryInto, result, vec::Vec};
+pub mod weights;
+pub use weights::WeightInfo;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -25,11 +27,6 @@ use serde::{Deserialize, Serialize};
 mod mock;
 #[cfg(test)]
 mod tests;
-
-pub mod weights;
-use frame_support::sp_std::cmp::Ordering;
-use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
-pub use weights::WeightInfo;
 
 /// Representation of supply/borrow pool state
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -311,15 +308,13 @@ impl<T: Config> Pallet<T> {
 		Ok((result, total_utility))
 	}
 
-	/// Recalcul`ate MNT speeds
+	/// Recalculate MNT speeds
 	pub fn refresh_mnt_speeds() -> DispatchResult {
-		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.iter()
-			.try_for_each(|&pool_id| -> DispatchResult {
-				Self::update_mnt_supply_index(pool_id)?;
-				Self::update_mnt_borrow_index(pool_id)?;
-				Ok(())
-			})?;
+		MntSpeeds::<T>::iter().try_for_each(|(pool_id, _)| -> DispatchResult {
+			Self::update_mnt_supply_index(pool_id)?;
+			Self::update_mnt_borrow_index(pool_id)?;
+			Ok(())
+		})?;
 
 		let (pool_utilities, sum_of_all_utilities) = Self::calculate_enabled_pools_utilities()?;
 		if sum_of_all_utilities.is_zero() {

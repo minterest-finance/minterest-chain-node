@@ -4,11 +4,11 @@ use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
-	AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, GenesisConfig, GrandpaConfig,
-	LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig, MinterestModelConfig,
-	MinterestOracleConfig, MntTokenConfig, OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig,
-	Signature, SudoConfig, SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM,
-	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
+	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, GenesisConfig,
+	GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
+	MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, OperatorMembershipMinterestConfig, PricesConfig,
+	RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, BTC,
+	DOLLARS, DOT, ETH, KSM, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -26,6 +26,7 @@ use sp_runtime::{
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 const INITIAL_BALANCE: u128 = 100_000 * DOLLARS;
+const INITIAL_TREASURY: u128 = 5_000_000 * DOLLARS;
 
 // The URL for the telemetry server.
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -76,20 +77,12 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				// Pre-funded accounts
 				vec![
-					// liquidation pool
-					hex!["6d6f646c6d696e2f6c71646e0000000000000000000000000000000000000000"].into(),
-					// DEXes
-					hex!["6d6f646c6d696e2f646578730000000000000000000000000000000000000000"].into(),
-					// Eugene
-					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Eve"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie"),
-					get_account_id_from_seed::<sr25519::Public>("Dave"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+					// Eugene
+					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
 				],
 				true,
 			)
@@ -218,7 +211,17 @@ fn testnet_genesis(
 		}),
 		pallet_balances: Some(BalancesConfig {
 			// Configure endowed accounts with initial balance of INITIAL_BALANCE.
-			balances: endowed_accounts.iter().cloned().map(|k| (k, INITIAL_BALANCE)).collect(),
+			balances: endowed_accounts
+				.iter()
+				.cloned()
+				.map(|k| (k, INITIAL_BALANCE))
+				.chain(
+					get_all_modules_accounts()
+						.iter()
+						.next() // module mnt-tokens
+						.map(|x| (x.clone(), INITIAL_TREASURY)),
+				)
+				.collect(),
 		}),
 		pallet_aura: Some(AuraConfig {
 			authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
@@ -233,6 +236,8 @@ fn testnet_genesis(
 		orml_tokens: Some(TokensConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
+				// liquidation_pools + DEXes
+				.chain(get_all_modules_accounts()[1..3].iter())
 				.flat_map(|x| {
 					vec![
 						(x.clone(), DOT, INITIAL_BALANCE),

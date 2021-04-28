@@ -115,10 +115,20 @@ pub fn native_version() -> NativeVersion {
 
 // Module accounts of runtime
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
-	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+}
+
+// Do not change the order of modules. Used for genesis block.
+pub fn get_all_modules_accounts() -> Vec<AccountId> {
+	vec![
+		MntTokenModuleId::get().into_account(),
+		LiquidationPoolsModuleId::get().into_account(),
+		DexModuleId::get().into_account(),
+		LiquidityPoolsModuleId::get().into_account(),
+	]
 }
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
