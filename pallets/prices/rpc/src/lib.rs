@@ -28,8 +28,7 @@ pub trait PricesApi<BlockHash> {
 
 	/// This function returns a Vector containing prices for all currencies been locked
 	/// In case some currency prices were not locked, None will be returned for corresponding
-	/// currencies.
-	/// Function read prices values from local storage.
+	/// currencies. Function read prices values from local storage.
 	///
 	///  - `&self` :  Self reference
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
