@@ -27,7 +27,8 @@ pub trait PricesApi<BlockHash> {
 	fn get_current_price(&self, at: Option<BlockHash>, currency_id: CurrencyId) -> Result<Option<Price>>;
 
 	/// This function returns a Vector containing prices for all currencies been locked
-	/// In case some currency prices were not locked, None will be returned for corresponding currencies.
+	/// In case some currency prices were not locked, None will be returned for corresponding
+	/// currencies.
 	/// Function read prices values from local storage.
 	///
 	///  - `&self` :  Self reference
