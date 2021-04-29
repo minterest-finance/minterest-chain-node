@@ -16,7 +16,6 @@ mod tests {
 	use liquidity_pools::{Pool, PoolUserData};
 	pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 	use minterest_primitives::{Balance, CurrencyId, Price, Rate};
-	use orml_currencies::Currency;
 	use orml_traits::{parameter_type_with_key, MultiCurrency};
 	use sp_core::H256;
 	use sp_runtime::{
@@ -38,6 +37,7 @@ mod tests {
 	mod liquidity_pools_tests;
 	mod minterest_model_tests;
 	mod minterest_protocol_tests;
+	mod mnt_token_tests;
 	mod scenario_tests;
 
 	pub type AccountId = u64;
@@ -53,6 +53,7 @@ mod tests {
 		UncheckedExtrinsic = UncheckedExtrinsic,
 		{
 			System: frame_system::{Module, Call, Config, Storage, Event<T>},
+			Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 			Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 			Currencies: orml_currencies::{Module, Call, Event<T>},
 			MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
@@ -61,6 +62,7 @@ mod tests {
 			TestController: controller::{Module, Storage, Call, Event, Config<T>},
 			MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 			TestDex: dex::{Module, Storage, Call, Event<T>},
+			TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		}
 	);
 
@@ -71,8 +73,10 @@ mod tests {
 	parameter_types! {
 		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 		pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+		pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
 		pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 		pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
+		pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
 		pub InitialExchangeRate: Rate = Rate::one();
 		pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 		pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
@@ -80,6 +84,7 @@ mod tests {
 
 	pub struct WhitelistMembers;
 	mock_impl_system_config!(Test);
+	mock_impl_balances_config!(Test);
 	mock_impl_orml_tokens_config!(Test);
 	mock_impl_orml_currencies_config!(Test);
 	mock_impl_liquidity_pools_config!(Test);
@@ -88,6 +93,7 @@ mod tests {
 	mock_impl_minterest_model_config!(Test, ZeroAdmin);
 	mock_impl_dex_config!(Test);
 	mock_impl_minterest_protocol_config!(Test);
+	mock_impl_mnt_token_config!(Test, ZeroAdmin);
 
 	pub struct MockPriceSource;
 
@@ -133,6 +139,9 @@ mod tests {
 	}
 	pub fn alice() -> Origin {
 		Origin::signed(ALICE)
+	}
+	pub fn bob() -> Origin {
+		Origin::signed(BOB)
 	}
 
 	pub struct ExtBuilder {
@@ -209,11 +218,33 @@ mod tests {
 			self
 		}
 
+		pub fn mnt_account_balance(mut self, balance: Balance) -> Self {
+			self.endowed_accounts
+				.push((TestMntToken::get_account_id(), MNT, balance));
+			self
+		}
+
 		pub fn build(self) -> sp_io::TestExternalities {
 			let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
+			pallet_balances::GenesisConfig::<Test> {
+				balances: self
+					.endowed_accounts
+					.clone()
+					.into_iter()
+					.filter(|(_, currency_id, _)| *currency_id == MNT)
+					.map(|(account_id, _, initial_balance)| (account_id, initial_balance))
+					.collect::<Vec<_>>(),
+			}
+			.assimilate_storage(&mut t)
+			.unwrap();
+
 			orml_tokens::GenesisConfig::<Test> {
-				endowed_accounts: self.endowed_accounts,
+				endowed_accounts: self
+					.endowed_accounts
+					.into_iter()
+					.filter(|(_, currency_id, _)| *currency_id != MNT)
+					.collect::<Vec<_>>(),
 			}
 			.assimilate_storage(&mut t)
 			.unwrap();
@@ -340,6 +371,15 @@ mod tests {
 				],
 			}
 			.assimilate_storage::<Test>(&mut t)
+			.unwrap();
+
+			mnt_token::GenesisConfig::<Test> {
+				mnt_rate: 100_000_000_000_000_000, // 0.1
+				mnt_claim_threshold: 100 * DOLLARS,
+				minted_pools: vec![DOT, ETH],
+				_phantom: Default::default(),
+			}
+			.assimilate_storage(&mut t)
 			.unwrap();
 
 			let mut ext = sp_io::TestExternalities::new(t);

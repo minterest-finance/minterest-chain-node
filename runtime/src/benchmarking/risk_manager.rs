@@ -1,17 +1,18 @@
-use super::utils::{enable_is_collateral, lookup_of_account, set_balance, set_oracle_price_for_all_pools};
+use super::utils::{
+	enable_whitelist_mode_and_add_member, lookup_of_account, prepare_for_mnt_distribution, set_balance, SEED,
+};
 use crate::{
-	AccountId, LiquidationPoolsModuleId, LiquidityPools, LiquidityPoolsModuleId, Origin, Rate, Runtime, System, BTC,
-	DOLLARS, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM,
+	AccountId, Currencies, EnabledUnderlyingAssetsIds, LiquidationPoolsModuleId, LiquidityPools, MinterestProtocol,
+	MntToken, Origin, Rate, Runtime, System, BTC, DOLLARS, DOT, ETH, KSM, MNT,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
+use orml_traits::MultiCurrency;
 use pallet_traits::PoolsManager;
 use sp_runtime::traits::AccountIdConversion;
 use sp_runtime::FixedPointNumber;
 use sp_std::prelude::*;
-
-pub const SEED: u32 = 0;
 
 runtime_benchmarks! {
 	{ Runtime, risk_manager }
@@ -47,59 +48,40 @@ runtime_benchmarks! {
 	)
 
 	liquidate {
-		System::set_block_number(1);
-
+		prepare_for_mnt_distribution(EnabledUnderlyingAssetsIds::get())?;
 		let borrower: AccountId = account("ownerx", 0, SEED);
-		let lender: AccountId = account("ownery", 0, SEED);
 		let borrower_lookup = lookup_of_account(borrower.clone());
 
-		let liquidity_pool_account_id = LiquidityPoolsModuleId::get().into_account();
-		let liquidation_pool_account_id = LiquidationPoolsModuleId::get().into_account();
+		System::set_block_number(10);
+		MntToken::refresh_mnt_speeds()?;
 
-		// feed price for each pool
-		set_oracle_price_for_all_pools::<Runtime>(2, Origin::root(), 1)?;
+		enable_whitelist_mode_and_add_member(&borrower)?;
 
-		// set balance for users
-		set_balance(MDOT, &borrower, 10_000 * DOLLARS)?;
-		set_balance(METH, &borrower, 10_000 * DOLLARS)?;
-		set_balance(MKSM, &borrower, 10_000 * DOLLARS)?;
-		set_balance(MBTC, &borrower, 10_000 * DOLLARS)?;
-		set_balance(MDOT, &lender, 30_000 * DOLLARS)?;
+		EnabledUnderlyingAssetsIds::get().into_iter().try_for_each(|pool_id| -> Result<(), &'static str> {
+			set_balance(pool_id, &borrower, 100_000 * DOLLARS)?;
+			MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), pool_id, 10_000 * DOLLARS)?;
+			MinterestProtocol::enable_is_collateral(Origin::signed(borrower.clone()).into(), pool_id)?;
+			Ok(())
+		})?;
 
-		// set balance for Liquidity Pool
-		set_balance(DOT, &liquidity_pool_account_id, 5_000 * DOLLARS)?;
-		set_balance(ETH, &liquidity_pool_account_id, 10_000 * DOLLARS)?;
-		set_balance(KSM, &liquidity_pool_account_id, 10_000 * DOLLARS)?;
-		set_balance(BTC, &liquidity_pool_account_id, 10_000 * DOLLARS)?;
+		MinterestProtocol::borrow(RawOrigin::Signed(borrower.clone()).into(), DOT, 35_000 * DOLLARS)?;
+
+		let liquidation_pool_account_id: AccountId = LiquidationPoolsModuleId::get().into_account();
 
 		// set balance for Liquidation Pool
 		set_balance(DOT, &liquidation_pool_account_id, 40_000 * DOLLARS)?;
 
-		// enable pools as collateral
-		enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), DOT)?;
-		enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), ETH)?;
-		enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), KSM)?;
-		enable_is_collateral::<Runtime>(Origin::signed(borrower.clone()), BTC)?;
-
-		// set borrow params
-		LiquidityPools::set_pool_total_borrowed(DOT, 35_000 * DOLLARS);
-		LiquidityPools::set_user_total_borrowed_and_interest_index(&borrower.clone(), DOT, 35_000 * DOLLARS, Rate::one());
-
-		// check if borrow params have been set.
-		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).total_borrowed, 35_000 * DOLLARS);
-		assert_eq!(LiquidityPools::pools(DOT).total_borrowed, 35_000 * DOLLARS);
-
-		// set next block number for accrue_interest to work
-		System::set_block_number(2);
+		System::set_block_number(20);
 	}: _(
 		RawOrigin::None,
 		borrower_lookup,
 		DOT
 	) verify {
-		assert_eq!(LiquidityPools::get_pool_available_liquidity(DOT), 30_000_008_251_425_000_000_000);
-		assert_eq!(LiquidityPools::get_pool_available_liquidity(ETH), 3_249_991_216_225_000_000_000);
-		assert_eq!(LiquidityPools::get_pool_available_liquidity(KSM), 0);
-		assert_eq!(LiquidityPools::get_pool_available_liquidity(BTC), 0);
+		assert_eq!(LiquidityPools::get_pool_available_liquidity(DOT), 40_000_001_906_875_001_666_225);
+		assert_eq!(LiquidityPools::get_pool_available_liquidity(ETH), 43_249_998_019_999_999_547_975);
+		assert_eq!(LiquidityPools::get_pool_available_liquidity(KSM), 39_999_999_977_499_999_322_900);
+		assert_eq!(LiquidityPools::get_pool_available_liquidity(BTC), 39_999_999_977_499_999_322_900);
+		assert_eq!(Currencies::free_balance(MNT, &borrower), 36_111_110_988_333_296_544);
 	}
 }
 

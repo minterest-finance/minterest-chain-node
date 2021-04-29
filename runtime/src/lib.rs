@@ -115,10 +115,20 @@ pub fn native_version() -> NativeVersion {
 
 // Module accounts of runtime
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
-	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+}
+
+// Do not change the order of modules. Used for test genesis block.
+pub fn get_all_modules_accounts() -> Vec<AccountId> {
+	vec![
+		MntTokenModuleId::get().into_account(),
+		LiquidationPoolsModuleId::get().into_account(),
+		DexModuleId::get().into_account(),
+		LiquidityPoolsModuleId::get().into_account(),
+	]
 }
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -349,6 +359,7 @@ impl minterest_protocol::Config for Runtime {
 	type Borrowing = LiquidityPools;
 	type ManagerLiquidationPools = LiquidationPools;
 	type ManagerLiquidityPools = LiquidityPools;
+	type MntManager = MntToken;
 	type WhitelistMembers = WhitelistCouncilProvider;
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
 }
@@ -456,6 +467,7 @@ impl risk_manager::Config for Runtime {
 	type UnsignedPriority = RiskManagerPriority;
 	type LiquidationPoolsManager = LiquidationPools;
 	type LiquidityPoolsManager = LiquidityPools;
+	type MntManager = MntToken;
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type RiskManagerWeightInfo = weights::risk_manager::WeightInfo<Runtime>;
 }
@@ -472,7 +484,7 @@ impl mnt_token::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControllerAPI = Controller;
 	type MntTokenAccountId = MntTokenAccountId;
-	type ProtocolWeightInfo = weights::mnt_token::WeightInfo<Runtime>;
+	type MntTokenWeightInfo = weights::mnt_token::WeightInfo<Runtime>;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -575,7 +587,7 @@ construct_runtime!(
 
 		// Oracle and Prices
 		MinterestOracle: orml_oracle::<Instance1>::{Module, Storage, Call, Config<T>, Event<T>},
-		Prices: module_prices::{Module, Storage, Call, Event<T>, Config},
+		Prices: module_prices::{Module, Storage, Call, Event<T>, Config<T>},
 
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		OperatorMembershipMinterest: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},

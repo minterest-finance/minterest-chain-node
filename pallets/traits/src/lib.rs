@@ -104,9 +104,32 @@ pub trait ControllerAPI<AccountId> {
 	// DispatchResult;
 
 	// /// Return minimum protocol interest needed to transfer it to liquidation pool
-	// fn get_protocol_interest_treshold(pool_id: CurrencyId) -> Balance;
+	// fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance;
 
 	// /// Protocol operation mode. In whitelist mode, only members 'WhitelistCouncil' can work with
 	// /// protocols.
 	// fn is_whitelist_mode_enabled() -> bool;
+}
+
+pub trait MntManager<AccountId> {
+	/// Update MNT supply index for a pool.
+	/// - `underlying_asset`: The pool which supply index to update.
+	fn update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult;
+
+	/// Update MNT borrow index for a pool.
+	/// - `underlying_asset`: The pool which borrow index to update.
+	fn update_mnt_borrow_index(underlying_id: CurrencyId) -> DispatchResult;
+
+	/// Distribute MNT token to supplier. It should be called after update_mnt_supply_index.
+	/// - `underlying_id`: The pool in which the supplier is acting;
+	/// - `supplier`: The AccountId of the supplier to distribute MNT to.
+	fn distribute_supplier_mnt(underlying_id: CurrencyId, supplier: &AccountId, distribute_all: bool)
+		-> DispatchResult;
+
+	/// Distribute MNT token to borrower. It should be called after update_mnt_borrow_index.
+	/// Borrowers will not begin to accrue tokens till the first interaction with the protocol.
+	/// - `underlying_id`: The pool in which the borrower is acting;
+	/// - `borrower`: The AccountId of the borrower to distribute MNT to.
+	fn distribute_borrower_mnt(underlying_id: CurrencyId, borrower: &AccountId, distribute_all: bool)
+		-> DispatchResult;
 }

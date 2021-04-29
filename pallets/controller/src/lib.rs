@@ -98,11 +98,11 @@ pub mod module {
 		/// The overarching event type.
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// Provides the basic liquidity pools manager and liquidity pool functionality
+		/// Provides the basic liquidity pools manager and liquidity pool functionality.
 		type LiquidityPoolsManager: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
 
 		#[pallet::constant]
-		/// Maximum total borrow amount per pool in usd
+		/// Maximum total borrow amount per pool in usd.
 		type MaxBorrowCap: Get<Balance>;
 
 		/// The origin which may update controller parameters. Root can
@@ -581,7 +581,6 @@ impl<T: Config> Pallet<T> {
 			.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 
 		ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
-
 		Ok(())
 	}
 
