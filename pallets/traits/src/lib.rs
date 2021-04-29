@@ -112,23 +112,23 @@ pub trait ControllerAPI<AccountId> {
 }
 
 pub trait MntManager<AccountId> {
-	/// Update mnt supply index for pool.
-	/// - `underlying_asset`: The pool whose supply index to update.
+	/// Update MNT supply index for a pool.
+	/// - `underlying_asset`: The pool which supply index to update.
 	fn update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult;
 
-	/// Update mnt borrow index for pool.
-	/// - `underlying_asset`: The pool whose borrow index to update.
+	/// Update MNT borrow index for a pool.
+	/// - `underlying_asset`: The pool which borrow index to update.
 	fn update_mnt_borrow_index(underlying_id: CurrencyId) -> DispatchResult;
 
-	/// Distribute mnt token to supplier. It should be called after update_mnt_supply_index.
-	/// - `underlying_id`: The pool in which the supplier is interacting;
+	/// Distribute MNT token to supplier. It should be called after update_mnt_supply_index.
+	/// - `underlying_id`: The pool in which the supplier is acting;
 	/// - `supplier`: The AccountId of the supplier to distribute MNT to.
 	fn distribute_supplier_mnt(underlying_id: CurrencyId, supplier: &AccountId, distribute_all: bool)
 		-> DispatchResult;
 
-	/// Distribute mnt token to borrower. It should be called after update_mnt_borrow_index.
-	/// Borrowers will not begin to accrue until after the first interaction with the protocol.
-	/// - `underlying_id`: The pool in which the borrower is interacting;
+	/// Distribute MNT token to borrower. It should be called after update_mnt_borrow_index.
+	/// Borrowers will not begin to accrue tokens till the first interaction with the protocol.
+	/// - `underlying_id`: The pool in which the borrower is acting;
 	/// - `borrower`: The AccountId of the borrower to distribute MNT to.
 	fn distribute_borrower_mnt(underlying_id: CurrencyId, borrower: &AccountId, distribute_all: bool)
 		-> DispatchResult;

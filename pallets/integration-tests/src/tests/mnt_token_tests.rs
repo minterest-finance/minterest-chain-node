@@ -1,4 +1,4 @@
-//  Integration-tests for mnt-token pallet.
+//  Integration tests for mnt-token pallet.
 
 #[cfg(test)]
 mod tests {
@@ -73,7 +73,7 @@ mod tests {
 
 				set_block_number_and_refresh_speeds(10);
 
-				// ALice deposit DOT and enable her DOT pool as collateral.
+				// ALice deposits DOT and enables her DOT pool as a collateral.
 				assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, ONE_HUNDRED));
 				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
 
@@ -92,7 +92,7 @@ mod tests {
 				// There are borrow in all pool, but BTC pool excluded from MNT distribution.
 				test_mnt_speeds(33_333_333_283_333_335, 66_666_666_716_666_664, 0);
 
-				// BOB deposit ETH and enable his assets in pools as collateral.
+				// BOB deposits ETH and enables his assets in pools as a collateral.
 				assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, ONE_HUNDRED));
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), 0);
 				assert_eq!(TestMntToken::mnt_accrued(BOB), 0);
@@ -120,7 +120,7 @@ mod tests {
 
 				set_block_number_and_refresh_speeds(70);
 
-				// The BTC pool is excluded from the MNT-token distribution, so its speed is zero.
+				// The BTC pool is excluded from the MNT token distribution, so its speed is zero.
 				test_mnt_speeds(41_176_429_955_924_386, 58_823_570_044_075_613, 0);
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
 				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());

@@ -217,8 +217,7 @@ fn testnet_genesis(
 				.map(|k| (k, INITIAL_BALANCE))
 				.chain(
 					get_all_modules_accounts()
-						.iter()
-						.next() // mnt-token module
+						.get(0) // mnt-token module
 						.map(|x| (x.clone(), INITIAL_TREASURY)),
 				)
 				.collect(),

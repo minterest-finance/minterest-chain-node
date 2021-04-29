@@ -342,10 +342,10 @@ impl<T: Config> Pallet<T> {
 	fn transfer_mnt(user: &T::AccountId, user_accrued: Balance, distribute_all: bool) -> DispatchResult {
 		//TODO: Need to discuss what we should do.
 		// Erorr/Event/save money to MntAccrued/stop producing mnt tokens
-		let threshold = if distribute_all {
-			Balance::zero()
-		} else {
-			MntClaimThreshold::<T>::get()
+
+		let threshold = match distribute_all {
+			true => Balance::zero(),
+			false => MntClaimThreshold::<T>::get(),
 		};
 
 		if user_accrued >= threshold && user_accrued > 0 {
