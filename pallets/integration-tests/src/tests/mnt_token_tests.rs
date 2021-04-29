@@ -101,10 +101,10 @@ mod tests {
 
 				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![ETH]));
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
-				assert_eq!(Tokens::free_balance(MNT, &ALICE), 583_333_303_583_252_543);
+				assert_eq!(Currencies::free_balance(MNT, &ALICE), 583_333_303_583_252_543);
 
 				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
-				assert_eq!(Tokens::free_balance(MNT, &ALICE), 1_249_999_968_987_352_566);
+				assert_eq!(Currencies::free_balance(MNT, &ALICE), 1_249_999_968_987_352_566);
 
 				assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
 
@@ -145,7 +145,7 @@ mod tests {
 					50_000 * DOLLARS
 				));
 				assert_ok!(MinterestProtocol::claim_mnt(bob(), vec![DOT]));
-				assert_eq!(Tokens::free_balance(MNT, &BOB), 292_884_845_268_385_804);
+				assert_eq!(Currencies::free_balance(MNT, &BOB), 292_884_845_268_385_804);
 
 				set_block_number_and_refresh_speeds(90);
 
@@ -169,10 +169,10 @@ mod tests {
 				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
 				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
-				assert_eq!(Tokens::free_balance(MNT, &ALICE), 3_334_999_547_405_935_875);
+				assert_eq!(Currencies::free_balance(MNT, &ALICE), 3_334_999_547_405_935_875);
 
 				assert_ok!(MinterestProtocol::claim_mnt(bob(), vec![DOT]));
-				assert_eq!(Tokens::free_balance(MNT, &BOB), 922_786_119_436_287_883);
+				assert_eq!(Currencies::free_balance(MNT, &BOB), 922_786_119_436_287_883);
 			})
 	}
 }

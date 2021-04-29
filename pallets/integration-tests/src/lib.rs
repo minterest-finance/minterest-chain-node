@@ -227,8 +227,24 @@ mod tests {
 		pub fn build(self) -> sp_io::TestExternalities {
 			let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
+			pallet_balances::GenesisConfig::<Test> {
+				balances: self
+					.endowed_accounts
+					.clone()
+					.into_iter()
+					.filter(|(_, currency_id, _)| *currency_id == MNT)
+					.map(|(account_id, _, initial_balance)| (account_id, initial_balance))
+					.collect::<Vec<_>>(),
+			}
+			.assimilate_storage(&mut t)
+			.unwrap();
+
 			orml_tokens::GenesisConfig::<Test> {
-				endowed_accounts: self.endowed_accounts,
+				endowed_accounts: self
+					.endowed_accounts
+					.into_iter()
+					.filter(|(_, currency_id, _)| *currency_id != MNT)
+					.collect::<Vec<_>>(),
 			}
 			.assimilate_storage(&mut t)
 			.unwrap();
