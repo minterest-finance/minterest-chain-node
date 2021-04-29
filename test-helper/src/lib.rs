@@ -198,7 +198,7 @@ macro_rules! mock_impl_dex_config {
 
 #[macro_export]
 macro_rules! mock_impl_minterest_protocol_config {
-	($target:ty, $controller_api:ty) => {
+	($target:ty) => {
 		impl minterest_protocol::Config for $target {
 			type Event = Event;
 			type Borrowing = liquidity_pools::Module<$target>;
@@ -206,14 +206,14 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type ManagerLiquidityPools = liquidity_pools::Module<$target>;
 			type WhitelistMembers = WhitelistMembers;
 			type ProtocolWeightInfo = ();
-			type ControllerAPI = $controller_api;
+			type ControllerAPI = controller::Module<$target>;
 		}
 	};
 }
 
 #[macro_export]
 macro_rules! mock_impl_risk_manager_config {
-	($target:ty, $acc:ident, $controller_api:ty) => {
+	($target:ty, $acc:ident) => {
 		parameter_types! {
 			pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
 		}
@@ -225,7 +225,7 @@ macro_rules! mock_impl_risk_manager_config {
 			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
 			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type RiskManagerWeightInfo = ();
-			type ControllerAPI = $controller_api;
+			type ControllerAPI = controller::Module<$target>;
 		}
 	};
 }

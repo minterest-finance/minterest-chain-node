@@ -64,8 +64,8 @@ mock_impl_liquidation_pools_config!(Test);
 mock_impl_controller_config!(Test, ZeroAdmin);
 mock_impl_minterest_model_config!(Test, ZeroAdmin);
 mock_impl_dex_config!(Test);
-mock_impl_minterest_protocol_config!(Test, Controller);
-mock_impl_risk_manager_config!(Test, ZeroAdmin, Controller);
+mock_impl_minterest_protocol_config!(Test);
+mock_impl_risk_manager_config!(Test, ZeroAdmin);
 
 pub struct MockPriceSource;
 
