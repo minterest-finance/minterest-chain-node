@@ -175,4 +175,158 @@ mod tests {
 				assert_eq!(Currencies::free_balance(MNT, &BOB), 922_786_119_436_287_883);
 			})
 	}
+
+	// Test MNT distribution behaviour when users are using transfer_wrapped
+	#[test]
+	fn mnt_token_supplier_distribution_when_users_transferring_tokens() {
+		ExtBuilder::default()
+			.pool_initial(DOT)
+			.pool_initial(ETH)
+			.pool_initial(BTC)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, ETH, ONE_HUNDRED)
+			.user_balance(ADMIN, BTC, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.user_balance(BOB, DOT, ONE_HUNDRED)
+			.user_balance(CAROL, DOT, 2 * ONE_HUNDRED)
+			.mnt_account_balance(ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				// Set initial state of pools for distribution MNT tokens.
+				assert_ok!(MinterestProtocol::deposit_underlying(admin(), DOT, ONE_HUNDRED));
+				assert_ok!(MinterestProtocol::deposit_underlying(admin(), ETH, ONE_HUNDRED));
+				assert_ok!(MinterestProtocol::deposit_underlying(admin(), BTC, ONE_HUNDRED));
+				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), DOT));
+				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), ETH));
+				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), BTC));
+				assert_ok!(MinterestProtocol::borrow(admin(), DOT, 50_000 * DOLLARS));
+				assert_ok!(MinterestProtocol::borrow(admin(), ETH, 50_000 * DOLLARS));
+				assert_ok!(MinterestProtocol::borrow(admin(), BTC, 50_000 * DOLLARS));
+
+				set_block_number_and_refresh_speeds(10);
+
+				// Alice deposits DOT and enables her DOT pool as a collateral.
+				assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, ONE_HUNDRED));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+				// Bob deposits DOT and enables her DOT pool as a collateral.
+				assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, ONE_HUNDRED));
+				assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
+				// Carol deposits DOT and enables her DOT pool as a collateral.
+				assert_ok!(MinterestProtocol::deposit_underlying(carol(), DOT, 2 * ONE_HUNDRED));
+				assert_ok!(MinterestProtocol::enable_is_collateral(carol(), DOT));
+
+				set_block_number_and_refresh_speeds(20);
+
+				// Check that both Alice and Bob receive the same amount of MNT token since they
+				// have equal DOT balance
+				let mnt_balance_after_deposit = 99_999_999_635_400_006;
+				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(bob(), vec![DOT]));
+				assert_eq!(Currencies::free_balance(MNT, &ALICE), mnt_balance_after_deposit);
+				assert_eq!(Currencies::free_balance(MNT, &BOB), mnt_balance_after_deposit);
+				assert_eq!(Currencies::free_balance(MNT, &CAROL), BALANCE_ZERO);
+
+				// Alice transfers all to Bob
+				assert_ok!(MinterestProtocol::transfer_wrapped(
+					alice(),
+					BOB,
+					MDOT,
+					Currencies::free_balance(MDOT, &ALICE)
+				));
+
+				set_block_number_and_refresh_speeds(30);
+
+				// Check that Alice received 0 MNT and Bob received approximately x2 comparing to
+				// previous claim
+				let mnt_bob_balance_after_transfer = mnt_balance_after_deposit + 200_000_003_320_799_939;
+				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(bob(), vec![DOT]));
+				assert_eq!(Currencies::free_balance(MNT, &ALICE), mnt_balance_after_deposit);
+				assert_eq!(Currencies::free_balance(MNT, &BOB), mnt_bob_balance_after_transfer);
+
+				// Bob transfers one third of its balance to Alice
+				assert_ok!(MinterestProtocol::transfer_wrapped(
+					bob(),
+					ALICE,
+					MDOT,
+					Currencies::free_balance(MDOT, &BOB) / 3
+				));
+
+				set_block_number_and_refresh_speeds(40);
+
+				// Test proportions 1:2. Amount of tokens Bob receive after claim must be twice
+				// bigger comparing to claim amount for Alice.
+				let mnt_alice_delta_after_second_transfer = 66_666_667_773_599_979;
+				let mnt_alice_balance_after_second_transfer =
+					mnt_balance_after_deposit + mnt_alice_delta_after_second_transfer;
+				let mnt_bob_balance_after_second_transfer = mnt_bob_balance_after_transfer +
+					mnt_alice_delta_after_second_transfer * 2 +
+					/*calculation error, it is okay for such algorithms*/ 1;
+				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(bob(), vec![DOT]));
+				assert_eq!(
+					Currencies::free_balance(MNT, &ALICE),
+					mnt_alice_balance_after_second_transfer
+				);
+				assert_eq!(
+					Currencies::free_balance(MNT, &BOB),
+					mnt_bob_balance_after_second_transfer
+				);
+
+				// Make random transfers
+				assert_ok!(MinterestProtocol::transfer_wrapped(
+					alice(),
+					BOB,
+					MDOT,
+					Currencies::free_balance(MDOT, &ALICE) / 2
+				));
+				assert_ok!(MinterestProtocol::transfer_wrapped(
+					bob(),
+					ALICE,
+					MDOT,
+					Currencies::free_balance(MDOT, &BOB) / 2
+				));
+				assert_ok!(MinterestProtocol::transfer_wrapped(
+					alice(),
+					BOB,
+					MDOT,
+					Currencies::free_balance(MDOT, &ALICE)
+				));
+				// Return the same proportions (1:2) eventually
+				assert_ok!(MinterestProtocol::transfer_wrapped(
+					bob(),
+					ALICE,
+					MDOT,
+					Currencies::free_balance(MDOT, &BOB) / 3
+				));
+
+				set_block_number_and_refresh_speeds(100);
+
+				// Test proportions 1:2 one more time. Transfers within one block doesn't affect
+				// calculations
+				let mnt_alice_delta_after_third_transfer = 400_000_006_641_933_212;
+				let mnt_alice_balance_after_third_transfer =
+					mnt_alice_balance_after_second_transfer + mnt_alice_delta_after_third_transfer;
+				let mnt_bob_balance_after_third_transfer =
+					mnt_bob_balance_after_second_transfer + mnt_alice_delta_after_third_transfer * 2;
+				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(bob(), vec![DOT]));
+				assert_eq!(
+					Currencies::free_balance(MNT, &ALICE),
+					mnt_alice_balance_after_third_transfer
+				);
+				assert_eq!(
+					Currencies::free_balance(MNT, &BOB),
+					mnt_bob_balance_after_third_transfer
+				);
+
+				assert_ok!(MinterestProtocol::claim_mnt(carol(), vec![DOT]));
+				assert_eq!(
+					Currencies::free_balance(MNT, &CAROL),
+					mnt_alice_balance_after_third_transfer +
+						mnt_bob_balance_after_third_transfer +
+						/*calculation error, it is okay for such algorithms*/ 4
+				);
+			});
+	}
 }
