@@ -759,67 +759,6 @@ impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
 		Ok(borrow_balance)
 	}
 
-	/// Applies accrued interest to total borrows and protocol interest.
-	/// This calculates interest accrued from the last checkpointed block
-	/// up to the current block and writes new checkpoint to storage.
-	fn accrue_interest_rate(underlying_asset: CurrencyId) -> DispatchResult {
-		//Remember the initial block number.
-		let current_block_number = <frame_system::Module<T>>::block_number();
-		let accrual_block_number_previous = Self::controller_dates(underlying_asset).last_interest_accrued_block;
-		// Calculate the number of blocks elapsed since the last accrual
-		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
-		//Short-circuit accumulating 0 interest.
-		if block_delta == T::BlockNumber::zero() {
-			return Ok(());
-		}
-
-		let pool_data = Self::calculate_interest_params(underlying_asset, block_delta)?;
-		// Save new params
-		ControllerParams::<T>::mutate(underlying_asset, |data| {
-			data.last_interest_accrued_block = current_block_number
-		});
-		<LiquidityPools<T>>::set_pool_data(
-			underlying_asset,
-			pool_data.total_borrowed,
-			pool_data.borrow_index,
-			pool_data.total_protocol_interest,
-		)?;
-
-		Ok(())
-	}
-
-	/// Checks if a specific operation is allowed on a pool.
-	///
-	/// Return true - if operation is allowed, false - if operation is unallowed.
-	fn is_operation_allowed(pool_id: CurrencyId, operation: Operation) -> bool {
-		match operation {
-			Operation::Deposit => !Self::pause_keepers(pool_id).deposit_paused,
-			Operation::Redeem => !Self::pause_keepers(pool_id).redeem_paused,
-			Operation::Borrow => !Self::pause_keepers(pool_id).borrow_paused,
-			Operation::Repay => !Self::pause_keepers(pool_id).repay_paused,
-			Operation::Transfer => !Self::pause_keepers(pool_id).transfer_paused,
-		}
-	}
-
-	/// Checks if the account should be allowed to redeem tokens in the given pool.
-	///
-	/// - `underlying_asset` - The CurrencyId to verify the redeem against.
-	/// - `redeemer` -  The account which would redeem the tokens.
-	/// - `redeem_amount` - The number of mTokens to exchange for the underlying asset in the
-	/// pool.
-	///
-	/// Return Ok if the redeem is allowed.
-	fn redeem_allowed(underlying_asset: CurrencyId, redeemer: &T::AccountId, redeem_amount: Balance) -> DispatchResult {
-		if LiquidityPools::<T>::check_user_available_collateral(&redeemer, underlying_asset) {
-			let (_, shortfall) =
-				Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset, redeem_amount, 0)
-					.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
-
-			ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
-		}
-		Ok(())
-	}
-
 	/// Determine what the account liquidity would be if the given amounts were redeemed/borrowed.
 	///
 	/// - `account`: The account to determine liquidity.
@@ -906,6 +845,67 @@ impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
 		}
 	}
 
+	/// Applies accrued interest to total borrows and protocol interest.
+	/// This calculates interest accrued from the last checkpointed block
+	/// up to the current block and writes new checkpoint to storage.
+	fn accrue_interest_rate(underlying_asset: CurrencyId) -> DispatchResult {
+		//Remember the initial block number.
+		let current_block_number = <frame_system::Module<T>>::block_number();
+		let accrual_block_number_previous = Self::controller_dates(underlying_asset).last_interest_accrued_block;
+		// Calculate the number of blocks elapsed since the last accrual
+		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
+		//Short-circuit accumulating 0 interest.
+		if block_delta == T::BlockNumber::zero() {
+			return Ok(());
+		}
+
+		let pool_data = Self::calculate_interest_params(underlying_asset, block_delta)?;
+		// Save new params
+		ControllerParams::<T>::mutate(underlying_asset, |data| {
+			data.last_interest_accrued_block = current_block_number
+		});
+		<LiquidityPools<T>>::set_pool_data(
+			underlying_asset,
+			pool_data.total_borrowed,
+			pool_data.borrow_index,
+			pool_data.total_protocol_interest,
+		)?;
+
+		Ok(())
+	}
+
+	/// Checks if a specific operation is allowed on a pool.
+	///
+	/// Return true - if operation is allowed, false - if operation is unallowed.
+	fn is_operation_allowed(pool_id: CurrencyId, operation: Operation) -> bool {
+		match operation {
+			Operation::Deposit => !Self::pause_keepers(pool_id).deposit_paused,
+			Operation::Redeem => !Self::pause_keepers(pool_id).redeem_paused,
+			Operation::Borrow => !Self::pause_keepers(pool_id).borrow_paused,
+			Operation::Repay => !Self::pause_keepers(pool_id).repay_paused,
+			Operation::Transfer => !Self::pause_keepers(pool_id).transfer_paused,
+		}
+	}
+
+	/// Checks if the account should be allowed to redeem tokens in the given pool.
+	///
+	/// - `underlying_asset` - The CurrencyId to verify the redeem against.
+	/// - `redeemer` -  The account which would redeem the tokens.
+	/// - `redeem_amount` - The number of mTokens to exchange for the underlying asset in the
+	/// pool.
+	///
+	/// Return Ok if the redeem is allowed.
+	fn redeem_allowed(underlying_asset: CurrencyId, redeemer: &T::AccountId, redeem_amount: Balance) -> DispatchResult {
+		if LiquidityPools::<T>::check_user_available_collateral(&redeemer, underlying_asset) {
+			let (_, shortfall) =
+				Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset, redeem_amount, 0)
+					.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
+
+			ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
+		}
+		Ok(())
+	}
+
 	/// Checks if the account should be allowed to borrow the underlying asset of the given pool.
 	///
 	/// - `underlying_asset` - The CurrencyId to verify the borrow against.
@@ -925,14 +925,14 @@ impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
 		Ok(())
 	}
 
+	/// Return minimum protocol interest needed to transfer it to liquidation pool
+	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance {
+		Self::controller_dates(pool_id).protocol_interest_threshold
+	}
+
 	/// Protocol operation mode. In whitelist mode, only members 'WhitelistCouncil' can work with
 	/// protocols.
 	fn is_whitelist_mode_enabled() -> bool {
 		WhitelistMode::<T>::get()
-	}
-
-	/// Return minimum protocol interest needed to transfer it to liquidation pool
-	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance {
-		Self::controller_dates(pool_id).protocol_interest_threshold
 	}
 }
