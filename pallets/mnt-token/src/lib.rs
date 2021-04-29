@@ -14,7 +14,7 @@ use orml_traits::MultiCurrency;
 use pallet_traits::{ControllerAPI, LiquidityPoolsManager, MntManager, PriceProvider};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
-	DispatchResult, FixedPointNumber, FixedU128,
+	DispatchResult, FixedPointNumber,
 };
 use sp_std::{convert::TryInto, result, vec::Vec};
 pub mod weights;

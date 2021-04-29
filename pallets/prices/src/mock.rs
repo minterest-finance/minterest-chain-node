@@ -4,12 +4,14 @@ use super::*;
 use crate as module_prices;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system::EnsureSignedBy;
-use minterest_primitives::CurrencyId;
+use minterest_primitives::{Balance, CurrencyId};
 use sp_core::H256;
-use sp_runtime::testing::Header;
-use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
-use sp_runtime::FixedPointNumber;
-pub use test_helper::{mock_impl_system_config, BTC, DOT, ETH, KSM, MDOT, MNT};
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentityLookup},
+	FixedPointNumber,
+};
+pub use test_helper::{mock_impl_balances_config, mock_impl_system_config, BTC, DOT, ETH, KSM, MDOT, MNT};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -22,11 +24,13 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		PricesModule: module_prices::{Module, Storage, Call, Event<T>},
 	}
 );
 
 mock_impl_system_config!(Test);
+mock_impl_balances_config!(Test);
 
 pub struct MockDataProvider;
 impl DataProvider<CurrencyId, Price> for MockDataProvider {

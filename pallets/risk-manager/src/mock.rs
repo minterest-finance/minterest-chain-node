@@ -31,6 +31,8 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
@@ -62,6 +64,7 @@ parameter_types! {
 pub struct WhitelistMembers;
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
+mock_impl_orml_currencies_config!(Test);
 mock_impl_liquidity_pools_config!(Test);
 mock_impl_liquidation_pools_config!(Test);
 mock_impl_controller_config!(Test, ZeroAdmin);
@@ -70,6 +73,7 @@ mock_impl_dex_config!(Test);
 mock_impl_minterest_protocol_config!(Test);
 mock_impl_risk_manager_config!(Test, ZeroAdmin);
 mock_impl_mnt_token_config!(Test, ZeroAdmin);
+mock_impl_balances_config!(Test);
 
 pub struct MockPriceSource;
 

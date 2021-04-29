@@ -8,7 +8,6 @@ use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
-use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
 use sp_core::H256;
@@ -33,6 +32,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
@@ -73,6 +73,7 @@ mock_impl_minterest_model_config!(Test, OneAlice);
 mock_impl_dex_config!(Test);
 mock_impl_minterest_protocol_config!(Test);
 mock_impl_mnt_token_config!(Test, OneAlice);
+mock_impl_balances_config!(Test);
 
 pub struct MockPriceSource;
 

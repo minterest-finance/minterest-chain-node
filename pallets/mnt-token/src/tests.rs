@@ -9,10 +9,10 @@ use pallet_traits::MntManager;
 use sp_arithmetic::FixedPointNumber;
 use sp_runtime::traits::Zero;
 
-const MNT_PALLET_START_BALANCE: Balance = 1000000 * DOLLARS;
+const MNT_PALLET_START_BALANCE: Balance = 1_000_000 * DOLLARS;
 
 fn get_mnt_account_balance(user: AccountId) -> Balance {
-	Currencies::total_balance(MNT, &user)
+	Currencies::free_balance(MNT, &user)
 }
 
 /// Move flywheel and check borrower balance
@@ -300,6 +300,10 @@ fn distribute_borrower_mnt() {
 		)
 		.build()
 		.execute_with(|| {
+			assert_eq!(
+				MNT_PALLET_START_BALANCE,
+				get_mnt_account_balance(MntToken::get_account_id())
+			);
 			let mnt_rate = 12 * DOLLARS;
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
 			// First interaction with protocol for distributors.

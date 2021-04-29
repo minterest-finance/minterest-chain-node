@@ -29,6 +29,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 	}
@@ -41,6 +42,7 @@ ord_parameter_types! {
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
 mock_impl_minterest_model_config!(Test, OneAlice);
+mock_impl_balances_config!(Test);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");

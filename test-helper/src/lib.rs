@@ -17,11 +17,7 @@ pub const METH: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::METH);
 
 #[macro_export]
 macro_rules! mock_impl_system_config {
-	($target: ty) => {
-		mock_impl_system_config!($target, ());
-	};
-
-	($target:ty, $account_data:ty) => {
+	($target:ty) => {
 		parameter_types! {
 			pub const MockBlockHashCount: u64 = 250;
 			pub const MockSS58Prefix: u8 = 42;
@@ -45,7 +41,7 @@ macro_rules! mock_impl_system_config {
 			type BlockHashCount = MockBlockHashCount;
 			type Version = ();
 			type PalletInfo = PalletInfo;
-			type AccountData = $account_data;
+			type AccountData = pallet_balances::AccountData<Balance>;
 			type OnNewAccount = ();
 			type OnKilledAccount = ();
 			type SystemWeightInfo = ();
@@ -77,24 +73,22 @@ macro_rules! mock_impl_orml_tokens_config {
 
 #[macro_export]
 macro_rules! mock_impl_orml_currencies_config {
-	($target:ty, $native_currency:ty) => {
+	($target:ty) => {
 		parameter_types! {
 			pub const MockGetNativeCurrencyId: CurrencyId = MNT;
 		}
 
-		type MockNativeCurrency = $native_currency;
+		pub type Amount = i128;
+		pub type BlockNumber = u64;
+		type AdaptedBasicCurrency = orml_currencies::BasicCurrencyAdapter<$target, Balances, Amount, BlockNumber>;
 
 		impl orml_currencies::Config for $target {
 			type Event = Event;
 			type MultiCurrency = orml_tokens::Module<$target>;
-			type NativeCurrency = MockNativeCurrency;
+			type NativeCurrency = AdaptedBasicCurrency;
 			type GetNativeCurrencyId = MockGetNativeCurrencyId;
 			type WeightInfo = ();
 		}
-	};
-
-	($target:ty) => {
-		mock_impl_orml_currencies_config!($target, Currency<$target, MockGetNativeCurrencyId>);
 	};
 }
 
@@ -102,7 +96,7 @@ macro_rules! mock_impl_orml_currencies_config {
 macro_rules! mock_impl_liquidity_pools_config {
 	($target:ty) => {
 		impl liquidity_pools::Config for $target {
-			type MultiCurrency = orml_tokens::Module<$target>;
+			type MultiCurrency = orml_currencies::Module<$target>;
 			type PriceSource = MockPriceSource;
 			type ModuleId = LiquidityPoolsModuleId;
 			type LiquidityPoolAccountId = LiquidityPoolAccountId;
@@ -122,7 +116,7 @@ macro_rules! mock_impl_liquidation_pools_config {
 
 		impl liquidation_pools::Config for $target {
 			type Event = Event;
-			type MultiCurrency = orml_tokens::Module<$target>;
+			type MultiCurrency = orml_currencies::Module<$target>;
 			type UnsignedPriority = MockLiquidityPoolsPriority;
 			type PriceSource = MockPriceSource;
 			type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
@@ -189,7 +183,7 @@ macro_rules! mock_impl_dex_config {
 
 		impl dex::Config for $target {
 			type Event = Event;
-			type MultiCurrency = orml_tokens::Module<$target>;
+			type MultiCurrency = orml_currencies::Module<$target>;
 			type DexModuleId = DexModuleId;
 			type DexAccountId = DexAccountId;
 		}
@@ -238,10 +232,30 @@ macro_rules! mock_impl_mnt_token_config {
 			type PriceSource = MockPriceSource;
 			type UpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
-			type MultiCurrency = orml_tokens::Module<$target>;
+			type MultiCurrency = orml_currencies::Module<$target>;
 			type ControllerAPI = controller::Module<$target>;
 			type MntTokenAccountId = MntTokenAccountId;
 			type MntTokenWeightInfo = ();
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! mock_impl_balances_config {
+	($target:ty) => {
+		parameter_types! {
+			pub const ExistentialDeposit: u128 = 500;
+			pub const MaxLocks: u32 = 50;
+		}
+
+		impl pallet_balances::Config for $target {
+			type MaxLocks = MaxLocks;
+			type Balance = Balance;
+			type Event = Event;
+			type DustRemoval = ();
+			type ExistentialDeposit = ExistentialDeposit;
+			type AccountStore = frame_system::Pallet<$target>;
+			type WeightInfo = pallet_balances::weights::SubstrateWeight<$target>;
 		}
 	};
 }
