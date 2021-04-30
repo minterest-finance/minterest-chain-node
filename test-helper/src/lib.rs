@@ -201,6 +201,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type MntManager = mnt_token::Module<$target>;
 			type WhitelistMembers = WhitelistMembers;
 			type ProtocolWeightInfo = ();
+			type ControllerAPI = controller::Module<$target>;
 		}
 	};
 }
@@ -220,6 +221,7 @@ macro_rules! mock_impl_risk_manager_config {
 			type MntManager = mnt_token::Module<$target>;
 			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type RiskManagerWeightInfo = ();
+			type ControllerAPI = controller::Module<$target>;
 		}
 	};
 }

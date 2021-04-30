@@ -17,6 +17,7 @@ use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Operation, Price};
 use orml_traits::MultiCurrency;
+use pallet_traits::ControllerAPI;
 use pallet_traits::{DEXManager, PoolsManager, PriceProvider};
 use risk_manager::RiskManagerData;
 use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};

@@ -18,10 +18,19 @@ mod weights_test;
 
 use crate::constants::fee::WeightToFee;
 pub use controller_rpc_runtime_api::{BalanceInfo, HypotheticalLiquidityData, PoolState, UserPoolBalanceData};
+pub use minterest_primitives::{
+	currency::{
+		CurrencyType::{UnderlyingAsset, WrappedToken},
+		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
+	},
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index, Moment,
+	Operation, Price, Rate, Signature,
+};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
+use pallet_traits::ControllerAPI;
 use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -40,15 +49,6 @@ use sp_std::{cmp::Ordering, convert::TryFrom, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-
-pub use minterest_primitives::{
-	currency::{
-		CurrencyType::{UnderlyingAsset, WrappedToken},
-		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
-	},
-	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index, Moment,
-	Operation, Price, Rate, Signature,
-};
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -362,6 +362,7 @@ impl minterest_protocol::Config for Runtime {
 	type MntManager = MntToken;
 	type WhitelistMembers = WhitelistCouncilProvider;
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
+	type ControllerAPI = Controller;
 }
 
 pub struct WhitelistCouncilProvider;
@@ -470,6 +471,7 @@ impl risk_manager::Config for Runtime {
 	type MntManager = MntToken;
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type RiskManagerWeightInfo = weights::risk_manager::WeightInfo<Runtime>;
+	type ControllerAPI = Controller;
 }
 
 parameter_types! {

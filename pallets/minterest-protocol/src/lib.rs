@@ -21,7 +21,7 @@ use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude
 use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 use minterest_primitives::{Balance, CurrencyId, Operation};
 use orml_traits::MultiCurrency;
-use pallet_traits::{Borrowing, LiquidityPoolsManager, MntManager, PoolsManager};
+use pallet_traits::{Borrowing, ControllerAPI, LiquidityPoolsManager, MntManager, PoolsManager};
 use sp_runtime::{
 	traits::{BadOrigin, Zero},
 	DispatchError, DispatchResult,
@@ -39,7 +39,6 @@ pub mod weights;
 pub use weights::WeightInfo;
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
-type Controller<T> = controller::Module<T>;
 type TokensResult = result::Result<(Balance, CurrencyId, Balance), DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 
@@ -48,7 +47,7 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + controller::Config + SendTransactionTypes<Call<Self>> {
+	pub trait Config: frame_system::Config + liquidity_pools::Config + SendTransactionTypes<Call<Self>> {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -69,6 +68,9 @@ pub mod module {
 
 		/// Weight information for the extrinsics.
 		type ProtocolWeightInfo: WeightInfo;
+
+		/// Public API of controller pallet
+		type ControllerAPI: ControllerAPI<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -173,7 +175,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() {
+			if T::ControllerAPI::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -198,7 +200,7 @@ pub mod module {
 		pub fn redeem(origin: OriginFor<T>, underlying_asset: CurrencyId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() {
+			if T::ControllerAPI::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 			let (underlying_amount, wrapped_id, wrapped_amount) =
@@ -228,7 +230,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() {
+			if T::ControllerAPI::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 			let (_, wrapped_id, wrapped_amount) =
@@ -258,7 +260,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() {
+			if T::ControllerAPI::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -291,7 +293,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() {
+			if T::ControllerAPI::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -313,7 +315,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() {
+			if T::ControllerAPI::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -330,7 +332,7 @@ pub mod module {
 		pub fn repay_all(origin: OriginFor<T>, underlying_asset: CurrencyId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() {
+			if T::ControllerAPI::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -354,7 +356,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() {
+			if T::ControllerAPI::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -378,7 +380,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() {
+			if T::ControllerAPI::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -393,7 +395,7 @@ pub mod module {
 		pub fn enable_is_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() {
+			if T::ControllerAPI::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&sender), BadOrigin);
 			}
 
@@ -423,7 +425,7 @@ pub mod module {
 		pub fn disable_is_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 
-			if controller::WhitelistMode::<T>::get() {
+			if T::ControllerAPI::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&sender), BadOrigin);
 			}
 
@@ -444,7 +446,7 @@ pub mod module {
 
 			// Check if the user will have enough collateral if he removes one of the collaterals.
 			let (_, shortfall) =
-				<Controller<T>>::get_hypothetical_account_liquidity(&sender, pool_id, user_balance_disabled_asset, 0)
+				T::ControllerAPI::get_hypothetical_account_liquidity(&sender, pool_id, user_balance_disabled_asset, 0)
 					.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 			ensure!(shortfall == 0, Error::<T>::IsCollateralCannotBeDisabled);
 
@@ -481,14 +483,14 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
-		<Controller<T>>::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
+		T::ControllerAPI::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
 		T::MntManager::update_mnt_supply_index(underlying_asset)?;
 		T::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
 
 		// Fail if deposit not allowed
 		ensure!(
-			<Controller<T>>::is_operation_allowed(underlying_asset, Operation::Deposit),
+			T::ControllerAPI::is_operation_allowed(underlying_asset, Operation::Deposit),
 			Error::<T>::OperationPaused
 		);
 
@@ -522,7 +524,7 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 
-		<Controller<T>>::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
+		T::ControllerAPI::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
 		let wrapped_id = underlying_asset
 			.wrapped_asset()
@@ -561,10 +563,10 @@ impl<T: Config> Pallet<T> {
 
 		// Fail if redeem not allowed
 		ensure!(
-			<Controller<T>>::is_operation_allowed(underlying_asset, Operation::Redeem),
+			T::ControllerAPI::is_operation_allowed(underlying_asset, Operation::Redeem),
 			Error::<T>::OperationPaused
 		);
-		<Controller<T>>::redeem_allowed(underlying_asset, &who, wrapped_amount)?;
+		T::ControllerAPI::redeem_allowed(underlying_asset, &who, wrapped_amount)?;
 
 		T::MntManager::update_mnt_supply_index(underlying_asset)?;
 		T::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
@@ -602,20 +604,20 @@ impl<T: Config> Pallet<T> {
 
 		ensure!(borrow_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
 
-		<Controller<T>>::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
+		T::ControllerAPI::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
 		// Fail if borrow not allowed.
 		ensure!(
-			<Controller<T>>::is_operation_allowed(underlying_asset, Operation::Borrow),
+			T::ControllerAPI::is_operation_allowed(underlying_asset, Operation::Borrow),
 			Error::<T>::OperationPaused
 		);
-		<Controller<T>>::borrow_allowed(underlying_asset, &who, borrow_amount)?;
+		T::ControllerAPI::borrow_allowed(underlying_asset, &who, borrow_amount)?;
 
 		T::MntManager::update_mnt_borrow_index(underlying_asset)?;
 		T::MntManager::distribute_borrower_mnt(underlying_asset, who, false)?;
 
 		// Fetch the amount the borrower owes, with accumulated interest.
-		let account_borrows = <Controller<T>>::borrow_balance_stored(&who, underlying_asset)?;
+		let account_borrows = T::ControllerAPI::borrow_balance_stored(&who, underlying_asset)?;
 
 		<LiquidityPools<T>>::update_state_on_borrow(&who, underlying_asset, borrow_amount, account_borrows)?;
 
@@ -647,7 +649,7 @@ impl<T: Config> Pallet<T> {
 			underlying_asset.is_supported_underlying_asset(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
-		<Controller<T>>::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
+		T::ControllerAPI::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 		repay_amount = Self::do_repay_fresh(who, borrower, underlying_asset, repay_amount, all_assets)?;
 		Ok(repay_amount)
 	}
@@ -671,7 +673,7 @@ impl<T: Config> Pallet<T> {
 
 		// Fail if repay_borrow not allowed
 		ensure!(
-			<Controller<T>>::is_operation_allowed(underlying_asset, Operation::Repay),
+			T::ControllerAPI::is_operation_allowed(underlying_asset, Operation::Repay),
 			Error::<T>::OperationPaused
 		);
 
@@ -679,7 +681,7 @@ impl<T: Config> Pallet<T> {
 		T::MntManager::distribute_borrower_mnt(underlying_asset, borrower, false)?;
 
 		// Fetch the amount the borrower owes, with accumulated interest
-		let account_borrows = <Controller<T>>::borrow_balance_stored(&borrower, underlying_asset)?;
+		let account_borrows = T::ControllerAPI::borrow_balance_stored(&borrower, underlying_asset)?;
 
 		if repay_amount.is_zero() {
 			repay_amount = account_borrows
@@ -725,12 +727,12 @@ impl<T: Config> Pallet<T> {
 
 		// Fail if transfer is not allowed
 		ensure!(
-			<Controller<T>>::is_operation_allowed(underlying_asset, Operation::Transfer),
+			T::ControllerAPI::is_operation_allowed(underlying_asset, Operation::Transfer),
 			Error::<T>::OperationPaused
 		);
 
 		// Fail if transfer_amount is not available for redeem
-		<Controller<T>>::redeem_allowed(underlying_asset, &who, transfer_amount)?;
+		T::ControllerAPI::redeem_allowed(underlying_asset, &who, transfer_amount)?;
 
 		T::MntManager::update_mnt_supply_index(underlying_asset)?;
 		T::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
@@ -749,8 +751,8 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn transfer_protocol_interest(pool_id: CurrencyId) {
-		let total_protocol_interest = T::LiquidityPoolsManager::get_pool_total_protocol_interest(pool_id);
-		if total_protocol_interest < <Controller<T>>::controller_dates(pool_id).protocol_interest_threshold {
+		let total_protocol_interest = T::ManagerLiquidityPools::get_pool_total_protocol_interest(pool_id);
+		if total_protocol_interest < T::ControllerAPI::get_protocol_interest_threshold(pool_id) {
 			return;
 		}
 
