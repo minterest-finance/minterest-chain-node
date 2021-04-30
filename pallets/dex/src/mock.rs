@@ -40,9 +40,11 @@ parameter_types! {
 
 mock_impl_system_config!(Runtime);
 mock_impl_orml_tokens_config!(Runtime);
+mock_impl_orml_currencies_config!(Runtime);
 mock_impl_liquidity_pools_config!(Runtime);
 mock_impl_liquidation_pools_config!(Runtime);
 mock_impl_dex_config!(Runtime);
+mock_impl_balances_config!(Runtime);
 
 pub struct MockPriceSource;
 
@@ -66,6 +68,8 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
 		System: frame_system::{Module, Call, Event<T>},
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},

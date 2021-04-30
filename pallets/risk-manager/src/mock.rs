@@ -31,6 +31,8 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
@@ -38,7 +40,8 @@ frame_support::construct_runtime!(
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
-		TestDex: dex::{Module, Storage, Call, Event<T>}
+		TestDex: dex::{Module, Storage, Call, Event<T>},
+		TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -49,8 +52,10 @@ ord_parameter_types! {
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
+	pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
@@ -59,6 +64,7 @@ parameter_types! {
 pub struct WhitelistMembers;
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
+mock_impl_orml_currencies_config!(Test);
 mock_impl_liquidity_pools_config!(Test);
 mock_impl_liquidation_pools_config!(Test);
 mock_impl_controller_config!(Test, ZeroAdmin);
@@ -66,6 +72,8 @@ mock_impl_minterest_model_config!(Test, ZeroAdmin);
 mock_impl_dex_config!(Test);
 mock_impl_minterest_protocol_config!(Test);
 mock_impl_risk_manager_config!(Test, ZeroAdmin);
+mock_impl_mnt_token_config!(Test, ZeroAdmin);
+mock_impl_balances_config!(Test);
 
 pub struct MockPriceSource;
 

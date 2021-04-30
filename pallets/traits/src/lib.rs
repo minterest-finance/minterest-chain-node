@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::upper_case_acronyms)]
 
-use minterest_primitives::{Balance, CurrencyId, Price, Rate};
+use minterest_primitives::{Balance, CurrencyId, Operation, Price, Rate};
 use sp_runtime::{DispatchError, DispatchResult};
 use sp_std::result::Result;
 
@@ -74,39 +74,59 @@ pub trait DEXManager<AccountId, CurrencyId, Balance> {
 	) -> Result<Balance, DispatchError>;
 }
 
-// TODO MIN-191
 pub trait ControllerAPI<AccountId> {
 	/// Return the borrow balance of account based on stored data.
 	fn borrow_balance_stored(who: &AccountId, underlying_asset_id: CurrencyId) -> Result<Balance, DispatchError>;
 
-	// /// Determine what the account liquidity would be if the given amounts were redeemed/borrowed.
-	// fn get_hypothetical_account_liquidity(
-	// 	account: &AccountId,
-	// 	underlying_to_borrow: CurrencyId,
-	// 	redeem_amount: Balance,
-	// 	borrow_amount: Balance,
-	// ) -> Result<(Balance, Balance), DispatchError>;
+	/// Determine what the account liquidity would be if the given amounts were redeemed/borrowed.
+	fn get_hypothetical_account_liquidity(
+		account: &AccountId,
+		underlying_to_borrow: CurrencyId,
+		redeem_amount: Balance,
+		borrow_amount: Balance,
+	) -> Result<(Balance, Balance), DispatchError>;
 
-	// /// Applies accrued interest to total borrows and protocol interest.
-	// /// This calculates interest accrued from the last checkpointed block
-	// /// up to the current block and writes new checkpoint to storage.
-	// fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult;
+	/// Applies accrued interest to total borrows and protocol interest.
+	/// This calculates interest accrued from the last checkpointed block
+	/// up to the current block and writes new checkpoint to storage.
+	fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult;
 
-	// /// Checks if a specific operation is allowed on a pool.
-	// fn is_operation_allowed(pool_id: CurrencyId, operation: Operation) -> bool;
+	/// Checks if a specific operation is allowed on a pool.
+	fn is_operation_allowed(pool_id: CurrencyId, operation: Operation) -> bool;
 
-	// /// Checks if the account should be allowed to redeem tokens in the given pool.
-	// fn redeem_allowed(underlying_asset_id: CurrencyId, redeemer: &AccountId, redeem_amount: Balance)
-	// -> DispatchResult;
+	/// Checks if the account should be allowed to redeem tokens in the given pool.
+	fn redeem_allowed(underlying_asset_id: CurrencyId, redeemer: &AccountId, redeem_amount: Balance) -> DispatchResult;
 
-	// /// Checks if the account should be allowed to borrow the underlying asset of the given pool.
-	// fn borrow_allowed(underlying_asset_id: CurrencyId, who: &AccountId, borrow_amount: Balance) ->
-	// DispatchResult;
+	/// Checks if the account should be allowed to borrow the underlying asset of the given pool.
+	fn borrow_allowed(underlying_asset_id: CurrencyId, who: &AccountId, borrow_amount: Balance) -> DispatchResult;
 
-	// /// Return minimum protocol interest needed to transfer it to liquidation pool
-	// fn get_protocol_interest_treshold(pool_id: CurrencyId) -> Balance;
+	/// Return minimum protocol interest needed to transfer it to liquidation pool
+	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance;
 
-	// /// Protocol operation mode. In whitelist mode, only members 'WhitelistCouncil' can work with
-	// /// protocols.
-	// fn is_whitelist_mode_enabled() -> bool;
+	/// Protocol operation mode. In whitelist mode, only members 'WhitelistCouncil' can work with
+	/// protocols.
+	fn is_whitelist_mode_enabled() -> bool;
+}
+
+pub trait MntManager<AccountId> {
+	/// Update MNT supply index for a pool.
+	/// - `underlying_asset`: The pool which supply index to update.
+	fn update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult;
+
+	/// Update MNT borrow index for a pool.
+	/// - `underlying_asset`: The pool which borrow index to update.
+	fn update_mnt_borrow_index(underlying_id: CurrencyId) -> DispatchResult;
+
+	/// Distribute MNT token to supplier. It should be called after update_mnt_supply_index.
+	/// - `underlying_id`: The pool in which the supplier is acting;
+	/// - `supplier`: The AccountId of the supplier to distribute MNT to.
+	fn distribute_supplier_mnt(underlying_id: CurrencyId, supplier: &AccountId, distribute_all: bool)
+		-> DispatchResult;
+
+	/// Distribute MNT token to borrower. It should be called after update_mnt_borrow_index.
+	/// Borrowers will not begin to accrue tokens till the first interaction with the protocol.
+	/// - `underlying_id`: The pool in which the borrower is acting;
+	/// - `borrower`: The AccountId of the borrower to distribute MNT to.
+	fn distribute_borrower_mnt(underlying_id: CurrencyId, borrower: &AccountId, distribute_all: bool)
+		-> DispatchResult;
 }

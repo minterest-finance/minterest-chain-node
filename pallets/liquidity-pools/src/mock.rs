@@ -7,7 +7,6 @@ use frame_support::parameter_types;
 pub use minterest_primitives::currency::CurrencyType::WrappedToken;
 use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId};
-use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
@@ -29,6 +28,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
@@ -39,6 +39,7 @@ mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
 mock_impl_orml_currencies_config!(Test);
 mock_impl_liquidity_pools_config!(Test);
+mock_impl_balances_config!(Test);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
