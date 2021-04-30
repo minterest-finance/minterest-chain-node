@@ -514,8 +514,10 @@ impl<T: Config> Pallet<T> {
 		Ok((total_supply_balance, total_borrowed_balance))
 	}
 
-	// Calculate total collateral in usd based on collateral factor, fresh exchange rate and latest
-	// oracle price.
+	/// Calculate total collateral in usd based on collateral factor, fresh exchange rate and latest
+	/// oracle price.
+	///
+	/// - `who`: the AccountId whose collateral should be calculated.
 	pub fn get_user_total_collateral(who: T::AccountId) -> BalanceResult {
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
@@ -548,6 +550,14 @@ impl<T: Config> Pallet<T> {
 
 				Ok(acc + collateral_in_usd)
 			})
+	}
+
+	/// Return the borrow balance of account based on stored data.
+	///
+	/// - `who`: the AccountId whose balance should be calculated.
+	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
+	pub fn get_borrow_balance(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
+		Self::borrow_balance_stored(who, underlying_asset_id)
 	}
 }
 
@@ -753,7 +763,7 @@ impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
 	///
 	/// - `who`: The address whose balance should be calculated.
 	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
-	fn borrow_balance_stored(who: &T::AccountId, underlying_asset_id: CurrencyId) -> Result<Balance, DispatchError> {
+	fn borrow_balance_stored(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
 		let pool_borrow_index = T::LiquidityPoolsManager::get_pool_borrow_index(underlying_asset_id);
 		let borrow_balance = Self::calculate_borrow_balance(who, underlying_asset_id, pool_borrow_index)?;
 		Ok(borrow_balance)
