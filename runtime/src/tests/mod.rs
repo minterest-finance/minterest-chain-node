@@ -28,7 +28,7 @@ mod dexes_tests;
 mod liquidation_tests;
 mod misc;
 mod rpc_tests;
-use frame_support::pallet_prelude::DispatchResultWithPostInfo;
+use frame_support::pallet_prelude::{DispatchResultWithPostInfo, PhantomData};
 
 parameter_types! {
 	pub ALICE: AccountId = AccountId::from([1u8; 32]);
@@ -359,10 +359,11 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		module_prices::GenesisConfig {
+		module_prices::GenesisConfig::<Runtime> {
 			locked_price: self.locked_prices,
+			_phantom: PhantomData,
 		}
-		.assimilate_storage::<Runtime>(&mut t)
+		.assimilate_storage(&mut t)
 		.unwrap();
 
 		let mut ext: sp_io::TestExternalities = t.into();
