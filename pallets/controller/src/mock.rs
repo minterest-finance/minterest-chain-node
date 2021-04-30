@@ -8,7 +8,6 @@ use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 pub(crate) use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId, Rate};
-use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
@@ -32,6 +31,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
@@ -49,6 +49,8 @@ mock_impl_orml_tokens_config!(Runtime);
 mock_impl_orml_currencies_config!(Runtime);
 mock_impl_liquidity_pools_config!(Runtime);
 mock_impl_minterest_model_config!(Runtime, OneAlice);
+mock_impl_controller_config!(Runtime, OneAlice);
+mock_impl_balances_config!(Runtime);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
@@ -78,19 +80,6 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
-parameter_types! {
-	pub const MaxBorrowCap: Balance = MAX_BORROW_CAP;
-}
-
-impl Config for Runtime {
-	type Event = Event;
-	type LiquidityPoolsManager = liquidity_pools::Module<Runtime>;
-	type MaxBorrowCap = MaxBorrowCap;
-	type UpdateOrigin = EnsureSignedBy<OneAlice, AccountId>;
-	type ControllerWeightInfo = ();
-}
-
-pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
 pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
 
 pub struct ExtBuilder {

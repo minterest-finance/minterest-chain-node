@@ -25,7 +25,7 @@ use frame_system::{
 };
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerAPI, PoolsManager, PriceProvider};
+use pallet_traits::{ControllerAPI, MntManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::{CheckedDiv, CheckedMul, One};
@@ -115,6 +115,9 @@ pub mod module {
 
 		/// Public API of controller pallet
 		type ControllerAPI: ControllerAPI<Self::AccountId>;
+
+		/// Provides MNT token distribution functionality.
+		type MntManager: MntManager<Self::AccountId>;
 
 		/// The origin which may update risk manager parameters. Root can
 		/// always do this.
@@ -573,6 +576,9 @@ impl<T: Config> Pallet<T> {
 					)
 					.map(|x| x.into_inner())
 					.ok_or(Error::<T>::NumOverflow)?;
+
+				<T as module::Config>::MntManager::update_mnt_supply_index(collateral_pool_id)?;
+				<T as module::Config>::MntManager::distribute_supplier_mnt(collateral_pool_id, &borrower, false)?;
 
 				// Check if there are enough collateral wrapped tokens to withdraw seize_tokens.
 				match balance_wrapped_token.cmp(&seize_tokens) {

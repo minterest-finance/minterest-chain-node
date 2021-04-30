@@ -5,7 +5,6 @@ use frame_support::{ord_parameter_types, parameter_types};
 use frame_system::EnsureSignedBy;
 use minterest_primitives::Price;
 pub use minterest_primitives::{currency::CurrencyType::WrappedToken, Balance, CurrencyId, Rate};
-use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
 use sp_core::H256;
@@ -29,6 +28,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		//ORML palletts
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
@@ -44,6 +44,7 @@ mock_impl_liquidity_pools_config!(Test);
 mock_impl_orml_tokens_config!(Test);
 mock_impl_orml_currencies_config!(Test);
 mock_impl_dex_config!(Test);
+mock_impl_balances_config!(Test);
 
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
@@ -100,7 +101,6 @@ where
 }
 
 type AccountId = u64;
-pub type BlockNumber = u64;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ADMIN: AccountId = 0;
 pub fn admin() -> Origin {

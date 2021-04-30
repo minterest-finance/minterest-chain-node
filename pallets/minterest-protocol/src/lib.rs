@@ -18,14 +18,15 @@
 use frame_support::traits::Contains;
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
+use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 use minterest_primitives::{Balance, CurrencyId, Operation};
 use orml_traits::MultiCurrency;
-use pallet_traits::{Borrowing, ControllerAPI, LiquidityPoolsManager, PoolsManager};
+use pallet_traits::{Borrowing, ControllerAPI, LiquidityPoolsManager, MntManager, PoolsManager};
 use sp_runtime::{
 	traits::{BadOrigin, Zero},
 	DispatchError, DispatchResult,
 };
-use sp_std::result;
+use sp_std::{result, vec::Vec};
 
 pub use module::*;
 
@@ -44,7 +45,6 @@ type BalanceResult = result::Result<Balance, DispatchError>;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + liquidity_pools::Config + SendTransactionTypes<Call<Self>> {
@@ -59,6 +59,9 @@ pub mod module {
 
 		/// The basic liquidity pools.
 		type ManagerLiquidityPools: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
+
+		/// Provides MNT token distribution functionality.
+		type MntManager: MntManager<Self::AccountId>;
 
 		/// The origin which may call deposit/redeem/borrow/repay in Whitelist mode.
 		type WhitelistMembers: Contains<Self::AccountId>;
@@ -122,6 +125,9 @@ pub mod module {
 		/// Repaid a borrow on the specific pool, for the specified amount: \[who,
 		/// underlying_asset, the_amount_repaid\]
 		Repaid(T::AccountId, CurrencyId, Balance),
+
+		/// Claimed the MNT accrued by holder: \[holder\]
+		Claimed(T::AccountId),
 
 		/// Transferred specified amount on a specified pool from one account to another:
 		/// \[who, receiver, wrapped_currency_id, wrapped_amount\]
@@ -448,6 +454,17 @@ pub mod module {
 			Self::deposit_event(Event::PoolDisabledIsCollateral(sender, pool_id));
 			Ok(().into())
 		}
+
+		/// Claim all the MNT accrued by holder in the specified markets.
+		/// - `pools`: The vector of markets to claim MNT in
+		#[pallet::weight(T::ProtocolWeightInfo::claim_mnt())]
+		#[transactional]
+		pub fn claim_mnt(origin: OriginFor<T>, pools: Vec<CurrencyId>) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			Self::do_claim(&who, pools)?;
+			Self::deposit_event(Event::Claimed(who));
+			Ok(().into())
+		}
 	}
 }
 
@@ -467,6 +484,9 @@ impl<T: Config> Pallet<T> {
 		);
 
 		T::ControllerAPI::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
+
+		T::MntManager::update_mnt_supply_index(underlying_asset)?;
+		T::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
 
 		// Fail if deposit not allowed
 		ensure!(
@@ -548,6 +568,9 @@ impl<T: Config> Pallet<T> {
 		);
 		T::ControllerAPI::redeem_allowed(underlying_asset, &who, wrapped_amount)?;
 
+		T::MntManager::update_mnt_supply_index(underlying_asset)?;
+		T::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
+
 		T::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount)?;
 
 		T::MultiCurrency::transfer(
@@ -589,6 +612,9 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::OperationPaused
 		);
 		T::ControllerAPI::borrow_allowed(underlying_asset, &who, borrow_amount)?;
+
+		T::MntManager::update_mnt_borrow_index(underlying_asset)?;
+		T::MntManager::distribute_borrower_mnt(underlying_asset, who, false)?;
 
 		// Fetch the amount the borrower owes, with accumulated interest.
 		let account_borrows = T::ControllerAPI::borrow_balance_stored(&who, underlying_asset)?;
@@ -651,6 +677,9 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::OperationPaused
 		);
 
+		T::MntManager::update_mnt_borrow_index(underlying_asset)?;
+		T::MntManager::distribute_borrower_mnt(underlying_asset, borrower, false)?;
+
 		// Fetch the amount the borrower owes, with accumulated interest
 		let account_borrows = T::ControllerAPI::borrow_balance_stored(&borrower, underlying_asset)?;
 
@@ -705,6 +734,10 @@ impl<T: Config> Pallet<T> {
 		// Fail if transfer_amount is not available for redeem
 		T::ControllerAPI::redeem_allowed(underlying_asset, &who, transfer_amount)?;
 
+		T::MntManager::update_mnt_supply_index(underlying_asset)?;
+		T::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
+		T::MntManager::distribute_supplier_mnt(underlying_asset, receiver, false)?;
+
 		// Fail if not enough free balance
 		ensure!(
 			transfer_amount <= T::MultiCurrency::free_balance(wrapped_id, &who),
@@ -743,5 +776,22 @@ impl<T: Config> Pallet<T> {
 		} else {
 			Self::deposit_event(Event::ProtocolInterestTransferFailed(pool_id));
 		}
+	}
+
+	/// Claim all the MNT accrued by holder in the specified markets.
+	/// - `holder`: The AccountId to claim mnt for;
+	/// - `pools`: The vector of pools to claim MNT in.
+	fn do_claim(holder: &T::AccountId, pools: Vec<CurrencyId>) -> DispatchResult {
+		pools.iter().try_for_each(|&pool_id| -> DispatchResult {
+			ensure!(
+				pool_id.is_supported_underlying_asset(),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+			T::MntManager::update_mnt_borrow_index(pool_id)?;
+			T::MntManager::distribute_borrower_mnt(pool_id, holder, true)?;
+			T::MntManager::update_mnt_supply_index(pool_id)?;
+			T::MntManager::distribute_supplier_mnt(pool_id, holder, true)?;
+			Ok(())
+		})
 	}
 }

@@ -3,13 +3,11 @@
 use super::*;
 use crate as minterest_protocol;
 use controller::{ControllerData, PauseKeeper};
-use frame_support::pallet_prelude::GenesisBuild;
-use frame_support::{ord_parameter_types, parameter_types};
+use frame_support::{assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
-use orml_currencies::Currency;
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
 use sp_core::H256;
@@ -34,6 +32,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
@@ -42,6 +41,7 @@ frame_support::construct_runtime!(
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
 		TestDex: dex::{Module, Storage, Call, Event<T>},
+		TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -53,8 +53,10 @@ ord_parameter_types! {
 parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
+	pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
@@ -70,6 +72,8 @@ mock_impl_controller_config!(Test, OneAlice);
 mock_impl_minterest_model_config!(Test, OneAlice);
 mock_impl_dex_config!(Test);
 mock_impl_minterest_protocol_config!(Test);
+mock_impl_mnt_token_config!(Test, OneAlice);
+mock_impl_balances_config!(Test);
 
 pub struct MockPriceSource;
 
@@ -129,18 +133,18 @@ impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
 			endowed_accounts: vec![
-				// seed: initial DOTs. Initial MINT to pay for gas.
-				(ALICE, MNT, ONE_MILL_DOLLARS),
+				// seed: initial DOTs
 				(ALICE, DOT, ONE_HUNDRED_DOLLARS),
 				(ALICE, ETH, ONE_HUNDRED_DOLLARS),
 				(ALICE, KSM, ONE_HUNDRED_DOLLARS),
-				(BOB, MNT, ONE_MILL_DOLLARS),
 				(BOB, DOT, ONE_HUNDRED_DOLLARS),
 				// seed: initial interest, equal 10_000$
 				(TestPools::pools_account_id(), ETH, TEN_THOUSAND_DOLLARS),
 				(TestPools::pools_account_id(), DOT, TEN_THOUSAND_DOLLARS),
 				// seed: initial interest = 10_000$, initial pool balance = 1_000_000$
 				(TestPools::pools_account_id(), KSM, ONE_MILL_DOLLARS),
+				// seed: initial MNT treasury = 1_000_000$
+				(TestMntToken::get_account_id(), MNT, ONE_MILL_DOLLARS),
 			],
 			pools: vec![],
 		}
@@ -173,8 +177,24 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
+		pallet_balances::GenesisConfig::<Test> {
+			balances: self
+				.endowed_accounts
+				.clone()
+				.into_iter()
+				.filter(|(_, currency_id, _)| *currency_id == MNT)
+				.map(|(account_id, _, initial_balance)| (account_id, initial_balance))
+				.collect::<Vec<_>>(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 		orml_tokens::GenesisConfig::<Test> {
-			endowed_accounts: self.endowed_accounts,
+			endowed_accounts: self
+				.endowed_accounts
+				.into_iter()
+				.filter(|(_, currency_id, _)| *currency_id != MNT)
+				.collect::<Vec<_>>(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -341,8 +361,22 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
+		mnt_token::GenesisConfig::<Test> {
+			mnt_rate: 100_000_000_000_000_000, // 0.1
+			mnt_claim_threshold: 100 * DOLLARS,
+			minted_pools: vec![DOT, ETH],
+			_phantom: Default::default(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 		let mut ext: sp_io::TestExternalities = t.into();
 		ext.execute_with(|| System::set_block_number(1));
 		ext
 	}
+}
+
+pub(crate) fn set_block_number_and_refresh_speeds(n: u64) {
+	System::set_block_number(n);
+	assert_ok!(TestMntToken::refresh_mnt_speeds());
 }
