@@ -19,7 +19,7 @@ use std::sync::Arc;
 pub trait PricesApi<BlockHash> {
 	/// This function returns a price for a currency.
 	/// If currency price has been locked, locked value will be returned.
-	/// Otherwise the value from Oracle RMS will be returned
+	/// Otherwise the value from Oracle will be returned
 	///
 	///  - `&self` :  Self reference
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
@@ -47,6 +47,19 @@ pub trait PricesApi<BlockHash> {
 	/// ```
 	#[rpc(name = "prices_getAllLockedPrices")]
 	fn get_all_locked_prices(&self, at: Option<BlockHash>) -> Result<Vec<(CurrencyId, Option<Price>)>>;
+
+	/// This function returns a Vector containing prices for all currencies from Oracle
+	///
+	///  - `&self` :  Self reference
+	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///
+	/// # Example:
+	/// ``` ignore
+	/// curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d '{"jsonrpc":"2.0",
+	/// "id":1, "method":"prices_getAllFreshestPrices", "params": []}'
+	/// ```
+	#[rpc(name = "prices_getAllFreshestPrices")]
+	fn get_all_freshest_prices(&self, at: Option<BlockHash>) -> Result<Vec<(CurrencyId, Option<Price>)>>;
 }
 
 /// Struct that implement 'PricesApi'.
@@ -107,6 +120,19 @@ where
 		api.get_all_locked_prices(&at).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
 			message: "Unable to get locked prices info.".into(),
+			data: Some(format!("{:?}", e).into()),
+		})
+	}
+
+	fn get_all_freshest_prices(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<(CurrencyId, Option<Price>)>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+
+		api.get_all_freshest_prices(&at).map_err(|e| RpcError {
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
+			message: "Unable to get fresh prices info.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})
 	}

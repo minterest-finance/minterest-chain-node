@@ -834,6 +834,10 @@ impl_runtime_apis! {
 				.map(|&currency_id| (currency_id, Prices::locked_price(currency_id)))
 				.collect()
 		}
+
+		fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
+			Prices::get_all_freshest_prices()
+		}
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]

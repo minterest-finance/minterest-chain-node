@@ -698,3 +698,16 @@ fn get_all_locked_prices_rpc_should_work() {
 			}
 		});
 }
+
+#[test]
+// Check that fresh prices will be returned
+// Prices set to 10_000
+fn get_all_freshest_prices_rpc_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(set_oracle_price_for_all_pools(10_000));
+		let fresh_prices = get_all_freshest_prices();
+		for (_currency_id, price) in fresh_prices {
+			assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
+		}
+	});
+}

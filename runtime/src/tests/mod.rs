@@ -446,6 +446,10 @@ fn get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
 	<Runtime as PricesApi<Block>>::get_all_locked_prices()
 }
 
+fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
+	<Runtime as PricesApi<Block>>::get_all_freshest_prices()
+}
+
 fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 	Prices::unlock_price(origin_root(), currency_id)
 }
