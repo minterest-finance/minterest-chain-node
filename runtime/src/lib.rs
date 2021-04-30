@@ -811,13 +811,13 @@ impl_runtime_apis! {
 
 	impl prices_rpc_runtime_api::PricesApi<Block> for Runtime {
 		fn  get_current_price(currency_id: CurrencyId) -> Option<Price> {
-			<module_prices::Module::<Runtime>>::get_underlying_price(currency_id)
+			Prices::get_underlying_price(currency_id)
 		}
 
 		fn  get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 				.iter()
-				.map(|&currency_id| (currency_id, <module_prices::Module::<Runtime>>::locked_price(currency_id)))
+				.map(|&currency_id| (currency_id, Prices::locked_price(currency_id)))
 				.collect()
 		}
 	}

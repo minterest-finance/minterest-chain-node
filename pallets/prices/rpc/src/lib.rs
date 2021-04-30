@@ -23,8 +23,15 @@ pub trait PricesApi<BlockHash> {
 	///
 	///  - `&self` :  Self reference
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///  - `currency_id`: currency type.
+	///
+	///  # Example:
+	/// ``` ignore
+	/// curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d '{"jsonrpc":"2.0",
+	/// "id":1, "method":"prices_getCurrentPrice", "params": [{"UnderlyingAsset":"DOT"}]}'
+	/// ```
 	#[rpc(name = "prices_getCurrentPrice")]
-	fn get_current_price(&self, at: Option<BlockHash>, currency_id: CurrencyId) -> Result<Option<Price>>;
+	fn get_current_price(&self, currency_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<Price>>;
 
 	/// This function returns a Vector containing prices for all currencies been locked
 	/// In case some currency prices were not locked, None will be returned for corresponding
@@ -78,7 +85,7 @@ where
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
 	C::Api: PricesRuntimeApi<Block>,
 {
-	fn get_current_price(&self, at: Option<<Block as BlockT>::Hash>, currency_id: CurrencyId) -> Result<Option<Price>> {
+	fn get_current_price(&self, currency_id: CurrencyId, at: Option<<Block as BlockT>::Hash>) -> Result<Option<Price>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
                 // If the block hash is not supplied assume the best block.
