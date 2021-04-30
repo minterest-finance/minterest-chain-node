@@ -199,6 +199,13 @@ fn test_rates_using_rpc() {
 					supply_rate: Rate::zero()
 				})
 			);
+			// Bob borrow balance equal zero
+			assert_eq!(
+				get_user_borrow_per_asset_rpc(BOB::get(), DOT),
+				Some(BalanceInfo {
+					amount: Balance::zero()
+				})
+			);
 
 			System::set_block_number(20);
 
@@ -214,6 +221,13 @@ fn test_rates_using_rpc() {
 					supply_rate: Rate::from_inner(1_764_000_000)
 				})
 			);
+			// Bob borrow balance = (100_000 DOT - 30_000 DOT) * $2 = $140_000
+			assert_eq!(
+				get_user_borrow_per_asset_rpc(BOB::get(), DOT),
+				Some(BalanceInfo {
+					amount: dollars(140_000)
+				})
+			);
 
 			System::set_block_number(30);
 
@@ -226,6 +240,13 @@ fn test_rates_using_rpc() {
 					exchange_rate: Rate::from_inner(1_000_000_017_640_000_000),
 					borrow_rate: Rate::from_inner(3_705_882_450),
 					supply_rate: Rate::from_inner(1_373_356_473)
+				})
+			);
+			// Bob borrow balance = $140_000 + accrued borrow
+			assert_eq!(
+				get_user_borrow_per_asset_rpc(BOB::get(), DOT),
+				Some(BalanceInfo {
+					amount: 140_000_005_880_000_000_000_000
 				})
 			);
 
@@ -243,12 +264,19 @@ fn test_rates_using_rpc() {
 					supply_rate: Rate::from_inner(2_270_242_360)
 				})
 			);
+			// Charlie borrow balance = 20_000 DOT * $2 = $40_000
+			assert_eq!(
+				get_user_borrow_per_asset_rpc(CHARLIE::get(), DOT),
+				Some(BalanceInfo {
+					amount: dollars(40_000)
+				})
+			);
 		});
 }
 
 /// Test that returned values are changed after some blocks passed
 #[test]
-fn test_user_balance_using_rpc() {
+fn test_user_balances_using_rpc() {
 	ExtBuilder::default()
 		.pool_initial(DOT)
 		.pool_initial(ETH)
@@ -289,6 +317,12 @@ fn test_user_balance_using_rpc() {
 					total_borrowed: dollars(0)
 				})
 			);
+			assert_eq!(
+				get_user_borrow_per_asset_rpc(BOB::get(), DOT),
+				Some(BalanceInfo {
+					amount: Balance::zero()
+				})
+			);
 
 			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
 			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
@@ -302,6 +336,12 @@ fn test_user_balance_using_rpc() {
 					total_borrowed: dollars(100_000)
 				})
 			);
+			assert_eq!(
+				get_user_borrow_per_asset_rpc(BOB::get(), DOT),
+				Some(BalanceInfo {
+					amount: dollars(100_000)
+				})
+			);
 
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(30_000)));
 			assert_eq!(
@@ -311,11 +351,18 @@ fn test_user_balance_using_rpc() {
 					total_borrowed: dollars(40_000)
 				})
 			);
+			assert_eq!(
+				get_user_borrow_per_asset_rpc(BOB::get(), DOT),
+				Some(BalanceInfo {
+					amount: dollars(40_000)
+				})
+			);
 
 			System::set_block_number(30);
 			let account_data = get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 			assert!(account_data.total_supply > dollars(240_000));
 			assert!(account_data.total_borrowed > dollars(40_000));
+			assert!(get_user_borrow_per_asset_rpc(BOB::get(), DOT).unwrap().amount > dollars(40_000));
 		});
 }
 

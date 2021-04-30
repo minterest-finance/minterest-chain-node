@@ -78,7 +78,7 @@ sp_api::decl_runtime_apis! {
 
 		fn get_user_total_collateral(account_id: AccountId) -> Option<BalanceInfo>;
 
-		fn get_borrow_balance(
+		fn get_user_borrow_per_asset(
 		account_id: AccountId,
 		underlying_asset_id: CurrencyId,
 	) -> Option<BalanceInfo>;

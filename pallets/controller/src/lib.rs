@@ -554,11 +554,11 @@ impl<T: Config> Pallet<T> {
 			})
 	}
 
-	/// Return the borrow balance of account.
+	/// Calculate actual borrow balance for user per asset in usd based on fresh latest indexes.
 	///
 	/// - `who`: the AccountId whose balance should be calculated.
 	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
-	pub fn get_borrow_balance(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
+	pub fn get_user_borrow_per_asset(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
 		ensure!(
 			underlying_asset_id.is_supported_underlying_asset(),
 			Error::<T>::NotValidUnderlyingAssetId
