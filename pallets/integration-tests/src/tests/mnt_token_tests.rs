@@ -195,15 +195,10 @@ mod tests {
 
 				set_block_number_and_refresh_speeds(10);
 
-				// Alice deposits DOT and enables her DOT pool as a collateral.
+				// Alice, Bob and Carol deposit DOT.
 				assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, ONE_HUNDRED));
-				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
-				// Bob deposits DOT and enables her DOT pool as a collateral.
 				assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, ONE_HUNDRED));
-				assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
-				// Carol deposits DOT and enables her DOT pool as a collateral.
 				assert_ok!(MinterestProtocol::deposit_underlying(carol(), DOT, 2 * ONE_HUNDRED));
-				assert_ok!(MinterestProtocol::enable_is_collateral(carol(), DOT));
 
 				set_block_number_and_refresh_speeds(20);
 
