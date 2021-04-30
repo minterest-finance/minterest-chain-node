@@ -148,6 +148,8 @@ pub mod module {
 		HypotheticalLiquidityCalculationError,
 		/// The currency is not enabled in wrapped protocol.
 		NotValidWrappedTokenId,
+		/// The currency is not enabled in protocol.
+		NotValidUnderlyingAssetId,
 	}
 
 	#[pallet::event]
@@ -552,12 +554,27 @@ impl<T: Config> Pallet<T> {
 			})
 	}
 
-	/// Return the borrow balance of account based on stored data.
+	/// Return the borrow balance of account.
 	///
 	/// - `who`: the AccountId whose balance should be calculated.
 	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
 	pub fn get_borrow_balance(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
-		Self::borrow_balance_stored(who, underlying_asset_id)
+		ensure!(
+			underlying_asset_id.is_supported_underlying_asset(),
+			Error::<T>::NotValidUnderlyingAssetId
+		);
+		let current_block_number = <frame_system::Module<T>>::block_number();
+		let accrual_block_number_previous = Self::controller_dates(underlying_asset_id).last_interest_accrued_block;
+		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
+		let pool_data = Self::calculate_interest_params(underlying_asset_id, block_delta)?;
+		let oracle_price =
+			T::PriceSource::get_underlying_price(underlying_asset_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+		let borrow_balance = Self::calculate_borrow_balance(&who, underlying_asset_id, pool_data.borrow_index)?;
+		let borrow_balance_in_usd = Rate::from_inner(borrow_balance)
+			.checked_mul(&oracle_price)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::BalanceOverflow)?;
+		Ok(borrow_balance_in_usd)
 	}
 }
 
