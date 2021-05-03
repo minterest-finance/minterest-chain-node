@@ -70,7 +70,7 @@ pub use sp_runtime::{Perbill, Permill, Perquintill};
 pub use constants::{currency::*, time::*, *};
 use frame_support::traits::Contains;
 use frame_system::{EnsureOneOf, EnsureRoot};
-
+use pallet_traits::PriceProvider;
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -604,7 +604,6 @@ construct_runtime!(
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Module, Storage, Call, Event<T>},
-
 		// Dev
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 	}
@@ -802,6 +801,10 @@ impl_runtime_apis! {
 		fn get_user_total_collateral(account_id: AccountId) -> Option<BalanceInfo> {
 				Some(BalanceInfo{amount: Controller::get_user_total_collateral(account_id).ok()?})
 		}
+
+		fn get_user_borrow_per_asset(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
+				Some(BalanceInfo{amount: Controller::get_user_borrow_per_asset(&account_id, underlying_asset_id).ok()?})
+		}
 	}
 
 	impl mnt_token_rpc_runtime_api::MntTokenApi<Block, AccountId> for Runtime {
@@ -816,7 +819,7 @@ impl_runtime_apis! {
 		CurrencyId,
 		TimeStampedPrice,
 	> for Runtime {
-		fn get_value(provider_id: DataProviderId ,key: CurrencyId) -> Option<TimeStampedPrice> {
+		fn get_value(provider_id: DataProviderId, key: CurrencyId) -> Option<TimeStampedPrice> {
 			match provider_id {
 				DataProviderId::Minterest => MinterestOracle::get_no_op(&key),
 				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_no_op(&key)
@@ -828,6 +831,23 @@ impl_runtime_apis! {
 				DataProviderId::Minterest => MinterestOracle::get_all_values(),
 				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_all_values()
 			}
+		}
+	}
+
+	impl prices_rpc_runtime_api::PricesApi<Block> for Runtime {
+		fn  get_current_price(currency_id: CurrencyId) -> Option<Price> {
+			Prices::get_underlying_price(currency_id)
+		}
+
+		fn  get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
+			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+				.into_iter()
+				.map(|currency_id| (currency_id, Prices::locked_price(currency_id)))
+				.collect()
+		}
+
+		fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
+			Prices::get_all_freshest_prices()
 		}
 	}
 

@@ -11,11 +11,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
-
 use frame_support::{pallet_prelude::*, transactional};
-use minterest_primitives::{CurrencyId, Price};
+use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, CurrencyId, Price};
 use orml_traits::{DataFeeder, DataProvider};
 use pallet_traits::PriceProvider;
+use sp_std::vec::Vec;
 
 pub use module::*;
 
@@ -161,5 +161,15 @@ impl<T: Config> PriceProvider<CurrencyId> for Pallet<T> {
 	fn unlock_price(currency_id: CurrencyId) {
 		LockedPrice::<T>::remove(currency_id);
 		<Pallet<T>>::deposit_event(Event::UnlockPrice(currency_id));
+	}
+}
+
+/// RPC calls
+impl<T: Config> Pallet<T> {
+	pub fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.into_iter()
+			.map(|currency_id| (currency_id, T::Source::get(&currency_id)))
+			.collect()
 	}
 }

@@ -64,6 +64,7 @@ integration-tests = { path = "../pallets/integration-tests", default-features = 
 controller = { path = "../pallets/controller", default-features = false }
 controller-rpc-runtime-api = { path = "../pallets/controller/rpc/runtime-api", default-features = false }
 module-prices = { path = "../pallets/prices", default-features = false }
+prices-rpc-runtime-api = { path = "../pallets/prices/rpc/runtime-api", default-features = false }
 minterest-model = { path = "../pallets/minterest-model", default-features = false }
 risk-manager = { path = "../pallets/risk-manager", default-features = false }
 liquidation-pools = { path = "../pallets/liquidation-pools", default-features = false }
@@ -143,6 +144,7 @@ std = [
     'controller/std',
     'controller-rpc-runtime-api/std',
     'module-prices/std',
+    'prices-rpc-runtime-api/std',
     'minterest-model/std',
     'risk-manager/std',
     'liquidation-pools/std',

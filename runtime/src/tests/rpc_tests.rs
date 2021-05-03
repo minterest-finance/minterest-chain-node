@@ -1,5 +1,4 @@
 use super::*;
-
 #[test]
 fn demo_scenario_n2_without_interest_using_rpc_should_work() {
 	ExtBuilder::default()
@@ -199,6 +198,13 @@ fn test_rates_using_rpc() {
 					supply_rate: Rate::zero()
 				})
 			);
+			// Bob borrow balance equal zero
+			assert_eq!(
+				get_user_borrow_per_asset_rpc(BOB::get(), DOT),
+				Some(BalanceInfo {
+					amount: Balance::zero()
+				})
+			);
 
 			System::set_block_number(20);
 
@@ -214,6 +220,13 @@ fn test_rates_using_rpc() {
 					supply_rate: Rate::from_inner(1_764_000_000)
 				})
 			);
+			// Bob borrow balance = (100_000 DOT - 30_000 DOT)= 70_000 DOT
+			assert_eq!(
+				get_user_borrow_per_asset_rpc(BOB::get(), DOT),
+				Some(BalanceInfo {
+					amount: dollars(70_000)
+				})
+			);
 
 			System::set_block_number(30);
 
@@ -226,6 +239,13 @@ fn test_rates_using_rpc() {
 					exchange_rate: Rate::from_inner(1_000_000_017_640_000_000),
 					borrow_rate: Rate::from_inner(3_705_882_450),
 					supply_rate: Rate::from_inner(1_373_356_473)
+				})
+			);
+			// Bob borrow balance = 70_000 DOT + accrued borrow
+			assert_eq!(
+				get_user_borrow_per_asset_rpc(BOB::get(), DOT),
+				Some(BalanceInfo {
+					amount: 70_000_002_940_000_000_000_000
 				})
 			);
 
@@ -243,12 +263,19 @@ fn test_rates_using_rpc() {
 					supply_rate: Rate::from_inner(2_270_242_360)
 				})
 			);
+			// Charlie borrow balance = 20_000 DOT = 20_000 DOT
+			assert_eq!(
+				get_user_borrow_per_asset_rpc(CHARLIE::get(), DOT),
+				Some(BalanceInfo {
+					amount: dollars(20_000)
+				})
+			);
 		});
 }
 
 /// Test that returned values are changed after some blocks passed
 #[test]
-fn test_user_balance_using_rpc() {
+fn test_user_balances_using_rpc() {
 	ExtBuilder::default()
 		.pool_initial(DOT)
 		.pool_initial(ETH)
@@ -289,6 +316,12 @@ fn test_user_balance_using_rpc() {
 					total_borrowed: dollars(0)
 				})
 			);
+			assert_eq!(
+				get_user_borrow_per_asset_rpc(BOB::get(), DOT),
+				Some(BalanceInfo {
+					amount: Balance::zero()
+				})
+			);
 
 			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
 			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
@@ -302,6 +335,12 @@ fn test_user_balance_using_rpc() {
 					total_borrowed: dollars(100_000)
 				})
 			);
+			assert_eq!(
+				get_user_borrow_per_asset_rpc(BOB::get(), DOT),
+				Some(BalanceInfo {
+					amount: dollars(50_000)
+				})
+			);
 
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(30_000)));
 			assert_eq!(
@@ -311,11 +350,18 @@ fn test_user_balance_using_rpc() {
 					total_borrowed: dollars(40_000)
 				})
 			);
+			assert_eq!(
+				get_user_borrow_per_asset_rpc(BOB::get(), DOT),
+				Some(BalanceInfo {
+					amount: dollars(20_000)
+				})
+			);
 
 			System::set_block_number(30);
 			let account_data = get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 			assert!(account_data.total_supply > dollars(240_000));
 			assert!(account_data.total_borrowed > dollars(40_000));
+			assert!(get_user_borrow_per_asset_rpc(BOB::get(), DOT).unwrap().amount > dollars(20_000));
 		});
 }
 
@@ -549,13 +595,6 @@ fn get_user_total_collateral_rpc_should_work() {
 		.pool_initial(KSM)
 		.build()
 		.execute_with(|| {
-			// The function unlock_price() call is necessary because asset values are
-			// locked in the genesis block. Values are locked because the mnt-token pallet
-			// in the method build() uses asset prices.
-			vec![DOT, KSM, BTC, ETH].into_iter().for_each(|pool_id| {
-				assert_ok!(Prices::unlock_price(origin_root(), pool_id));
-			});
-
 			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
@@ -670,6 +709,54 @@ fn get_user_total_collateral_rpc_should_work() {
 				})
 			);
 		})
+}
+
+#[test]
+fn get_all_locked_prices_rpc_should_work() {
+	ExtBuilder::default()
+		.set_locked_prices(10_000)
+		.build()
+		.execute_with(|| {
+			// Check that locked prices are returned
+			// By default all price set to 10_000
+			let locked_prices = get_all_locked_prices();
+			for (_currency_id, price) in locked_prices {
+				assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
+			}
+			// Unlock price for DOT, check that None will be returned for this currency
+			assert_ok!(unlock_price(DOT));
+			let locked_prices = get_all_locked_prices();
+			for (currency_id, price) in locked_prices {
+				match currency_id {
+					DOT => {
+						assert_eq!(price, None);
+					}
+					ETH => {
+						assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
+					}
+					BTC => {
+						assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
+					}
+					KSM => {
+						assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
+					}
+					_ => panic!("Unexpected token!"),
+				}
+			}
+		});
+}
+
+#[test]
+// Check that fresh prices will be returned
+// Prices set to 10_000
+fn get_all_freshest_prices_rpc_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(set_oracle_price_for_all_pools(10_000));
+		let fresh_prices = get_all_freshest_prices();
+		for (_currency_id, price) in fresh_prices {
+			assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
+		}
+	});
 }
 
 #[test]
