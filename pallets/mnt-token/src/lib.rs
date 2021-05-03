@@ -71,6 +71,8 @@ impl<T: Config> Default for MntPoolState<T> {
 	}
 }
 
+type BalanceResult = result::Result<Balance, DispatchError>;
+
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
@@ -363,9 +365,18 @@ impl<T: Config> Pallet<T> {
 
 // RPC methods
 impl<T: Config> Pallet<T> {
-	/// Gets MNT accrued by a user.
-	pub fn get_mnt_unclaimed_balance(_account_id: &T::AccountId) -> result::Result<Balance, DispatchError> {
-		Ok(Balance::zero())
+	/// Gets MNT accrued but not yet transferred to user.
+	pub fn get_mnt_unclaimed_balance(account_id: &T::AccountId) -> BalanceResult {
+		let accrued_mnt =
+			MntSpeeds::<T>::iter().try_fold(Balance::zero(), |current_accrued, (pool_id, _)| -> BalanceResult {
+				let (mut accrued_borrow_mnt, mut accrued_supply_mnt) = (Balance::zero(), Balance::zero());
+				Self::update_mnt_borrow_index(pool_id)?;
+				accrued_borrow_mnt += Self::distribute_borrower_mnt(pool_id, account_id, true)?;
+				Self::update_mnt_supply_index(pool_id)?;
+				accrued_supply_mnt += Self::distribute_supplier_mnt(pool_id, account_id, true)?;
+				Ok(current_accrued + accrued_borrow_mnt + accrued_supply_mnt)
+			})?;
+		Ok(accrued_mnt)
 	}
 }
 
@@ -481,7 +492,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		underlying_id: CurrencyId,
 		supplier: &T::AccountId,
 		distribute_all: bool,
-	) -> DispatchResult {
+	) -> BalanceResult {
 		// delta_index = mnt_distribution_index - mnt_supplier_index
 		// supplier_delta = supplier_mtoken_balance * delta_index
 		// supplier_mnt_balance += supplier_delta
@@ -525,15 +536,19 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			supply_index,
 		));
 
-		Ok(())
+		Ok(supplier_mnt_accrued)
 	}
 
-	/// Distribute mnt token to borrower. It should be called after update_mnt_borrow_index
+	/// Distribute MNT token to borrower. It should be called after update_mnt_borrow_index.
+	/// Borrowers will not begin to accrue tokens till the first interaction with the protocol.
+	///
+	/// - `underlying_id`: The pool in which the borrower is acting;
+	/// - `borrower`: The AccountId of the borrower to distribute MNT to.
 	fn distribute_borrower_mnt(
 		underlying_id: CurrencyId,
 		borrower: &T::AccountId,
 		distribute_all: bool,
-	) -> DispatchResult {
+	) -> BalanceResult {
 		// borrower_amount = account_borrow_balance / liquidity_pool_borrow_index
 		// delta_index = mnt_distribution_index(for current pool) - borrower_index
 		// borrower_delta = borrower_amount * delta_index
@@ -546,7 +561,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		MntBorrowerIndex::<T>::insert(underlying_id, borrower, pool_borrow_state.mnt_distribution_index);
 		if borrower_index.is_zero() {
 			// This is first interaction with protocol
-			return Ok(());
+			return Ok(Balance::zero());
 		}
 
 		let borrow_balance = T::ControllerAPI::borrow_balance_stored(&borrower, underlying_id)?;
@@ -561,7 +576,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		if delta_index == Rate::zero() {
-			return Ok(());
+			return Ok(Balance::zero());
 		}
 
 		let borrower_delta = borrower_amount
@@ -581,6 +596,6 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			borrower_delta.into_inner(),
 			pool_borrow_state.mnt_distribution_index,
 		));
-		Ok(())
+		Ok(borrower_mnt_accrued)
 	}
 }
