@@ -88,7 +88,7 @@ mod tests {
 				// There are borrow in all pool, but BTC pool excluded from MNT distribution.
 				test_mnt_speeds(33_333_333_283_333_335, 66_666_666_716_666_664, 0);
 
-				// BOB deposits ETH and enables his assets in pools as a collateral.
+				// BOB deposits ETH.
 				assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, ONE_HUNDRED));
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), 0);
 				assert_eq!(TestMntToken::mnt_accrued(BOB), 0);

@@ -601,23 +601,13 @@ fn get_user_total_collateral_rpc_should_work() {
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(50_000)));
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), BTC, dollars(50_000)));
 			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
-			assert_eq!(
-				get_user_total_collateral_rpc(ALICE::get()),
-				Some(BalanceInfo {
-					amount: dollars(90_000)
-				})
-			);
+			assert_eq!(get_user_total_collateral_rpc(ALICE::get()), dollars(90_000));
 
 			run_to_block(50);
 
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(50_000)));
 			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
-			assert_eq!(
-				get_user_total_collateral_rpc(ALICE::get()),
-				Some(BalanceInfo {
-					amount: dollars(180_000)
-				})
-			);
+			assert_eq!(get_user_total_collateral_rpc(ALICE::get()), dollars(180_000));
 
 			run_to_block(100);
 
@@ -625,32 +615,18 @@ fn get_user_total_collateral_rpc_should_work() {
 			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, 70_000 * DOLLARS));
 
-			assert_eq!(
-				get_user_total_collateral_rpc(ALICE::get()),
-				Some(BalanceInfo {
-					amount: dollars(180_000)
-				})
-			);
-			assert_eq!(
-				get_user_total_collateral_rpc(BOB::get()),
-				Some(BalanceInfo {
-					amount: dollars(180_000)
-				})
-			);
+			assert_eq!(get_user_total_collateral_rpc(ALICE::get()), dollars(180_000));
+			assert_eq!(get_user_total_collateral_rpc(BOB::get()), dollars(180_000));
 
 			run_to_block(200);
 
 			assert_eq!(
 				get_user_total_collateral_rpc(ALICE::get()),
-				Some(BalanceInfo {
-					amount: 180_000_015_876_000_000_000_000
-				})
+				180_000_015_876_000_000_000_000
 			);
 			assert_eq!(
 				get_user_total_collateral_rpc(BOB::get()),
-				Some(BalanceInfo {
-					amount: 180_000_031_752_000_000_000_000
-				})
+				180_000_031_752_000_000_000_000
 			);
 
 			run_to_block(300);
@@ -661,15 +637,11 @@ fn get_user_total_collateral_rpc_should_work() {
 
 			assert_eq!(
 				get_user_total_collateral_rpc(ALICE::get()),
-				Some(BalanceInfo {
-					amount: 90_000_047_628_000_000_000_000
-				})
+				90_000_047_628_000_000_000_000
 			);
 			assert_eq!(
 				get_user_total_collateral_rpc(BOB::get()),
-				Some(BalanceInfo {
-					amount: 180_000_095_256_000_000_000_000
-				})
+				180_000_095_256_000_000_000_000
 			);
 
 			run_to_block(500);
@@ -685,65 +657,56 @@ fn get_user_total_collateral_rpc_should_work() {
 
 			let expected_bob_collateral = 180_000_238_140_000_000_000_000 + dollars(90_000);
 
-			assert_eq!(
-				get_user_total_collateral_rpc(ALICE::get()),
-				Some(BalanceInfo { amount: 0 })
-			);
-			assert_eq!(
-				get_user_total_collateral_rpc(BOB::get()),
-				Some(BalanceInfo {
-					amount: expected_bob_collateral
-				})
-			);
+			assert_eq!(get_user_total_collateral_rpc(ALICE::get()), Balance::zero());
+			assert_eq!(get_user_total_collateral_rpc(BOB::get()), expected_bob_collateral);
 
 			// Change the price from 2 USD to 4 USD for DOT.
 			assert_ok!(MinterestOracle::feed_values(
 				origin_of(ORACLE1::get().clone()),
 				vec![(DOT, Rate::saturating_from_integer(4))]
 			));
+			assert_ok!(Prices::unlock_price(origin_root(), DOT));
 
-			assert_eq!(
-				get_user_total_collateral_rpc(BOB::get()),
-				Some(BalanceInfo {
-					amount: expected_bob_collateral * 2
-				})
-			);
+			assert_eq!(get_user_total_collateral_rpc(BOB::get()), expected_bob_collateral * 2);
 		})
 }
 
 #[test]
 fn get_all_locked_prices_rpc_should_work() {
-	ExtBuilder::default()
-		.set_locked_prices(10_000)
-		.build()
-		.execute_with(|| {
-			// Check that locked prices are returned
-			// By default all price set to 10_000
-			let locked_prices = get_all_locked_prices();
-			for (_currency_id, price) in locked_prices {
-				assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
-			}
-			// Unlock price for DOT, check that None will be returned for this currency
-			assert_ok!(unlock_price(DOT));
-			let locked_prices = get_all_locked_prices();
-			for (currency_id, price) in locked_prices {
-				match currency_id {
-					DOT => {
-						assert_eq!(price, None);
-					}
-					ETH => {
-						assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
-					}
-					BTC => {
-						assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
-					}
-					KSM => {
-						assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
-					}
-					_ => panic!("Unexpected token!"),
-				}
-			}
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(set_oracle_price_for_all_pools(10_000));
+
+		vec![DOT, KSM, BTC, ETH].into_iter().for_each(|pool_id| {
+			assert_ok!(Prices::lock_price(origin_root(), pool_id));
 		});
+
+		// Check that locked prices are returned
+		// By default all price set to 10_000
+		let locked_prices = get_all_locked_prices();
+		for (_currency_id, price) in locked_prices {
+			assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
+		}
+		// Unlock price for DOT, check that None will be returned for this currency
+		assert_ok!(unlock_price(DOT));
+		let locked_prices = get_all_locked_prices();
+		for (currency_id, price) in locked_prices {
+			match currency_id {
+				DOT => {
+					assert_eq!(price, None);
+				}
+				ETH => {
+					assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
+				}
+				BTC => {
+					assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
+				}
+				KSM => {
+					assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
+				}
+				_ => panic!("Unexpected token!"),
+			}
+		}
+	});
 }
 
 #[test]
@@ -762,10 +725,11 @@ fn get_all_freshest_prices_rpc_should_work() {
 #[test]
 fn get_unclaimed_mnt_balance_should_work() {
 	ExtBuilder::default()
-		.enable_minting_for_pool(DOT)
-		.set_locked_prices(10_000)
 		.mnt_account_balance(1_000_000 * DOLLARS)
 		.pool_initial(DOT)
+		.pool_initial(KSM)
+		.pool_initial(ETH)
+		.pool_initial(BTC)
 		.build()
 		.execute_with(|| {
 			// Set initial state of pools for distribution MNT tokens.
@@ -780,38 +744,46 @@ fn get_unclaimed_mnt_balance_should_work() {
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 50_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
 
+			run_to_block(15);
+			assert_ok!(MntToken::refresh_mnt_speeds());
+
+			// Calculation of the balance of Alice in MNT tokens (only supply distribution):
+			// supplier_mnt_accrued = previous_balance + speed_DOT * block_delta * alice_supply / total_supply;
+			// supplier_mnt_accrued = 0 + 10 * 5 * 50 / 150 = 16.66 MNT;
+			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 16_666_666_464_166_653_690);
+
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 10_000 * DOLLARS));
+
 			run_to_block(20);
 			assert_ok!(MntToken::refresh_mnt_speeds());
 
-			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 20_000 * DOLLARS));
-
+			// Calculation of the balance of Alice in MNT tokens (only supply distribution):
+			// supplier_mnt_accrued = previous_balance + speed_DOT * block_delta * alice_supply / total_supply;
+			// supplier_mnt_accrued = 0 + 10 * 5 * 60 / 160 = 18.75 MNT;
+			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 18_749_999_777_636_673_218);
 			assert_eq!(
-				get_unclaimed_mnt_balance_rpc(ALICE::get()),
-				Some(MntBalanceInfo {
-					amount: Balance::zero()
-				})
+				Currencies::free_balance(MNT, &ALICE::get()),
+				100_035_416_666_241_803_326_908
 			);
+			// FIXME WTF???
+			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
+
+			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 20_000 * DOLLARS));
 
 			run_to_block(30);
 			assert_ok!(MntToken::refresh_mnt_speeds());
 
-			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 10_000 * DOLLARS));
+			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 66_071_426_707_059_137_419);
+			// FIXME WTF???
+			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
 
-			assert_eq!(
-				get_unclaimed_mnt_balance_rpc(ALICE::get()),
-				Some(MntBalanceInfo {
-					amount: Balance::zero()
-				})
-			);
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 10_000 * DOLLARS));
 
 			run_to_block(40);
 			assert_ok!(MntToken::refresh_mnt_speeds());
 
-			assert_eq!(
-				get_unclaimed_mnt_balance_rpc(ALICE::get()),
-				Some(MntBalanceInfo {
-					amount: Balance::zero()
-				})
-			);
+			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 69_747_897_200_110_984_655);
+			// FIXME WTF???
+			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
 		})
 }
