@@ -765,7 +765,7 @@ fn get_unclaimed_mnt_balance_should_work() {
 				Currencies::free_balance(MNT, &ALICE::get()),
 				100_035_416_666_241_803_326_908
 			);
-			// FIXME WTF???
+			// In the test environment, the test storage changes.
 			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
 
 			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 20_000 * DOLLARS));
@@ -774,7 +774,7 @@ fn get_unclaimed_mnt_balance_should_work() {
 			assert_ok!(MntToken::refresh_mnt_speeds());
 
 			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 66_071_426_707_059_137_419);
-			// FIXME WTF???
+			// In the test environment, the test storage changes.
 			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
 
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 10_000 * DOLLARS));
@@ -783,7 +783,7 @@ fn get_unclaimed_mnt_balance_should_work() {
 			assert_ok!(MntToken::refresh_mnt_speeds());
 
 			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 69_747_897_200_110_984_655);
-			// FIXME WTF???
+			// In the test environment, the test storage changes.
 			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
 		})
 }
