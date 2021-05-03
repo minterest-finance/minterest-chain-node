@@ -763,6 +763,7 @@ fn get_all_freshest_prices_rpc_should_work() {
 fn get_unclaimed_mnt_balance_should_work() {
 	ExtBuilder::default()
 		.enable_minting_for_pool(DOT)
+		.set_locked_prices(10_000)
 		.mnt_account_balance(1_000_000 * DOLLARS)
 		.pool_initial(DOT)
 		.build()
@@ -812,9 +813,5 @@ fn get_unclaimed_mnt_balance_should_work() {
 					amount: Balance::zero()
 				})
 			);
-
-			assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
-			assert_eq!(MntToken::mnt_accrued(ALICE::get()), Balance::zero());
-			assert_eq!(Currencies::free_balance(MNT, &ALICE::get()), Balance::zero());
 		})
 }
