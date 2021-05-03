@@ -93,23 +93,6 @@ pub mod module {
 		}
 	}
 
-	#[cfg(feature = "std")]
-	impl<T: Config> GenesisConfig<T> {
-		/// Direct implementation of `GenesisBuild::build_storage`.
-		///
-		/// Kept in order not to break dependency.
-		pub fn build_storage(&self) -> Result<sp_runtime::Storage, String> {
-			<Self as frame_support::traits::GenesisBuild<T>>::build_storage(self)
-		}
-
-		/// Direct implementation of `GenesisBuild::assimilate_storage`.
-		///
-		/// Kept in order not to break dependency.
-		pub fn assimilate_storage(&self, storage: &mut sp_runtime::Storage) -> Result<(), String> {
-			<Self as frame_support::traits::GenesisBuild<T>>::assimilate_storage(self, storage)
-		}
-	}
-
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
 
@@ -185,8 +168,8 @@ impl<T: Config> PriceProvider<CurrencyId> for Pallet<T> {
 impl<T: Config> Pallet<T> {
 	pub fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.iter()
-			.map(|x| (*x, T::Source::get(&x)))
+			.into_iter()
+			.map(|currency_id| (currency_id, T::Source::get(&currency_id)))
 			.collect()
 	}
 }
