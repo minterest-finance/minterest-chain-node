@@ -800,6 +800,10 @@ impl_runtime_apis! {
 		fn get_user_total_collateral(account_id: AccountId) -> Option<BalanceInfo> {
 				Some(BalanceInfo{amount: Controller::get_user_total_collateral(account_id).ok()?})
 		}
+
+		fn get_user_borrow_per_asset(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
+				Some(BalanceInfo{amount: Controller::get_user_borrow_per_asset(&account_id, underlying_asset_id).ok()?})
+		}
 	}
 
 	impl orml_oracle_rpc_runtime_api::OracleApi<

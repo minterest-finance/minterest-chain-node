@@ -32,6 +32,14 @@ pub trait ControllerApi<BlockHash, AccountId> {
 
 	#[rpc(name = "controller_accountCollateral")]
 	fn get_user_total_collateral(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
+
+	#[rpc(name = "controller_getUserBorrowPerAsset")]
+	fn get_user_borrow_per_asset(
+		&self,
+		account_id: AccountId,
+		underlying_asset_id: CurrencyId,
+		at: Option<BlockHash>,
+	) -> Result<Option<BalanceInfo>>;
 }
 
 /// A struct that implements the [`ControllerApi`].
@@ -145,5 +153,23 @@ where
 			message: "Unable to get total user collateral.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})
+	}
+
+	fn get_user_borrow_per_asset(
+		&self,
+		account_id: AccountId,
+		underlying_asset_id: CurrencyId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<Option<BalanceInfo>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+		api.get_user_borrow_per_asset(&at, account_id, underlying_asset_id)
+			.map_err(|e| RpcError {
+				code: ErrorCode::ServerError(Error::RuntimeError.into()),
+				message: "Unable to get total user borrow balance.".into(),
+				data: Some(format!("{:?}", e).into()),
+			})
 	}
 }

@@ -404,6 +404,10 @@ fn get_user_total_collateral_rpc(account_id: AccountId) -> Option<BalanceInfo> {
 	<Runtime as ControllerApi<Block, AccountId>>::get_user_total_collateral(account_id)
 }
 
+fn get_user_borrow_per_asset_rpc(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
+	<Runtime as ControllerApi<Block, AccountId>>::get_user_borrow_per_asset(account_id, underlying_asset_id)
+}
+
 fn dollars(amount: u128) -> u128 {
 	amount.saturating_mul(Price::accuracy())
 }
