@@ -830,8 +830,8 @@ impl_runtime_apis! {
 
 		fn  get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-				.iter()
-				.map(|&currency_id| (currency_id, Prices::locked_price(currency_id)))
+				.into_iter()
+				.map(|currency_id| (currency_id, Prices::locked_price(currency_id)))
 				.collect()
 		}
 
