@@ -805,8 +805,8 @@ impl_runtime_apis! {
 	}
 
 	impl mnt_token_rpc_runtime_api::MntTokenApi<Block, AccountId> for Runtime {
-		fn get_mnt_unclaimed_balance(account_id: AccountId) -> Option<MntBalanceInfo> {
-				Some(MntBalanceInfo{amount: MntToken::get_mnt_unclaimed_balance(&account_id).ok()?})
+		fn get_unclaimed_mnt_balance(account_id: AccountId) -> Option<MntBalanceInfo> {
+				Some(MntBalanceInfo{amount: MntToken::get_unclaimed_mnt_balance(&account_id).ok()?})
 		}
 	}
 

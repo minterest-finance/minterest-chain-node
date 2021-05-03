@@ -366,7 +366,7 @@ impl<T: Config> Pallet<T> {
 // RPC methods
 impl<T: Config> Pallet<T> {
 	/// Gets MNT accrued but not yet transferred to user.
-	pub fn get_mnt_unclaimed_balance(account_id: &T::AccountId) -> BalanceResult {
+	pub fn get_unclaimed_mnt_balance(account_id: &T::AccountId) -> BalanceResult {
 		let accrued_mnt =
 			MntSpeeds::<T>::iter().try_fold(Balance::zero(), |current_accrued, (pool_id, _)| -> BalanceResult {
 				let (mut accrued_borrow_mnt, mut accrued_supply_mnt) = (Balance::zero(), Balance::zero());

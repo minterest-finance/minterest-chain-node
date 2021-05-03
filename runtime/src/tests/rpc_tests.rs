@@ -549,6 +549,13 @@ fn get_user_total_collateral_rpc_should_work() {
 		.pool_initial(KSM)
 		.build()
 		.execute_with(|| {
+			// The function unlock_price() call is necessary because asset values are
+			// locked in the genesis block. Values are locked because the mnt-token pallet
+			// in the method build() uses asset prices.
+			vec![DOT, KSM, BTC, ETH].into_iter().for_each(|pool_id| {
+				assert_ok!(Prices::unlock_price(origin_root(), pool_id));
+			});
+
 			// Set price = 2.00 USD for all pools.
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
@@ -662,5 +669,65 @@ fn get_user_total_collateral_rpc_should_work() {
 					amount: expected_bob_collateral * 2
 				})
 			);
+		})
+}
+
+#[test]
+fn get_unclaimed_mnt_balance_should_work() {
+	ExtBuilder::default()
+		.enable_minting_for_pool(DOT)
+		.mnt_account_balance(1_000_000 * DOLLARS)
+		.pool_initial(DOT)
+		.build()
+		.execute_with(|| {
+			// Set initial state of pools for distribution MNT tokens.
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, 100_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::borrow(bob(), DOT, 50_000 * DOLLARS));
+
+			run_to_block(10);
+			assert_ok!(MntToken::refresh_mnt_speeds());
+
+			// ALice deposits DOT and enables her DOT pool as a collateral.
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 50_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+
+			run_to_block(20);
+			assert_ok!(MntToken::refresh_mnt_speeds());
+
+			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 20_000 * DOLLARS));
+
+			assert_eq!(
+				get_unclaimed_mnt_balance_rpc(ALICE::get()),
+				Some(MntBalanceInfo {
+					amount: Balance::zero()
+				})
+			);
+
+			run_to_block(30);
+			assert_ok!(MntToken::refresh_mnt_speeds());
+
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 10_000 * DOLLARS));
+
+			assert_eq!(
+				get_unclaimed_mnt_balance_rpc(ALICE::get()),
+				Some(MntBalanceInfo {
+					amount: Balance::zero()
+				})
+			);
+
+			run_to_block(40);
+			assert_ok!(MntToken::refresh_mnt_speeds());
+
+			assert_eq!(
+				get_unclaimed_mnt_balance_rpc(ALICE::get()),
+				Some(MntBalanceInfo {
+					amount: Balance::zero()
+				})
+			);
+
+			assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
+			assert_eq!(MntToken::mnt_accrued(ALICE::get()), Balance::zero());
+			assert_eq!(Currencies::free_balance(MNT, &ALICE::get()), Balance::zero());
 		})
 }

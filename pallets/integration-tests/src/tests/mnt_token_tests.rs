@@ -61,15 +61,11 @@ mod tests {
 			.build()
 			.execute_with(|| {
 				// Set initial state of pools for distribution MNT tokens.
-				assert_ok!(MinterestProtocol::deposit_underlying(admin(), DOT, ONE_HUNDRED));
-				assert_ok!(MinterestProtocol::deposit_underlying(admin(), ETH, ONE_HUNDRED));
-				assert_ok!(MinterestProtocol::deposit_underlying(admin(), BTC, ONE_HUNDRED));
-				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), DOT));
-				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), ETH));
-				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), BTC));
-				assert_ok!(MinterestProtocol::borrow(admin(), DOT, 50_000 * DOLLARS));
-				assert_ok!(MinterestProtocol::borrow(admin(), ETH, 50_000 * DOLLARS));
-				assert_ok!(MinterestProtocol::borrow(admin(), BTC, 50_000 * DOLLARS));
+				vec![DOT, ETH, BTC].into_iter().for_each(|pool_id| {
+					assert_ok!(MinterestProtocol::deposit_underlying(admin(), pool_id, ONE_HUNDRED));
+					assert_ok!(MinterestProtocol::enable_is_collateral(admin(), pool_id));
+					assert_ok!(MinterestProtocol::borrow(admin(), pool_id, 50_000 * DOLLARS));
+				});
 
 				set_block_number_and_refresh_speeds(10);
 

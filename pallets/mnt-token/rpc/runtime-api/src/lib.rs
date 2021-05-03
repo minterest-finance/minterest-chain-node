@@ -41,6 +41,6 @@ sp_api::decl_runtime_apis! {
 	where
 		AccountId: Codec,
 	{
-		fn get_mnt_unclaimed_balance(account_id: AccountId) -> Option<MntBalanceInfo>;
+		fn get_unclaimed_mnt_balance(account_id: AccountId) -> Option<MntBalanceInfo>;
 	}
 }

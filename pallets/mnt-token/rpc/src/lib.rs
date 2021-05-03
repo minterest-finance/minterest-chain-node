@@ -11,8 +11,8 @@ use std::sync::Arc;
 
 #[rpc]
 pub trait MntTokenApi<BlockHash, AccountId> {
-	#[rpc(name = "mntToken_getMntUnclaimedBalance")]
-	fn get_mnt_unclaimed_balance(&self, who: AccountId, at: Option<BlockHash>) -> Result<Option<MntBalanceInfo>>;
+	#[rpc(name = "mntToken_getUnclaimedMntBalance")]
+	fn get_unclaimed_mnt_balance(&self, who: AccountId, at: Option<BlockHash>) -> Result<Option<MntBalanceInfo>>;
 }
 
 /// A struct that implements the [`MntTokenApi`].
@@ -50,7 +50,7 @@ where
 	C::Api: MntTokenRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
 {
-	fn get_mnt_unclaimed_balance(
+	fn get_unclaimed_mnt_balance(
 		&self,
 		account_id: AccountId,
 		at: Option<<Block as BlockT>::Hash>,
@@ -59,9 +59,9 @@ where
 		let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume the best block.
             self.client.info().best_hash));
-		api.get_mnt_unclaimed_balance(&at, account_id).map_err(|e| RpcError {
+		api.get_unclaimed_mnt_balance(&at, account_id).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
-			message: "Unable to get user MNT unclaimed balance.".into(),
+			message: "Unable to get user unclaimed MNT balance.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})
 	}
