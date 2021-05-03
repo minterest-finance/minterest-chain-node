@@ -128,6 +128,7 @@ mod tests {
 	pub const ADMIN: AccountId = 0;
 	pub const ALICE: AccountId = 1;
 	pub const BOB: AccountId = 2;
+	pub const CAROL: AccountId = 3;
 	pub const ONE_HUNDRED: Balance = 100_000 * DOLLARS;
 	pub const BALANCE_ZERO: Balance = 0;
 	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
@@ -142,6 +143,9 @@ mod tests {
 	}
 	pub fn bob() -> Origin {
 		Origin::signed(BOB)
+	}
+	pub fn carol() -> Origin {
+		Origin::signed(CAROL)
 	}
 
 	pub struct ExtBuilder {
