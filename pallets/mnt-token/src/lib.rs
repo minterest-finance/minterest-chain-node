@@ -361,6 +361,14 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
+// RPC methods
+impl<T: Config> Pallet<T> {
+	/// Gets MNT accrued by a user.
+	pub fn get_mnt_unclaimed_balance(_account_id: &T::AccountId) -> result::Result<Balance, DispatchError> {
+		Ok(Balance::zero())
+	}
+}
+
 impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 	/// Update mnt supply index for pool
 	fn update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult {
