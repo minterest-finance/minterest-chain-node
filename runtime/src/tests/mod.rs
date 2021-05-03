@@ -19,15 +19,16 @@ use minterest_primitives::{CurrencyId, Operation, Price};
 use orml_traits::MultiCurrency;
 use pallet_traits::ControllerAPI;
 use pallet_traits::{DEXManager, PoolsManager, PriceProvider};
+use prices_rpc_runtime_api::runtime_decl_for_PricesApi::PricesApi;
 use risk_manager::RiskManagerData;
 use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};
 use test_helper::{BTC, DOT, ETH, KSM, MDOT, METH, MNT};
-
 mod balancing_pools_tests;
 mod dexes_tests;
 mod liquidation_tests;
 mod misc;
 mod rpc_tests;
+use frame_support::pallet_prelude::{DispatchResultWithPostInfo, PhantomData};
 
 parameter_types! {
 	pub ALICE: AccountId = AccountId::from([1u8; 32]);
@@ -43,6 +44,7 @@ struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
+	locked_prices: Vec<(CurrencyId, Price)>,
 }
 
 impl Default for ExtBuilder {
@@ -65,6 +67,7 @@ impl Default for ExtBuilder {
 			],
 			pools: vec![],
 			pool_user_data: vec![],
+			locked_prices: vec![],
 		}
 	}
 }
@@ -136,6 +139,14 @@ impl ExtBuilder {
 				liquidation_attempts,
 			},
 		));
+		self
+	}
+
+	pub fn set_locked_prices(mut self, price: u128) -> Self {
+		self.locked_prices.push((DOT, Price::saturating_from_integer(price)));
+		self.locked_prices.push((ETH, Price::saturating_from_integer(price)));
+		self.locked_prices.push((BTC, Price::saturating_from_integer(price)));
+		self.locked_prices.push((KSM, Price::saturating_from_integer(price)));
 		self
 	}
 
@@ -348,6 +359,13 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
+		module_prices::GenesisConfig::<Runtime> {
+			locked_price: self.locked_prices,
+			_phantom: PhantomData,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 		let mut ext: sp_io::TestExternalities = t.into();
 		ext.execute_with(|| System::set_block_number(1));
 		ext
@@ -419,9 +437,21 @@ fn set_oracle_price_for_all_pools(price: u128) -> DispatchResult {
 		.into_iter()
 		.map(|pool_id| (pool_id, Price::saturating_from_integer(price)))
 		.collect();
-	MinterestOracle::on_finalize(0);
+	MinterestOracle::on_finalize(System::block_number());
 	assert_ok!(MinterestOracle::feed_values(origin_of(ORACLE1::get().clone()), prices));
 	Ok(())
+}
+
+fn get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
+	<Runtime as PricesApi<Block>>::get_all_locked_prices()
+}
+
+fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
+	<Runtime as PricesApi<Block>>::get_all_freshest_prices()
+}
+
+fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
+	Prices::unlock_price(origin_root(), currency_id)
 }
 
 pub fn run_to_block(n: u32) {
