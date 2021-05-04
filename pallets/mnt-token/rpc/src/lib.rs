@@ -12,7 +12,8 @@ use std::sync::Arc;
 #[rpc]
 pub trait MntTokenApi<BlockHash, AccountId> {
 	#[rpc(name = "mntToken_getUnclaimedMntBalance")]
-	fn get_unclaimed_mnt_balance(&self, who: AccountId, at: Option<BlockHash>) -> Result<Option<MntBalanceInfo>>;
+	fn get_unclaimed_mnt_balance(&self, account_id: AccountId, at: Option<BlockHash>)
+		-> Result<Option<MntBalanceInfo>>;
 }
 
 /// A struct that implements the [`MntTokenApi`].
