@@ -201,7 +201,7 @@ fn liquidation_scenario_n1() {
 
 /*
 Description of scenario:
-This scenario handle the case, when user has not enough collateral to cover liquidation.
+This scenario handles the case, when user has not enough collateral to cover liquidation.
 This is a rare but possible case (may be caused by Flash Crashes of BTC or outage of oracles).
 This is a VERY painful case.
 The algorithm performs liquidation, the borrow balance remains with the user.

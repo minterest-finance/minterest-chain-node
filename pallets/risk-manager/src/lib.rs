@@ -410,18 +410,18 @@ impl<T: Config> Pallet<T> {
 			<T as module::Config>::ControllerAPI::accrue_interest_rate(currency_id)
 				.map_err(|_| OffchainErr::CheckFail)?;
 
-			let has_user_collateral = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			let user_has_collateral = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 				.iter()
 				.filter(|&pool_id| <LiquidityPools<T>>::check_user_available_collateral(&member, *pool_id))
 				.try_fold(
 					Balance::zero(),
 					|acc, &pool_id| -> result::Result<Balance, DispatchError> {
 						let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::PoolNotFound)?;
-						let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &member);
-						Ok(acc + user_balance_wrapped_tokens)
+						let user_wrapped_tokens_balance = T::MultiCurrency::free_balance(wrapped_id, &member);
+						Ok(acc + user_wrapped_tokens_balance)
 					},
 				)
-				.and_then(|collateral| Ok(!collateral.is_zero()))
+				.map(|collateral| !collateral.is_zero())
 				.map_err(|_| OffchainErr::CheckFail)?;
 
 			// Checks if the liquidation should be allowed to occur.
@@ -429,7 +429,7 @@ impl<T: Config> Pallet<T> {
 				<T as module::Config>::ControllerAPI::get_hypothetical_account_liquidity(&member, currency_id, 0, 0)
 					.map_err(|_| OffchainErr::CheckFail)?;
 
-			if !shortfall.is_zero() && has_user_collateral {
+			if !shortfall.is_zero() && user_has_collateral {
 				Self::submit_unsigned_liquidation(member, currency_id)
 			} else {
 				//TODO It is place for handle the case when collateral = 0, borrow > 0
