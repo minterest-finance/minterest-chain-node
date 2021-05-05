@@ -99,6 +99,10 @@ pub mod module {
 		/// The Mnt-token's account id, keep assets that should be distributed to users
 		type MntTokenAccountId: Get<Self::AccountId>;
 
+		#[pallet::constant]
+		// The MntSpeed update period.
+		type SpeedRefreshPeriod: Get<Self::BlockNumber>;
+
 		/// Weight information for the extrinsics.
 		type MntTokenWeightInfo: WeightInfo;
 	}
@@ -218,12 +222,9 @@ pub mod module {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_finalize(block: T::BlockNumber) {
-			if let Ok(v) = TryInto::<u64>::try_into(block) {
-				match (v % 5).is_zero() {
-					true if Pallet::<T>::refresh_mnt_speeds().is_err() => {
-						debug::info!("RefreshMntSpeeds internal error")
-					}
-					_ => (),
+			if block % T::SpeedRefreshPeriod::get() == T::BlockNumber::zero() {
+				if let Err(msg) = Pallet::<T>::refresh_mnt_speeds() {
+					debug::error!("{:?}", msg)
 				}
 			}
 		}

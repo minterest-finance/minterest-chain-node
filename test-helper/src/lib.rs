@@ -237,6 +237,7 @@ macro_rules! mock_impl_mnt_token_config {
 			type MultiCurrency = orml_currencies::Module<$target>;
 			type ControllerAPI = controller::Module<$target>;
 			type MntTokenAccountId = MntTokenAccountId;
+			type SpeedRefreshPeriod = SpeedRefreshPeriod;
 			type MntTokenWeightInfo = ();
 		}
 	};

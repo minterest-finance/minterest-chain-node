@@ -60,6 +60,7 @@ parameter_types! {
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
+	pub SpeedRefreshPeriod: BlockNumber = 5;
 }
 
 pub struct WhitelistMembers;
