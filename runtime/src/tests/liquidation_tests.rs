@@ -84,7 +84,7 @@ fn liquidation_scenario_n1() {
 			 */
 			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
 				BOB::get(),
-				52_500_003_307_500_000_000_000_000, // repay_amount = $52_500_000;
+				52_500_003_307_499_999_999_999_924, // repay_amount = $52_500_000;
 				BTC,                                // liquidated_pool_id;
 				vec![ETH],                          // seized_pools
 				true,
@@ -159,7 +159,7 @@ fn liquidation_scenario_n1() {
 
 			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
 				BOB::get(),
-				52_010_835_370_810_769_596_000, // repay_amount = $52_010;
+				52_010_835_370_810_769_596_505, // repay_amount = $52_010;
 				BTC,                            // liquidated_pool_id;
 				vec![ETH],                      // seized_pools
 				false,
@@ -197,6 +197,112 @@ fn liquidation_scenario_n1() {
 				}
 			);
 		});
+}
+
+//TODO:
+/*
+Description of scenario:
+This scenario handle the case, when user has not enough collateral to cover liquidation.
+This is a rare but possible case (may be caused by Flash Crashes of BTC or outage of oracles).
+This is a VERY painful case.
+The algorithm performs liquidation, the borrow balance remains with the user.
+ */
+#[test]
+fn liquidation_not_enough_collateral() {
+	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
+		.pool_initial(BTC)
+		.liquidation_pool_balance(DOT, dollars(1_000_000))
+		.liquidation_pool_balance(ETH, dollars(1_000_000))
+		.liquidation_pool_balance(BTC, dollars(1_000_000))
+		.pool_user_data(DOT, ALICE::get(), Balance::zero(), Rate::one(), false, 0)
+		.pool_user_data(ETH, ALICE::get(), Balance::zero(), Rate::one(), false, 0)
+		.pool_user_data(BTC, ALICE::get(), Balance::zero(), Rate::one(), false, 3)
+		.build()
+		.execute_with(|| {
+			// Set prices for currencies.
+			assert_ok!(MinterestOracle::feed_values(
+				origin_of(ORACLE1::get().clone()),
+				vec![
+					(DOT, Rate::saturating_from_integer(2)),
+					(ETH, Rate::saturating_from_integer(2)),
+					(BTC, Rate::saturating_from_integer(2)),
+					(KSM, Rate::saturating_from_integer(2)),
+				]
+			));
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), BTC, dollars(100_000)));
+			run_to_block(1);
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(50_000)));
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+			run_to_block(10);
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(50_000)));
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
+			run_to_block(20);
+			assert_ok!(MinterestProtocol::borrow(alice(), BTC, dollars(50_000)));
+			run_to_block(30);
+			assert_ok!(MinterestOracle::feed_values(
+				origin_of(ORACLE1::get().clone()),
+				vec![(BTC, Rate::saturating_from_integer(100))]
+			));
+			run_to_block(40);
+			assert_ok!(RiskManager::liquidate_unsafe_loan(ALICE::get(), BTC));
+			let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
+				ALICE::get(),
+				190_476_190_476_190_476_190_476, // repay_amount = $190_476;
+				BTC,                             // liquidated_pool_id;
+				vec![DOT, ETH],                  // seized_pools
+				false,
+			));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
+			assert_eq!(
+				LiquidityPools::pool_user_data(BTC, ALICE::get()),
+				PoolUserData {
+					total_borrowed: 48_095_242_595_238_095_238_095, // 50_000 BTC - 1904.76 BTC = 48_095.24 BTC
+					interest_index: Rate::from_inner(1_000_000_090_000_000_000),
+					is_collateral: false,
+					liquidation_attempts: 0,
+				}
+			);
+
+			// Borrowed liquidity pool balance: 50_000 BTC + 1904.76 BTC =  51_904.76 BTC;
+			assert_eq!(
+				LiquidityPools::get_pool_available_liquidity(BTC),
+				51_904_761_904_761_904_761_905
+			);
+			// Collateralizing liquidity pool balance: 0 ETH
+			assert_eq!(LiquidityPools::get_pool_available_liquidity(ETH), Balance::zero());
+			// Collateralizing liquidity pool balance: 0 DOT
+			assert_eq!(LiquidityPools::get_pool_available_liquidity(DOT), Balance::zero());
+			// Borrowed liquidation pool balance: 1_000_000 BTC - 1904.76 BTC = 998_095.24 BTC
+			assert_eq!(
+				LiquidationPools::get_pool_available_liquidity(BTC),
+				998_095_238_095_238_095_238_095
+			);
+			// Collateralizing liquidation pool balance: 1_000_000 DOT + 50_000 DOT = 1_050_000 DOT
+			assert_eq!(
+				LiquidationPools::get_pool_available_liquidity(DOT),
+				1_050_000_000_000_000_000_000_000
+			);
+			// Borrower balance in wrapped tokens (balance - seize_amount):
+			// 50_000 METH - 50_000 METH = 0 METH
+			assert_eq!(Currencies::free_balance(METH, &ALICE::get()), Balance::zero());
+			// 50_000 MDOT - 50_000 MDOT = 0 MDOT
+			assert_eq!(Currencies::free_balance(MDOT, &ALICE::get()), Balance::zero());
+			// current borrower account shortfall = $4_809_524;
+			assert_eq!(
+				Controller::get_hypothetical_account_liquidity(&ALICE::get(), BTC, 0, 0),
+				Ok((0, 4_809_524_259_523_809_523_809_500)),
+			);
+			// Borrower total collateral equal zero
+			assert_eq!(Controller::get_user_total_collateral(ALICE::get()), Ok(Balance::zero()));
+			// Borrower total borrow equal: shortfall / BTC price ($100)
+			assert_eq!(
+				Controller::get_user_borrow_per_asset(&ALICE::get(), BTC),
+				Ok(4_809_524_259_523_809_523_809_500 / 100)
+			);
+		})
 }
 
 #[test]

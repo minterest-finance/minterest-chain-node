@@ -525,10 +525,14 @@ impl<T: Config> Pallet<T> {
 			.iter()
 			.filter(|&pool_id| <LiquidityPools<T>>::check_user_available_collateral(&who, *pool_id))
 			.try_fold(Balance::zero(), |acc, &pool_id| -> BalanceResult {
-				let collateral_factor = Self::controller_dates(pool_id).collateral_factor;
 				let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::PoolNotFound)?;
-
 				let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
+
+				if user_balance_wrapped_tokens.is_zero() {
+					return Ok(Balance::zero());
+				}
+
+				let collateral_factor = Self::controller_dates(pool_id).collateral_factor;
 
 				let current_block_number = <frame_system::Module<T>>::block_number();
 				let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
