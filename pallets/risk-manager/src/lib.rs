@@ -127,6 +127,8 @@ pub mod module {
 		InvalidLiquidationIncentiveValue,
 		/// Feed price is invalid
 		InvalidFeedPrice,
+		/// Pool not found.
+		PoolNotFound,
 	}
 
 	#[pallet::event]
@@ -407,14 +409,30 @@ impl<T: Config> Pallet<T> {
 		for member in pool_members.into_iter() {
 			<T as module::Config>::ControllerAPI::accrue_interest_rate(currency_id)
 				.map_err(|_| OffchainErr::CheckFail)?;
+
+			let has_user_collateral = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+				.iter()
+				.filter(|&pool_id| <LiquidityPools<T>>::check_user_available_collateral(&member, *pool_id))
+				.try_fold(
+					Balance::zero(),
+					|acc, &pool_id| -> result::Result<Balance, DispatchError> {
+						let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::PoolNotFound)?;
+						let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &member);
+						Ok(acc + user_balance_wrapped_tokens)
+					},
+				)
+				.is_ok();
+
 			// Checks if the liquidation should be allowed to occur.
 			let (_, shortfall) =
 				<T as module::Config>::ControllerAPI::get_hypothetical_account_liquidity(&member, currency_id, 0, 0)
 					.map_err(|_| OffchainErr::CheckFail)?;
 
-			match shortfall.cmp(&Balance::zero()) {
-				Ordering::Equal => continue,
-				_ => Self::submit_unsigned_liquidation(member, currency_id),
+			if !shortfall.is_zero() && has_user_collateral {
+				Self::submit_unsigned_liquidation(member, currency_id)
+			} else {
+				//TODO It is necessary to handle the case when collateral = 0, borrow > 0
+				continue;
 			}
 
 			iteration_count += 1;
