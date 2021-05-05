@@ -23,6 +23,13 @@ fn run_to_block(n: u64) {
 	}
 }
 
+// Set mnt speed according to pool utility.
+fn refresh_mnt_speeds() {
+	System::set_block_number(0);
+	assert_ok!(MntToken::refresh_mnt_speeds());
+	System::set_block_number(1);
+}
+
 /// Move flywheel and check borrower balance
 fn check_borrower(
 	pool_id: CurrencyId,
@@ -116,6 +123,8 @@ fn distribute_mnt_to_supplier_with_threshold() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
+			refresh_mnt_speeds();
+
 			// Award for ALICE is 10 per block
 			// So at the first step awarded tokens should be kept in internal storage
 			// At the second it should be transferred to ALICE and so on.
@@ -148,6 +157,8 @@ fn distribute_mnt_to_supplier_from_different_pools() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
+			refresh_mnt_speeds();
+
 			// Check accruing mnt tokens from two pools for supplier
 			let dot_mnt_speed = 2 * DOLLARS;
 			let ksm_mnt_speed = 8 * DOLLARS;
@@ -261,6 +272,8 @@ fn distribute_borrowers_mnt() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
+			refresh_mnt_speeds();
+
 			/*
 			There is only one pool included in minting process. So 10 mnt for this pool.
 			Pool total borrow is 150_000. Alice borrowed 30_000 and BOB - 120_000
@@ -406,6 +419,8 @@ fn test_update_mnt_borrow_index_simple() {
 		.set_mnt_rate(1)
 		.build()
 		.execute_with(|| {
+			refresh_mnt_speeds();
+
 			/*
 			* Minting was enabled when block_number was equal to 0. Here block_number == 1.
 			So block_delta = 1
@@ -446,6 +461,8 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
+			refresh_mnt_speeds();
+
 			/*
 			Minting was enabled when block_number was equal to 0. Here block_number == 1.
 			So block_delta = 1
@@ -513,9 +530,9 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 				bob_award_per_block * current_block,
 			);
 			check_supplier_award(
-				BOB,
-				bob_award_per_block * block_delta,
-				bob_award_per_block * current_block,
+				ALICE,
+				alice_award_per_block * block_delta,
+				alice_award_per_block * current_block,
 			);
 			assert_eq!(
 				MNT_PALLET_START_BALANCE - get_mnt_account_balance(ALICE) - get_mnt_account_balance(BOB),
@@ -536,6 +553,8 @@ fn test_update_mnt_supply_index() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
+			refresh_mnt_speeds();
+
 			//
 			// * Minting was enabled when block_number was equal to 0. Here block_number == 1.
 			// So block_delta = 1
@@ -685,6 +704,8 @@ fn test_mnt_speed_calculation_with_zero_borrowed() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
+			refresh_mnt_speeds();
+
 			// Input parameters:
 			// mnt_rate: 10
 			// Prices: DOT[0] = 0.5 USD, ETH[1] = 1.5 USD, KSM[2] = 2 USD, BTC[3] = 3 USD
@@ -730,6 +751,8 @@ fn test_disable_mnt_minting() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
+			refresh_mnt_speeds();
+
 			// Make sure that speeds were precalculated
 			assert_eq!(MntToken::mnt_speeds(DOT), 714285714285714280);
 
