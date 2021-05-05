@@ -23,7 +23,7 @@ pub struct MntToken<C, B> {
 }
 
 impl<C, B> MntToken<C, B> {
-	/// Create new `LiquidityPool` with the given reference to the client.
+	/// Create new `MntToken` with the given reference to the client.
 	pub fn new(client: Arc<C>) -> Self {
 		Self {
 			client,
