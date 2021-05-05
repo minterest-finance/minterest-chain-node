@@ -421,7 +421,8 @@ impl<T: Config> Pallet<T> {
 						Ok(acc + user_balance_wrapped_tokens)
 					},
 				)
-				.is_ok();
+				.and_then(|collateral| Ok(!collateral.is_zero()))
+				.map_err(|_| OffchainErr::CheckFail)?;
 
 			// Checks if the liquidation should be allowed to occur.
 			let (_, shortfall) =
