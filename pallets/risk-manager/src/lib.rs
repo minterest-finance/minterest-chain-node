@@ -431,7 +431,7 @@ impl<T: Config> Pallet<T> {
 			if !shortfall.is_zero() && has_user_collateral {
 				Self::submit_unsigned_liquidation(member, currency_id)
 			} else {
-				//TODO It is necessary to handle the case when collateral = 0, borrow > 0
+				//TODO It is place for handle the case when collateral = 0, borrow > 0
 				continue;
 			}
 
@@ -581,55 +581,41 @@ impl<T: Config> Pallet<T> {
 				<T as module::Config>::MntManager::distribute_supplier_mnt(collateral_pool_id, &borrower, false)?;
 
 				// Check if there are enough collateral wrapped tokens to withdraw seize_tokens.
-				match balance_wrapped_token.cmp(&seize_tokens) {
+				let seize_underlying = match balance_wrapped_token.cmp(&seize_tokens) {
 					// Not enough collateral wrapped tokens.
 					Ordering::Less => {
 						// seize_underlying = balance_wrapped_token * exchange_rate
 						let seize_underlying =
 							<LiquidityPools<T>>::convert_from_wrapped(wrapped_id, balance_wrapped_token)?;
-
 						T::MultiCurrency::withdraw(wrapped_id, &borrower, balance_wrapped_token)?;
-
-						T::MultiCurrency::transfer(
-							collateral_pool_id,
-							&liquidity_pool_account_id,
-							&liquidation_pool_account_id,
-							seize_underlying,
-						)?;
-
 						// seize_amount = seize_amount - (seize_underlying * price_collateral)
 						seize_amount -= Rate::from_inner(seize_underlying)
 							.checked_mul(&price_collateral)
 							.map(|x| x.into_inner())
 							.ok_or(Error::<T>::NumOverflow)?;
-						// already_seized_amount = already_seized_amount + (seize_underlying * price_collateral)
-						already_seized_amount += Rate::from_inner(seize_underlying)
-							.checked_mul(&price_collateral)
-							.map(|x| x.into_inner())
-							.ok_or(Error::<T>::NumOverflow)?;
+						seize_underlying
 					}
 					// Enough collateral wrapped tokens. Transfer all seize_tokens to liquidation_pool.
 					_ => {
 						// seize_underlying = seize_tokens * exchange_rate
 						let seize_underlying = <LiquidityPools<T>>::convert_from_wrapped(wrapped_id, seize_tokens)?;
-
 						T::MultiCurrency::withdraw(wrapped_id, &borrower, seize_tokens)?;
-
-						T::MultiCurrency::transfer(
-							collateral_pool_id,
-							&liquidity_pool_account_id,
-							&liquidation_pool_account_id,
-							seize_underlying,
-						)?;
 						// seize_amount = 0, since all seize_tokens have already been withdrawn
 						seize_amount = Balance::zero();
-						// already_seized_amount = already_seized_amount + (seize_underlying * price_collateral)
-						already_seized_amount += Rate::from_inner(seize_underlying)
-							.checked_mul(&price_collateral)
-							.map(|x| x.into_inner())
-							.ok_or(Error::<T>::NumOverflow)?;
+						seize_underlying
 					}
-				}
+				};
+				T::MultiCurrency::transfer(
+					collateral_pool_id,
+					&liquidity_pool_account_id,
+					&liquidation_pool_account_id,
+					seize_underlying,
+				)?;
+				// already_seized_amount = already_seized_amount + (seize_underlying * price_collateral)
+				already_seized_amount += Rate::from_inner(seize_underlying)
+					.checked_mul(&price_collateral)
+					.map(|x| x.into_inner())
+					.ok_or(Error::<T>::NumOverflow)?;
 				// Collecting seized pools to display in an Event.
 				seized_pools.push(collateral_pool_id);
 			}
