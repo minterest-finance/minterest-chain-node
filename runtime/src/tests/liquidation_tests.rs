@@ -199,7 +199,6 @@ fn liquidation_scenario_n1() {
 		});
 }
 
-//TODO:
 /*
 Description of scenario:
 This scenario handle the case, when user has not enough collateral to cover liquidation.

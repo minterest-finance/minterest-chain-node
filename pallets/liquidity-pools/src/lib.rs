@@ -395,12 +395,15 @@ impl<T: Config> Pallet<T> {
 				let wrapped_id = pool_id.wrapped_asset()?;
 
 				// only collateral pools.
-				if !Self::pool_user_data(pool_id, who).is_collateral {
+				if !Self::check_user_available_collateral(&who, pool_id) {
 					return None;
 				};
 
 				// We calculate the value of the user's wrapped tokens in USD.
 				let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
+				if user_balance_wrapped_tokens.is_zero() {
+					return None;
+				}
 				let user_balance_underlying_asset =
 					Self::convert_from_wrapped(wrapped_id, user_balance_wrapped_tokens).ok()?;
 				let oracle_price = T::PriceSource::get_underlying_price(pool_id)?;

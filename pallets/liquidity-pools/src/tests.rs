@@ -378,13 +378,13 @@ fn get_is_collateral_pools_should_work() {
 		.pool_user_data_with_params(DOT, ALICE, Balance::zero(), Rate::default(), true, 0)
 		.pool_user_data_with_params(ETH, ALICE, Balance::zero(), Rate::default(), true, 0)
 		.pool_user_data_with_params(BTC, ALICE, Balance::zero(), Rate::default(), false, 0)
-		.user_balance(ALICE, MKSM, TEN_THOUSAND)
+		.user_balance(ALICE, MKSM, Balance::zero())
 		.user_balance(ALICE, MDOT, TEN_THOUSAND)
 		.user_balance(ALICE, METH, TEN_THOUSAND)
 		.user_balance(ALICE, MBTC, TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
-			assert_eq!(TestPools::get_is_collateral_pools(&ALICE), Ok(vec![DOT, ETH, KSM]));
+			assert_eq!(TestPools::get_is_collateral_pools(&ALICE), Ok(vec![DOT, ETH]));
 			assert_eq!(TestPools::get_is_collateral_pools(&BOB), Ok(vec![]));
 		});
 }

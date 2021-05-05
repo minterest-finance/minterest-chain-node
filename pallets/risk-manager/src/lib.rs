@@ -491,6 +491,7 @@ impl<T: Config> Pallet<T> {
 			Self::calculate_liquidation_info(liquidated_pool_id, total_repay_amount, is_partial_liquidation)?;
 
 		let (seized_pools, repay_amount) = Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, seize_amount)?;
+
 		if is_attempt_increment_required {
 			Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation);
 		}
@@ -525,6 +526,10 @@ impl<T: Config> Pallet<T> {
 		// Get an array of collateral pools for the borrower.
 		// The array is sorted in descending order by the number of wrapped tokens in USD.
 		let collateral_pools = <LiquidityPools<T>>::get_is_collateral_pools(&borrower)?;
+
+		if collateral_pools.is_empty() {
+			return Ok((Vec::new(), Balance::zero()));
+		}
 
 		// Collect seized pools.
 		let mut seized_pools: Vec<CurrencyId> = Vec::new();
@@ -579,7 +584,7 @@ impl<T: Config> Pallet<T> {
 							.checked_mul(&price_collateral)
 							.map(|x| x.into_inner())
 							.ok_or(Error::<T>::NumOverflow)?;
-						// seized_amount = seized_amount + (seize_underlying * price_collateral)
+						// already_seized_amount = already_seized_amount + (seize_underlying * price_collateral)
 						already_seized_amount += Rate::from_inner(seize_underlying)
 							.checked_mul(&price_collateral)
 							.map(|x| x.into_inner())
@@ -600,7 +605,7 @@ impl<T: Config> Pallet<T> {
 						)?;
 						// seize_amount = 0, since all seize_tokens have already been withdrawn
 						seize_amount = Balance::zero();
-						// seized_amount = seized_amount + (seize_underlying * price_collateral)
+						// already_seized_amount = already_seized_amount + (seize_underlying * price_collateral)
 						already_seized_amount += Rate::from_inner(seize_underlying)
 							.checked_mul(&price_collateral)
 							.map(|x| x.into_inner())
@@ -648,7 +653,8 @@ impl<T: Config> Pallet<T> {
 	///
 	/// Returns:
 	/// `seize_amount`: - the number of collateral tokens to seize converted into USD (consider
-	/// liquidation_fee). `is_attempt_increment_required`: - boolean, whether or not to increment
+	/// liquidation_fee).
+	/// `is_attempt_increment_required`: - boolean, whether or not to increment
 	/// the counter of liquidation attempts.
 	pub fn calculate_liquidation_info(
 		liquidated_pool_id: CurrencyId,

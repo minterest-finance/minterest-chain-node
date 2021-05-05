@@ -581,7 +581,7 @@ impl<T: Config> Pallet<T> {
 	/// Checks if borrow cap is reached.
 	///
 	/// Return true if total borrow per pool will exceed borrow cap, otherwise false.
-	pub fn is_borrow_cap_reached(pool_id: CurrencyId, borrow_amount: Balance) -> Result<bool, DispatchError> {
+	fn is_borrow_cap_reached(pool_id: CurrencyId, borrow_amount: Balance) -> Result<bool, DispatchError> {
 		if let Some(borrow_cap) = Self::controller_dates(pool_id).borrow_cap {
 			let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 			let pool_total_borrowed = T::LiquidityPoolsManager::get_pool_total_borrowed(pool_id);
@@ -640,7 +640,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// - `underlying_asset`: ID of the currency to make calculations for.
 	/// - `block_delta`: number of blocks passed since last accrue interest
-	pub fn calculate_interest_params(
+	fn calculate_interest_params(
 		underlying_asset: CurrencyId,
 		block_delta: T::BlockNumber,
 	) -> result::Result<Pool, DispatchError> {
