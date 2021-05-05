@@ -218,7 +218,7 @@ pub mod module {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_finalize(block: T::BlockNumber) {
-			if let Some(v) = TryInto::<u64>::try_into(block).ok() {
+			if let Ok(v) = TryInto::<u64>::try_into(block) {
 				match (v % 5).is_zero() {
 					true if Pallet::<T>::refresh_mnt_speeds().is_err() => {
 						debug::info!("RefreshMntSpeeds internal error")
