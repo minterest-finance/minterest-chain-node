@@ -369,11 +369,10 @@ impl<T: Config> Pallet<T> {
 	pub fn get_unclaimed_mnt_balance(account_id: &T::AccountId) -> BalanceResult {
 		let accrued_mnt =
 			MntSpeeds::<T>::iter().try_fold(Balance::zero(), |current_accrued, (pool_id, _)| -> BalanceResult {
-				let (mut accrued_borrow_mnt, mut accrued_supply_mnt) = (Balance::zero(), Balance::zero());
 				Self::update_mnt_borrow_index(pool_id)?;
-				accrued_borrow_mnt += Self::distribute_borrower_mnt(pool_id, account_id, true)?;
+				let accrued_borrow_mnt = Self::distribute_borrower_mnt(pool_id, account_id, true)?;
 				Self::update_mnt_supply_index(pool_id)?;
-				accrued_supply_mnt += Self::distribute_supplier_mnt(pool_id, account_id, true)?;
+				let accrued_supply_mnt = Self::distribute_supplier_mnt(pool_id, account_id, true)?;
 				Ok(current_accrued + accrued_borrow_mnt + accrued_supply_mnt)
 			})?;
 		Ok(accrued_mnt)
