@@ -410,6 +410,8 @@ impl<T: Config> Pallet<T> {
 			<T as module::Config>::ControllerAPI::accrue_interest_rate(currency_id)
 				.map_err(|_| OffchainErr::CheckFail)?;
 
+			// We check if the user has the collateral so as not to start the liquidation process
+			// for users who have collateral = 0 and borrow > 0.
 			let user_has_collateral = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 				.iter()
 				.filter(|&pool_id| <LiquidityPools<T>>::check_user_available_collateral(&member, *pool_id))
@@ -424,11 +426,11 @@ impl<T: Config> Pallet<T> {
 				.map(|collateral| !collateral.is_zero())
 				.map_err(|_| OffchainErr::CheckFail)?;
 
-			// Checks if the liquidation should be allowed to occur.
 			let (_, shortfall) =
 				<T as module::Config>::ControllerAPI::get_hypothetical_account_liquidity(&member, currency_id, 0, 0)
 					.map_err(|_| OffchainErr::CheckFail)?;
 
+			// Checks if the liquidation should be allowed to occur.
 			if !shortfall.is_zero() && user_has_collateral {
 				Self::submit_unsigned_liquidation(member, currency_id)
 			} else {
