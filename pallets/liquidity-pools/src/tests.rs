@@ -388,3 +388,22 @@ fn get_is_collateral_pools_should_work() {
 			assert_eq!(TestPools::get_is_collateral_pools(&BOB), Ok(vec![]));
 		});
 }
+
+#[test]
+fn check_user_has_collateral_should_work() {
+	ExtBuilder::default()
+		.pool_mock(DOT)
+		.pool_mock(BTC)
+		.pool_user_data_with_params(DOT, ALICE, Balance::zero(), Rate::default(), true, 0)
+		.pool_user_data_with_params(DOT, BOB, Balance::zero(), Rate::default(), true, 0)
+		.pool_user_data_with_params(BTC, CHARLIE, Balance::zero(), Rate::default(), false, 0)
+		.user_balance(ALICE, MDOT, TEN_THOUSAND)
+		.user_balance(BOB, MDOT, Balance::zero())
+		.user_balance(CHARLIE, MBTC, TEN_THOUSAND)
+		.build()
+		.execute_with(|| {
+			assert_eq!(TestPools::check_user_has_collateral(&ALICE), true);
+			assert_eq!(TestPools::check_user_has_collateral(&BOB), false);
+			assert_eq!(TestPools::check_user_has_collateral(&CHARLIE), false);
+		});
+}

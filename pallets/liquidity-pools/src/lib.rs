@@ -345,7 +345,6 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-// Storage getters for LiquidityPools
 impl<T: Config> Pallet<T> {
 	/// Gets pool associated data
 	pub fn get_pool_data(pool_id: CurrencyId) -> Pool {
@@ -419,6 +418,22 @@ impl<T: Config> Pallet<T> {
 		pools.sort_by(|x, y| y.1.cmp(&x.1));
 
 		Ok(pools.iter().map(|pool| pool.0).collect::<Vec<CurrencyId>>())
+	}
+
+	/// Checks if the user has the collateral.
+	pub fn check_user_has_collateral(who: &T::AccountId) -> bool {
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.into_iter()
+			.filter(|&pool_id| Self::check_user_available_collateral(&who, pool_id))
+			.take_while(|&pool_id| {
+				if let Some(wrapped_id) = pool_id.wrapped_asset() {
+					!T::MultiCurrency::free_balance(wrapped_id, &who).is_zero()
+				} else {
+					false
+				}
+			})
+			.next()
+			.is_some()
 	}
 }
 

@@ -127,8 +127,6 @@ pub mod module {
 		InvalidLiquidationIncentiveValue,
 		/// Feed price is invalid
 		InvalidFeedPrice,
-		/// Pool not found.
-		PoolNotFound,
 	}
 
 	#[pallet::event]
@@ -412,19 +410,7 @@ impl<T: Config> Pallet<T> {
 
 			// We check if the user has the collateral so as not to start the liquidation process
 			// for users who have collateral = 0 and borrow > 0.
-			let user_has_collateral = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-				.iter()
-				.filter(|&pool_id| <LiquidityPools<T>>::check_user_available_collateral(&member, *pool_id))
-				.try_fold(
-					Balance::zero(),
-					|acc, &pool_id| -> result::Result<Balance, DispatchError> {
-						let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::PoolNotFound)?;
-						let user_wrapped_tokens_balance = T::MultiCurrency::free_balance(wrapped_id, &member);
-						Ok(acc + user_wrapped_tokens_balance)
-					},
-				)
-				.map(|collateral| !collateral.is_zero())
-				.map_err(|_| OffchainErr::CheckFail)?;
+			let user_has_collateral = <LiquidityPools<T>>::check_user_has_collateral(&member);
 
 			let (_, shortfall) =
 				<T as module::Config>::ControllerAPI::get_hypothetical_account_liquidity(&member, currency_id, 0, 0)
