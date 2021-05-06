@@ -364,7 +364,7 @@ impl<T: Config> Pallet<T> {
 		// Get available assets list
 		let underlying_assets: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 
-		if underlying_assets.len().is_zero() {
+		if underlying_assets.is_empty() {
 			return Ok(());
 		}
 
@@ -634,6 +634,8 @@ impl<T: Config> Pallet<T> {
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
+		// Calculating the number of assets that must be repaid out of the liquidation pool.
+		// repay_assets = already_seized_amount / (liquidation_fee * price_borrowed)
 		let repay_assets = Rate::from_inner(repay_amount)
 			.checked_div(&price_borrowed)
 			.map(|x| x.into_inner())
