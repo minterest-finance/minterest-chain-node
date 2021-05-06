@@ -16,6 +16,13 @@ fn collects_sales_list_should_work_2_2() {
 		.liquidation_pool_balance(BTC, 100_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// The function unlock_price() call is necessary because asset values are
+			// locked in the genesis block. Values are locked because the mnt-token pallet
+			// in the method build() uses asset prices.
+			vec![DOT, KSM, BTC, ETH].into_iter().for_each(|pool_id| {
+				assert_ok!(Prices::unlock_price(origin_root(), pool_id));
+			});
+
 			let prices: Vec<(CurrencyId, Price)> = vec![
 				(DOT, Price::saturating_from_integer(30)),
 				(KSM, Price::saturating_from_integer(5)),
@@ -72,6 +79,13 @@ fn balance_liquidation_pools_should_work() {
 		.dex_balance(BTC, 500_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// The function unlock_price() call is necessary because asset values are
+			// locked in the genesis block. Values are locked because the mnt-token pallet
+			// in the method build() uses asset prices.
+			vec![DOT, KSM, BTC, ETH].into_iter().for_each(|pool_id| {
+				assert_ok!(Prices::unlock_price(origin_root(), pool_id));
+			});
+
 			let prices: Vec<(CurrencyId, Price)> = vec![
 				(DOT, Price::saturating_from_integer(1)),
 				(KSM, Price::saturating_from_integer(2)),
@@ -165,6 +179,13 @@ fn balance_liquidation_pools_two_pools_should_work_test() {
 		.dex_balance(ETH, 500_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// The function unlock_price() call is necessary because asset values are
+			// locked in the genesis block. Values are locked because the mnt-token pallet
+			// in the method build() uses asset prices.
+			vec![DOT, KSM, BTC, ETH].into_iter().for_each(|pool_id| {
+				assert_ok!(Prices::unlock_price(origin_root(), pool_id));
+			});
+
 			let prices: Vec<(CurrencyId, Price)> = vec![
 				(DOT, Price::saturating_from_integer(2)),
 				(ETH, Price::saturating_from_integer(4)),

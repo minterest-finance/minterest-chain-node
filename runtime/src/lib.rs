@@ -26,6 +26,7 @@ pub use minterest_primitives::{
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index, Moment,
 	Operation, Price, Rate, Signature,
 };
+pub use mnt_token_rpc_runtime_api::MntBalanceInfo;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::fg_primitives;
@@ -803,6 +804,12 @@ impl_runtime_apis! {
 
 		fn get_user_borrow_per_asset(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
 				Some(BalanceInfo{amount: Controller::get_user_borrow_per_asset(&account_id, underlying_asset_id).ok()?})
+		}
+	}
+
+	impl mnt_token_rpc_runtime_api::MntTokenApi<Block, AccountId> for Runtime {
+		fn get_unclaimed_mnt_balance(account_id: AccountId) -> Option<MntBalanceInfo> {
+				Some(MntBalanceInfo{amount: MntToken::get_unclaimed_mnt_balance(&account_id).ok()?})
 		}
 	}
 

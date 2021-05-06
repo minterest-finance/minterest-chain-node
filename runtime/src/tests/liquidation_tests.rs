@@ -28,6 +28,13 @@ fn liquidation_scenario_n1() {
 		.pool_user_data(BTC, BOB::get(), Balance::zero(), Rate::one(), false, 0)
 		.build()
 		.execute_with(|| {
+			// The function unlock_price() call is necessary because asset values are
+			// locked in the genesis block. Values are locked because the mnt-token pallet
+			// in the method build() uses asset prices.
+			vec![DOT, KSM, BTC, ETH].into_iter().for_each(|pool_id| {
+				assert_ok!(Prices::unlock_price(origin_root(), pool_id));
+			});
+
 			// Set prices for currencies.
 			assert_ok!(MinterestOracle::feed_values(
 				origin_of(ORACLE1::get().clone()),

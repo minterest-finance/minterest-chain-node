@@ -29,10 +29,12 @@ where
 		orml_oracle_rpc::OracleRuntimeApi<Block, DataProviderId, CurrencyId, node_minterest_runtime::TimeStampedPrice>,
 	C::Api: controller_rpc::ControllerRuntimeApi<Block, AccountId>,
 	C::Api: prices_rpc::PricesRuntimeApi<Block>,
+	C::Api: mnt_token_rpc::MntTokenRuntimeApi<Block, AccountId>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + 'static,
 {
 	use controller_rpc::{Controller, ControllerApi};
+	use mnt_token_rpc::{MntToken, MntTokenApi};
 	use orml_oracle_rpc::{Oracle, OracleApi};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
 	use prices_rpc::{Prices, PricesApi};
@@ -58,6 +60,8 @@ where
 	io.extend_with(ControllerApi::to_delegate(Controller::new(client.clone())));
 
 	io.extend_with(OracleApi::to_delegate(Oracle::new(client.clone())));
+
+	io.extend_with(MntTokenApi::to_delegate(MntToken::new(client.clone())));
 
 	io.extend_with(PricesApi::to_delegate(Prices::new(client)));
 	// Extend this RPC with a custom API by using the following syntax.
