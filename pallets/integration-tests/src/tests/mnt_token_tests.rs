@@ -61,15 +61,11 @@ mod tests {
 			.build()
 			.execute_with(|| {
 				// Set initial state of pools for distribution MNT tokens.
-				assert_ok!(MinterestProtocol::deposit_underlying(admin(), DOT, ONE_HUNDRED));
-				assert_ok!(MinterestProtocol::deposit_underlying(admin(), ETH, ONE_HUNDRED));
-				assert_ok!(MinterestProtocol::deposit_underlying(admin(), BTC, ONE_HUNDRED));
-				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), DOT));
-				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), ETH));
-				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), BTC));
-				assert_ok!(MinterestProtocol::borrow(admin(), DOT, 50_000 * DOLLARS));
-				assert_ok!(MinterestProtocol::borrow(admin(), ETH, 50_000 * DOLLARS));
-				assert_ok!(MinterestProtocol::borrow(admin(), BTC, 50_000 * DOLLARS));
+				vec![DOT, ETH, BTC].into_iter().for_each(|pool_id| {
+					assert_ok!(MinterestProtocol::deposit_underlying(admin(), pool_id, ONE_HUNDRED));
+					assert_ok!(MinterestProtocol::enable_is_collateral(admin(), pool_id));
+					assert_ok!(MinterestProtocol::borrow(admin(), pool_id, 50_000 * DOLLARS));
+				});
 
 				set_block_number_and_refresh_speeds(10);
 
@@ -92,7 +88,7 @@ mod tests {
 				// There are borrow in all pool, but BTC pool excluded from MNT distribution.
 				test_mnt_speeds(33_333_333_283_333_335, 66_666_666_716_666_664, 0);
 
-				// BOB deposits ETH and enables his assets in pools as a collateral.
+				// BOB deposits ETH.
 				assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, ONE_HUNDRED));
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), 0);
 				assert_eq!(TestMntToken::mnt_accrued(BOB), 0);

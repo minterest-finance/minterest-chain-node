@@ -55,6 +55,7 @@ smallvec = { default-features = false, version = '1.6.0' }
 
 # local dependencies
 mnt-token = { path = "../pallets/mnt-token", default-features = false }
+mnt-token-rpc-runtime-api = { path = "../pallets/mnt-token/rpc/runtime-api", default-features = false }
 minterest-protocol = { path = "../pallets/minterest-protocol", default-features = false }
 minterest-primitives = { path = "../primitives", default-features = false }
 liquidity-pools = { path = "../pallets/liquidity-pools", default-features = false }
@@ -134,6 +135,7 @@ std = [
     "orml-benchmarking/std",
 
     'mnt-token/std',
+    'mnt-token-rpc-runtime-api/std',
     'minterest-protocol/std',
     'minterest-primitives/std',
     'liquidity-pools/std',

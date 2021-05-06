@@ -3883,6 +3883,7 @@ version = "0.5.0"
 dependencies = [
  "controller-rpc",
  "jsonrpc-core",
+ "mnt-token-rpc",
  "node-minterest-runtime",
  "orml-oracle-rpc",
  "pallet-transaction-payment-rpc",
@@ -4048,6 +4049,35 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "test-helper",
+]
+
+[[package]]
+name = "mnt-token-rpc"
+version = "0.5.0"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "minterest-primitives",
+ "mnt-token-rpc-runtime-api",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+]
+
+[[package]]
+name = "mnt-token-rpc-runtime-api"
+version = "0.6.1"
+dependencies = [
+ "minterest-primitives",
+ "parity-scale-codec",
+ "serde",
+ "serde_json",
+ "sp-api",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-std",
 ]
 
 [[package]]
@@ -4223,6 +4253,7 @@ dependencies = [
  "minterest-primitives",
  "minterest-protocol",
  "mnt-token",
+ "mnt-token-rpc-runtime-api",
  "module-prices",
  "orml-benchmarking",
  "orml-currencies",

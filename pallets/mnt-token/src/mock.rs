@@ -84,10 +84,10 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 }
 
 pub struct ExtBuilder {
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	minted_pools: Vec<CurrencyId>,
-	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	mnt_rate: Balance,
 	mnt_claim_threshold: Balance,
 }

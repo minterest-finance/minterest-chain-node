@@ -1,7 +1,7 @@
 use crate::{
 	AccountId, Balance, Block, Controller, Currencies, Dex, EnabledUnderlyingAssetsIds, Event, LiquidationPools,
-	LiquidityPools, MinterestCouncilMembership, MinterestOracle, MinterestProtocol, Prices, Rate, RiskManager, Runtime,
-	System, WhitelistCouncilMembership, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+	LiquidityPools, MinterestCouncilMembership, MinterestOracle, MinterestProtocol, MntToken, Prices, Rate,
+	RiskManager, Runtime, System, WhitelistCouncilMembership, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::{
@@ -16,6 +16,7 @@ use liquidation_pools::{LiquidationPoolData, Sales};
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Operation, Price};
+use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenApi::MntTokenApi;
 use orml_traits::MultiCurrency;
 use pallet_traits::ControllerAPI;
 use pallet_traits::{DEXManager, PoolsManager, PriceProvider};
@@ -44,7 +45,6 @@ struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
-	locked_prices: Vec<(CurrencyId, Price)>,
 }
 
 impl Default for ExtBuilder {
@@ -67,7 +67,6 @@ impl Default for ExtBuilder {
 			],
 			pools: vec![],
 			pool_user_data: vec![],
-			locked_prices: vec![],
 		}
 	}
 }
@@ -142,11 +141,8 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn set_locked_prices(mut self, price: u128) -> Self {
-		self.locked_prices.push((DOT, Price::saturating_from_integer(price)));
-		self.locked_prices.push((ETH, Price::saturating_from_integer(price)));
-		self.locked_prices.push((BTC, Price::saturating_from_integer(price)));
-		self.locked_prices.push((KSM, Price::saturating_from_integer(price)));
+	pub fn mnt_account_balance(mut self, balance: Balance) -> Self {
+		self.endowed_accounts.push((MntToken::get_account_id(), MNT, balance));
 		self
 	}
 
@@ -155,8 +151,24 @@ impl ExtBuilder {
 			.build_storage::<Runtime>()
 			.unwrap();
 
+		pallet_balances::GenesisConfig::<Runtime> {
+			balances: self
+				.endowed_accounts
+				.clone()
+				.into_iter()
+				.filter(|(_, currency_id, _)| *currency_id == MNT)
+				.map(|(account_id, _, initial_balance)| (account_id, initial_balance))
+				.collect::<Vec<_>>(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 		orml_tokens::GenesisConfig::<Runtime> {
-			endowed_accounts: self.endowed_accounts,
+			endowed_accounts: self
+				.endowed_accounts
+				.into_iter()
+				.filter(|(_, currency_id, _)| *currency_id != MNT)
+				.collect::<Vec<_>>(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -360,8 +372,22 @@ impl ExtBuilder {
 		.unwrap();
 
 		module_prices::GenesisConfig::<Runtime> {
-			locked_price: self.locked_prices,
+			locked_price: vec![
+				(DOT, Rate::saturating_from_integer(2)),
+				(KSM, Rate::saturating_from_integer(2)),
+				(ETH, Rate::saturating_from_integer(2)),
+				(BTC, Rate::saturating_from_integer(2)),
+			],
 			_phantom: PhantomData,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		mnt_token::GenesisConfig::<Runtime> {
+			mnt_rate: 10 * DOLLARS,
+			mnt_claim_threshold: 0, // disable by default
+			minted_pools: vec![DOT, ETH, KSM, BTC],
+			_phantom: std::marker::PhantomData,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -400,12 +426,20 @@ fn is_admin_rpc(caller: AccountId) -> Option<bool> {
 	<Runtime as ControllerApi<Block, AccountId>>::is_admin(caller)
 }
 
-fn get_user_total_collateral_rpc(account_id: AccountId) -> Option<BalanceInfo> {
+fn get_user_total_collateral_rpc(account_id: AccountId) -> Balance {
 	<Runtime as ControllerApi<Block, AccountId>>::get_user_total_collateral(account_id)
+		.unwrap()
+		.amount
 }
 
 fn get_user_borrow_per_asset_rpc(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
 	<Runtime as ControllerApi<Block, AccountId>>::get_user_borrow_per_asset(account_id, underlying_asset_id)
+}
+
+fn get_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
+	<Runtime as MntTokenApi<Block, AccountId>>::get_unclaimed_mnt_balance(account_id)
+		.unwrap()
+		.amount
 }
 
 fn dollars(amount: u128) -> u128 {
