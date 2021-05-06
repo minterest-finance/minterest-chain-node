@@ -414,12 +414,15 @@ impl<T: Config> Pallet<T> {
 
 			// Checks if the liquidation should be allowed to occur.
 			if user_has_collateral {
-				if let Ok((_, shortfall)) =
-					<T as module::Config>::ControllerAPI::get_hypothetical_account_liquidity(&member, currency_id, 0, 0)
-				{
-					if !shortfall.is_zero() {
-						Self::submit_unsigned_liquidation(member, currency_id)
-					}
+				let (_, shortfall) = <T as module::Config>::ControllerAPI::get_hypothetical_account_liquidity(
+					&member,
+					currency_id,
+					0,
+					0,
+				)
+				.map_err(|_| OffchainErr::CheckFail)?;
+				if !shortfall.is_zero() {
+					Self::submit_unsigned_liquidation(member, currency_id)
 				}
 			} else {
 				//TODO It is place for handle the case when collateral = 0, borrow > 0
@@ -608,15 +611,15 @@ impl<T: Config> Pallet<T> {
 			}
 		}
 
-		let price_borrowed =
-			T::PriceSource::get_underlying_price(liquidated_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-
 		let liquidation_fee = Self::risk_manager_dates(liquidated_pool_id).liquidation_fee;
 
 		let repay_amount = Rate::from_inner(already_seized_amount)
 			.checked_div(&liquidation_fee)
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
+
+		let price_borrowed =
+			T::PriceSource::get_underlying_price(liquidated_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
 		// Calculating the number of assets that must be repaid out of the liquidation pool.
 		// repay_assets = already_seized_amount / (liquidation_fee * price_borrowed)
