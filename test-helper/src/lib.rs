@@ -229,6 +229,10 @@ macro_rules! mock_impl_risk_manager_config {
 #[macro_export]
 macro_rules! mock_impl_mnt_token_config {
 	($target:ty, $acc:ident) => {
+		parameter_types! {
+			pub const SpeedRefreshPeriod: BlockNumber = 5;
+		}
+
 		impl mnt_token::Config for $target {
 			type Event = Event;
 			type PriceSource = MockPriceSource;

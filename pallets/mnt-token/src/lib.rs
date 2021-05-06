@@ -224,7 +224,11 @@ pub mod module {
 		fn on_finalize(block: T::BlockNumber) {
 			if block % T::SpeedRefreshPeriod::get() == T::BlockNumber::zero() {
 				if let Err(msg) = Pallet::<T>::refresh_mnt_speeds() {
-					debug::error!("{:?}", msg)
+					debug::error!(
+						"MntToken module: Cannot run refresh_mnt_speed() at {:?}: {:?}",
+						block,
+						msg
+					)
 				}
 			}
 		}
