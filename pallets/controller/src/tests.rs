@@ -321,7 +321,7 @@ fn get_liquidity_pool_borrow_and_supply_rates_less_than_kink() {
 			// supply_rate = 0.75 * 0.00_000_000_675 * (1 - 0.1) = 0.00000000455625
 			assert_eq!(
 				Controller::get_liquidity_pool_borrow_and_supply_rates(DOT),
-				Some((Rate::from_inner(6750000000), Rate::from_inner(4556250000)))
+				Some((Rate::from_inner(6750000014), Rate::from_inner(4556250018)))
 			);
 		});
 }
@@ -334,11 +334,11 @@ fn get_liquidity_pool_borrow_and_supply_rates_above_kink() {
 		.build()
 		.execute_with(|| {
 			// utilization_rate = 500 / (100 - 0 + 500) = 0.83 > kink = 0.8
-			// borrow_rate = 0.83 * 0.8 * 0.000_000_207  + (0.8 * 0.000_000_009) + 0 = 0.0000001452
-			// supply_rate = 0.83 * 0.0000001452 * (1 - 0.1) = 0.00000000455625
+			// borrow_rate = 0,83333336 * 0.8 * 0.000_000_207  + (0.8 * 0.000_000_009) + 0 = 0.0000001452
+			// supply_rate = 0,83333336 * 0.0000001452 * (1 - 0.1) = 0,0000001089
 			assert_eq!(
 				Controller::get_liquidity_pool_borrow_and_supply_rates(DOT),
-				Some((Rate::from_inner(145199999999), Rate::from_inner(108899999999)))
+				Some((Rate::from_inner(145200005009), Rate::from_inner(108900007709)))
 			);
 		});
 }
