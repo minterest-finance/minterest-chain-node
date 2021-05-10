@@ -525,10 +525,14 @@ impl<T: Config> Pallet<T> {
 			.iter()
 			.filter(|&pool_id| <LiquidityPools<T>>::check_user_available_collateral(&who, *pool_id))
 			.try_fold(Balance::zero(), |acc, &pool_id| -> BalanceResult {
-				let collateral_factor = Self::controller_dates(pool_id).collateral_factor;
 				let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::PoolNotFound)?;
-
 				let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
+
+				if user_balance_wrapped_tokens.is_zero() {
+					return Ok(Balance::zero());
+				}
+
+				let collateral_factor = Self::controller_dates(pool_id).collateral_factor;
 
 				let current_block_number = <frame_system::Module<T>>::block_number();
 				let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
@@ -577,7 +581,7 @@ impl<T: Config> Pallet<T> {
 	/// Checks if borrow cap is reached.
 	///
 	/// Return true if total borrow per pool will exceed borrow cap, otherwise false.
-	pub fn is_borrow_cap_reached(pool_id: CurrencyId, borrow_amount: Balance) -> Result<bool, DispatchError> {
+	fn is_borrow_cap_reached(pool_id: CurrencyId, borrow_amount: Balance) -> Result<bool, DispatchError> {
 		if let Some(borrow_cap) = Self::controller_dates(pool_id).borrow_cap {
 			let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 			let pool_total_borrowed = T::LiquidityPoolsManager::get_pool_total_borrowed(pool_id);
@@ -636,7 +640,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// - `underlying_asset`: ID of the currency to make calculations for.
 	/// - `block_delta`: number of blocks passed since last accrue interest
-	pub fn calculate_interest_params(
+	fn calculate_interest_params(
 		underlying_asset: CurrencyId,
 		block_delta: T::BlockNumber,
 	) -> result::Result<Pool, DispatchError> {

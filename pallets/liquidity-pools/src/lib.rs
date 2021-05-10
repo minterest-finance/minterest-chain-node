@@ -345,7 +345,6 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-// Storage getters for LiquidityPools
 impl<T: Config> Pallet<T> {
 	/// Gets pool associated data
 	pub fn get_pool_data(pool_id: CurrencyId) -> Pool {
@@ -395,12 +394,15 @@ impl<T: Config> Pallet<T> {
 				let wrapped_id = pool_id.wrapped_asset()?;
 
 				// only collateral pools.
-				if !Self::pool_user_data(pool_id, who).is_collateral {
+				if !Self::check_user_available_collateral(&who, pool_id) {
 					return None;
 				};
 
 				// We calculate the value of the user's wrapped tokens in USD.
 				let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
+				if user_balance_wrapped_tokens.is_zero() {
+					return None;
+				}
 				let user_balance_underlying_asset =
 					Self::convert_from_wrapped(wrapped_id, user_balance_wrapped_tokens).ok()?;
 				let oracle_price = T::PriceSource::get_underlying_price(pool_id)?;
@@ -416,6 +418,20 @@ impl<T: Config> Pallet<T> {
 		pools.sort_by(|x, y| y.1.cmp(&x.1));
 
 		Ok(pools.iter().map(|pool| pool.0).collect::<Vec<CurrencyId>>())
+	}
+
+	/// Checks if the user has the collateral.
+	pub fn check_user_has_collateral(who: &T::AccountId) -> bool {
+		for pool_id in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset) {
+			if Self::check_user_available_collateral(&who, pool_id) {
+				if let Some(wrapped_id) = pool_id.wrapped_asset() {
+					if !T::MultiCurrency::free_balance(wrapped_id, &who).is_zero() {
+						return true;
+					}
+				}
+			}
+		}
+		false
 	}
 }
 
