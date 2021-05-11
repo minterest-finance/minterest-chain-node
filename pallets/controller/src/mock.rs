@@ -232,6 +232,17 @@ impl ExtBuilder {
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
+				(
+					KSM,
+					ControllerData {
+						last_interest_accrued_block: 0,
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+					},
+				),
 			],
 			pause_keepers: vec![
 				(
@@ -309,6 +320,15 @@ impl ExtBuilder {
 				),
 				(
 					BTC,
+					MinterestModelData {
+						kink: Rate::saturating_from_rational(8, 10),
+						base_rate_per_block: Rate::zero(),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
+				(
+					KSM,
 					MinterestModelData {
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::zero(),

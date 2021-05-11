@@ -344,6 +344,195 @@ fn get_liquidity_pool_borrow_and_supply_rates_above_kink() {
 }
 
 #[test]
+fn get_user_supply_and_borrow_apy_should_work() {
+	ExtBuilder::default()
+		.pool_balance(DOT, dollars(100_u128))
+		.pool_total_borrowed(DOT, dollars(500_u128))
+		.pool_balance(ETH, dollars(100_u128))
+		.pool_total_borrowed(ETH, dollars(300_u128))
+		.pool_balance(BTC, dollars(100_u128))
+		.pool_total_borrowed(BTC, dollars(100_u128))
+		.pool_balance(KSM, dollars(100_u128))
+		.pool_total_borrowed(KSM, dollars(100_u128))
+		.user_balance(ALICE, MDOT, dollars(600_u128))
+		.pool_user_data(DOT, ALICE, dollars(500_u128), Rate::one(), true, 0)
+		.user_balance(ALICE, METH, dollars(400_u128))
+		.pool_user_data(ETH, ALICE, dollars(300_u128), Rate::one(), true, 0)
+		.user_balance(ALICE, MBTC, dollars(200_u128))
+		.pool_user_data(BTC, ALICE, dollars(100_u128), Rate::one(), true, 0)
+		.user_balance(ALICE, MKSM, dollars(100_u128))
+		.pool_user_data(KSM, ALICE, Balance::zero(), Rate::one(), false, 0)
+		.build()
+		.execute_with(|| {
+			// Set price = 2.00 USD for all assets.
+			MockPriceSource::set_underlying_price(Some(Price::from_inner(2 * DOLLARS)));
+
+			// Borrow rate per year = 0.0000001452 * 5256000 = 76,3171226327304 %
+			// Supply rate per year = 0,0000001089 * 5256000 = 57,2378440518504 %
+
+			assert_eq!(
+				Controller::get_liquidity_pool_borrow_and_supply_rates(DOT),
+				Some((Rate::from_inner(145200005009), Rate::from_inner(108900007709)))
+			);
+
+			// Borrow rate per year = 0.000000006750000014 * 5256000 = 3,5478 %
+			// Supply rate per year = 0,000000004556250018 * 5256000 = 2,3947 %
+
+			assert_eq!(
+				Controller::get_liquidity_pool_borrow_and_supply_rates(ETH),
+				Some((Rate::from_inner(6750000014), Rate::from_inner(4556250018)))
+			);
+
+			// Borrow rate per year = 0,000000004500000011 * 5256000 = 2,3652 %
+			// Supply rate per year = 0,000000002025000009 * 5256000 = 1,0643 %
+			assert_eq!(
+				Controller::get_liquidity_pool_borrow_and_supply_rates(BTC),
+				Some((Rate::from_inner(4500000011), Rate::from_inner(2025000009)))
+			);
+
+			// Borrow rate per year = 0,000000004500000011 * 5256000 = 2,3652 %
+			// Supply rate per year = 0,000000002025000009 * 5256000 = 1,0643 %
+			assert_eq!(
+				Controller::get_liquidity_pool_borrow_and_supply_rates(KSM),
+				Some((Rate::from_inner(4500000011), Rate::from_inner(2025000009)))
+			);
+
+			// Hypothetical year supply interest(for the pool):
+			// supplyInterest = userSupplyInUsd * supplyApyAsDecimal
+			// DOT: 1200 * 0.5723 = 686.854 $
+			// ETH: 800 * 0.0234 = 19.157 $
+			// DOT: 400 * 0.0106 = 4.257 $
+			// KSM: 400 * 0.0106 = 4.257 $
+			// Sum = 686.854 + 19.157 + 4.257 + 4.257 = 714.525 $
+			// totalSupplyInUsd = 1200 + 800 + 400 + 400 = 2800 $
+			// sumSupplyApy = 714.525/2800 = 25.51 %
+
+			// Hypothetical year borrow interest(for the pool):
+			// borrowInterest = userBorrowInUsd * borrowApyAsDecimal
+			// DOT: 1000 * 0.7631 = 763.17 $
+			// ETH: 600 * 0.0354 = 21.286 $
+			// DOT: 200 * 0.0236 = 4.73 $
+			// Sum = 763.17 + 21.286 + 4.73 = 789.186 $
+			// totalSupplyInUsd = 1000 + 600 + 200 = 1800 $
+			// sumSupplyApy = 789.186/1800 = 43.84 %
+
+			assert_eq!(
+				Controller::get_user_supply_and_borrow_apy(ALICE),
+				Ok((
+					Rate::from_inner(255_188_217_480_048_000),
+					Rate::from_inner(438_438_039_737_112_000)
+				))
+			);
+		});
+}
+
+#[test]
+fn get_user_supply_per_asset_should_work() {
+	ExtBuilder::default()
+		.pool_balance(DOT, dollars(100_u128))
+		.pool_total_borrowed(DOT, dollars(500_u128))
+		.user_balance(ALICE, MDOT, dollars(600_u128))
+		.build()
+		.execute_with(|| {
+			System::set_block_number(0);
+
+			assert_eq!(
+				Controller::get_user_supply_per_asset(&ALICE, DOT),
+				Ok(dollars(600_u128))
+			);
+
+			System::set_block_number(10);
+
+			// blockDelta = 10
+			// currentBorrowInterestRate = 145_199_999_999
+			// interestAccumulated = totalBorrow * borrowInterestRate * blockDelta
+			// interestAccumulated = 500*10^18 * 0,000_000_145_199_999_999 * 10 = 0,000_725_999_999_995
+			// newTotalBorrowed = 500*10^18  + 0,000_725_999_999_995 =  500,000_725_999_999_995
+			// totalProtocolInterest = 0,000_725_999_999_995 * 0.1 =  0,0_000_725_999_999_995
+
+			// expectedExchangeRate = 1,000001088999999992
+			let expected_exchange_rate = <LiquidityPools<Runtime>>::get_exchange_rate_by_interest_params(
+				DOT,
+				72599999999500,
+				500000725999999995000,
+			)
+			.unwrap();
+
+			// expectedSupplyBalance = 600 * 1,000001088999999992 = 600,0006533999999952
+			let expected_supply_balance = Rate::from_inner(dollars(600_u128))
+				.checked_mul(&expected_exchange_rate)
+				.map(|v| v.into_inner())
+				.unwrap();
+
+			assert_eq!(expected_supply_balance, 600_000_653_399_999_995_200);
+
+			assert_eq!(
+				Controller::get_user_supply_per_asset(&ALICE, DOT),
+				Ok(expected_supply_balance)
+			);
+		});
+}
+
+#[test]
+fn get_vec_of_supply_and_borrow_balance_should_work() {
+	ExtBuilder::default()
+		.pool_balance(DOT, dollars(100_u128))
+		.pool_total_borrowed(DOT, dollars(500_u128))
+		.pool_balance(ETH, dollars(100_u128))
+		.pool_total_borrowed(ETH, dollars(300_u128))
+		.pool_balance(BTC, dollars(100_u128))
+		.pool_total_borrowed(BTC, dollars(100_u128))
+		.pool_balance(KSM, dollars(100_u128))
+		.pool_total_borrowed(KSM, dollars(100_u128))
+		.user_balance(ALICE, MDOT, dollars(600_u128))
+		.pool_user_data(DOT, ALICE, dollars(500_u128), Rate::one(), true, 0)
+		.user_balance(ALICE, METH, dollars(400_u128))
+		.pool_user_data(ETH, ALICE, dollars(300_u128), Rate::one(), true, 0)
+		.user_balance(ALICE, MBTC, dollars(200_u128))
+		.pool_user_data(BTC, ALICE, dollars(100_u128), Rate::one(), true, 0)
+		.user_balance(ALICE, MKSM, dollars(100_u128))
+		.pool_user_data(KSM, ALICE, Balance::zero(), Rate::one(), false, 0)
+		.build()
+		.execute_with(|| {
+			System::set_block_number(0);
+
+			// Set price = 2.00 USD for all assets.
+			MockPriceSource::set_underlying_price(Some(Price::from_inner(2 * DOLLARS)));
+
+			let expected_vec = vec![
+				(DOT, dollars(1200_u128), dollars(1000_u128)),
+				(KSM, dollars(400_u128), Balance::zero()),
+				(BTC, dollars(400_u128), dollars(200_u128)),
+				(ETH, dollars(800_u128), dollars(600_u128)),
+			];
+
+			assert_eq!(
+				Controller::get_vec_of_supply_and_borrow_balance(&ALICE),
+				Ok(expected_vec)
+			);
+		});
+}
+
+#[test]
+fn get_block_delta_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		System::set_block_number(0);
+
+		assert_eq!(Controller::get_block_delta(DOT), Ok(0));
+
+		System::set_block_number(45);
+
+		assert_eq!(Controller::get_block_delta(DOT), Ok(45));
+		assert_ok!(Controller::accrue_interest_rate(DOT));
+		assert_eq!(Controller::get_block_delta(DOT), Ok(0));
+
+		System::set_block_number(46);
+
+		assert_eq!(Controller::get_block_delta(DOT), Ok(1));
+	});
+}
+
+#[test]
 fn redeem_allowed_should_work() {
 	ExtBuilder::default().alice_deposit_60_dot().build().execute_with(|| {
 		assert_ok!(Controller::redeem_allowed(DOT, &ALICE, dollars(40_u128)));

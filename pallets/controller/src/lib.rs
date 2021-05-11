@@ -458,7 +458,7 @@ impl<T: Config> Pallet<T> {
 	pub fn get_total_supply_and_borrowed_usd_balance(
 		who: &T::AccountId,
 	) -> result::Result<(Balance, Balance), DispatchError> {
-		let total_supply_and_borrow_in_usd = Self::get_vec_supply_and_borrow_balance(who)?;
+		let total_supply_and_borrow_in_usd = Self::get_vec_of_supply_and_borrow_balance(who)?;
 
 		let (total_supply_balance, total_borrowed_balance) = total_supply_and_borrow_in_usd.into_iter().fold(
 			(Balance::zero(), Balance::zero()),
@@ -502,7 +502,7 @@ impl<T: Config> Pallet<T> {
 	/// Calculate actual borrow balance for user per asset based on fresh latest indexes.
 	///
 	/// - `who`: the AccountId whose balance should be calculated.
-	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
+	/// - `underlying_asset_id`: ID of the currency, the balance of borrowing of which we calculate.
 	pub fn get_user_borrow_per_asset(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
 		ensure!(
 			underlying_asset_id.is_supported_underlying_asset(),
@@ -519,40 +519,15 @@ impl<T: Config> Pallet<T> {
 		Ok(borrow_balance)
 	}
 
-	pub fn get_user_supply_per_asset(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
-		let wrapped_id = underlying_asset_id.wrapped_asset().ok_or(Error::<T>::PoolNotFound)?;
-
-		let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
-
-		if user_balance_wrapped_tokens.is_zero() {
-			return Ok(Balance::zero());
-		}
-
-		let block_delta = Self::get_block_delta(underlying_asset_id)?;
-		let pool_data = Self::calculate_interest_params(underlying_asset_id, block_delta)?;
-		let current_exchange_rate = <LiquidityPools<T>>::get_exchange_rate_by_interest_params(
-			underlying_asset_id,
-			pool_data.total_protocol_interest,
-			pool_data.total_borrowed,
-		)?;
-
-		let supply_balance = Rate::from_inner(user_balance_wrapped_tokens)
-			.checked_mul(&current_exchange_rate)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-		Ok(supply_balance)
-	}
-
-	pub fn get_block_delta(underlying_asset_id: CurrencyId) -> result::Result<T::BlockNumber, DispatchError> {
-		let current_block_number = <frame_system::Module<T>>::block_number();
-		let accrual_block_number_previous = Self::controller_dates(underlying_asset_id).last_interest_accrued_block;
-		Self::calculate_block_delta(current_block_number, accrual_block_number_previous)
-	}
-
+	/// Calculate total user's supply and borrow APY.
+	///
+	/// - `who`: the AccountId whose APY should be calculated.
 	pub fn get_user_supply_and_borrow_apy(who: T::AccountId) -> Result<(Rate, Rate), DispatchError> {
-		let total_supply_and_borrow = Self::get_vec_supply_and_borrow_balance(&who)?;
+		// Get vector of balances for each asset(in USD).
+		let total_supply_and_borrow_per_asset = Self::get_vec_of_supply_and_borrow_balance(&who)?;
 
-		let (total_supply, total_borrow) = total_supply_and_borrow.iter().fold(
+		// Calculate total supply and borrow balance.
+		let (total_supply, total_borrow) = total_supply_and_borrow_per_asset.iter().fold(
 			(Balance::zero(), Balance::zero()),
 			|(total_supply, total_borrow), &(_, supply_balance, borrow_balance)| -> (Balance, Balance) {
 				(total_supply + supply_balance, total_borrow + borrow_balance)
@@ -563,83 +538,45 @@ impl<T: Config> Pallet<T> {
 			return Ok((Rate::zero(), Rate::zero()));
 		}
 
-		let (hypothetical_earned, hypothetical_payed) = total_supply_and_borrow.into_iter().try_fold(
+		// Calculate hypothetical interest on the supply and borrow.
+		let (hypothetical_earned, hypothetical_payed) = total_supply_and_borrow_per_asset.into_iter().try_fold(
 			(Balance::zero(), Balance::zero()),
-			|(hypothetical_earnings, hypothetical_payments),
+			|(sum_supply_interest, sum_borrow_interest),
 			 (pool_id, current_supply_in_usd, current_borrow_in_usd)|
 			 -> result::Result<(Balance, Balance), DispatchError> {
 				if current_supply_in_usd.is_zero() && current_borrow_in_usd.is_zero() {
-					return Ok((hypothetical_earnings, hypothetical_payments));
+					return Ok((sum_supply_interest, sum_borrow_interest));
 				}
 
 				let (borrow_rate, supply_rate) =
 					Self::get_liquidity_pool_borrow_and_supply_rates(pool_id).ok_or(Error::<T>::NumOverflow)?;
 
-				let deposit_interest = Rate::from_inner(current_supply_in_usd)
+				let supply_interest = Rate::from_inner(current_supply_in_usd)
 					.checked_mul(&supply_rate)
-					.and_then(|v| v.checked_mul(&Rate::saturating_from_integer(T::BlocksPerYear::get())))
 					.map(|x| x.into_inner())
 					.ok_or(Error::<T>::NumOverflow)?;
 
-				let loan_interest = Rate::from_inner(current_borrow_in_usd)
+				let borrow_interest = Rate::from_inner(current_borrow_in_usd)
 					.checked_mul(&borrow_rate)
-					.and_then(|v| v.checked_mul(&Rate::saturating_from_integer(T::BlocksPerYear::get())))
 					.map(|x| x.into_inner())
 					.ok_or(Error::<T>::NumOverflow)?;
 
 				Ok((
-					hypothetical_earnings + deposit_interest,
-					hypothetical_payments + loan_interest,
+					sum_supply_interest + supply_interest,
+					sum_borrow_interest + borrow_interest,
 				))
 			},
 		)?;
 
-		//FIXME: try to mul to blocksperyear only once
-		let supply_apy = Rate::saturating_from_rational(hypothetical_earned, total_supply);
-		let borrow_apy =
-			Rate::checked_from_rational(hypothetical_payed, total_borrow).unwrap_or_else(|| Default::default());
+		// Calculate APY given the amount of blocks per year.
+		let supply_apy = Rate::saturating_from_rational(hypothetical_earned, total_supply)
+			.checked_mul(&Rate::saturating_from_integer(T::BlocksPerYear::get()))
+			.ok_or(Error::<T>::NumOverflow)?;
+		let borrow_apy = Rate::checked_from_rational(hypothetical_payed, total_borrow)
+			.and_then(|v| v.checked_mul(&Rate::saturating_from_integer(T::BlocksPerYear::get())))
+			.unwrap_or_else(|| Default::default());
 
 		Ok((supply_apy, borrow_apy))
-	}
-
-	fn get_vec_supply_and_borrow_balance(
-		who: &T::AccountId,
-	) -> result::Result<Vec<(CurrencyId, Balance, Balance)>, DispatchError> {
-		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.iter()
-			.try_fold(
-				Vec::<(CurrencyId, Balance, Balance)>::new(),
-				|mut vec, &pool_id| -> result::Result<Vec<(CurrencyId, Balance, Balance)>, DispatchError> {
-					// Check if user has / had borrowed wrapped tokens in the pool
-					let mut supply_balance = Self::get_user_supply_per_asset(&who, pool_id)?;
-					let mut borrow_balance = Self::get_user_borrow_per_asset(&who, pool_id)?;
-
-					// Skip this pool if there is nothing to calculate
-					if supply_balance.is_zero() && borrow_balance.is_zero() {
-						vec.push((pool_id, Balance::zero(), Balance::zero()));
-						return Ok(vec);
-					}
-
-					let oracle_price =
-						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-
-					if !supply_balance.is_zero() {
-						supply_balance = Rate::from_inner(supply_balance)
-							.checked_mul(&oracle_price)
-							.map(|x| x.into_inner())
-							.ok_or(Error::<T>::BalanceOverflow)?;
-					}
-					if !borrow_balance.is_zero() {
-						borrow_balance = Rate::from_inner(borrow_balance)
-							.checked_mul(&oracle_price)
-							.map(|x| x.into_inner())
-							.ok_or(Error::<T>::BalanceOverflow)?;
-					}
-
-					vec.push((pool_id, supply_balance, borrow_balance));
-					Ok(vec)
-				},
-			)
 	}
 }
 
@@ -837,6 +774,89 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok(interest_factor)
+	}
+
+	/// Calculate actual supply balance for user per asset based on fresh exchange rate.
+	///
+	/// - `who`: the AccountId whose balance should be calculated.
+	/// - `underlying_asset_id`: ID of the currency, the balance of supplying of which we calculate.
+	fn get_user_supply_per_asset(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
+		let wrapped_id = underlying_asset_id.wrapped_asset().ok_or(Error::<T>::PoolNotFound)?;
+
+		let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
+
+		if user_balance_wrapped_tokens.is_zero() {
+			return Ok(Balance::zero());
+		}
+
+		let block_delta = Self::get_block_delta(underlying_asset_id)?;
+		let pool_data = Self::calculate_interest_params(underlying_asset_id, block_delta)?;
+		let current_exchange_rate = <LiquidityPools<T>>::get_exchange_rate_by_interest_params(
+			underlying_asset_id,
+			pool_data.total_protocol_interest,
+			pool_data.total_borrowed,
+		)?;
+
+		let supply_balance = Rate::from_inner(user_balance_wrapped_tokens)
+			.checked_mul(&current_exchange_rate)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+		Ok(supply_balance)
+	}
+
+	/// Create a vector that contains total supply and total borrowed balance in usd for each pool
+	/// based on freshest data.
+	///
+	/// - `who`: the AccountId whose APYs should be calculated.
+	/// Returns: Vec<(CurrencyId, supply_balance, borrow_balance)>
+	fn get_vec_of_supply_and_borrow_balance(
+		who: &T::AccountId,
+	) -> result::Result<Vec<(CurrencyId, Balance, Balance)>, DispatchError> {
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.iter()
+			.try_fold(
+				Vec::<(CurrencyId, Balance, Balance)>::new(),
+				|mut vec, &pool_id| -> result::Result<Vec<(CurrencyId, Balance, Balance)>, DispatchError> {
+					// Get supply and borrow balance per asset.
+					let mut supply_balance = Self::get_user_supply_per_asset(&who, pool_id)?;
+					let mut borrow_balance = Self::get_user_borrow_per_asset(&who, pool_id)?;
+
+					// Skip this pool if there is nothing to calculate.
+					if supply_balance.is_zero() && borrow_balance.is_zero() {
+						vec.push((pool_id, Balance::zero(), Balance::zero()));
+						return Ok(vec);
+					}
+
+					let oracle_price =
+						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+
+					// Convert to USD if balance exists.
+					if !supply_balance.is_zero() {
+						supply_balance = Rate::from_inner(supply_balance)
+							.checked_mul(&oracle_price)
+							.map(|x| x.into_inner())
+							.ok_or(Error::<T>::BalanceOverflow)?;
+					}
+					if !borrow_balance.is_zero() {
+						borrow_balance = Rate::from_inner(borrow_balance)
+							.checked_mul(&oracle_price)
+							.map(|x| x.into_inner())
+							.ok_or(Error::<T>::BalanceOverflow)?;
+					}
+
+					vec.push((pool_id, supply_balance, borrow_balance));
+					Ok(vec)
+				},
+			)
+	}
+
+	/// Calculate the delta of blocks from the last interest accrued to the current.
+	///
+	/// - `underlying_asset_id`: ID of the currency, the blocks delta of which we calculate.
+	fn get_block_delta(underlying_asset_id: CurrencyId) -> result::Result<T::BlockNumber, DispatchError> {
+		let current_block_number = <frame_system::Module<T>>::block_number();
+		let accrual_block_number_previous = Self::controller_dates(underlying_asset_id).last_interest_accrued_block;
+		Self::calculate_block_delta(current_block_number, accrual_block_number_previous)
 	}
 }
 
