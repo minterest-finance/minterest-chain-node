@@ -6,7 +6,7 @@ pub use controller_rpc_runtime_api::{
 };
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use minterest_primitives::CurrencyId;
+use minterest_primitives::{CurrencyId, Rate};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
@@ -40,6 +40,13 @@ pub trait ControllerApi<BlockHash, AccountId> {
 		underlying_asset_id: CurrencyId,
 		at: Option<BlockHash>,
 	) -> Result<Option<BalanceInfo>>;
+
+	#[rpc(name = "controller_getUserSupplyAndBorrowApy")]
+	fn get_user_supply_and_borrow_apy(
+		&self,
+		account_id: AccountId,
+		at: Option<BlockHash>,
+	) -> Result<Option<(Rate, Rate)>>;
 }
 
 /// A struct that implements the [`ControllerApi`].
@@ -169,6 +176,23 @@ where
 			.map_err(|e| RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
 				message: "Unable to get total user borrow balance.".into(),
+				data: Some(format!("{:?}", e).into()),
+			})
+	}
+
+	fn get_user_supply_and_borrow_apy(
+		&self,
+		account_id: AccountId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<Option<(Rate, Rate)>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+		api.get_user_supply_and_borrow_apy(&at, account_id)
+			.map_err(|e| RpcError {
+				code: ErrorCode::ServerError(Error::RuntimeError.into()),
+				message: "Unable to get user's APY.".into(),
 				data: Some(format!("{:?}", e).into()),
 			})
 	}

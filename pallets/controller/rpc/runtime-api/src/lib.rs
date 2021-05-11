@@ -82,5 +82,7 @@ sp_api::decl_runtime_apis! {
 		account_id: AccountId,
 		underlying_asset_id: CurrencyId,
 	) -> Option<BalanceInfo>;
+
+		fn get_user_supply_and_borrow_apy(account_id: AccountId) -> Option<(Rate, Rate)>;
 	}
 }

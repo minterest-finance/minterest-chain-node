@@ -805,6 +805,10 @@ impl_runtime_apis! {
 		fn get_user_borrow_per_asset(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
 				Some(BalanceInfo{amount: Controller::get_user_borrow_per_asset(&account_id, underlying_asset_id).ok()?})
 		}
+
+		fn get_user_supply_and_borrow_apy(account_id: AccountId) -> Option<(Rate, Rate)> {
+				Some(Controller::get_user_supply_and_borrow_apy(account_id).ok()?)
+		}
 	}
 
 	impl mnt_token_rpc_runtime_api::MntTokenApi<Block, AccountId> for Runtime {
