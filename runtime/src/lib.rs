@@ -807,7 +807,7 @@ impl_runtime_apis! {
 		}
 
 		fn get_user_supply_and_borrow_apy(account_id: AccountId) -> Option<(Rate, Rate)> {
-				Some(Controller::get_user_supply_and_borrow_apy(account_id).ok()?)
+				Controller::get_user_supply_and_borrow_apy(account_id).ok()
 		}
 	}
 

@@ -781,3 +781,77 @@ fn get_unclaimed_mnt_balance_should_work() {
 			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
 		})
 }
+
+#[test]
+fn get_user_supply_and_borrow_apy_should_work() {
+	ExtBuilder::default()
+		.mnt_account_balance(1_000_000 * DOLLARS)
+		.pool_initial(DOT)
+		.pool_initial(KSM)
+		.pool_initial(ETH)
+		.pool_initial(BTC)
+		.build()
+		.execute_with(|| {
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 100_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 50_000 * DOLLARS));
+
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 100_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
+			assert_ok!(MinterestProtocol::borrow(alice(), ETH, 80_000 * DOLLARS));
+
+			// borrowInterestRate = 2.36 %
+			// supplyInterestRate = 1.06 %
+			assert_eq!(
+				Controller::get_liquidity_pool_borrow_and_supply_rates(DOT),
+				Some((Rate::from_inner(4500000000), Rate::from_inner(2025000000)))
+			);
+			// borrowInterestRate = 3.78 %
+			// supplyInterestRate = 2.72 %
+			assert_eq!(
+				Controller::get_liquidity_pool_borrow_and_supply_rates(ETH),
+				Some((Rate::from_inner(7200000000), Rate::from_inner(5184000000)))
+			);
+
+			// Hypothetical year supply interest(for the pool):
+			// supplyInterest = userSupplyInUsd * supplyApyAsDecimal
+			// DOT: 200_000 * 0.0106 = 2120 $
+			// ETH: 200_000 * 0.0272 = 5440 $
+			// Sum = 2120 + 5440  = 7560 $
+			// sumSupplyApy = 7560/400_000 = 1.89 %
+
+			// Hypothetical year borrow interest(for the pool):
+			// borrowInterest = userBorrowInUsd * borrowApyAsDecimal
+			// DOT: 100_000 * 0.0236 = 2360 $
+			// ETH: 160_000 * 0.0378 = 6048 $
+			// Sum = 2360 + 6048 = 8408 $
+			// sumBorrowApy = 8408/260_000 = 3.23 %
+
+			assert_eq!(
+				get_user_supply_and_borrow_apy_rpc(ALICE::get()),
+				Some((
+					Rate::from_inner(18_945_252_000_000_000),
+					Rate::from_inner(32_385_046_151_016_000)
+				))
+			);
+
+			// Add liquidity to pool whose supply interest rate is zero.
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), BTC, 50_000 * DOLLARS));
+
+			// borrowInterestRate = 0 %
+			// supplyInterestRate = 0 %
+			assert_eq!(
+				Controller::get_liquidity_pool_borrow_and_supply_rates(BTC),
+				Some((Rate::zero(), Rate::zero()))
+			);
+
+			// sumSupplyApy = 7560/(400_000 + 100_000) = 1.51 %
+			assert_eq!(
+				get_user_supply_and_borrow_apy_rpc(ALICE::get()),
+				Some((
+					Rate::from_inner(15_156_201_600_000_000),
+					Rate::from_inner(32_385_046_151_016_000)
+				))
+			);
+		})
+}

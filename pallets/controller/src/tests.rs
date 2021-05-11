@@ -401,7 +401,7 @@ fn get_user_supply_and_borrow_apy_should_work() {
 			// supplyInterest = userSupplyInUsd * supplyApyAsDecimal
 			// DOT: 1200 * 0.5723 = 686.854 $
 			// ETH: 800 * 0.0234 = 19.157 $
-			// DOT: 400 * 0.0106 = 4.257 $
+			// BTC: 400 * 0.0106 = 4.257 $
 			// KSM: 400 * 0.0106 = 4.257 $
 			// Sum = 686.854 + 19.157 + 4.257 + 4.257 = 714.525 $
 			// totalSupplyInUsd = 1200 + 800 + 400 + 400 = 2800 $
@@ -411,10 +411,10 @@ fn get_user_supply_and_borrow_apy_should_work() {
 			// borrowInterest = userBorrowInUsd * borrowApyAsDecimal
 			// DOT: 1000 * 0.7631 = 763.17 $
 			// ETH: 600 * 0.0354 = 21.286 $
-			// DOT: 200 * 0.0236 = 4.73 $
+			// BTC: 200 * 0.0236 = 4.73 $
 			// Sum = 763.17 + 21.286 + 4.73 = 789.186 $
 			// totalSupplyInUsd = 1000 + 600 + 200 = 1800 $
-			// sumSupplyApy = 789.186/1800 = 43.84 %
+			// sumBorrowApy = 789.186/1800 = 43.84 %
 
 			assert_eq!(
 				Controller::get_user_supply_and_borrow_apy(ALICE),

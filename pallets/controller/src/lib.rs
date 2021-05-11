@@ -574,7 +574,7 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 		let borrow_apy = Rate::checked_from_rational(hypothetical_payed, total_borrow)
 			.and_then(|v| v.checked_mul(&Rate::saturating_from_integer(T::BlocksPerYear::get())))
-			.unwrap_or_else(|| Default::default());
+			.unwrap_or_else(Default::default);
 
 		Ok((supply_apy, borrow_apy))
 	}

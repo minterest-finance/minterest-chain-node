@@ -442,6 +442,10 @@ fn get_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
 		.amount
 }
 
+fn get_user_supply_and_borrow_apy_rpc(account_id: AccountId) -> Option<(Rate, Rate)> {
+	<Runtime as ControllerApi<Block, AccountId>>::get_user_supply_and_borrow_apy(account_id)
+}
+
 fn dollars(amount: u128) -> u128 {
 	amount.saturating_mul(Price::accuracy())
 }
