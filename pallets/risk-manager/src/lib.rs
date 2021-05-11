@@ -360,7 +360,15 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 	fn _offchain_worker() -> Result<(), OffchainErr> {
 		// Get available assets list
-		let underlying_assets: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
+		let underlying_assets: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.iter()
+			.filter_map(|&underlying_id| {
+				if !T::LiquidityPoolsManager::pool_exists(&underlying_id) {
+					return None;
+				}
+				Some(underlying_id)
+			})
+			.collect();
 
 		if underlying_assets.is_empty() {
 			return Ok(());

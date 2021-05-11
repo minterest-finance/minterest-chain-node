@@ -235,6 +235,7 @@ pub mod module {
 				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
+			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 
 			let new_deviation_threshold = Rate::from_inner(threshold);
 
@@ -269,6 +270,7 @@ pub mod module {
 				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
+			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 
 			let new_balance_ratio = Rate::from_inner(balance_ratio);
 
@@ -303,6 +305,7 @@ pub mod module {
 				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
+			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
 
 			// Write new value into storage.
 			LiquidationPoolsData::<T>::mutate(pool_id, |x| x.max_ideal_balance = max_ideal_balance);
@@ -325,6 +328,9 @@ pub mod module {
 			target_amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let _ = ensure_none(origin)?;
+			ensure!(T::LiquidityPoolsManager::pool_exists(&supply_pool_id), Error::<T>::PoolNotFound);
+			ensure!(T::LiquidityPoolsManager::pool_exists(&target_pool_id), Error::<T>::PoolNotFound);
+
 			let module_id = Self::pools_account_id();
 			T::Dex::swap_with_exact_target(
 				&module_id,
@@ -353,6 +359,7 @@ pub mod module {
 				underlying_asset_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
+			ensure!(T::LiquidityPoolsManager::pool_exists(&underlying_asset_id), Error::<T>::PoolNotFound);
 			ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
 			ensure!(
 				underlying_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
@@ -446,6 +453,9 @@ impl<T: Config> Pallet<T> {
 		let (mut information_vec, mut sum_oversupply, mut sum_shortfall) =
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 				.iter()
+				.filter(|&underlying_id| {
+					T::LiquidityPoolsManager::pool_exists(underlying_id)
+				})
 				.try_fold(
 					(Vec::<LiquidationInformation>::new(), Balance::zero(), Balance::zero()),
 					|(mut current_vec, mut current_sum_oversupply, mut current_sum_shortfall),

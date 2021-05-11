@@ -157,6 +157,12 @@ fn redeem_should_not_work() {
 #[test]
 fn redeem_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
+		.pool_with_params(
+			BTC,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
 		.user_balance(ALICE, BTC, TEN_THOUSAND_DOLLARS)
 		.build()
 		.execute_with(|| {
@@ -248,6 +254,12 @@ fn redeem_underlying_should_work() {
 #[test]
 fn redeem_underlying_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
+		.pool_with_params(
+			BTC,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
 		.user_balance(ALICE, BTC, TEN_THOUSAND_DOLLARS)
 		.build()
 		.execute_with(|| {
@@ -335,6 +347,12 @@ fn redeem_wrapped_should_work() {
 #[test]
 fn redeem_wrapped_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
+		.pool_with_params(
+			BTC,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
 		.user_balance(ALICE, BTC, TEN_THOUSAND_DOLLARS)
 		.build()
 		.execute_with(|| {
@@ -366,6 +384,12 @@ fn borrow_should_work() {
 		)
 		.pool_with_params(
 			ETH,
+			Balance::zero(),
+			Rate::saturating_from_rational(1, 1),
+			TEN_THOUSAND_DOLLARS,
+		)
+		.pool_with_params(
+			KSM,
 			Balance::zero(),
 			Rate::saturating_from_rational(1, 1),
 			TEN_THOUSAND_DOLLARS,
@@ -418,6 +442,12 @@ fn borrow_should_work() {
 #[test]
 fn borrow_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
+		.pool_with_params(
+			BTC,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
 		.user_balance(ALICE, BTC, TEN_THOUSAND_DOLLARS)
 		.build()
 		.execute_with(|| {
@@ -772,10 +802,16 @@ fn transfer_wrapped_should_work() {
 			Rate::saturating_from_rational(1, 1),
 			TEN_THOUSAND_DOLLARS,
 		)
+		.pool_with_params(
+			BTC,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
 		.build()
 		.execute_with(|| {
 			// Alice can transfer all tokens to Bob
-			assert_ok!(TestProtocol::transfer_wrapped(alice(), BOB, MDOT, ONE_HUNDRED_DOLLARS,));
+			assert_ok!(TestProtocol::transfer_wrapped(alice(), BOB, MDOT, ONE_HUNDRED_DOLLARS));
 			let expected_event =
 				Event::minterest_protocol(crate::Event::Transferred(ALICE, BOB, MDOT, ONE_HUNDRED_DOLLARS));
 			assert!(System::events().iter().any(|record| record.event == expected_event));

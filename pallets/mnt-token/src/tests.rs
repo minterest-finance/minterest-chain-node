@@ -338,7 +338,7 @@ fn test_update_mnt_borrow_index() {
 		.pool_total_borrowed(BTC, 40_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			let initial_index = Rate::saturating_from_integer(1);
+			let initial_index = Rate::one();
 			let mnt_rate = 1 * DOLLARS;
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
 			// Input parameters:

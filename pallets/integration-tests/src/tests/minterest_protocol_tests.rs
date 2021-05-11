@@ -119,6 +119,7 @@ mod tests {
 	fn redeem_underlying_with_current_currency_borrowing() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
+			.pool_initial(ETH)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
 			.user_balance(ALICE, ETH, ONE_HUNDRED)
@@ -280,6 +281,8 @@ mod tests {
 	#[test]
 	fn redeem_underlying_with_another_currency_borrowing() {
 		ExtBuilder::default()
+			.pool_initial(DOT)
+			.pool_initial(ETH)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
@@ -335,7 +338,7 @@ mod tests {
 				// Alice redeem all DOTs
 				assert_noop!(
 					MinterestProtocol::redeem_underlying(Origin::signed(ALICE), DOT, alice_deposited_amount_in_dot),
-					controller::Error::<Test>::HypotheticalLiquidityCalculationError
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				// Checking free balance DOT && ETH for user.
@@ -373,6 +376,7 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(ETH)
+			.pool_initial(BTC)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
 			.user_balance(ALICE, BTC, ONE_HUNDRED)
@@ -513,6 +517,7 @@ mod tests {
 	fn redeem_underlying_over_interest() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
+			.pool_initial(BTC)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
 			.user_balance(BOB, BTC, ONE_HUNDRED)
@@ -618,6 +623,7 @@ mod tests {
 	fn redeem_with_current_currency_borrowing() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
+			.pool_initial(ETH)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
 			.user_balance(ALICE, ETH, ONE_HUNDRED)
@@ -781,11 +787,12 @@ mod tests {
 	#[test]
 	fn redeem_with_another_currency_borrowing() {
 		ExtBuilder::default()
+			.pool_initial(DOT)
+			.pool_initial(ETH)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
 			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_balance(DOT, BALANCE_ZERO)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -836,7 +843,7 @@ mod tests {
 				// Alice redeem all DOTs
 				assert_noop!(
 					MinterestProtocol::redeem(Origin::signed(ALICE), DOT),
-					controller::Error::<Test>::HypotheticalLiquidityCalculationError
+					controller::Error::<Test>::InsufficientLiquidity
 				);
 
 				// Checking free balance DOT && ETH for user.
@@ -874,6 +881,7 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(ETH)
+			.pool_initial(BTC)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
 			.user_balance(ALICE, BTC, ONE_HUNDRED)
@@ -1000,6 +1008,7 @@ mod tests {
 	fn redeem_over_interest() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
+			.pool_initial(BTC)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
 			.user_balance(BOB, DOT, ONE_HUNDRED)
@@ -1126,6 +1135,8 @@ mod tests {
 	#[test]
 	fn borrow_without_collateral_in_second_currency() {
 		ExtBuilder::default()
+			.pool_initial(DOT)
+			.pool_initial(ETH)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
@@ -1180,6 +1191,8 @@ mod tests {
 	#[test]
 	fn borrow_with_insufficient_collateral_in_second_currency() {
 		ExtBuilder::default()
+			.pool_initial(DOT)
+			.pool_initial(ETH)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
@@ -1233,6 +1246,8 @@ mod tests {
 	#[test]
 	fn borrow_with_sufficient_collateral_in_second_currency() {
 		ExtBuilder::default()
+			.pool_initial(DOT)
+			.pool_initial(ETH)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)

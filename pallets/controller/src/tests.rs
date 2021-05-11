@@ -179,6 +179,8 @@ fn calculate_utilization_rate_should_work() {
 #[test]
 fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work() {
 	ExtBuilder::default()
+		.pool_mock(DOT)
+		.pool_mock(BTC)
 		.pool_user_data(DOT, ALICE, Balance::zero(), Rate::from_inner(0), true, 0)
 		.pool_user_data(BTC, BOB, Balance::zero(), Rate::from_inner(0), false, 0)
 		.build()
