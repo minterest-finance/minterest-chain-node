@@ -367,54 +367,54 @@ fn get_user_supply_and_borrow_apy_should_work() {
 			// Set price = 2.00 USD for all assets.
 			MockPriceSource::set_underlying_price(Some(Price::from_inner(2 * DOLLARS)));
 
-			// Borrow rate per year = 0.0000001452 * 5256000 = 76,3171226327304 %
-			// Supply rate per year = 0,0000001089 * 5256000 = 57,2378440518504 %
+			// borrow_rate_per_year = 0.0000001452 * 5256000 = 76,3171226327304 %
+			// supply_rate_per_year = 0,0000001089 * 5256000 = 57,2378440518504 %
 
 			assert_eq!(
 				Controller::get_liquidity_pool_borrow_and_supply_rates(DOT),
 				Some((Rate::from_inner(145200005009), Rate::from_inner(108900007709)))
 			);
 
-			// Borrow rate per year = 0.000000006750000014 * 5256000 = 3,5478 %
-			// Supply rate per year = 0,000000004556250018 * 5256000 = 2,3947 %
+			// borrow_rate_per_year = 0.000000006750000014 * 5256000 = 3,5478 %
+			// supply_rate_per_year = 0,000000004556250018 * 5256000 = 2,3947 %
 
 			assert_eq!(
 				Controller::get_liquidity_pool_borrow_and_supply_rates(ETH),
 				Some((Rate::from_inner(6750000014), Rate::from_inner(4556250018)))
 			);
 
-			// Borrow rate per year = 0,000000004500000011 * 5256000 = 2,3652 %
-			// Supply rate per year = 0,000000002025000009 * 5256000 = 1,0643 %
+			// borrow_rate_per_year = 0,000000004500000011 * 5256000 = 2,3652 %
+			// supply_rate_per_year = 0,000000002025000009 * 5256000 = 1,0643 %
 			assert_eq!(
 				Controller::get_liquidity_pool_borrow_and_supply_rates(BTC),
 				Some((Rate::from_inner(4500000011), Rate::from_inner(2025000009)))
 			);
 
-			// Borrow rate per year = 0,000000004500000011 * 5256000 = 2,3652 %
-			// Supply rate per year = 0,000000002025000009 * 5256000 = 1,0643 %
+			// borrow_rate_per_year = 0,000000004500000011 * 5256000 = 2,3652 %
+			// supply_rate_per_year = 0,000000002025000009 * 5256000 = 1,0643 %
 			assert_eq!(
 				Controller::get_liquidity_pool_borrow_and_supply_rates(KSM),
 				Some((Rate::from_inner(4500000011), Rate::from_inner(2025000009)))
 			);
 
 			// Hypothetical year supply interest(for the pool):
-			// supplyInterest = userSupplyInUsd * supplyApyAsDecimal
+			// supply_interest = user_supply_in_usd * supply_apy_as_decimal
 			// DOT: 1200 * 0.5723 = 686.854 $
 			// ETH: 800 * 0.0234 = 19.157 $
 			// BTC: 400 * 0.0106 = 4.257 $
 			// KSM: 400 * 0.0106 = 4.257 $
-			// Sum = 686.854 + 19.157 + 4.257 + 4.257 = 714.525 $
-			// totalSupplyInUsd = 1200 + 800 + 400 + 400 = 2800 $
-			// sumSupplyApy = 714.525/2800 = 25.51 %
+			// sum = 686.854 + 19.157 + 4.257 + 4.257 = 714.525 $
+			// total_supply_in_usd = 1200 + 800 + 400 + 400 = 2800 $
+			// sum_supply_apy = 714.525/2800 = 25.51 %
 
 			// Hypothetical year borrow interest(for the pool):
-			// borrowInterest = userBorrowInUsd * borrowApyAsDecimal
+			// borrow_interest = user_borrow_in_usd * borrow_apy_as_decimal
 			// DOT: 1000 * 0.7631 = 763.17 $
 			// ETH: 600 * 0.0354 = 21.286 $
 			// BTC: 200 * 0.0236 = 4.73 $
-			// Sum = 763.17 + 21.286 + 4.73 = 789.186 $
-			// totalSupplyInUsd = 1000 + 600 + 200 = 1800 $
-			// sumBorrowApy = 789.186/1800 = 43.84 %
+			// sum = 763.17 + 21.286 + 4.73 = 789.186 $
+			// total_borrow_in_usd = 1000 + 600 + 200 = 1800 $
+			// sum_borrow_apy = 789.186/1800 = 43.84 %
 
 			assert_eq!(
 				Controller::get_user_supply_and_borrow_apy(ALICE),
@@ -443,14 +443,14 @@ fn get_user_supply_per_asset_should_work() {
 
 			System::set_block_number(10);
 
-			// blockDelta = 10
-			// currentBorrowInterestRate = 145_199_999_999
-			// interestAccumulated = totalBorrow * borrowInterestRate * blockDelta
-			// interestAccumulated = 500*10^18 * 0,000_000_145_199_999_999 * 10 = 0,000_725_999_999_995
-			// newTotalBorrowed = 500*10^18  + 0,000_725_999_999_995 =  500,000_725_999_999_995
-			// totalProtocolInterest = 0,000_725_999_999_995 * 0.1 =  0,0_000_725_999_999_995
+			// block_delta = 10
+			// current_borrow_interest_rate = 145_199_999_999
+			// interest_accumulated = total_borrow * borrow_interest_rate * block_delta
+			// interest_accumulated = 500*10^18 * 0,000_000_145_199_999_999 * 10 = 0,000_725_999_999_995
+			// new_total_borrowed = 500*10^18  + 0,000_725_999_999_995 =  500,000_725_999_999_995
+			// total_protocol_interest = 0,000_725_999_999_995 * 0.1 =  0,0_000_725_999_999_995
 
-			// expectedExchangeRate = 1,000001088999999992
+			// expected_exchange_rate = 1,000001088999999992
 			let expected_exchange_rate = <LiquidityPools<Runtime>>::get_exchange_rate_by_interest_params(
 				DOT,
 				72599999999500,
@@ -458,7 +458,7 @@ fn get_user_supply_per_asset_should_work() {
 			)
 			.unwrap();
 
-			// expectedSupplyBalance = 600 * 1,000001088999999992 = 600,0006533999999952
+			// expected_supply_balance = 600 * 1,000001088999999992 = 600,0006533999999952
 			let expected_supply_balance = Rate::from_inner(dollars(600_u128))
 				.checked_mul(&expected_exchange_rate)
 				.map(|v| v.into_inner())

@@ -455,17 +455,26 @@ impl<T: Config> Pallet<T> {
 
 	/// Calculates total supply and total borrowed balance in usd based on
 	/// total_borrowed, total_protocol_interest, borrow_index values calculated for current block
-	pub fn get_total_supply_and_borrowed_usd_balance(
+	pub fn get_user_total_supply_and_borrowed_usd_balance(
 		who: &T::AccountId,
 	) -> result::Result<(Balance, Balance), DispatchError> {
 		let total_supply_and_borrow_in_usd = Self::get_vec_of_supply_and_borrow_balance(who)?;
 
-		let (total_supply_balance, total_borrowed_balance) = total_supply_and_borrow_in_usd.into_iter().fold(
+		let (total_supply_balance, total_borrowed_balance) = total_supply_and_borrow_in_usd.into_iter().try_fold(
 			(Balance::zero(), Balance::zero()),
-			|(total_supply, total_borrow), (_, supply_balance, borrow_balance)| -> (Balance, Balance) {
-				(total_supply + supply_balance, total_borrow + borrow_balance)
+			|(total_supply, total_borrow),
+			 (_, supply_balance, borrow_balance)|
+			 -> result::Result<(Balance, Balance), DispatchError> {
+				Ok((
+					total_supply
+						.checked_add(supply_balance)
+						.ok_or(Error::<T>::NumOverflow)?,
+					total_borrow
+						.checked_add(borrow_balance)
+						.ok_or(Error::<T>::NumOverflow)?,
+				))
 			},
-		);
+		)?;
 
 		Ok((total_supply_balance, total_borrowed_balance))
 	}
@@ -674,11 +683,11 @@ impl<T: Config> Pallet<T> {
 
 		/*
 		Calculate the interest accumulated into borrows and protocol interest and the new index:
-			*  simpleInterestFactor = borrowRate * blockDelta
-			*  interestAccumulated = simpleInterestFactor * totalBorrows
-			*  totalBorrowsNew = interestAccumulated + totalBorrows
-			*  totalProtocolInterestNew = interestAccumulated * protocolInterestFactor + totalProtocolInterest
-			*  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
+			*  simple_interest_factor = borrow_rate * block_delta
+			*  interest_accumulated = simple_interest_factor * total_borrows
+			*  total_borrows_new = interest_accumulated + total_borrows
+			*  total_protocol_interest_new = interest_accumulated * protocol_interest_factor + total_protocol_interest
+			*  borrow_index_new = simple_interest_factor * borrow_index + borrow_index
 		*/
 
 		let simple_interest_factor = Self::calculate_interest_factor(current_borrow_interest_rate, block_delta)?;
@@ -813,7 +822,7 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 	) -> result::Result<Vec<(CurrencyId, Balance, Balance)>, DispatchError> {
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.iter()
+			.into_iter()
 			.try_fold(
 				Vec::<(CurrencyId, Balance, Balance)>::new(),
 				|mut vec, &pool_id| -> result::Result<Vec<(CurrencyId, Balance, Balance)>, DispatchError> {

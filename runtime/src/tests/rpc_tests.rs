@@ -285,14 +285,14 @@ fn test_user_balances_using_rpc() {
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_eq!(
-				get_total_supply_and_borrowed_usd_balance_rpc(ALICE::get()),
+				get_user_total_supply_and_borrowed_usd_balance_rpc(ALICE::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(0),
 					total_borrowed: dollars(0)
 				})
 			);
 			assert_eq!(
-				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()),
+				get_user_total_supply_and_borrowed_usd_balance_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(0),
 					total_borrowed: dollars(0)
@@ -303,14 +303,14 @@ fn test_user_balances_using_rpc() {
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
 
 			assert_eq!(
-				get_total_supply_and_borrowed_usd_balance_rpc(ALICE::get()),
+				get_user_total_supply_and_borrowed_usd_balance_rpc(ALICE::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(0),
 					total_borrowed: dollars(0)
 				})
 			);
 			assert_eq!(
-				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()),
+				get_user_total_supply_and_borrowed_usd_balance_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(240_000),
 					total_borrowed: dollars(0)
@@ -329,7 +329,7 @@ fn test_user_balances_using_rpc() {
 
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(50_000)));
 			assert_eq!(
-				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()),
+				get_user_total_supply_and_borrowed_usd_balance_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(240_000),
 					total_borrowed: dollars(100_000)
@@ -344,7 +344,7 @@ fn test_user_balances_using_rpc() {
 
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(30_000)));
 			assert_eq!(
-				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()),
+				get_user_total_supply_and_borrowed_usd_balance_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(240_000),
 					total_borrowed: dollars(40_000)
@@ -358,7 +358,7 @@ fn test_user_balances_using_rpc() {
 			);
 
 			System::set_block_number(30);
-			let account_data = get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
+			let account_data = get_user_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 			assert!(account_data.total_supply > dollars(240_000));
 			assert!(account_data.total_borrowed > dollars(40_000));
 			assert!(get_user_borrow_per_asset_rpc(BOB::get(), DOT).unwrap().amount > dollars(20_000));
@@ -436,7 +436,7 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 			System::set_block_number(200);
 
 			let account_data_before_repay_all =
-				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 
 			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
@@ -475,13 +475,13 @@ fn test_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc
 			System::set_block_number(150);
 
 			let account_data_before_repay =
-				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 
 			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(10_000)));
 			let account_data_after_repay =
-				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
 				LiquidityPools::pool_user_data(DOT, BOB::get()).total_borrowed,
@@ -514,13 +514,13 @@ fn test_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rp
 			System::set_block_number(100);
 
 			let account_data_before_borrow =
-				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 
 			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(30_000)));
 			let account_data_after_borrow =
-				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
 				LiquidityPools::pool_user_data(DOT, BOB::get()).total_borrowed,
@@ -554,13 +554,13 @@ fn test_total_borrowed_difference_is_ok_before_and_after_deposit_using_balance_r
 			System::set_block_number(100);
 
 			let account_data_before_deposit =
-				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 
 			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(30_000)));
 			let account_data_after_deposit =
-				get_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrowed_usd_balance_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
 				dollars(30_000),
@@ -800,14 +800,18 @@ fn get_user_supply_and_borrow_apy_should_work() {
 			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
 			assert_ok!(MinterestProtocol::borrow(alice(), ETH, 80_000 * DOLLARS));
 
-			// borrowInterestRate = 2.36 %
-			// supplyInterestRate = 1.06 %
+			// BlocksPerYear = 5_256_000
+			// borrow_rate_per_year = borrow_rate * blocks_per_year
+			// supply_rate_per_year = supply_rate * blocks_per_year
+
+			// borrow_rate_per_year = 0,0000000045 × 5256000 = 2.36 %
+			// supply_rate_per_year = 0,000000002025 × 5256000 = 1.06 %
 			assert_eq!(
 				Controller::get_liquidity_pool_borrow_and_supply_rates(DOT),
 				Some((Rate::from_inner(4500000000), Rate::from_inner(2025000000)))
 			);
-			// borrowInterestRate = 3.78 %
-			// supplyInterestRate = 2.72 %
+			// borrow_rate_per_year = 0,0000000072 × 5256000 = 3.78 %
+			// supply_rate_per_year = 0,000000005184 × 5256000 = 2.72 %
 			assert_eq!(
 				Controller::get_liquidity_pool_borrow_and_supply_rates(ETH),
 				Some((Rate::from_inner(7200000000), Rate::from_inner(5184000000)))

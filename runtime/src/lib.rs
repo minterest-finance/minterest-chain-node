@@ -775,8 +775,8 @@ impl_runtime_apis! {
 			Some(PoolState { exchange_rate, borrow_rate, supply_rate })
 		}
 
-		fn get_total_supply_and_borrowed_usd_balance(account_id: AccountId) -> Option<UserPoolBalanceData> {
-			let (total_supply, total_borrowed) = Controller::get_total_supply_and_borrowed_usd_balance(&account_id).ok()?;
+		fn get_user_total_supply_and_borrowed_usd_balance(account_id: AccountId) -> Option<UserPoolBalanceData> {
+			let (total_supply, total_borrowed) = Controller::get_user_total_supply_and_borrowed_usd_balance(&account_id).ok()?;
 
 			Some(UserPoolBalanceData {total_supply, total_borrowed})
 		}

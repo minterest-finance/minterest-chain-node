@@ -414,8 +414,8 @@ fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 	<Runtime as ControllerApi<Block, AccountId>>::liquidity_pool_state(currency_id)
 }
 
-fn get_total_supply_and_borrowed_usd_balance_rpc(account_id: AccountId) -> Option<UserPoolBalanceData> {
-	<Runtime as ControllerApi<Block, AccountId>>::get_total_supply_and_borrowed_usd_balance(account_id)
+fn get_user_total_supply_and_borrowed_usd_balance_rpc(account_id: AccountId) -> Option<UserPoolBalanceData> {
+	<Runtime as ControllerApi<Block, AccountId>>::get_user_total_supply_and_borrowed_usd_balance(account_id)
 }
 
 fn get_hypothetical_account_liquidity_rpc(account_id: AccountId) -> Option<HypotheticalLiquidityData> {
