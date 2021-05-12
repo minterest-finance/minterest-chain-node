@@ -6,6 +6,53 @@ use mock::{Event, *};
 use frame_support::{assert_noop, assert_ok};
 use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 
+use sp_core::offchain::{
+	testing::{TestOffchainExt, TestTransactionPoolExt},
+	OffchainExt, TransactionPoolExt,
+};
+
+#[test]
+fn test_offchain_worker() {
+	let mut ext = ExtBuilder::default()
+		.pool_init(DOT)
+		.pool_init(KSM)
+		.user_balance(ALICE, KSM, 100_000 * DOLLARS)
+		.user_balance(ALICE, DOT, 100_000 * DOLLARS)
+		.user_balance(BOB, KSM, 100_000 * DOLLARS)
+		.liquidity_pool_balance(DOT, 10_000 * DOLLARS)
+		.liquidity_pool_balance(KSM, 10_000 * DOLLARS)
+		// .liquidation_pool_balance(KSM, 15_000 * DOLLARS)
+		// .liquidation_pool_balance(DOT, 15_000 * DOLLARS)
+		.build();
+
+	let (offchain, _state) = TestOffchainExt::new();
+	let (pool, pool_state) = TestTransactionPoolExt::new();
+	ext.register_extension(OffchainExt::new(offchain));
+	ext.register_extension(TransactionPoolExt::new(pool));
+
+	ext.execute_with(|| {
+		// Prices::unlock_price(admin(), DOT).unwrap();
+		System::set_block_number(2);
+		assert_ok!(TestMinterestProtocol::deposit_underlying(
+			alice(),
+			DOT,
+			11_000 * DOLLARS
+		));
+
+		System::set_block_number(3);
+		assert_ok!(TestMinterestProtocol::deposit_underlying(bob(), KSM, 12_000 * DOLLARS));
+		assert_ok!(TestMinterestProtocol::enable_is_collateral(alice(), DOT));
+		assert_ok!(TestMinterestProtocol::borrow(alice(), KSM, 10_500 * DOLLARS));
+
+		System::set_block_number(4);
+		// Decrease DOT price. Now alice collateral isn't enough
+		// and loan shoud be liquidated
+		Prices::unlock_price(admin(), DOT).unwrap();
+
+		TestRiskManager::offchain_worker(4);
+	});
+}
+
 #[test]
 fn set_max_attempts_should_work() {
 	ExtBuilder::default().build().execute_with(|| {

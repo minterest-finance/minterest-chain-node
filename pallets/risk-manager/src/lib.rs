@@ -358,17 +358,13 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
-	fn _offchain_worker() -> Result<(), OffchainErr> {
+	/// Looks for insolvent loans and liquidate them
+	fn process_insolvent_loans() -> Result<(), OffchainErr> {
 		// Get available assets list
 		let underlying_assets: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 
 		if underlying_assets.is_empty() {
 			return Ok(());
-		}
-
-		// Check if we are a potential validator
-		if !sp_io::offchain::is_validator() {
-			return Err(OffchainErr::NotValidator);
 		}
 
 		// acquire offchain worker lock
@@ -395,11 +391,12 @@ impl<T: Config> Pallet<T> {
 			.get::<u32>()
 			.unwrap_or(Some(DEFAULT_MAX_ITERATIONS));
 
-		let currency_id = underlying_assets[(collateral_position as usize)];
+		let currency_id = underlying_assets[1];
 
 		// Get list of users that have an active loan for current pool
 		let pool_members =
 			<LiquidityPools<T>>::get_pool_members_with_loans(currency_id).map_err(|_| OffchainErr::CheckFail)?;
+		println!("Pool members with loans: {:?}", pool_members.len());
 
 		let mut iteration_count = 0;
 		let iteration_start_time = sp_io::offchain::timestamp();
@@ -411,6 +408,7 @@ impl<T: Config> Pallet<T> {
 			// We check if the user has the collateral so as not to start the liquidation process
 			// for users who have collateral = 0 and borrow > 0.
 			let user_has_collateral = <LiquidityPools<T>>::check_user_has_collateral(&member);
+			println!("HAS COLLATERAL?! {:?}", user_has_collateral);
 
 			// Checks if the liquidation should be allowed to occur.
 			if user_has_collateral {
@@ -421,7 +419,9 @@ impl<T: Config> Pallet<T> {
 					0,
 				)
 				.map_err(|_| OffchainErr::CheckFail)?;
+				println!("HAS ZERO? {:?}", shortfall);
 				if !shortfall.is_zero() {
+					println!("LIQIODATION!");
 					Self::submit_unsigned_liquidation(member, currency_id)
 				}
 			} else {
@@ -451,6 +451,16 @@ impl<T: Config> Pallet<T> {
 		// Consume the guard but **do not** unlock the underlying lock.
 		guard.forget();
 
+		Ok(())
+	}
+
+	fn _offchain_worker() -> Result<(), OffchainErr> {
+		// Check if we are a potential validator
+		if !sp_io::offchain::is_validator() {
+			return Err(OffchainErr::NotValidator);
+		}
+
+		Self::process_insolvent_loans()?;
 		Ok(())
 	}
 
@@ -502,6 +512,7 @@ impl<T: Config> Pallet<T> {
 		let (seize_amount, is_attempt_increment_required) =
 			Self::calculate_liquidation_info(liquidated_pool_id, total_repay_amount, is_partial_liquidation)?;
 
+		println!("Seize amount: {:?}", seize_amount);
 		let (seized_pools, repay_amount) = Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, seize_amount)?;
 
 		if is_attempt_increment_required {

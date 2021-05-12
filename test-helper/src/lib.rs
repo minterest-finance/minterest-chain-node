@@ -94,16 +94,20 @@ macro_rules! mock_impl_orml_currencies_config {
 
 #[macro_export]
 macro_rules! mock_impl_liquidity_pools_config {
-	($target:ty) => {
+	($target:ty, $price_source:ty) => {
 		impl liquidity_pools::Config for $target {
 			type MultiCurrency = orml_currencies::Module<$target>;
-			type PriceSource = MockPriceSource;
+			type PriceSource = $price_source;
 			type ModuleId = LiquidityPoolsModuleId;
 			type LiquidityPoolAccountId = LiquidityPoolAccountId;
 			type InitialExchangeRate = InitialExchangeRate;
 			type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 			type EnabledWrappedTokensId = EnabledWrappedTokensId;
 		}
+	};
+
+	($target:ty) => {
+		mock_impl_liquidity_pools_config!($target, MockPriceSource);
 	};
 }
 
