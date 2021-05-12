@@ -101,6 +101,10 @@ pub mod module {
 		/// The Mnt-token's account id, keep assets that should be distributed to users
 		type MntTokenAccountId: Get<Self::AccountId>;
 
+		#[pallet::constant]
+		// The MntSpeed update period.
+		type SpeedRefreshPeriod: Get<Self::BlockNumber>;
+
 		/// Weight information for the extrinsics.
 		type MntTokenWeightInfo: WeightInfo;
 	}
@@ -211,9 +215,6 @@ pub mod module {
 				MntSpeeds::<T>::insert(currency_id, Balance::zero());
 				MntPoolsState::<T>::insert(currency_id, MntPoolState::new());
 			}
-			if !self.minted_pools.is_empty() {
-				Pallet::<T>::refresh_mnt_speeds().expect("Calculate MntSpeeds is failed");
-			}
 		}
 	}
 
@@ -221,7 +222,19 @@ pub mod module {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+		fn on_finalize(block: T::BlockNumber) {
+			if block % T::SpeedRefreshPeriod::get() == T::BlockNumber::zero() {
+				if let Err(msg) = Pallet::<T>::refresh_mnt_speeds() {
+					debug::error!(
+						"MntToken module: Cannot run refresh_mnt_speed() at {:?}: {:?}",
+						block,
+						msg
+					)
+				}
+			}
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
