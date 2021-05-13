@@ -825,7 +825,7 @@ impl<T: Config> Pallet<T> {
 			.into_iter()
 			.try_fold(
 				Vec::<(CurrencyId, Balance, Balance)>::new(),
-				|mut vec, &pool_id| -> result::Result<Vec<(CurrencyId, Balance, Balance)>, DispatchError> {
+				|mut vec, pool_id| -> result::Result<Vec<(CurrencyId, Balance, Balance)>, DispatchError> {
 					// Get supply and borrow balance per asset.
 					let mut supply_balance = Self::get_user_supply_per_asset(&who, pool_id)?;
 					let mut borrow_balance = Self::get_user_borrow_per_asset(&who, pool_id)?;
