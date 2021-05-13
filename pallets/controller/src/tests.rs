@@ -98,6 +98,7 @@ fn calculate_interest_factor_should_work() {
 #[test]
 fn borrow_balance_stored_with_zero_balance_should_work() {
 	ExtBuilder::default()
+		.pool_mock(DOT)
 		.pool_user_data(DOT, ALICE, Balance::zero(), Rate::from_inner(0), true, 0)
 		.build()
 		.execute_with(|| {

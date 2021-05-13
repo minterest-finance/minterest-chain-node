@@ -93,6 +93,12 @@ fn redeem_should_work() {
 			Rate::saturating_from_rational(1, 1),
 			TEN_THOUSAND_DOLLARS,
 		)
+		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
 		.build()
 		.execute_with(|| {
 			// Alice deposit 60 DOT; exchange_rate = 1.0
@@ -120,6 +126,12 @@ fn redeem_should_not_work() {
 			Balance::zero(),
 			Rate::saturating_from_rational(1, 1),
 			TEN_THOUSAND_DOLLARS,
+		)
+		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
 		)
 		.pool_with_params(
 			KSM,
@@ -158,6 +170,18 @@ fn redeem_should_not_work() {
 fn redeem_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
 		.pool_with_params(
+			DOT,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
+		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
+		.pool_with_params(
 			BTC,
 			Balance::zero(),
 			Rate::one(),
@@ -192,6 +216,12 @@ fn redeem_underlying_should_work() {
 			Balance::zero(),
 			Rate::saturating_from_rational(1, 1),
 			TEN_THOUSAND_DOLLARS,
+		)
+		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
 		)
 		.pool_with_params(
 			KSM,
@@ -255,6 +285,18 @@ fn redeem_underlying_should_work() {
 fn redeem_underlying_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
 		.pool_with_params(
+			DOT,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
+		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
+		.pool_with_params(
 			BTC,
 			Balance::zero(),
 			Rate::one(),
@@ -289,6 +331,12 @@ fn redeem_wrapped_should_work() {
 			Balance::zero(),
 			Rate::saturating_from_rational(1, 1),
 			TEN_THOUSAND_DOLLARS,
+		)
+		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
 		)
 		.pool_with_params(
 			KSM,
@@ -347,6 +395,18 @@ fn redeem_wrapped_should_work() {
 #[test]
 fn redeem_wrapped_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
+		.pool_with_params(
+			DOT,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
+		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
 		.pool_with_params(
 			BTC,
 			Balance::zero(),
@@ -443,6 +503,18 @@ fn borrow_should_work() {
 fn borrow_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
 		.pool_with_params(
+			DOT,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
+		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
+		.pool_with_params(
 			BTC,
 			Balance::zero(),
 			Rate::one(),
@@ -490,6 +562,12 @@ fn repay_should_work() {
 			Balance::zero(),
 			Rate::saturating_from_rational(1, 1),
 			TEN_THOUSAND_DOLLARS,
+		)
+		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
 		)
 		.pool_with_params(
 			KSM,
@@ -560,6 +638,12 @@ fn repay_all_should_work() {
 			TEN_THOUSAND_DOLLARS,
 		)
 		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
+		.pool_with_params(
 			KSM,
 			Balance::zero(),
 			Rate::saturating_from_rational(1, 1),
@@ -604,6 +688,12 @@ fn repay_all_fails_if_not_enough_underlying_assets() {
 			Rate::saturating_from_rational(1, 1),
 			TEN_THOUSAND_DOLLARS,
 		)
+		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 60 DOT to the pool.
@@ -630,6 +720,12 @@ fn repay_on_behalf_should_work() {
 			Balance::zero(),
 			Rate::saturating_from_rational(1, 1),
 			TEN_THOUSAND_DOLLARS,
+		)
+		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
 		)
 		.pool_with_params(
 			KSM,
@@ -794,6 +890,18 @@ fn disable_is_collateral_should_work() {
 #[test]
 fn transfer_wrapped_should_work() {
 	ExtBuilder::default()
+		.pool_with_params(
+			DOT,
+			Balance::zero(),
+			Rate::saturating_from_rational(1, 1),
+			TEN_THOUSAND_DOLLARS,
+		)
+		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
 		.user_balance(ALICE, MDOT, ONE_HUNDRED_DOLLARS)
 		.user_balance(BOB, MBTC, ONE_HUNDRED_DOLLARS)
 		.pool_with_params(
@@ -847,6 +955,18 @@ fn transfer_wrapped_should_work() {
 #[test]
 fn transfer_wrapped_should_not_work() {
 	ExtBuilder::default()
+		.pool_with_params(
+			DOT,
+			Balance::zero(),
+			Rate::saturating_from_rational(1, 1),
+			TEN_THOUSAND_DOLLARS,
+		)
+		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
 		.user_balance(ALICE, MDOT, ONE_HUNDRED_DOLLARS)
 		.user_balance(ALICE, MKSM, ONE_HUNDRED_DOLLARS)
 		.pool_with_params(
@@ -920,6 +1040,12 @@ fn claim_mnt_should_work() {
 			Rate::saturating_from_rational(1, 1),
 			TEN_THOUSAND_DOLLARS,
 		)
+		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
+		)
 		.build()
 		.execute_with(|| {
 			set_block_number_and_refresh_speeds(10);
@@ -990,6 +1116,12 @@ fn partial_protocol_interest_transfer_should_work() {
 			Balance::zero(),
 			Rate::saturating_from_rational(1, 1),
 			dollars(11_000u128),
+		)
+		.pool_with_params(
+			ETH,
+			Balance::zero(),
+			Rate::one(),
+			Balance::zero(),
 		)
 		.build()
 		.execute_with(|| {

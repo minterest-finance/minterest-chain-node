@@ -228,6 +228,8 @@ fn update_state_on_borrow_should_work() {
 #[test]
 fn update_state_on_repay_should_work() {
 	ExtBuilder::default()
+		.pool_mock(DOT)
+		.pool_mock(ETH)
 		.user_balance(ALICE, DOT, ONE_HUNDRED_DOLLARS)
 		.build()
 		.execute_with(|| {
@@ -275,6 +277,9 @@ fn convert_to_wrapped_should_work() {
 #[test]
 fn convert_from_wrapped_should_work() {
 	ExtBuilder::default()
+		.pool_mock(DOT)
+		.pool_mock(ETH)
+		.pool_mock(BTC)
 		.user_balance(ALICE, DOT, ONE_HUNDRED)
 		.user_balance(ALICE, MDOT, ONE_HUNDRED)
 		.user_balance(ALICE, MBTC, 1)

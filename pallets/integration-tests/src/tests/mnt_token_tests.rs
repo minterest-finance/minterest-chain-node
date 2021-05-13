@@ -177,6 +177,7 @@ mod tests {
 	fn mnt_token_supplier_distribution_when_users_transferring_tokens() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
+			.pool_initial(ETH)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
 			.user_balance(BOB, DOT, ONE_HUNDRED)

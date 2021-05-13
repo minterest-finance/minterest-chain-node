@@ -350,6 +350,8 @@ pub mod module {
 			pool_id: CurrencyId,
 		) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
+			ensure!(T::ManagerLiquidityPools::pool_exists(&pool_id), liquidity_pools::Error::<T>::PoolNotFound);
+
 			let who = T::Lookup::lookup(who)?;
 			Self::liquidate_unsafe_loan(who, pool_id)?;
 			Ok(().into())

@@ -211,9 +211,6 @@ pub mod module {
 				MntSpeeds::<T>::insert(currency_id, Balance::zero());
 				MntPoolsState::<T>::insert(currency_id, MntPoolState::new());
 			}
-			if !self.minted_pools.is_empty() {
-				Pallet::<T>::refresh_mnt_speeds().expect("Calculate MntSpeeds is failed");
-			}
 		}
 	}
 

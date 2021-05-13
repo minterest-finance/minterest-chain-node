@@ -135,7 +135,40 @@ impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
 			endowed_accounts: vec![],
-			pools: vec![],
+			pools: vec![
+				(
+					DOT,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						total_protocol_interest: Balance::zero(),
+					}
+				),
+				(
+					ETH,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						total_protocol_interest: Balance::zero(),
+					}
+				),
+				(
+					BTC,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						total_protocol_interest: Balance::zero(),
+					}
+				),
+				(
+					KSM,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						total_protocol_interest: Balance::zero(),
+					}
+				),
+			],
 			pool_user_data: vec![],
 		}
 	}

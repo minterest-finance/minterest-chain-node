@@ -113,6 +113,8 @@ pub mod module {
 		ExchangeRateCalculationError,
 		/// Conversion error between underlying asset and wrapped token.
 		ConversionError,
+		/// Pool not found.
+		PoolNotFound,
 	}
 
 	#[pallet::storage]
