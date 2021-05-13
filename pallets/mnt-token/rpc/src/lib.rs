@@ -3,6 +3,7 @@
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
+use minterest_primitives::{CurrencyId, Price};
 pub use mnt_token_rpc_runtime_api::{MntBalanceInfo, MntTokenApi as MntTokenRuntimeApi};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
@@ -14,6 +15,12 @@ pub trait MntTokenApi<BlockHash, AccountId> {
 	#[rpc(name = "mntToken_getUnclaimedMntBalance")]
 	fn get_unclaimed_mnt_balance(&self, account_id: AccountId, at: Option<BlockHash>)
 		-> Result<Option<MntBalanceInfo>>;
+
+	#[rpc(name = "mntToken_getMntBorrowApy")]
+	fn get_mnt_borrow_apy(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<Price>>;
+
+	#[rpc(name = "mntToken_getMntSupplyApy")]
+	fn get_mnt_supply_apy(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<Price>>;
 }
 
 /// A struct that implements the [`MntTokenApi`].
@@ -63,6 +70,30 @@ where
 		api.get_unclaimed_mnt_balance(&at, account_id).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
 			message: "Unable to get user unclaimed MNT balance.".into(),
+			data: Some(format!("{:?}", e).into()),
+		})
+	}
+
+	fn get_mnt_borrow_apy(&self, pool_id: CurrencyId, at: Option<<Block as BlockT>::Hash>) -> Result<Option<Price>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+            // If the block hash is not supplied assume the best block.
+            self.client.info().best_hash));
+		api.get_mnt_borrow_apy(&at, pool_id).map_err(|e| RpcError {
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
+			message: "Unable to get total borrow MNT APY.".into(),
+			data: Some(format!("{:?}", e).into()),
+		})
+	}
+
+	fn get_mnt_supply_apy(&self, pool_id: CurrencyId, at: Option<<Block as BlockT>::Hash>) -> Result<Option<Price>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+            // If the block hash is not supplied assume the best block.
+            self.client.info().best_hash));
+		api.get_mnt_supply_apy(&at, pool_id).map_err(|e| RpcError {
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
+			message: "Unable to get total supply MNT APY.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})
 	}

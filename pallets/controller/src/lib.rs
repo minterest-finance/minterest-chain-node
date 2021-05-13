@@ -574,6 +574,15 @@ impl<T: Config> Pallet<T> {
 		let borrow_balance = Self::calculate_borrow_balance(&who, underlying_asset_id, pool_data.borrow_index)?;
 		Ok(borrow_balance)
 	}
+
+	pub fn get_fresh_interest_param(pool_id: CurrencyId) -> result::Result<Pool, DispatchError> {
+		let current_block_number = <frame_system::Module<T>>::block_number();
+		let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
+
+		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
+		let pool_data = Self::calculate_interest_params(pool_id, block_delta)?;
+		Ok(pool_data)
+	}
 }
 
 // Private methods

@@ -8,7 +8,7 @@
 use frame_support::{pallet_prelude::*, sp_std::cmp::Ordering, transactional};
 use frame_system::pallet_prelude::*;
 use minterest_primitives::currency::MNT;
-use minterest_primitives::{Balance, CurrencyId, Price, Rate};
+use minterest_primitives::{AccountId, Balance, CurrencyId, Price, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{ControllerAPI, LiquidityPoolsManager, MntManager, PriceProvider};
@@ -389,6 +389,13 @@ impl<T: Config> Pallet<T> {
 				Ok(current_accrued + accrued_borrow_mnt + accrued_supply_mnt)
 			})?;
 		Ok(accrued_mnt)
+	}
+
+	///TODO: Add description
+	pub fn get_fresh_mnt_speed(pool_id: CurrencyId) -> BalanceResult {
+		Self::refresh_mnt_speeds();
+		let speed = MntSpeeds::<T>::get(pool_id);
+		Ok(speed)
 	}
 }
 
