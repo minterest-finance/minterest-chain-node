@@ -128,8 +128,6 @@ pub trait ControllerAPI<AccountId> {
 }
 
 pub trait MntManager<AccountId> {
-	fn add_pool(pool_id: CurrencyId);
-
 	/// Update MNT supply index for a pool.
 	///
 	/// - `underlying_asset`: The pool which supply index to update.

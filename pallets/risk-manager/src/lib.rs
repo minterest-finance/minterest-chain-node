@@ -127,6 +127,10 @@ pub mod module {
 		InvalidLiquidationIncentiveValue,
 		/// Feed price is invalid
 		InvalidFeedPrice,
+		/// Pool not found in liquidity-pools pallet storage
+		PoolNotAdded,
+		/// Pool had already been added to risk-manager
+		PoolAlreadyAdded,
 	}
 
 	#[pallet::event]
@@ -145,6 +149,9 @@ pub mod module {
 		/// Unsafe loan has been successfully liquidated: \[who, liquidate_amount_in_usd,
 		/// liquidated_pool_id, seized_pools, partial_liquidation\]
 		LiquidateUnsafeLoan(T::AccountId, Balance, CurrencyId, Vec<CurrencyId>, bool),
+
+		/// New pool had been created: \[pool_id\]
+		PoolAdded(CurrencyId),
 	}
 
 	/// Liquidation params for pools: `(max_attempts, min_partial_liquidation_sum, threshold,
@@ -224,6 +231,40 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		///
+		#[pallet::weight(10000)]
+		#[transactional]
+		pub fn add_pool(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			max_attempts: u8,
+			min_partial_liquidation_sum: Balance,
+			threshold: Rate,
+			liquidation_fee: Rate,
+		) -> DispatchResultWithPostInfo {
+			T::RiskManagerUpdateOrigin::ensure_origin(origin)?;
+
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&currency_id),
+				liquidity_pools::Error::<T>::PoolNotFound
+			);
+			ensure!(
+				RiskManagerParams::<T>::contains_key(currency_id),
+				Error::<T>::PoolAlreadyAdded
+			);
+			RiskManagerParams::<T>::insert(
+				currency_id,
+				RiskManagerData {
+					max_attempts: max_attempts,
+					min_partial_liquidation_sum: min_partial_liquidation_sum,
+					threshold: threshold,
+					liquidation_fee: liquidation_fee,
+				},
+			);
+
+			Ok(().into())
+		}
+
 		/// Set maximum amount of partial liquidation attempts.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `max_attempts`: New max value of liquidation attempts.
@@ -354,6 +395,10 @@ pub mod module {
 				T::ManagerLiquidityPools::pool_exists(&pool_id),
 				liquidity_pools::Error::<T>::PoolNotFound
 			);
+			ensure!(
+				T::ManagerLiquidityPools::pool_exists(&pool_id),
+				Error::<T>::PoolNotAdded
+			);
 
 			let who = T::Lookup::lookup(who)?;
 			Self::liquidate_unsafe_loan(who, pool_id)?;
@@ -368,7 +413,9 @@ impl<T: Config> Pallet<T> {
 		let underlying_assets: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
 			.filter_map(|&underlying_id| {
-				if !T::LiquidityPoolsManager::pool_exists(&underlying_id) {
+				if !T::LiquidityPoolsManager::pool_exists(&underlying_id)
+					|| !RiskManagerParams::<T>::contains_key(underlying_id)
+				{
 					return None;
 				}
 				Some(underlying_id)

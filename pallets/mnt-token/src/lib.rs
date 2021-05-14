@@ -11,7 +11,7 @@ use minterest_primitives::currency::MNT;
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerAPI, LiquidityPoolsManager, MntManager, PriceProvider};
+use pallet_traits::{ControllerAPI, LiquidityPoolsManager, MntManager, PoolsManager, PriceProvider};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
 	DispatchResult, FixedPointNumber,
@@ -82,7 +82,7 @@ pub mod module {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Provides Liquidity Pool functionality
-		type LiquidityPoolsManager: LiquidityPoolsManager;
+		type LiquidityPoolsManager: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
 
 		/// The origin which may update MNT token parameters. Root can
 		/// always do this.
@@ -119,6 +119,8 @@ pub mod module {
 		NotValidUnderlyingAssetId,
 		/// Error that never should happen
 		InternalError,
+		/// Pool not forund in liquidity-pools storage
+		PoolNotFound,
 	}
 
 	#[pallet::event]
@@ -230,6 +232,10 @@ pub mod module {
 			ensure!(
 				currency_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
+			);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&currency_id),
+				Error::<T>::PoolNotFound
 			);
 			ensure!(
 				!MntSpeeds::<T>::contains_key(currency_id),
@@ -377,12 +383,6 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
-	///
-	fn add_pool(pool_id: CurrencyId) {
-		MntSpeeds::<T>::insert(pool_id, Balance::zero());
-		MntPoolsState::<T>::insert(pool_id, MntPoolState::new());
-	}
-
 	/// Update mnt supply index for pool
 	fn update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult {
 		// block_delta = current_block_number - supply_state.index_updated_at_block

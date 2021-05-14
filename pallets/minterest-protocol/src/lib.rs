@@ -187,7 +187,7 @@ pub mod module {
 			collateral_factor: Rate,
 			protocol_interest_threshold: Balance,
 			deviation_threshold: Rate,
-			balance_ration: Rate,
+			balance_ratio: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::CreatePoolOrigin::ensure_origin(origin)?;
 
@@ -202,7 +202,7 @@ pub mod module {
 				collateral_factor,
 				protocol_interest_threshold,
 				deviation_threshold,
-				balance_ration,
+				balance_ratio,
 			)?;
 			Self::deposit_event(Event::PoolCreated(pool_id));
 			Ok(().into())
@@ -538,7 +538,7 @@ impl<T: Config> Pallet<T> {
 		collateral_factor: Rate,
 		protocol_interest_threshold: Balance,
 		deviation_threshold: Rate,
-		balance_ration: Rate,
+		balance_ratio: Rate,
 	) -> DispatchResult {
 		ensure!(
 			pool_id.is_supported_underlying_asset(),
@@ -564,8 +564,7 @@ impl<T: Config> Pallet<T> {
 			collateral_factor,
 			protocol_interest_threshold,
 		);
-		T::ManagerLiquidationPools::create_pool(pool_id, deviation_threshold, balance_ration);
-		T::MntManager::add_pool(pool_id);
+		T::ManagerLiquidationPools::create_pool(pool_id, deviation_threshold, balance_ratio);
 
 		Ok(())
 	}
