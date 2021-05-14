@@ -50,6 +50,17 @@ pub trait LiquidityPoolsManager {
 	fn get_pool_total_protocol_interest(pool_id: CurrencyId) -> Balance;
 }
 
+/// An abstraction of pools basic functionalities.
+pub trait LiquidationPoolsManager<AccountId> {
+	/// Return module account id.
+	fn pools_account_id() -> AccountId;
+
+	/// Return liquidity balance of `pool_id`.
+	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance;
+
+	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate);
+}
+
 pub trait PriceProvider<CurrencyId> {
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price>;
 	fn lock_price(currency_id: CurrencyId);
@@ -75,6 +86,14 @@ pub trait DEXManager<AccountId, CurrencyId, Balance> {
 }
 
 pub trait ControllerAPI<AccountId> {
+	fn create_pool(
+		currency_id: CurrencyId,
+		protocol_interest_factor: Rate,
+		max_borrow_rate: Rate,
+		collateral_factor: Rate,
+		protocol_interest_threshold: Balance,
+	);
+
 	/// Return the borrow balance of account based on stored data.
 	fn borrow_balance_stored(who: &AccountId, underlying_asset_id: CurrencyId) -> Result<Balance, DispatchError>;
 
@@ -109,6 +128,8 @@ pub trait ControllerAPI<AccountId> {
 }
 
 pub trait MntManager<AccountId> {
+	fn add_pool(pool_id: CurrencyId);
+
 	/// Update MNT supply index for a pool.
 	///
 	/// - `underlying_asset`: The pool which supply index to update.

@@ -115,6 +115,8 @@ pub mod module {
 		ConversionError,
 		/// Pool not found.
 		PoolNotFound,
+		/// Pool is already created.
+		PoolAlreadyCreated,
 	}
 
 	#[pallet::storage]
@@ -345,6 +347,17 @@ impl<T: Config> Pallet<T> {
 	pub fn disable_is_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
 		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = false);
 	}
+
+	pub fn create_pool(currency_id: CurrencyId) {
+		Pools::<T>::insert(
+			currency_id,
+			Pool {
+				total_borrowed: Balance::zero(),
+				borrow_index: Rate::one(),
+				total_protocol_interest: Balance::zero(),
+			},
+		);
+	}
 }
 
 impl<T: Config> Pallet<T> {
@@ -392,9 +405,7 @@ impl<T: Config> Pallet<T> {
 	pub fn get_is_collateral_pools(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
 		let mut pools: Vec<(CurrencyId, Balance)> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
-			.filter(|&underlying_id| {
-				Self::pool_exists(underlying_id)
-			})
+			.filter(|&underlying_id| Self::pool_exists(underlying_id))
 			.filter_map(|&pool_id| {
 				let wrapped_id = pool_id.wrapped_asset()?;
 
@@ -427,10 +438,10 @@ impl<T: Config> Pallet<T> {
 
 	/// Checks if the user has the collateral.
 	pub fn check_user_has_collateral(who: &T::AccountId) -> bool {
-		for &pool_id in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset).iter()
-			.filter(|&underlying_id| {
-				Self::pool_exists(underlying_id)
-			}) {
+		for &pool_id in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.iter()
+			.filter(|&underlying_id| Self::pool_exists(underlying_id))
+		{
 			if Self::check_user_available_collateral(&who, pool_id) {
 				if let Some(wrapped_id) = pool_id.wrapped_asset() {
 					if !T::MultiCurrency::free_balance(wrapped_id, &who).is_zero() {

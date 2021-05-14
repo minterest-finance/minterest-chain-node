@@ -300,6 +300,24 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
+	pub fn create_pool(
+		currency_id: CurrencyId,
+		kink: Rate,
+		base_rate_per_block: Rate,
+		multiplier_per_block: Rate,
+		jump_multiplier_per_block: Rate,
+	) {
+		MinterestModelParams::<T>::insert(
+			currency_id,
+			MinterestModelData {
+				kink: kink,
+				base_rate_per_block: base_rate_per_block,
+				multiplier_per_block: multiplier_per_block,
+				jump_multiplier_per_block: jump_multiplier_per_block,
+			},
+		);
+	}
+
 	/// Calculates the current borrow rate per block.
 	/// - `underlying_asset`: Asset ID for which the borrow interest rate is calculated.
 	/// - `utilization_rate`: Current Utilization rate value.

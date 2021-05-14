@@ -70,7 +70,7 @@ mock_impl_liquidation_pools_config!(Test);
 mock_impl_controller_config!(Test, ZeroAdmin);
 mock_impl_minterest_model_config!(Test, ZeroAdmin);
 mock_impl_dex_config!(Test);
-mock_impl_minterest_protocol_config!(Test);
+mock_impl_minterest_protocol_config!(Test, ZeroAdmin);
 mock_impl_risk_manager_config!(Test, ZeroAdmin);
 mock_impl_mnt_token_config!(Test, ZeroAdmin);
 mock_impl_balances_config!(Test);
@@ -142,7 +142,7 @@ impl Default for ExtBuilder {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						total_protocol_interest: Balance::zero(),
-					}
+					},
 				),
 				(
 					ETH,
@@ -150,7 +150,7 @@ impl Default for ExtBuilder {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						total_protocol_interest: Balance::zero(),
-					}
+					},
 				),
 				(
 					BTC,
@@ -158,7 +158,7 @@ impl Default for ExtBuilder {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						total_protocol_interest: Balance::zero(),
-					}
+					},
 				),
 				(
 					KSM,
@@ -166,7 +166,7 @@ impl Default for ExtBuilder {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						total_protocol_interest: Balance::zero(),
-					}
+					},
 				),
 			],
 			pool_user_data: vec![],

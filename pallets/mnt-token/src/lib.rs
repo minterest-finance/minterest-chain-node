@@ -377,6 +377,12 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
+	///
+	fn add_pool(pool_id: CurrencyId) {
+		MntSpeeds::<T>::insert(pool_id, Balance::zero());
+		MntPoolsState::<T>::insert(pool_id, MntPoolState::new());
+	}
+
 	/// Update mnt supply index for pool
 	fn update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult {
 		// block_delta = current_block_number - supply_state.index_updated_at_block

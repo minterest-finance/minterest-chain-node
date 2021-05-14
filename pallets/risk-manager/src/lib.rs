@@ -25,7 +25,7 @@ use frame_system::{
 };
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerAPI, MntManager, PoolsManager, PriceProvider};
+use pallet_traits::{ControllerAPI, LiquidationPoolsManager, MntManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::{CheckedDiv, CheckedMul, One};
@@ -97,7 +97,7 @@ pub mod module {
 		type UnsignedPriority: Get<TransactionPriority>;
 
 		/// The basic liquidity pools.
-		type LiquidationPoolsManager: PoolsManager<Self::AccountId>;
+		type LiquidationPoolsManager: LiquidationPoolsManager<Self::AccountId>;
 
 		/// Pools are responsible for holding funds for automatic liquidation.
 		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
@@ -350,7 +350,10 @@ pub mod module {
 			pool_id: CurrencyId,
 		) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
-			ensure!(T::ManagerLiquidityPools::pool_exists(&pool_id), liquidity_pools::Error::<T>::PoolNotFound);
+			ensure!(
+				T::ManagerLiquidityPools::pool_exists(&pool_id),
+				liquidity_pools::Error::<T>::PoolNotFound
+			);
 
 			let who = T::Lookup::lookup(who)?;
 			Self::liquidate_unsafe_loan(who, pool_id)?;

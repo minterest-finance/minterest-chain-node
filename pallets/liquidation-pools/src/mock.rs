@@ -3,9 +3,9 @@ use super::*;
 use crate as liquidation_pools;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system::EnsureSignedBy;
+use liquidity_pools::Pool;
 use minterest_primitives::Price;
 pub use minterest_primitives::{currency::CurrencyType::WrappedToken, Balance, CurrencyId, Rate};
-use liquidity_pools::Pool;
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PriceProvider;
 use sp_core::H256;
@@ -130,7 +130,7 @@ impl Default for ExternalityBuilder {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						total_protocol_interest: Balance::zero(),
-					}
+					},
 				),
 				(
 					ETH,
@@ -138,7 +138,7 @@ impl Default for ExternalityBuilder {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						total_protocol_interest: Balance::zero(),
-					}
+					},
 				),
 				(
 					BTC,
@@ -146,7 +146,7 @@ impl Default for ExternalityBuilder {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						total_protocol_interest: Balance::zero(),
-					}
+					},
 				),
 				(
 					KSM,
@@ -154,7 +154,7 @@ impl Default for ExternalityBuilder {
 						total_borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						total_protocol_interest: Balance::zero(),
-					}
+					},
 				),
 			],
 			liquidation_pools: vec![(
@@ -195,8 +195,8 @@ impl ExternalityBuilder {
 			pools: self.liquidity_pools,
 			pool_user_data: vec![],
 		}
-			.assimilate_storage(&mut t)
-			.unwrap();
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 		liquidation_pools::GenesisConfig::<Test> {
 			liquidation_pools: self.liquidation_pools,

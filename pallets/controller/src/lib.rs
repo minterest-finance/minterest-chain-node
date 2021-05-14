@@ -244,7 +244,10 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(pool_id.is_supported_underlying_asset(), Error::<T>::PoolNotFound);
-			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
 
 			PauseKeepers::<T>::mutate(pool_id, |pool| match operation {
 				Operation::Deposit => pool.deposit_paused = true,
@@ -270,7 +273,10 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(pool_id.is_supported_underlying_asset(), Error::<T>::PoolNotFound);
-			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
 
 			PauseKeepers::<T>::mutate(pool_id, |pool| match operation {
 				Operation::Deposit => pool.deposit_paused = false,
@@ -298,7 +304,10 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(pool_id.is_supported_underlying_asset(), Error::<T>::PoolNotFound);
-			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
 
 			ControllerParams::<T>::mutate(pool_id, |data| data.protocol_interest_factor = protocol_interest_factor);
 			Self::deposit_event(Event::InterestFactorChanged);
@@ -319,7 +328,10 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(pool_id.is_supported_underlying_asset(), Error::<T>::PoolNotFound);
-			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
 			ensure!(!max_borrow_rate.is_zero(), Error::<T>::MaxBorrowRateCannotBeZero);
 
 			ControllerParams::<T>::mutate(pool_id, |data| data.max_borrow_rate = max_borrow_rate);
@@ -341,7 +353,10 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(pool_id.is_supported_underlying_asset(), Error::<T>::PoolNotFound);
-			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
 			ensure!(
 				!collateral_factor.is_zero() && collateral_factor <= Rate::one(),
 				Error::<T>::CollateralFactorIncorrectValue
@@ -365,7 +380,10 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(pool_id.is_supported_underlying_asset(), Error::<T>::PoolNotFound);
-			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
 
 			if let Some(cap) = borrow_cap {
 				ensure!(
@@ -390,7 +408,10 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(pool_id.is_supported_underlying_asset(), Error::<T>::PoolNotFound);
-			ensure!(T::LiquidityPoolsManager::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
 
 			ControllerParams::<T>::mutate(pool_id, |data| {
 				data.protocol_interest_threshold = protocol_interest_threshold
@@ -460,9 +481,7 @@ impl<T: Config> Pallet<T> {
 		let (total_supply_balance, total_borrowed_balance) =
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 				.iter()
-				.filter(|&underlying_id| {
-					T::LiquidityPoolsManager::pool_exists(underlying_id)
-				})
+				.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
 				.try_fold(
 					(Balance::zero(), Balance::zero()),
 					|current_value, &pool_id| -> result::Result<(Balance, Balance), DispatchError> {
@@ -526,9 +545,7 @@ impl<T: Config> Pallet<T> {
 	pub fn get_user_total_collateral(who: T::AccountId) -> BalanceResult {
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
-			.filter(|&underlying_id| {
-				T::LiquidityPoolsManager::pool_exists(underlying_id)
-			})
+			.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
 			.filter(|&pool_id| <LiquidityPools<T>>::check_user_available_collateral(&who, *pool_id))
 			.try_fold(Balance::zero(), |acc, &pool_id| -> BalanceResult {
 				let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::PoolNotFound)?;
@@ -780,6 +797,37 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
+	///
+	fn create_pool(
+		currency_id: CurrencyId,
+		protocol_interest_factor: Rate,
+		max_borrow_rate: Rate,
+		collateral_factor: Rate,
+		protocol_interest_threshold: Balance,
+	) {
+		ControllerParams::<T>::insert(
+			currency_id,
+			ControllerData {
+				last_interest_accrued_block: <frame_system::Module<T>>::block_number(),
+				protocol_interest_factor: protocol_interest_factor,
+				max_borrow_rate: max_borrow_rate,
+				collateral_factor: collateral_factor,
+				borrow_cap: None,
+				protocol_interest_threshold: protocol_interest_threshold,
+			},
+		);
+		PauseKeepers::<T>::insert(
+			currency_id,
+			PauseKeeper {
+				deposit_paused: false,
+				redeem_paused: false,
+				borrow_paused: false,
+				repay_paused: false,
+				transfer_paused: false,
+			},
+		);
+	}
+
 	/// Return the borrow balance of account based on stored data.
 	///
 	/// - `who`: The address whose balance should be calculated.
