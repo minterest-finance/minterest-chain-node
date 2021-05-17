@@ -628,8 +628,8 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		let total_cash = T::PoolsManager::get_pool_available_liquidity(pool_id);
 		let total_protocol_interest = T::LiquidityPoolsManager::get_pool_total_protocol_interest(pool_id);
 
-		let supply_apy = total_cash - total_protocol_interest + total_borrow;
+		let supply_apy = FixedU128::from_inner(total_cash - total_protocol_interest + total_borrow) * oracle_price;
 
-		Ok((Some(borrow_apy), Some(FixedU128::from_inner(supply_apy))))
+		Ok((Some(borrow_apy), Some(supply_apy)))
 	}
 }

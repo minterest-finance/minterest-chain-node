@@ -106,8 +106,6 @@ pub trait ControllerAPI<AccountId> {
 	/// Protocol operation mode. In whitelist mode, only members 'WhitelistCouncil' can work with
 	/// protocols.
 	fn is_whitelist_mode_enabled() -> bool;
-
-	fn get_interest_param_for_stored_values(pool_id: CurrencyId) -> Result<Balance, DispatchError>;
 }
 
 pub trait MntManager<AccountId> {
