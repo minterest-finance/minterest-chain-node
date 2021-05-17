@@ -31,7 +31,7 @@ use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
-use pallet_traits::ControllerAPI;
+use pallet_traits::{ControllerAPI, MntManager};
 use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -490,6 +490,7 @@ impl mnt_token::Config for Runtime {
 	type MntTokenAccountId = MntTokenAccountId;
 	type MntTokenWeightInfo = weights::mnt_token::WeightInfo<Runtime>;
 	type SpeedRefreshPeriod = RefreshSpeedPeriod;
+	type PoolsManager = LiquidationPools;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -814,21 +815,8 @@ impl_runtime_apis! {
 				Some(MntBalanceInfo{amount: MntToken::get_unclaimed_mnt_balance(&account_id).ok()?})
 		}
 
-		fn get_mnt_borrow_apy(pool_id: CurrencyId) -> Option<Price> {
-			let mnt_price = 6; //Prices::get_underlying_price(MNT);
-			let block_per_day = 6; //TODO remove stub
-
-			let mnt_speed = MntToken::get_fresh_mnt_speed(pool_id);
-
-			let pool_data = Controller::get_fresh_interest_param(pool_id);
-			let oracle_price = 6; // Prices::get_underlying_price(pool_id);
-			let apy = mnt_speed.unwrap() * block_per_day * mnt_price / pool_data.unwrap().total_borrowed * oracle_price * 365 * 100; //TODO: refactor
-
-			Some(Price::from_inner(apy))
-		}
-
-		fn get_mnt_supply_apy(pool_id: CurrencyId) -> Option<Price> {
-			Some(Price::from_inner(0)) //Stub
+		fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> (Option<Price>, Option<Price>) {
+			MntToken::get_mnt_borrow_supply_apy(pool_id).unwrap()
 		}
 	}
 

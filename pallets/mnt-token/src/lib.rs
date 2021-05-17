@@ -7,14 +7,13 @@
 
 use frame_support::{pallet_prelude::*, sp_std::cmp::Ordering, transactional};
 use frame_system::pallet_prelude::*;
-use minterest_primitives::currency::MNT;
-use minterest_primitives::{AccountId, Balance, CurrencyId, Price, Rate};
+use minterest_primitives::{currency::MNT, Balance, CurrencyId, Price, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerAPI, LiquidityPoolsManager, MntManager, PriceProvider};
+use pallet_traits::{ControllerAPI, LiquidityPoolsManager, MntManager, PoolsManager, PriceProvider};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
-	DispatchResult, FixedPointNumber,
+	DispatchResult, FixedPointNumber, FixedU128,
 };
 use sp_std::{convert::TryInto, result, vec::Vec};
 pub mod weights;
@@ -107,6 +106,8 @@ pub mod module {
 
 		/// Weight information for the extrinsics.
 		type MntTokenWeightInfo: WeightInfo;
+
+		type PoolsManager: PoolsManager<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -390,13 +391,6 @@ impl<T: Config> Pallet<T> {
 			})?;
 		Ok(accrued_mnt)
 	}
-
-	///TODO: Add description
-	pub fn get_fresh_mnt_speed(pool_id: CurrencyId) -> BalanceResult {
-		Self::refresh_mnt_speeds();
-		let speed = MntSpeeds::<T>::get(pool_id);
-		Ok(speed)
-	}
 }
 
 impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
@@ -616,5 +610,26 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			pool_borrow_state.mnt_distribution_index,
 		));
 		Ok(borrower_mnt_accrued)
+	}
+
+	fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> Result<(Option<Price>, Option<Price>), DispatchError> {
+		Self::refresh_mnt_speeds()?;
+		let mnt_speed = MntSpeeds::<T>::get(pool_id);
+		let mnt_price = T::PriceSource::get_underlying_price(MNT).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
+
+		let total_borrow = T::LiquidityPoolsManager::get_pool_total_borrowed(pool_id);
+		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
+
+		let borrow_apy = FixedU128::from_inner(mnt_speed) * FixedU128::from_inner(5256000) * mnt_price //fix const
+				/ FixedU128::from_inner(total_borrow)
+			* oracle_price
+			* FixedU128::from_inner(100); //todo: refactor
+
+		let total_cash = T::PoolsManager::get_pool_available_liquidity(pool_id);
+		let total_protocol_interest = T::LiquidityPoolsManager::get_pool_total_protocol_interest(pool_id);
+
+		let supply_apy = total_cash - total_protocol_interest + total_borrow;
+
+		Ok((Some(borrow_apy), Some(FixedU128::from_inner(supply_apy))))
 	}
 }
