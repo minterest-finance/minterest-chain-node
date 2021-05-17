@@ -10,14 +10,15 @@ use liquidity_pools::{Pool, PoolUserData};
 pub use minterest_primitives::currency::CurrencyType::WrappedToken;
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
+use orml_traits::{DataFeeder, DataProvider};
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	FixedPointNumber, ModuleId,
 };
-use orml_traits::{DataFeeder, DataProvider};
 use sp_std::cell::RefCell;
+use std::thread;
 pub use test_helper::*;
 
 pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
@@ -25,6 +26,7 @@ pub type AccountId = u64;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
+pub type Extrinsic = TestXt<Call, ()>;
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -63,11 +65,18 @@ parameter_types! {
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
+
 pub struct MockDataProvider;
 impl DataProvider<CurrencyId, Price> for MockDataProvider {
 	fn get(currency_id: &CurrencyId) -> Option<Price> {
 		match currency_id {
 			&DOT => Some(Price::saturating_from_integer(5)),
+			&BTC => {
+				// This sleep is need to emulate hard computation in offchain worker.
+				let two_sec = std::time::Duration::from_millis(1000);
+				thread::sleep(two_sec);
+				Some(Price::saturating_from_integer(2))
+			}
 			_ => panic!("Price for this currency wasn't set"),
 		}
 	}
@@ -99,7 +108,6 @@ mock_impl_minterest_protocol_config!(Test);
 mock_impl_risk_manager_config!(Test, ZeroAdmin);
 mock_impl_mnt_token_config!(Test, ZeroAdmin);
 mock_impl_balances_config!(Test);
-
 
 pub struct MockPriceSource;
 
@@ -150,10 +158,10 @@ pub const ALICE: AccountId = 1;
 pub fn alice() -> Origin {
 	Origin::signed(ALICE)
 }
-pub const BOB: AccountId = 2;
-pub fn bob() -> Origin {
-	Origin::signed(BOB)
-}
+// pub const BOB: AccountId = 2;
+// pub fn bob() -> Origin {
+// 	Origin::signed(BOB)
+// }
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
@@ -185,11 +193,6 @@ impl ExtBuilder {
 	pub fn liquidity_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((TestPools::pools_account_id(), currency_id, balance));
-		self
-	}
-	pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-		self.endowed_accounts
-			.push((LiquidationPools::pools_account_id(), currency_id, balance));
 		self
 	}
 	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {

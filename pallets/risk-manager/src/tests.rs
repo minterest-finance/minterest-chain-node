@@ -8,40 +8,99 @@ use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 
 use sp_core::offchain::{
 	testing::{TestOffchainExt, TestTransactionPoolExt},
-	OffchainExt, TransactionPoolExt,
+	Externalities, OffchainExt, TransactionPoolExt,
 };
 
+use std::thread;
+
 #[test]
-fn test_offchain_worker() {
+fn test_offchain_worker_lock_expired() {
 	let mut ext = ExtBuilder::default()
-		.pool_init(DOT)
-		.pool_init(KSM)
-		.user_balance(ALICE, KSM, 100_000 * DOLLARS)
-		.user_balance(ALICE, DOT, 100_000 * DOLLARS)
-		.user_balance(BOB, KSM, 100_000 * DOLLARS)
-		.liquidity_pool_balance(DOT, 10_000 * DOLLARS)
-		.liquidity_pool_balance(KSM, 10_000 * DOLLARS)
-		// .liquidation_pool_balance(KSM, 15_000 * DOLLARS)
-		// .liquidation_pool_balance(DOT, 15_000 * DOLLARS)
+		.pool_init(ETH)
+		.pool_init(BTC)
+		.user_balance(ALICE, BTC, 100_000 * DOLLARS)
+		.liquidity_pool_balance(BTC, 15_000 * DOLLARS)
+		.liquidity_pool_balance(ETH, 15_000 * DOLLARS)
 		.build();
 
 	let (offchain, _state) = TestOffchainExt::new();
-	let (pool, pool_state) = TestTransactionPoolExt::new();
+	let mut offchain_cl = offchain.clone();
+
+	let (pool, trans_pool_state) = TestTransactionPoolExt::new();
+	ext.register_extension(OffchainExt::new(offchain));
+	ext.register_extension(TransactionPoolExt::new(pool));
+
+	// As a timestamp returns always the same value (0) in offchain worker
+	// This trick is need to emulate lock expiration
+	// sleep_until is used to set new timestamp value. It isn't sleep in real.
+	thread::spawn(move || {
+		let half_sec = std::time::Duration::from_millis(500);
+		// This sleep is need to wait when offchain worker will start calculation.
+		// After that we set new timestamp value and on next calling guard.extend_lock()
+		// will throw expiration error.
+		thread::sleep(half_sec);
+		offchain_cl.sleep_until(sp_core::offchain::Timestamp::from_unix_millis(30000));
+	});
+
+	ext.execute_with(|| {
+		System::set_block_number(2);
+		assert_ok!(TestMinterestProtocol::deposit_underlying(
+			alice(),
+			BTC,
+			11_000 * DOLLARS
+		));
+		assert_ok!(TestMinterestProtocol::enable_is_collateral(alice(), BTC));
+
+		System::set_block_number(3);
+		assert_ok!(TestMinterestProtocol::borrow(alice(), ETH, 10_500 * DOLLARS));
+
+		System::set_block_number(4);
+		// Decrease DOT price. Now alice collateral isn't enough
+		// and loan shoud be liquidated
+		Prices::unlock_price(admin(), BTC).unwrap();
+
+		// Temprorary. offchain worker returns error because lock time is expired
+		assert!(TestRiskManager::_offchain_worker().is_err());
+
+		assert_eq!(trans_pool_state.read().transactions.len(), 1);
+		let transaction = trans_pool_state.write().transactions.pop().unwrap();
+		let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
+
+		// Called extrinsic input params
+		let (who, pool_id) = match ex.call {
+			crate::mock::Call::TestRiskManager(crate::Call::liquidate(who, pool_id, ..)) => (who, pool_id),
+			e => panic!("Unexpected call: {:?}", e),
+		};
+		assert_eq!(who, ALICE);
+		assert_eq!(pool_id, ETH);
+	});
+}
+
+#[test]
+fn test_offchain_worker_simple_liquidation() {
+	let mut ext = ExtBuilder::default()
+		.pool_init(DOT)
+		.pool_init(KSM)
+		.user_balance(ALICE, DOT, 100_000 * DOLLARS)
+		.liquidity_pool_balance(DOT, 10_000 * DOLLARS)
+		.liquidity_pool_balance(KSM, 15_000 * DOLLARS)
+		.build();
+
+	let (offchain, _state) = TestOffchainExt::new();
+	let (pool, trans_pool_state) = TestTransactionPoolExt::new();
 	ext.register_extension(OffchainExt::new(offchain));
 	ext.register_extension(TransactionPoolExt::new(pool));
 
 	ext.execute_with(|| {
-		// Prices::unlock_price(admin(), DOT).unwrap();
 		System::set_block_number(2);
 		assert_ok!(TestMinterestProtocol::deposit_underlying(
 			alice(),
 			DOT,
 			11_000 * DOLLARS
 		));
+		assert_ok!(TestMinterestProtocol::enable_is_collateral(alice(), DOT));
 
 		System::set_block_number(3);
-		assert_ok!(TestMinterestProtocol::deposit_underlying(bob(), KSM, 12_000 * DOLLARS));
-		assert_ok!(TestMinterestProtocol::enable_is_collateral(alice(), DOT));
 		assert_ok!(TestMinterestProtocol::borrow(alice(), KSM, 10_500 * DOLLARS));
 
 		System::set_block_number(4);
@@ -49,7 +108,19 @@ fn test_offchain_worker() {
 		// and loan shoud be liquidated
 		Prices::unlock_price(admin(), DOT).unwrap();
 
-		TestRiskManager::offchain_worker(4);
+		assert_ok!(TestRiskManager::_offchain_worker());
+
+		assert_eq!(trans_pool_state.read().transactions.len(), 1);
+		let transaction = trans_pool_state.write().transactions.pop().unwrap();
+		let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
+
+		// Called extrinsic input params
+		let (who, pool_id) = match ex.call {
+			crate::mock::Call::TestRiskManager(crate::Call::liquidate(who, pool_id, ..)) => (who, pool_id),
+			e => panic!("Unexpected call: {:?}", e),
+		};
+		assert_eq!(who, ALICE);
+		assert_eq!(pool_id, KSM);
 	});
 }
 
