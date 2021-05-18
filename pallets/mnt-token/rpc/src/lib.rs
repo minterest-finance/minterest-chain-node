@@ -21,7 +21,7 @@ pub trait MntTokenApi<BlockHash, AccountId> {
 		&self,
 		pool_id: CurrencyId,
 		at: Option<BlockHash>,
-	) -> Result<(Option<Price>, Option<Price>)>;
+	) -> Result<(Price, Price)>;
 }
 
 /// A struct that implements the [`MntTokenApi`].
@@ -79,7 +79,7 @@ where
 		&self,
 		pool_id: CurrencyId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<(Option<Price>, Option<Price>)> {
+	) -> Result<(Price, Price)> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume the best block.

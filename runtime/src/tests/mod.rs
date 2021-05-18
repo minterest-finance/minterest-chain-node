@@ -45,6 +45,8 @@ struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
+	minted_pools: Vec<CurrencyId>,
+	mnt_rate: Balance,
 }
 
 impl Default for ExtBuilder {
@@ -67,6 +69,8 @@ impl Default for ExtBuilder {
 			],
 			pools: vec![],
 			pool_user_data: vec![],
+			mnt_rate: 10 * DOLLARS,
+			minted_pools: vec![KSM, DOT, ETH, BTC],
 		}
 	}
 }
@@ -143,6 +147,11 @@ impl ExtBuilder {
 
 	pub fn mnt_account_balance(mut self, balance: Balance) -> Self {
 		self.endowed_accounts.push((MntToken::get_account_id(), MNT, balance));
+		self
+	}
+
+	pub fn set_mnt_rate(mut self, rate: u128) -> Self {
+		self.mnt_rate = rate * DOLLARS;
 		self
 	}
 
@@ -377,6 +386,7 @@ impl ExtBuilder {
 				(KSM, Rate::saturating_from_integer(2)),
 				(ETH, Rate::saturating_from_integer(2)),
 				(BTC, Rate::saturating_from_integer(2)),
+				(MNT, Rate::saturating_from_integer(4)),
 			],
 			_phantom: PhantomData,
 		}
@@ -384,9 +394,9 @@ impl ExtBuilder {
 		.unwrap();
 
 		mnt_token::GenesisConfig::<Runtime> {
-			mnt_rate: 10 * DOLLARS,
+			mnt_rate: self.mnt_rate,
 			mnt_claim_threshold: 0, // disable by default
-			minted_pools: vec![DOT, ETH, KSM, BTC],
+			minted_pools: self.minted_pools,
 			_phantom: std::marker::PhantomData,
 		}
 		.assimilate_storage(&mut t)
@@ -492,6 +502,10 @@ fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 	Prices::unlock_price(origin_root(), currency_id)
 }
 
+fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> (Price, Price) {
+	<Runtime as MntTokenApi<Block, AccountId>>::get_mnt_borrow_supply_apy(pool_id)
+}
+
 pub fn run_to_block(n: u32) {
 	while System::block_number() < n {
 		MinterestProtocol::on_finalize(System::block_number());
@@ -499,3 +513,4 @@ pub fn run_to_block(n: u32) {
 		System::set_block_number(System::block_number() + 1);
 	}
 }
+

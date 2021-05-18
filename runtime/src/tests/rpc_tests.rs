@@ -781,3 +781,58 @@ fn get_unclaimed_mnt_balance_should_work() {
 			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
 		})
 }
+
+#[test]
+fn get_mnt_borrow_supply_apy_should_work() {
+	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
+		.pool_initial(BTC)
+		.set_mnt_rate(10)
+		.build()
+		.execute_with(|| {
+			// Prices: DOT[0] = 2 USD, ETH[1] = 2 USD, BTC[3] = 2 USD, MNT[4] = 4 USD
+			// Sum of all utilities: 50_000$
+			// Expected mnt_speed = pool_utilities / sum_of_all_utilities * MntRate
+			// 
+			//dot: 10/40 *10 =2.5
+			//eth: 20/40*10 = 5
+			//btc: 10/40*10= 2.5
+
+
+			// Expected borrow_apy = mnt_speed * mnt_price / (total_borrow * price):
+			// DOT: 2.5 * 4 / (20 * 2) = 0.25
+			// ETH: 5 * 4 / (20 * 2) = 0.5
+			// BTC: 2.5 * 4 / (20 * 2) = 0.25
+			// Expected supply_apy = mnt_speed * mnt_price / (total_supply * price):
+			// DOT: 2.5 * 4 / (50 * 2) = 0,1
+			// ETH: 5 * 4 / (50 * 2) = 0,2
+			// BTC: 2.5 * 4 / (50 * 2) = 0,1
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 10_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 15_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), BTC, 25_000 * DOLLARS));
+
+			LiquidityPools::enable_is_collateral_internal(&ALICE::get(), DOT);
+			LiquidityPools::enable_is_collateral_internal(&ALICE::get(), ETH);
+			LiquidityPools::enable_is_collateral_internal(&BOB::get(), BTC);
+			
+			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 5_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::borrow(bob(), ETH, 10_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::borrow(alice(), BTC, 5_000 * DOLLARS));
+
+			//MntToken::on_finalize(System::block_number());
+			run_to_block(5);
+
+
+			assert_ok!(MntToken::refresh_mnt_speeds());
+			assert_eq!(MntToken::mnt_speeds(DOT), 2_500_000_000_000_000_000);
+			assert_eq!(MntToken::mnt_speeds(ETH), 5_000_000_000_000_000_000);
+			assert_eq!(MntToken::mnt_speeds(BTC), 2_500_000_000_000_000_000);
+
+
+			assert_eq!(get_mnt_borrow_supply_apy(DOT), (Some(Price::saturating_from_rational(0,0008)), Some(Price::saturating_from_rational(0,0004))));
+			assert_eq!(get_mnt_borrow_supply_apy(ETH), (Some(Price::saturating_from_rational(0,0006)), Some(Price::saturating_from_rational(0,0004))));
+			assert_eq!(get_mnt_borrow_supply_apy(BTC), (Some(Price::saturating_from_rational(0,002)), Some(Price::saturating_from_rational(0,0004))));
+			
+		});
+}

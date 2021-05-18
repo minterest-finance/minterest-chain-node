@@ -145,5 +145,5 @@ pub trait MntManager<AccountId> {
 	) -> Result<Balance, DispatchError>;
 
 	//TODO: add description
-	fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> Result<(Option<Price>, Option<Price>), DispatchError>;
+	fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> Result<(Price, Price), DispatchError>;
 }
