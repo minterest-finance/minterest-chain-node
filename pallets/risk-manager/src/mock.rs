@@ -6,6 +6,7 @@ use frame_support::pallet_prelude::GenesisBuild;
 use frame_support::traits::Contains;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system::EnsureSignedBy;
+use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::{Pool, PoolUserData};
 pub use minterest_primitives::currency::CurrencyType::WrappedToken;
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
@@ -190,6 +191,11 @@ impl ExtBuilder {
 		));
 		self
 	}
+	pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts
+			.push((LiquidationPools::pools_account_id(), currency_id, balance));
+		self
+	}
 	pub fn liquidity_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((TestPools::pools_account_id(), currency_id, balance));
@@ -249,6 +255,45 @@ impl ExtBuilder {
 		.assimilate_storage::<Test>(&mut t)
 		.unwrap();
 
+		liquidation_pools::GenesisConfig::<Test> {
+			balancing_period: 30, // Blocks per 3 minutes.
+			liquidation_pools: vec![
+				(
+					DOT,
+					LiquidationPoolData {
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
+					},
+				),
+				(
+					ETH,
+					LiquidationPoolData {
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
+					},
+				),
+				(
+					BTC,
+					LiquidationPoolData {
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(8, 10),
+						max_ideal_balance: None,
+					},
+				),
+				(
+					KSM,
+					LiquidationPoolData {
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
+					},
+				),
+			],
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
 		controller::GenesisConfig::<Test> {
 			controller_dates: vec![
 				(

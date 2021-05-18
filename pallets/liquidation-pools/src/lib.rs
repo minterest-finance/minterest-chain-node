@@ -18,7 +18,7 @@ use frame_system::pallet_prelude::*;
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::DEXManager;
-use pallet_traits::{PoolsManager, PriceProvider};
+use pallet_traits::{LiquidationPoolsManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::{AccountIdConversion, CheckedDiv, CheckedMul, Zero};
@@ -53,6 +53,7 @@ pub struct LiquidationPoolData {
 }
 
 type BalanceResult = sp_std::result::Result<Balance, DispatchError>;
+type DispatchResult = sp_std::result::Result<(), DispatchError>;
 
 #[frame_support::pallet]
 pub mod module {
@@ -606,6 +607,25 @@ impl<T: Config> Pallet<T> {
 			Some(max_ideal_balance) => Ok(ideal_balance.min(max_ideal_balance)),
 			None => Ok(ideal_balance),
 		}
+	}
+}
+
+impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
+	fn pools_balancing() -> DispatchResult {
+		Self::collects_sales_list()?
+			.iter()
+			.try_for_each(|sale: &Sales| -> DispatchResult {
+				let (max_supply_amount, target_amount) =
+					Self::get_amounts(sale.supply_pool_id, sale.target_pool_id, sale.amount)?;
+				Self::submit_unsigned_tx(
+					sale.supply_pool_id,
+					sale.target_pool_id,
+					max_supply_amount,
+					target_amount,
+				);
+				Ok(())
+			})?;
+		Ok(())
 	}
 }
 

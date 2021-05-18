@@ -37,6 +37,10 @@ pub trait PoolsManager<AccountId> {
 	fn pool_exists(underlying_asset: &CurrencyId) -> bool;
 }
 
+pub trait LiquidationPoolsManager<AccountId>: PoolsManager<AccountId> {
+	fn pools_balancing() -> DispatchResult;
+}
+
 /// Provides liquidity pool functionality
 pub trait LiquidityPoolsManager {
 	/// Gets total amount borrowed from the pool.

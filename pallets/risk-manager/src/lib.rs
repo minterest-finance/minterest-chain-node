@@ -25,7 +25,7 @@ use frame_system::{
 };
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerAPI, MntManager, PoolsManager, PriceProvider};
+use pallet_traits::{ControllerAPI, LiquidationPoolsManager, MntManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::{CheckedDiv, CheckedMul, One};
@@ -95,7 +95,7 @@ pub mod module {
 		type UnsignedPriority: Get<TransactionPriority>;
 
 		/// The basic liquidity pools.
-		type LiquidationPoolsManager: PoolsManager<Self::AccountId>;
+		type LiquidationPoolsManager: LiquidationPoolsManager<Self::AccountId>;
 
 		/// Pools are responsible for holding funds for automatic liquidation.
 		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
@@ -357,11 +357,14 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
-	fn process_insolvent_loans() -> Result<(), OffchainErr> {
+	/// Checks insolvent loans and liquidate them if it required.
+	///
+	/// returns true if at least one loan was liquidated.
+	fn process_insolvent_loans() -> Result<bool, OffchainErr> {
 		let mut underlying_assets: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 		let underlying_assets_count = underlying_assets.len();
 		if underlying_assets_count == 0 {
-			return Ok(());
+			return Ok(false);
 		}
 
 		// acquire offchain worker lock
@@ -433,7 +436,7 @@ impl<T: Config> Pallet<T> {
 							loans_liquidated_count
 						);
 						StorageValueRef::persistent(&OFFCHAIN_WORKER_LATEST_POOL_INDEX).set(&(pos as u32));
-						return Ok(());
+						return Ok(loans_liquidated_count > 0);
 					}
 				}
 			}
@@ -449,7 +452,7 @@ impl<T: Config> Pallet<T> {
 			working_time.millis()
 		);
 
-		Ok(())
+		Ok(loans_liquidated_count > 0)
 	}
 
 	fn _offchain_worker() -> Result<(), OffchainErr> {
@@ -458,7 +461,10 @@ impl<T: Config> Pallet<T> {
 			return Err(OffchainErr::NotValidator);
 		}
 
-		Self::process_insolvent_loans()?;
+		let loans_was_liquidated = Self::process_insolvent_loans()?;
+		if loans_was_liquidated {
+			T::LiquidationPoolsManager::pools_balancing().map_err(|_| OffchainErr::PoolsBalancingError)?;
+		}
 		Ok(())
 	}
 

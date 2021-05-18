@@ -91,6 +91,7 @@ pub enum OffchainErr {
 	OffchainLock,
 	NotValidator,
 	CheckFail,
+	PoolsBalancingError,
 }
 
 impl sp_std::fmt::Debug for OffchainErr {
@@ -99,6 +100,7 @@ impl sp_std::fmt::Debug for OffchainErr {
 			OffchainErr::OffchainLock => write!(fmt, "Failed to get or extend lock"),
 			OffchainErr::NotValidator => write!(fmt, "Not validator"),
 			OffchainErr::CheckFail => write!(fmt, "Check fail"),
+			OffchainErr::PoolsBalancingError => write!(fmt, "Pools balancing error"),
 		}
 	}
 }

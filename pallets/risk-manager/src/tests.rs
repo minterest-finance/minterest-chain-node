@@ -11,6 +11,7 @@ use sp_core::offchain::{
 	Externalities, OffchainExt, StorageKind, TransactionPoolExt,
 };
 
+use liquidation_pools;
 use std::thread;
 
 #[test]
@@ -21,6 +22,8 @@ fn test_offchain_worker_lock_expired() {
 		.user_balance(ALICE, BTC, 100_000 * DOLLARS)
 		.liquidity_pool_balance(BTC, 15_000 * DOLLARS)
 		.liquidity_pool_balance(ETH, 15_000 * DOLLARS)
+		.liquidation_pool_balance(ETH, 10_000 * DOLLARS)
+		.liquidation_pool_balance(BTC, 10_000 * DOLLARS)
 		.build();
 
 	let (offchain, _state) = TestOffchainExt::new();
@@ -62,15 +65,26 @@ fn test_offchain_worker_lock_expired() {
 
 		assert_ok!(TestRiskManager::_offchain_worker());
 
-		assert_eq!(trans_pool_state.read().transactions.len(), 1);
+		// There are two transactions. One of them is liquidation of loan, another one is balancing of pool
+		assert_eq!(trans_pool_state.read().transactions.len(), 2);
+
+		// It check is balancing pool extrinsic was called.
 		let transaction = trans_pool_state.write().transactions.pop().unwrap();
 		let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
+		match ex.call {
+			crate::mock::Call::LiquidationPools(liquidation_pools::Call::balance_liquidation_pools(..)) => {}
+			e => panic!("Unexpected call: {:?}", e),
+		}
 
+		// It check is liquidation extrinsic was called.
+		let transaction = trans_pool_state.write().transactions.pop().unwrap();
+		let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
 		// Called extrinsic input params
 		let (who, pool_id) = match ex.call {
 			crate::mock::Call::TestRiskManager(crate::Call::liquidate(who, pool_id, ..)) => (who, pool_id),
 			e => panic!("Unexpected call: {:?}", e),
 		};
+
 		assert_eq!(who, ALICE);
 		assert_eq!(pool_id, ETH);
 		// Get saved index from database
