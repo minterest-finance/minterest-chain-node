@@ -3,12 +3,196 @@
 use super::*;
 use mock::{Event, *};
 
+use controller::{ControllerData, PauseKeeper};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
+use liquidation_pools::LiquidationPoolData;
+use liquidity_pools::Pool;
+use minterest_model::MinterestModelData;
 use minterest_primitives::Rate;
 use sp_runtime::FixedPointNumber;
 
 fn dollars<T: Into<u128>>(d: T) -> Balance {
 	DOLLARS.saturating_mul(d.into())
+}
+
+#[test]
+fn create_pool_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		// The dispatch origin of this call must be Administrator.
+		assert_noop!(
+			TestProtocol::create_pool(
+				bob(),
+				DOT,
+				Rate::zero(),
+				Rate::zero(),
+				Rate::zero(),
+				Rate::zero(),
+				Rate::zero(),
+				Rate::zero(),
+				Rate::zero(),
+				Balance::zero(),
+				Rate::zero(),
+				Rate::zero(),
+			),
+			BadOrigin,
+		);
+
+		assert_ok!(TestProtocol::create_pool(
+			alice(),
+			DOT,
+			Rate::saturating_from_rational(2, 3),
+			Rate::saturating_from_rational(1, 3),
+			Rate::saturating_from_rational(2, 4),
+			Rate::saturating_from_rational(1, 2),
+			Rate::saturating_from_rational(1, 10),
+			Rate::saturating_from_rational(5, 1000),
+			Rate::saturating_from_rational(9, 10),
+			100000,
+			Rate::saturating_from_rational(5, 100),
+			Rate::saturating_from_rational(2, 10),
+		));
+		let expected_event = Event::minterest_protocol(crate::Event::PoolCreated(DOT));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+
+		assert_eq!(
+			TestPools::get_pool_data(DOT),
+			Pool {
+				total_borrowed: Balance::zero(),
+				borrow_index: Rate::one(),
+				total_protocol_interest: Balance::zero(),
+			},
+		);
+		assert_eq!(
+			TestMinterestModel::minterest_model_params(DOT),
+			MinterestModelData {
+				kink: Rate::saturating_from_rational(2, 3),
+				base_rate_per_block: Rate::saturating_from_rational(1, 3),
+				multiplier_per_block: Rate::saturating_from_rational(2, 4),
+				jump_multiplier_per_block: Rate::saturating_from_rational(1, 2),
+			},
+		);
+		assert_eq!(
+			Controller::controller_dates(DOT),
+			ControllerData {
+				last_interest_accrued_block: 1,
+				protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+				max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+				collateral_factor: Rate::saturating_from_rational(9, 10),
+				borrow_cap: None,
+				protocol_interest_threshold: 100000,
+			},
+		);
+		assert_eq!(
+			Controller::pause_keepers(DOT),
+			PauseKeeper {
+				deposit_paused: false,
+				redeem_paused: false,
+				borrow_paused: false,
+				repay_paused: false,
+				transfer_paused: false,
+			},
+		);
+		assert_eq!(
+			TestLiquidationPools::liquidation_pools_data(DOT),
+			LiquidationPoolData {
+				deviation_threshold: Rate::saturating_from_rational(5, 100),
+				balance_ratio: Rate::saturating_from_rational(2, 10),
+				max_ideal_balance: None,
+			},
+		);
+
+		// Unable to create pool twice
+		assert_noop!(
+			TestProtocol::create_pool(
+				alice(),
+				DOT,
+				Rate::saturating_from_rational(2, 3),
+				Rate::saturating_from_rational(1, 3),
+				Rate::saturating_from_rational(2, 4),
+				Rate::saturating_from_rational(1, 2),
+				Rate::saturating_from_rational(1, 10),
+				Rate::saturating_from_rational(5, 1000),
+				Rate::saturating_from_rational(9, 10),
+				100000,
+				Rate::saturating_from_rational(5, 100),
+				Rate::saturating_from_rational(2, 10),
+			),
+			liquidity_pools::Error::<Test>::PoolAlreadyCreated,
+		);
+	});
+}
+
+#[test]
+fn protocol_operations_not_working_for_nonexisting_pool() {
+	ExtBuilder::default()
+		.pool_with_params(
+			DOT,
+			Balance::zero(),
+			Rate::saturating_from_rational(1, 1),
+			TEN_THOUSAND_DOLLARS,
+		)
+		.build()
+		.execute_with(|| {
+			assert_noop!(
+				TestProtocol::deposit_underlying(alice(), ETH, dollars(60_u128)),
+				liquidity_pools::Error::<Test>::PoolNotFound
+			);
+
+			assert_noop!(
+				TestProtocol::redeem(alice(), ETH),
+				liquidity_pools::Error::<Test>::PoolNotFound
+			);
+
+			assert_noop!(
+				TestProtocol::redeem_underlying(alice(), ETH, dollars(60_u128)),
+				liquidity_pools::Error::<Test>::PoolNotFound
+			);
+
+			assert_noop!(
+				TestProtocol::redeem_wrapped(alice(), METH, dollars(60_u128)),
+				liquidity_pools::Error::<Test>::PoolNotFound
+			);
+
+			assert_noop!(
+				TestProtocol::borrow(alice(), ETH, dollars(60_u128)),
+				liquidity_pools::Error::<Test>::PoolNotFound
+			);
+
+			assert_noop!(
+				TestProtocol::repay(alice(), ETH, Balance::zero()),
+				liquidity_pools::Error::<Test>::PoolNotFound
+			);
+
+			assert_noop!(
+				TestProtocol::repay_all(alice(), ETH),
+				liquidity_pools::Error::<Test>::PoolNotFound
+			);
+
+			assert_noop!(
+				TestProtocol::repay_on_behalf(bob(), ETH, ALICE, dollars(10_u128)),
+				liquidity_pools::Error::<Test>::PoolNotFound
+			);
+
+			assert_noop!(
+				TestProtocol::enable_is_collateral(alice(), ETH),
+				liquidity_pools::Error::<Test>::PoolNotFound
+			);
+
+			assert_noop!(
+				TestProtocol::disable_is_collateral(alice(), ETH),
+				liquidity_pools::Error::<Test>::PoolNotFound
+			);
+
+			assert_noop!(
+				TestProtocol::transfer_wrapped(alice(), BOB, METH, dollars(10_u128)),
+				liquidity_pools::Error::<Test>::PoolNotFound
+			);
+
+			assert_noop!(
+				TestProtocol::claim_mnt(alice(), vec![DOT, ETH]),
+				liquidity_pools::Error::<Test>::PoolNotFound
+			);
+		});
 }
 
 #[test]

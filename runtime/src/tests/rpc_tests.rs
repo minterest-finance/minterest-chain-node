@@ -676,9 +676,11 @@ fn get_all_locked_prices_rpc_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(set_oracle_price_for_all_pools(10_000));
 
-		vec![DOT, KSM, BTC, ETH].into_iter().for_each(|pool_id| {
-			assert_ok!(Prices::lock_price(origin_root(), pool_id));
-		});
+		CurrencyId::get_enabled_tokens_in_protocol(minterest_primitives::currency::CurrencyType::UnderlyingAsset)
+			.into_iter()
+			.for_each(|pool_id| {
+				assert_ok!(Prices::lock_price(origin_root(), pool_id));
+			});
 
 		// Check that locked prices are returned
 		// By default all price set to 10_000
@@ -694,7 +696,7 @@ fn get_all_locked_prices_rpc_should_work() {
 				DOT => {
 					assert_eq!(price, None);
 				}
-				ETH | BTC | KSM => {
+				ETH | BTC | KSM | TMP => {
 					assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
 				}
 				_ => panic!("Unexpected token!"),

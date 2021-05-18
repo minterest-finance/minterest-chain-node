@@ -160,7 +160,7 @@ pub mod module {
 	/// pool.
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_speeds)]
-	pub(crate) type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Balance, ValueQuery>;
+	pub type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Balance, ValueQuery>;
 
 	/// Index + block_number need for generating and distributing new MNT tokens for pool
 	#[pallet::storage]

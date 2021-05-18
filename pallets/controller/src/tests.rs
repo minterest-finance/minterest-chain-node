@@ -7,6 +7,46 @@ use frame_support::{assert_err, assert_noop, assert_ok};
 use sp_runtime::DispatchError::BadOrigin;
 
 #[test]
+fn protocol_operations_not_working_for_nonexisting_pool() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_noop!(
+			Controller::pause_operation(alice(), ETH, Operation::Deposit),
+			Error::<Runtime>::PoolNotFound
+		);
+
+		assert_noop!(
+			Controller::resume_operation(alice(), ETH, Operation::Deposit),
+			Error::<Runtime>::PoolNotFound
+		);
+
+		assert_noop!(
+			Controller::set_protocol_interest_factor(alice(), ETH, Rate::one()),
+			Error::<Runtime>::PoolNotFound
+		);
+
+		assert_noop!(
+			Controller::set_max_borrow_rate(alice(), ETH, Rate::one()),
+			Error::<Runtime>::PoolNotFound
+		);
+
+		assert_noop!(
+			Controller::set_collateral_factor(alice(), ETH, Rate::one()),
+			Error::<Runtime>::PoolNotFound
+		);
+
+		assert_noop!(
+			Controller::set_borrow_cap(alice(), ETH, Some(100u128)),
+			Error::<Runtime>::PoolNotFound
+		);
+
+		assert_noop!(
+			Controller::set_protocol_interest_threshold(alice(), ETH, 100u128),
+			Error::<Runtime>::PoolNotFound
+		);
+	});
+}
+
+#[test]
 fn accrue_interest_should_work() {
 	ExtBuilder::default()
 		.pool_total_borrowed(DOT, dollars(80_u128))
@@ -309,6 +349,8 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 				Controller::get_liquidity_pool_exchange_rate(DOT),
 				Some(Rate::saturating_from_rational(32, 10))
 			);
+
+			assert_eq!(Controller::get_liquidity_pool_exchange_rate(ETH), None);
 		});
 }
 
@@ -326,6 +368,8 @@ fn get_liquidity_pool_borrow_and_supply_rates_less_than_kink() {
 				Controller::get_liquidity_pool_borrow_and_supply_rates(DOT),
 				Some((Rate::from_inner(6750000000), Rate::from_inner(4556250000)))
 			);
+
+			assert_eq!(Controller::get_liquidity_pool_borrow_and_supply_rates(ETH), None);
 		});
 }
 

@@ -14,6 +14,8 @@ pub const BTC: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::BTC);
 pub const MBTC: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MBTC);
 pub const ETH: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::ETH);
 pub const METH: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::METH);
+pub const TMP: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::TMP);
+pub const MTMP: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MTMP);
 
 #[macro_export]
 macro_rules! mock_impl_system_config {

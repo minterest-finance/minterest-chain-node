@@ -36,7 +36,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		TestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},

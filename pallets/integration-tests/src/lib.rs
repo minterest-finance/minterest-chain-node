@@ -152,6 +152,7 @@ mod tests {
 		endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 		pools: Vec<(CurrencyId, Pool)>,
 		pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
+		minted_pools: Vec<CurrencyId>,
 	}
 
 	impl Default for ExtBuilder {
@@ -160,11 +161,17 @@ mod tests {
 				endowed_accounts: vec![],
 				pools: vec![],
 				pool_user_data: vec![],
+				minted_pools: vec![],
 			}
 		}
 	}
 
 	impl ExtBuilder {
+		pub fn mnt_enabled_pools(mut self, pools: Vec<CurrencyId>) -> Self {
+			self.minted_pools = pools;
+			self
+		}
+
 		pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
 			self.endowed_accounts.push((user, currency_id, balance));
 			self
@@ -380,7 +387,7 @@ mod tests {
 			mnt_token::GenesisConfig::<Test> {
 				mnt_rate: 100_000_000_000_000_000, // 0.1
 				mnt_claim_threshold: 100 * DOLLARS,
-				minted_pools: vec![DOT, ETH],
+				minted_pools: self.minted_pools,
 				_phantom: Default::default(),
 			}
 			.assimilate_storage(&mut t)

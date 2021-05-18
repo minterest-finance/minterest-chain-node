@@ -57,9 +57,14 @@ mod tests {
 			.user_balance(BOB, DOT, ONE_HUNDRED)
 			.user_balance(BOB, ETH, ONE_HUNDRED)
 			.user_balance(BOB, BTC, ONE_HUNDRED)
+			.mnt_enabled_pools(vec![DOT, ETH])
 			.mnt_account_balance(ONE_HUNDRED)
 			.build()
 			.execute_with(|| {
+				assert!(mnt_token::MntSpeeds::<Test>::contains_key(DOT));
+				assert!(mnt_token::MntSpeeds::<Test>::contains_key(ETH));
+				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(BTC));
+				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(KSM));
 				// Set initial state of pools for distribution MNT tokens.
 				vec![DOT, ETH, BTC].into_iter().for_each(|pool_id| {
 					assert_ok!(MinterestProtocol::deposit_underlying(admin(), pool_id, ONE_HUNDRED));
@@ -172,6 +177,114 @@ mod tests {
 			})
 	}
 
+	// This scenario works with two users and three pools.
+	// The test checks the parameters of the MNT token when new pool is created.
+	// Initial parameters: 	DOT + ETH - enabled in mnt minting;
+	// 						mnt_rate = 0.1 MNT per block;
+	// 1. Alice deposit() 100_000 DOT;
+	// 2. Alice borrow() 50_000 ETH;
+	// 3. Init BTC pool;
+	// 4. Alice borrow() 30_000 BTC;
+	// 5. Enable MNT distribution for BTC pool;
+	// 6. Alice repay_all() ETH;
+	// 7. Alice claim() [DOT, ETH, BTC];
+	#[test]
+	fn test_mnt_token_scenario_n_2() {
+		ExtBuilder::default()
+			.pool_initial(DOT)
+			.pool_initial(ETH)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ADMIN, ETH, ONE_HUNDRED)
+			.user_balance(ADMIN, BTC, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, ETH, ONE_HUNDRED)
+			.user_balance(ALICE, BTC, ONE_HUNDRED)
+			.user_balance(BOB, DOT, ONE_HUNDRED)
+			.user_balance(BOB, ETH, ONE_HUNDRED)
+			.user_balance(BOB, BTC, ONE_HUNDRED)
+			.mnt_enabled_pools(vec![DOT, ETH])
+			.mnt_account_balance(ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				assert!(mnt_token::MntSpeeds::<Test>::contains_key(DOT));
+				assert!(mnt_token::MntSpeeds::<Test>::contains_key(ETH));
+				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(BTC));
+				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(KSM));
+				// Set initial state of pools for distribution MNT tokens.
+				vec![DOT, ETH].into_iter().for_each(|pool_id| {
+					assert_ok!(MinterestProtocol::deposit_underlying(admin(), pool_id, ONE_HUNDRED));
+					assert_ok!(MinterestProtocol::enable_is_collateral(admin(), pool_id));
+					assert_ok!(MinterestProtocol::borrow(admin(), pool_id, 50_000 * DOLLARS));
+				});
+
+				set_block_number_and_refresh_speeds(10);
+
+				// ALice deposits DOT and enables her DOT pool as a collateral.
+				assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, ONE_HUNDRED));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+
+				set_block_number_and_refresh_speeds(20);
+
+				assert_ok!(MinterestProtocol::borrow(alice(), ETH, 50_000 * DOLLARS));
+
+				// Accrued MNT tokens are equal to zero, since distribution occurs only at
+				// the moment of repeated user interaction with the protocol
+				// (deposit, redeem, borrow, repay, transfer, claim).
+				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
+				assert_eq!(Tokens::free_balance(MNT, &ALICE), Balance::zero());
+
+				set_block_number_and_refresh_speeds(30);
+
+				// There are borrow in all pool, but BTC pool excluded from MNT distribution.
+				test_mnt_speeds(33_333_333_283_333_335, 66_666_666_716_666_664, 0);
+
+				// Init BTC pool
+				assert_ok!(MinterestProtocol::create_pool(
+					admin(),
+					BTC,
+					Rate::saturating_from_rational(8, 10),
+					Rate::zero(),
+					Rate::saturating_from_rational(9, 1_000_000_000),
+					Rate::saturating_from_rational(207, 1_000_000_000),
+					Rate::saturating_from_rational(1, 10),
+					Rate::saturating_from_rational(5, 1000),
+					Rate::saturating_from_rational(9, 10),
+					PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+					Rate::saturating_from_rational(1, 10),
+					Rate::saturating_from_rational(2, 10),
+				));
+				assert_ok!(MinterestProtocol::deposit_underlying(admin(), BTC, ONE_HUNDRED));
+				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), BTC));
+				assert_ok!(MinterestProtocol::borrow(admin(), BTC, 50_000 * DOLLARS));
+
+				assert_ok!(MinterestProtocol::borrow(alice(), BTC, 30_000 * DOLLARS));
+
+				set_block_number_and_refresh_speeds(70);
+
+				// The BTC pool is excluded from the MNT token distribution, so its speed is zero.
+				test_mnt_speeds(33_333_333_283_333_335, 66_666_666_716_666_664, 0);
+				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
+
+				assert_ok!(TestMntToken::enable_mnt_minting(admin(), BTC));
+				test_mnt_speeds(21_739_130_719_754_245, 43_478_261_537_334_575, 34_782_607_742_911_179);
+				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
+
+				assert_ok!(MinterestProtocol::repay_all(alice(), ETH));
+
+				set_block_number_and_refresh_speeds(80);
+
+				test_mnt_speeds(27_777_711_264_044_877, 27_777_952_513_478_936, 44_444_336_222_476_186);
+				assert_eq!(TestMntToken::mnt_accrued(ALICE), 1_583_333_261_583_256_134);
+				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
+
+				// Alice шы able to claim rewards from all three pools
+				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT, ETH, BTC]));
+				assert_eq!(Currencies::free_balance(MNT, &ALICE), 2_989_130_353_325_167_984);
+			})
+	}
+
 	// Test MNT distribution behaviour when users are using transfer_wrapped
 	#[test]
 	fn mnt_token_supplier_distribution_when_users_transferring_tokens() {
@@ -182,6 +295,7 @@ mod tests {
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
 			.user_balance(BOB, DOT, ONE_HUNDRED)
 			.user_balance(CAROL, DOT, 2 * ONE_HUNDRED)
+			.mnt_enabled_pools(vec![DOT, ETH])
 			.mnt_account_balance(ONE_HUNDRED)
 			.build()
 			.execute_with(|| {

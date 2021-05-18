@@ -444,11 +444,17 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 	/// Gets the exchange rate between a mToken and the underlying asset.
 	pub fn get_liquidity_pool_exchange_rate(pool_id: CurrencyId) -> Option<Rate> {
+		if !<LiquidityPools<T>>::pool_exists(&pool_id) {
+			return None;
+		}
 		<LiquidityPools<T>>::get_exchange_rate(pool_id).ok()
 	}
 
 	/// Gets borrow interest rate and supply interest rate.
 	pub fn get_liquidity_pool_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
+		if !<LiquidityPools<T>>::pool_exists(&pool_id) {
+			return None;
+		}
 		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
 		let pool_data = <LiquidityPools<T>>::get_pool_data(pool_id);
 		let protocol_interest_factor = Self::controller_dates(pool_id).protocol_interest_factor;
@@ -586,6 +592,10 @@ impl<T: Config> Pallet<T> {
 	/// - `who`: the AccountId whose balance should be calculated.
 	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
 	pub fn get_user_borrow_per_asset(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
+		ensure!(
+			<LiquidityPools<T>>::pool_exists(&underlying_asset_id),
+			Error::<T>::PoolNotFound
+		);
 		ensure!(
 			underlying_asset_id.is_supported_underlying_asset(),
 			Error::<T>::NotValidUnderlyingAssetId
