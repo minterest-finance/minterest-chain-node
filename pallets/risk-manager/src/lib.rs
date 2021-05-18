@@ -388,6 +388,7 @@ impl<T: Config> Pallet<T> {
 		// Start iteration from the pool where we finished. Otherwise, take first pool.
 		underlying_assets.rotate_left(latest_pool_index);
 		let mut loans_checked_count = 0;
+		let mut loans_liquidated_count = 0;
 		let working_start_time = sp_io::offchain::timestamp();
 
 		for (pos, currency_id) in underlying_assets.iter().enumerate() {
@@ -411,7 +412,8 @@ impl<T: Config> Pallet<T> {
 					)
 					.map_err(|_| OffchainErr::CheckFail)?;
 					if !shortfall.is_zero() {
-						Self::submit_unsigned_liquidation(member, *currency_id)
+						Self::submit_unsigned_liquidation(member, *currency_id);
+						loans_liquidated_count += 1;
 					}
 				} else {
 					//TODO It is place for handle the case when collateral = 0, borrow > 0
@@ -424,8 +426,11 @@ impl<T: Config> Pallet<T> {
 					Ok(_) => {}
 					Err(_) => {
 						debug::info!(
-							"Risk Manager offchain worker hasn't(!) processed all pools. MAX duration time is expired. Loans checked count: {:?}",
-							loans_checked_count
+							"Risk Manager offchain worker hasn't(!) processed all pools. \
+							 MAX duration time is expired. Loans checked count: {:?}, \
+							 loans liquidated count: {:?}",
+							loans_checked_count,
+							loans_liquidated_count
 						);
 						StorageValueRef::persistent(&OFFCHAIN_WORKER_LATEST_POOL_INDEX).set(&(pos as u32));
 						return Ok(());
@@ -437,8 +442,10 @@ impl<T: Config> Pallet<T> {
 
 		let working_time = sp_io::offchain::timestamp().diff(&working_start_time);
 		debug::info!(
-			"Risk Manager offchain worker has processed all pools. Loans checked count {:?}, execution time(ms): {:?}",
+			"Risk Manager offchain worker has processed all pools. Loans checked count {:?}, \
+			loans liquidated count: {:?}, execution time(ms): {:?}",
 			loans_checked_count,
+			loans_liquidated_count,
 			working_time.millis()
 		);
 
