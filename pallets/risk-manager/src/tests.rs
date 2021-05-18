@@ -8,7 +8,7 @@ use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 
 use sp_core::offchain::{
 	testing::{TestOffchainExt, TestTransactionPoolExt},
-	Externalities, OffchainExt, TransactionPoolExt,
+	Externalities, OffchainExt, StorageKind, TransactionPoolExt,
 };
 
 use std::thread;
@@ -25,6 +25,7 @@ fn test_offchain_worker_lock_expired() {
 
 	let (offchain, _state) = TestOffchainExt::new();
 	let mut offchain_cl = offchain.clone();
+	let mut offchain_cl2 = offchain.clone();
 
 	let (pool, trans_pool_state) = TestTransactionPoolExt::new();
 	ext.register_extension(OffchainExt::new(offchain));
@@ -59,8 +60,7 @@ fn test_offchain_worker_lock_expired() {
 		// and loan shoud be liquidated
 		Prices::unlock_price(admin(), BTC).unwrap();
 
-		// Temprorary. offchain worker returns error because lock time is expired
-		assert!(TestRiskManager::_offchain_worker().is_err());
+		assert_ok!(TestRiskManager::_offchain_worker());
 
 		assert_eq!(trans_pool_state.read().transactions.len(), 1);
 		let transaction = trans_pool_state.write().transactions.pop().unwrap();
@@ -73,6 +73,17 @@ fn test_offchain_worker_lock_expired() {
 		};
 		assert_eq!(who, ALICE);
 		assert_eq!(pool_id, ETH);
+		// Get saved index from database
+		let le_index_result = offchain_cl2
+			.local_storage_get(StorageKind::PERSISTENT, OFFCHAIN_WORKER_LATEST_POOL_INDEX)
+			.unwrap();
+		// If you run test in processor used big-endian byte order(???), this assertion will fail, it's ok.
+		// If sequence that produced by CurrencyId::get_enabled_tokens_in_protocol was changed, this
+		// assertion can fail.
+		assert_eq!(le_index_result[0], 3);
+
+		// Shouldn't fail
+		assert_ok!(TestRiskManager::_offchain_worker());
 	});
 }
 
