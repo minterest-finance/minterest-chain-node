@@ -1,6 +1,6 @@
 use crate::{
 	AccountId, Balance, Currencies, CurrencyId, MinterestProtocol, MntTokenModuleId, Origin, Runtime, Vec,
-	WhitelistCouncilMembership, BTC, DOLLARS, DOT, ETH, KSM, MNT,
+	WhitelistCouncilMembership, DOLLARS, MNT,
 };
 
 use frame_benchmarking::account;
@@ -9,7 +9,6 @@ use frame_system::pallet_prelude::OriginFor;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{AccountIdConversion, StaticLookup};
-use sp_runtime::FixedPointNumber;
 
 pub const SEED: u32 = 0;
 

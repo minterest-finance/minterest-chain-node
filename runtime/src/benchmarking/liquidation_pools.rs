@@ -12,9 +12,6 @@ runtime_benchmarks! {
 
 	_ {}
 
-	set_balancing_period {}: _(RawOrigin::Root, 100)
-	verify { assert_eq!(LiquidationPools::balancing_period(), 100) }
-
 	set_deviation_threshold {}: _(RawOrigin::Root, DOT, 10u128.pow(18))
 	verify { assert_eq!(LiquidationPools::liquidation_pools_data(DOT).deviation_threshold, Rate::one()) }
 
@@ -48,13 +45,6 @@ mod tests {
 	use super::*;
 	use crate::benchmarking::utils::tests::test_externalities;
 	use frame_support::assert_ok;
-
-	#[test]
-	fn test_set_balancing_period() {
-		test_externalities().execute_with(|| {
-			assert_ok!(test_benchmark_set_balancing_period());
-		})
-	}
 
 	#[test]
 	fn test_set_deviation_threshold() {

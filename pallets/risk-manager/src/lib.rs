@@ -16,26 +16,24 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-use frame_support::{debug, ensure, traits::Get};
-use frame_support::{pallet_prelude::*, transactional};
-use frame_system::pallet_prelude::*;
+use frame_support::{debug, ensure, pallet_prelude::*, traits::Get, transactional};
 use frame_system::{
 	ensure_none,
 	offchain::{SendTransactionTypes, SubmitTransaction},
+	pallet_prelude::*,
 };
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{ControllerAPI, LiquidationPoolsManager, MntManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::traits::{CheckedDiv, CheckedMul, One};
 use sp_runtime::{
 	offchain::{
 		storage::StorageValueRef,
 		storage_lock::{StorageLock, Time},
 		Duration,
 	},
-	traits::{StaticLookup, ValidateUnsigned, Zero},
+	traits::{CheckedDiv, CheckedMul, One, StaticLookup, ValidateUnsigned, Zero},
 	transaction_validity::{
 		InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity, ValidTransaction,
 	},
@@ -428,6 +426,7 @@ impl<T: Config> Pallet<T> {
 				match guard.extend_lock() {
 					Ok(_) => {}
 					Err(_) => {
+						// The lock's deadline is happened
 						debug::info!(
 							"Risk Manager offchain worker hasn't(!) processed all pools. \
 							 MAX duration time is expired. Loans checked count: {:?}, \
@@ -461,8 +460,8 @@ impl<T: Config> Pallet<T> {
 			return Err(OffchainErr::NotValidator);
 		}
 
-		let loans_was_liquidated = Self::process_insolvent_loans()?;
-		if loans_was_liquidated {
+		let was_liquidated_loans = Self::process_insolvent_loans()?;
+		if was_liquidated_loans {
 			T::LiquidationPoolsManager::pools_balancing().map_err(|_| OffchainErr::PoolsBalancingError)?;
 		}
 		Ok(())

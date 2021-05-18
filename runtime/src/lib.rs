@@ -510,7 +510,6 @@ impl liquidation_pools::Config for Runtime {
 	type UnsignedPriority = LiquidityPoolsPriority;
 	type PriceSource = Prices;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
-	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type LiquidityPoolsManager = LiquidityPools;
 	type Dex = Dex;

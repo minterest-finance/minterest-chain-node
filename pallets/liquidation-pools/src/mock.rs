@@ -68,7 +68,6 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 
 parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
-	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value();
 }
 
@@ -82,7 +81,6 @@ impl Config for Test {
 	type UnsignedPriority = LiquidityPoolsPriority;
 	type PriceSource = MockPriceSource;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
-	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
 	type Dex = dex::Module<Test>;
@@ -114,7 +112,6 @@ pub fn alice() -> Origin {
 pub struct ExternalityBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
-	balancing_period: BlockNumber,
 }
 
 impl Default for ExternalityBuilder {
@@ -129,7 +126,6 @@ impl Default for ExternalityBuilder {
 					max_ideal_balance: None,
 				},
 			)],
-			balancing_period: 600, // Blocks per 10 minutes
 		}
 	}
 }
@@ -157,7 +153,7 @@ impl ExternalityBuilder {
 
 		liquidation_pools::GenesisConfig::<Test> {
 			liquidation_pools: self.liquidation_pools,
-			balancing_period: self.balancing_period,
+			phantom: PhantomData,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

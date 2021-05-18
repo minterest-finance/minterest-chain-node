@@ -2,16 +2,13 @@
 use super::*;
 use crate as risk_manager;
 use controller::{ControllerData, PauseKeeper};
-use frame_support::pallet_prelude::GenesisBuild;
-use frame_support::traits::Contains;
-use frame_support::{ord_parameter_types, parameter_types};
+use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, traits::Contains};
 use frame_system::EnsureSignedBy;
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::{Pool, PoolUserData};
 pub use minterest_primitives::currency::CurrencyType::WrappedToken;
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
-use orml_traits::parameter_type_with_key;
-use orml_traits::{DataFeeder, DataProvider};
+use orml_traits::{parameter_type_with_key, DataFeeder, DataProvider};
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
@@ -159,10 +156,7 @@ pub const ALICE: AccountId = 1;
 pub fn alice() -> Origin {
 	Origin::signed(ALICE)
 }
-// pub const BOB: AccountId = 2;
-// pub fn bob() -> Origin {
-// 	Origin::signed(BOB)
-// }
+
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
@@ -256,7 +250,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		liquidation_pools::GenesisConfig::<Test> {
-			balancing_period: 30, // Blocks per 3 minutes.
+			phantom: PhantomData,
 			liquidation_pools: vec![
 				(
 					DOT,

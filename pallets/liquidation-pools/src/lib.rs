@@ -3,9 +3,6 @@
 //! ## Overview
 //!
 //! Liquidation Pools are responsible for holding funds for automatic liquidation.
-//! This module has offchain worker implemented which is running periodically (interval is
-//! configured in BalancingPeriod).
-//! Offchain worker keeps pools in balance to avoid lack of funds for liquidation.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
@@ -13,21 +10,25 @@
 
 use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, traits::Get, transactional};
-use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
-use frame_system::pallet_prelude::*;
-use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
+use frame_system::{
+	offchain::{SendTransactionTypes, SubmitTransaction},
+	pallet_prelude::*,
+};
+use minterest_primitives::{arithmetic::sum_with_mult_result, Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::DEXManager;
-use pallet_traits::{LiquidationPoolsManager, PoolsManager, PriceProvider};
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-use sp_runtime::traits::{AccountIdConversion, CheckedDiv, CheckedMul, Zero};
-use sp_runtime::{transaction_validity::TransactionPriority, FixedPointNumber, ModuleId, RuntimeDebug};
-use sp_std::prelude::*;
+use pallet_traits::{DEXManager, LiquidationPoolsManager, PoolsManager, PriceProvider};
+use sp_runtime::{
+	traits::{AccountIdConversion, CheckedDiv, CheckedMul, Zero},
+	transaction_validity::TransactionPriority,
+	FixedPointNumber, ModuleId, RuntimeDebug,
+};
 
-use minterest_primitives::arithmetic::sum_with_mult_result;
+use sp_std::prelude::*;
 pub use module::*;
 use sp_std::cmp::Ordering;
+
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 mod mock;
@@ -77,10 +78,6 @@ pub mod module {
 		/// The Liquidation Pool's module id, keep all assets in Pools.
 		type LiquidationPoolsModuleId: Get<ModuleId>;
 
-		#[pallet::constant]
-		/// The Liquidation Pool's account id, keep all assets in Pools.
-		type LiquidationPoolAccountId: Get<Self::AccountId>;
-
 		/// The price source of currencies
 		type PriceSource: PriceProvider<CurrencyId>;
 
@@ -127,8 +124,6 @@ pub mod module {
 	pub enum Event<T: Config> {
 		/// Liquidation pools are balanced
 		LiquidationPoolsBalanced,
-		///  Balancing period has been successfully changed: \[new_period\]
-		BalancingPeriodChanged(T::BlockNumber),
 		///  Deviation Threshold has been successfully changed: \[pool_id, new_threshold_value\]
 		DeviationThresholdChanged(CurrencyId, Rate),
 		///  Balance ratio has been successfully changed: \[pool_id, new_threshold_value\]
@@ -140,11 +135,6 @@ pub mod module {
 		TransferToLiquidationPool(CurrencyId, Balance, T::AccountId),
 	}
 
-	/// Balancing pool frequency.
-	#[pallet::storage]
-	#[pallet::getter(fn balancing_period)]
-	pub(crate) type BalancingPeriod<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
-
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_pools_data)]
 	pub(crate) type LiquidationPoolsData<T: Config> =
@@ -152,17 +142,17 @@ pub mod module {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub balancing_period: T::BlockNumber,
 		#[allow(clippy::type_complexity)]
 		pub liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
+		pub phantom: PhantomData<T>,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			GenesisConfig {
-				balancing_period: Default::default(),
 				liquidation_pools: vec![],
+				phantom: PhantomData,
 			}
 		}
 	}
@@ -170,7 +160,6 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			BalancingPeriod::<T>::put(self.balancing_period);
 			self.liquidation_pools.iter().for_each(|(currency_id, pool_data)| {
 				LiquidationPoolsData::<T>::insert(currency_id, LiquidationPoolData { ..*pool_data })
 			});
@@ -181,43 +170,10 @@ pub mod module {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		/// Runs balancing liquidation pools every 'balancing_period' blocks.
-		fn offchain_worker(now: T::BlockNumber) {
-			if let Err(error) = Self::_offchain_worker(now) {
-				debug::info!(
-					target: "LiquidationPool offchain worker",
-					"cannot run offchain worker at {:?}: {:?}",
-					now,
-					error,
-				);
-			} else {
-				debug::debug!(
-					target: "LiquidationPool offchain worker",
-					" LiquidationPool offchain worker start at block: {:?} already done!",
-					now,
-				);
-			}
-		}
-	}
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Set new value of balancing period.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `period`: New value of balancing period in blocks.
-		///
-		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_balancing_period())]
-		#[transactional]
-		pub fn set_balancing_period(origin: OriginFor<T>, period: T::BlockNumber) -> DispatchResultWithPostInfo {
-			T::UpdateOrigin::ensure_origin(origin)?;
-			// Write new value into storage.
-			BalancingPeriod::<T>::put(period);
-			Self::deposit_event(Event::BalancingPeriodChanged(period));
-			Ok(().into())
-		}
-
 		/// Set new value of deviation threshold.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `threshold`: New value of deviation threshold.
@@ -412,33 +368,6 @@ impl<T: Config> Pallet<T> {
 				supply_pool_id, target_pool_id,
 			);
 		}
-	}
-
-	fn _offchain_worker(now: T::BlockNumber) -> Result<(), OffchainErr> {
-		// Call a offchain_worker every `balancing_period` blocks
-		if now % Self::balancing_period() == T::BlockNumber::zero() {
-			// Check if we are a potential validator
-			if !sp_io::offchain::is_validator() {
-				return Err(OffchainErr::NotValidator);
-			}
-			// Sending transactions to DEX.
-			let _ = Self::collects_sales_list()
-				.map_err(|_| OffchainErr::CheckFail)?
-				.iter()
-				.try_for_each(|sale: &Sales| -> Result<(), OffchainErr> {
-					let (max_supply_amount, target_amount) =
-						Self::get_amounts(sale.supply_pool_id, sale.target_pool_id, sale.amount)
-							.map_err(|_| OffchainErr::CheckFail)?;
-					Self::submit_unsigned_tx(
-						sale.supply_pool_id,
-						sale.target_pool_id,
-						max_supply_amount,
-						target_amount,
-					);
-					Ok(())
-				});
-		}
-		Ok(())
 	}
 
 	/// Collects information about required transactions on DEX.

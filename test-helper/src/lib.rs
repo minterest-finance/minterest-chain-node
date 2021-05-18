@@ -124,7 +124,6 @@ macro_rules! mock_impl_liquidation_pools_config {
 			type UnsignedPriority = MockLiquidityPoolsPriority;
 			type PriceSource = MockPriceSource;
 			type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
-			type LiquidationPoolAccountId = LiquidationPoolAccountId;
 			type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
 			type Dex = dex::Module<$target>;
