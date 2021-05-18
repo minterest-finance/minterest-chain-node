@@ -8,7 +8,7 @@ use node_minterest_runtime::{
 	GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
 	MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, OperatorMembershipMinterestConfig, PricesConfig,
 	RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, BTC,
-	DOLLARS, DOT, ETH, KSM, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
+	DOLLARS, DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -497,6 +497,7 @@ fn testnet_genesis(
 				(KSM, FixedU128::saturating_from_integer(2)),
 				(ETH, FixedU128::saturating_from_integer(2)),
 				(BTC, FixedU128::saturating_from_integer(2)),
+				(MNT, FixedU128::saturating_from_integer(2)),
 			],
 			_phantom: Default::default(),
 		}),

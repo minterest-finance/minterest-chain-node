@@ -243,6 +243,7 @@ macro_rules! mock_impl_mnt_token_config {
 			type MntTokenAccountId = MntTokenAccountId;
 			type SpeedRefreshPeriod = SpeedRefreshPeriod;
 			type MntTokenWeightInfo = ();
+			type PoolsManager = liquidity_pools::Module<$target>;
 		}
 	};
 }

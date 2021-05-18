@@ -613,22 +613,27 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 	}
 
 	fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> Result<(Option<Price>, Option<Price>), DispatchError> {
+		let total_borrow = T::LiquidityPoolsManager::get_pool_total_borrowed(pool_id);
+
+		if total_borrow == 0 {
+			return Ok((Some(Price::zero()), Some(Price::zero())));
+		}
+
 		Self::refresh_mnt_speeds()?;
 		let mnt_speed = MntSpeeds::<T>::get(pool_id);
 		let mnt_price = T::PriceSource::get_underlying_price(MNT).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
 
-		let total_borrow = T::LiquidityPoolsManager::get_pool_total_borrowed(pool_id);
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
 
-		let borrow_apy = FixedU128::from_inner(mnt_speed) * FixedU128::from_inner(5256000) * mnt_price //fix const
-				/ FixedU128::from_inner(total_borrow)
+		let borrow_apy = FixedU128::from_inner(mnt_speed) * mnt_price / FixedU128::from_inner(total_borrow)
 			* oracle_price
 			* FixedU128::from_inner(100); //todo: refactor
 
 		let total_cash = T::PoolsManager::get_pool_available_liquidity(pool_id);
 		let total_protocol_interest = T::LiquidityPoolsManager::get_pool_total_protocol_interest(pool_id);
 
-		let supply_apy = FixedU128::from_inner(total_cash - total_protocol_interest + total_borrow) * oracle_price;
+		let total_supply = FixedU128::from_inner(total_cash - total_protocol_interest + total_borrow) * oracle_price;
+		let supply_apy = FixedU128::from_inner(mnt_speed) * mnt_price / total_supply;
 
 		Ok((Some(borrow_apy), Some(supply_apy)))
 	}
