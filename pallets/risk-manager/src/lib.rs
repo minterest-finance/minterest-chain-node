@@ -44,8 +44,6 @@ use sp_std::{cmp::Ordering, prelude::*, result, str};
 pub const OFFCHAIN_WORKER_LOCK: &[u8] = b"pallets/risk-manager/lock/";
 pub const OFFCHAIN_WORKER_LATEST_POOL_INDEX: &[u8] = b"pallets/risk-manager/counter";
 
-pub const OFFCHAIN_WORKER_MAX_DURATION: u64 = 1000;
-
 pub use module::*;
 
 #[cfg(test)]
@@ -109,6 +107,10 @@ pub mod module {
 		type RiskManagerUpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		type RiskManagerWeightInfo: WeightInfo;
+
+		#[pallet::constant]
+		/// Max duration time for offchain worker.
+		type OffchainWorkerMaxDurationMs: Get<u64>;
 	}
 
 	#[pallet::error]
@@ -366,7 +368,7 @@ impl<T: Config> Pallet<T> {
 		}
 
 		// acquire offchain worker lock
-		let lock_expiration = Duration::from_millis(OFFCHAIN_WORKER_MAX_DURATION);
+		let lock_expiration = Duration::from_millis(T::OffchainWorkerMaxDurationMs::get());
 		let mut lock = StorageLock::<'_, Time>::with_deadline(&OFFCHAIN_WORKER_LOCK, lock_expiration);
 		let mut guard = lock.try_lock().map_err(|_| OffchainErr::OffchainLock)?;
 

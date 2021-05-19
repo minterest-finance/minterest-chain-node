@@ -71,8 +71,8 @@ impl DataProvider<CurrencyId, Price> for MockDataProvider {
 			&DOT => Some(Price::saturating_from_integer(5)),
 			&BTC => {
 				// This sleep is need to emulate hard computation in offchain worker.
-				let two_sec = std::time::Duration::from_millis(1000);
-				thread::sleep(two_sec);
+				let one_sec = std::time::Duration::from_millis(1000);
+				thread::sleep(one_sec);
 				Some(Price::saturating_from_integer(2))
 			}
 			_ => panic!("Price for this currency wasn't set"),

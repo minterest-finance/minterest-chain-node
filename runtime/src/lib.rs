@@ -462,6 +462,7 @@ impl minterest_model::Config for Runtime {
 parameter_types! {
 	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
 	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
+	pub const RiskManagerWorkerMaxDurationMs: u64 = 2000;
 }
 
 impl risk_manager::Config for Runtime {
@@ -473,6 +474,7 @@ impl risk_manager::Config for Runtime {
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type RiskManagerWeightInfo = weights::risk_manager::WeightInfo<Runtime>;
 	type ControllerAPI = Controller;
+	type OffchainWorkerMaxDurationMs = RiskManagerWorkerMaxDurationMs;
 }
 
 parameter_types! {

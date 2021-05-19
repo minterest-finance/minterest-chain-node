@@ -214,6 +214,7 @@ macro_rules! mock_impl_risk_manager_config {
 	($target:ty, $acc:ident) => {
 		parameter_types! {
 			pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
+			pub const MaxDurationMs: u64 = 1000;
 		}
 
 		impl risk_manager::Config for $target {
@@ -225,6 +226,7 @@ macro_rules! mock_impl_risk_manager_config {
 			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type RiskManagerWeightInfo = ();
 			type ControllerAPI = controller::Module<$target>;
+			type OffchainWorkerMaxDurationMs = MaxDurationMs;
 		}
 	};
 }
