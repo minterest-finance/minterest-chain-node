@@ -89,7 +89,7 @@ fn test_offchain_worker_lock_expired() {
 		assert_eq!(pool_id, ETH);
 		// Get saved index from database
 		let le_index_result = offchain_cl2
-			.local_storage_get(StorageKind::PERSISTENT, OFFCHAIN_WORKER_LATEST_POOL_INDEX)
+			.local_storage_get(StorageKind::LOCAL, OFFCHAIN_WORKER_LATEST_POOL_INDEX)
 			.unwrap();
 		// If you run test in processor used big-endian byte order(???), this assertion will fail, it's ok.
 		// If sequence that produced by CurrencyId::get_enabled_tokens_in_protocol was changed, this

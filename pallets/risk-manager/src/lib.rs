@@ -373,11 +373,11 @@ impl<T: Config> Pallet<T> {
 		let mut guard = lock.try_lock().map_err(|_| OffchainErr::OffchainLock)?;
 
 		let latest_pool_index = {
-			let storage_index = StorageValueRef::persistent(&OFFCHAIN_WORKER_LATEST_POOL_INDEX)
+			let storage_index = StorageValueRef::local(&OFFCHAIN_WORKER_LATEST_POOL_INDEX)
 				.get::<u32>()
 				.unwrap_or(Some(0))
 				.ok_or(OffchainErr::CheckFail)? as usize;
-			StorageValueRef::persistent(&OFFCHAIN_WORKER_LATEST_POOL_INDEX).clear();
+			StorageValueRef::local(&OFFCHAIN_WORKER_LATEST_POOL_INDEX).clear();
 
 			// Assume that count of enbled tokens can be changed. So make sure that index is not out of
 			// bounds
@@ -436,7 +436,7 @@ impl<T: Config> Pallet<T> {
 							loans_checked_count,
 							loans_liquidated_count
 						);
-						StorageValueRef::persistent(&OFFCHAIN_WORKER_LATEST_POOL_INDEX).set(&(pos as u32));
+						StorageValueRef::local(&OFFCHAIN_WORKER_LATEST_POOL_INDEX).set(&(pos as u32));
 						return Ok(loans_liquidated_count > 0);
 					}
 				}
