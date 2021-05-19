@@ -121,7 +121,7 @@ pub mod module {
 
 	#[pallet::storage]
 	#[pallet::getter(fn pools)]
-	pub(crate) type Pools<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Pool, ValueQuery>;
+	pub type Pools<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Pool, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn pool_user_data)]

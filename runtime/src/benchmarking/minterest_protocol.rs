@@ -4,10 +4,11 @@ use super::utils::{
 use crate::{
 	AccountId, Balance, Currencies, EnabledUnderlyingAssetsIds, EnabledWrappedTokensId, LiquidityPools,
 	LiquidityPoolsModuleId, MinterestProtocol, MntToken, MntTokenModuleId, Origin, Rate, Runtime, System, BTC, DOLLARS,
-	DOT, ETH, KSM, MBTC, MDOT, MNT,
+	DOT, ETH, KSM, MBTC, MDOT, MNT, TMP,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
+use liquidity_pools::Pool;
 use orml_benchmarking::runtime_benchmarks;
 use orml_traits::MultiCurrency;
 use sp_runtime::{
@@ -37,6 +38,7 @@ fn hypothetical_liquidity_setup(borrower: &AccountId, lender: &AccountId) -> Res
 	// enable pools as collateral
 	EnabledUnderlyingAssetsIds::get()
 		.into_iter()
+		.filter(|&asset_id| asset_id != TMP)
 		.try_for_each(|asset_id| -> Result<(), &'static str> {
 			enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), asset_id)?;
 			// set borrow params
@@ -56,6 +58,23 @@ runtime_benchmarks! {
 	{ Runtime, minterest_protocol }
 
 	_ {}
+
+	create_pool {
+		liquidity_pools::Pools::<Runtime>::remove(DOT);
+	}: _(
+		RawOrigin::Root,
+		DOT,
+		Rate::saturating_from_rational(2, 3),
+		Rate::saturating_from_rational(1, 3),
+		Rate::saturating_from_rational(2, 4),
+		Rate::saturating_from_rational(1, 2),
+		Rate::saturating_from_rational(1, 10),
+		Rate::saturating_from_rational(5, 1000),
+		Rate::saturating_from_rational(9, 10),
+		100000,
+		Rate::saturating_from_rational(5, 100),
+		Rate::saturating_from_rational(2, 10)
+	)
 
 	deposit_underlying {
 		prepare_for_mnt_distribution(vec![DOT])?;
@@ -278,24 +297,35 @@ runtime_benchmarks! {
 			1_000_000 * DOLLARS,
 		)?;
 
-		EnabledUnderlyingAssetsIds::get().into_iter().try_for_each(|pool_id| -> Result<(), &'static str> {
-			set_balance(pool_id, &lender, 100_000 * DOLLARS)?;
-			MinterestProtocol::deposit_underlying(RawOrigin::Signed(lender.clone()).into(), pool_id, 100_000 * DOLLARS)?;
-			MinterestProtocol::enable_is_collateral(Origin::signed(lender.clone()).into(), pool_id)?;
-			MinterestProtocol::borrow(RawOrigin::Signed(lender.clone()).into(), pool_id, 50_000 * DOLLARS)?;
-			Ok(())
-		})?;
+		EnabledUnderlyingAssetsIds::get()
+			.into_iter()
+			.filter(|&asset_id| asset_id != TMP)
+			.try_for_each(|pool_id| -> Result<(), &'static str> {
+				liquidity_pools::Pools::<Runtime>::insert(pool_id, Pool {
+					total_borrowed: Balance::zero(),
+					borrow_index: Rate::one(),
+					total_protocol_interest: Balance::zero(),
+				});
+				set_balance(pool_id, &lender, 100_000 * DOLLARS)?;
+				MinterestProtocol::deposit_underlying(RawOrigin::Signed(lender.clone()).into(), pool_id, 100_000 * DOLLARS)?;
+				MinterestProtocol::enable_is_collateral(Origin::signed(lender.clone()).into(), pool_id)?;
+				MinterestProtocol::borrow(RawOrigin::Signed(lender.clone()).into(), pool_id, 50_000 * DOLLARS)?;
+				Ok(())
+			})?;
 
 		System::set_block_number(50);
 		MntToken::refresh_mnt_speeds()?;
 
-		EnabledUnderlyingAssetsIds::get().into_iter().try_for_each(|pool_id| -> Result<(), &'static str> {
-			set_balance(pool_id, &borrower, 100_000 * DOLLARS)?;
-			MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), pool_id, 100_000 * DOLLARS)?;
-			MinterestProtocol::enable_is_collateral(Origin::signed(borrower.clone()).into(), pool_id)?;
-			MinterestProtocol::borrow(RawOrigin::Signed(borrower.clone()).into(), pool_id, 50_000 * DOLLARS)?;
-			Ok(())
-		})?;
+		EnabledUnderlyingAssetsIds::get()
+			.into_iter()
+			.filter(|&asset_id| asset_id != TMP)
+			.try_for_each(|pool_id| -> Result<(), &'static str> {
+				set_balance(pool_id, &borrower, 100_000 * DOLLARS)?;
+				MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), pool_id, 100_000 * DOLLARS)?;
+				MinterestProtocol::enable_is_collateral(Origin::signed(borrower.clone()).into(), pool_id)?;
+				MinterestProtocol::borrow(RawOrigin::Signed(borrower.clone()).into(), pool_id, 50_000 * DOLLARS)?;
+				Ok(())
+			})?;
 
 		System::set_block_number(100);
 
@@ -319,6 +349,13 @@ mod tests {
 	use super::*;
 	use crate::benchmarking::utils::tests::test_externalities;
 	use frame_support::assert_ok;
+
+	#[test]
+	fn test_create_pool() {
+		test_externalities().execute_with(|| {
+			assert_ok!(test_benchmark_create_pool());
+		})
+	}
 
 	#[test]
 	fn test_deposit_underlying() {

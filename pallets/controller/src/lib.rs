@@ -807,7 +807,8 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
-	///
+	/// Creates storage records for ControllerParams and PauseKeepers
+	/// All operations are paused after this function call
 	fn create_pool(
 		currency_id: CurrencyId,
 		protocol_interest_factor: Rate,

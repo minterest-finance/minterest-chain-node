@@ -21,7 +21,7 @@ pub use controller_rpc_runtime_api::{BalanceInfo, HypotheticalLiquidityData, Poo
 pub use minterest_primitives::{
 	currency::{
 		CurrencyType::{UnderlyingAsset, WrappedToken},
-		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
+		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT, TMP,
 	},
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index, Moment,
 	Operation, Price, Rate, Signature,
