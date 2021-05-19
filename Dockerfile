@@ -8,8 +8,9 @@ WORKDIR platform
 COPY . .
 
 RUN apt update && apt install -y llvm clang curl rustc make && curl https://sh.rustup.rs -sSf | sh
-RUN make init
-RUN make build
+RUN make init && make build
+
+EXPOSE 9944
 
 ENTRYPOINT ["make"]
 CMD ["run"]
