@@ -7,7 +7,7 @@ ARG Version="0.0.1"
 WORKDIR platform
 COPY . .
 
-RUN apt update && apt install -y llvm clang make && curl https://sh.rustup.rs -sSf | sh
+RUN apt update && apt install -y llvm clang curl rustc make && curl https://sh.rustup.rs -sSf | sh
 RUN make init
 RUN make build
 
