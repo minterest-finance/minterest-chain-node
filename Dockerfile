@@ -10,7 +10,7 @@ COPY . .
 RUN apt update && apt install -y llvm clang curl rustc make && curl https://sh.rustup.rs -sSf | sh
 RUN make init && make build
 
-EXPOSE 9944
+EXPOSE 9944 9933
 
 ENTRYPOINT ["make"]
 CMD ["run"]
