@@ -23,9 +23,9 @@ use sp_runtime::{
 	FixedPointNumber, ModuleId, RuntimeDebug,
 };
 
-use sp_std::prelude::*;
 pub use module::*;
 use sp_std::cmp::Ordering;
+use sp_std::prelude::*;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
