@@ -1,13 +1,14 @@
-FROM ubuntu:20.10
+FROM liuchong/rustup
 
 ARG Mainteiner="Nick Lototskiy"
 ARG Name="Minterest Platform"
 ARG Version="0.0.1"
 
+USER root
 WORKDIR platform
 COPY . .
 
-RUN apt update && apt install -y llvm clang curl rustc make && curl https://sh.rustup.rs -sSf | sh
+RUN apt update && apt install -y llvm clang curl make
 RUN make init && make build
 
 EXPOSE 9944 9933
