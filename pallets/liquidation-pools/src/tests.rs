@@ -6,6 +6,36 @@ use mock::{Event, *};
 use sp_runtime::traits::{BadOrigin, Zero};
 
 #[test]
+fn protocol_operations_not_working_for_nonexisting_pool() {
+	ExternalityBuilder::default().build().execute_with(|| {
+		assert_noop!(
+			TestLiquidationPools::set_deviation_threshold(admin(), TMP, 123),
+			Error::<Test>::PoolNotFound
+		);
+
+		assert_noop!(
+			TestLiquidationPools::set_balance_ratio(admin(), TMP, 123),
+			Error::<Test>::PoolNotFound
+		);
+
+		assert_noop!(
+			TestLiquidationPools::set_max_ideal_balance(admin(), TMP, Some(123)),
+			Error::<Test>::PoolNotFound
+		);
+
+		assert_noop!(
+			TestLiquidationPools::balance_liquidation_pools(Origin::none(), TMP, DOT, Balance::zero(), Balance::zero()),
+			Error::<Test>::PoolNotFound
+		);
+
+		assert_noop!(
+			TestLiquidationPools::transfer_to_liquidation_pool(admin(), TMP, 123),
+			Error::<Test>::PoolNotFound
+		);
+	});
+}
+
+#[test]
 fn set_balancing_period_should_work() {
 	ExternalityBuilder::default().build().execute_with(|| {
 		// Can be set to 0.0
