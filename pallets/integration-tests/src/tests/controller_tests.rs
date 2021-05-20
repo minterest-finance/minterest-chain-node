@@ -74,7 +74,6 @@ mod tests {
 	fn set_protocol_interest_factor_greater_than_zero() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.pool_initial(ETH)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
 			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()
@@ -141,7 +140,6 @@ mod tests {
 	fn set_protocol_interest_factor_equal_zero() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.pool_initial(ETH)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
 			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
 			.build()

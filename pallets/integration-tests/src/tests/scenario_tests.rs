@@ -16,7 +16,6 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
 			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_initial(DOT)
 			.build()
 			.execute_with(|| {
 				// INITIAL PARAMS

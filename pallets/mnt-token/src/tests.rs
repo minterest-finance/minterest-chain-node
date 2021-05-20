@@ -66,9 +66,6 @@ fn distribute_mnt_to_borrower_with_threshold() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
 		.pool_total_borrowed(DOT, 150_000 * DOLLARS)
-		.pool_initial(ETH)
-		.pool_initial(BTC)
-		.pool_initial(KSM)
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_threshold(20)
 		.pool_user_data(
@@ -123,9 +120,6 @@ fn distribute_mnt_to_supplier_with_threshold() {
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_threshold(20)
 		.pool_total_borrowed(DOT, 100 * DOLLARS)
-		.pool_initial(ETH)
-		.pool_initial(BTC)
-		.pool_initial(KSM)
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
@@ -159,8 +153,6 @@ fn distribute_mnt_to_supplier_from_different_pools() {
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_threshold(0)
 		.pool_total_borrowed(DOT, 100 * DOLLARS)
-		.pool_initial(ETH)
-		.pool_initial(BTC)
 		.pool_total_borrowed(KSM, 100 * DOLLARS)
 		.set_mnt_rate(10)
 		.build()
@@ -195,8 +187,6 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 		.enable_minting_for_all_pools()
 		.pool_total_borrowed(DOT, 150_000 * DOLLARS)
 		.pool_total_borrowed(KSM, 150_000 * DOLLARS)
-		.pool_initial(ETH)
-		.pool_initial(BTC)
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_threshold(0)
 		.pool_user_data(
@@ -263,9 +253,6 @@ fn distribute_borrowers_mnt() {
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_threshold(0)
 		.pool_total_borrowed(DOT, 150_000 * DOLLARS)
-		.pool_initial(ETH)
-		.pool_initial(BTC)
-		.pool_initial(KSM)
 		.pool_user_data(
 			DOT,
 			ALICE,
@@ -322,9 +309,6 @@ fn distribute_borrower_mnt() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools()
 		.pool_total_borrowed(DOT, 150_000 * DOLLARS)
-		.pool_initial(ETH)
-		.pool_initial(BTC)
-		.pool_initial(KSM)
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_threshold(0)
 		.pool_user_data(
@@ -432,9 +416,6 @@ fn test_update_mnt_borrow_index_simple() {
 		.enable_minting_for_all_pools()
 		// total borrows needs to calculate mnt_speeds
 		.pool_total_borrowed(DOT, 150_000 * DOLLARS)
-		.pool_initial(ETH)
-		.pool_initial(BTC)
-		.pool_initial(KSM)
 		.set_mnt_rate(1)
 		.build()
 		.execute_with(|| {
@@ -477,9 +458,6 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 		.set_mnt_claim_threshold(0)
 		// total borrows needs to calculate mnt_speeds
 		.pool_total_borrowed(DOT, 50 * DOLLARS)
-		.pool_initial(ETH)
-		.pool_initial(BTC)
-		.pool_initial(KSM)
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {

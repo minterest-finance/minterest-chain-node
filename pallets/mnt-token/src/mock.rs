@@ -125,18 +125,6 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
-		self.pools.push((
-			pool_id,
-			Pool {
-				total_borrowed: Balance::zero(),
-				borrow_index: Rate::one(),
-				total_protocol_interest: Balance::zero(),
-			},
-		));
-		self
-	}
-
 	pub fn pool_total_borrowed(mut self, pool_id: CurrencyId, total_borrowed: Balance) -> Self {
 		self.pools.push((
 			pool_id,

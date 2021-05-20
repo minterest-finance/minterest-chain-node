@@ -395,10 +395,7 @@ pub mod module {
 				T::ManagerLiquidityPools::pool_exists(&pool_id),
 				liquidity_pools::Error::<T>::PoolNotFound
 			);
-			ensure!(
-				T::ManagerLiquidityPools::pool_exists(&pool_id),
-				Error::<T>::PoolNotAdded
-			);
+			ensure!(RiskManagerParams::<T>::contains_key(pool_id), Error::<T>::PoolNotAdded);
 
 			let who = T::Lookup::lookup(who)?;
 			Self::liquidate_unsafe_loan(who, pool_id)?;

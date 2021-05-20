@@ -830,11 +830,11 @@ impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
 		PauseKeepers::<T>::insert(
 			currency_id,
 			PauseKeeper {
-				deposit_paused: false,
-				redeem_paused: false,
-				borrow_paused: false,
-				repay_paused: false,
-				transfer_paused: false,
+				deposit_paused: true,
+				redeem_paused: true,
+				borrow_paused: true,
+				repay_paused: true,
+				transfer_paused: true,
 			},
 		);
 	}

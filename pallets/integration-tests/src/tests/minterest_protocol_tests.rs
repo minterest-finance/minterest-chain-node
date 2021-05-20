@@ -9,7 +9,6 @@ mod tests {
 	fn deposit_underlying_with_supplied_interest_should_work() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.pool_initial(ETH)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
 			.user_balance(BOB, DOT, ONE_HUNDRED)
@@ -88,8 +87,6 @@ mod tests {
 			// Set genesis to get exchange rate 0,00000000000000001
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
 			.user_balance(ALICE, MDOT, DOLLARS)
-			.pool_initial(DOT)
-			.pool_initial(ETH)
 			.pool_balance(DOT, 5)
 			.pool_total_borrowed(DOT, 5)
 			.build()
@@ -519,7 +516,6 @@ mod tests {
 	fn redeem_underlying_over_interest() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.pool_initial(ETH)
 			.pool_initial(BTC)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
@@ -1011,7 +1007,6 @@ mod tests {
 	fn redeem_over_interest() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.pool_initial(ETH)
 			.pool_initial(BTC)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
@@ -1105,7 +1100,6 @@ mod tests {
 	fn borrow_with_insufficient_collateral_no_deposits() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.pool_initial(ETH)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED)
 			.user_balance(ALICE, DOT, ONE_HUNDRED)
 			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)

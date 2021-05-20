@@ -177,7 +177,7 @@ mod tests {
 			})
 	}
 
-	// This scenario works with two users and three pools.
+	// This scenario works with one user and three pools.
 	// The test checks the parameters of the MNT token when new pool is created.
 	// Initial parameters: 	DOT + ETH - enabled in mnt minting;
 	// 						mnt_rate = 0.1 MNT per block;
@@ -212,9 +212,9 @@ mod tests {
 				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(KSM));
 				// Set initial state of pools for distribution MNT tokens.
 				vec![DOT, ETH].into_iter().for_each(|pool_id| {
-					assert_ok!(MinterestProtocol::deposit_underlying(admin(), pool_id, ONE_HUNDRED));
-					assert_ok!(MinterestProtocol::enable_is_collateral(admin(), pool_id));
-					assert_ok!(MinterestProtocol::borrow(admin(), pool_id, 50_000 * DOLLARS));
+					assert_ok!(MinterestProtocol::deposit_underlying(bob(), pool_id, ONE_HUNDRED));
+					assert_ok!(MinterestProtocol::enable_is_collateral(bob(), pool_id));
+					assert_ok!(MinterestProtocol::borrow(bob(), pool_id, 50_000 * DOLLARS));
 				});
 
 				set_block_number_and_refresh_speeds(10);
@@ -255,6 +255,11 @@ mod tests {
 						balance_ratio: Rate::saturating_from_rational(2, 10),
 					},
 				));
+				assert_ok!(TestController::resume_operation(admin(), BTC, Operation::Borrow));
+				assert_ok!(TestController::resume_operation(admin(), BTC, Operation::Deposit));
+				assert_ok!(TestController::resume_operation(admin(), BTC, Operation::Redeem));
+				assert_ok!(TestController::resume_operation(admin(), BTC, Operation::Repay));
+				assert_ok!(TestController::resume_operation(admin(), BTC, Operation::Transfer));
 				assert_ok!(MinterestProtocol::deposit_underlying(admin(), BTC, ONE_HUNDRED));
 				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), BTC));
 				assert_ok!(MinterestProtocol::borrow(admin(), BTC, 50_000 * DOLLARS));
@@ -281,8 +286,10 @@ mod tests {
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), 1_583_333_261_583_256_134);
 				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
-				// Alice шы able to claim rewards from all three pools
-				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT, ETH, BTC]));
+				// Alice is able to claim rewards from all three pools
+				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT, ETH]));
+				assert_eq!(Currencies::free_balance(MNT, &ALICE), 2_858_695_574_289_277_984);
+				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![BTC]));
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), 2_989_130_353_325_167_984);
 			})
 	}

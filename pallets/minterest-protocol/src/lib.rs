@@ -202,6 +202,15 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			T::CreatePoolOrigin::ensure_origin(origin)?;
 
+			ensure!(
+				pool_id.is_supported_underlying_asset(),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+			ensure!(
+				!T::ManagerLiquidityPools::pool_exists(&pool_id),
+				liquidity_pools::Error::<T>::PoolAlreadyCreated
+			);
+
 			Self::do_create_pool(pool_id, pool_data)?;
 			Self::deposit_event(Event::PoolCreated(pool_id));
 			Ok(().into())
@@ -527,15 +536,6 @@ pub mod module {
 // Dispatchable calls implementation
 impl<T: Config> Pallet<T> {
 	fn do_create_pool(pool_id: CurrencyId, pool_data: PoolInitData) -> DispatchResult {
-		ensure!(
-			pool_id.is_supported_underlying_asset(),
-			Error::<T>::NotValidUnderlyingAssetId
-		);
-		ensure!(
-			!T::ManagerLiquidityPools::pool_exists(&pool_id),
-			liquidity_pools::Error::<T>::PoolAlreadyCreated
-		);
-
 		<LiquidityPools<T>>::create_pool(pool_id);
 		<MinterestModel<T>>::create_pool(
 			pool_id,
