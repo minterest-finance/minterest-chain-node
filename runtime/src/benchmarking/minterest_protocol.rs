@@ -9,6 +9,7 @@ use crate::{
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
 use liquidity_pools::Pool;
+use minterest_protocol::PoolInitData;
 use orml_benchmarking::runtime_benchmarks;
 use orml_traits::MultiCurrency;
 use sp_runtime::{
@@ -64,16 +65,18 @@ runtime_benchmarks! {
 	}: _(
 		RawOrigin::Root,
 		DOT,
-		Rate::saturating_from_rational(2, 3),
-		Rate::saturating_from_rational(1, 3),
-		Rate::saturating_from_rational(2, 4),
-		Rate::saturating_from_rational(1, 2),
-		Rate::saturating_from_rational(1, 10),
-		Rate::saturating_from_rational(5, 1000),
-		Rate::saturating_from_rational(9, 10),
-		100000,
-		Rate::saturating_from_rational(5, 100),
-		Rate::saturating_from_rational(2, 10)
+		PoolInitData {
+			kink: Rate::saturating_from_rational(2, 3),
+			base_rate_per_block: Rate::saturating_from_rational(1, 3),
+			multiplier_per_block: Rate::saturating_from_rational(2, 4),
+			jump_multiplier_per_block: Rate::saturating_from_rational(1, 2),
+			protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+			max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+			collateral_factor: Rate::saturating_from_rational(9, 10),
+			protocol_interest_threshold: 100000,
+			deviation_threshold: Rate::saturating_from_rational(5, 100),
+			balance_ratio: Rate::saturating_from_rational(2, 10),
+		}
 	)
 
 	deposit_underlying {

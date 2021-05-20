@@ -16,6 +16,7 @@ mod tests {
 	use liquidity_pools::{Pool, PoolUserData};
 	pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 	use minterest_primitives::{Balance, CurrencyId, Price, Rate};
+	use minterest_protocol::PoolInitData;
 	use orml_traits::{parameter_type_with_key, MultiCurrency};
 	use sp_core::H256;
 	use sp_runtime::{

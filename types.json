@@ -37,6 +37,18 @@
         "Transfer"
       ]
     },
+    "PoolInitData": {
+      "kink": "Rate",
+      "base_rate_per_block": "Rate",
+      "multiplier_per_block": "Rate",
+      "jump_multiplier_per_block": "Rate",
+      "protocol_interest_factor": "Rate",
+      "max_borrow_rate": "Rate",
+      "collateral_factor": "Rate",
+      "protocol_interest_threshold": "Balance",
+      "deviation_threshold": "Rate",
+      "balance_ratio": "Rate"
+    },
     "Pool": {
       "total_borrowed": "Balance",
       "borrow_index": "Rate",

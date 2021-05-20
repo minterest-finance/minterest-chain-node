@@ -820,11 +820,11 @@ impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
 			currency_id,
 			ControllerData {
 				last_interest_accrued_block: <frame_system::Module<T>>::block_number(),
-				protocol_interest_factor: protocol_interest_factor,
-				max_borrow_rate: max_borrow_rate,
-				collateral_factor: collateral_factor,
+				protocol_interest_factor,
+				max_borrow_rate,
+				collateral_factor,
 				borrow_cap: None,
-				protocol_interest_threshold: protocol_interest_threshold,
+				protocol_interest_threshold,
 			},
 		);
 		PauseKeepers::<T>::insert(

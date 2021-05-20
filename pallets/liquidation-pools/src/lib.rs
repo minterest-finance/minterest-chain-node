@@ -653,8 +653,8 @@ impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
 		LiquidationPoolsData::<T>::insert(
 			currency_id,
 			LiquidationPoolData {
-				deviation_threshold: deviation_threshold,
-				balance_ratio: balance_ratio,
+				deviation_threshold,
+				balance_ratio,
 				max_ideal_balance: None,
 			},
 		);

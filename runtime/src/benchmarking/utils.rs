@@ -1,5 +1,5 @@
 use crate::{
-	AccountId, Balance, Currencies, CurrencyId, MinterestProtocol, MntTokenModuleId, Origin, Runtime, Vec,
+	AccountId, Balance, Currencies, CurrencyId, MinterestProtocol, MntTokenModuleId, Origin, Rate, Runtime, Vec,
 	WhitelistCouncilMembership, BTC, DOLLARS, DOT, ETH, KSM, MNT,
 };
 
@@ -7,6 +7,7 @@ use frame_benchmarking::account;
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 use frame_system::pallet_prelude::OriginFor;
 use frame_system::RawOrigin;
+use liquidity_pools::Pool;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{AccountIdConversion, StaticLookup};
 use sp_runtime::FixedPointNumber;
@@ -34,6 +35,19 @@ pub fn enable_whitelist_mode_and_add_member(who: &AccountId) -> DispatchResultWi
 	controller::WhitelistMode::<Runtime>::put(true);
 	WhitelistCouncilMembership::add_member(RawOrigin::Root.into(), who.clone())?;
 	Ok(().into())
+}
+
+pub(crate) fn create_pools(pools: &Vec<CurrencyId>) {
+	pools.into_iter().for_each(|pool_id| {
+		liquidity_pools::Pools::<Runtime>::insert(
+			pool_id,
+			Pool {
+				total_borrowed: 0,
+				borrow_index: Rate::one(),
+				total_protocol_interest: 0,
+			},
+		);
+	});
 }
 
 pub(crate) fn prepare_for_mnt_distribution(pools: Vec<CurrencyId>) -> Result<(), &'static str> {

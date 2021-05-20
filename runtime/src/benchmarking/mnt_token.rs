@@ -1,5 +1,5 @@
-use super::utils::prepare_for_mnt_distribution;
-use crate::{EnabledUnderlyingAssetsIds, MntToken, Runtime, System, BTC, DOLLARS, DOT};
+use super::utils::{create_pools, prepare_for_mnt_distribution};
+use crate::{EnabledUnderlyingAssetsIds, MntToken, Runtime, System, BTC, DOLLARS, DOT, TMP};
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
 use sp_std::prelude::*;
@@ -9,21 +9,36 @@ runtime_benchmarks! {
 
 	_ {}
 	set_mnt_rate {
-		prepare_for_mnt_distribution(EnabledUnderlyingAssetsIds::get())?;
+		let pools = EnabledUnderlyingAssetsIds::get()
+			.into_iter()
+			.filter(|&asset_id| asset_id != TMP)
+			.collect();
+		create_pools(&pools);
+		prepare_for_mnt_distribution(pools)?;
 		System::set_block_number(10);
 		MntToken::refresh_mnt_speeds()?;
 		System::set_block_number(11);
 	}: _(RawOrigin::Root, 15 * DOLLARS)
 
 	disable_mnt_minting {
-		prepare_for_mnt_distribution(EnabledUnderlyingAssetsIds::get())?;
+		let pools = EnabledUnderlyingAssetsIds::get()
+			.into_iter()
+			.filter(|&asset_id| asset_id != TMP)
+			.collect();
+		create_pools(&pools);
+		prepare_for_mnt_distribution(pools)?;
 		System::set_block_number(10);
 		MntToken::refresh_mnt_speeds()?;
 		System::set_block_number(11);
 	}: _(RawOrigin::Root, BTC)
 
 	enable_mnt_minting {
-		prepare_for_mnt_distribution(EnabledUnderlyingAssetsIds::get())?;
+		let pools = EnabledUnderlyingAssetsIds::get()
+			.into_iter()
+			.filter(|&asset_id| asset_id != TMP)
+			.collect();
+		create_pools(&pools);
+		prepare_for_mnt_distribution(pools)?;
 		System::set_block_number(10);
 		MntToken::refresh_mnt_speeds()?;
 		MntToken::disable_mnt_minting(RawOrigin::Root.into(), DOT)?;

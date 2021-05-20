@@ -15,6 +15,7 @@
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
 
+//use codec::{Decode, Encode};
 use frame_support::traits::Contains;
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
@@ -24,6 +25,8 @@ use orml_traits::MultiCurrency;
 use pallet_traits::{
 	Borrowing, ControllerAPI, LiquidationPoolsManager, LiquidityPoolsManager, MntManager, PoolsManager,
 };
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	traits::{BadOrigin, Zero},
 	DispatchError, DispatchResult,
@@ -44,6 +47,24 @@ type LiquidityPools<T> = liquidity_pools::Module<T>;
 type MinterestModel<T> = minterest_model::Module<T>;
 type TokensResult = result::Result<(Balance, CurrencyId, Balance), DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
+
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct PoolInitData {
+	// Minterest Model storage data
+	pub kink: Rate,
+	pub base_rate_per_block: Rate,
+	pub multiplier_per_block: Rate,
+	pub jump_multiplier_per_block: Rate,
+	//Controller storage data
+	pub protocol_interest_factor: Rate,
+	pub max_borrow_rate: Rate,
+	pub collateral_factor: Rate,
+	pub protocol_interest_threshold: Balance,
+	// Liquidation Pools storage data
+	pub deviation_threshold: Rate,
+	pub balance_ratio: Rate,
+}
 
 #[frame_support::pallet]
 pub mod module {
@@ -177,33 +198,11 @@ pub mod module {
 		pub fn create_pool(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			// TODO: maybe put fields below into a struct
-			kink: Rate,
-			base_rate_per_block: Rate,
-			multiplier_per_block: Rate,
-			jump_multiplier_per_block: Rate,
-			protocol_interest_factor: Rate,
-			max_borrow_rate: Rate,
-			collateral_factor: Rate,
-			protocol_interest_threshold: Balance,
-			deviation_threshold: Rate,
-			balance_ratio: Rate,
+			pool_data: PoolInitData,
 		) -> DispatchResultWithPostInfo {
 			T::CreatePoolOrigin::ensure_origin(origin)?;
 
-			Self::do_create_pool(
-				pool_id,
-				kink,
-				base_rate_per_block,
-				multiplier_per_block,
-				jump_multiplier_per_block,
-				protocol_interest_factor,
-				max_borrow_rate,
-				collateral_factor,
-				protocol_interest_threshold,
-				deviation_threshold,
-				balance_ratio,
-			)?;
+			Self::do_create_pool(pool_id, pool_data)?;
 			Self::deposit_event(Event::PoolCreated(pool_id));
 			Ok(().into())
 		}
@@ -527,19 +526,7 @@ pub mod module {
 
 // Dispatchable calls implementation
 impl<T: Config> Pallet<T> {
-	fn do_create_pool(
-		pool_id: CurrencyId,
-		kink: Rate,
-		base_rate_per_block: Rate,
-		multiplier_per_block: Rate,
-		jump_multiplier_per_block: Rate,
-		protocol_interest_factor: Rate,
-		max_borrow_rate: Rate,
-		collateral_factor: Rate,
-		protocol_interest_threshold: Balance,
-		deviation_threshold: Rate,
-		balance_ratio: Rate,
-	) -> DispatchResult {
+	fn do_create_pool(pool_id: CurrencyId, pool_data: PoolInitData) -> DispatchResult {
 		ensure!(
 			pool_id.is_supported_underlying_asset(),
 			Error::<T>::NotValidUnderlyingAssetId
@@ -552,19 +539,19 @@ impl<T: Config> Pallet<T> {
 		<LiquidityPools<T>>::create_pool(pool_id);
 		<MinterestModel<T>>::create_pool(
 			pool_id,
-			kink,
-			base_rate_per_block,
-			multiplier_per_block,
-			jump_multiplier_per_block,
+			pool_data.kink,
+			pool_data.base_rate_per_block,
+			pool_data.multiplier_per_block,
+			pool_data.jump_multiplier_per_block,
 		);
 		T::ControllerAPI::create_pool(
 			pool_id,
-			protocol_interest_factor,
-			max_borrow_rate,
-			collateral_factor,
-			protocol_interest_threshold,
+			pool_data.protocol_interest_factor,
+			pool_data.max_borrow_rate,
+			pool_data.collateral_factor,
+			pool_data.protocol_interest_threshold,
 		);
-		T::ManagerLiquidationPools::create_pool(pool_id, deviation_threshold, balance_ratio);
+		T::ManagerLiquidationPools::create_pool(pool_id, pool_data.deviation_threshold, pool_data.balance_ratio);
 
 		Ok(())
 	}

@@ -310,10 +310,10 @@ impl<T: Config> Pallet<T> {
 		MinterestModelParams::<T>::insert(
 			currency_id,
 			MinterestModelData {
-				kink: kink,
-				base_rate_per_block: base_rate_per_block,
-				multiplier_per_block: multiplier_per_block,
-				jump_multiplier_per_block: jump_multiplier_per_block,
+				kink,
+				base_rate_per_block,
+				multiplier_per_block,
+				jump_multiplier_per_block,
 			},
 		);
 	}

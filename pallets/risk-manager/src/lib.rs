@@ -255,10 +255,10 @@ pub mod module {
 			RiskManagerParams::<T>::insert(
 				currency_id,
 				RiskManagerData {
-					max_attempts: max_attempts,
-					min_partial_liquidation_sum: min_partial_liquidation_sum,
-					threshold: threshold,
-					liquidation_fee: liquidation_fee,
+					max_attempts,
+					min_partial_liquidation_sum,
+					threshold,
+					liquidation_fee,
 				},
 			);
 
@@ -411,14 +411,10 @@ impl<T: Config> Pallet<T> {
 	fn _offchain_worker() -> Result<(), OffchainErr> {
 		// Get available assets list
 		let underlying_assets: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.iter()
-			.filter_map(|&underlying_id| {
-				if !T::LiquidityPoolsManager::pool_exists(&underlying_id)
-					|| !RiskManagerParams::<T>::contains_key(underlying_id)
-				{
-					return None;
-				}
-				Some(underlying_id)
+			.into_iter()
+			.filter(|&underlying_id| {
+				T::LiquidityPoolsManager::pool_exists(&underlying_id)
+					&& RiskManagerParams::<T>::contains_key(underlying_id)
 			})
 			.collect();
 

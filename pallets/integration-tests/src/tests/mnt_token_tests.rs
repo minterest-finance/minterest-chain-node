@@ -242,16 +242,18 @@ mod tests {
 				assert_ok!(MinterestProtocol::create_pool(
 					admin(),
 					BTC,
-					Rate::saturating_from_rational(8, 10),
-					Rate::zero(),
-					Rate::saturating_from_rational(9, 1_000_000_000),
-					Rate::saturating_from_rational(207, 1_000_000_000),
-					Rate::saturating_from_rational(1, 10),
-					Rate::saturating_from_rational(5, 1000),
-					Rate::saturating_from_rational(9, 10),
-					PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
-					Rate::saturating_from_rational(1, 10),
-					Rate::saturating_from_rational(2, 10),
+					PoolInitData {
+						kink: Rate::saturating_from_rational(8, 10),
+						base_rate_per_block: Rate::zero(),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000),
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+						collateral_factor: Rate::saturating_from_rational(9, 10),
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+					},
 				));
 				assert_ok!(MinterestProtocol::deposit_underlying(admin(), BTC, ONE_HUNDRED));
 				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), BTC));
