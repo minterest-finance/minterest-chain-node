@@ -2,6 +2,7 @@
 
 use super::Error;
 use crate::mock::*;
+use frame_support::pallet_prelude::Hooks;
 use frame_support::{assert_noop, assert_ok};
 use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
@@ -13,6 +14,20 @@ const MNT_PALLET_START_BALANCE: Balance = 1_000_000 * DOLLARS;
 
 fn get_mnt_account_balance(user: AccountId) -> Balance {
 	Currencies::free_balance(MNT, &user)
+}
+
+fn run_to_block(n: u64) {
+	while System::block_number() < n {
+		MntToken::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+	}
+}
+
+// Set mnt speed according to pool utility.
+fn set_initial_mnt_speeds() {
+	System::set_block_number(0);
+	assert_ok!(MntToken::refresh_mnt_speeds());
+	System::set_block_number(1);
 }
 
 /// Move flywheel and check borrower balance
@@ -114,9 +129,7 @@ fn distribute_mnt_to_supplier_with_threshold() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
-			System::set_block_number(0);
-			assert_ok!(MntToken::refresh_mnt_speeds());
-			System::set_block_number(1);
+			set_initial_mnt_speeds();
 
 			// Award for ALICE is 10 per block
 			// So at the first step awarded tokens should be kept in internal storage
@@ -126,12 +139,12 @@ fn distribute_mnt_to_supplier_with_threshold() {
 			Currencies::deposit(MDOT, &ALICE, 100 * DOLLARS).unwrap();
 
 			check_supplier_accrued(DOT, ALICE, 0, 10 * DOLLARS);
-			// System::set_block_number(2);
-			// check_supplier_accrued(DOT, ALICE, 20 * DOLLARS, 0);
-			// System::set_block_number(3);
-			// check_supplier_accrued(DOT, ALICE, 20 * DOLLARS, 10 * DOLLARS);
-			// System::set_block_number(4);
-			// check_supplier_accrued(DOT, ALICE, 40 * DOLLARS, 0);
+			System::set_block_number(2);
+			check_supplier_accrued(DOT, ALICE, 20 * DOLLARS, 0);
+			System::set_block_number(3);
+			check_supplier_accrued(DOT, ALICE, 20 * DOLLARS, 10 * DOLLARS);
+			System::set_block_number(4);
+			check_supplier_accrued(DOT, ALICE, 40 * DOLLARS, 0);
 			assert_eq!(
 				MNT_PALLET_START_BALANCE - get_mnt_account_balance(ALICE),
 				get_mnt_account_balance(MntToken::get_account_id())
@@ -152,9 +165,7 @@ fn distribute_mnt_to_supplier_from_different_pools() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
-			System::set_block_number(0);
-			assert_ok!(MntToken::refresh_mnt_speeds());
-			System::set_block_number(1);
+			set_initial_mnt_speeds();
 
 			// Check accruing mnt tokens from two pools for supplier
 			let dot_mnt_speed = 2 * DOLLARS;
@@ -274,7 +285,8 @@ fn distribute_borrowers_mnt() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
-			assert_ok!(MntToken::refresh_mnt_speeds());
+			set_initial_mnt_speeds();
+
 			/*
 			There is only one pool included in minting process. So 10 mnt for this pool.
 			Pool total borrow is 150_000. Alice borrowed 30_000 and BOB - 120_000
@@ -426,9 +438,8 @@ fn test_update_mnt_borrow_index_simple() {
 		.set_mnt_rate(1)
 		.build()
 		.execute_with(|| {
-			System::set_block_number(0);
-			assert_ok!(MntToken::refresh_mnt_speeds());
-			System::set_block_number(1);
+			set_initial_mnt_speeds();
+
 			/*
 			* Minting was enabled when block_number was equal to 0. Here block_number == 1.
 			So block_delta = 1
@@ -472,9 +483,7 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
-			System::set_block_number(0);
-			assert_ok!(MntToken::refresh_mnt_speeds());
-			System::set_block_number(1);
+			set_initial_mnt_speeds();
 
 			/*
 			Minting was enabled when block_number was equal to 0. Here block_number == 1.
@@ -543,9 +552,9 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 				bob_award_per_block * current_block,
 			);
 			check_supplier_award(
-				BOB,
-				bob_award_per_block * block_delta,
-				bob_award_per_block * current_block,
+				ALICE,
+				alice_award_per_block * block_delta,
+				alice_award_per_block * current_block,
 			);
 			assert_eq!(
 				MNT_PALLET_START_BALANCE - get_mnt_account_balance(ALICE) - get_mnt_account_balance(BOB),
@@ -566,9 +575,7 @@ fn test_update_mnt_supply_index() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
-			System::set_block_number(0);
-			assert_ok!(MntToken::refresh_mnt_speeds());
-			System::set_block_number(1);
+			set_initial_mnt_speeds();
 
 			//
 			// * Minting was enabled when block_number was equal to 0. Here block_number == 1.
@@ -719,9 +726,7 @@ fn test_mnt_speed_calculation_with_zero_borrowed() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
-			System::set_block_number(0);
-			assert_ok!(MntToken::refresh_mnt_speeds());
-			System::set_block_number(1);
+			set_initial_mnt_speeds();
 
 			// Input parameters:
 			// mnt_rate: 10
@@ -768,9 +773,7 @@ fn test_disable_mnt_minting() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
-			System::set_block_number(0);
-			assert_ok!(MntToken::refresh_mnt_speeds());
-			System::set_block_number(1);
+			set_initial_mnt_speeds();
 
 			// Make sure that speeds were precalculated
 			assert_eq!(MntToken::mnt_speeds(DOT), 714285714285714280);
@@ -1002,5 +1005,57 @@ fn transfer_mnt_should_work() {
 				second_transfer + fifth_transfer + sixth_transfer
 			);
 			assert_eq!(MntToken::mnt_accrued(ALICE), Balance::zero());
+		});
+}
+
+#[test]
+fn on_finalize_should_work() {
+	ExtBuilder::default()
+		.enable_minting_for_all_pools()
+		.set_mnt_claim_threshold(20)
+		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_total_borrowed(ETH, 50 * DOLLARS)
+		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_total_borrowed(BTC, 50 * DOLLARS)
+		.set_mnt_rate(10)
+		.build()
+		.execute_with(|| {
+			// Prices: DOT[0] = 0.5 USD, ETH[1] = 1.5 USD, KSM[2] = 2 USD, BTC[3] = 3 USD
+			// Sum of all utilities: 350$
+			// Expected speed = pool_utilities / sum_of_all_utilities * MntRate
+			// DOT: 25/350 * 10 = 0,714285
+			// ETH: 75/350 * 10 = 2,142857
+			// KSM: 100/350 * 10 = 2,857142
+			// BTC: 150/350 * 10 = 4,285714
+			run_to_block(6);
+			assert_eq!(MntToken::mnt_speeds(DOT), 714_285_714_285_714_280);
+			assert_eq!(MntToken::mnt_speeds(ETH), 2_142_857_142_857_142_850);
+			assert_eq!(MntToken::mnt_speeds(KSM), 2_857_142_857_142_857_140);
+			assert_eq!(MntToken::mnt_speeds(BTC), 4_285_714_285_714_285_710);
+
+			// Prepare data to see MntSpeed changing
+			TestPools::set_pool_data(DOT, 120, Rate::one(), 0).unwrap();
+			TestPools::set_pool_data(ETH, 40, Rate::one(), 0).unwrap();
+			TestPools::set_pool_data(KSM, 30, Rate::one(), 0).unwrap();
+			TestPools::set_pool_data(BTC, 20, Rate::one(), 0).unwrap();
+
+			// Check that nothing changed.
+			run_to_block(7);
+			assert_eq!(MntToken::mnt_speeds(DOT), 714_285_714_285_714_280);
+			assert_eq!(MntToken::mnt_speeds(ETH), 2_142_857_142_857_142_850);
+			assert_eq!(MntToken::mnt_speeds(KSM), 2_857_142_857_142_857_140);
+			assert_eq!(MntToken::mnt_speeds(BTC), 4_285_714_285_714_285_710);
+
+			// Sum of all utilities: 240$
+			// Expected speeds:
+			// DOT: 60/240 * 10 = 2.5
+			// ETH: 60/240 * 10 = 2.5
+			// KSM: 60/240 * 10 = 2.5
+			// BTC: 60/240 * 10 = 2.5
+			run_to_block(11);
+			assert_eq!(MntToken::mnt_speeds(DOT), 2_500_000_000_000_000_000);
+			assert_eq!(MntToken::mnt_speeds(ETH), 2_500_000_000_000_000_000);
+			assert_eq!(MntToken::mnt_speeds(KSM), 2_500_000_000_000_000_000);
+			assert_eq!(MntToken::mnt_speeds(BTC), 2_500_000_000_000_000_000);
 		});
 }
