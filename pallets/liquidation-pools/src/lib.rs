@@ -22,6 +22,7 @@ use pallet_traits::{LiquidationPoolsManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::{AccountIdConversion, CheckedDiv, CheckedMul, Zero};
+use sp_runtime::DispatchResult;
 use sp_runtime::{transaction_validity::TransactionPriority, FixedPointNumber, ModuleId, RuntimeDebug};
 use sp_std::prelude::*;
 
@@ -243,9 +244,8 @@ pub mod module {
 			);
 
 			let new_deviation_threshold = Rate::from_inner(threshold);
-
 			ensure!(
-				(Rate::zero() <= new_deviation_threshold && new_deviation_threshold <= Rate::one()),
+				Self::is_valid_deviation_threshold(new_deviation_threshold),
 				Error::<T>::NotValidDeviationThresholdValue
 			);
 
@@ -281,9 +281,8 @@ pub mod module {
 			);
 
 			let new_balance_ratio = Rate::from_inner(balance_ratio);
-
 			ensure!(
-				(Rate::zero() <= new_balance_ratio && new_balance_ratio <= Rate::one()),
+				Self::is_valid_balance_ratio(new_balance_ratio),
 				Error::<T>::NotValidBalanceRatioValue
 			);
 
@@ -635,6 +634,14 @@ impl<T: Config> Pallet<T> {
 			None => Ok(ideal_balance),
 		}
 	}
+
+	pub fn is_valid_deviation_threshold(deviation_threshold: Rate) -> bool {
+		Rate::zero() <= deviation_threshold && deviation_threshold <= Rate::one()
+	}
+
+	pub fn is_valid_balance_ratio(balance_ratio: Rate) -> bool {
+		Rate::zero() <= balance_ratio && balance_ratio <= Rate::one()
+	}
 }
 
 impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
@@ -649,7 +656,16 @@ impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
 		T::MultiCurrency::free_balance(pool_id, &module_account_id)
 	}
 
-	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) {
+	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult {
+		ensure!(
+			Self::is_valid_deviation_threshold(deviation_threshold),
+			Error::<T>::NotValidDeviationThresholdValue
+		);
+		ensure!(
+			Self::is_valid_balance_ratio(balance_ratio),
+			Error::<T>::NotValidBalanceRatioValue
+		);
+
 		LiquidationPoolsData::<T>::insert(
 			currency_id,
 			LiquidationPoolData {
@@ -658,6 +674,7 @@ impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
 				max_ideal_balance: None,
 			},
 		);
+		Ok(())
 	}
 }
 

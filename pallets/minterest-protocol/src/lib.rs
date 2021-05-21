@@ -543,15 +543,15 @@ impl<T: Config> Pallet<T> {
 			pool_data.base_rate_per_block,
 			pool_data.multiplier_per_block,
 			pool_data.jump_multiplier_per_block,
-		);
+		)?;
 		T::ControllerAPI::create_pool(
 			pool_id,
 			pool_data.protocol_interest_factor,
 			pool_data.max_borrow_rate,
 			pool_data.collateral_factor,
 			pool_data.protocol_interest_threshold,
-		);
-		T::ManagerLiquidationPools::create_pool(pool_id, pool_data.deviation_threshold, pool_data.balance_ratio);
+		)?;
+		T::ManagerLiquidationPools::create_pool(pool_id, pool_data.deviation_threshold, pool_data.balance_ratio)?;
 
 		Ok(())
 	}

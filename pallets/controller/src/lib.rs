@@ -332,7 +332,10 @@ pub mod module {
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
 			);
-			ensure!(!max_borrow_rate.is_zero(), Error::<T>::MaxBorrowRateCannotBeZero);
+			ensure!(
+				Self::is_valid_max_borrow_rate(max_borrow_rate),
+				Error::<T>::MaxBorrowRateCannotBeZero
+			);
 
 			ControllerParams::<T>::mutate(pool_id, |data| data.max_borrow_rate = max_borrow_rate);
 			Self::deposit_event(Event::MaxBorrowRateChanged);
@@ -358,7 +361,7 @@ pub mod module {
 				Error::<T>::PoolNotFound
 			);
 			ensure!(
-				!collateral_factor.is_zero() && collateral_factor <= Rate::one(),
+				Self::is_valid_collateral_factor(collateral_factor),
 				Error::<T>::CollateralFactorIncorrectValue
 			);
 
@@ -385,12 +388,10 @@ pub mod module {
 				Error::<T>::PoolNotFound
 			);
 
-			if let Some(cap) = borrow_cap {
-				ensure!(
-					cap >= Balance::zero() && cap <= T::MaxBorrowCap::get(),
-					Error::<T>::InvalidBorrowCap
-				);
-			}
+			ensure!(
+				Self::is_valid_borrow_cap(borrow_cap),
+				Error::<T>::InvalidBorrowCap
+			);
 			ControllerParams::<T>::mutate(pool_id, |data| data.borrow_cap = borrow_cap);
 			Self::deposit_event(Event::BorrowCapChanged(pool_id, borrow_cap));
 			Ok(().into())
@@ -804,6 +805,21 @@ impl<T: Config> Pallet<T> {
 
 		Ok(interest_factor)
 	}
+
+	fn is_valid_max_borrow_rate(max_borrow_rate: Rate) -> bool {
+		!max_borrow_rate.is_zero()
+	}
+
+	fn is_valid_collateral_factor(collateral_factor: Rate) -> bool {
+		!collateral_factor.is_zero() && collateral_factor <= Rate::one()
+	}
+
+	fn is_valid_borrow_cap(borrow_cap: Option<Balance>) -> bool {
+		match borrow_cap {
+			Some(cap) => cap >= Balance::zero() && cap <= T::MaxBorrowCap::get(),
+			None => true,
+		}
+	}
 }
 
 impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
@@ -815,7 +831,16 @@ impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
 		max_borrow_rate: Rate,
 		collateral_factor: Rate,
 		protocol_interest_threshold: Balance,
-	) {
+	) -> DispatchResult {
+		ensure!(
+			Self::is_valid_max_borrow_rate(max_borrow_rate),
+			Error::<T>::MaxBorrowRateCannotBeZero
+		);
+		ensure!(
+			Self::is_valid_collateral_factor(collateral_factor),
+			Error::<T>::CollateralFactorIncorrectValue
+		);
+
 		ControllerParams::<T>::insert(
 			currency_id,
 			ControllerData {
@@ -837,6 +862,7 @@ impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
 				transfer_paused: true,
 			},
 		);
+		Ok(())
 	}
 
 	/// Return the borrow balance of account based on stored data.

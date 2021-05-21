@@ -18,7 +18,7 @@ use minterest_primitives::{CurrencyId, Rate};
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul},
-	DispatchError, FixedPointNumber, RuntimeDebug,
+	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, result};
 
@@ -260,12 +260,13 @@ pub mod module {
 				.ok_or(Error::<T>::NumOverflow)?;
 
 			// Multiplier per block cannot be set to 0 at the same time as Base rate per block .
-			if new_multiplier_per_block.is_zero() {
-				ensure!(
-					!Self::minterest_model_params(pool_id).base_rate_per_block.is_zero(),
-					Error::<T>::MultiplierPerBlockCannotBeZero
-				);
-			}
+			ensure!(
+				Self::is_valid_base_rate_and_multiplier(
+					new_multiplier_per_block,
+					Self::minterest_model_params(pool_id).base_rate_per_block
+				),
+				Error::<T>::MultiplierPerBlockCannotBeZero
+			);
 
 			// Write the previously calculated values into storage.
 			MinterestModelParams::<T>::mutate(pool_id, |r| r.multiplier_per_block = new_multiplier_per_block);
@@ -288,7 +289,7 @@ pub mod module {
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
-			ensure!(kink <= Rate::one(), Error::<T>::KinkCannotBeMoreThanOne);
+			ensure!(Self::is_valid_kink(kink), Error::<T>::KinkCannotBeMoreThanOne);
 
 			// Write the previously calculated values into storage.
 			MinterestModelParams::<T>::mutate(pool_id, |r| r.kink = kink);
@@ -306,7 +307,16 @@ impl<T: Config> Pallet<T> {
 		base_rate_per_block: Rate,
 		multiplier_per_block: Rate,
 		jump_multiplier_per_block: Rate,
-	) {
+	) -> DispatchResult {
+		ensure!(Self::is_valid_kink(kink), Error::<T>::KinkCannotBeMoreThanOne);
+		ensure!(
+			Self::is_valid_base_rate_and_multiplier(
+				multiplier_per_block,
+				Self::minterest_model_params(currency_id).base_rate_per_block
+			),
+			Error::<T>::MultiplierPerBlockCannotBeZero
+		);
+
 		MinterestModelParams::<T>::insert(
 			currency_id,
 			MinterestModelData {
@@ -316,6 +326,7 @@ impl<T: Config> Pallet<T> {
 				jump_multiplier_per_block,
 			},
 		);
+		Ok(())
 	}
 
 	/// Calculates the current borrow rate per block.
@@ -360,5 +371,13 @@ impl<T: Config> Pallet<T> {
 		};
 
 		Ok(borrow_interest_rate)
+	}
+
+	pub fn is_valid_kink(kink: Rate) -> bool {
+		kink <= Rate::one()
+	}
+
+	pub fn is_valid_base_rate_and_multiplier(base_rate_per_block: Rate, multiplier_per_block: Rate) -> bool {
+		!(base_rate_per_block.is_zero() && multiplier_per_block.is_zero())
 	}
 }

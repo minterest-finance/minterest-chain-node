@@ -58,7 +58,7 @@ pub trait LiquidationPoolsManager<AccountId> {
 	/// Return liquidity balance of `pool_id`.
 	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance;
 
-	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate);
+	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult;
 }
 
 pub trait PriceProvider<CurrencyId> {
@@ -92,7 +92,7 @@ pub trait ControllerAPI<AccountId> {
 		max_borrow_rate: Rate,
 		collateral_factor: Rate,
 		protocol_interest_threshold: Balance,
-	);
+	) -> DispatchResult;
 
 	/// Return the borrow balance of account based on stored data.
 	fn borrow_balance_stored(who: &AccountId, underlying_asset_id: CurrencyId) -> Result<Balance, DispatchError>;

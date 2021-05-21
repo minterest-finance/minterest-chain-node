@@ -271,12 +271,10 @@ mod tests {
 				// The BTC pool is excluded from the MNT token distribution, so its speed is zero.
 				test_mnt_speeds(33_333_333_283_333_335, 66_666_666_716_666_664, 0);
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
-				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
 				assert_ok!(TestMntToken::enable_mnt_minting(admin(), BTC));
 				test_mnt_speeds(21_739_130_719_754_245, 43_478_261_537_334_575, 34_782_607_742_911_179);
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
-				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
 				assert_ok!(MinterestProtocol::repay_all(alice(), ETH));
 
@@ -284,7 +282,6 @@ mod tests {
 
 				test_mnt_speeds(27_777_711_264_044_877, 27_777_952_513_478_936, 44_444_336_222_476_186);
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), 1_583_333_261_583_256_134);
-				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
 				// Alice is able to claim rewards from all three pools
 				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT, ETH]));
