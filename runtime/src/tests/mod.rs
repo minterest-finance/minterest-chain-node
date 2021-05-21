@@ -58,14 +58,17 @@ impl Default for ExtBuilder {
 				(ALICE::get(), DOT, 100_000 * DOLLARS),
 				(ALICE::get(), ETH, 100_000 * DOLLARS),
 				(ALICE::get(), BTC, 100_000 * DOLLARS),
+				(ALICE::get(), KSM, 100_000 * DOLLARS),
 				(BOB::get(), MNT, 100_000 * DOLLARS),
 				(BOB::get(), DOT, 100_000 * DOLLARS),
 				(BOB::get(), ETH, 100_000 * DOLLARS),
 				(BOB::get(), BTC, 100_000 * DOLLARS),
+				(BOB::get(), KSM, 100_000 * DOLLARS),
 				(CHARLIE::get(), MNT, 100_000 * DOLLARS),
 				(CHARLIE::get(), DOT, 100_000 * DOLLARS),
 				(CHARLIE::get(), ETH, 100_000 * DOLLARS),
 				(CHARLIE::get(), BTC, 100_000 * DOLLARS),
+				(CHARLIE::get(), KSM, 100_000 * DOLLARS),
 			],
 			pools: vec![],
 			pool_user_data: vec![],
@@ -502,7 +505,7 @@ fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 	Prices::unlock_price(origin_root(), currency_id)
 }
 
-fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> (Price, Price) {
+fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> (Rate, Rate) {
 	<Runtime as MntTokenApi<Block, AccountId>>::get_mnt_borrow_supply_apy(pool_id)
 }
 
@@ -513,4 +516,3 @@ pub fn run_to_block(n: u32) {
 		System::set_block_number(System::block_number() + 1);
 	}
 }
-

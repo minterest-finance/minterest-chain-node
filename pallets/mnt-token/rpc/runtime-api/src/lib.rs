@@ -7,7 +7,7 @@
 #![allow(clippy::unnecessary_mut_passed)]
 
 use codec::{Codec, Decode, Encode};
-use minterest_primitives::{Balance, CurrencyId, Price};
+use minterest_primitives::{Balance, CurrencyId, Rate};
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
 
@@ -42,6 +42,6 @@ sp_api::decl_runtime_apis! {
 		AccountId: Codec,
 	{
 		fn get_unclaimed_mnt_balance(account_id: AccountId) -> Option<MntBalanceInfo>;
-		fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> (Price, Price);
+		fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> (Rate, Rate);
 	}
 }

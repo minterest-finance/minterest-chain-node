@@ -81,7 +81,7 @@ pub mod module {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Provides Liquidity Pool functionality
-		type LiquidityPoolsManager: LiquidityPoolsManager;
+		type LiquidityPoolsManager: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
 
 		/// The origin which may update MNT token parameters. Root can
 		/// always do this.
@@ -612,29 +612,45 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		Ok(borrower_mnt_accrued)
 	}
 
-	fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> Result<(Price, Price), DispatchError> {
+	/// Return Borrow APY and Supply APY values for block for current pool
+	/// - `pool_id` - the pool to calculate APY
+	fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> Result<(Rate, Rate), DispatchError> {
+		// borrow_apy = mnt_speed * mnt_price / (total_borrow * currency_price)
+		// supply_apy = mnt_speed * mnt_price / (total_supply * currency_price)
+		// where:
+		//	total_supply = total_cash + total_protocol_interest - total_borrow
+
 		let total_borrow = T::LiquidityPoolsManager::get_pool_total_borrowed(pool_id);
 
-		if total_borrow == 0 {
-			return Ok((Price::zero(), Price::zero()));
+		if total_borrow.is_zero() {
+			return Ok((Rate::zero(), Rate::zero()));
 		}
 
 		Self::refresh_mnt_speeds()?;
 		let mnt_speed = MntSpeeds::<T>::get(pool_id);
-		let mnt_price = T::PriceSource::get_underlying_price(MNT).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
 
+		let mnt_price = T::PriceSource::get_underlying_price(MNT).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
 
-
-
-		let total_cash = T::PoolsManager::get_pool_available_liquidity(pool_id);
+		let total_cash = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
 		let total_protocol_interest = T::LiquidityPoolsManager::get_pool_total_protocol_interest(pool_id);
-		let total_supply = FixedU128::from_inner(total_cash - total_protocol_interest + total_borrow);
 
-		let borrow_apy = FixedU128::from_inner(mnt_speed) * mnt_price 
-						/ (FixedU128::from_inner(total_borrow) * oracle_price);
+		let total_supply = total_cash
+			.checked_sub(total_protocol_interest)
+			.and_then(|v| v.checked_add(total_borrow))
+			.ok_or(Error::<T>::NumOverflow)?;
 
-		let supply_apy = FixedU128::from_inner(mnt_speed) * mnt_price / (total_supply * oracle_price);
+		let borrow_apy = FixedU128::from_inner(mnt_speed)
+			.checked_mul(&mnt_price)
+			.and_then(|v| v.checked_div(&Rate::from_inner(total_borrow)))
+			.and_then(|v| v.checked_div(&oracle_price))
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		let supply_apy = FixedU128::from_inner(mnt_speed)
+			.checked_mul(&mnt_price)
+			.and_then(|v| v.checked_div(&Rate::from_inner(total_supply)))
+			.and_then(|v| v.checked_div(&oracle_price))
+			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok((borrow_apy, supply_apy))
 	}

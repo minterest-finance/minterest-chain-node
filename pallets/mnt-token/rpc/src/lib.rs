@@ -3,7 +3,7 @@
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use minterest_primitives::{CurrencyId, Price};
+use minterest_primitives::{CurrencyId, Rate};
 pub use mnt_token_rpc_runtime_api::{MntBalanceInfo, MntTokenApi as MntTokenRuntimeApi};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
@@ -17,11 +17,7 @@ pub trait MntTokenApi<BlockHash, AccountId> {
 		-> Result<Option<MntBalanceInfo>>;
 
 	#[rpc(name = "mntToken_getMntBorrowSupplyApy")]
-	fn get_mnt_borrow_supply_apy(
-		&self,
-		pool_id: CurrencyId,
-		at: Option<BlockHash>,
-	) -> Result<(Price, Price)>;
+	fn get_mnt_borrow_supply_apy(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<(Rate, Rate)>;
 }
 
 /// A struct that implements the [`MntTokenApi`].
@@ -79,7 +75,7 @@ where
 		&self,
 		pool_id: CurrencyId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<(Price, Price)> {
+	) -> Result<(Rate, Rate)> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume the best block.
