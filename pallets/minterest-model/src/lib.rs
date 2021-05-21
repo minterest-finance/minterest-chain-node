@@ -301,6 +301,8 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
+	/// This is a part of a pool creation flow
+	/// Checks parameters validity and creates storage records for MinterestModelParams
 	pub fn create_pool(
 		currency_id: CurrencyId,
 		kink: Rate,

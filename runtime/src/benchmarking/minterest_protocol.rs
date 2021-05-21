@@ -65,7 +65,7 @@ runtime_benchmarks! {
 	}: _(
 		RawOrigin::Root,
 		DOT,
-		PoolInitData {
+		Box::new(PoolInitData {
 			kink: Rate::saturating_from_rational(2, 3),
 			base_rate_per_block: Rate::saturating_from_rational(1, 3),
 			multiplier_per_block: Rate::saturating_from_rational(2, 4),
@@ -76,7 +76,11 @@ runtime_benchmarks! {
 			protocol_interest_threshold: 100000,
 			deviation_threshold: Rate::saturating_from_rational(5, 100),
 			balance_ratio: Rate::saturating_from_rational(2, 10),
-		}
+			max_attempts: 3,
+			min_partial_liquidation_sum: 100,
+			threshold: Rate::saturating_from_rational(103, 100),
+			liquidation_fee: Rate::saturating_from_rational(105, 100),
+		})
 	)
 
 	deposit_underlying {

@@ -163,3 +163,13 @@ pub trait MntManager<AccountId> {
 		distribute_all: bool,
 	) -> Result<Balance, DispatchError>;
 }
+
+pub trait RiskManagerAPI {
+	fn add_pool(
+		currency_id: CurrencyId,
+		max_attempts: u8,
+		min_partial_liquidation_sum: Balance,
+		threshold: Rate,
+		liquidation_fee: Rate,
+	) -> DispatchResult;
+}

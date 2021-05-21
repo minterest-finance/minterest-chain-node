@@ -25,7 +25,7 @@ use frame_system::{
 };
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerAPI, LiquidationPoolsManager, MntManager, PoolsManager, PriceProvider};
+use pallet_traits::{ControllerAPI, LiquidationPoolsManager, MntManager, PoolsManager, PriceProvider, RiskManagerAPI};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::{CheckedDiv, CheckedMul, One};
@@ -231,40 +231,6 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		///
-		#[pallet::weight(10000)]
-		#[transactional]
-		pub fn add_pool(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			max_attempts: u8,
-			min_partial_liquidation_sum: Balance,
-			threshold: Rate,
-			liquidation_fee: Rate,
-		) -> DispatchResultWithPostInfo {
-			T::RiskManagerUpdateOrigin::ensure_origin(origin)?;
-
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&currency_id),
-				liquidity_pools::Error::<T>::PoolNotFound
-			);
-			ensure!(
-				RiskManagerParams::<T>::contains_key(currency_id),
-				Error::<T>::PoolAlreadyAdded
-			);
-			RiskManagerParams::<T>::insert(
-				currency_id,
-				RiskManagerData {
-					max_attempts,
-					min_partial_liquidation_sum,
-					threshold,
-					liquidation_fee,
-				},
-			);
-
-			Ok(().into())
-		}
-
 		/// Set maximum amount of partial liquidation attempts.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `max_attempts`: New max value of liquidation attempts.
@@ -365,7 +331,7 @@ pub mod module {
 
 			// Check if 1 <= liquidation_fee <= 1.5
 			ensure!(
-				(liquidation_fee >= Rate::one() && liquidation_fee <= Rate::saturating_from_rational(15, 10)),
+				Self::is_valid_liquidation_fee(liquidation_fee),
 				Error::<T>::InvalidLiquidationIncentiveValue
 			);
 
@@ -766,6 +732,39 @@ impl<T: Config> Pallet<T> {
 				p.liquidation_attempts = u8::zero();
 			}
 		})
+	}
+
+	fn is_valid_liquidation_fee(liquidation_fee: Rate) -> bool {
+		liquidation_fee >= Rate::one() && liquidation_fee <= Rate::saturating_from_rational(15, 10)
+	}
+}
+
+impl<T: Config> RiskManagerAPI for Pallet<T> {
+	/// This is a part of a pool creation flow
+	/// Creates storage records for RiskManagerParams
+	fn add_pool(
+		currency_id: CurrencyId,
+		max_attempts: u8,
+		min_partial_liquidation_sum: Balance,
+		threshold: Rate,
+		liquidation_fee: Rate,
+	) -> DispatchResult {
+		ensure!(
+			Self::is_valid_liquidation_fee(liquidation_fee),
+			Error::<T>::InvalidLiquidationIncentiveValue
+		);
+
+		RiskManagerParams::<T>::insert(
+			currency_id,
+			RiskManagerData {
+				max_attempts,
+				min_partial_liquidation_sum,
+				threshold,
+				liquidation_fee,
+			},
+		);
+
+		Ok(())
 	}
 }
 

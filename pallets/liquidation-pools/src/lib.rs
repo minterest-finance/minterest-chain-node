@@ -656,6 +656,8 @@ impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
 		T::MultiCurrency::free_balance(pool_id, &module_account_id)
 	}
 
+	/// This is a part of a pool creation flow
+	/// Checks parameters validity and creates storage records for LiquidationPoolsData
 	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult {
 		ensure!(
 			Self::is_valid_deviation_threshold(deviation_threshold),

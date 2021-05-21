@@ -23,7 +23,7 @@ use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	Borrowing, ControllerAPI, LiquidationPoolsManager, LiquidityPoolsManager, MntManager, PoolsManager,
+	Borrowing, ControllerAPI, LiquidationPoolsManager, LiquidityPoolsManager, MntManager, PoolsManager, RiskManagerAPI,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -31,7 +31,7 @@ use sp_runtime::{
 	traits::{BadOrigin, Zero},
 	DispatchError, DispatchResult,
 };
-use sp_std::{result, vec::Vec};
+use sp_std::{boxed::Box, result, vec::Vec};
 
 pub use module::*;
 
@@ -64,6 +64,11 @@ pub struct PoolInitData {
 	// Liquidation Pools storage data
 	pub deviation_threshold: Rate,
 	pub balance_ratio: Rate,
+	// Risk manager storage data
+	pub max_attempts: u8,
+	pub min_partial_liquidation_sum: Balance,
+	pub threshold: Rate,
+	pub liquidation_fee: Rate,
 }
 
 #[frame_support::pallet]
@@ -97,6 +102,9 @@ pub mod module {
 
 		/// Public API of controller pallet
 		type ControllerAPI: ControllerAPI<Self::AccountId>;
+
+		/// Public API of risk manager pallet
+		type RiskManagerAPI: RiskManagerAPI;
 
 		/// The origin which may create pools. Root can
 		/// always do this.
@@ -198,7 +206,7 @@ pub mod module {
 		pub fn create_pool(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			pool_data: PoolInitData,
+			pool_data: Box<PoolInitData>,
 		) -> DispatchResultWithPostInfo {
 			T::CreatePoolOrigin::ensure_origin(origin)?;
 
@@ -211,7 +219,7 @@ pub mod module {
 				liquidity_pools::Error::<T>::PoolAlreadyCreated
 			);
 
-			Self::do_create_pool(pool_id, pool_data)?;
+			Self::do_create_pool(pool_id, *pool_data)?;
 			Self::deposit_event(Event::PoolCreated(pool_id));
 			Ok(().into())
 		}
@@ -552,6 +560,13 @@ impl<T: Config> Pallet<T> {
 			pool_data.protocol_interest_threshold,
 		)?;
 		T::ManagerLiquidationPools::create_pool(pool_id, pool_data.deviation_threshold, pool_data.balance_ratio)?;
+		T::RiskManagerAPI::add_pool(
+			pool_id,
+			pool_data.max_attempts,
+			pool_data.min_partial_liquidation_sum,
+			pool_data.threshold,
+			pool_data.liquidation_fee,
+		)?;
 
 		Ok(())
 	}

@@ -204,6 +204,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type WhitelistMembers = WhitelistMembers;
 			type ProtocolWeightInfo = ();
 			type ControllerAPI = controller::Module<$target>;
+			type RiskManagerAPI = TestRiskManager;
 			type CreatePoolOrigin = EnsureSignedBy<$acc, AccountId>;
 		}
 	};

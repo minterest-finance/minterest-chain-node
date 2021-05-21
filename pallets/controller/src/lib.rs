@@ -388,10 +388,7 @@ pub mod module {
 				Error::<T>::PoolNotFound
 			);
 
-			ensure!(
-				Self::is_valid_borrow_cap(borrow_cap),
-				Error::<T>::InvalidBorrowCap
-			);
+			ensure!(Self::is_valid_borrow_cap(borrow_cap), Error::<T>::InvalidBorrowCap);
 			ControllerParams::<T>::mutate(pool_id, |data| data.borrow_cap = borrow_cap);
 			Self::deposit_event(Event::BorrowCapChanged(pool_id, borrow_cap));
 			Ok(().into())
@@ -823,6 +820,7 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
+	/// This is a part of a pool creation flow
 	/// Creates storage records for ControllerParams and PauseKeepers
 	/// All operations are paused after this function call
 	fn create_pool(

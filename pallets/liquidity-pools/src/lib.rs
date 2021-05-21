@@ -348,6 +348,8 @@ impl<T: Config> Pallet<T> {
 		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = false);
 	}
 
+	/// This is a part of a pool creation flow
+	/// Creates storage records for LiquidationPoolsData
 	pub fn create_pool(currency_id: CurrencyId) {
 		Pools::<T>::insert(
 			currency_id,

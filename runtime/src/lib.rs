@@ -364,6 +364,7 @@ impl minterest_protocol::Config for Runtime {
 	type WhitelistMembers = WhitelistCouncilProvider;
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
 	type ControllerAPI = Controller;
+	type RiskManagerAPI = RiskManager;
 	type CreatePoolOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 

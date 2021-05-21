@@ -9,7 +9,7 @@ use liquidity_pools::{Pool, PoolUserData};
 pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
-use pallet_traits::PriceProvider;
+use pallet_traits::{PriceProvider, RiskManagerAPI};
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
@@ -74,6 +74,20 @@ mock_impl_dex_config!(Test);
 mock_impl_minterest_protocol_config!(Test, OneAlice);
 mock_impl_mnt_token_config!(Test, OneAlice);
 mock_impl_balances_config!(Test);
+
+pub struct TestRiskManager;
+
+impl RiskManagerAPI for TestRiskManager {
+	fn add_pool(
+		_currency_id: CurrencyId,
+		_max_attempts: u8,
+		_min_partial_liquidation_sum: u128,
+		_threshold: Rate,
+		_liquidation_fee: Rate,
+	) -> DispatchResult {
+		Ok(())
+	}
+}
 
 pub struct MockPriceSource;
 

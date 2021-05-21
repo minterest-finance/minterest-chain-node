@@ -242,7 +242,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::create_pool(
 					admin(),
 					BTC,
-					PoolInitData {
+					Box::new(PoolInitData {
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::zero(),
 						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
@@ -253,7 +253,11 @@ mod tests {
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 						deviation_threshold: Rate::saturating_from_rational(1, 10),
 						balance_ratio: Rate::saturating_from_rational(2, 10),
-					},
+						max_attempts: 3,
+						min_partial_liquidation_sum: 100 * DOLLARS,
+						threshold: Rate::saturating_from_rational(103, 100),
+						liquidation_fee: Rate::saturating_from_rational(105, 100),
+					}),
 				));
 				assert_ok!(TestController::resume_operation(admin(), BTC, Operation::Borrow));
 				assert_ok!(TestController::resume_operation(admin(), BTC, Operation::Deposit));

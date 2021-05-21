@@ -23,7 +23,7 @@ fn create_pool_should_work() {
 			TestProtocol::create_pool(
 				bob(),
 				DOT,
-				PoolInitData {
+				Box::new(PoolInitData {
 					kink: Rate::zero(),
 					base_rate_per_block: Rate::zero(),
 					multiplier_per_block: Rate::zero(),
@@ -34,7 +34,11 @@ fn create_pool_should_work() {
 					protocol_interest_threshold: Balance::zero(),
 					deviation_threshold: Rate::zero(),
 					balance_ratio: Rate::zero(),
-				},
+					max_attempts: u8::zero(),
+					min_partial_liquidation_sum: Balance::zero(),
+					threshold: Rate::zero(),
+					liquidation_fee: Rate::zero(),
+				}),
 			),
 			BadOrigin,
 		);
@@ -42,7 +46,7 @@ fn create_pool_should_work() {
 		assert_ok!(TestProtocol::create_pool(
 			alice(),
 			DOT,
-			PoolInitData {
+			Box::new(PoolInitData {
 				kink: Rate::saturating_from_rational(2, 3),
 				base_rate_per_block: Rate::saturating_from_rational(1, 3),
 				multiplier_per_block: Rate::saturating_from_rational(2, 4),
@@ -53,7 +57,11 @@ fn create_pool_should_work() {
 				protocol_interest_threshold: 100000,
 				deviation_threshold: Rate::saturating_from_rational(5, 100),
 				balance_ratio: Rate::saturating_from_rational(2, 10),
-			},
+				max_attempts: 3,
+				min_partial_liquidation_sum: 100 * DOLLARS,
+				threshold: Rate::saturating_from_rational(103, 100),
+				liquidation_fee: Rate::saturating_from_rational(105, 100),
+			}),
 		));
 		let expected_event = Event::minterest_protocol(crate::Event::PoolCreated(DOT));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
@@ -110,7 +118,7 @@ fn create_pool_should_work() {
 			TestProtocol::create_pool(
 				alice(),
 				DOT,
-				PoolInitData {
+				Box::new(PoolInitData {
 					kink: Rate::saturating_from_rational(2, 3),
 					base_rate_per_block: Rate::saturating_from_rational(1, 3),
 					multiplier_per_block: Rate::saturating_from_rational(2, 4),
@@ -121,7 +129,11 @@ fn create_pool_should_work() {
 					protocol_interest_threshold: 100000,
 					deviation_threshold: Rate::saturating_from_rational(5, 100),
 					balance_ratio: Rate::saturating_from_rational(2, 10),
-				}
+					max_attempts: 3,
+					min_partial_liquidation_sum: 100 * DOLLARS,
+					threshold: Rate::saturating_from_rational(103, 100),
+					liquidation_fee: Rate::saturating_from_rational(105, 100),
+				}),
 			),
 			liquidity_pools::Error::<Test>::PoolAlreadyCreated,
 		);

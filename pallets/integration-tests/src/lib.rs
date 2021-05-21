@@ -64,6 +64,7 @@ mod tests {
 			MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 			TestDex: dex::{Module, Storage, Call, Event<T>},
 			TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
+			TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config},
 		}
 	);
 
@@ -95,6 +96,7 @@ mod tests {
 	mock_impl_dex_config!(Test);
 	mock_impl_minterest_protocol_config!(Test, ZeroAdmin);
 	mock_impl_mnt_token_config!(Test, ZeroAdmin);
+	mock_impl_risk_manager_config!(Test, ZeroAdmin);
 
 	pub struct MockPriceSource;
 
