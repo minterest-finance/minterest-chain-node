@@ -623,6 +623,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		let mnt_speed = MntSpeeds::<T>::get(pool_id);
 		let mnt_price = T::PriceSource::get_underlying_price(MNT).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
 
+		let total_borrow = T::LiquidityPoolsManager::get_pool_total_borrowed(pool_id);
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
 
 
