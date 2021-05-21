@@ -108,8 +108,8 @@ pub mod module {
 		/// Provides MNT token distribution functionality.
 		type MntManager: MntManager<Self::AccountId>;
 
-		/// The origin which may update risk manager parameters. Root can
-		/// always do this.
+		/// The origin which may update risk manager parameters. Root or
+		/// Half Minterest Council can always do this.
 		type RiskManagerUpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		type RiskManagerWeightInfo: WeightInfo;
@@ -127,8 +127,6 @@ pub mod module {
 		InvalidLiquidationIncentiveValue,
 		/// Feed price is invalid
 		InvalidFeedPrice,
-		/// Pool not found in liquidity-pools pallet storage
-		PoolNotAdded,
 		/// Pool had already been added to risk-manager
 		PoolAlreadyAdded,
 	}
@@ -361,7 +359,6 @@ pub mod module {
 				T::ManagerLiquidityPools::pool_exists(&pool_id),
 				liquidity_pools::Error::<T>::PoolNotFound
 			);
-			ensure!(RiskManagerParams::<T>::contains_key(pool_id), Error::<T>::PoolNotAdded);
 
 			let who = T::Lookup::lookup(who)?;
 			Self::liquidate_unsafe_loan(who, pool_id)?;
@@ -375,10 +372,7 @@ impl<T: Config> Pallet<T> {
 		// Get available assets list
 		let underlying_assets: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.into_iter()
-			.filter(|&underlying_id| {
-				T::LiquidityPoolsManager::pool_exists(&underlying_id)
-					&& RiskManagerParams::<T>::contains_key(underlying_id)
-			})
+			.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(&underlying_id))
 			.collect();
 
 		if underlying_assets.is_empty() {

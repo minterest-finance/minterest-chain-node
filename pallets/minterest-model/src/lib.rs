@@ -63,8 +63,8 @@ pub mod module {
 		/// The approximate number of blocks per year
 		type BlocksPerYear: Get<u128>;
 
-		/// The origin which may update minterest model parameters. Root can
-		/// always do this.
+		/// The origin which may update minterest model parameters. Root or
+		/// Half Minterest Council can always do this.
 		type ModelUpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		/// Weight information for the extrinsics.

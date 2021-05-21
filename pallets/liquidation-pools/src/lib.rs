@@ -87,8 +87,8 @@ pub mod module {
 		/// The basic liquidity pools manager.
 		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
 
-		/// The origin which may update liquidation pools parameters. Root can
-		/// always do this.
+		/// The origin which may update liquidation pools parameters. Root or
+		/// Half Minterest Council can always do this.
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		/// The DEX participating in balancing
@@ -114,8 +114,6 @@ pub mod module {
 		InvalidFeedPrice,
 		/// Could not find a pool with required parameters
 		PoolNotFound,
-		/// Pool is already created
-		PoolAlreadyCreated,
 		/// Not enough liquidation pool balance.
 		NotEnoughBalance,
 		/// There is not enough liquidity available on user balance.
@@ -339,11 +337,8 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let _ = ensure_none(origin)?;
 			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&supply_pool_id),
-				Error::<T>::PoolNotFound
-			);
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&target_pool_id),
+				T::LiquidityPoolsManager::pool_exists(&supply_pool_id)
+					&& T::LiquidityPoolsManager::pool_exists(&target_pool_id),
 				Error::<T>::PoolNotFound
 			);
 

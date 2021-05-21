@@ -84,8 +84,8 @@ pub mod module {
 		/// Provides Liquidity Pool functionality
 		type LiquidityPoolsManager: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
 
-		/// The origin which may update MNT token parameters. Root can
-		/// always do this.
+		/// The origin which may update MNT token parameters. Root or
+		/// Two Thirds Minterest Council can always do this
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		/// The price source of currencies

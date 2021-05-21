@@ -115,8 +115,6 @@ pub mod module {
 		ConversionError,
 		/// Pool not found.
 		PoolNotFound,
-		/// Pool is already created.
-		PoolAlreadyCreated,
 	}
 
 	#[pallet::storage]
@@ -253,7 +251,7 @@ impl<T: Config> Pallet<T> {
 		total_borrowed: Balance,
 	) -> RateResult {
 		let rate = match total_supply.cmp(&Balance::zero()) {
-			// If there are no tokens minted: exchangeRate = InitialExchangeRate.
+			// If there are no tokens minted: exchange_rate = initial_exchange_rate.
 			Ordering::Equal => T::InitialExchangeRate::get(),
 
 			// Otherwise: exchange_rate = (total_cash + total_borrowed - total_protocol_interest) / total_supply

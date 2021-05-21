@@ -105,8 +105,8 @@ pub mod module {
 		/// Maximum total borrow amount per pool in usd.
 		type MaxBorrowCap: Get<Balance>;
 
-		/// The origin which may update controller parameters. Root can
-		/// always do this.
+		/// The origin which may update controller parameters. Root or
+		/// Half Minterest Council can always do this.
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		/// Weight information for the extrinsics.
@@ -853,11 +853,11 @@ impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
 		PauseKeepers::<T>::insert(
 			currency_id,
 			PauseKeeper {
-				deposit_paused: true,
-				redeem_paused: true,
-				borrow_paused: true,
-				repay_paused: true,
-				transfer_paused: true,
+				deposit_paused: false,
+				redeem_paused: false,
+				borrow_paused: false,
+				repay_paused: false,
+				transfer_paused: false,
 			},
 		);
 		Ok(())

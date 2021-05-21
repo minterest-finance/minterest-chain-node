@@ -106,8 +106,8 @@ pub mod module {
 		/// Public API of risk manager pallet
 		type RiskManagerAPI: RiskManagerAPI;
 
-		/// The origin which may create pools. Root can
-		/// always do this.
+		/// The origin which may create pools. Root or
+		/// Half Minterest Council can always do this.
 		type CreatePoolOrigin: EnsureOrigin<Self::Origin>;
 	}
 
@@ -143,6 +143,8 @@ pub mod module {
 		HypotheticalLiquidityCalculationError,
 		/// The currency is not enabled in wrapped protocol.
 		NotValidWrappedTokenId,
+		/// Pool is already created
+		PoolAlreadyCreated,
 	}
 
 	#[pallet::event]
@@ -216,7 +218,7 @@ pub mod module {
 			);
 			ensure!(
 				!T::ManagerLiquidityPools::pool_exists(&pool_id),
-				liquidity_pools::Error::<T>::PoolAlreadyCreated
+				Error::<T>::PoolAlreadyCreated
 			);
 
 			Self::do_create_pool(pool_id, *pool_data)?;

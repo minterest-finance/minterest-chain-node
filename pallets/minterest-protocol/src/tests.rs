@@ -20,26 +20,7 @@ fn create_pool_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
-			TestProtocol::create_pool(
-				bob(),
-				DOT,
-				Box::new(PoolInitData {
-					kink: Rate::zero(),
-					base_rate_per_block: Rate::zero(),
-					multiplier_per_block: Rate::zero(),
-					jump_multiplier_per_block: Rate::zero(),
-					protocol_interest_factor: Rate::zero(),
-					max_borrow_rate: Rate::zero(),
-					collateral_factor: Rate::zero(),
-					protocol_interest_threshold: Balance::zero(),
-					deviation_threshold: Rate::zero(),
-					balance_ratio: Rate::zero(),
-					max_attempts: u8::zero(),
-					min_partial_liquidation_sum: Balance::zero(),
-					threshold: Rate::zero(),
-					liquidation_fee: Rate::zero(),
-				}),
-			),
+			TestProtocol::create_pool(bob(), DOT, Box::new(PoolInitData { ..Default::default() })),
 			BadOrigin,
 		);
 
@@ -97,11 +78,11 @@ fn create_pool_should_work() {
 		assert_eq!(
 			Controller::pause_keepers(DOT),
 			PauseKeeper {
-				deposit_paused: true,
-				redeem_paused: true,
-				borrow_paused: true,
-				repay_paused: true,
-				transfer_paused: true,
+				deposit_paused: false,
+				redeem_paused: false,
+				borrow_paused: false,
+				repay_paused: false,
+				transfer_paused: false,
 			},
 		);
 		assert_eq!(
@@ -135,7 +116,7 @@ fn create_pool_should_work() {
 					liquidation_fee: Rate::saturating_from_rational(105, 100),
 				}),
 			),
-			liquidity_pools::Error::<Test>::PoolAlreadyCreated,
+			Error::<Test>::PoolAlreadyCreated,
 		);
 	});
 }
