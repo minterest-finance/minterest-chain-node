@@ -618,7 +618,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		// borrow_rate = mnt_speed * mnt_price / (total_borrow * currency_price)
 		// supply_rate = mnt_speed * mnt_price / (total_supply * currency_price)
 		// where:
-		//	total_supply = total_cash + total_protocol_interest - total_borrow
+		//	total_supply = total_cash - total_protocol_interest + total_borrow
 
 		let total_borrow = T::LiquidityPoolsManager::get_pool_total_borrowed(pool_id);
 
