@@ -8,128 +8,12 @@ use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 
 use sp_core::offchain::{
 	testing::{TestOffchainExt, TestTransactionPoolExt},
-	Externalities, OffchainExt, StorageKind, TransactionPoolExt,
+	OffchainExt, TransactionPoolExt,
 };
 
-use frame_support::sp_runtime::app_crypto::sp_core::offchain::{
-	HttpError, HttpRequestId, HttpRequestStatus, OpaqueNetworkState, Timestamp,
-};
-use frame_support::sp_runtime::app_crypto::sp_core::OpaquePeerId;
 use liquidation_pools;
 use sp_core::offchain::OffchainStorage;
-
-// TODO: Make this more general by taking a struct containing hooks
-/// Allows you to hook into timestamp call
-struct OffChainExtWithHooks<T> {
-	inner: Box<T>,
-	timestamp_hook: Option<Box<dyn Fn(Timestamp, &mut dyn Externalities) -> Timestamp + Send>>,
-}
-
-impl<T> OffChainExtWithHooks<T>
-where
-	T: Externalities,
-{
-	pub fn new(
-		inner: T,
-		timestamp_hook: Option<Box<dyn Fn(Timestamp, &mut dyn Externalities) -> Timestamp + Send>>,
-	) -> Self {
-		Self {
-			inner: Box::new(inner),
-			timestamp_hook,
-		}
-	}
-}
-
-impl<T> Externalities for OffChainExtWithHooks<T>
-where
-	T: Externalities,
-{
-	fn is_validator(&self) -> bool {
-		self.inner.is_validator()
-	}
-
-	fn network_state(&self) -> Result<OpaqueNetworkState, ()> {
-		self.inner.network_state()
-	}
-
-	fn timestamp(&mut self) -> Timestamp {
-		let inner_timestamp = self.inner.timestamp();
-		return if let Some(ref mut timestamp_hook_fn) = self.timestamp_hook {
-			timestamp_hook_fn(inner_timestamp, self.inner.as_mut())
-		} else {
-			inner_timestamp
-		};
-	}
-
-	fn sleep_until(&mut self, deadline: Timestamp) {
-		self.inner.sleep_until(deadline)
-	}
-
-	fn random_seed(&mut self) -> [u8; 32] {
-		self.inner.random_seed()
-	}
-
-	fn local_storage_set(&mut self, kind: StorageKind, key: &[u8], value: &[u8]) {
-		self.inner.local_storage_set(kind, key, value)
-	}
-
-	fn local_storage_clear(&mut self, kind: StorageKind, key: &[u8]) {
-		self.inner.local_storage_clear(kind, key)
-	}
-
-	fn local_storage_compare_and_set(
-		&mut self,
-		kind: StorageKind,
-		key: &[u8],
-		old_value: Option<&[u8]>,
-		new_value: &[u8],
-	) -> bool {
-		self.inner
-			.local_storage_compare_and_set(kind, key, old_value, new_value)
-	}
-
-	fn local_storage_get(&mut self, kind: StorageKind, key: &[u8]) -> Option<Vec<u8>> {
-		self.inner.local_storage_get(kind, key)
-	}
-
-	fn http_request_start(&mut self, method: &str, uri: &str, meta: &[u8]) -> Result<HttpRequestId, ()> {
-		self.inner.http_request_start(method, uri, meta)
-	}
-
-	fn http_request_add_header(&mut self, request_id: HttpRequestId, name: &str, value: &str) -> Result<(), ()> {
-		self.inner.http_request_add_header(request_id, name, value)
-	}
-
-	fn http_request_write_body(
-		&mut self,
-		request_id: HttpRequestId,
-		chunk: &[u8],
-		deadline: Option<Timestamp>,
-	) -> Result<(), HttpError> {
-		self.inner.http_request_write_body(request_id, chunk, deadline)
-	}
-
-	fn http_response_wait(&mut self, ids: &[HttpRequestId], deadline: Option<Timestamp>) -> Vec<HttpRequestStatus> {
-		self.inner.http_response_wait(ids, deadline)
-	}
-
-	fn http_response_headers(&mut self, request_id: HttpRequestId) -> Vec<(Vec<u8>, Vec<u8>)> {
-		self.inner.http_response_headers(request_id)
-	}
-
-	fn http_response_read_body(
-		&mut self,
-		request_id: HttpRequestId,
-		buffer: &mut [u8],
-		deadline: Option<Timestamp>,
-	) -> Result<usize, HttpError> {
-		self.inner.http_response_read_body(request_id, buffer, deadline)
-	}
-
-	fn set_authorized_nodes(&mut self, nodes: Vec<OpaquePeerId>, authorized_only: bool) {
-		self.inner.set_authorized_nodes(nodes, authorized_only)
-	}
-}
+use test_helper::offchain_ext::OffChainExtWithHooks;
 
 #[test]
 fn test_offchain_worker_lock_expired() {
@@ -144,17 +28,10 @@ fn test_offchain_worker_lock_expired() {
 		.build();
 
 	let (offchain, state) = TestOffchainExt::new();
-	let offchain_ext_with_timestamp_hook = OffChainExtWithHooks::new(
-		// Increment time by some amount whenever timestamp is called, to simulate real clock
-		offchain,
-		Some(Box::new(|t, ext| {
-			ext.sleep_until(t.add(Duration::from_millis(30000)));
-			t
-		})),
-	);
+	let offchain_ext = OffChainExtWithHooks::new(offchain, None);
 
 	let (pool, trans_pool_state) = TestTransactionPoolExt::new();
-	ext.register_extension(OffchainExt::new(offchain_ext_with_timestamp_hook));
+	ext.register_extension(OffchainExt::new(offchain_ext));
 	ext.register_extension(TransactionPoolExt::new(pool));
 
 	ext.execute_with(|| {

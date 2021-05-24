@@ -8281,6 +8281,7 @@ dependencies = [
 name = "test-helper"
 version = "0.6.2"
 dependencies = [
+ "frame-support",
  "minterest-primitives",
 ]
 
