@@ -612,7 +612,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		Ok(borrower_mnt_accrued)
 	}
 
-	/// Return Borrow APY and Supply rate values for block for current pool
+	/// Return MNT Borrow Rate and MNT Supply Rate values per block for current pool.
 	/// - `pool_id` - the pool to calculate rates
 	fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Rate, Rate), DispatchError> {
 		// borrow_rate = mnt_speed * mnt_price / (total_borrow * currency_price)
