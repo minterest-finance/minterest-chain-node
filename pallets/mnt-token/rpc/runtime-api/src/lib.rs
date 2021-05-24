@@ -42,6 +42,6 @@ sp_api::decl_runtime_apis! {
 		AccountId: Codec,
 	{
 		fn get_unclaimed_mnt_balance(account_id: AccountId) -> Option<MntBalanceInfo>;
-		fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> (Rate, Rate);
+		fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)>;
 	}
 }

@@ -815,8 +815,8 @@ impl_runtime_apis! {
 				Some(MntBalanceInfo{amount: MntToken::get_unclaimed_mnt_balance(&account_id).ok()?})
 		}
 
-		fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> (Rate, Rate) {
-			MntToken::get_mnt_borrow_supply_apy(pool_id).unwrap()
+		fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
+			Some(MntToken::get_mnt_borrow_and_supply_rates(pool_id).ok()?)
 		}
 	}
 

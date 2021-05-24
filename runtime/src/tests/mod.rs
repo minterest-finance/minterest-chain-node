@@ -505,8 +505,8 @@ fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 	Prices::unlock_price(origin_root(), currency_id)
 }
 
-fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> (Rate, Rate) {
-	<Runtime as MntTokenApi<Block, AccountId>>::get_mnt_borrow_supply_apy(pool_id)
+fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> (Rate, Rate) {
+	<Runtime as MntTokenApi<Block, AccountId>>::get_mnt_borrow_and_supply_rates(pool_id).unwrap()
 }
 
 pub fn run_to_block(n: u32) {

@@ -16,8 +16,12 @@ pub trait MntTokenApi<BlockHash, AccountId> {
 	fn get_unclaimed_mnt_balance(&self, account_id: AccountId, at: Option<BlockHash>)
 		-> Result<Option<MntBalanceInfo>>;
 
-	#[rpc(name = "mntToken_getMntBorrowSupplyApy")]
-	fn get_mnt_borrow_supply_apy(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<(Rate, Rate)>;
+	#[rpc(name = "mntToken_getMntBorrowAndSupplyRates")]
+	fn get_mnt_borrow_and_supply_rates(
+		&self,
+		pool_id: CurrencyId,
+		at: Option<BlockHash>,
+	) -> Result<Option<(Rate, Rate)>>;
 }
 
 /// A struct that implements the [`MntTokenApi`].
@@ -71,16 +75,16 @@ where
 		})
 	}
 
-	fn get_mnt_borrow_supply_apy(
+	fn get_mnt_borrow_and_supply_rates(
 		&self,
 		pool_id: CurrencyId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<(Rate, Rate)> {
+	) -> Result<Option<(Rate, Rate)>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume the best block.
             self.client.info().best_hash));
-		api.get_mnt_borrow_supply_apy(&at, pool_id).map_err(|e| RpcError {
+		api.get_mnt_borrow_and_supply_rates(&at, pool_id).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
 			message: "Unable to get total borrow and/or supply MNT APY.".into(),
 			data: Some(format!("{:?}", e).into()),

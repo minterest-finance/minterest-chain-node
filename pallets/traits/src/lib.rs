@@ -144,9 +144,9 @@ pub trait MntManager<AccountId> {
 		distribute_all: bool,
 	) -> Result<Balance, DispatchError>;
 
-	/// Return Borrow APY and Supply APY values for block for current pool
-	/// - `pool_id` - the pool to calculate APY
+	/// Return Borrow APY and Supply rate values for block for current pool
+	/// - `pool_id` - the pool to calculate rates
 	///
 	/// returns (`borrow_apy`, `supply_apy`): - percentage yield per block
-	fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> Result<(Price, Price), DispatchError>;
+	fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Price, Price), DispatchError>;
 }

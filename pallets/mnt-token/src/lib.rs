@@ -612,11 +612,11 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		Ok(borrower_mnt_accrued)
 	}
 
-	/// Return Borrow APY and Supply APY values for block for current pool
-	/// - `pool_id` - the pool to calculate APY
-	fn get_mnt_borrow_supply_apy(pool_id: CurrencyId) -> Result<(Rate, Rate), DispatchError> {
-		// borrow_apy = mnt_speed * mnt_price / (total_borrow * currency_price)
-		// supply_apy = mnt_speed * mnt_price / (total_supply * currency_price)
+	/// Return Borrow APY and Supply rate values for block for current pool
+	/// - `pool_id` - the pool to calculate rates
+	fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Rate, Rate), DispatchError> {
+		// borrow_rate = mnt_speed * mnt_price / (total_borrow * currency_price)
+		// supply_rate = mnt_speed * mnt_price / (total_supply * currency_price)
 		// where:
 		//	total_supply = total_cash + total_protocol_interest - total_borrow
 
@@ -640,18 +640,17 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			.and_then(|v| v.checked_add(total_borrow))
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let borrow_apy = FixedU128::from_inner(mnt_speed)
-			.checked_mul(&mnt_price)
-			.and_then(|v| v.checked_div(&Rate::from_inner(total_borrow)))
-			.and_then(|v| v.checked_div(&oracle_price))
-			.ok_or(Error::<T>::NumOverflow)?;
+		let rate_calculation = |x: Balance| {
+			FixedU128::from_inner(mnt_speed)
+				.checked_mul(&mnt_price)
+				.and_then(|v| v.checked_div(&Rate::from_inner(x)))
+				.and_then(|v| v.checked_div(&oracle_price))
+				.ok_or(Error::<T>::NumOverflow)
+		};
 
-		let supply_apy = FixedU128::from_inner(mnt_speed)
-			.checked_mul(&mnt_price)
-			.and_then(|v| v.checked_div(&Rate::from_inner(total_supply)))
-			.and_then(|v| v.checked_div(&oracle_price))
-			.ok_or(Error::<T>::NumOverflow)?;
+		let borrow_rate: Rate = rate_calculation(total_borrow)?;
+		let supply_rate: Rate = rate_calculation(total_supply)?;
 
-		Ok((borrow_apy, supply_apy))
+		Ok((borrow_rate, supply_rate))
 	}
 }
