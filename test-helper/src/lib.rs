@@ -129,6 +129,7 @@ macro_rules! mock_impl_liquidation_pools_config {
 			type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 			type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
+			type LiquidationPoolAccountId = LiquidationPoolAccountId;
 			type Dex = dex::Module<$target>;
 			type LiquidationPoolsWeightInfo = ();
 		}

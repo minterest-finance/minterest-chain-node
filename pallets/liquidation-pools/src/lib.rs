@@ -3,6 +3,8 @@
 //! ## Overview
 //!
 //! Liquidation Pools are responsible for holding funds for automatic liquidation.
+//! This module has offchain worker implemented which is running constantly.
+//! Offchain worker keeps pools in balance to avoid lack of funds for liquidation.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
@@ -14,13 +16,13 @@ use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 	pallet_prelude::*,
 };
-use minterest_primitives::{arithmetic::sum_with_mult_result, Balance, CurrencyId, Rate};
+use minterest_primitives::{arithmetic::sum_with_mult_result, Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{DEXManager, LiquidationPoolsManager, PoolsManager, PriceProvider};
+use pallet_traits::{DEXManager, PoolsManager, PriceProvider};
 use sp_runtime::{
 	traits::{AccountIdConversion, CheckedDiv, CheckedMul, Zero},
 	transaction_validity::TransactionPriority,
-	FixedPointNumber, ModuleId, RuntimeDebug,
+	DispatchResult, FixedPointNumber, ModuleId, RuntimeDebug,
 };
 
 pub use module::*;
@@ -54,7 +56,6 @@ pub struct LiquidationPoolData {
 }
 
 type BalanceResult = sp_std::result::Result<Balance, DispatchError>;
-type DispatchResult = sp_std::result::Result<(), DispatchError>;
 
 #[frame_support::pallet]
 pub mod module {
@@ -77,6 +78,10 @@ pub mod module {
 		#[pallet::constant]
 		/// The Liquidation Pool's module id, keep all assets in Pools.
 		type LiquidationPoolsModuleId: Get<ModuleId>;
+
+		#[pallet::constant]
+		/// The Liquidation Pool's account id, keep all assets in Pools.
+		type LiquidationPoolAccountId: Get<Self::AccountId>;
 
 		/// The price source of currencies
 		type PriceSource: PriceProvider<CurrencyId>;
@@ -170,7 +175,24 @@ pub mod module {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+		fn offchain_worker(now: T::BlockNumber) {
+			if let Err(error) = Self::_offchain_worker(now) {
+				debug::info!(
+					target: "LiquidationPool offchain worker",
+					"cannot run offchain worker at {:?}: {:?}",
+					now,
+					error,
+				);
+			} else {
+				debug::debug!(
+					target: "LiquidationPool offchain worker",
+					" LiquidationPool offchain worker start at block: {:?} already done!",
+					now,
+				);
+			}
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -353,6 +375,35 @@ pub struct Sales {
 }
 
 impl<T: Config> Pallet<T> {
+	fn _offchain_worker(_now: T::BlockNumber) -> Result<(), OffchainErr> {
+		// Check if we are a potential validator
+		if !sp_io::offchain::is_validator() {
+			return Err(OffchainErr::NotValidator);
+		}
+		Self::pools_balancing().map_err(|_| OffchainErr::PoolsBalancingError)?;
+		Ok(())
+	}
+
+	/// Makes balancing of liquidation pools if it necessary.
+	fn pools_balancing() -> DispatchResult {
+		// If balancing of pools isn't required then collects_sales_list returns empty list
+		// and next steps won't be processed.
+		Self::collects_sales_list()?
+			.iter()
+			.try_for_each(|sale: &Sales| -> DispatchResult {
+				let (max_supply_amount, target_amount) =
+					Self::get_amounts(sale.supply_pool_id, sale.target_pool_id, sale.amount)?;
+				Self::submit_unsigned_tx(
+					sale.supply_pool_id,
+					sale.target_pool_id,
+					max_supply_amount,
+					target_amount,
+				);
+				Ok(())
+			})?;
+		Ok(())
+	}
+
 	fn submit_unsigned_tx(
 		supply_pool_id: CurrencyId,
 		target_pool_id: CurrencyId,
@@ -536,25 +587,6 @@ impl<T: Config> Pallet<T> {
 			Some(max_ideal_balance) => Ok(ideal_balance.min(max_ideal_balance)),
 			None => Ok(ideal_balance),
 		}
-	}
-}
-
-impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
-	fn pools_balancing() -> DispatchResult {
-		Self::collects_sales_list()?
-			.iter()
-			.try_for_each(|sale: &Sales| -> DispatchResult {
-				let (max_supply_amount, target_amount) =
-					Self::get_amounts(sale.supply_pool_id, sale.target_pool_id, sale.amount)?;
-				Self::submit_unsigned_tx(
-					sale.supply_pool_id,
-					sale.target_pool_id,
-					max_supply_amount,
-					target_amount,
-				);
-				Ok(())
-			})?;
-		Ok(())
 	}
 }
 

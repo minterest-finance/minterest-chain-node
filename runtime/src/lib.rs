@@ -510,6 +510,7 @@ impl liquidation_pools::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type UnsignedPriority = LiquidityPoolsPriority;
+	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type PriceSource = Prices;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;

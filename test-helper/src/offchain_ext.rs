@@ -1,5 +1,3 @@
-//! TODO DESCRIPTION
-
 use frame_support::sp_runtime::app_crypto::sp_core::offchain::{
 	Externalities, HttpError, HttpRequestId, HttpRequestStatus, OpaqueNetworkState, StorageKind, Timestamp,
 };

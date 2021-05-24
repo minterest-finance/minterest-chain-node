@@ -185,11 +185,6 @@ impl ExtBuilder {
 		));
 		self
 	}
-	pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-		self.endowed_accounts
-			.push((LiquidationPools::pools_account_id(), currency_id, balance));
-		self
-	}
 	pub fn liquidity_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((TestPools::pools_account_id(), currency_id, balance));
