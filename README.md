@@ -1,5 +1,6 @@
 # Minterest chain node
 
+
 Released version: **0.6.1** <br>
 Developed version: **0.6.2**
 
