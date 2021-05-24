@@ -816,7 +816,7 @@ impl_runtime_apis! {
 		}
 
 		fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
-			Some(MntToken::get_mnt_borrow_and_supply_rates(pool_id).ok())
+			Some(MntToken::get_mnt_borrow_and_supply_rates(pool_id).ok()?)
 		}
 	}
 
