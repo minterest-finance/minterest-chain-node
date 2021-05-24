@@ -783,3 +783,11 @@ fn get_unclaimed_mnt_balance_should_work() {
 			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
 		})
 }
+
+#[test]
+fn pool_exists_should_work() {
+	ExtBuilder::default().pool_initial(DOT).build().execute_with(|| {
+		assert_eq!(pool_exists_rpc(DOT), Some(true));
+		assert_eq!(pool_exists_rpc(ETH), Some(false));
+	});
+}

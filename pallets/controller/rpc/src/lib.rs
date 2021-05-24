@@ -40,6 +40,9 @@ pub trait ControllerApi<BlockHash, AccountId> {
 		underlying_asset_id: CurrencyId,
 		at: Option<BlockHash>,
 	) -> Result<Option<BalanceInfo>>;
+
+	#[rpc(name = "controller_poolExists")]
+	fn pool_exists(&self, underlying_asset_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<bool>>;
 }
 
 /// A struct that implements the [`ControllerApi`].
@@ -171,5 +174,21 @@ where
 				message: "Unable to get total user borrow balance.".into(),
 				data: Some(format!("{:?}", e).into()),
 			})
+	}
+
+	fn pool_exists(
+		&self,
+		underlying_asset_id: CurrencyId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<Option<bool>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+		api.pool_exists(&at, underlying_asset_id).map_err(|e| RpcError {
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
+			message: "Unable to check if pool exists.".into(),
+			data: Some(format!("{:?}", e).into()),
+		})
 	}
 }

@@ -17,7 +17,9 @@ mod weights;
 mod weights_test;
 
 use crate::constants::fee::WeightToFee;
-pub use controller_rpc_runtime_api::{BalanceInfo, HypotheticalLiquidityData, PoolState, UserPoolBalanceData};
+pub use controller_rpc_runtime_api::{
+	BalanceInfo, HypotheticalLiquidityData, PoolExists, PoolState, UserPoolBalanceData,
+};
 pub use minterest_primitives::{
 	currency::{
 		CurrencyType::{UnderlyingAsset, WrappedToken},
@@ -31,7 +33,7 @@ use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
-use pallet_traits::ControllerAPI;
+use pallet_traits::{ControllerAPI, PoolsManager};
 use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -808,6 +810,10 @@ impl_runtime_apis! {
 
 		fn get_user_borrow_per_asset(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
 				Some(BalanceInfo{amount: Controller::get_user_borrow_per_asset(&account_id, underlying_asset_id).ok()?})
+		}
+
+		fn pool_exists(underlying_asset_id: CurrencyId) -> Option<bool> {
+			Some(LiquidityPools::pool_exists(&underlying_asset_id))
 		}
 	}
 

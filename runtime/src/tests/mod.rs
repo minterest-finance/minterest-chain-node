@@ -441,6 +441,10 @@ fn get_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
 		.amount
 }
 
+fn pool_exists_rpc(underlying_asset_id: CurrencyId) -> Option<bool> {
+	<Runtime as ControllerApi<Block, AccountId>>::pool_exists(underlying_asset_id)
+}
+
 fn dollars(amount: u128) -> u128 {
 	amount.saturating_mul(Price::accuracy())
 }
