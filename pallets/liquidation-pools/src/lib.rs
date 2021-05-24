@@ -114,6 +114,8 @@ pub mod module {
 		InvalidFeedPrice,
 		/// Could not find a pool with required parameters
 		PoolNotFound,
+		/// Pool is already created
+		PoolAlreadyCreated,
 		/// Not enough liquidation pool balance.
 		NotEnoughBalance,
 		/// There is not enough liquidity available on user balance.
@@ -147,8 +149,7 @@ pub mod module {
 
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_pools_data)]
-	pub(crate) type LiquidationPoolsData<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyId, LiquidationPoolData, ValueQuery>;
+	pub type LiquidationPoolsData<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, LiquidationPoolData, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -654,6 +655,10 @@ impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for LiquidationPoolsData
 	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult {
+		ensure!(
+			!LiquidationPoolsData::<T>::contains_key(currency_id),
+			Error::<T>::PoolAlreadyCreated
+		);
 		ensure!(
 			Self::is_valid_deviation_threshold(deviation_threshold),
 			Error::<T>::NotValidDeviationThresholdValue

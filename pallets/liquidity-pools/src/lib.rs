@@ -115,6 +115,8 @@ pub mod module {
 		ConversionError,
 		/// Pool not found.
 		PoolNotFound,
+		/// Pool is already created
+		PoolAlreadyCreated,
 	}
 
 	#[pallet::storage]
@@ -214,6 +216,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// returns `exchange_rate` between a mToken and the underlying asset.
 	pub fn get_exchange_rate(underlying_asset: CurrencyId) -> RateResult {
+		ensure!(Self::pool_exists(&underlying_asset), Error::<T>::PoolNotFound);
 		let wrapped_asset_id = underlying_asset
 			.wrapped_asset()
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
@@ -280,6 +283,7 @@ impl<T: Config> Pallet<T> {
 		total_protocol_interest: Balance,
 		total_borrowed: Balance,
 	) -> RateResult {
+		ensure!(Self::pool_exists(&underlying_asset), Error::<T>::PoolNotFound);
 		let wrapped_asset_id = underlying_asset
 			.wrapped_asset()
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
@@ -348,7 +352,9 @@ impl<T: Config> Pallet<T> {
 
 	/// This is a part of a pool creation flow
 	/// Creates storage records for LiquidationPoolsData
-	pub fn create_pool(currency_id: CurrencyId) {
+	pub fn create_pool(currency_id: CurrencyId) -> DispatchResult {
+		ensure!(!Self::pool_exists(&currency_id), Error::<T>::PoolAlreadyCreated);
+
 		Pools::<T>::insert(
 			currency_id,
 			Pool {
@@ -357,6 +363,7 @@ impl<T: Config> Pallet<T> {
 				total_protocol_interest: Balance::zero(),
 			},
 		);
+		Ok(())
 	}
 }
 

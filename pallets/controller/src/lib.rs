@@ -125,6 +125,8 @@ pub mod module {
 		InsufficientLiquidity,
 		/// Pool not found.
 		PoolNotFound,
+		/// Pool is already created
+		PoolAlreadyCreated,
 		/// Balance exceeds maximum value.
 		/// Only happened when the balance went wrong and balance exceeds the integer type.
 		BalanceOverflow,
@@ -830,6 +832,10 @@ impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
 		collateral_factor: Rate,
 		protocol_interest_threshold: Balance,
 	) -> DispatchResult {
+		ensure!(
+			!ControllerParams::<T>::contains_key(currency_id),
+			Error::<T>::PoolAlreadyCreated
+		);
 		ensure!(
 			Self::is_valid_max_borrow_rate(max_borrow_rate),
 			Error::<T>::MaxBorrowRateCannotBeZero

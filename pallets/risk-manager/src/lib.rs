@@ -127,8 +127,8 @@ pub mod module {
 		InvalidLiquidationIncentiveValue,
 		/// Feed price is invalid
 		InvalidFeedPrice,
-		/// Pool had already been added to risk-manager
-		PoolAlreadyAdded,
+		/// Pool is already created
+		PoolAlreadyCreated1,
 	}
 
 	#[pallet::event]
@@ -156,7 +156,7 @@ pub mod module {
 	/// liquidation_fee)`.
 	#[pallet::storage]
 	#[pallet::getter(fn risk_manager_dates)]
-	pub(crate) type RiskManagerParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, RiskManagerData, ValueQuery>;
+	pub type RiskManagerParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, RiskManagerData, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -736,13 +736,17 @@ impl<T: Config> Pallet<T> {
 impl<T: Config> RiskManagerAPI for Pallet<T> {
 	/// This is a part of a pool creation flow
 	/// Creates storage records for RiskManagerParams
-	fn add_pool(
+	fn create_pool(
 		currency_id: CurrencyId,
 		max_attempts: u8,
 		min_partial_liquidation_sum: Balance,
 		threshold: Rate,
 		liquidation_fee: Rate,
 	) -> DispatchResult {
+		ensure!(
+			!RiskManagerParams::<T>::contains_key(currency_id),
+			Error::<T>::PoolAlreadyCreated1
+		);
 		ensure!(
 			Self::is_valid_liquidation_fee(liquidation_fee),
 			Error::<T>::InvalidLiquidationIncentiveValue

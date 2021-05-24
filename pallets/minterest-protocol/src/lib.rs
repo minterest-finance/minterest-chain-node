@@ -546,7 +546,7 @@ pub mod module {
 // Dispatchable calls implementation
 impl<T: Config> Pallet<T> {
 	fn do_create_pool(pool_id: CurrencyId, pool_data: PoolInitData) -> DispatchResult {
-		<LiquidityPools<T>>::create_pool(pool_id);
+		<LiquidityPools<T>>::create_pool(pool_id)?;
 		<MinterestModel<T>>::create_pool(
 			pool_id,
 			pool_data.kink,
@@ -562,7 +562,7 @@ impl<T: Config> Pallet<T> {
 			pool_data.protocol_interest_threshold,
 		)?;
 		T::ManagerLiquidationPools::create_pool(pool_id, pool_data.deviation_threshold, pool_data.balance_ratio)?;
-		T::RiskManagerAPI::add_pool(
+		T::RiskManagerAPI::create_pool(
 			pool_id,
 			pool_data.max_attempts,
 			pool_data.min_partial_liquidation_sum,

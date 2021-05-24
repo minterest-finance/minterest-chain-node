@@ -165,7 +165,7 @@ pub trait MntManager<AccountId> {
 }
 
 pub trait RiskManagerAPI {
-	fn add_pool(
+	fn create_pool(
 		currency_id: CurrencyId,
 		max_attempts: u8,
 		min_partial_liquidation_sum: Balance,

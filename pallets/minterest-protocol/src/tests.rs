@@ -17,86 +17,17 @@ fn dollars<T: Into<u128>>(d: T) -> Balance {
 
 #[test]
 fn create_pool_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		// The dispatch origin of this call must be Administrator.
-		assert_noop!(
-			TestProtocol::create_pool(bob(), DOT, Box::new(PoolInitData { ..Default::default() })),
-			BadOrigin,
-		);
+	ExtBuilder::default()
+		.set_controller_data(vec![])
+		.build()
+		.execute_with(|| {
+			// The dispatch origin of this call must be Administrator.
+			assert_noop!(
+				TestProtocol::create_pool(bob(), DOT, Box::new(PoolInitData { ..Default::default() })),
+				BadOrigin,
+			);
 
-		assert_ok!(TestProtocol::create_pool(
-			alice(),
-			DOT,
-			Box::new(PoolInitData {
-				kink: Rate::saturating_from_rational(2, 3),
-				base_rate_per_block: Rate::saturating_from_rational(1, 3),
-				multiplier_per_block: Rate::saturating_from_rational(2, 4),
-				jump_multiplier_per_block: Rate::saturating_from_rational(1, 2),
-				protocol_interest_factor: Rate::saturating_from_rational(1, 10),
-				max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-				collateral_factor: Rate::saturating_from_rational(9, 10),
-				protocol_interest_threshold: 100000,
-				deviation_threshold: Rate::saturating_from_rational(5, 100),
-				balance_ratio: Rate::saturating_from_rational(2, 10),
-				max_attempts: 3,
-				min_partial_liquidation_sum: 100 * DOLLARS,
-				threshold: Rate::saturating_from_rational(103, 100),
-				liquidation_fee: Rate::saturating_from_rational(105, 100),
-			}),
-		));
-		let expected_event = Event::minterest_protocol(crate::Event::PoolCreated(DOT));
-		assert!(System::events().iter().any(|record| record.event == expected_event));
-
-		assert_eq!(
-			TestPools::get_pool_data(DOT),
-			Pool {
-				total_borrowed: Balance::zero(),
-				borrow_index: Rate::one(),
-				total_protocol_interest: Balance::zero(),
-			},
-		);
-		assert_eq!(
-			TestMinterestModel::minterest_model_params(DOT),
-			MinterestModelData {
-				kink: Rate::saturating_from_rational(2, 3),
-				base_rate_per_block: Rate::saturating_from_rational(1, 3),
-				multiplier_per_block: Rate::saturating_from_rational(2, 4),
-				jump_multiplier_per_block: Rate::saturating_from_rational(1, 2),
-			},
-		);
-		assert_eq!(
-			Controller::controller_dates(DOT),
-			ControllerData {
-				last_interest_accrued_block: 1,
-				protocol_interest_factor: Rate::saturating_from_rational(1, 10),
-				max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-				collateral_factor: Rate::saturating_from_rational(9, 10),
-				borrow_cap: None,
-				protocol_interest_threshold: 100000,
-			},
-		);
-		assert_eq!(
-			Controller::pause_keepers(DOT),
-			PauseKeeper {
-				deposit_paused: false,
-				redeem_paused: false,
-				borrow_paused: false,
-				repay_paused: false,
-				transfer_paused: false,
-			},
-		);
-		assert_eq!(
-			TestLiquidationPools::liquidation_pools_data(DOT),
-			LiquidationPoolData {
-				deviation_threshold: Rate::saturating_from_rational(5, 100),
-				balance_ratio: Rate::saturating_from_rational(2, 10),
-				max_ideal_balance: None,
-			},
-		);
-
-		// Unable to create pool twice
-		assert_noop!(
-			TestProtocol::create_pool(
+			assert_ok!(TestProtocol::create_pool(
 				alice(),
 				DOT,
 				Box::new(PoolInitData {
@@ -115,10 +46,148 @@ fn create_pool_should_work() {
 					threshold: Rate::saturating_from_rational(103, 100),
 					liquidation_fee: Rate::saturating_from_rational(105, 100),
 				}),
-			),
-			Error::<Test>::PoolAlreadyCreated,
-		);
-	});
+			));
+			let expected_event = Event::minterest_protocol(crate::Event::PoolCreated(DOT));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+
+			assert_eq!(
+				TestPools::get_pool_data(DOT),
+				Pool {
+					total_borrowed: Balance::zero(),
+					borrow_index: Rate::one(),
+					total_protocol_interest: Balance::zero(),
+				},
+			);
+			assert_eq!(
+				TestMinterestModel::minterest_model_params(DOT),
+				MinterestModelData {
+					kink: Rate::saturating_from_rational(2, 3),
+					base_rate_per_block: Rate::saturating_from_rational(1, 3),
+					multiplier_per_block: Rate::saturating_from_rational(2, 4),
+					jump_multiplier_per_block: Rate::saturating_from_rational(1, 2),
+				},
+			);
+			assert_eq!(
+				Controller::controller_dates(DOT),
+				ControllerData {
+					last_interest_accrued_block: 1,
+					protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+					collateral_factor: Rate::saturating_from_rational(9, 10),
+					borrow_cap: None,
+					protocol_interest_threshold: 100000,
+				},
+			);
+			assert_eq!(
+				Controller::pause_keepers(DOT),
+				PauseKeeper {
+					deposit_paused: false,
+					redeem_paused: false,
+					borrow_paused: false,
+					repay_paused: false,
+					transfer_paused: false,
+				},
+			);
+			assert_eq!(
+				TestLiquidationPools::liquidation_pools_data(DOT),
+				LiquidationPoolData {
+					deviation_threshold: Rate::saturating_from_rational(5, 100),
+					balance_ratio: Rate::saturating_from_rational(2, 10),
+					max_ideal_balance: None,
+				},
+			);
+
+			// Unable to create pool twice
+			assert_noop!(
+				TestProtocol::create_pool(
+					alice(),
+					DOT,
+					Box::new(PoolInitData {
+						kink: Rate::saturating_from_rational(2, 3),
+						base_rate_per_block: Rate::saturating_from_rational(1, 3),
+						multiplier_per_block: Rate::saturating_from_rational(2, 4),
+						jump_multiplier_per_block: Rate::saturating_from_rational(1, 2),
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+						collateral_factor: Rate::saturating_from_rational(9, 10),
+						protocol_interest_threshold: 100000,
+						deviation_threshold: Rate::saturating_from_rational(5, 100),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+						max_attempts: 3,
+						min_partial_liquidation_sum: 100 * DOLLARS,
+						threshold: Rate::saturating_from_rational(103, 100),
+						liquidation_fee: Rate::saturating_from_rational(105, 100),
+					}),
+				),
+				Error::<Test>::PoolAlreadyCreated,
+			);
+		});
+}
+
+#[test]
+fn create_pool_should_not_work_when_controller_storage_has_data() {
+	ExtBuilder::default()
+		.set_controller_data(vec![(DOT, ControllerData::default())])
+		.build()
+		.execute_with(|| {
+			// Controller pallet has record in storage, unable to create new pool
+			assert_noop!(
+				TestProtocol::create_pool(
+					alice(),
+					DOT,
+					Box::new(PoolInitData {
+						kink: Rate::saturating_from_rational(2, 3),
+						base_rate_per_block: Rate::saturating_from_rational(1, 3),
+						multiplier_per_block: Rate::saturating_from_rational(2, 4),
+						jump_multiplier_per_block: Rate::saturating_from_rational(1, 2),
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+						collateral_factor: Rate::saturating_from_rational(9, 10),
+						protocol_interest_threshold: 100000,
+						deviation_threshold: Rate::saturating_from_rational(5, 100),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+						max_attempts: 3,
+						min_partial_liquidation_sum: 100 * DOLLARS,
+						threshold: Rate::saturating_from_rational(103, 100),
+						liquidation_fee: Rate::saturating_from_rational(105, 100),
+					}),
+				),
+				controller::Error::<Test>::PoolAlreadyCreated,
+			);
+		});
+}
+
+#[test]
+fn create_pool_should_not_work_when_minterest_model_storage_has_data() {
+	ExtBuilder::default()
+		.set_minterest_model_params(vec![(DOT, MinterestModelData::default())])
+		.build()
+		.execute_with(|| {
+			// Controller pallet has record in storage, unable to create new pool
+			assert_noop!(
+				TestProtocol::create_pool(
+					alice(),
+					DOT,
+					Box::new(PoolInitData {
+						kink: Rate::saturating_from_rational(2, 3),
+						base_rate_per_block: Rate::saturating_from_rational(1, 3),
+						multiplier_per_block: Rate::saturating_from_rational(2, 4),
+						jump_multiplier_per_block: Rate::saturating_from_rational(1, 2),
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+						collateral_factor: Rate::saturating_from_rational(9, 10),
+						protocol_interest_threshold: 100000,
+						deviation_threshold: Rate::saturating_from_rational(5, 100),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+						max_attempts: 3,
+						min_partial_liquidation_sum: 100 * DOLLARS,
+						threshold: Rate::saturating_from_rational(103, 100),
+						liquidation_fee: Rate::saturating_from_rational(105, 100),
+					}),
+				),
+				minterest_model::Error::<Test>::PoolAlreadyCreated,
+			);
+		});
 }
 
 #[test]

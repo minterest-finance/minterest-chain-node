@@ -85,6 +85,8 @@ pub mod module {
 		KinkCannotBeMoreThanOne,
 		/// Borrow interest rate calculation error.
 		BorrowRateCalculationError,
+		/// Pool is already created
+		PoolAlreadyCreated,
 	}
 
 	#[pallet::event]
@@ -104,8 +106,7 @@ pub mod module {
 	/// jump_multiplier_per_block)`.
 	#[pallet::storage]
 	#[pallet::getter(fn minterest_model_params)]
-	pub(crate) type MinterestModelParams<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyId, MinterestModelData, ValueQuery>;
+	pub type MinterestModelParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, MinterestModelData, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -310,6 +311,10 @@ impl<T: Config> Pallet<T> {
 		multiplier_per_block: Rate,
 		jump_multiplier_per_block: Rate,
 	) -> DispatchResult {
+		ensure!(
+			!MinterestModelParams::<T>::contains_key(currency_id),
+			Error::<T>::PoolAlreadyCreated
+		);
 		ensure!(Self::is_valid_kink(kink), Error::<T>::KinkCannotBeMoreThanOne);
 		ensure!(
 			Self::is_valid_base_rate_and_multiplier(
