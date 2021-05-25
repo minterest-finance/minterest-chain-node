@@ -7,14 +7,13 @@
 
 use frame_support::{pallet_prelude::*, sp_std::cmp::Ordering, transactional};
 use frame_system::pallet_prelude::*;
-use minterest_primitives::currency::MNT;
-use minterest_primitives::{Balance, CurrencyId, Price, Rate};
+use minterest_primitives::{currency::MNT, Balance, CurrencyId, Price, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerAPI, LiquidityPoolsManager, MntManager, PriceProvider};
+use pallet_traits::{ControllerAPI, LiquidityPoolsManager, MntManager, PoolsManager, PriceProvider};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
-	DispatchResult, FixedPointNumber,
+	DispatchResult, FixedPointNumber, FixedU128,
 };
 use sp_std::{convert::TryInto, result, vec::Vec};
 pub mod weights;
@@ -82,7 +81,7 @@ pub mod module {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Provides Liquidity Pool functionality
-		type LiquidityPoolsManager: LiquidityPoolsManager;
+		type LiquidityPoolsManager: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
 
 		/// The origin which may update MNT token parameters. Root can
 		/// always do this.
@@ -107,6 +106,8 @@ pub mod module {
 
 		/// Weight information for the extrinsics.
 		type MntTokenWeightInfo: WeightInfo;
+
+		type PoolsManager: PoolsManager<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -609,5 +610,47 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			pool_borrow_state.mnt_distribution_index,
 		));
 		Ok(borrower_mnt_accrued)
+	}
+
+	/// Return MNT Borrow Rate and MNT Supply Rate values per block for current pool.
+	/// - `pool_id` - the pool to calculate rates
+	fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Rate, Rate), DispatchError> {
+		// borrow_rate = mnt_speed * mnt_price / (total_borrow * currency_price)
+		// supply_rate = mnt_speed * mnt_price / (total_supply * currency_price)
+		// where:
+		//	total_supply = total_cash - total_protocol_interest + total_borrow
+
+		let total_borrow = T::LiquidityPoolsManager::get_pool_total_borrowed(pool_id);
+
+		if total_borrow.is_zero() {
+			return Ok((Rate::zero(), Rate::zero()));
+		}
+
+		Self::refresh_mnt_speeds()?;
+		let mnt_speed = MntSpeeds::<T>::get(pool_id);
+
+		let mnt_price = T::PriceSource::get_underlying_price(MNT).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
+		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
+
+		let total_cash = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
+		let total_protocol_interest = T::LiquidityPoolsManager::get_pool_total_protocol_interest(pool_id);
+
+		let total_supply = total_cash
+			.checked_sub(total_protocol_interest)
+			.and_then(|v| v.checked_add(total_borrow))
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		let rate_calculation = |x: Balance| {
+			FixedU128::from_inner(mnt_speed)
+				.checked_mul(&mnt_price)
+				.and_then(|v| v.checked_div(&Rate::from_inner(x)))
+				.and_then(|v| v.checked_div(&oracle_price))
+				.ok_or(Error::<T>::NumOverflow)
+		};
+
+		let borrow_rate: Rate = rate_calculation(total_borrow)?;
+		let supply_rate: Rate = rate_calculation(total_supply)?;
+
+		Ok((borrow_rate, supply_rate))
 	}
 }

@@ -31,7 +31,7 @@ use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
-use pallet_traits::ControllerAPI;
+use pallet_traits::{ControllerAPI, MntManager};
 use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -492,6 +492,7 @@ impl mnt_token::Config for Runtime {
 	type MntTokenAccountId = MntTokenAccountId;
 	type MntTokenWeightInfo = weights::mnt_token::WeightInfo<Runtime>;
 	type SpeedRefreshPeriod = RefreshSpeedPeriod;
+	type PoolsManager = LiquidationPools;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -814,6 +815,10 @@ impl_runtime_apis! {
 	impl mnt_token_rpc_runtime_api::MntTokenApi<Block, AccountId> for Runtime {
 		fn get_unclaimed_mnt_balance(account_id: AccountId) -> Option<MntBalanceInfo> {
 				Some(MntBalanceInfo{amount: MntToken::get_unclaimed_mnt_balance(&account_id).ok()?})
+		}
+
+		fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
+			MntToken::get_mnt_borrow_and_supply_rates(pool_id).ok()
 		}
 	}
 

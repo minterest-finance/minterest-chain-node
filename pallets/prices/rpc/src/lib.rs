@@ -69,7 +69,7 @@ pub struct Prices<C, M> {
 }
 
 impl<C, M> Prices<C, M> {
-	/// Create new `Controller` instance with the given reference to the client.
+	/// Create new `Prices` instance with the given reference to the client.
 	pub fn new(client: Arc<C>) -> Self {
 		Self {
 			client,

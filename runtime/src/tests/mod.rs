@@ -45,6 +45,8 @@ struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
+	minted_pools: Vec<CurrencyId>,
+	mnt_rate: Balance,
 }
 
 impl Default for ExtBuilder {
@@ -56,17 +58,22 @@ impl Default for ExtBuilder {
 				(ALICE::get(), DOT, 100_000 * DOLLARS),
 				(ALICE::get(), ETH, 100_000 * DOLLARS),
 				(ALICE::get(), BTC, 100_000 * DOLLARS),
+				(ALICE::get(), KSM, 100_000 * DOLLARS),
 				(BOB::get(), MNT, 100_000 * DOLLARS),
 				(BOB::get(), DOT, 100_000 * DOLLARS),
 				(BOB::get(), ETH, 100_000 * DOLLARS),
 				(BOB::get(), BTC, 100_000 * DOLLARS),
+				(BOB::get(), KSM, 100_000 * DOLLARS),
 				(CHARLIE::get(), MNT, 100_000 * DOLLARS),
 				(CHARLIE::get(), DOT, 100_000 * DOLLARS),
 				(CHARLIE::get(), ETH, 100_000 * DOLLARS),
 				(CHARLIE::get(), BTC, 100_000 * DOLLARS),
+				(CHARLIE::get(), KSM, 100_000 * DOLLARS),
 			],
 			pools: vec![],
 			pool_user_data: vec![],
+			mnt_rate: 10 * DOLLARS,
+			minted_pools: vec![KSM, DOT, ETH, BTC],
 		}
 	}
 }
@@ -143,6 +150,11 @@ impl ExtBuilder {
 
 	pub fn mnt_account_balance(mut self, balance: Balance) -> Self {
 		self.endowed_accounts.push((MntToken::get_account_id(), MNT, balance));
+		self
+	}
+
+	pub fn set_mnt_rate(mut self, rate: u128) -> Self {
+		self.mnt_rate = rate * DOLLARS;
 		self
 	}
 
@@ -377,6 +389,7 @@ impl ExtBuilder {
 				(KSM, Rate::saturating_from_integer(2)),
 				(ETH, Rate::saturating_from_integer(2)),
 				(BTC, Rate::saturating_from_integer(2)),
+				(MNT, Rate::saturating_from_integer(4)),
 			],
 			_phantom: PhantomData,
 		}
@@ -384,9 +397,9 @@ impl ExtBuilder {
 		.unwrap();
 
 		mnt_token::GenesisConfig::<Runtime> {
-			mnt_rate: 10 * DOLLARS,
+			mnt_rate: self.mnt_rate,
 			mnt_claim_threshold: 0, // disable by default
-			minted_pools: vec![DOT, ETH, KSM, BTC],
+			minted_pools: self.minted_pools,
 			_phantom: std::marker::PhantomData,
 		}
 		.assimilate_storage(&mut t)
@@ -490,6 +503,10 @@ fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
 
 fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 	Prices::unlock_price(origin_root(), currency_id)
+}
+
+fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> (Rate, Rate) {
+	<Runtime as MntTokenApi<Block, AccountId>>::get_mnt_borrow_and_supply_rates(pool_id).unwrap()
 }
 
 pub fn run_to_block(n: u32) {
