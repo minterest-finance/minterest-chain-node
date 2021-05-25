@@ -20,6 +20,7 @@ use minterest_primitives::{arithmetic::sum_with_mult_result, Balance, CurrencyId
 use orml_traits::MultiCurrency;
 use pallet_traits::{DEXManager, PoolsManager, PriceProvider};
 use sp_runtime::{
+	offchain::storage_lock::{StorageLock, Time},
 	traits::{AccountIdConversion, CheckedDiv, CheckedMul, Zero},
 	transaction_validity::TransactionPriority,
 	DispatchResult, FixedPointNumber, ModuleId, RuntimeDebug,
@@ -40,6 +41,8 @@ mod tests;
 pub mod weights;
 use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 pub use weights::WeightInfo;
+
+const OFFCHAIN_LIQUIDATION_WORKER_LOCK: &[u8] = b"pallets/liquidation-pools/lock/";
 
 /// Liquidation Pool metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -380,6 +383,11 @@ impl<T: Config> Pallet<T> {
 		if !sp_io::offchain::is_validator() {
 			return Err(OffchainErr::NotValidator);
 		}
+		let mut lock = StorageLock::<Time>::new(&OFFCHAIN_LIQUIDATION_WORKER_LOCK);
+		// If pools balancing procedure already started should be returned OffchainLock error.
+		// To prevent any race condition sutiations.
+		// TODO Add test to cover this situation in MIN-178
+		let _guard = lock.try_lock().map_err(|_| OffchainErr::OffchainLock)?;
 		Self::pools_balancing().map_err(|_| OffchainErr::PoolsBalancingError)?;
 		Ok(())
 	}
