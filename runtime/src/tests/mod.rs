@@ -219,36 +219,9 @@ impl ExtBuilder {
 				),
 			],
 			pause_keepers: vec![
-				(
-					DOT,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
-				(
-					ETH,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
-				(
-					BTC,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
+				(DOT, PauseKeeper::all_unpaused()),
+				(ETH, PauseKeeper::all_unpaused()),
+				(BTC, PauseKeeper::all_unpaused()),
 			],
 			whitelist_mode: false,
 		}

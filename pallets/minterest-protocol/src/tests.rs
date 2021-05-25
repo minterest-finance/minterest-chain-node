@@ -78,16 +78,7 @@ fn create_pool_should_work() {
 					protocol_interest_threshold: 100000,
 				},
 			);
-			assert_eq!(
-				Controller::pause_keepers(DOT),
-				PauseKeeper {
-					deposit_paused: false,
-					redeem_paused: false,
-					borrow_paused: false,
-					repay_paused: false,
-					transfer_paused: false,
-				},
-			);
+			assert_eq!(Controller::pause_keepers(DOT), PauseKeeper::all_unpaused());
 			assert_eq!(
 				TestLiquidationPools::liquidation_pools_data(DOT),
 				LiquidationPoolData {

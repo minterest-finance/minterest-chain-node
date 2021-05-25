@@ -7,6 +7,14 @@ use frame_support::{assert_err, assert_noop, assert_ok};
 use sp_runtime::DispatchError::BadOrigin;
 
 #[test]
+fn operations_are_paused_by_default() {
+	ExtBuilder::default().build().execute_with(|| {
+		// All operations are paused when nothing is in storage
+		assert_eq!(Controller::pause_keepers(KSM), PauseKeeper::all_paused());
+	});
+}
+
+#[test]
 fn protocol_operations_not_working_for_nonexisting_pool() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(

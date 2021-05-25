@@ -83,6 +83,34 @@ pub struct PauseKeeper {
 	pub transfer_paused: bool,
 }
 
+impl PauseKeeper {
+	pub fn all_paused() -> Self {
+		PauseKeeper {
+			deposit_paused: true,
+			redeem_paused: true,
+			borrow_paused: true,
+			repay_paused: true,
+			transfer_paused: true,
+		}
+	}
+	pub fn all_unpaused() -> Self {
+		PauseKeeper {
+			deposit_paused: false,
+			redeem_paused: false,
+			borrow_paused: false,
+			repay_paused: false,
+			transfer_paused: false,
+		}
+	}
+}
+
+pub struct GetAllPaused;
+impl frame_support::traits::Get<PauseKeeper> for GetAllPaused {
+	fn get() -> PauseKeeper {
+		PauseKeeper::all_paused()
+	}
+}
+
 type LiquidityPools<T> = liquidity_pools::Module<T>;
 type MinterestModel<T> = minterest_model::Module<T>;
 type RateResult = result::Result<Rate, DispatchError>;
@@ -185,7 +213,8 @@ pub mod module {
 	/// The Pause Guardian can pause certain actions as a safety mechanism.
 	#[pallet::storage]
 	#[pallet::getter(fn pause_keepers)]
-	pub(crate) type PauseKeepers<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, PauseKeeper, ValueQuery>;
+	pub(crate) type PauseKeepers<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyId, PauseKeeper, ValueQuery, GetAllPaused>;
 
 	/// Boolean variable. Protocol operation mode. In whitelist mode, only members
 	/// 'WhitelistCouncil' can work with protocols.
