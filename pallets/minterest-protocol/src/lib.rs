@@ -16,7 +16,6 @@
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
 
-//use codec::{Decode, Encode};
 use frame_support::traits::Contains;
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
@@ -24,7 +23,8 @@ use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	Borrowing, ControllerAPI, LiquidationPoolsManager, LiquidityPoolsManager, MntManager, PoolsManager, RiskManagerAPI,
+	Borrowing, ControllerAPI, LiquidationPoolsManager, LiquidityPoolsManager, MinterestModelAPI, MntManager,
+	PoolsManager, RiskManagerAPI,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -45,7 +45,6 @@ pub mod weights;
 pub use weights::WeightInfo;
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
-type MinterestModel<T> = minterest_model::Module<T>;
 type TokensResult = result::Result<(Balance, CurrencyId, Balance), DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 
@@ -77,9 +76,7 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config:
-		frame_system::Config + liquidity_pools::Config + minterest_model::Config + SendTransactionTypes<Call<Self>>
-	{
+	pub trait Config: frame_system::Config + liquidity_pools::Config + SendTransactionTypes<Call<Self>> {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -106,6 +103,9 @@ pub mod module {
 
 		/// Public API of risk manager pallet
 		type RiskManagerAPI: RiskManagerAPI;
+
+		/// Public API of risk manager pallet
+		type MinterestModelAPI: MinterestModelAPI;
 
 		/// The origin which may create pools. Root or
 		/// Half Minterest Council can always do this.
@@ -553,7 +553,7 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 	fn do_create_pool(pool_id: CurrencyId, pool_data: PoolInitData) -> DispatchResult {
 		<LiquidityPools<T>>::create_pool(pool_id)?;
-		<MinterestModel<T>>::create_pool(
+		T::MinterestModelAPI::create_pool(
 			pool_id,
 			pool_data.kink,
 			pool_data.base_rate_per_block,

@@ -168,11 +168,25 @@ pub trait MntManager<AccountId> {
 }
 
 pub trait RiskManagerAPI {
+	/// This is a part of a pool creation flow
+	/// Creates storage records for RiskManagerParams
 	fn create_pool(
 		currency_id: CurrencyId,
 		max_attempts: u8,
 		min_partial_liquidation_sum: Balance,
 		threshold: Rate,
 		liquidation_fee: Rate,
+	) -> DispatchResult;
+}
+
+pub trait MinterestModelAPI {
+	/// This is a part of a pool creation flow
+	/// Checks parameters validity and creates storage records for MinterestModelParams
+	fn create_pool(
+		currency_id: CurrencyId,
+		kink: Rate,
+		base_rate_per_block: Rate,
+		multiplier_per_block: Rate,
+		jump_multiplier_per_block: Rate,
 	) -> DispatchResult;
 }

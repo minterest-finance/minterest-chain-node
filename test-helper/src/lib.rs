@@ -203,6 +203,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type ProtocolWeightInfo = ();
 			type ControllerAPI = controller::Module<$target>;
 			type RiskManagerAPI = TestRiskManager;
+			type MinterestModelAPI = TestMinterestModel;
 			type CreatePoolOrigin = EnsureSignedBy<$acc, AccountId>;
 		}
 	};

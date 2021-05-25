@@ -14,6 +14,7 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use minterest_primitives::{CurrencyId, Rate};
+use pallet_traits::MinterestModelAPI;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -386,5 +387,41 @@ impl<T: Config> Pallet<T> {
 
 	pub fn is_valid_base_rate_and_multiplier(base_rate_per_block: Rate, multiplier_per_block: Rate) -> bool {
 		!(base_rate_per_block.is_zero() && multiplier_per_block.is_zero())
+	}
+}
+
+impl<T: Config> MinterestModelAPI for Pallet<T> {
+	/// This is a part of a pool creation flow
+	/// Checks parameters validity and creates storage records for MinterestModelParams
+	fn create_pool(
+		currency_id: CurrencyId,
+		kink: Rate,
+		base_rate_per_block: Rate,
+		multiplier_per_block: Rate,
+		jump_multiplier_per_block: Rate,
+	) -> DispatchResult {
+		ensure!(
+			!MinterestModelParams::<T>::contains_key(currency_id),
+			Error::<T>::PoolAlreadyCreated
+		);
+		ensure!(Self::is_valid_kink(kink), Error::<T>::KinkCannotBeMoreThanOne);
+		ensure!(
+			Self::is_valid_base_rate_and_multiplier(
+				multiplier_per_block,
+				Self::minterest_model_params(currency_id).base_rate_per_block
+			),
+			Error::<T>::MultiplierPerBlockCannotBeZero
+		);
+
+		MinterestModelParams::<T>::insert(
+			currency_id,
+			MinterestModelData {
+				kink,
+				base_rate_per_block,
+				multiplier_per_block,
+				jump_multiplier_per_block,
+			},
+		);
+		Ok(())
 	}
 }

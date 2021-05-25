@@ -367,6 +367,7 @@ impl minterest_protocol::Config for Runtime {
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
 	type ControllerAPI = Controller;
 	type RiskManagerAPI = RiskManager;
+	type MinterestModelAPI = MinterestModel;
 	type CreatePoolOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 

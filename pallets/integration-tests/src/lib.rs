@@ -61,7 +61,7 @@ mod tests {
 			TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 			TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
 			TestController: controller::{Module, Storage, Call, Event, Config<T>},
-			MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+			TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 			TestDex: dex::{Module, Storage, Call, Event<T>},
 			TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 			TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config},
