@@ -11,7 +11,6 @@ use sp_core::offchain::{
 	OffchainExt, TransactionPoolExt,
 };
 
-use sp_core::offchain::OffchainStorage;
 use test_helper::offchain_ext::OffChainExtWithHooks;
 
 #[test]
@@ -68,8 +67,8 @@ fn test_offchain_worker_lock_expired() {
 		// Get saved index from database
 		let serialized_index_result = state
 			.read()
-			.local_storage
-			.get(b"", OFFCHAIN_WORKER_LATEST_POOL_INDEX)
+			.persistent_storage
+			.get(OFFCHAIN_WORKER_LATEST_POOL_INDEX)
 			.unwrap();
 		// If sequence that produced by CurrencyId::get_enabled_tokens_in_protocol was changed, this
 		// assertion can fail.
