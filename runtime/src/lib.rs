@@ -23,7 +23,7 @@ pub use controller_rpc_runtime_api::{
 pub use minterest_primitives::{
 	currency::{
 		CurrencyType::{UnderlyingAsset, WrappedToken},
-		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT, TMP,
+		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
 	},
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index, Moment,
 	Operation, Price, Rate, Signature,

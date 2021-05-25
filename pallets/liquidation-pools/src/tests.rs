@@ -9,27 +9,27 @@ use sp_runtime::traits::{BadOrigin, Zero};
 fn protocol_operations_not_working_for_nonexisting_pool() {
 	ExternalityBuilder::default().build().execute_with(|| {
 		assert_noop!(
-			TestLiquidationPools::set_deviation_threshold(admin(), TMP, 123),
+			TestLiquidationPools::set_deviation_threshold(admin(), KSM, 123),
 			Error::<Test>::PoolNotFound
 		);
 
 		assert_noop!(
-			TestLiquidationPools::set_balance_ratio(admin(), TMP, 123),
+			TestLiquidationPools::set_balance_ratio(admin(), KSM, 123),
 			Error::<Test>::PoolNotFound
 		);
 
 		assert_noop!(
-			TestLiquidationPools::set_max_ideal_balance(admin(), TMP, Some(123)),
+			TestLiquidationPools::set_max_ideal_balance(admin(), KSM, Some(123)),
 			Error::<Test>::PoolNotFound
 		);
 
 		assert_noop!(
-			TestLiquidationPools::balance_liquidation_pools(Origin::none(), TMP, DOT, Balance::zero(), Balance::zero()),
+			TestLiquidationPools::balance_liquidation_pools(Origin::none(), KSM, DOT, Balance::zero(), Balance::zero()),
 			Error::<Test>::PoolNotFound
 		);
 
 		assert_noop!(
-			TestLiquidationPools::transfer_to_liquidation_pool(admin(), TMP, 123),
+			TestLiquidationPools::transfer_to_liquidation_pool(admin(), KSM, 123),
 			Error::<Test>::PoolNotFound
 		);
 	});

@@ -286,7 +286,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::create_pool(
 					admin(),
 					BTC,
-					Box::new(PoolInitData {
+					PoolInitData {
 						kink: Rate::saturating_from_rational(8, 10),
 						base_rate_per_block: Rate::zero(),
 						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000),
@@ -301,7 +301,7 @@ mod tests {
 						min_partial_liquidation_sum: 100 * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
 						liquidation_fee: Rate::saturating_from_rational(105, 100),
-					}),
+					},
 				));
 				assert_ok!(MinterestProtocol::deposit_underlying(admin(), BTC, ONE_HUNDRED));
 				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), BTC));

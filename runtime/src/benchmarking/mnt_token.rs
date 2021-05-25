@@ -1,5 +1,5 @@
 use super::utils::{create_pools, prepare_for_mnt_distribution};
-use crate::{EnabledUnderlyingAssetsIds, MntToken, Runtime, System, BTC, DOLLARS, DOT, TMP};
+use crate::{EnabledUnderlyingAssetsIds, MntToken, Runtime, System, BTC, DOLLARS, DOT};
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
 use sp_std::prelude::*;
@@ -9,10 +9,7 @@ runtime_benchmarks! {
 
 	_ {}
 	set_mnt_rate {
-		let pools = EnabledUnderlyingAssetsIds::get()
-			.into_iter()
-			.filter(|&asset_id| asset_id != TMP)
-			.collect();
+		let pools = EnabledUnderlyingAssetsIds::get();
 		create_pools(&pools);
 		prepare_for_mnt_distribution(pools)?;
 		System::set_block_number(10);
@@ -21,10 +18,7 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Root, 15 * DOLLARS)
 
 	disable_mnt_minting {
-		let pools = EnabledUnderlyingAssetsIds::get()
-			.into_iter()
-			.filter(|&asset_id| asset_id != TMP)
-			.collect();
+		let pools = EnabledUnderlyingAssetsIds::get();
 		create_pools(&pools);
 		prepare_for_mnt_distribution(pools)?;
 		System::set_block_number(10);
@@ -33,10 +27,7 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Root, BTC)
 
 	enable_mnt_minting {
-		let pools = EnabledUnderlyingAssetsIds::get()
-			.into_iter()
-			.filter(|&asset_id| asset_id != TMP)
-			.collect();
+		let pools = EnabledUnderlyingAssetsIds::get();
 		create_pools(&pools);
 		prepare_for_mnt_distribution(pools)?;
 		System::set_block_number(10);

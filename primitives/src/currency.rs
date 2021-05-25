@@ -81,8 +81,6 @@ create_currency_id! {
 		MBTC("Bitcoin", 8, WrappedToken) = 6,
 		ETH("Ethereum", 18, UnderlyingAsset) = 7,
 		METH("Ethereum", 18, WrappedToken) = 8,
-		TMP("Non-existing", 18, UnderlyingAsset) = 9,
-		MTMP("Non-existing", 18, WrappedToken) = 10,
 	}
 }
 
@@ -177,11 +175,11 @@ mod tests {
 		assert_eq!(CurrencyId::get_enabled_tokens_in_protocol(Native), vec![MNT]);
 		assert_eq!(
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset),
-			vec![DOT, KSM, BTC, ETH, TMP]
+			vec![DOT, KSM, BTC, ETH]
 		);
 		assert_eq!(
 			CurrencyId::get_enabled_tokens_in_protocol(WrappedToken),
-			vec![MDOT, MKSM, MBTC, METH, MTMP]
+			vec![MDOT, MKSM, MBTC, METH]
 		);
 	}
 }

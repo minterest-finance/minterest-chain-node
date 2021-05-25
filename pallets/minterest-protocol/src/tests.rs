@@ -23,14 +23,14 @@ fn create_pool_should_work() {
 		.execute_with(|| {
 			// The dispatch origin of this call must be Administrator.
 			assert_noop!(
-				TestProtocol::create_pool(bob(), DOT, Box::new(PoolInitData { ..Default::default() })),
+				TestProtocol::create_pool(bob(), DOT, PoolInitData { ..Default::default() }),
 				BadOrigin,
 			);
 
 			assert_ok!(TestProtocol::create_pool(
 				alice(),
 				DOT,
-				Box::new(PoolInitData {
+				PoolInitData {
 					kink: Rate::saturating_from_rational(2, 3),
 					base_rate_per_block: Rate::saturating_from_rational(1, 3),
 					multiplier_per_block: Rate::saturating_from_rational(2, 4),
@@ -45,7 +45,7 @@ fn create_pool_should_work() {
 					min_partial_liquidation_sum: 100 * DOLLARS,
 					threshold: Rate::saturating_from_rational(103, 100),
 					liquidation_fee: Rate::saturating_from_rational(105, 100),
-				}),
+				},
 			));
 			let expected_event = Event::minterest_protocol(crate::Event::PoolCreated(DOT));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
@@ -102,7 +102,7 @@ fn create_pool_should_work() {
 				TestProtocol::create_pool(
 					alice(),
 					DOT,
-					Box::new(PoolInitData {
+					PoolInitData {
 						kink: Rate::saturating_from_rational(2, 3),
 						base_rate_per_block: Rate::saturating_from_rational(1, 3),
 						multiplier_per_block: Rate::saturating_from_rational(2, 4),
@@ -117,7 +117,7 @@ fn create_pool_should_work() {
 						min_partial_liquidation_sum: 100 * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
 						liquidation_fee: Rate::saturating_from_rational(105, 100),
-					}),
+					},
 				),
 				Error::<Test>::PoolAlreadyCreated,
 			);
@@ -135,7 +135,7 @@ fn create_pool_should_not_work_when_controller_storage_has_data() {
 				TestProtocol::create_pool(
 					alice(),
 					DOT,
-					Box::new(PoolInitData {
+					PoolInitData {
 						kink: Rate::saturating_from_rational(2, 3),
 						base_rate_per_block: Rate::saturating_from_rational(1, 3),
 						multiplier_per_block: Rate::saturating_from_rational(2, 4),
@@ -150,7 +150,7 @@ fn create_pool_should_not_work_when_controller_storage_has_data() {
 						min_partial_liquidation_sum: 100 * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
 						liquidation_fee: Rate::saturating_from_rational(105, 100),
-					}),
+					},
 				),
 				controller::Error::<Test>::PoolAlreadyCreated,
 			);
@@ -168,7 +168,7 @@ fn create_pool_should_not_work_when_minterest_model_storage_has_data() {
 				TestProtocol::create_pool(
 					alice(),
 					DOT,
-					Box::new(PoolInitData {
+					PoolInitData {
 						kink: Rate::saturating_from_rational(2, 3),
 						base_rate_per_block: Rate::saturating_from_rational(1, 3),
 						multiplier_per_block: Rate::saturating_from_rational(2, 4),
@@ -183,7 +183,7 @@ fn create_pool_should_not_work_when_minterest_model_storage_has_data() {
 						min_partial_liquidation_sum: 100 * DOLLARS,
 						threshold: Rate::saturating_from_rational(103, 100),
 						liquidation_fee: Rate::saturating_from_rational(105, 100),
-					}),
+					},
 				),
 				minterest_model::Error::<Test>::PoolAlreadyCreated,
 			);

@@ -4,7 +4,7 @@ use super::utils::{
 };
 use crate::{
 	AccountId, Currencies, EnabledUnderlyingAssetsIds, LiquidationPoolsModuleId, LiquidityPools, MinterestProtocol,
-	MntToken, Origin, Rate, Runtime, System, BTC, DOLLARS, DOT, ETH, KSM, MNT, TMP,
+	MntToken, Origin, Rate, Runtime, System, BTC, DOLLARS, DOT, ETH, KSM, MNT,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
@@ -51,7 +51,6 @@ runtime_benchmarks! {
 	liquidate {
 		let pools = EnabledUnderlyingAssetsIds::get()
 			.into_iter()
-			.filter(|&asset_id| asset_id != TMP)
 			.collect();
 		create_pools(&pools);
 		prepare_for_mnt_distribution(pools.clone())?;

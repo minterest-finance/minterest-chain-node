@@ -86,6 +86,9 @@ pub trait DEXManager<AccountId, CurrencyId, Balance> {
 }
 
 pub trait ControllerAPI<AccountId> {
+	/// This is a part of a pool creation flow
+	/// Creates storage records for ControllerParams and PauseKeepers
+	/// All operations are unpaused after this function call
 	fn create_pool(
 		currency_id: CurrencyId,
 		protocol_interest_factor: Rate,

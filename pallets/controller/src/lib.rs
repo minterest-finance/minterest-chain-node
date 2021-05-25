@@ -444,9 +444,6 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 	/// Gets the exchange rate between a mToken and the underlying asset.
 	pub fn get_liquidity_pool_exchange_rate(pool_id: CurrencyId) -> Option<Rate> {
-		if !<LiquidityPools<T>>::pool_exists(&pool_id) {
-			return None;
-		}
 		<LiquidityPools<T>>::get_exchange_rate(pool_id).ok()
 	}
 
@@ -824,7 +821,7 @@ impl<T: Config> Pallet<T> {
 impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
 	/// This is a part of a pool creation flow
 	/// Creates storage records for ControllerParams and PauseKeepers
-	/// All operations are paused after this function call
+	/// All operations are unpaused after this function call
 	fn create_pool(
 		currency_id: CurrencyId,
 		protocol_interest_factor: Rate,

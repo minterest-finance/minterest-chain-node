@@ -148,14 +148,6 @@ impl Default for ExternalityBuilder {
 						total_protocol_interest: Balance::zero(),
 					},
 				),
-				(
-					KSM,
-					Pool {
-						total_borrowed: Balance::zero(),
-						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
-					},
-				),
 			],
 			liquidation_pools: vec![(
 				DOT,

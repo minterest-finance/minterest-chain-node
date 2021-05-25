@@ -22,7 +22,7 @@ use pallet_traits::{ControllerAPI, DEXManager, LiquidationPoolsManager, PoolsMan
 use prices_rpc_runtime_api::runtime_decl_for_PricesApi::PricesApi;
 use risk_manager::RiskManagerData;
 use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};
-use test_helper::{BTC, DOT, ETH, KSM, MDOT, METH, MNT, TMP};
+use test_helper::{BTC, DOT, ETH, KSM, MDOT, METH, MNT};
 mod balancing_pools_tests;
 mod dexes_tests;
 mod liquidation_tests;

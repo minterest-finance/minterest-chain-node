@@ -4,7 +4,7 @@ use super::utils::{
 use crate::{
 	AccountId, Balance, Currencies, EnabledUnderlyingAssetsIds, EnabledWrappedTokensId, LiquidityPools,
 	LiquidityPoolsModuleId, MinterestProtocol, MntToken, MntTokenModuleId, Origin, Rate, Runtime, System, BTC, DOLLARS,
-	DOT, ETH, KSM, MBTC, MDOT, MNT, TMP,
+	DOT, ETH, KSM, MBTC, MDOT, MNT,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
@@ -39,7 +39,6 @@ fn hypothetical_liquidity_setup(borrower: &AccountId, lender: &AccountId) -> Res
 	// enable pools as collateral
 	EnabledUnderlyingAssetsIds::get()
 		.into_iter()
-		.filter(|&asset_id| asset_id != TMP)
 		.try_for_each(|asset_id| -> Result<(), &'static str> {
 			enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), asset_id)?;
 			// set borrow params
@@ -69,7 +68,7 @@ runtime_benchmarks! {
 	}: _(
 		RawOrigin::Root,
 		DOT,
-		Box::new(PoolInitData {
+		PoolInitData {
 			kink: Rate::saturating_from_rational(2, 3),
 			base_rate_per_block: Rate::saturating_from_rational(1, 3),
 			multiplier_per_block: Rate::saturating_from_rational(2, 4),
@@ -84,7 +83,7 @@ runtime_benchmarks! {
 			min_partial_liquidation_sum: 100,
 			threshold: Rate::saturating_from_rational(103, 100),
 			liquidation_fee: Rate::saturating_from_rational(105, 100),
-		})
+		}
 	)
 
 	deposit_underlying {
@@ -310,7 +309,6 @@ runtime_benchmarks! {
 
 		EnabledUnderlyingAssetsIds::get()
 			.into_iter()
-			.filter(|&asset_id| asset_id != TMP)
 			.try_for_each(|pool_id| -> Result<(), &'static str> {
 				liquidity_pools::Pools::<Runtime>::insert(pool_id, Pool {
 					total_borrowed: Balance::zero(),
@@ -329,7 +327,6 @@ runtime_benchmarks! {
 
 		EnabledUnderlyingAssetsIds::get()
 			.into_iter()
-			.filter(|&asset_id| asset_id != TMP)
 			.try_for_each(|pool_id| -> Result<(), &'static str> {
 				set_balance(pool_id, &borrower, 100_000 * DOLLARS)?;
 				MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), pool_id, 100_000 * DOLLARS)?;

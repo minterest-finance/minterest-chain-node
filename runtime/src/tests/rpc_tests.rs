@@ -696,7 +696,7 @@ fn get_all_locked_prices_rpc_should_work() {
 				DOT => {
 					assert_eq!(price, None);
 				}
-				ETH | BTC | KSM | TMP => {
+				ETH | BTC | KSM => {
 					assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
 				}
 				_ => panic!("Unexpected token!"),

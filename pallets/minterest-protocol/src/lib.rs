@@ -12,6 +12,7 @@
 //! it is transferred from liquidity to liquidation pool.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::large_enum_variant)]
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
 
@@ -31,7 +32,7 @@ use sp_runtime::{
 	traits::{BadOrigin, Zero},
 	DispatchError, DispatchResult,
 };
-use sp_std::{boxed::Box, result, vec::Vec};
+use sp_std::{result, vec::Vec};
 
 pub use module::*;
 
@@ -203,12 +204,17 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Creates pool in storage. It is a part of a pool creation process and must be called
+		/// after new CurrencyId is added to runtime.
+		///
+		/// - `pool_id`: id of the pool that is being created
+		/// - `pool_data`: data to initialize pool storage in all pallets
 		#[pallet::weight(T::ProtocolWeightInfo::create_pool())]
 		#[transactional]
 		pub fn create_pool(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			pool_data: Box<PoolInitData>,
+			pool_data: PoolInitData,
 		) -> DispatchResultWithPostInfo {
 			T::CreatePoolOrigin::ensure_origin(origin)?;
 
@@ -221,7 +227,7 @@ pub mod module {
 				Error::<T>::PoolAlreadyCreated
 			);
 
-			Self::do_create_pool(pool_id, *pool_data)?;
+			Self::do_create_pool(pool_id, pool_data)?;
 			Self::deposit_event(Event::PoolCreated(pool_id));
 			Ok(().into())
 		}
