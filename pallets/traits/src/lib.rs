@@ -165,6 +165,12 @@ pub trait MntManager<AccountId> {
 		borrower: &AccountId,
 		distribute_all: bool,
 	) -> Result<Balance, DispatchError>;
+
+	/// Return MNT Borrow Rate and MNT Supply Rate values per block for current pool.
+	/// - `pool_id` - the pool to calculate rates
+	///
+	/// returns (`borrow_apy`, `supply_apy`): - percentage yield per block
+	fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Price, Price), DispatchError>;
 }
 
 pub trait RiskManagerAPI {

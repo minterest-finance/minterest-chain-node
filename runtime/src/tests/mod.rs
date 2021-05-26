@@ -44,6 +44,8 @@ struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
+	minted_pools: Vec<CurrencyId>,
+	mnt_rate: Balance,
 }
 
 impl Default for ExtBuilder {
@@ -55,17 +57,22 @@ impl Default for ExtBuilder {
 				(ALICE::get(), DOT, 100_000 * DOLLARS),
 				(ALICE::get(), ETH, 100_000 * DOLLARS),
 				(ALICE::get(), BTC, 100_000 * DOLLARS),
+				(ALICE::get(), KSM, 100_000 * DOLLARS),
 				(BOB::get(), MNT, 100_000 * DOLLARS),
 				(BOB::get(), DOT, 100_000 * DOLLARS),
 				(BOB::get(), ETH, 100_000 * DOLLARS),
 				(BOB::get(), BTC, 100_000 * DOLLARS),
+				(BOB::get(), KSM, 100_000 * DOLLARS),
 				(CHARLIE::get(), MNT, 100_000 * DOLLARS),
 				(CHARLIE::get(), DOT, 100_000 * DOLLARS),
 				(CHARLIE::get(), ETH, 100_000 * DOLLARS),
 				(CHARLIE::get(), BTC, 100_000 * DOLLARS),
+				(CHARLIE::get(), KSM, 100_000 * DOLLARS),
 			],
 			pools: vec![],
 			pool_user_data: vec![],
+			mnt_rate: 10 * DOLLARS,
+			minted_pools: vec![KSM, DOT, ETH, BTC],
 		}
 	}
 }
@@ -145,6 +152,11 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn set_mnt_rate(mut self, rate: u128) -> Self {
+		self.mnt_rate = rate * DOLLARS;
+		self
+	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
@@ -217,11 +229,24 @@ impl ExtBuilder {
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
+				(
+					KSM,
+					ControllerData {
+						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
+						last_interest_accrued_block: 1,
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
+						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
+						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+					},
+				),
 			],
 			pause_keepers: vec![
 				(DOT, PauseKeeper::all_unpaused()),
 				(ETH, PauseKeeper::all_unpaused()),
 				(BTC, PauseKeeper::all_unpaused()),
+				(KSM, PauseKeeper::all_unpaused()),
 			],
 			whitelist_mode: false,
 		}
@@ -349,6 +374,7 @@ impl ExtBuilder {
 				(KSM, Rate::saturating_from_integer(2)),
 				(ETH, Rate::saturating_from_integer(2)),
 				(BTC, Rate::saturating_from_integer(2)),
+				(MNT, Rate::saturating_from_integer(4)),
 			],
 			_phantom: PhantomData,
 		}
@@ -356,9 +382,9 @@ impl ExtBuilder {
 		.unwrap();
 
 		mnt_token::GenesisConfig::<Runtime> {
-			mnt_rate: 10 * DOLLARS,
+			mnt_rate: self.mnt_rate,
 			mnt_claim_threshold: 0, // disable by default
-			minted_pools: vec![DOT, ETH, KSM, BTC],
+			minted_pools: self.minted_pools,
 			_phantom: std::marker::PhantomData,
 		}
 		.assimilate_storage(&mut t)
@@ -466,6 +492,10 @@ fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
 
 fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 	Prices::unlock_price(origin_root(), currency_id)
+}
+
+fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> (Rate, Rate) {
+	<Runtime as MntTokenApi<Block, AccountId>>::get_mnt_borrow_and_supply_rates(pool_id).unwrap()
 }
 
 pub fn run_to_block(n: u32) {
