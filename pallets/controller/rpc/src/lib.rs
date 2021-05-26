@@ -42,7 +42,7 @@ pub trait ControllerApi<BlockHash, AccountId> {
 	) -> Result<Option<BalanceInfo>>;
 
 	#[rpc(name = "controller_poolExists")]
-	fn pool_exists(&self, underlying_asset_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<bool>>;
+	fn pool_exists(&self, underlying_asset_id: CurrencyId, at: Option<BlockHash>) -> Result<bool>;
 }
 
 /// A struct that implements the [`ControllerApi`].
@@ -176,11 +176,7 @@ where
 			})
 	}
 
-	fn pool_exists(
-		&self,
-		underlying_asset_id: CurrencyId,
-		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<Option<bool>> {
+	fn pool_exists(&self, underlying_asset_id: CurrencyId, at: Option<<Block as BlockT>::Hash>) -> Result<bool> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.

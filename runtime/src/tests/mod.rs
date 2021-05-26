@@ -440,7 +440,7 @@ fn get_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
 		.amount
 }
 
-fn pool_exists_rpc(underlying_asset_id: CurrencyId) -> Option<bool> {
+fn pool_exists_rpc(underlying_asset_id: CurrencyId) -> bool {
 	<Runtime as ControllerApi<Block, AccountId>>::pool_exists(underlying_asset_id)
 }
 

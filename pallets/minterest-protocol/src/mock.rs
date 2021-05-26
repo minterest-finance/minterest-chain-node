@@ -379,3 +379,22 @@ pub(crate) fn set_block_number_and_refresh_speeds(n: u64) {
 	System::set_block_number(n);
 	assert_ok!(TestMntToken::refresh_mnt_speeds());
 }
+
+pub(crate) fn create_dummy_pool_init_data() -> PoolInitData {
+	PoolInitData {
+		kink: Rate::saturating_from_rational(2, 3),
+		base_rate_per_block: Rate::saturating_from_rational(1, 3),
+		multiplier_per_block: Rate::saturating_from_rational(2, 4),
+		jump_multiplier_per_block: Rate::saturating_from_rational(1, 2),
+		protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+		max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+		collateral_factor: Rate::saturating_from_rational(9, 10),
+		protocol_interest_threshold: 100000,
+		deviation_threshold: Rate::saturating_from_rational(5, 100),
+		balance_ratio: Rate::saturating_from_rational(2, 10),
+		max_attempts: 3,
+		min_partial_liquidation_sum: 100 * DOLLARS,
+		threshold: Rate::saturating_from_rational(103, 100),
+		liquidation_fee: Rate::saturating_from_rational(105, 100),
+	}
+}

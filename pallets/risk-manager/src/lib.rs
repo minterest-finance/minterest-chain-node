@@ -128,7 +128,7 @@ pub mod module {
 		/// Feed price is invalid
 		InvalidFeedPrice,
 		/// Pool is already created
-		PoolAlreadyCreated1,
+		PoolAlreadyCreated,
 	}
 
 	#[pallet::event]
@@ -745,7 +745,7 @@ impl<T: Config> RiskManagerAPI for Pallet<T> {
 	) -> DispatchResult {
 		ensure!(
 			!RiskManagerParams::<T>::contains_key(currency_id),
-			Error::<T>::PoolAlreadyCreated1
+			Error::<T>::PoolAlreadyCreated
 		);
 		ensure!(
 			Self::is_valid_liquidation_fee(liquidation_fee),

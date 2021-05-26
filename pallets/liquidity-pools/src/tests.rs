@@ -369,7 +369,7 @@ fn get_exchange_rate_by_interest_params_should_work() {
 				TestPools::get_exchange_rate_by_interest_params(DOT, Balance::zero(), Balance::zero()),
 				Ok(Rate::saturating_from_rational(8, 10))
 			);
-			// exchange_rate = (100 - 0 + 0) / 125 = 0.8
+			// exchange_rate = (100 - 100 + 0) / 125 = 0
 			assert_eq!(
 				TestPools::get_exchange_rate_by_interest_params(DOT, dollars(100_u128), Balance::zero()),
 				Ok(Rate::zero())

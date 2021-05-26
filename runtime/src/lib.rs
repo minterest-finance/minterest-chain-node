@@ -17,9 +17,7 @@ mod weights;
 mod weights_test;
 
 use crate::constants::fee::WeightToFee;
-pub use controller_rpc_runtime_api::{
-	BalanceInfo, HypotheticalLiquidityData, PoolExists, PoolState, UserPoolBalanceData,
-};
+pub use controller_rpc_runtime_api::{BalanceInfo, HypotheticalLiquidityData, PoolState, UserPoolBalanceData};
 pub use minterest_primitives::{
 	currency::{
 		CurrencyType::{UnderlyingAsset, WrappedToken},
@@ -813,8 +811,8 @@ impl_runtime_apis! {
 				Some(BalanceInfo{amount: Controller::get_user_borrow_per_asset(&account_id, underlying_asset_id).ok()?})
 		}
 
-		fn pool_exists(underlying_asset_id: CurrencyId) -> Option<bool> {
-			Some(LiquidityPools::pool_exists(&underlying_asset_id))
+		fn pool_exists(underlying_asset_id: CurrencyId) -> bool {
+			LiquidityPools::pool_exists(&underlying_asset_id)
 		}
 	}
 

@@ -861,7 +861,7 @@ fn get_mnt_borrow_and_supply_rates_should_work() {
 #[test]
 fn pool_exists_should_work() {
 	ExtBuilder::default().pool_initial(DOT).build().execute_with(|| {
-		assert_eq!(pool_exists_rpc(DOT), Some(true));
-		assert_eq!(pool_exists_rpc(ETH), Some(false));
+		assert_eq!(pool_exists_rpc(DOT), true);
+		assert_eq!(pool_exists_rpc(ETH), false);
 	});
 }

@@ -24,12 +24,6 @@ pub struct PoolState {
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Eq, PartialEq, Default, RuntimeDebug)]
-pub struct PoolExists {
-	pub exists: bool,
-}
-
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, Eq, PartialEq, Default, RuntimeDebug)]
 pub struct UserPoolBalanceData {
 	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
 	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
@@ -89,6 +83,6 @@ sp_api::decl_runtime_apis! {
 			underlying_asset_id: CurrencyId,
 		) -> Option<BalanceInfo>;
 
-		fn pool_exists(underlying_asset_id: CurrencyId) -> Option<bool>;
+		fn pool_exists(underlying_asset_id: CurrencyId) -> bool;
 	}
 }

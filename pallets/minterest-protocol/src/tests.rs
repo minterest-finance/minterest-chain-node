@@ -27,26 +27,7 @@ fn create_pool_should_work() {
 				BadOrigin,
 			);
 
-			assert_ok!(TestProtocol::create_pool(
-				alice(),
-				DOT,
-				PoolInitData {
-					kink: Rate::saturating_from_rational(2, 3),
-					base_rate_per_block: Rate::saturating_from_rational(1, 3),
-					multiplier_per_block: Rate::saturating_from_rational(2, 4),
-					jump_multiplier_per_block: Rate::saturating_from_rational(1, 2),
-					protocol_interest_factor: Rate::saturating_from_rational(1, 10),
-					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-					collateral_factor: Rate::saturating_from_rational(9, 10),
-					protocol_interest_threshold: 100000,
-					deviation_threshold: Rate::saturating_from_rational(5, 100),
-					balance_ratio: Rate::saturating_from_rational(2, 10),
-					max_attempts: 3,
-					min_partial_liquidation_sum: 100 * DOLLARS,
-					threshold: Rate::saturating_from_rational(103, 100),
-					liquidation_fee: Rate::saturating_from_rational(105, 100),
-				},
-			));
+			assert_ok!(TestProtocol::create_pool(alice(), DOT, create_dummy_pool_init_data()));
 			let expected_event = Event::minterest_protocol(crate::Event::PoolCreated(DOT));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
@@ -90,26 +71,7 @@ fn create_pool_should_work() {
 
 			// Unable to create pool twice
 			assert_noop!(
-				TestProtocol::create_pool(
-					alice(),
-					DOT,
-					PoolInitData {
-						kink: Rate::saturating_from_rational(2, 3),
-						base_rate_per_block: Rate::saturating_from_rational(1, 3),
-						multiplier_per_block: Rate::saturating_from_rational(2, 4),
-						jump_multiplier_per_block: Rate::saturating_from_rational(1, 2),
-						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
-						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-						collateral_factor: Rate::saturating_from_rational(9, 10),
-						protocol_interest_threshold: 100000,
-						deviation_threshold: Rate::saturating_from_rational(5, 100),
-						balance_ratio: Rate::saturating_from_rational(2, 10),
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
-					},
-				),
+				TestProtocol::create_pool(alice(), DOT, create_dummy_pool_init_data()),
 				Error::<Test>::PoolAlreadyCreated,
 			);
 		});
@@ -123,26 +85,7 @@ fn create_pool_should_not_work_when_controller_storage_has_data() {
 		.execute_with(|| {
 			// Controller pallet has record in storage, unable to create new pool
 			assert_noop!(
-				TestProtocol::create_pool(
-					alice(),
-					DOT,
-					PoolInitData {
-						kink: Rate::saturating_from_rational(2, 3),
-						base_rate_per_block: Rate::saturating_from_rational(1, 3),
-						multiplier_per_block: Rate::saturating_from_rational(2, 4),
-						jump_multiplier_per_block: Rate::saturating_from_rational(1, 2),
-						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
-						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-						collateral_factor: Rate::saturating_from_rational(9, 10),
-						protocol_interest_threshold: 100000,
-						deviation_threshold: Rate::saturating_from_rational(5, 100),
-						balance_ratio: Rate::saturating_from_rational(2, 10),
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
-					},
-				),
+				TestProtocol::create_pool(alice(), DOT, create_dummy_pool_init_data()),
 				controller::Error::<Test>::PoolAlreadyCreated,
 			);
 		});
@@ -154,7 +97,7 @@ fn create_pool_should_not_work_when_minterest_model_storage_has_data() {
 		.set_minterest_model_params(vec![(DOT, MinterestModelData::default())])
 		.build()
 		.execute_with(|| {
-			// Controller pallet has record in storage, unable to create new pool
+			// MinterestModel pallet has record in storage, unable to create new pool
 			assert_noop!(
 				TestProtocol::create_pool(
 					alice(),
@@ -1065,6 +1008,8 @@ fn transfer_wrapped_should_work() {
 #[test]
 fn transfer_wrapped_should_not_work() {
 	ExtBuilder::default()
+		.user_balance(ALICE, MDOT, ONE_HUNDRED_DOLLARS)
+		.user_balance(ALICE, MKSM, ONE_HUNDRED_DOLLARS)
 		.pool_with_params(
 			DOT,
 			Balance::zero(),
@@ -1077,8 +1022,6 @@ fn transfer_wrapped_should_not_work() {
 			Rate::saturating_from_rational(1, 1),
 			TEN_THOUSAND_DOLLARS,
 		)
-		.user_balance(ALICE, MDOT, ONE_HUNDRED_DOLLARS)
-		.user_balance(ALICE, MKSM, ONE_HUNDRED_DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Alice is unable to transfer more tokens tan she has
