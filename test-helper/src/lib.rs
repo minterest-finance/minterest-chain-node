@@ -98,7 +98,7 @@ macro_rules! mock_impl_liquidity_pools_config {
 		impl liquidity_pools::Config for $target {
 			type MultiCurrency = orml_currencies::Module<$target>;
 			type PriceSource = MockPriceSource;
-			type ModuleId = LiquidityPoolsModuleId;
+			type PalletId = LiquidityPoolsModuleId;
 			type LiquidityPoolAccountId = LiquidityPoolAccountId;
 			type InitialExchangeRate = InitialExchangeRate;
 			type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
@@ -177,7 +177,7 @@ macro_rules! mock_impl_minterest_model_config {
 macro_rules! mock_impl_dex_config {
 	($target:ty) => {
 		parameter_types! {
-			pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
+			pub const DexModuleId: PalletId = PalletId(*b"min/dexs");
 			pub DexAccountId: AccountId = DexModuleId::get().into_account();
 		}
 

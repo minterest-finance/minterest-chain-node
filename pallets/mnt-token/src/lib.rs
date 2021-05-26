@@ -5,7 +5,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
-use frame_support::{pallet_prelude::*, sp_std::cmp::Ordering, transactional};
+use frame_support::{log, pallet_prelude::*, sp_std::cmp::Ordering, transactional};
 use frame_system::pallet_prelude::*;
 use minterest_primitives::currency::MNT;
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
@@ -13,7 +13,7 @@ pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{ControllerAPI, LiquidityPoolsManager, MntManager, PriceProvider};
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
+	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
 	DispatchResult, FixedPointNumber,
 };
 use sp_std::{convert::TryInto, result, vec::Vec};
@@ -226,7 +226,7 @@ pub mod module {
 		fn on_finalize(block: T::BlockNumber) {
 			if block % T::SpeedRefreshPeriod::get() == T::BlockNumber::zero() {
 				if let Err(msg) = Pallet::<T>::refresh_mnt_speeds() {
-					debug::error!(
+					log::error!(
 						"MntToken module: Cannot run refresh_mnt_speed() at {:?}: {:?}",
 						block,
 						msg
@@ -366,7 +366,7 @@ impl<T: Config> Pallet<T> {
 		if user_accrued >= threshold && user_accrued > 0 {
 			let mnt_treasury_balance = T::MultiCurrency::free_balance(MNT, &Self::get_account_id());
 			if user_accrued <= mnt_treasury_balance {
-				T::MultiCurrency::transfer(MNT, &Self::get_account_id(), &user, user_accrued)?;
+				T::MultiCurrency::transfer(MNT, &Self::get_account_id(), &user, user_accrued);
 				MntAccrued::<T>::remove(user); // set to 0
 			}
 		} else {

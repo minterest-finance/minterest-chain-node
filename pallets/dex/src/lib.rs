@@ -8,7 +8,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
-use frame_support::{pallet_prelude::*, transactional};
+use frame_support::{pallet_prelude::*, transactional, PalletId};
 use minterest_primitives::{Balance, CurrencyId};
 use orml_traits::MultiCurrency;
 use pallet_traits::DEXManager;
@@ -18,7 +18,6 @@ mod tests;
 
 pub use module::*;
 use sp_runtime::traits::{AccountIdConversion, Zero};
-use sp_runtime::ModuleId;
 
 #[frame_support::pallet]
 pub mod module {
@@ -33,7 +32,7 @@ pub mod module {
 
 		#[pallet::constant]
 		/// The Dex module id.
-		type DexModuleId: Get<ModuleId>;
+		type DexModuleId: Get<PalletId>;
 
 		#[pallet::constant]
 		/// The Dex account id.
@@ -105,8 +104,8 @@ impl<T: Config> Pallet<T> {
 
 		ensure!(target_dex_balance >= target_amount, Error::<T>::InsufficientDexBalance);
 
-		T::MultiCurrency::transfer(supply_currency_id, &who, &module_account_id, max_supply_amount)?;
-		T::MultiCurrency::transfer(target_currency_id, &module_account_id, &who, target_amount)?;
+		T::MultiCurrency::transfer(supply_currency_id, &who, &module_account_id, max_supply_amount);
+		T::MultiCurrency::transfer(target_currency_id, &module_account_id, &who, target_amount);
 
 		Self::deposit_event(Event::Swap(
 			who.clone(),

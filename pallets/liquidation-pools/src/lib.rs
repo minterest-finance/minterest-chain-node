@@ -12,7 +12,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-use frame_support::{ensure, pallet_prelude::*, traits::Get, transactional};
+use frame_support::{ensure, log, pallet_prelude::*, traits::Get, transactional, PalletId};
 use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
 use frame_system::pallet_prelude::*;
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
@@ -21,8 +21,8 @@ use pallet_traits::DEXManager;
 use pallet_traits::{PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::traits::{AccountIdConversion, CheckedDiv, CheckedMul, Zero};
-use sp_runtime::{transaction_validity::TransactionPriority, FixedPointNumber, ModuleId, RuntimeDebug};
+use sp_runtime::traits::{AccountIdConversion, CheckedDiv, CheckedMul, One, Zero};
+use sp_runtime::{transaction_validity::TransactionPriority, FixedPointNumber, RuntimeDebug};
 use sp_std::prelude::*;
 
 use minterest_primitives::arithmetic::sum_with_mult_result;
@@ -74,7 +74,7 @@ pub mod module {
 
 		#[pallet::constant]
 		/// The Liquidation Pool's module id, keep all assets in Pools.
-		type LiquidationPoolsModuleId: Get<ModuleId>;
+		type LiquidationPoolsModuleId: Get<PalletId>;
 
 		#[pallet::constant]
 		/// The Liquidation Pool's account id, keep all assets in Pools.
@@ -184,14 +184,14 @@ pub mod module {
 		/// Runs balancing liquidation pools every 'balancing_period' blocks.
 		fn offchain_worker(now: T::BlockNumber) {
 			if let Err(error) = Self::_offchain_worker(now) {
-				debug::info!(
+				log::info!(
 					target: "LiquidationPool offchain worker",
 					"cannot run offchain worker at {:?}: {:?}",
 					now,
 					error,
 				);
 			} else {
-				debug::debug!(
+				log::debug!(
 					target: "LiquidationPool offchain worker",
 					" LiquidationPool offchain worker start at block: {:?} already done!",
 					now,
@@ -359,7 +359,7 @@ pub mod module {
 				Error::<T>::NotEnoughLiquidityAvailable
 			);
 
-			T::MultiCurrency::transfer(underlying_asset_id, &who, &Self::pools_account_id(), underlying_amount)?;
+			T::MultiCurrency::transfer(underlying_asset_id, &who, &Self::pools_account_id(), underlying_amount);
 
 			Self::deposit_event(Event::TransferToLiquidationPool(
 				underlying_asset_id,
@@ -405,7 +405,7 @@ impl<T: Config> Pallet<T> {
 		let call =
 			Call::<T>::balance_liquidation_pools(supply_pool_id, target_pool_id, max_supply_amount, target_amount);
 		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
-			debug::info!(
+			log::info!(
 				target: "liquidation-pools offchain worker",
 				"submit unsigned balancing tx for \n CurrencyId {:?} and CurrencyId {:?} \nfailed!",
 				supply_pool_id, target_pool_id,

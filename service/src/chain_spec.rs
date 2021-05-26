@@ -13,6 +13,7 @@ use node_minterest_runtime::{
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
+use serde::{Deserialize, Serialize};
 use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
@@ -32,7 +33,27 @@ const INITIAL_TREASURY: u128 = 5_000_000 * DOLLARS;
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
+pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
+
+/// Node `ChainSpec` extensions.
+///
+/// Additional parameters for some Substrate core modules,
+/// customizable from the chain spec.
+#[derive(Default, Clone, Serialize, Deserialize, ChainSpecExtension)]
+#[serde(rename_all = "camelCase")]
+pub struct Extensions {
+	/// The relay chain of the Parachain.
+	pub relay_chain: String,
+	/// The id of the Parachain.
+	pub para_id: u32,
+}
+
+impl Extensions {
+	/// Try to get the extension from the given `ChainSpec`.
+	pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
+		sc_chain_spec::get_extension(chain_spec.extensions())
+	}
+}
 
 /// Generate a crypto pair from seed.
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -96,7 +117,10 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		// Properties
 		Some(properties),
 		// Extensions
-		None,
+		Extensions {
+			relay_chain: "rococo-dev".into(),
+			para_id: 1967u32.into(),
+		},
 	))
 }
 
@@ -146,7 +170,10 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		// Properties
 		Some(properties),
 		// Extensions
-		None,
+		Extensions {
+			relay_chain: "rococo-local".into(),
+			para_id: 1987u32.into(),
+		},
 	))
 }
 
@@ -191,7 +218,10 @@ pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
 		// Properties
 		Some(properties),
 		// Extensions
-		Default::default(),
+		Extensions {
+			relay_chain: "rococo-turbo".into(),
+			para_id: 1987u32.into(),
+		},
 	))
 }
 

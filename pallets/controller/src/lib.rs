@@ -22,7 +22,7 @@ use pallet_traits::{ControllerAPI, LiquidityPoolsManager, PoolsManager, PricePro
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedDiv, CheckedMul, Zero},
+	traits::{CheckedAdd, CheckedDiv, CheckedMul, One, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, FixedU128, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};

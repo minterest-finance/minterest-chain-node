@@ -10,9 +10,9 @@ jsonrpc-core-client = "15.0"
 jsonrpc-derive = "15.0"
 
 sc-rpc = '3.0'
-sp-runtime = { version = "3.0.0" }
-sp-api = { version = "3.0.0" }
-sp-blockchain = { version = "3.0.0" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 
 prices-rpc-runtime-api = { path = "runtime-api" }
 minterest-primitives = { path = "../../../primitives" }

@@ -16,7 +16,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-use frame_support::{debug, ensure, traits::Get};
+use frame_support::{debug, ensure, log, traits::Get};
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use frame_system::{
@@ -203,17 +203,17 @@ pub mod module {
 		/// Runs after every block. Start offchain worker to check unsafe loan and
 		/// submit unsigned tx to trigger liquidation.
 		fn offchain_worker(now: T::BlockNumber) {
-			debug::info!("Entering off-chain worker");
+			log::info!("Entering off-chain worker");
 
 			if let Err(e) = Self::_offchain_worker() {
-				debug::info!(
+				log::info!(
 					target: "RiskManager offchain worker",
 					"cannot run offchain worker at {:?}: {:?}",
 					now,
 					e,
 				);
 			} else {
-				debug::debug!(
+				log::debug!(
 					target: "RiskManager offchain worker",
 					" RiskManager offchain worker start at block: {:?} already done!",
 					now,
@@ -436,7 +436,7 @@ impl<T: Config> Pallet<T> {
 		}
 
 		let iteration_end_time = sp_io::offchain::timestamp();
-		debug::info!(
+		log::info!(
 			target: "RiskManager offchain worker",
 			"iteration info:\n max iterations is {:?}\n currency id: {:?}, start key: {:?}, iterate count: {:?}\n iteration start at: {:?}, end at: {:?}, execution time: {:?}\n",
 			max_iterations,
@@ -463,7 +463,7 @@ impl<T: Config> Pallet<T> {
 		let who = T::Lookup::unlookup(borrower);
 		let call = Call::<T>::liquidate(who.clone(), pool_id);
 		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
-			debug::info!(
+			log::info!(
 				target: "RiskManager offchain worker",
 				"submit unsigned liquidation for \n AccountId {:?} CurrencyId {:?} \nfailed!",
 				who, pool_id,
@@ -577,7 +577,7 @@ impl<T: Config> Pallet<T> {
 						// seize_underlying = balance_wrapped_token * exchange_rate
 						let seize_underlying =
 							<LiquidityPools<T>>::convert_from_wrapped(wrapped_id, balance_wrapped_token)?;
-						T::MultiCurrency::withdraw(wrapped_id, &borrower, balance_wrapped_token)?;
+						T::MultiCurrency::withdraw(wrapped_id, &borrower, balance_wrapped_token);
 						// seize_amount = seize_amount - (seize_underlying * price_collateral)
 						seize_amount -= Rate::from_inner(seize_underlying)
 							.checked_mul(&price_collateral)
@@ -589,7 +589,7 @@ impl<T: Config> Pallet<T> {
 					_ => {
 						// seize_underlying = seize_tokens * exchange_rate
 						let seize_underlying = <LiquidityPools<T>>::convert_from_wrapped(wrapped_id, seize_tokens)?;
-						T::MultiCurrency::withdraw(wrapped_id, &borrower, seize_tokens)?;
+						T::MultiCurrency::withdraw(wrapped_id, &borrower, seize_tokens);
 						// seize_amount = 0, since all seize_tokens have already been withdrawn
 						seize_amount = Balance::zero();
 						seize_underlying
@@ -600,7 +600,7 @@ impl<T: Config> Pallet<T> {
 					&liquidity_pool_account_id,
 					&liquidation_pool_account_id,
 					seize_underlying,
-				)?;
+				);
 				// already_seized_amount = already_seized_amount + (seize_underlying * price_collateral)
 				already_seized_amount += Rate::from_inner(seize_underlying)
 					.checked_mul(&price_collateral)

@@ -4,7 +4,7 @@
 
 use super::*;
 use crate as dex;
-use frame_support::{construct_runtime, ord_parameter_types, parameter_types};
+use frame_support::{construct_runtime, ord_parameter_types, parameter_types, PalletId};
 use frame_system::offchain::SendTransactionTypes;
 use frame_system::EnsureSignedBy;
 pub use minterest_primitives::{
@@ -29,8 +29,8 @@ ord_parameter_types! {
 }
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
-	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+	pub const LiquidityPoolsModuleId: PalletId = PalletId(*b"min/lqdy");
+	pub const LiquidationPoolsModuleId: PalletId = PalletId(*b"min/lqdn");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();

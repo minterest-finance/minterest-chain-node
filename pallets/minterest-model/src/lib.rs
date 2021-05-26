@@ -16,6 +16,7 @@ use frame_system::pallet_prelude::*;
 use minterest_primitives::{CurrencyId, Rate};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+use sp_runtime::traits::{One, Zero};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul},
 	DispatchError, FixedPointNumber, RuntimeDebug,

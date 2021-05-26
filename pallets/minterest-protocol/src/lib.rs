@@ -505,9 +505,9 @@ impl<T: Config> Pallet<T> {
 			&who,
 			&T::ManagerLiquidityPools::pools_account_id(),
 			underlying_amount,
-		)?;
+		);
 
-		T::MultiCurrency::deposit(wrapped_id, &who, wrapped_amount)?;
+		T::MultiCurrency::deposit(wrapped_id, &who, wrapped_amount);
 
 		Ok((underlying_amount, wrapped_id, wrapped_amount))
 	}
@@ -571,14 +571,14 @@ impl<T: Config> Pallet<T> {
 		T::MntManager::update_mnt_supply_index(underlying_asset)?;
 		T::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
 
-		T::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount)?;
+		T::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount);
 
 		T::MultiCurrency::transfer(
 			underlying_asset,
 			&T::ManagerLiquidityPools::pools_account_id(),
 			&who,
 			underlying_amount,
-		)?;
+		);
 
 		Ok((underlying_amount, wrapped_id, wrapped_amount))
 	}
@@ -627,7 +627,7 @@ impl<T: Config> Pallet<T> {
 			&T::ManagerLiquidityPools::pools_account_id(),
 			&who,
 			borrow_amount,
-		)?;
+		);
 
 		Ok(())
 	}
@@ -700,7 +700,7 @@ impl<T: Config> Pallet<T> {
 			&who,
 			&T::ManagerLiquidityPools::pools_account_id(),
 			repay_amount,
-		)?;
+		);
 
 		Ok(repay_amount)
 	}
@@ -745,7 +745,7 @@ impl<T: Config> Pallet<T> {
 		);
 
 		// Transfer the transfer_amount from one account to another
-		T::MultiCurrency::transfer(wrapped_id, &who, &receiver, transfer_amount)?;
+		T::MultiCurrency::transfer(wrapped_id, &who, &receiver, transfer_amount);
 
 		Ok(())
 	}

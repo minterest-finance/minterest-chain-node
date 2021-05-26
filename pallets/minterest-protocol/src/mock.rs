@@ -3,7 +3,7 @@
 use super::*;
 use crate as minterest_protocol;
 use controller::{ControllerData, PauseKeeper};
-use frame_support::{assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
+use frame_support::{assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
@@ -14,7 +14,7 @@ use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-	FixedPointNumber, ModuleId,
+	FixedPointNumber,
 };
 use sp_std::cell::RefCell;
 pub use test_helper::*;
@@ -51,9 +51,9 @@ ord_parameter_types! {
 }
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
-	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
-	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
+	pub const LiquidityPoolsModuleId: PalletId = PalletId(*b"min/lqdy");
+	pub const LiquidationPoolsModuleId: PalletId = PalletId(*b"min/lqdn");
+	pub const MntTokenModuleId: PalletId = PalletId(*b"min/mntt");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 	pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();

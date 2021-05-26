@@ -2,7 +2,7 @@
 
 use super::*;
 use crate as controller;
-use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
+use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
@@ -13,7 +13,7 @@ use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
-	FixedPointNumber, ModuleId,
+	FixedPointNumber,
 };
 use sp_std::cell::RefCell;
 pub use test_helper::*;
@@ -53,7 +53,7 @@ mock_impl_controller_config!(Runtime, OneAlice);
 mock_impl_balances_config!(Runtime);
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+	pub const LiquidityPoolsModuleId: PalletId = PalletId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);

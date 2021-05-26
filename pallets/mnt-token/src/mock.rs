@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use crate as mnt_token;
-use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::*, parameter_types};
+use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::*, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
@@ -11,7 +11,7 @@ use pallet_traits::PriceProvider;
 use sp_runtime::{
 	testing::{Header, H256},
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
-	FixedPointNumber, ModuleId,
+	FixedPointNumber,
 };
 pub use test_helper::*;
 
@@ -36,9 +36,9 @@ construct_runtime!(
 );
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+	pub const LiquidityPoolsModuleId: PalletId = PalletId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
-	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
+	pub const MntTokenModuleId: PalletId = PalletId(*b"min/mntt");
 	pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
