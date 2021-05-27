@@ -89,7 +89,7 @@ fn test_offchain_worker_simple_liquidation() {
 		.liquidity_pool_balance(KSM, 15_000 * DOLLARS)
 		.build();
 
-	let (offchain, _state) = TestOffchainExt::new();
+	let (offchain, state) = TestOffchainExt::new();
 	let (pool, trans_pool_state) = TestTransactionPoolExt::new();
 	ext.register_extension(OffchainExt::new(offchain));
 	ext.register_extension(TransactionPoolExt::new(pool));
@@ -124,6 +124,12 @@ fn test_offchain_worker_simple_liquidation() {
 		};
 		assert_eq!(who, ALICE);
 		assert_eq!(pool_id, KSM);
+
+		// Make sure that index wasn't set. Because all pools were processed.
+		assert_eq!(
+			state.read().persistent_storage.get(OFFCHAIN_WORKER_LATEST_POOL_INDEX),
+			None
+		);
 	});
 }
 

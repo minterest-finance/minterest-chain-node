@@ -369,24 +369,18 @@ impl<T: Config> Pallet<T> {
 		let mut lock = StorageLock::<'_, Time>::with_deadline(&OFFCHAIN_WORKER_LOCK, lock_expiration);
 		let mut guard = lock.try_lock().map_err(|_| OffchainErr::OffchainLock)?;
 
-		let latest_pool_index = {
-			let storage_index = StorageValueRef::persistent(&OFFCHAIN_WORKER_LATEST_POOL_INDEX)
-				.get::<u32>()
-				.unwrap_or(Some(0))
-				.ok_or(OffchainErr::CheckFail)? as usize;
-			StorageValueRef::persistent(&OFFCHAIN_WORKER_LATEST_POOL_INDEX).clear();
-
-			// Assume that count of enbled tokens can be changed. So make sure that index is not out of
-			// bounds
-			if storage_index >= underlying_assets_count {
-				0
-			} else {
-				storage_index
+		let start_pool_index = match StorageValueRef::persistent(&OFFCHAIN_WORKER_LATEST_POOL_INDEX).get::<u32>() {
+			Some(Some(index)) => {
+				// Assume that count of enbled tokens can be changed. So make sure that index is not out of
+				// bounds
+				index as usize % underlying_assets.len()
 			}
+			_ => usize::zero(),
 		};
+		StorageValueRef::persistent(&OFFCHAIN_WORKER_LATEST_POOL_INDEX).clear();
 
 		// Start iteration from the pool where we finished. Otherwise, take first pool.
-		underlying_assets.rotate_left(latest_pool_index);
+		underlying_assets.rotate_left(start_pool_index);
 		let mut loans_checked_count = 0;
 		let mut loans_liquidated_count = 0;
 		let working_start_time = sp_io::offchain::timestamp();
@@ -422,20 +416,17 @@ impl<T: Config> Pallet<T> {
 
 				loans_checked_count += 1;
 
-				match guard.extend_lock() {
-					Ok(_) => {}
-					Err(_) => {
-						// The lock's deadline is happened
-						debug::info!(
-							"Risk Manager offchain worker hasn't(!) processed all pools. \
-							 MAX duration time is expired. Loans checked count: {:?}, \
-							 loans liquidated count: {:?}",
-							loans_checked_count,
-							loans_liquidated_count
-						);
-						StorageValueRef::persistent(&OFFCHAIN_WORKER_LATEST_POOL_INDEX).set(&(pos as u32));
-						return Ok(());
-					}
+				if let Err(_) = guard.extend_lock() {
+					// The lock's deadline is happened
+					debug::warn!(
+						"Risk Manager offchain worker hasn't(!) processed all pools. \
+						MAX duration time is expired. Loans checked count: {:?}, \
+						loans liquidated count: {:?}",
+						loans_checked_count,
+						loans_liquidated_count
+					);
+					StorageValueRef::persistent(&OFFCHAIN_WORKER_LATEST_POOL_INDEX).set(&(pos as u32));
+					return Ok(());
 				}
 			}
 			debug::info!("RiskManager finished processing loans for {:?}", currency_id);
