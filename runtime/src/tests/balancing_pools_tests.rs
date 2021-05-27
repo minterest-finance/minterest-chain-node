@@ -6,6 +6,10 @@ use super::*;
 #[test]
 fn collects_sales_list_should_work_2_2() {
 	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(KSM)
+		.pool_initial(ETH)
+		.pool_initial(BTC)
 		.liquidity_pool_balance(DOT, 2_700_000 * DOLLARS)
 		.liquidity_pool_balance(KSM, 1_000_000 * DOLLARS)
 		.liquidity_pool_balance(ETH, 2_500_000_000 * DOLLARS)
@@ -65,6 +69,10 @@ fn collects_sales_list_should_work_2_2() {
 #[test]
 fn balance_liquidation_pools_should_work() {
 	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(KSM)
+		.pool_initial(ETH)
+		.pool_initial(BTC)
 		.liquidity_pool_balance(DOT, 500_000 * DOLLARS)
 		.liquidity_pool_balance(KSM, 1_000_000 * DOLLARS)
 		.liquidity_pool_balance(ETH, 1_500_000 * DOLLARS)
@@ -171,6 +179,8 @@ fn balance_liquidation_pools_should_work() {
 #[test]
 fn balance_liquidation_pools_two_pools_should_work_test() {
 	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
 		.liquidity_pool_balance(DOT, 500_000 * DOLLARS)
 		.liquidity_pool_balance(ETH, 300_000 * DOLLARS)
 		.liquidation_pool_balance(DOT, 170_000 * DOLLARS) // + 140_000$

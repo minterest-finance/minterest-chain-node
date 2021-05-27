@@ -20,6 +20,7 @@ minterest-primitives = { path = "../../primitives", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
 liquidation-pools = { path = "../liquidation-pools", default-features = false }
 minterest-protocol = { path = "../minterest-protocol", default-features = false }
+risk-manager = { path = "../risk-manager", default-features = false }
 
 [dev-dependencies]
 serde = { version = "1.0.101" }
@@ -57,5 +58,6 @@ std = [
     "liquidity-pools/std",
     "liquidation-pools/std",
     "minterest-protocol/std",
+    "risk-manager/std",
 ]
 

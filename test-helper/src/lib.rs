@@ -199,7 +199,7 @@ macro_rules! mock_impl_dex_config {
 
 #[macro_export]
 macro_rules! mock_impl_minterest_protocol_config {
-	($target:ty) => {
+	($target:ty, $acc:ident) => {
 		impl minterest_protocol::Config for $target {
 			type Event = Event;
 			type Borrowing = liquidity_pools::Module<$target>;
@@ -209,6 +209,9 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type WhitelistMembers = WhitelistMembers;
 			type ProtocolWeightInfo = ();
 			type ControllerAPI = controller::Module<$target>;
+			type RiskManagerAPI = TestRiskManager;
+			type MinterestModelAPI = TestMinterestModel;
+			type CreatePoolOrigin = EnsureSignedBy<$acc, AccountId>;
 		}
 	};
 }
@@ -252,7 +255,6 @@ macro_rules! mock_impl_mnt_token_config {
 			type MntTokenAccountId = MntTokenAccountId;
 			type SpeedRefreshPeriod = SpeedRefreshPeriod;
 			type MntTokenWeightInfo = ();
-			type PoolsManager = liquidity_pools::Module<$target>;
 		}
 	};
 }

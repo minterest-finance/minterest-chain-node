@@ -364,6 +364,8 @@ fn complete_liquidation_one_collateral_should_work() {
 #[test]
 fn complete_liquidation_multi_collateral_should_work() {
 	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
 		.liquidity_pool_balance(DOT, 160_000 * DOLLARS)
 		.liquidity_pool_balance(ETH, 50_000 * DOLLARS)
 		.liquidation_pool_balance(DOT, 100_000 * DOLLARS)
@@ -459,6 +461,8 @@ fn partial_liquidation_one_collateral_should_work() {
 #[test]
 fn partial_liquidation_multi_collateral_should_work() {
 	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
 		.liquidity_pool_balance(DOT, 130_000 * DOLLARS)
 		.liquidity_pool_balance(ETH, 80_000 * DOLLARS)
 		.liquidation_pool_balance(DOT, 100_000 * DOLLARS)
@@ -604,6 +608,8 @@ fn complete_liquidation_one_collateral_not_enough_balance_should_work() {
 #[test]
 fn complete_liquidation_multi_collateral_not_enough_balance_should_work() {
 	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
 		.liquidity_pool_balance(DOT, 160_000 * DOLLARS)
 		.liquidity_pool_balance(ETH, 50_000 * DOLLARS)
 		.liquidation_pool_balance(DOT, 60_000 * DOLLARS)
@@ -656,6 +662,8 @@ fn complete_liquidation_multi_collateral_not_enough_balance_should_work() {
 #[test]
 fn partial_liquidation_multi_collateral_not_enough_balance_should_work() {
 	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
 		.liquidity_pool_balance(DOT, 130_000 * DOLLARS)
 		.liquidity_pool_balance(ETH, 80_000 * DOLLARS)
 		.liquidation_pool_balance(DOT, 10_000 * DOLLARS)

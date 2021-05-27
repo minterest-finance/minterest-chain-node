@@ -12,6 +12,7 @@
 //! it is transferred from liquidity to liquidation pool.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::large_enum_variant)]
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
 
@@ -19,9 +20,14 @@ use frame_support::traits::Contains;
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
 use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
-use minterest_primitives::{Balance, CurrencyId, Operation};
+use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{Borrowing, ControllerAPI, LiquidityPoolsManager, MntManager, PoolsManager};
+use pallet_traits::{
+	Borrowing, ControllerAPI, LiquidationPoolsManager, LiquidityPoolsManager, MinterestModelAPI, MntManager,
+	PoolsManager, RiskManagerAPI,
+};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	traits::{BadOrigin, Zero},
 	DispatchError, DispatchResult,
@@ -42,6 +48,29 @@ type LiquidityPools<T> = liquidity_pools::Module<T>;
 type TokensResult = result::Result<(Balance, CurrencyId, Balance), DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct PoolInitData {
+	// Minterest Model storage data
+	pub kink: Rate,
+	pub base_rate_per_block: Rate,
+	pub multiplier_per_block: Rate,
+	pub jump_multiplier_per_block: Rate,
+	//Controller storage data
+	pub protocol_interest_factor: Rate,
+	pub max_borrow_rate: Rate,
+	pub collateral_factor: Rate,
+	pub protocol_interest_threshold: Balance,
+	// Liquidation Pools storage data
+	pub deviation_threshold: Rate,
+	pub balance_ratio: Rate,
+	// Risk manager storage data
+	pub max_attempts: u8,
+	pub min_partial_liquidation_sum: Balance,
+	pub threshold: Rate,
+	pub liquidation_fee: Rate,
+}
+
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
@@ -55,7 +84,7 @@ pub mod module {
 		type Borrowing: Borrowing<Self::AccountId>;
 
 		/// The basic liquidity pools.
-		type ManagerLiquidationPools: PoolsManager<Self::AccountId>;
+		type ManagerLiquidationPools: LiquidationPoolsManager<Self::AccountId>;
 
 		/// The basic liquidity pools.
 		type ManagerLiquidityPools: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
@@ -71,6 +100,16 @@ pub mod module {
 
 		/// Public API of controller pallet
 		type ControllerAPI: ControllerAPI<Self::AccountId>;
+
+		/// Public API of risk manager pallet
+		type RiskManagerAPI: RiskManagerAPI;
+
+		/// Public API of risk manager pallet
+		type MinterestModelAPI: MinterestModelAPI;
+
+		/// The origin which may create pools. Root or
+		/// Half Minterest Council can always do this.
+		type CreatePoolOrigin: EnsureOrigin<Self::Origin>;
 	}
 
 	#[pallet::error]
@@ -105,6 +144,8 @@ pub mod module {
 		HypotheticalLiquidityCalculationError,
 		/// The currency is not enabled in wrapped protocol.
 		NotValidWrappedTokenId,
+		/// Pool is already created
+		PoolAlreadyCreated,
 	}
 
 	#[pallet::event]
@@ -141,6 +182,9 @@ pub mod module {
 
 		/// Unable to transfer protocol interest from liquidity to liquidation pool: \[pool_id\]
 		ProtocolInterestTransferFailed(CurrencyId),
+
+		/// New pool had been created: \[pool_id\]
+		PoolCreated(CurrencyId),
 	}
 
 	#[pallet::pallet]
@@ -151,6 +195,7 @@ pub mod module {
 		fn on_finalize(_block_number: T::BlockNumber) {
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 				.iter()
+				.filter(|&underlying_id| T::ManagerLiquidityPools::pool_exists(underlying_id))
 				.for_each(|&underlying_id| {
 					Self::transfer_protocol_interest(underlying_id);
 				});
@@ -159,6 +204,34 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Creates pool in storage. It is a part of a pool creation process and must be called
+		/// after new CurrencyId is added to runtime.
+		///
+		/// - `pool_id`: id of the pool that is being created
+		/// - `pool_data`: data to initialize pool storage in all pallets
+		#[pallet::weight(T::ProtocolWeightInfo::create_pool())]
+		#[transactional]
+		pub fn create_pool(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			pool_data: PoolInitData,
+		) -> DispatchResultWithPostInfo {
+			T::CreatePoolOrigin::ensure_origin(origin)?;
+
+			ensure!(
+				pool_id.is_supported_underlying_asset(),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+			ensure!(
+				!T::ManagerLiquidityPools::pool_exists(&pool_id),
+				Error::<T>::PoolAlreadyCreated
+			);
+
+			Self::do_create_pool(pool_id, pool_data)?;
+			Self::deposit_event(Event::PoolCreated(pool_id));
+			Ok(().into())
+		}
+
 		/// Transfers an asset into the protocol. The user receives a quantity of mTokens equal
 		/// to the underlying tokens supplied, divided by the current Exchange Rate.
 		///
@@ -403,6 +476,10 @@ pub mod module {
 				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
+			ensure!(
+				T::ManagerLiquidityPools::pool_exists(&pool_id),
+				liquidity_pools::Error::<T>::PoolNotFound
+			);
 
 			ensure!(
 				!<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id),
@@ -432,6 +509,10 @@ pub mod module {
 			ensure!(
 				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
+			);
+			ensure!(
+				T::ManagerLiquidityPools::pool_exists(&pool_id),
+				liquidity_pools::Error::<T>::PoolNotFound
 			);
 
 			ensure!(
@@ -470,10 +551,42 @@ pub mod module {
 
 // Dispatchable calls implementation
 impl<T: Config> Pallet<T> {
+	fn do_create_pool(pool_id: CurrencyId, pool_data: PoolInitData) -> DispatchResult {
+		<LiquidityPools<T>>::create_pool(pool_id)?;
+		T::MinterestModelAPI::create_pool(
+			pool_id,
+			pool_data.kink,
+			pool_data.base_rate_per_block,
+			pool_data.multiplier_per_block,
+			pool_data.jump_multiplier_per_block,
+		)?;
+		T::ControllerAPI::create_pool(
+			pool_id,
+			pool_data.protocol_interest_factor,
+			pool_data.max_borrow_rate,
+			pool_data.collateral_factor,
+			pool_data.protocol_interest_threshold,
+		)?;
+		T::ManagerLiquidationPools::create_pool(pool_id, pool_data.deviation_threshold, pool_data.balance_ratio)?;
+		T::RiskManagerAPI::create_pool(
+			pool_id,
+			pool_data.max_attempts,
+			pool_data.min_partial_liquidation_sum,
+			pool_data.threshold,
+			pool_data.liquidation_fee,
+		)?;
+
+		Ok(())
+	}
+
 	fn do_deposit(who: &T::AccountId, underlying_asset: CurrencyId, underlying_amount: Balance) -> TokensResult {
 		ensure!(
 			underlying_asset.is_supported_underlying_asset(),
 			Error::<T>::NotValidUnderlyingAssetId
+		);
+		ensure!(
+			T::ManagerLiquidityPools::pool_exists(&underlying_asset),
+			liquidity_pools::Error::<T>::PoolNotFound
 		);
 
 		ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
@@ -522,6 +635,10 @@ impl<T: Config> Pallet<T> {
 		ensure!(
 			underlying_asset.is_supported_underlying_asset(),
 			Error::<T>::NotValidUnderlyingAssetId
+		);
+		ensure!(
+			T::ManagerLiquidityPools::pool_exists(&underlying_asset),
+			liquidity_pools::Error::<T>::PoolNotFound
 		);
 
 		T::ControllerAPI::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
@@ -593,6 +710,10 @@ impl<T: Config> Pallet<T> {
 			underlying_asset.is_supported_underlying_asset(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
+		ensure!(
+			T::ManagerLiquidityPools::pool_exists(&underlying_asset),
+			liquidity_pools::Error::<T>::PoolNotFound
+		);
 
 		let pool_available_liquidity = T::ManagerLiquidityPools::get_pool_available_liquidity(underlying_asset);
 
@@ -649,6 +770,11 @@ impl<T: Config> Pallet<T> {
 			underlying_asset.is_supported_underlying_asset(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
+		ensure!(
+			T::ManagerLiquidityPools::pool_exists(&underlying_asset),
+			liquidity_pools::Error::<T>::PoolNotFound
+		);
+
 		T::ControllerAPI::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 		repay_amount = Self::do_repay_fresh(who, borrower, underlying_asset, repay_amount, all_assets)?;
 		Ok(repay_amount)
@@ -724,6 +850,10 @@ impl<T: Config> Pallet<T> {
 		let underlying_asset = wrapped_id
 			.underlying_asset()
 			.ok_or(Error::<T>::NotValidWrappedTokenId)?;
+		ensure!(
+			T::ManagerLiquidityPools::pool_exists(&underlying_asset),
+			liquidity_pools::Error::<T>::PoolNotFound
+		);
 
 		// Fail if transfer is not allowed
 		ensure!(
@@ -787,6 +917,11 @@ impl<T: Config> Pallet<T> {
 				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
+			ensure!(
+				T::ManagerLiquidityPools::pool_exists(&pool_id),
+				liquidity_pools::Error::<T>::PoolNotFound
+			);
+
 			T::MntManager::update_mnt_borrow_index(pool_id)?;
 			T::MntManager::distribute_borrower_mnt(pool_id, holder, true)?;
 			T::MntManager::update_mnt_supply_index(pool_id)?;

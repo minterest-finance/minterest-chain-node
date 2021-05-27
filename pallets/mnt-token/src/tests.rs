@@ -359,7 +359,7 @@ fn test_update_mnt_borrow_index() {
 		.pool_total_borrowed(BTC, 40_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			let initial_index = Rate::saturating_from_integer(1);
+			let initial_index = Rate::one();
 			let mnt_rate = 1 * DOLLARS;
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
 			// Input parameters:
@@ -830,12 +830,15 @@ fn test_set_mnt_rate() {
 fn test_minting_enable_disable() {
 	ExtBuilder::default()
 		.pool_total_borrowed(DOT, 50 * DOLLARS)
-		.pool_total_borrowed(ETH, 50 * DOLLARS)
 		.pool_total_borrowed(KSM, 50 * DOLLARS)
-		.pool_total_borrowed(BTC, 50 * DOLLARS)
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
+			// Unable to enable minting for non existing pool
+			assert_noop!(
+				MntToken::enable_mnt_minting(admin(), ETH),
+				Error::<Runtime>::PoolNotFound
+			);
 			// Add new mnt minting
 			assert_ok!(MntToken::enable_mnt_minting(admin(), DOT));
 			let new_minting_event = Event::mnt_token(crate::Event::MntMintingEnabled(DOT));

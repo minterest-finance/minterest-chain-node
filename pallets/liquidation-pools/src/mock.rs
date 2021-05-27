@@ -3,6 +3,7 @@ use super::*;
 use crate as liquidation_pools;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system::EnsureSignedBy;
+use liquidity_pools::Pool;
 use minterest_primitives::Price;
 pub use minterest_primitives::{currency::CurrencyType::WrappedToken, Balance, CurrencyId, Rate};
 use orml_traits::parameter_type_with_key;
@@ -113,6 +114,7 @@ pub fn alice() -> Origin {
 
 pub struct ExternalityBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+	liquidity_pools: Vec<(CurrencyId, Pool)>,
 	liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
 }
 
@@ -120,6 +122,32 @@ impl Default for ExternalityBuilder {
 	fn default() -> Self {
 		Self {
 			endowed_accounts: vec![],
+			liquidity_pools: vec![
+				(
+					DOT,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						total_protocol_interest: Balance::zero(),
+					},
+				),
+				(
+					ETH,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						total_protocol_interest: Balance::zero(),
+					},
+				),
+				(
+					BTC,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						total_protocol_interest: Balance::zero(),
+					},
+				),
+			],
 			liquidation_pools: vec![(
 				DOT,
 				LiquidationPoolData {
@@ -149,6 +177,13 @@ impl ExternalityBuilder {
 
 		orml_tokens::GenesisConfig::<Test> {
 			endowed_accounts: self.endowed_accounts,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		liquidity_pools::GenesisConfig::<Test> {
+			pools: self.liquidity_pools,
+			pool_user_data: vec![],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
