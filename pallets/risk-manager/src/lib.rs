@@ -429,7 +429,7 @@ impl<T: Config> Pallet<T> {
 
 				loans_checked_count += 1;
 
-				if let Err(_) = guard.extend_lock() {
+				if guard.extend_lock().is_err() {
 					// The lock's deadline is happened
 					debug::warn!(
 						"Risk Manager offchain worker hasn't(!) processed all pools. \
