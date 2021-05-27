@@ -31,29 +31,27 @@ use codec::HasCompact;
 use frame_support::{
 	ensure,
 	pallet_prelude::*,
-	traits::{
-		Currency, EnsureOrigin, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, MaxEncodedLen,
-		WithdrawReasons,
-	},
-	transactional, BoundedVec,
+	traits::{Currency, EnsureOrigin, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons},
+	transactional,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use sp_runtime::{
 	traits::{AtLeast32Bit, CheckedAdd, Saturating, StaticLookup, Zero},
-	ArithmeticError, DispatchResult, RuntimeDebug,
+	DispatchResult, RuntimeDebug,
 };
 use sp_std::{
 	cmp::{Eq, PartialEq},
-	convert::TryInto,
 	vec::Vec,
 };
 
+mod default_weight;
 mod mock;
 mod tests;
-mod weights;
 
 pub use module::*;
-pub use weights::WeightInfo;
+
+/// The maximum number of vesting schedules an account can have.
+pub const MAX_VESTINGS: usize = 20;
 
 pub const VESTING_LOCK_ID: LockIdentifier = *b"ormlvest";
 
@@ -61,7 +59,7 @@ pub const VESTING_LOCK_ID: LockIdentifier = *b"ormlvest";
 ///
 /// Benefits would be granted gradually, `per_period` amount every `period`
 /// of blocks after `start`.
-#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, MaxEncodedLen)]
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug)]
 pub struct VestingSchedule<BlockNumber, Balance: HasCompact> {
 	/// Vesting starting block
 	pub start: BlockNumber,
@@ -111,6 +109,12 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 pub mod module {
 	use super::*;
 
+	pub trait WeightInfo {
+		fn vested_transfer() -> Weight;
+		fn claim(i: u32) -> Weight;
+		fn update_vesting_schedules(i: u32) -> Weight;
+	}
+
 	pub(crate) type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 	pub(crate) type VestingScheduleOf<T> = VestingSchedule<<T as frame_system::Config>::BlockNumber, BalanceOf<T>>;
@@ -137,9 +141,6 @@ pub mod module {
 
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
-
-		/// The maximum vesting schedules
-		type MaxVestingSchedules: Get<u32>;
 	}
 
 	#[pallet::error]
@@ -148,14 +149,14 @@ pub mod module {
 		ZeroVestingPeriod,
 		/// Number of vests is zero
 		ZeroVestingPeriodCount,
+		/// Arithmetic calculation overflow
+		NumOverflow,
 		/// Insufficient amount of balance to lock
 		InsufficientBalanceToLock,
 		/// This account have too many vesting schedules
 		TooManyVestingSchedules,
 		/// The vested transfer amount is too low
 		AmountLow,
-		/// Failed because the maximum vesting schedules was exceeded
-		MaxVestingSchedulesExceeded,
 	}
 
 	#[pallet::event]
@@ -172,13 +173,8 @@ pub mod module {
 	/// Vesting schedules of an account.
 	#[pallet::storage]
 	#[pallet::getter(fn vesting_schedules)]
-	pub type VestingSchedules<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		T::AccountId,
-		BoundedVec<VestingScheduleOf<T>, T::MaxVestingSchedules>,
-		ValueQuery,
-	>;
+	pub type VestingSchedules<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, Vec<VestingScheduleOf<T>>, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -200,36 +196,35 @@ pub mod module {
 				.for_each(|(who, start, period, period_count, per_period)| {
 					let total = *per_period * Into::<BalanceOf<T>>::into(*period_count);
 
-					let bounded_schedule: BoundedVec<VestingScheduleOf<T>, T::MaxVestingSchedules> =
-						vec![VestingSchedule {
-							start: *start,
-							period: *period,
-							period_count: *period_count,
-							per_period: *per_period,
-						}]
-						.try_into()
-						.expect("Max vesting schedules exceeded");
-
 					assert!(
 						T::Currency::free_balance(who) >= total,
 						"Account do not have enough balance"
 					);
 
 					T::Currency::set_lock(VESTING_LOCK_ID, who, total, WithdrawReasons::all());
-					VestingSchedules::<T>::insert(who, bounded_schedule);
+					VestingSchedules::<T>::insert(
+						who,
+						vec![VestingSchedule {
+							start: *start,
+							period: *period,
+							period_count: *period_count,
+							per_period: *per_period,
+						}],
+					);
 				});
 		}
 	}
 
 	#[pallet::pallet]
-	pub struct Pallet<T>(_);
+	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(T::WeightInfo::claim((<T as Config>::MaxVestingSchedules::get() / 2) as u32))]
+		// can not get VestingSchedule count from `who`, so use `MAX_VESTINGS / 2`
+		#[pallet::weight(T::WeightInfo::claim((MAX_VESTINGS / 2) as u32))]
 		pub fn claim(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let locked_amount = Self::do_claim(&who);
@@ -282,7 +277,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Returns locked balance based on current block number.
 	fn locked_balance(who: &T::AccountId) -> BalanceOf<T> {
-		let now = <frame_system::Pallet<T>>::block_number();
+		let now = <frame_system::Module<T>>::block_number();
 		<VestingSchedules<T>>::mutate_exists(who, |maybe_schedules| {
 			let total = if let Some(schedules) = maybe_schedules.as_mut() {
 				let mut total: BalanceOf<T> = Zero::zero();
@@ -306,45 +301,47 @@ impl<T: Config> Pallet<T> {
 	fn do_vested_transfer(from: &T::AccountId, to: &T::AccountId, schedule: VestingScheduleOf<T>) -> DispatchResult {
 		let schedule_amount = Self::ensure_valid_vesting_schedule(&schedule)?;
 
+		ensure!(
+			<VestingSchedules<T>>::decode_len(to).unwrap_or(0) < MAX_VESTINGS,
+			Error::<T>::TooManyVestingSchedules
+		);
+
 		let total_amount = Self::locked_balance(to)
 			.checked_add(&schedule_amount)
-			.ok_or(ArithmeticError::Overflow)?;
+			.ok_or(Error::<T>::NumOverflow)?;
 
 		T::Currency::transfer(from, to, schedule_amount, ExistenceRequirement::AllowDeath)?;
 		T::Currency::set_lock(VESTING_LOCK_ID, to, total_amount, WithdrawReasons::all());
-		<VestingSchedules<T>>::try_append(to, schedule).map_err(|_| Error::<T>::MaxVestingSchedulesExceeded)?;
+		<VestingSchedules<T>>::append(to, schedule);
 		Ok(())
 	}
 
 	fn do_update_vesting_schedules(who: &T::AccountId, schedules: Vec<VestingScheduleOf<T>>) -> DispatchResult {
-		let bounded_schedules: BoundedVec<VestingScheduleOf<T>, T::MaxVestingSchedules> = schedules
-			.try_into()
-			.map_err(|_| Error::<T>::MaxVestingSchedulesExceeded)?;
-
-		let total_amount = bounded_schedules
-			.iter()
-			.try_fold::<_, _, Result<BalanceOf<T>, DispatchError>>(Zero::zero(), |acc_amount, schedule| {
+		let total_amount = schedules.iter().try_fold::<_, _, Result<BalanceOf<T>, Error<T>>>(
+			Zero::zero(),
+			|acc_amount, schedule| {
 				let amount = Self::ensure_valid_vesting_schedule(schedule)?;
 				Ok(acc_amount + amount)
-			})?;
+			},
+		)?;
 		ensure!(
 			T::Currency::free_balance(who) >= total_amount,
 			Error::<T>::InsufficientBalanceToLock,
 		);
 
 		T::Currency::set_lock(VESTING_LOCK_ID, who, total_amount, WithdrawReasons::all());
-		<VestingSchedules<T>>::insert(who, bounded_schedules);
+		<VestingSchedules<T>>::insert(who, schedules);
 
 		Ok(())
 	}
 
 	/// Returns `Ok(amount)` if valid schedule, or error.
-	fn ensure_valid_vesting_schedule(schedule: &VestingScheduleOf<T>) -> Result<BalanceOf<T>, DispatchError> {
+	fn ensure_valid_vesting_schedule(schedule: &VestingScheduleOf<T>) -> Result<BalanceOf<T>, Error<T>> {
 		ensure!(!schedule.period.is_zero(), Error::<T>::ZeroVestingPeriod);
 		ensure!(!schedule.period_count.is_zero(), Error::<T>::ZeroVestingPeriodCount);
-		ensure!(schedule.end().is_some(), ArithmeticError::Overflow);
+		ensure!(schedule.end().is_some(), Error::<T>::NumOverflow);
 
-		let total = schedule.total_amount().ok_or(ArithmeticError::Overflow)?;
+		let total = schedule.total_amount().ok_or(Error::<T>::NumOverflow)?;
 
 		ensure!(total >= T::MinVestedTransfer::get(), Error::<T>::AmountLow);
 
