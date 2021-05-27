@@ -116,7 +116,6 @@ pub struct ExternalityBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	liquidity_pools: Vec<(CurrencyId, Pool)>,
 	liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
-	balancing_period: BlockNumber,
 }
 
 impl Default for ExternalityBuilder {
@@ -157,7 +156,6 @@ impl Default for ExternalityBuilder {
 					max_ideal_balance: None,
 				},
 			)],
-			balancing_period: 600, // Blocks per 10 minutes
 		}
 	}
 }
@@ -192,7 +190,7 @@ impl ExternalityBuilder {
 
 		liquidation_pools::GenesisConfig::<Test> {
 			liquidation_pools: self.liquidation_pools,
-			balancing_period: self.balancing_period,
+			phantom: PhantomData,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

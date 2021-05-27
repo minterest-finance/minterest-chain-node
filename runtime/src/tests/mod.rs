@@ -329,7 +329,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		liquidation_pools::GenesisConfig::<Runtime> {
-			balancing_period: 30, // Blocks per 3 minutes.
+			phantom: PhantomData,
 			liquidation_pools: vec![
 				(
 					DOT,

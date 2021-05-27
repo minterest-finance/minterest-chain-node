@@ -16,39 +16,33 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-use frame_support::{debug, ensure, traits::Get};
-use frame_support::{pallet_prelude::*, transactional};
-use frame_system::pallet_prelude::*;
+use frame_support::{debug, ensure, pallet_prelude::*, traits::Get, transactional};
 use frame_system::{
 	ensure_none,
 	offchain::{SendTransactionTypes, SubmitTransaction},
+	pallet_prelude::*,
 };
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{ControllerAPI, LiquidationPoolsManager, MntManager, PoolsManager, PriceProvider, RiskManagerAPI};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::traits::{CheckedDiv, CheckedMul, One};
 use sp_runtime::{
 	offchain::{
 		storage::StorageValueRef,
 		storage_lock::{StorageLock, Time},
 		Duration,
 	},
-	traits::{BlakeTwo256, Hash, StaticLookup, ValidateUnsigned, Zero},
+	traits::{CheckedDiv, CheckedMul, One, StaticLookup, ValidateUnsigned, Zero},
 	transaction_validity::{
 		InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity, ValidTransaction,
 	},
-	DispatchError, DispatchResult, FixedPointNumber, RandomNumberGenerator, RuntimeDebug,
+	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, prelude::*, result, str};
 
-pub const OFFCHAIN_WORKER_DATA: &[u8] = b"pallets/risk-manager/data/";
 pub const OFFCHAIN_WORKER_LOCK: &[u8] = b"pallets/risk-manager/lock/";
-pub const OFFCHAIN_WORKER_MAX_ITERATIONS: &[u8] = b"pallets/risk-manager/max-iterations/";
-
-pub const LOCK_DURATION: u64 = 100;
-pub const DEFAULT_MAX_ITERATIONS: u32 = 1000;
+pub const OFFCHAIN_WORKER_LATEST_POOL_INDEX: &[u8] = b"pallets/risk-manager/counter";
 
 pub use module::*;
 
@@ -113,6 +107,9 @@ pub mod module {
 		type RiskManagerUpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		type RiskManagerWeightInfo: WeightInfo;
+
+		/// Max duration time for offchain worker.
+		type OffchainWorkerMaxDurationMs: Get<u64>;
 	}
 
 	#[pallet::error]
@@ -208,7 +205,7 @@ pub mod module {
 		/// Runs after every block. Start offchain worker to check unsafe loan and
 		/// submit unsigned tx to trigger liquidation.
 		fn offchain_worker(now: T::BlockNumber) {
-			debug::info!("Entering off-chain worker");
+			debug::info!("Entering in RiskManager off-chain worker");
 
 			if let Err(e) = Self::_offchain_worker() {
 				debug::info!(
@@ -224,6 +221,7 @@ pub mod module {
 					now,
 				);
 			}
+			debug::info!("Exited from RiskManager off-chain worker");
 		}
 	}
 
@@ -368,102 +366,104 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
-	fn _offchain_worker() -> Result<(), OffchainErr> {
+	/// Checks insolvent loans and liquidate them if it required.
+	fn process_insolvent_loans() -> Result<(), OffchainErr> {
 		// Get available assets list
-		let underlying_assets: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+		let mut underlying_assets: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.into_iter()
 			.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(&underlying_id))
 			.collect();
-
 		if underlying_assets.is_empty() {
 			return Ok(());
 		}
 
+		// acquire offchain worker lock
+		let lock_expiration = Duration::from_millis(T::OffchainWorkerMaxDurationMs::get());
+		let mut lock = StorageLock::<'_, Time>::with_deadline(&OFFCHAIN_WORKER_LOCK, lock_expiration);
+		let mut guard = lock.try_lock().map_err(|_| OffchainErr::OffchainLock)?;
+
+		let start_pool_index = match StorageValueRef::persistent(&OFFCHAIN_WORKER_LATEST_POOL_INDEX).get::<u32>() {
+			Some(Some(index)) => {
+				// Assume that count of enbled tokens can be changed. So make sure that index is not out of
+				// bounds
+				index as usize % underlying_assets.len()
+			}
+			_ => usize::zero(),
+		};
+		StorageValueRef::persistent(&OFFCHAIN_WORKER_LATEST_POOL_INDEX).clear();
+
+		// Start iteration from the pool where we finished. Otherwise, take first pool.
+		underlying_assets.rotate_left(start_pool_index);
+		let mut loans_checked_count = 0;
+		let mut loans_liquidated_count = 0;
+		let working_start_time = sp_io::offchain::timestamp();
+
+		for (pos, currency_id) in underlying_assets.iter().enumerate() {
+			debug::info!("RiskManager starts processing loans for {:?}", currency_id);
+			<T as module::Config>::ControllerAPI::accrue_interest_rate(*currency_id)
+				.map_err(|_| OffchainErr::CheckFail)?;
+			let pool_members =
+				<LiquidityPools<T>>::get_pool_members_with_loans(*currency_id).map_err(|_| OffchainErr::CheckFail)?;
+			for member in pool_members.into_iter() {
+				// We check if the user has the collateral so as not to start the liquidation process
+				// for users who have collateral = 0 and borrow > 0.
+				let user_has_collateral = <LiquidityPools<T>>::check_user_has_collateral(&member);
+
+				// Checks if the liquidation should be allowed to occur.
+				if user_has_collateral {
+					let (_, shortfall) = <T as module::Config>::ControllerAPI::get_hypothetical_account_liquidity(
+						&member,
+						*currency_id,
+						0,
+						0,
+					)
+					.map_err(|_| OffchainErr::CheckFail)?;
+					if !shortfall.is_zero() {
+						Self::submit_unsigned_liquidation(member, *currency_id);
+						loans_liquidated_count += 1;
+					}
+				} else {
+					//TODO It is place for handle the case when collateral = 0, borrow > 0
+					continue;
+				}
+
+				loans_checked_count += 1;
+
+				if guard.extend_lock().is_err() {
+					// The lock's deadline is happened
+					debug::warn!(
+						"Risk Manager offchain worker hasn't(!) processed all pools. \
+						MAX duration time is expired. Loans checked count: {:?}, \
+						loans liquidated count: {:?}",
+						loans_checked_count,
+						loans_liquidated_count
+					);
+					StorageValueRef::persistent(&OFFCHAIN_WORKER_LATEST_POOL_INDEX).set(&(pos as u32));
+					return Ok(());
+				}
+			}
+			debug::info!("RiskManager finished processing loans for {:?}", currency_id);
+		}
+
+		let working_time = sp_io::offchain::timestamp().diff(&working_start_time);
+		debug::info!(
+			"Risk Manager offchain worker has processed all pools. Loans checked count {:?}, \
+			loans liquidated count: {:?}, execution time(ms): {:?}",
+			loans_checked_count,
+			loans_liquidated_count,
+			working_time.millis()
+		);
+
+		Ok(())
+	}
+
+	fn _offchain_worker() -> Result<(), OffchainErr> {
 		// Check if we are a potential validator
 		if !sp_io::offchain::is_validator() {
 			return Err(OffchainErr::NotValidator);
 		}
 
-		// acquire offchain worker lock
-		let lock_expiration = Duration::from_millis(LOCK_DURATION);
-		let mut lock = StorageLock::<'_, Time>::with_deadline(&OFFCHAIN_WORKER_LOCK, lock_expiration);
-		let mut guard = lock.try_lock().map_err(|_| OffchainErr::OffchainLock)?;
-
-		let to_be_continue = StorageValueRef::persistent(&OFFCHAIN_WORKER_DATA);
-
-		// Get to_be_continue record
-		let (collateral_position, start_key) =
-			if let Some(Some((last_collateral_position, maybe_last_iterator_previous_key))) =
-				to_be_continue.get::<(u32, Option<Vec<u8>>)>()
-			{
-				(last_collateral_position, maybe_last_iterator_previous_key)
-			} else {
-				let random_seed = sp_io::offchain::random_seed();
-				let mut rng = RandomNumberGenerator::<BlakeTwo256>::new(BlakeTwo256::hash(&random_seed[..]));
-				(rng.pick_u32(underlying_assets.len().saturating_sub(1) as u32), None)
-			};
-
-		// Get the max iterations config
-		let max_iterations = StorageValueRef::persistent(&OFFCHAIN_WORKER_MAX_ITERATIONS)
-			.get::<u32>()
-			.unwrap_or(Some(DEFAULT_MAX_ITERATIONS));
-
-		let currency_id = underlying_assets[(collateral_position as usize)];
-
-		// Get list of users that have an active loan for current pool
-		let pool_members =
-			<LiquidityPools<T>>::get_pool_members_with_loans(currency_id).map_err(|_| OffchainErr::CheckFail)?;
-
-		let mut iteration_count = 0;
-		let iteration_start_time = sp_io::offchain::timestamp();
-
-		for member in pool_members.into_iter() {
-			<T as module::Config>::ControllerAPI::accrue_interest_rate(currency_id)
-				.map_err(|_| OffchainErr::CheckFail)?;
-
-			// We check if the user has the collateral so as not to start the liquidation process
-			// for users who have collateral = 0 and borrow > 0.
-			let user_has_collateral = <LiquidityPools<T>>::check_user_has_collateral(&member);
-
-			// Checks if the liquidation should be allowed to occur.
-			if user_has_collateral {
-				let (_, shortfall) = <T as module::Config>::ControllerAPI::get_hypothetical_account_liquidity(
-					&member,
-					currency_id,
-					0,
-					0,
-				)
-				.map_err(|_| OffchainErr::CheckFail)?;
-				if !shortfall.is_zero() {
-					Self::submit_unsigned_liquidation(member, currency_id)
-				}
-			} else {
-				//TODO It is place for handle the case when collateral = 0, borrow > 0
-				continue;
-			}
-
-			iteration_count += 1;
-
-			// extend offchain worker lock
-			guard.extend_lock().map_err(|_| OffchainErr::OffchainLock)?;
-		}
-
-		let iteration_end_time = sp_io::offchain::timestamp();
-		debug::info!(
-			target: "RiskManager offchain worker",
-			"iteration info:\n max iterations is {:?}\n currency id: {:?}, start key: {:?}, iterate count: {:?}\n iteration start at: {:?}, end at: {:?}, execution time: {:?}\n",
-			max_iterations,
-			currency_id,
-			start_key,
-			iteration_count,
-			iteration_start_time,
-			iteration_end_time,
-			iteration_end_time.diff(&iteration_start_time)
-		);
-
-		// Consume the guard but **do not** unlock the underlying lock.
-		guard.forget();
-
+		Self::process_insolvent_loans()?;
 		Ok(())
 	}
 

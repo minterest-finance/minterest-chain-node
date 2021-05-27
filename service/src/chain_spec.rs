@@ -423,7 +423,7 @@ fn testnet_genesis(
 			],
 		}),
 		liquidation_pools: Some(LiquidationPoolsConfig {
-			balancing_period: 10, // FIXME: temporary value.
+			phantom: Default::default(),
 			liquidation_pools: vec![
 				(
 					DOT,

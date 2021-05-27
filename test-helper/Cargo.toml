@@ -5,10 +5,13 @@ authors = ["Minterest <https://github.com/minterest-defi>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 minterest-primitives = { path = "../primitives" }
+frame-support = {  version = '3.0.0' }
 
 [features]
 default = ["std"]
-std = []
+std = [
+    "minterest-primitives/std",
+    'frame-support/std',
+]
