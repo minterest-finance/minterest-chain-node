@@ -13,7 +13,7 @@ pub use minterest_primitives::{
 };
 pub(crate) use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
-pub(crate) use pallet_traits::{PoolsManager, PriceProvider};
+pub(crate) use pallet_traits::{LiquidationPoolsManager, PriceProvider};
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},

@@ -31,7 +31,7 @@ use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
-use pallet_traits::{ControllerAPI, MntManager};
+use pallet_traits::{ControllerAPI, MntManager, PoolsManager};
 use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -364,6 +364,9 @@ impl minterest_protocol::Config for Runtime {
 	type WhitelistMembers = WhitelistCouncilProvider;
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
 	type ControllerAPI = Controller;
+	type RiskManagerAPI = RiskManager;
+	type MinterestModelAPI = MinterestModel;
+	type CreatePoolOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 
 pub struct WhitelistCouncilProvider;
@@ -490,7 +493,6 @@ impl mnt_token::Config for Runtime {
 	type MntTokenAccountId = MntTokenAccountId;
 	type MntTokenWeightInfo = weights::mnt_token::WeightInfo<Runtime>;
 	type SpeedRefreshPeriod = RefreshSpeedPeriod;
-	type PoolsManager = LiquidationPools;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -807,6 +809,10 @@ impl_runtime_apis! {
 
 		fn get_user_borrow_per_asset(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
 				Some(BalanceInfo{amount: Controller::get_user_borrow_per_asset(&account_id, underlying_asset_id).ok()?})
+		}
+
+		fn pool_exists(underlying_asset_id: CurrencyId) -> bool {
+			LiquidityPools::pool_exists(&underlying_asset_id)
 		}
 	}
 

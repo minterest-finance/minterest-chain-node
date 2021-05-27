@@ -25,7 +25,7 @@ use frame_system::{
 };
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerAPI, MntManager, PoolsManager, PriceProvider};
+use pallet_traits::{ControllerAPI, LiquidationPoolsManager, MntManager, PoolsManager, PriceProvider, RiskManagerAPI};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::{CheckedDiv, CheckedMul, One};
@@ -97,7 +97,7 @@ pub mod module {
 		type UnsignedPriority: Get<TransactionPriority>;
 
 		/// The basic liquidity pools.
-		type LiquidationPoolsManager: PoolsManager<Self::AccountId>;
+		type LiquidationPoolsManager: LiquidationPoolsManager<Self::AccountId>;
 
 		/// Pools are responsible for holding funds for automatic liquidation.
 		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
@@ -108,8 +108,8 @@ pub mod module {
 		/// Provides MNT token distribution functionality.
 		type MntManager: MntManager<Self::AccountId>;
 
-		/// The origin which may update risk manager parameters. Root can
-		/// always do this.
+		/// The origin which may update risk manager parameters. Root or
+		/// Half Minterest Council can always do this.
 		type RiskManagerUpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		type RiskManagerWeightInfo: WeightInfo;
@@ -127,6 +127,8 @@ pub mod module {
 		InvalidLiquidationIncentiveValue,
 		/// Feed price is invalid
 		InvalidFeedPrice,
+		/// Pool is already created
+		PoolAlreadyCreated,
 	}
 
 	#[pallet::event]
@@ -145,13 +147,16 @@ pub mod module {
 		/// Unsafe loan has been successfully liquidated: \[who, liquidate_amount_in_usd,
 		/// liquidated_pool_id, seized_pools, partial_liquidation\]
 		LiquidateUnsafeLoan(T::AccountId, Balance, CurrencyId, Vec<CurrencyId>, bool),
+
+		/// New pool had been created: \[pool_id\]
+		PoolAdded(CurrencyId),
 	}
 
 	/// Liquidation params for pools: `(max_attempts, min_partial_liquidation_sum, threshold,
 	/// liquidation_fee)`.
 	#[pallet::storage]
 	#[pallet::getter(fn risk_manager_dates)]
-	pub(crate) type RiskManagerParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, RiskManagerData, ValueQuery>;
+	pub type RiskManagerParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, RiskManagerData, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -324,7 +329,7 @@ pub mod module {
 
 			// Check if 1 <= liquidation_fee <= 1.5
 			ensure!(
-				(liquidation_fee >= Rate::one() && liquidation_fee <= Rate::saturating_from_rational(15, 10)),
+				Self::is_valid_liquidation_fee(liquidation_fee),
 				Error::<T>::InvalidLiquidationIncentiveValue
 			);
 
@@ -350,6 +355,11 @@ pub mod module {
 			pool_id: CurrencyId,
 		) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
+			ensure!(
+				T::ManagerLiquidityPools::pool_exists(&pool_id),
+				liquidity_pools::Error::<T>::PoolNotFound
+			);
+
 			let who = T::Lookup::lookup(who)?;
 			Self::liquidate_unsafe_loan(who, pool_id)?;
 			Ok(().into())
@@ -360,7 +370,10 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 	fn _offchain_worker() -> Result<(), OffchainErr> {
 		// Get available assets list
-		let underlying_assets: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
+		let underlying_assets: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.into_iter()
+			.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(&underlying_id))
+			.collect();
 
 		if underlying_assets.is_empty() {
 			return Ok(());
@@ -713,6 +726,43 @@ impl<T: Config> Pallet<T> {
 				p.liquidation_attempts = u8::zero();
 			}
 		})
+	}
+
+	fn is_valid_liquidation_fee(liquidation_fee: Rate) -> bool {
+		liquidation_fee >= Rate::one() && liquidation_fee <= Rate::saturating_from_rational(15, 10)
+	}
+}
+
+impl<T: Config> RiskManagerAPI for Pallet<T> {
+	/// This is a part of a pool creation flow
+	/// Creates storage records for RiskManagerParams
+	fn create_pool(
+		currency_id: CurrencyId,
+		max_attempts: u8,
+		min_partial_liquidation_sum: Balance,
+		threshold: Rate,
+		liquidation_fee: Rate,
+	) -> DispatchResult {
+		ensure!(
+			!RiskManagerParams::<T>::contains_key(currency_id),
+			Error::<T>::PoolAlreadyCreated
+		);
+		ensure!(
+			Self::is_valid_liquidation_fee(liquidation_fee),
+			Error::<T>::InvalidLiquidationIncentiveValue
+		);
+
+		RiskManagerParams::<T>::insert(
+			currency_id,
+			RiskManagerData {
+				max_attempts,
+				min_partial_liquidation_sum,
+				threshold,
+				liquidation_fee,
+			},
+		);
+
+		Ok(())
 	}
 }
 

@@ -83,8 +83,8 @@ pub mod module {
 		/// Provides Liquidity Pool functionality
 		type LiquidityPoolsManager: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
 
-		/// The origin which may update MNT token parameters. Root can
-		/// always do this.
+		/// The origin which may update MNT token parameters. Root or
+		/// Two Thirds Minterest Council can always do this
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		/// The price source of currencies
@@ -106,8 +106,6 @@ pub mod module {
 
 		/// Weight information for the extrinsics.
 		type MntTokenWeightInfo: WeightInfo;
-
-		type PoolsManager: PoolsManager<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -124,6 +122,8 @@ pub mod module {
 		NotValidUnderlyingAssetId,
 		/// Error that never should happen
 		InternalError,
+		/// Pool not forund in liquidity-pools storage
+		PoolNotFound,
 	}
 
 	#[pallet::event]
@@ -163,7 +163,7 @@ pub mod module {
 	/// pool.
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_speeds)]
-	pub(crate) type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Balance, ValueQuery>;
+	pub type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Balance, ValueQuery>;
 
 	/// Index + block_number need for generating and distributing new MNT tokens for pool
 	#[pallet::storage]
@@ -247,6 +247,10 @@ pub mod module {
 			ensure!(
 				currency_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
+			);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&currency_id),
+				Error::<T>::PoolNotFound
 			);
 			ensure!(
 				!MntSpeeds::<T>::contains_key(currency_id),

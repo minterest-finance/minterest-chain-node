@@ -35,7 +35,7 @@ frame_support::construct_runtime!(
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
@@ -70,7 +70,7 @@ mock_impl_liquidation_pools_config!(Test);
 mock_impl_controller_config!(Test, ZeroAdmin);
 mock_impl_minterest_model_config!(Test, ZeroAdmin);
 mock_impl_dex_config!(Test);
-mock_impl_minterest_protocol_config!(Test);
+mock_impl_minterest_protocol_config!(Test, ZeroAdmin);
 mock_impl_risk_manager_config!(Test, ZeroAdmin);
 mock_impl_mnt_token_config!(Test, ZeroAdmin);
 mock_impl_balances_config!(Test);
@@ -135,7 +135,40 @@ impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
 			endowed_accounts: vec![],
-			pools: vec![],
+			pools: vec![
+				(
+					DOT,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						total_protocol_interest: Balance::zero(),
+					},
+				),
+				(
+					ETH,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						total_protocol_interest: Balance::zero(),
+					},
+				),
+				(
+					BTC,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						total_protocol_interest: Balance::zero(),
+					},
+				),
+				(
+					KSM,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						total_protocol_interest: Balance::zero(),
+					},
+				),
+			],
 			pool_user_data: vec![],
 		}
 	}

@@ -113,11 +113,15 @@ pub mod module {
 		ExchangeRateCalculationError,
 		/// Conversion error between underlying asset and wrapped token.
 		ConversionError,
+		/// Pool not found.
+		PoolNotFound,
+		/// Pool is already created
+		PoolAlreadyCreated,
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn pools)]
-	pub(crate) type Pools<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Pool, ValueQuery>;
+	pub type Pools<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Pool, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn pool_user_data)]
@@ -212,6 +216,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// returns `exchange_rate` between a mToken and the underlying asset.
 	pub fn get_exchange_rate(underlying_asset: CurrencyId) -> RateResult {
+		ensure!(Self::pool_exists(&underlying_asset), Error::<T>::PoolNotFound);
 		let wrapped_asset_id = underlying_asset
 			.wrapped_asset()
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
@@ -249,7 +254,7 @@ impl<T: Config> Pallet<T> {
 		total_borrowed: Balance,
 	) -> RateResult {
 		let rate = match total_supply.cmp(&Balance::zero()) {
-			// If there are no tokens minted: exchangeRate = InitialExchangeRate.
+			// If there are no tokens minted: exchange_rate = initial_exchange_rate.
 			Ordering::Equal => T::InitialExchangeRate::get(),
 
 			// Otherwise: exchange_rate = (total_cash + total_borrowed - total_protocol_interest) / total_supply
@@ -278,6 +283,7 @@ impl<T: Config> Pallet<T> {
 		total_protocol_interest: Balance,
 		total_borrowed: Balance,
 	) -> RateResult {
+		ensure!(Self::pool_exists(&underlying_asset), Error::<T>::PoolNotFound);
 		let wrapped_asset_id = underlying_asset
 			.wrapped_asset()
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
@@ -343,6 +349,22 @@ impl<T: Config> Pallet<T> {
 	pub fn disable_is_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
 		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = false);
 	}
+
+	/// This is a part of a pool creation flow
+	/// Creates storage records for LiquidationPoolsData
+	pub fn create_pool(currency_id: CurrencyId) -> DispatchResult {
+		ensure!(!Self::pool_exists(&currency_id), Error::<T>::PoolAlreadyCreated);
+
+		Pools::<T>::insert(
+			currency_id,
+			Pool {
+				total_borrowed: Balance::zero(),
+				borrow_index: Rate::one(),
+				total_protocol_interest: Balance::zero(),
+			},
+		);
+		Ok(())
+	}
 }
 
 impl<T: Config> Pallet<T> {
@@ -390,6 +412,7 @@ impl<T: Config> Pallet<T> {
 	pub fn get_is_collateral_pools(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
 		let mut pools: Vec<(CurrencyId, Balance)> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
+			.filter(|&underlying_id| Self::pool_exists(underlying_id))
 			.filter_map(|&pool_id| {
 				let wrapped_id = pool_id.wrapped_asset()?;
 
@@ -422,7 +445,10 @@ impl<T: Config> Pallet<T> {
 
 	/// Checks if the user has the collateral.
 	pub fn check_user_has_collateral(who: &T::AccountId) -> bool {
-		for pool_id in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset) {
+		for &pool_id in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.iter()
+			.filter(|&underlying_id| Self::pool_exists(underlying_id))
+		{
 			if Self::check_user_available_collateral(&who, pool_id) {
 				if let Some(wrapped_id) = pool_id.wrapped_asset() {
 					if !T::MultiCurrency::free_balance(wrapped_id, &who).is_zero() {

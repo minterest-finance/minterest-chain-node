@@ -18,8 +18,7 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Operation, Price};
 use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenApi::MntTokenApi;
 use orml_traits::MultiCurrency;
-use pallet_traits::ControllerAPI;
-use pallet_traits::{DEXManager, PoolsManager, PriceProvider};
+use pallet_traits::{ControllerAPI, DEXManager, LiquidationPoolsManager, PoolsManager, PriceProvider};
 use prices_rpc_runtime_api::runtime_decl_for_PricesApi::PricesApi;
 use risk_manager::RiskManagerData;
 use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};
@@ -230,38 +229,24 @@ impl ExtBuilder {
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
+				(
+					KSM,
+					ControllerData {
+						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
+						last_interest_accrued_block: 1,
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
+						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
+						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+					},
+				),
 			],
 			pause_keepers: vec![
-				(
-					DOT,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
-				(
-					ETH,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
-				(
-					BTC,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
+				(DOT, PauseKeeper::all_unpaused()),
+				(ETH, PauseKeeper::all_unpaused()),
+				(BTC, PauseKeeper::all_unpaused()),
+				(KSM, PauseKeeper::all_unpaused()),
 			],
 			whitelist_mode: false,
 		}
@@ -453,6 +438,10 @@ fn get_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
 	<Runtime as MntTokenApi<Block, AccountId>>::get_unclaimed_mnt_balance(account_id)
 		.unwrap()
 		.amount
+}
+
+fn pool_exists_rpc(underlying_asset_id: CurrencyId) -> bool {
+	<Runtime as ControllerApi<Block, AccountId>>::pool_exists(underlying_asset_id)
 }
 
 fn dollars(amount: u128) -> u128 {

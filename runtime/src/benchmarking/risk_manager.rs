@@ -1,5 +1,6 @@
 use super::utils::{
-	enable_whitelist_mode_and_add_member, lookup_of_account, prepare_for_mnt_distribution, set_balance, SEED,
+	create_pools, enable_whitelist_mode_and_add_member, lookup_of_account, prepare_for_mnt_distribution, set_balance,
+	SEED,
 };
 use crate::{
 	AccountId, Currencies, EnabledUnderlyingAssetsIds, LiquidationPoolsModuleId, LiquidityPools, MinterestProtocol,
@@ -48,7 +49,11 @@ runtime_benchmarks! {
 	)
 
 	liquidate {
-		prepare_for_mnt_distribution(EnabledUnderlyingAssetsIds::get())?;
+		let pools = EnabledUnderlyingAssetsIds::get()
+			.into_iter()
+			.collect();
+		create_pools(&pools);
+		prepare_for_mnt_distribution(pools.clone())?;
 		let borrower: AccountId = account("ownerx", 0, SEED);
 		let borrower_lookup = lookup_of_account(borrower.clone());
 
@@ -57,7 +62,7 @@ runtime_benchmarks! {
 
 		enable_whitelist_mode_and_add_member(&borrower)?;
 
-		EnabledUnderlyingAssetsIds::get().into_iter().try_for_each(|pool_id| -> Result<(), &'static str> {
+		pools.into_iter().try_for_each(|pool_id| -> Result<(), &'static str> {
 			set_balance(pool_id, &borrower, 100_000 * DOLLARS)?;
 			MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), pool_id, 10_000 * DOLLARS)?;
 			MinterestProtocol::enable_is_collateral(Origin::signed(borrower.clone()).into(), pool_id)?;

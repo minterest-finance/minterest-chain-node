@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn whitelist_mode_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilder::default().pool_initial(DOT).build().execute_with(|| {
 		// Set price = 2.00 USD for all pools.
 		assert_ok!(set_oracle_price_for_all_pools(2));
 		System::set_block_number(1);

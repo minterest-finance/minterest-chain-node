@@ -18,10 +18,11 @@ use frame_system::pallet_prelude::*;
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::DEXManager;
-use pallet_traits::{PoolsManager, PriceProvider};
+use pallet_traits::{LiquidationPoolsManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::{AccountIdConversion, CheckedDiv, CheckedMul, Zero};
+use sp_runtime::DispatchResult;
 use sp_runtime::{transaction_validity::TransactionPriority, FixedPointNumber, ModuleId, RuntimeDebug};
 use sp_std::prelude::*;
 
@@ -86,8 +87,8 @@ pub mod module {
 		/// The basic liquidity pools manager.
 		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
 
-		/// The origin which may update liquidation pools parameters. Root can
-		/// always do this.
+		/// The origin which may update liquidation pools parameters. Root or
+		/// Half Minterest Council can always do this.
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		/// The DEX participating in balancing
@@ -113,6 +114,8 @@ pub mod module {
 		InvalidFeedPrice,
 		/// Could not find a pool with required parameters
 		PoolNotFound,
+		/// Pool is already created
+		PoolAlreadyCreated,
 		/// Not enough liquidation pool balance.
 		NotEnoughBalance,
 		/// There is not enough liquidity available on user balance.
@@ -146,8 +149,7 @@ pub mod module {
 
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_pools_data)]
-	pub(crate) type LiquidationPoolsData<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyId, LiquidationPoolData, ValueQuery>;
+	pub type LiquidationPoolsData<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, LiquidationPoolData, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -235,11 +237,14 @@ pub mod module {
 				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
 
 			let new_deviation_threshold = Rate::from_inner(threshold);
-
 			ensure!(
-				(Rate::zero() <= new_deviation_threshold && new_deviation_threshold <= Rate::one()),
+				Self::is_valid_deviation_threshold(new_deviation_threshold),
 				Error::<T>::NotValidDeviationThresholdValue
 			);
 
@@ -269,11 +274,14 @@ pub mod module {
 				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
 
 			let new_balance_ratio = Rate::from_inner(balance_ratio);
-
 			ensure!(
-				(Rate::zero() <= new_balance_ratio && new_balance_ratio <= Rate::one()),
+				Self::is_valid_balance_ratio(new_balance_ratio),
 				Error::<T>::NotValidBalanceRatioValue
 			);
 
@@ -303,6 +311,10 @@ pub mod module {
 				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				Error::<T>::PoolNotFound
+			);
 
 			// Write new value into storage.
 			LiquidationPoolsData::<T>::mutate(pool_id, |x| x.max_ideal_balance = max_ideal_balance);
@@ -325,6 +337,12 @@ pub mod module {
 			target_amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let _ = ensure_none(origin)?;
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&supply_pool_id)
+					&& T::LiquidityPoolsManager::pool_exists(&target_pool_id),
+				Error::<T>::PoolNotFound
+			);
+
 			let module_id = Self::pools_account_id();
 			T::Dex::swap_with_exact_target(
 				&module_id,
@@ -352,6 +370,10 @@ pub mod module {
 			ensure!(
 				underlying_asset_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
+			);
+			ensure!(
+				T::LiquidityPoolsManager::pool_exists(&underlying_asset_id),
+				Error::<T>::PoolNotFound
 			);
 			ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
 			ensure!(
@@ -446,6 +468,7 @@ impl<T: Config> Pallet<T> {
 		let (mut information_vec, mut sum_oversupply, mut sum_shortfall) =
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 				.iter()
+				.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
 				.try_fold(
 					(Vec::<LiquidationInformation>::new(), Balance::zero(), Balance::zero()),
 					|(mut current_vec, mut current_sum_oversupply, mut current_sum_shortfall),
@@ -607,9 +630,17 @@ impl<T: Config> Pallet<T> {
 			None => Ok(ideal_balance),
 		}
 	}
+
+	pub fn is_valid_deviation_threshold(deviation_threshold: Rate) -> bool {
+		Rate::zero() <= deviation_threshold && deviation_threshold <= Rate::one()
+	}
+
+	pub fn is_valid_balance_ratio(balance_ratio: Rate) -> bool {
+		Rate::zero() <= balance_ratio && balance_ratio <= Rate::one()
+	}
 }
 
-impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
+impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
 	/// Gets module account id.
 	fn pools_account_id() -> T::AccountId {
 		T::LiquidationPoolsModuleId::get().into_account()
@@ -621,9 +652,31 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 		T::MultiCurrency::free_balance(pool_id, &module_account_id)
 	}
 
-	/// Check if pool exists
-	fn pool_exists(underlying_asset: &CurrencyId) -> bool {
-		LiquidationPoolsData::<T>::contains_key(underlying_asset)
+	/// This is a part of a pool creation flow
+	/// Checks parameters validity and creates storage records for LiquidationPoolsData
+	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult {
+		ensure!(
+			!LiquidationPoolsData::<T>::contains_key(currency_id),
+			Error::<T>::PoolAlreadyCreated
+		);
+		ensure!(
+			Self::is_valid_deviation_threshold(deviation_threshold),
+			Error::<T>::NotValidDeviationThresholdValue
+		);
+		ensure!(
+			Self::is_valid_balance_ratio(balance_ratio),
+			Error::<T>::NotValidBalanceRatioValue
+		);
+
+		LiquidationPoolsData::<T>::insert(
+			currency_id,
+			LiquidationPoolData {
+				deviation_threshold,
+				balance_ratio,
+				max_ideal_balance: None,
+			},
+		);
+		Ok(())
 	}
 }
 

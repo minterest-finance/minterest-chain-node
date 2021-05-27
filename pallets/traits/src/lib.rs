@@ -50,6 +50,17 @@ pub trait LiquidityPoolsManager {
 	fn get_pool_total_protocol_interest(pool_id: CurrencyId) -> Balance;
 }
 
+/// An abstraction of pools basic functionalities.
+pub trait LiquidationPoolsManager<AccountId> {
+	/// Return module account id.
+	fn pools_account_id() -> AccountId;
+
+	/// Return liquidity balance of `pool_id`.
+	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance;
+
+	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult;
+}
+
 pub trait PriceProvider<CurrencyId> {
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price>;
 	fn lock_price(currency_id: CurrencyId);
@@ -75,6 +86,17 @@ pub trait DEXManager<AccountId, CurrencyId, Balance> {
 }
 
 pub trait ControllerAPI<AccountId> {
+	/// This is a part of a pool creation flow
+	/// Creates storage records for ControllerParams and PauseKeepers
+	/// All operations are unpaused after this function call
+	fn create_pool(
+		currency_id: CurrencyId,
+		protocol_interest_factor: Rate,
+		max_borrow_rate: Rate,
+		collateral_factor: Rate,
+		protocol_interest_threshold: Balance,
+	) -> DispatchResult;
+
 	/// Return the borrow balance of account based on stored data.
 	fn borrow_balance_stored(who: &AccountId, underlying_asset_id: CurrencyId) -> Result<Balance, DispatchError>;
 
@@ -149,4 +171,28 @@ pub trait MntManager<AccountId> {
 	///
 	/// returns (`borrow_apy`, `supply_apy`): - percentage yield per block
 	fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Price, Price), DispatchError>;
+}
+
+pub trait RiskManagerAPI {
+	/// This is a part of a pool creation flow
+	/// Creates storage records for RiskManagerParams
+	fn create_pool(
+		currency_id: CurrencyId,
+		max_attempts: u8,
+		min_partial_liquidation_sum: Balance,
+		threshold: Rate,
+		liquidation_fee: Rate,
+	) -> DispatchResult;
+}
+
+pub trait MinterestModelAPI {
+	/// This is a part of a pool creation flow
+	/// Checks parameters validity and creates storage records for MinterestModelParams
+	fn create_pool(
+		currency_id: CurrencyId,
+		kink: Rate,
+		base_rate_per_block: Rate,
+		multiplier_per_block: Rate,
+		jump_multiplier_per_block: Rate,
+	) -> DispatchResult;
 }
