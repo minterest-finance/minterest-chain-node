@@ -17,6 +17,7 @@ fn vesting_from_chain_spec_works() {
 			20
 		));
 		assert!(PalletBalances::ensure_can_withdraw(&CHARLIE, 11, WithdrawReasons::TRANSFER, 19).is_err());
+		assert_eq!(PalletBalances::usable_balance(CHARLIE), 10);
 
 		assert_eq!(
 			Vesting::vesting_schedules(&CHARLIE),
@@ -39,6 +40,7 @@ fn vesting_from_chain_spec_works() {
 			5
 		));
 		assert!(PalletBalances::ensure_can_withdraw(&CHARLIE, 26, WithdrawReasons::TRANSFER, 4).is_err());
+		assert_eq!(PalletBalances::usable_balance(CHARLIE), 25);
 
 		System::set_block_number(14);
 
@@ -50,6 +52,7 @@ fn vesting_from_chain_spec_works() {
 			WithdrawReasons::TRANSFER,
 			0
 		));
+		assert_eq!(PalletBalances::usable_balance(CHARLIE), 30);
 	});
 }
 
@@ -69,6 +72,20 @@ fn vested_transfer_works() {
 
 		let vested_event = Event::vesting(crate::Event::VestingScheduleAdded(ALICE, BOB, schedule));
 		assert!(System::events().iter().any(|record| record.event == vested_event));
+
+		assert_eq!(PalletBalances::free_balance(ALICE), 0);
+		assert_eq!(PalletBalances::free_balance(BOB), 100);
+		assert_eq!(PalletBalances::usable_balance(BOB), 0);
+
+		assert_ok!(Vesting::claim(Origin::signed(BOB)));
+		assert_eq!(PalletBalances::free_balance(BOB), 100);
+		assert_eq!(PalletBalances::usable_balance(BOB), 0);
+
+		System::set_block_number(10);
+
+		assert_ok!(Vesting::claim(Origin::signed(BOB)));
+		assert_eq!(PalletBalances::free_balance(BOB), 100);
+		assert_eq!(PalletBalances::usable_balance(BOB), 100);
 	});
 }
 
@@ -82,6 +99,9 @@ fn add_new_vesting_schedule_merges_with_current_locked_balance_and_until() {
 			per_period: 10u64,
 		};
 		assert_ok!(Vesting::vested_transfer(Origin::signed(ALICE), BOB, schedule));
+
+		assert_eq!(PalletBalances::free_balance(BOB), 20);
+		assert_eq!(PalletBalances::usable_balance(BOB), 0);
 
 		System::set_block_number(12);
 
@@ -101,6 +121,15 @@ fn add_new_vesting_schedule_merges_with_current_locked_balance_and_until() {
 				reasons: Reasons::All,
 			})
 		);
+
+		assert_ok!(Vesting::claim(Origin::signed(BOB)));
+		assert_eq!(PalletBalances::free_balance(BOB), 27);
+		assert_eq!(PalletBalances::usable_balance(BOB), 10);
+
+		System::set_block_number(23);
+
+		assert_ok!(Vesting::claim(Origin::signed(BOB)));
+		assert_eq!(PalletBalances::usable_balance(BOB), 27);
 	});
 }
 
@@ -262,10 +291,19 @@ fn update_vesting_schedules_works() {
 		System::set_block_number(11);
 		assert_ok!(Vesting::claim(Origin::signed(BOB)));
 		assert!(PalletBalances::transfer(Origin::signed(BOB), ALICE, 1).is_err());
+		assert_eq!(PalletBalances::usable_balance(BOB), 0);
 
 		System::set_block_number(21);
 		assert_ok!(Vesting::claim(Origin::signed(BOB)));
-		assert_ok!(PalletBalances::transfer(Origin::signed(BOB), ALICE, 10));
+		assert_eq!(PalletBalances::usable_balance(BOB), 10);
+		assert_eq!(
+			PalletBalances::locks(&BOB).pop(),
+			Some(BalanceLock {
+				id: VESTING_LOCK_ID,
+				amount: 10u64,
+				reasons: Reasons::All,
+			})
+		);
 	});
 }
 

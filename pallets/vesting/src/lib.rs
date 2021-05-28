@@ -233,6 +233,13 @@ pub mod module {
 			Ok(().into())
 		}
 
+		/// Add a new vesting schedule for an account. Removes the transferred balance
+		/// from the sender.
+		///
+		/// The dispatch origin of this call must be `VestedTransferOrigin`.
+		///
+		/// - `dest`: the account that receives vesting schedule of the MNT tokens;
+		/// - `schedule`: the schedule that is created on the AccountId `dest`.
 		#[pallet::weight(T::WeightInfo::vested_transfer())]
 		pub fn vested_transfer(
 			origin: OriginFor<T>,
@@ -247,12 +254,14 @@ pub mod module {
 			Ok(().into())
 		}
 
+		/// Update all vesting schedules under an account, `root` origin required.
 		#[pallet::weight(T::WeightInfo::update_vesting_schedules(vesting_schedules.len() as u32))]
 		pub fn update_vesting_schedules(
 			origin: OriginFor<T>,
 			who: <T::Lookup as StaticLookup>::Source,
 			vesting_schedules: Vec<VestingScheduleOf<T>>,
 		) -> DispatchResultWithPostInfo {
+			// FIXME: root only? maybe add council?
 			ensure_root(origin)?;
 
 			let account = T::Lookup::lookup(who)?;

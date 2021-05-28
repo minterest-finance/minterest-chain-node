@@ -568,17 +568,15 @@ impl dex::Config for Runtime {
 }
 
 parameter_types! {
-	// FIXME: ask and fix
-	pub MinVestedTransfer: Balance = 100 * DOLLARS;
-	// FIXME: ask and fix
-	pub const MaxVestingSchedules: u32 = 7; // number of baskets
+	pub MinVestedTransfer: Balance = 1 * DOLLARS;
+	pub const MaxVestingSchedules: u32 = 2;
 }
 
 impl module_vesting::Config for Runtime {
 	type Event = Event;
 	type Currency = pallet_balances::Module<Runtime>;
 	type MinVestedTransfer = MinVestedTransfer;
-	// FIXME: ask who can translate and then fix it
+	// FIXME: ask who can transfer and then fix it
 	type VestedTransferOrigin = EnsureSigned<AccountId>;
 	// FIXME: implement weights
 	type WeightInfo = ();
