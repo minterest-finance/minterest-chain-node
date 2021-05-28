@@ -50,9 +50,6 @@ mod tests;
 
 pub use module::*;
 
-/// The maximum number of vesting schedules an account can have.
-pub const MAX_VESTINGS: usize = 20;
-
 pub const VESTING_LOCK_ID: LockIdentifier = *b"ormlvest";
 
 /// The vesting schedule.
@@ -141,6 +138,9 @@ pub mod module {
 
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
+
+		/// The maximum number of vesting schedules an account can have.
+		type MaxVestingSchedules: Get<u32>;
 	}
 
 	#[pallet::error]
@@ -223,8 +223,8 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		// can not get VestingSchedule count from `who`, so use `MAX_VESTINGS / 2`
-		#[pallet::weight(T::WeightInfo::claim((MAX_VESTINGS / 2) as u32))]
+		// can not get VestingSchedule count from `who`, so use `MaxVestingSchedules / 2`
+		#[pallet::weight(T::WeightInfo::claim((<T as Config>::MaxVestingSchedules::get() / 2) as u32))]
 		pub fn claim(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let locked_amount = Self::do_claim(&who);
@@ -302,7 +302,7 @@ impl<T: Config> Pallet<T> {
 		let schedule_amount = Self::ensure_valid_vesting_schedule(&schedule)?;
 
 		ensure!(
-			<VestingSchedules<T>>::decode_len(to).unwrap_or(0) < MAX_VESTINGS,
+			<VestingSchedules<T>>::decode_len(to).unwrap_or(0) < T::MaxVestingSchedules::get() as usize,
 			Error::<T>::TooManyVestingSchedules
 		);
 

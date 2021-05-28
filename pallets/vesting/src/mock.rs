@@ -48,6 +48,7 @@ type Balance = u64;
 parameter_types! {
 	pub const ExistentialDeposit: u64 = 1;
 	pub const MinVestedTransfer: u64 = 5;
+	pub const MaxVestingSchedules: u32 = 7; // number of baskets
 }
 
 impl pallet_balances::Config for Runtime {
@@ -84,6 +85,7 @@ impl Config for Runtime {
 	type MinVestedTransfer = MinVestedTransfer;
 	type VestedTransferOrigin = EnsureAliceOrBob;
 	type WeightInfo = ();
+	type MaxVestingSchedules = MaxVestingSchedules;
 }
 
 pub type Block = sp_runtime::generic::Block<Header, UncheckedExtrinsic>;
