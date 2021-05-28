@@ -85,7 +85,7 @@ pub trait DEXManager<AccountId, CurrencyId, Balance> {
 	) -> Result<Balance, DispatchError>;
 }
 
-pub trait ControllerAPI<AccountId> {
+pub trait ControllerManager<AccountId> {
 	/// This is a part of a pool creation flow
 	/// Creates storage records for ControllerParams and PauseKeepers
 	/// All operations are unpaused after this function call
