@@ -64,7 +64,7 @@ fn deserialize_from_string<'de, D: Deserializer<'de>, T: std::str::FromStr>(dese
 // Here we declare the runtime API. It is implemented in the `impl` block in
 // runtime amalgamator file (the `runtime/src/lib.rs`)
 sp_api::decl_runtime_apis! {
-	pub trait ControllerApi<AccountId>
+	pub trait ControllerRuntimeApi<AccountId>
 	where
 		AccountId: Codec,
 	{

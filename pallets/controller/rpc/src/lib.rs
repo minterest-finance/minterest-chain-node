@@ -2,7 +2,7 @@
 
 use codec::Codec;
 pub use controller_rpc_runtime_api::{
-	BalanceInfo, ControllerApi as ControllerRuntimeApi, HypotheticalLiquidityData, PoolState, UserPoolBalanceData,
+	BalanceInfo, ControllerRuntimeApi, HypotheticalLiquidityData, PoolState, UserPoolBalanceData,
 };
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
@@ -13,7 +13,7 @@ use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
 
 #[rpc]
-pub trait ControllerApi<BlockHash, AccountId> {
+pub trait ControllerRpcApi<BlockHash, AccountId> {
 	#[rpc(name = "controller_liquidityPoolState")]
 	fn liquidity_pool_state(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<PoolState>>;
 
@@ -46,12 +46,12 @@ pub trait ControllerApi<BlockHash, AccountId> {
 }
 
 /// A struct that implements the [`ControllerApi`].
-pub struct Controller<C, B> {
+pub struct ControllerRpcImpl<C, B> {
 	client: Arc<C>,
 	_marker: std::marker::PhantomData<B>,
 }
 
-impl<C, B> Controller<C, B> {
+impl<C, B> ControllerRpcImpl<C, B> {
 	/// Create new `LiquidityPool` with the given reference to the client.
 	pub fn new(client: Arc<C>) -> Self {
 		Self {
@@ -73,7 +73,7 @@ impl From<Error> for i64 {
 	}
 }
 
-impl<C, Block, AccountId> ControllerApi<<Block as BlockT>::Hash, AccountId> for Controller<C, Block>
+impl<C, Block, AccountId> ControllerRpcApi<<Block as BlockT>::Hash, AccountId> for ControllerRpcImpl<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,

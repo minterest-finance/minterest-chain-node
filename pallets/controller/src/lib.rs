@@ -17,7 +17,7 @@ use frame_system::pallet_prelude::*;
 use liquidity_pools::Pool;
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerAPI, LiquidityPoolsManager, PoolsManager, PriceProvider};
+use pallet_traits::{ControllerManager, LiquidityPoolsManager, PoolsManager, PriceProvider};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;
@@ -847,7 +847,7 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
+impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	/// This is a part of a pool creation flow
 	/// Creates storage records for ControllerParams and PauseKeepers
 	/// All operations are unpaused after this function call

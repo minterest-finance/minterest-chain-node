@@ -33,7 +33,7 @@ where
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + 'static,
 {
-	use controller_rpc::{Controller, ControllerApi};
+	use controller_rpc::{ControllerRpcApi, ControllerRpcImpl};
 	use mnt_token_rpc::{MntToken, MntTokenApi};
 	use orml_oracle_rpc::{Oracle, OracleApi};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
@@ -57,7 +57,7 @@ where
 		client.clone(),
 	)));
 
-	io.extend_with(ControllerApi::to_delegate(Controller::new(client.clone())));
+	io.extend_with(ControllerRpcApi::to_delegate(ControllerRpcImpl::new(client.clone())));
 
 	io.extend_with(OracleApi::to_delegate(Oracle::new(client.clone())));
 
