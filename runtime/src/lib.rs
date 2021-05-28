@@ -576,7 +576,7 @@ parameter_types! {
 
 impl module_vesting::Config for Runtime {
 	type Event = Event;
-	type Currency = pallet_balances::Pallet<Runtime>;
+	type Currency = pallet_balances::Module<Runtime>;
 	type MinVestedTransfer = MinVestedTransfer;
 	// FIXME: ask who can translate and then fix it
 	type VestedTransferOrigin = EnsureSigned<AccountId>;
@@ -915,6 +915,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, liquidation_pools, benchmarking::liquidation_pools);
 			add_benchmark!(params, batches, minterest_protocol, benchmarking::minterest_protocol);
 			add_benchmark!(params, batches, mnt_token, benchmarking::mnt_token);
+			add_benchmark!(params, batches, module_vesting, benchmarking::module_vesting);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

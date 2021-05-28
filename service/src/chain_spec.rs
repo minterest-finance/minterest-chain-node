@@ -70,6 +70,21 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		"dev",
 		ChainType::Development,
 		move || {
+			let dev_vesting_list_json = &include_bytes!("../../resources/dev-minterest-vesting-MNT.json")[..];
+			let dev_vesting_list: Vec<(AccountId, BlockNumber, BlockNumber, u32, Balance)> =
+				serde_json::from_slice(dev_vesting_list_json).unwrap();
+
+			// ensure no duplicates exist.
+			let unique_dev_vesting_accounts = dev_vesting_list
+				.iter()
+				.map(|(account, _, _, _, _)| account)
+				.cloned()
+				.collect::<std::collections::BTreeSet<_>>();
+			assert!(
+				unique_dev_vesting_accounts.len() == dev_vesting_list.len(),
+				"duplicate vesting accounts in genesis."
+			);
+
 			testnet_genesis(
 				wasm_binary,
 				// Initial PoA authorities
@@ -89,8 +104,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 					// Eugene
 					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
 				],
-				// TODO: implement vesting_list with a json file
-				vec![],
+				dev_vesting_list,
 				true,
 			)
 		},

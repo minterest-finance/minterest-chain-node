@@ -50,7 +50,7 @@ mod tests;
 
 pub use module::*;
 
-pub const VESTING_LOCK_ID: LockIdentifier = *b"ormlvest";
+pub const VESTING_LOCK_ID: LockIdentifier = *b"mod/vest";
 
 /// The vesting schedule.
 ///
