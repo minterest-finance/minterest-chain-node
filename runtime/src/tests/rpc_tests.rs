@@ -301,10 +301,18 @@ fn test_get_utilization_rate_rpc() {
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(100_000)));
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(30_000)));
 			assert_eq!(pool_balance(DOT), dollars(80_000));
-			// 70 / 80 + 70 = 0.466666667
+			// 70 / (80 + 70) = 0.466666667
 			assert_eq!(
 				get_utilization_rate_rpc(DOT),
 				Some(Rate::from_inner(466_666_666_666_666_667))
+			);
+			assert_eq!(get_utilization_rate_rpc(ETH), Some(Rate::zero()));
+
+			System::set_block_number(100);
+			// Utilization rate grows with time as interest is accrued
+			assert_eq!(
+				get_utilization_rate_rpc(DOT),
+				Some(Rate::from_inner(466_666_757_610_653_833))
 			);
 			assert_eq!(get_utilization_rate_rpc(ETH), Some(Rate::zero()));
 		});
