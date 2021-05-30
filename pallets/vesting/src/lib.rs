@@ -21,8 +21,8 @@
 //!
 //! - `vested_transfer` - Add a new vesting schedule for an account.
 //! - `claim` - Claim unlocked balances.
-//! - `update_vesting_schedules` - Update all vesting schedules under an
-//!   account, `root` origin required.
+//! - `update_vesting_schedules` - Update all vesting schedules under an account, `root` origin
+//! required.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]

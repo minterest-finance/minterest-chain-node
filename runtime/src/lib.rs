@@ -568,7 +568,7 @@ impl dex::Config for Runtime {
 }
 
 parameter_types! {
-	pub MinVestedTransfer: Balance = 1 * DOLLARS;
+	pub MinVestedTransfer: Balance = DOLLARS; // 1 USD
 	pub const MaxVestingSchedules: u32 = 2;
 }
 
