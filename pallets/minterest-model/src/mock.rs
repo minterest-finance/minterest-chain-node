@@ -6,7 +6,7 @@ use frame_system::EnsureSignedBy;
 use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
-use pallet_traits::PriceProvider;
+use pallet_traits::PricesManager;
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
 use sp_runtime::{
@@ -54,7 +54,7 @@ parameter_types! {
 
 pub struct MockPriceSource;
 
-impl PriceProvider<CurrencyId> for MockPriceSource {
+impl PricesManager<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
 		Some(Price::one())
 	}

@@ -30,7 +30,7 @@ mod tests {
 	use frame_support::traits::Contains;
 	use minterest_model::MinterestModelData;
 	use minterest_protocol::Error as MinterestProtocolError;
-	use pallet_traits::{PoolsManager, PriceProvider};
+	use pallet_traits::{PoolsManager, PricesManager};
 	use sp_std::cell::RefCell;
 	use test_helper::*;
 
@@ -100,7 +100,7 @@ mod tests {
 
 	pub struct MockPriceSource;
 
-	impl PriceProvider<CurrencyId> for MockPriceSource {
+	impl PricesManager<CurrencyId> for MockPriceSource {
 		fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
 			Some(Price::one())
 		}
