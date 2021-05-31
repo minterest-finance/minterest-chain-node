@@ -507,7 +507,16 @@ impl<T: Config> Pallet<T> {
 
 	/// Gets current utilization rate of the pool.
 	pub fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate> {
-		Self::calculate_utilization_rate_current(pool_id).ok()
+		let current_block_number = <frame_system::Module<T>>::block_number();
+		let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
+		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous).ok()?;
+		let pool_data = Self::calculate_interest_params(pool_id, block_delta).ok()?;
+		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
+		Self::calculate_utilization_rate(
+			current_total_balance,
+			pool_data.total_borrowed,
+			pool_data.total_protocol_interest,
+		).ok()
 	}
 
 	/// Calculates total supply and total borrowed balance in usd based on
@@ -800,25 +809,6 @@ impl<T: Config> Pallet<T> {
 		.ok_or(Error::<T>::UtilizationRateCalculationError)?;
 
 		Ok(utilization_rate)
-	}
-
-	/// Calculates utilization rate of the pool based on updated interest parameters.
-	/// - `pool_id`: id of the pool to calculate utilization rate for.
-	///
-	/// returns `utilization_rate =
-	///  current_total_borrows / (total_cash + current_total_borrows -
-	/// current_total_protocol_interest)`
-	fn calculate_utilization_rate_current(pool_id: CurrencyId) -> RateResult {
-		let current_block_number = <frame_system::Module<T>>::block_number();
-		let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
-		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
-		let pool_data = Self::calculate_interest_params(pool_id, block_delta)?;
-		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
-		Self::calculate_utilization_rate(
-			current_total_balance,
-			pool_data.total_borrowed,
-			pool_data.total_protocol_interest,
-		)
 	}
 
 	/// Calculates the number of blocks elapsed since the last accrual.

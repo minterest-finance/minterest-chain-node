@@ -298,8 +298,7 @@ fn test_get_utilization_rate_rpc() {
 
 			System::set_block_number(20);
 
-			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(100_000)));
-			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(30_000)));
+			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(70_000)));
 			assert_eq!(pool_balance(DOT), dollars(80_000));
 			// 70 / (80 + 70) = 0.466666667
 			assert_eq!(
