@@ -25,7 +25,7 @@ use frame_system::{
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	ControllerManager, LiquidationPoolsManager, MntManager, PoolsManager, PriceProvider, RiskManagerAPI,
+	ControllerManager, LiquidationPoolsManager, MntManager, PoolsManager, PricesManager, RiskManagerAPI,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};

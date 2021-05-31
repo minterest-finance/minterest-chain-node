@@ -17,7 +17,7 @@ use frame_system::pallet_prelude::*;
 use liquidity_pools::Pool;
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerManager, LiquidityPoolsManager, PoolsManager, PriceProvider};
+use pallet_traits::{ControllerManager, LiquidityPoolsManager, PoolsManager, PricesManager};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;

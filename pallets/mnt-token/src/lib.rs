@@ -10,7 +10,7 @@ use frame_system::pallet_prelude::*;
 use minterest_primitives::{currency::MNT, Balance, CurrencyId, Price, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerManager, LiquidityPoolsManager, MntManager, PoolsManager, PriceProvider};
+use pallet_traits::{ControllerManager, LiquidityPoolsManager, MntManager, PoolsManager, PricesManager};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
 	DispatchResult, FixedPointNumber, FixedU128,
@@ -88,7 +88,7 @@ pub mod module {
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		/// The price source of currencies
-		type PriceSource: PriceProvider<CurrencyId>;
+		type PriceSource: PricesManager<CurrencyId>;
 
 		/// The `MultiCurrency` implementation for wrapped.
 		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;

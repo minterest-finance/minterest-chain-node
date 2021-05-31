@@ -1,4 +1,8 @@
 //! Runtime API definition for controller pallet.
+//! Here we declare the runtime API. It is implemented in the `impl` block in
+//! runtime amalgamator file (the `runtime/src/lib.rs`)
+//!
+//! Corresponding RPC declaration: `pallets/controller/rpc/src/lib.rs`
 
 #![cfg_attr(not(feature = "std"), no_std)]
 // The `too_many_arguments` warning originates from `decl_runtime_apis` macro.
@@ -61,8 +65,6 @@ fn deserialize_from_string<'de, D: Deserializer<'de>, T: std::str::FromStr>(dese
 		.map_err(|_| serde::de::Error::custom("Parse from string failed"))
 }
 
-// Here we declare the runtime API. It is implemented in the `impl` block in
-// runtime amalgamator file (the `runtime/src/lib.rs`)
 sp_api::decl_runtime_apis! {
 	pub trait ControllerRuntimeApi<AccountId>
 	where

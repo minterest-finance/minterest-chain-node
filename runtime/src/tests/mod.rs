@@ -16,10 +16,10 @@ use liquidation_pools::{LiquidationPoolData, Sales};
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Operation, Price};
-use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenApi::MntTokenApi;
+use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerManager, DEXManager, LiquidationPoolsManager, PoolsManager, PriceProvider};
-use prices_rpc_runtime_api::runtime_decl_for_PricesApi::PricesApi;
+use pallet_traits::{ControllerManager, DEXManager, LiquidationPoolsManager, PoolsManager, PricesManager};
+use prices_rpc_runtime_api::runtime_decl_for_PricesRuntimeApi::PricesRuntimeApi;
 use risk_manager::RiskManagerData;
 use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};
 use test_helper::{BTC, DOT, ETH, KSM, MDOT, METH, MNT};
@@ -435,7 +435,7 @@ fn get_user_borrow_per_asset_rpc(account_id: AccountId, underlying_asset_id: Cur
 }
 
 fn get_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
-	<Runtime as MntTokenApi<Block, AccountId>>::get_unclaimed_mnt_balance(account_id)
+	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_unclaimed_mnt_balance(account_id)
 		.unwrap()
 		.amount
 }
@@ -483,11 +483,11 @@ fn set_oracle_price_for_all_pools(price: u128) -> DispatchResult {
 }
 
 fn get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
-	<Runtime as PricesApi<Block>>::get_all_locked_prices()
+	<Runtime as PricesRuntimeApi<Block>>::get_all_locked_prices()
 }
 
 fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
-	<Runtime as PricesApi<Block>>::get_all_freshest_prices()
+	<Runtime as PricesRuntimeApi<Block>>::get_all_freshest_prices()
 }
 
 fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
@@ -495,7 +495,7 @@ fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 }
 
 fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> (Rate, Rate) {
-	<Runtime as MntTokenApi<Block, AccountId>>::get_mnt_borrow_and_supply_rates(pool_id).unwrap()
+	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_mnt_borrow_and_supply_rates(pool_id).unwrap()
 }
 
 pub fn run_to_block(n: u32) {

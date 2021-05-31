@@ -70,7 +70,7 @@ pub use sp_runtime::{Perbill, Permill, Perquintill};
 pub use constants::{currency::*, time::*, *};
 use frame_support::traits::Contains;
 use frame_system::{EnsureOneOf, EnsureRoot};
-use pallet_traits::PriceProvider;
+use pallet_traits::PricesManager;
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -818,7 +818,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl mnt_token_rpc_runtime_api::MntTokenApi<Block, AccountId> for Runtime {
+	impl mnt_token_rpc_runtime_api::MntTokenRuntimeApi<Block, AccountId> for Runtime {
 		fn get_unclaimed_mnt_balance(account_id: AccountId) -> Option<MntBalanceInfo> {
 				Some(MntBalanceInfo{amount: MntToken::get_unclaimed_mnt_balance(&account_id).ok()?})
 		}
@@ -849,7 +849,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl prices_rpc_runtime_api::PricesApi<Block> for Runtime {
+	impl prices_rpc_runtime_api::PricesRuntimeApi<Block> for Runtime {
 		fn  get_current_price(currency_id: CurrencyId) -> Option<Price> {
 			Prices::get_underlying_price(currency_id)
 		}
