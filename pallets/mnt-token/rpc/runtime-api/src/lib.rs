@@ -1,8 +1,4 @@
 //! Runtime API definition for mnt-token pallet.
-//! Here we declare the runtime API. It is implemented in the `impl` block in
-//! runtime amalgamator file (the `runtime/src/lib.rs`)
-//!
-//! Corresponding RPC declaration: `pallets/mnt-token/rpc/src/lib.rs`
 
 #![cfg_attr(not(feature = "std"), no_std)]
 // The `too_many_arguments` warning originates from `decl_runtime_apis` macro.
@@ -41,7 +37,7 @@ fn deserialize_from_string<'de, D: Deserializer<'de>, T: std::str::FromStr>(dese
 // Here we declare the runtime API. It is implemented it the `impl` block in
 // runtime amalgamator file (the `runtime/src/lib.rs`)
 sp_api::decl_runtime_apis! {
-	pub trait MntTokenRuntimeApi<AccountId>
+	pub trait MntTokenApi<AccountId>
 	where
 		AccountId: Codec,
 	{

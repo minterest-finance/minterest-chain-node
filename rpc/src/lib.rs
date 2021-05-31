@@ -33,11 +33,11 @@ where
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + 'static,
 {
-	use controller_rpc::{ControllerRpcApi, ControllerRpcImpl};
-	use mnt_token_rpc::{MntTokenRpcApi, MntTokenRpcImpl};
+	use controller_rpc::{Controller, ControllerApi};
+	use mnt_token_rpc::{MntToken, MntTokenApi};
 	use orml_oracle_rpc::{Oracle, OracleApi};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
-	use prices_rpc::{PricesRpcApi, PricesRpcImpl};
+	use prices_rpc::{Prices, PricesApi};
 	use substrate_frame_rpc_system::{FullSystem, SystemApi};
 
 	let mut io = jsonrpc_core::IoHandler::default();
@@ -57,13 +57,13 @@ where
 		client.clone(),
 	)));
 
-	io.extend_with(ControllerRpcApi::to_delegate(ControllerRpcImpl::new(client.clone())));
+	io.extend_with(ControllerApi::to_delegate(Controller::new(client.clone())));
 
 	io.extend_with(OracleApi::to_delegate(Oracle::new(client.clone())));
 
-	io.extend_with(MntTokenRpcApi::to_delegate(MntTokenRpcImpl::new(client.clone())));
+	io.extend_with(MntTokenApi::to_delegate(MntToken::new(client.clone())));
 
-	io.extend_with(PricesRpcApi::to_delegate(PricesRpcImpl::new(client)));
+	io.extend_with(PricesApi::to_delegate(Prices::new(client)));
 	// Extend this RPC with a custom API by using the following syntax.
 	// `YourRpcStruct` should have a reference to a client, which is needed
 	// to call into the runtime.

@@ -1,39 +1,21 @@
 //! RPC interface for the mnt-token pallet.
-//!
-//! RPC installation: `rpc/src/lib.rc`
-//!
-//! Corresponding runtime API declaration: `pallets/mnt-token/rpc/run-time/src/lib.rs`
-//! Corresponding runtime API implementation: `runtime/src/lib.rs`
 
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
 use minterest_primitives::{CurrencyId, Rate};
-pub use mnt_token_rpc_runtime_api::{MntBalanceInfo, MntTokenRuntimeApi};
+pub use mnt_token_rpc_runtime_api::{MntBalanceInfo, MntTokenApi as MntTokenRuntimeApi};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
 
 #[rpc]
-/// Base trait for RPC interface of mnt-token
-pub trait MntTokenRpcApi<BlockHash, AccountId> {
-	/// Gets MNT accrued but not yet transferred to user
-	///  - `&self` :  Self reference
-	///  - `account_id`: user account id.
-	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
-	/// Return:
-	/// - amount: the MNT accrued but not yet transferred to each user.
+pub trait MntTokenApi<BlockHash, AccountId> {
 	#[rpc(name = "mntToken_getUnclaimedMntBalance")]
 	fn get_unclaimed_mnt_balance(&self, account_id: AccountId, at: Option<BlockHash>)
 		-> Result<Option<MntBalanceInfo>>;
 
-	/// Return MNT Borrow Rate and MNT Supply Rate values per block for current pool.
-	///  - `&self` :  Self reference
-	///  - `pool_id`: current pool id.
-	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
-	/// Return:
-	/// - (borrow_rate, supply_rate): MNT Borrow Rate and MNT Supply Rate values
 	#[rpc(name = "mntToken_getMntBorrowAndSupplyRates")]
 	fn get_mnt_borrow_and_supply_rates(
 		&self,
@@ -42,14 +24,14 @@ pub trait MntTokenRpcApi<BlockHash, AccountId> {
 	) -> Result<Option<(Rate, Rate)>>;
 }
 
-/// A struct that implements the `MntTokenRpcApi`.
-pub struct MntTokenRpcImpl<C, B> {
+/// A struct that implements the [`MntTokenApi`].
+pub struct MntToken<C, B> {
 	client: Arc<C>,
 	_marker: std::marker::PhantomData<B>,
 }
 
-impl<C, B> MntTokenRpcImpl<C, B> {
-	/// Create new `MntTokenRpcImpl` with the given reference to the client.
+impl<C, B> MntToken<C, B> {
+	/// Create new `MntToken` with the given reference to the client.
 	pub fn new(client: Arc<C>) -> Self {
 		Self {
 			client,
@@ -70,8 +52,7 @@ impl From<Error> for i64 {
 	}
 }
 
-/// Implementation of 'MntTokenRpcApi'
-impl<C, Block, AccountId> MntTokenRpcApi<<Block as BlockT>::Hash, AccountId> for MntTokenRpcImpl<C, Block>
+impl<C, Block, AccountId> MntTokenApi<<Block as BlockT>::Hash, AccountId> for MntToken<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,

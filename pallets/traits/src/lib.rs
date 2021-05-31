@@ -58,26 +58,16 @@ pub trait LiquidationPoolsManager<AccountId> {
 	/// Return liquidity balance of `pool_id`.
 	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance;
 
-	/// This is a part of a pool creation flow
-	/// Checks parameters validity and creates storage records for LiquidationPoolsData
 	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult;
 }
 
-/// An abstraction of prices basic functionalities.
-pub trait PricesManager<CurrencyId> {
-	/// Get price underlying token in USD.
+pub trait PriceProvider<CurrencyId> {
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price>;
-
-	/// Locks price when get valid price from source.
 	fn lock_price(currency_id: CurrencyId);
-
-	/// Unlocks price when get valid price from source.
 	fn unlock_price(currency_id: CurrencyId);
 }
 
-/// An abstraction of DEXs basic functionalities.
 pub trait DEXManager<AccountId, CurrencyId, Balance> {
-	//TODO: Add function description
 	fn swap_with_exact_supply(
 		who: &AccountId,
 		target_currency_id: CurrencyId,
@@ -86,7 +76,6 @@ pub trait DEXManager<AccountId, CurrencyId, Balance> {
 		min_target_amount: Balance,
 	) -> Result<Balance, DispatchError>;
 
-	//TODO: Add function description
 	fn swap_with_exact_target(
 		who: &AccountId,
 		supply_currency_id: CurrencyId,
@@ -96,8 +85,7 @@ pub trait DEXManager<AccountId, CurrencyId, Balance> {
 	) -> Result<Balance, DispatchError>;
 }
 
-/// An abstraction of controller basic functionalities.
-pub trait ControllerManager<AccountId> {
+pub trait ControllerAPI<AccountId> {
 	/// This is a part of a pool creation flow
 	/// Creates storage records for ControllerParams and PauseKeepers
 	/// All operations are unpaused after this function call
@@ -185,7 +173,6 @@ pub trait MntManager<AccountId> {
 	fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Price, Price), DispatchError>;
 }
 
-/// An abstraction of risk-manager basic functionalities.
 pub trait RiskManagerAPI {
 	/// This is a part of a pool creation flow
 	/// Creates storage records for RiskManagerParams
@@ -198,7 +185,6 @@ pub trait RiskManagerAPI {
 	) -> DispatchResult;
 }
 
-/// An abstraction of minterest-model basic functionalities.
 pub trait MinterestModelAPI {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for MinterestModelParams

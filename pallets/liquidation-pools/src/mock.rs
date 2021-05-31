@@ -7,7 +7,7 @@ use liquidity_pools::Pool;
 use minterest_primitives::Price;
 pub use minterest_primitives::{currency::CurrencyType::WrappedToken, Balance, CurrencyId, Rate};
 use orml_traits::parameter_type_with_key;
-use pallet_traits::PricesManager;
+use pallet_traits::PriceProvider;
 use sp_core::H256;
 use sp_io::TestExternalities;
 use sp_runtime::testing::TestXt;
@@ -57,7 +57,7 @@ parameter_types! {
 
 pub struct MockPriceSource;
 
-impl PricesManager<CurrencyId> for MockPriceSource {
+impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
 		Some(Price::one())
 	}

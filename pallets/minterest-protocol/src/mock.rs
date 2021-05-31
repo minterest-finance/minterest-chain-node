@@ -10,7 +10,7 @@ use minterest_model::MinterestModelData;
 pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
-use pallet_traits::{PricesManager, RiskManagerAPI};
+use pallet_traits::{PriceProvider, RiskManagerAPI};
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
@@ -92,7 +92,7 @@ impl RiskManagerAPI for TestRiskManager {
 
 pub struct MockPriceSource;
 
-impl PricesManager<CurrencyId> for MockPriceSource {
+impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
 		Some(Price::one())
 	}

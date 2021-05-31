@@ -14,7 +14,7 @@
 use frame_support::{pallet_prelude::*, transactional};
 use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, CurrencyId, Price};
 use orml_traits::{DataFeeder, DataProvider};
-use pallet_traits::PricesManager;
+use pallet_traits::PriceProvider;
 use sp_std::vec::Vec;
 
 pub use module::*;
@@ -116,7 +116,7 @@ pub mod module {
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
-			<Pallet<T> as PricesManager<CurrencyId>>::lock_price(currency_id);
+			<Pallet<T> as PriceProvider<CurrencyId>>::lock_price(currency_id);
 			Ok(().into())
 		}
 
@@ -135,13 +135,13 @@ pub mod module {
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
-			<Pallet<T> as PricesManager<CurrencyId>>::unlock_price(currency_id);
+			<Pallet<T> as PriceProvider<CurrencyId>>::unlock_price(currency_id);
 			Ok(().into())
 		}
 	}
 }
 
-impl<T: Config> PricesManager<CurrencyId> for Pallet<T> {
+impl<T: Config> PriceProvider<CurrencyId> for Pallet<T> {
 	/// Get price underlying token in USD.
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
 		// if locked price exists, return it, otherwise return latest price from oracle:

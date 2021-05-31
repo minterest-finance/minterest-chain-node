@@ -51,7 +51,7 @@ parameter_types! {
 
 pub struct MockPriceSource;
 
-impl PricesManager<CurrencyId> for MockPriceSource {
+impl PriceProvider<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
 		Some(Price::one())
 	}

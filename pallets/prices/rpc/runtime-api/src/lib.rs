@@ -14,7 +14,7 @@ use minterest_primitives::{CurrencyId, Price};
 use sp_std::vec::Vec;
 
 sp_api::decl_runtime_apis! {
-	pub trait PricesRuntimeApi
+	pub trait PricesApi
 	{
 		fn  get_current_price(currency_id: CurrencyId) -> Option<Price>;
 		fn  get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)>;
