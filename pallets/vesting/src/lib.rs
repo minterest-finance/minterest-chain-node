@@ -127,6 +127,7 @@ pub mod module {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
+		/// A currency whose accounts can have liquidity restrictions.
 		type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
 		#[pallet::constant]
@@ -223,7 +224,8 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		// can not get VestingSchedule count from `who`, so use `MaxVestingSchedules / 2`
+		/// Claim unlocked balances.
+		/// Can not get VestingSchedule count from `who`, so use `MaxVestingSchedules / 2`.
 		#[pallet::weight(T::WeightInfo::claim((<T as Config>::MaxVestingSchedules::get() / 2) as u32))]
 		pub fn claim(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
