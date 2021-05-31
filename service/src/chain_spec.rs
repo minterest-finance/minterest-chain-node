@@ -1,4 +1,5 @@
 use controller::{ControllerData, PauseKeeper};
+use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::Pool;
@@ -6,9 +7,9 @@ use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
 	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, GenesisConfig,
 	GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
-	MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, OperatorMembershipMinterestConfig, PricesConfig,
-	RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, BTC,
-	DOLLARS, DOT, ETH, KSM, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
+	MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, OperatorMembershipMinterestConfig,
+	ParachainInfoConfig, PricesConfig, Rate, RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig,
+	WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -18,9 +19,10 @@ use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
+use sp_runtime::traits::One;
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify, Zero},
-	FixedPointNumber, FixedU128,
+	FixedPointNumber, Rate,
 };
 
 // The URL for the telemetry server.
@@ -72,12 +74,12 @@ where
 	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
-/// Generate an Aura authority key.
-pub fn authority_keys_from_seed(seed: &str) -> (AuraId, GrandpaId) {
-	(get_from_seed::<AuraId>(seed), get_from_seed::<GrandpaId>(seed))
-}
+// /// Generate an Aura authority key.
+// pub fn authority_keys_from_seed(seed: &str) -> (AuraId, GrandpaId) {
+// 	(get_from_seed::<AuraId>(seed), get_from_seed::<GrandpaId>(seed))
+// }
 
-pub fn development_config() -> Result<ChainSpec, String> {
+pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenDecimals".into(), 18.into());
 
@@ -88,14 +90,15 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		"Development",
 		// ID
 		"dev",
-		ChainType::Development,
+		ChainType::local,
 		move || {
 			testnet_genesis(
 				wasm_binary,
 				// Initial PoA authorities
-				vec![authority_keys_from_seed("Alice")],
+				// vec![authority_keys_from_seed("Alice")],
 				// Sudo account
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				vec![get_from_seed::<AuraId>("Alice"), get_from_seed::<AuraId>("Bob")],
 				// Pre-funded accounts
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -105,7 +108,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 					// Eugene
 					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
 				],
-				true,
+				id,
 			)
 		},
 		// Bootnodes
@@ -115,16 +118,17 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		// Protocol ID
 		None,
 		// Properties
-		Some(properties),
+		// Some(properties),
 		// Extensions
+		None,
 		Extensions {
-			relay_chain: "rococo-dev".into(),
-			para_id: 1967u32.into(),
+			relay_chain: "rococo-local".into(),
+			para_id: id.into(),
 		},
 	))
 }
 
-pub fn local_testnet_config() -> Result<ChainSpec, String> {
+pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenDecimals".into(), 18.into());
 
@@ -140,9 +144,9 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			testnet_genesis(
 				wasm_binary,
 				// Initial PoA authorities
-				vec![authority_keys_from_seed("Alice"), authority_keys_from_seed("Bob")],
-				// Sudo account
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				// Sudo account
+				vec![get_from_seed::<AuraId>("Alice"), get_from_seed::<AuraId>("Bob")],
 				// Pre-funded accounts
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -158,7 +162,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				true,
+				id,
 			)
 		},
 		// Bootnodes
@@ -168,16 +172,17 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		// Protocol ID
 		None,
 		// Properties
-		Some(properties),
+		// Some(properties),
 		// Extensions
+		None,
 		Extensions {
 			relay_chain: "rococo-local".into(),
-			para_id: 1987u32.into(),
+			para_id: id.into(),
 		},
 	))
 }
 
-pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
+pub fn minterest_turbo_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenDecimals".into(), 18.into());
 
@@ -191,10 +196,10 @@ pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
 			testnet_genesis(
 				wasm_binary,
 				// Initial PoA authorities
-				vec![authority_keys_from_seed("Alice")],
+				hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
 				// Sudo account
 				// 5ER9G3d2V4EEq8VjEbjkGbMdgprvtCntTYu9itCRJNHTkWYX
-				hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
+				vec![get_from_seed::<AuraId>("Alice"), get_from_seed::<AuraId>("Bob")],
 				// Pre-funded accounts
 				vec![
 					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
@@ -203,7 +208,7 @@ pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 				],
-				true,
+				id,
 			)
 		},
 		// Bootnodes
@@ -216,11 +221,12 @@ pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
 		// Protocol ID
 		Some("turbo-latest"),
 		// Properties
-		Some(properties),
+		// Some(properties),
 		// Extensions
+		None,
 		Extensions {
 			relay_chain: "rococo-turbo".into(),
-			para_id: 1987u32.into(),
+			para_id: id.into(),
 		},
 	))
 }
@@ -228,10 +234,10 @@ pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
 /// Configure initial storage state for FRAME pallets.
 fn testnet_genesis(
 	wasm_binary: &[u8],
-	initial_authorities: Vec<(AuraId, GrandpaId)>,
 	root_key: AccountId,
+	initial_authorities: Vec<(AuraId)>,
 	endowed_accounts: Vec<AccountId>,
-	_enable_println: bool,
+	id: ParaId,
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -239,6 +245,7 @@ fn testnet_genesis(
 			code: wasm_binary.to_vec(),
 			changes_trie_config: Default::default(),
 		}),
+		parachain_info: Some(ParachainInfoConfig { parachain_id: id }),
 		pallet_balances: Some(BalancesConfig {
 			// Configure endowed accounts with initial balance of INITIAL_BALANCE.
 			balances: endowed_accounts
@@ -253,15 +260,13 @@ fn testnet_genesis(
 				.collect(),
 		}),
 		pallet_aura: Some(AuraConfig {
-			authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
-		}),
-		pallet_grandpa: Some(GrandpaConfig {
-			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
+			authorities: initial_authorities,
 		}),
 		pallet_sudo: Some(SudoConfig {
 			// Assign network admin rights.
 			key: root_key.clone(),
 		}),
+		cumulus_pallet_aura_ext: Default::default(),
 		orml_tokens: Some(TokensConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
@@ -282,7 +287,7 @@ fn testnet_genesis(
 					ETH,
 					Pool {
 						total_borrowed: Balance::zero(),
-						borrow_index: FixedU128::one(),
+						borrow_index: Rate::one(),
 						total_protocol_interest: Balance::zero(),
 					},
 				),
@@ -290,7 +295,7 @@ fn testnet_genesis(
 					DOT,
 					Pool {
 						total_borrowed: Balance::zero(),
-						borrow_index: FixedU128::one(),
+						borrow_index: Rate::one(),
 						total_protocol_interest: Balance::zero(),
 					},
 				),
@@ -298,7 +303,7 @@ fn testnet_genesis(
 					KSM,
 					Pool {
 						total_borrowed: Balance::zero(),
-						borrow_index: FixedU128::one(),
+						borrow_index: Rate::one(),
 						total_protocol_interest: Balance::zero(),
 					},
 				),
@@ -306,7 +311,7 @@ fn testnet_genesis(
 					BTC,
 					Pool {
 						total_borrowed: Balance::zero(),
-						borrow_index: FixedU128::one(),
+						borrow_index: Rate::one(),
 						total_protocol_interest: Balance::zero(),
 					},
 				),
@@ -319,9 +324,9 @@ fn testnet_genesis(
 					ETH,
 					ControllerData {
 						last_interest_accrued_block: 0,
-						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
-						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
-						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
@@ -330,9 +335,9 @@ fn testnet_genesis(
 					DOT,
 					ControllerData {
 						last_interest_accrued_block: 0,
-						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
-						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
-						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
@@ -341,9 +346,9 @@ fn testnet_genesis(
 					KSM,
 					ControllerData {
 						last_interest_accrued_block: 0,
-						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
-						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
-						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
@@ -352,9 +357,9 @@ fn testnet_genesis(
 					BTC,
 					ControllerData {
 						last_interest_accrued_block: 0,
-						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
-						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
-						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
 						borrow_cap: None,
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
@@ -409,37 +414,37 @@ fn testnet_genesis(
 				(
 					ETH,
 					MinterestModelData {
-						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
-						base_rate_per_block: FixedU128::zero(),
-						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						kink: Rate::saturating_from_rational(8, 10), // 0.8 = 80 %
+						base_rate_per_block: Rate::zero(),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
 					},
 				),
 				(
 					DOT,
 					MinterestModelData {
-						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
-						base_rate_per_block: FixedU128::zero(),
-						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						kink: Rate::saturating_from_rational(8, 10), // 0.8 = 80 %
+						base_rate_per_block: Rate::zero(),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
 					},
 				),
 				(
 					KSM,
 					MinterestModelData {
-						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
-						base_rate_per_block: FixedU128::zero(),
-						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						kink: Rate::saturating_from_rational(8, 10), // 0.8 = 80 %
+						base_rate_per_block: Rate::zero(),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
 					},
 				),
 				(
 					BTC,
 					MinterestModelData {
-						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
-						base_rate_per_block: FixedU128::zero(),
-						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						kink: Rate::saturating_from_rational(8, 10), // 0.8 = 80 %
+						base_rate_per_block: Rate::zero(),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
 					},
 				),
 			],
@@ -451,8 +456,8 @@ fn testnet_genesis(
 					RiskManagerData {
 						max_attempts: 2,
 						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
+						threshold: Rate::saturating_from_rational(103, 100), // 3%
+						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
 					},
 				),
 				(
@@ -460,8 +465,8 @@ fn testnet_genesis(
 					RiskManagerData {
 						max_attempts: 2,
 						min_partial_liquidation_sum: 100_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
+						threshold: Rate::saturating_from_rational(103, 100), // 3%
+						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
 					},
 				),
 				(
@@ -469,8 +474,8 @@ fn testnet_genesis(
 					RiskManagerData {
 						max_attempts: 2,
 						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
+						threshold: Rate::saturating_from_rational(103, 100), // 3%
+						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
 					},
 				),
 				(
@@ -478,8 +483,8 @@ fn testnet_genesis(
 					RiskManagerData {
 						max_attempts: 2,
 						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
+						threshold: Rate::saturating_from_rational(103, 100), // 3%
+						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
 					},
 				),
 			],
@@ -490,32 +495,32 @@ fn testnet_genesis(
 				(
 					DOT,
 					LiquidationPoolData {
-						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
-						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
 						max_ideal_balance: None,
 					},
 				),
 				(
 					ETH,
 					LiquidationPoolData {
-						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
-						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
 						max_ideal_balance: None,
 					},
 				),
 				(
 					BTC,
 					LiquidationPoolData {
-						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
-						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
 						max_ideal_balance: None,
 					},
 				),
 				(
 					KSM,
 					LiquidationPoolData {
-						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
-						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
 						max_ideal_balance: None,
 					},
 				),
@@ -523,10 +528,10 @@ fn testnet_genesis(
 		}),
 		module_prices: Some(PricesConfig {
 			locked_price: vec![
-				(DOT, FixedU128::saturating_from_integer(2)),
-				(KSM, FixedU128::saturating_from_integer(2)),
-				(ETH, FixedU128::saturating_from_integer(2)),
-				(BTC, FixedU128::saturating_from_integer(2)),
+				(DOT, Rate::saturating_from_integer(2)),
+				(KSM, Rate::saturating_from_integer(2)),
+				(ETH, Rate::saturating_from_integer(2)),
+				(BTC, Rate::saturating_from_integer(2)),
 			],
 			_phantom: Default::default(),
 		}),

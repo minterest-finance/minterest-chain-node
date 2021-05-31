@@ -5,8 +5,8 @@ authors = ["Minterest <https://github.com/minterest-defi>"]
 edition = "2018"
 
 [dependencies]
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false }
 orml-oracle = { version = "0.4.0", default-features = false }
 
 minterest-primitives = { path = "../../../../primitives", default-features = false }

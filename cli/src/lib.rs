@@ -11,3 +11,8 @@ pub use command::*;
 
 #[cfg(feature = "cli")]
 pub use sc_cli::{Error, Result};
+
+//FIXME: ><
+#[macro_use]
+mod cli;
+mod command;

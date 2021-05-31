@@ -46,7 +46,7 @@ impl From<Error> for i64 {
 
 impl<C, Block, AccountId> MntTokenApi<<Block as BlockT>::Hash, AccountId> for MntToken<C, Block>
 where
-	Block: BlockT,
+	Block: BlockT + sp_runtime::traits::Block + sp_runtime::traits::Block,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
 	C::Api: MntTokenRuntimeApi<Block, AccountId>,
 	AccountId: Codec,

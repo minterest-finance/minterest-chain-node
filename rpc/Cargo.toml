@@ -6,14 +6,15 @@ edition = "2018"
 
 [dependencies]
 jsonrpc-core = '15.0.0'
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
-sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
-sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
-sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
-sc-rpc-api = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
-pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
-substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
-sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
+sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
+sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
+# FIXME: was version 0.9.0
+sc-rpc-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
+pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
+substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
+sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
 orml-oracle-rpc = { version = "0.4.0" }
 
 # local dependencies
