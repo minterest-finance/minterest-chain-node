@@ -341,7 +341,6 @@ fn multiple_vesting_schedule_claim_works() {
 			per_period: 10u64,
 		};
 		assert_ok!(Vesting::vested_transfer(Origin::signed(ALICE), BOB, schedule.clone()));
-
 		let schedule2 = VestingSchedule {
 			start: 0u64,
 			period: 10u64,
@@ -350,20 +349,40 @@ fn multiple_vesting_schedule_claim_works() {
 		};
 		assert_ok!(Vesting::vested_transfer(Origin::signed(ALICE), BOB, schedule2.clone()));
 
+		// There are 2 active vesting schedules for BOB
+		assert_eq!(
+			Vesting::vesting_schedules(&BOB),
+			vec![schedule.clone(), schedule2.clone()]
+		);
+
+		// Bob should receive 50 tokens at the end of all schedules
+		assert_eq!(PalletBalances::free_balance(BOB), 50);
+		assert_eq!(PalletBalances::usable_balance(BOB), 0);
+
+		// Should be usable first 20 tokens. 10 from each schedule
+		System::set_block_number(11);
+		assert_ok!(Vesting::claim(Origin::signed(BOB)));
+		assert_eq!(PalletBalances::free_balance(BOB), 50);
+		assert_eq!(PalletBalances::usable_balance(BOB), 20);
+
+		// There are 2 active vesting schedules
 		assert_eq!(Vesting::vesting_schedules(&BOB), vec![schedule, schedule2.clone()]);
 
 		System::set_block_number(21);
 
+		// First schedule is over. Plus 20 tokens. ( 10 from each schedule )
 		assert_ok!(Vesting::claim(Origin::signed(BOB)));
-
 		assert_eq!(Vesting::vesting_schedules(&BOB), vec![schedule2]);
+		assert_eq!(PalletBalances::free_balance(BOB), 50);
+		assert_eq!(PalletBalances::usable_balance(BOB), 40);
 
 		System::set_block_number(31);
 
+		// All schedules are finished. All tokens are usable
 		assert_ok!(Vesting::claim(Origin::signed(BOB)));
-
+		assert_eq!(PalletBalances::free_balance(BOB), 50);
+		assert_eq!(PalletBalances::usable_balance(BOB), 50);
 		assert_eq!(VestingSchedules::<Runtime>::contains_key(&BOB), false);
-
 		assert_eq!(PalletBalances::locks(&BOB), vec![]);
 	});
 }
