@@ -123,7 +123,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		vesting::GenesisConfig::<Runtime> {
-			vesting: vec![(CHARLIE, 2, 3, 4, 5)], // who, start, period, period_count, per_period
+			vesting: vec![(VestingBucket::Team, CHARLIE, 2, 3, 4, 5)], // who, start, period, period_count, per_period
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

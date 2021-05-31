@@ -4,7 +4,6 @@ use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use minterest_primitives::{VestingBucket, VestingScheduleJson};
-use module_vesting::VestingSchedule;
 use node_minterest_runtime::{
 	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, BlockNumber, ControllerConfig,
 	GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
@@ -73,38 +72,37 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		"dev",
 		ChainType::Development,
 		move || {
-			let dev_vesting_list_json = &include_bytes!("../../resources/ddev-minterest-vesting-MNT.json")[..];
+			// FIXME:: fix in all genesis blocks
+			let dev_vesting_list_json = &include_bytes!("../../resources/dev-minterest-vesting-MNT.json")[..];
 
-			let dev_vesting_list: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, BlockNumber, Balance>>> =
-				serde_json::from_slice(dev_vesting_list_json).unwrap();
+			let dev_vesting_list_parse: HashMap<
+				VestingBucket,
+				Vec<VestingScheduleJson<AccountId, BlockNumber, Balance>>,
+			> = serde_json::from_slice(dev_vesting_list_json).unwrap();
 
-			let mut result: Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)> = Vec::new();
+			let mut dev_vesting_list: Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)> =
+				Vec::new();
 
-			for (bucket_name, schedules) in dev_vesting_list.iter() {
-				for field in schedules.iter() {
-					result.push((
-						bucket_name.clone(),
-						field.key.clone(),
-						field.start,
-						field.period,
-						field.period_count,
-						field.per_period,
+			for (bucket, schedules) in dev_vesting_list_parse.iter() {
+				for schedule in schedules.iter() {
+					dev_vesting_list.push((
+						bucket.clone(),
+						schedule.account.clone(),
+						schedule.start,
+						schedule.period,
+						schedule.period_count,
+						schedule.per_period,
 					));
 				}
 			}
 
-			println!("{:?}", result);
-
-			let dev_vesting_list_json = &include_bytes!("../../resources/dev-minterest-vesting-MNT.json")[..];
-			let dev_vesting_list: Vec<(AccountId, BlockNumber, BlockNumber, u32, Balance)> =
-				serde_json::from_slice(dev_vesting_list_json).unwrap();
-
 			// ensure no duplicates exist.
 			let unique_dev_vesting_accounts = dev_vesting_list
 				.iter()
-				.map(|(account, _, _, _, _)| account)
+				.map(|(_, account, _, _, _, _)| account)
 				.cloned()
 				.collect::<std::collections::BTreeSet<_>>();
+
 			assert!(
 				unique_dev_vesting_accounts.len() == dev_vesting_list.len(),
 				"duplicate vesting accounts in genesis."
@@ -251,7 +249,7 @@ fn testnet_genesis(
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
-	vesting_list: Vec<(AccountId, BlockNumber, BlockNumber, u32, Balance)>,
+	vesting_list: Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)>,
 	_enable_println: bool,
 ) -> GenesisConfig {
 	GenesisConfig {

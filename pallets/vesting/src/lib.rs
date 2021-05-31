@@ -35,7 +35,7 @@ use frame_support::{
 	transactional,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
-use minterest_primitives::Bucket;
+use minterest_primitives::VestingBucket;
 use sp_runtime::{
 	traits::{AtLeast32Bit, CheckedAdd, Saturating, StaticLookup, Zero},
 	DispatchResult, RuntimeDebug,
@@ -62,7 +62,9 @@ pub const VESTING_LOCK_ID: LockIdentifier = *b"mod/vest";
 /// of blocks after `start`.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct VestingSchedule<BlockNumber, Balance: HasCompact> {
+pub struct VestingSchedule<BlockNumber, Balance: HasCompact, VestingBucket> {
+	/// Vesting bucket type
+	pub bucket: VestingBucket,
 	/// Vesting starting block
 	pub start: BlockNumber,
 	/// Number of blocks between vest
@@ -74,7 +76,9 @@ pub struct VestingSchedule<BlockNumber, Balance: HasCompact> {
 	pub per_period: Balance,
 }
 
-impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSchedule<BlockNumber, Balance> {
+impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy, VestingBucket: Eq + PartialEq>
+	VestingSchedule<BlockNumber, Balance, VestingBucket>
+{
 	/// Returns the end of all periods, `None` if calculation overflows.
 	pub fn end(&self) -> Option<BlockNumber> {
 		// period * period_count + start
@@ -119,8 +123,10 @@ pub mod module {
 
 	pub(crate) type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-	pub(crate) type VestingScheduleOf<T> = VestingSchedule<<T as frame_system::Config>::BlockNumber, BalanceOf<T>>;
+	pub(crate) type VestingScheduleOf<T> =
+		VestingSchedule<<T as frame_system::Config>::BlockNumber, BalanceOf<T>, VestingBucket>;
 	pub type ScheduledItem<T> = (
+		VestingBucket,
 		<T as frame_system::Config>::AccountId,
 		<T as frame_system::Config>::BlockNumber,
 		<T as frame_system::Config>::BlockNumber,
@@ -199,7 +205,7 @@ pub mod module {
 		fn build(&self) {
 			self.vesting
 				.iter()
-				.for_each(|(who, start, period, period_count, per_period)| {
+				.for_each(|(bucket, who, start, period, period_count, per_period)| {
 					let total = *per_period * Into::<BalanceOf<T>>::into(*period_count);
 
 					assert!(
@@ -211,6 +217,7 @@ pub mod module {
 					VestingSchedules::<T>::insert(
 						who,
 						vec![VestingSchedule {
+							bucket: *bucket,
 							start: *start,
 							period: *period,
 							period_count: *period_count,

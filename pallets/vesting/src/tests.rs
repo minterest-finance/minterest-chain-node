@@ -22,6 +22,7 @@ fn vesting_from_chain_spec_works() {
 		assert_eq!(
 			Vesting::vesting_schedules(&CHARLIE),
 			vec![VestingSchedule {
+				bucket: VestingBucket::Team,
 				start: 2u64,
 				period: 3u64,
 				period_count: 4u32,
@@ -62,6 +63,7 @@ fn vested_transfer_works() {
 		System::set_block_number(1);
 
 		let schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: 0u64,
 			period: 10u64,
 			period_count: 1u32,
@@ -93,6 +95,7 @@ fn vested_transfer_works() {
 fn add_new_vesting_schedule_merges_with_current_locked_balance_and_until() {
 	ExtBuilder::build().execute_with(|| {
 		let schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: 0u64,
 			period: 10u64,
 			period_count: 2u32,
@@ -106,6 +109,7 @@ fn add_new_vesting_schedule_merges_with_current_locked_balance_and_until() {
 		System::set_block_number(12);
 
 		let another_schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: 10u64,
 			period: 13u64,
 			period_count: 1u32,
@@ -137,6 +141,7 @@ fn add_new_vesting_schedule_merges_with_current_locked_balance_and_until() {
 fn cannot_use_fund_if_not_claimed() {
 	ExtBuilder::build().execute_with(|| {
 		let schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: 10u64,
 			period: 10u64,
 			period_count: 1u32,
@@ -151,6 +156,7 @@ fn cannot_use_fund_if_not_claimed() {
 fn vested_transfer_fails_if_zero_period_or_count() {
 	ExtBuilder::build().execute_with(|| {
 		let schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: 1u64,
 			period: 0u64,
 			period_count: 1u32,
@@ -162,6 +168,7 @@ fn vested_transfer_fails_if_zero_period_or_count() {
 		);
 
 		let schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: 1u64,
 			period: 1u64,
 			period_count: 0u32,
@@ -178,6 +185,7 @@ fn vested_transfer_fails_if_zero_period_or_count() {
 fn vested_transfer_fails_if_transfer_err() {
 	ExtBuilder::build().execute_with(|| {
 		let schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: 1u64,
 			period: 1u64,
 			period_count: 1u32,
@@ -194,6 +202,7 @@ fn vested_transfer_fails_if_transfer_err() {
 fn vested_transfer_fails_if_overflow() {
 	ExtBuilder::build().execute_with(|| {
 		let schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: 1u64,
 			period: 1u64,
 			period_count: 2u32,
@@ -205,6 +214,7 @@ fn vested_transfer_fails_if_overflow() {
 		);
 
 		let another_schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: u64::max_value(),
 			period: 1u64,
 			period_count: 2u32,
@@ -221,6 +231,7 @@ fn vested_transfer_fails_if_overflow() {
 fn vested_transfer_fails_if_bad_origin() {
 	ExtBuilder::build().execute_with(|| {
 		let schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: 0u64,
 			period: 10u64,
 			period_count: 1u32,
@@ -237,6 +248,7 @@ fn vested_transfer_fails_if_bad_origin() {
 fn claim_works() {
 	ExtBuilder::build().execute_with(|| {
 		let schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: 0u64,
 			period: 10u64,
 			period_count: 2u32,
@@ -269,6 +281,7 @@ fn claim_works() {
 fn update_vesting_schedules_works() {
 	ExtBuilder::build().execute_with(|| {
 		let schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: 0u64,
 			period: 10u64,
 			period_count: 2u32,
@@ -277,6 +290,7 @@ fn update_vesting_schedules_works() {
 		assert_ok!(Vesting::vested_transfer(Origin::signed(ALICE), BOB, schedule.clone()));
 
 		let updated_schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: 0u64,
 			period: 20u64,
 			period_count: 2u32,
@@ -319,6 +333,7 @@ fn update_vesting_schedules_fails_if_unexpected_existing_locks() {
 fn vested_transfer_check_for_min() {
 	ExtBuilder::build().execute_with(|| {
 		let schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: 1u64,
 			period: 1u64,
 			period_count: 1u32,
@@ -335,6 +350,7 @@ fn vested_transfer_check_for_min() {
 fn multiple_vesting_schedule_claim_works() {
 	ExtBuilder::build().execute_with(|| {
 		let schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: 0u64,
 			period: 10u64,
 			period_count: 2u32,
@@ -343,6 +359,7 @@ fn multiple_vesting_schedule_claim_works() {
 		assert_ok!(Vesting::vested_transfer(Origin::signed(ALICE), BOB, schedule.clone()));
 
 		let schedule2 = VestingSchedule {
+			bucket: VestingBucket::Team,
 			start: 0u64,
 			period: 10u64,
 			period_count: 3u32,

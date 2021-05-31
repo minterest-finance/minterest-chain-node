@@ -30,9 +30,6 @@ pub mod time {
 	pub const REFRESH_SPEED_PERIOD: BlockNumber = 5;
 }
 
-/// A maximum number of admins. When membership reaches this number, no new members may join.
-pub const MAX_MEMBERS: u8 = 16;
-
 pub const MAX_BORROW_CAP: minterest_primitives::Balance = 1_000_000_000_000_000_000_000_000;
 pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: minterest_primitives::Balance = 1_000_000_000_000_000_000_000;
 

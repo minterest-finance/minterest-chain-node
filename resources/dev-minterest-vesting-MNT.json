@@ -1,10 +1,59 @@
-[
-  [ "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", 0, 1, 50000, 1000000000000000000 ],
-  [ "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY", 0, 1, 50000, 1000000000000000000 ],
-  [ "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty", 0, 1, 50000, 1000000000000000000 ],
-  [ "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc", 0, 1, 50000, 1000000000000000000 ],
-  [ "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y", 0, 1, 50000, 1000000000000000000 ],
-  [ "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy", 0, 1, 50000, 1000000000000000000 ],
-  [ "5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw", 0, 1, 50000, 1000000000000000000 ],
-  [ "5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL", 0, 1, 50000, 1000000000000000000 ]
-]
+{
+  "PrivateSale": [
+    {
+      "account": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+      "start": 0,
+      "period": 1,
+      "period_count": 50000,
+      "per_period": 1000000000000000000
+    }],
+  "PublicSale": [
+    {
+      "account": "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY",
+      "start": 0,
+      "period": 1,
+      "period_count": 50000,
+      "per_period": 1000000000000000000
+    }],
+  "MarketMaking": [
+    {
+      "account": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+      "start": 0,
+      "period": 1,
+      "period_count": 50000,
+      "per_period": 1000000000000000000
+    }],
+  "StrategicPartners": [
+    {
+      "account": "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
+      "start": 0,
+      "period": 1,
+      "period_count": 50000,
+      "per_period": 1000000000000000000
+    }],
+  "Marketing": [
+    {
+      "account": "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y",
+      "start": 0,
+      "period": 1,
+      "period_count": 50000,
+      "per_period": 1000000000000000000
+    }],
+  "Ecosystem": [
+    {
+      "account": "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy",
+      "start": 0,
+      "period": 1,
+      "period_count": 50000,
+      "per_period": 1000000000000000000
+    }],
+  "Team":
+    [
+      {
+        "account": "5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw",
+        "start": 0,
+        "period": 1,
+        "period_count": 50000,
+        "per_period": 1000000000000000000
+      }]
+}

@@ -576,7 +576,7 @@ impl module_vesting::Config for Runtime {
 	type Event = Event;
 	type Currency = pallet_balances::Module<Runtime>;
 	type MinVestedTransfer = MinVestedTransfer;
-	// FIXME: ask who can transfer and then fix it
+	// FIXME:  fix it sudo + 1/3 MinterestCouncil
 	type VestedTransferOrigin = EnsureSigned<AccountId>;
 	// FIXME: implement weights
 	type WeightInfo = ();

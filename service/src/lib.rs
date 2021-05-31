@@ -14,6 +14,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 pub mod chain_spec;
+#[cfg(test)]
+mod tests;
 
 // Our native executor instance.
 native_executor_instance!(
