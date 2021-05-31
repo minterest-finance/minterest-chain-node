@@ -48,7 +48,7 @@ mock_impl_dex_config!(Test);
 mock_impl_balances_config!(Test);
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"lqdy/min");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
@@ -68,7 +68,7 @@ impl PriceProvider<CurrencyId> for MockPriceSource {
 }
 
 parameter_types! {
-	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"lqdn/min");
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value();
 }
@@ -148,14 +148,24 @@ impl Default for ExternalityBuilder {
 					},
 				),
 			],
-			liquidation_pools: vec![(
-				DOT,
-				LiquidationPoolData {
-					deviation_threshold: Rate::saturating_from_rational(1, 10),
-					balance_ratio: Rate::saturating_from_rational(2, 10),
-					max_ideal_balance: None,
-				},
-			)],
+			liquidation_pools: vec![
+				(
+					DOT,
+					LiquidationPoolData {
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
+					},
+				),
+				(
+					ETH,
+					LiquidationPoolData {
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
+					},
+				),
+			],
 		}
 	}
 }
@@ -163,6 +173,12 @@ impl Default for ExternalityBuilder {
 impl ExternalityBuilder {
 	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts.push((user, currency_id, balance));
+		self
+	}
+
+	pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts
+			.push((TestLiquidationPools::pools_account_id(), currency_id, balance));
 		self
 	}
 
