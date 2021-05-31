@@ -516,7 +516,8 @@ impl<T: Config> Pallet<T> {
 			current_total_balance,
 			pool_data.total_borrowed,
 			pool_data.total_protocol_interest,
-		).ok()
+		)
+		.ok()
 	}
 
 	/// Calculates total supply and total borrowed balance in usd based on
