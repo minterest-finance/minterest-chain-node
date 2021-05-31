@@ -1,0 +1,59 @@
+{
+  "PrivateSale": [
+    {
+      "key": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+      "start": 0,
+      "period": 1,
+      "period_count": 50000,
+      "per_period": 1000000000000000000
+    }],
+  "PublicSale": [
+    {
+      "key": "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY",
+      "start": 0,
+      "period": 1,
+      "period_count": 50000,
+      "per_period": 1000000000000000000
+    }],
+  "MarketMaking": [
+    {
+      "key": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+      "start": 0,
+      "period": 1,
+      "period_count": 50000,
+      "per_period": 1000000000000000000
+    }],
+  "StrategicPartners": [
+    {
+      "key": "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
+      "start": 0,
+      "period": 1,
+      "period_count": 50000,
+      "per_period": 1000000000000000000
+    }],
+  "Marketing": [
+    {
+      "key": "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y",
+      "start": 0,
+      "period": 1,
+      "period_count": 50000,
+      "per_period": 1000000000000000000
+    }],
+  "Ecosystem": [
+    {
+      "key": "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy",
+      "start": 0,
+      "period": 1,
+      "period_count": 50000,
+      "per_period": 1000000000000000000
+    }],
+  "Team":
+    [
+      {
+        "key": "5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw",
+        "start": 0,
+        "period": 1,
+        "period_count": 50000,
+        "per_period": 1000000000000000000
+      }]
+}

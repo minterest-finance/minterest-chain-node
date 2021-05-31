@@ -2,7 +2,7 @@
 #![allow(clippy::unnecessary_cast)]
 #![allow(clippy::upper_case_acronyms)]
 
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, HasCompact};
 pub use currency::CurrencyId;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -103,4 +103,39 @@ impl sp_std::fmt::Debug for OffchainErr {
 			OffchainErr::PoolsBalancingError => write!(fmt, "Pools balancing error"),
 		}
 	}
+}
+
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum VestingBucket {
+	Community,
+	PrivateSale,
+	PublicSale,
+	MarketMaking,
+	StrategicPartners,
+	Marketing,
+	Ecosystem,
+	Team,
+}
+
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct Bucket {
+	years_vesting: u8,
+	total: u32,
+}
+
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct VestingScheduleJson<AccountId, BlockNumber, Balance: HasCompact> {
+	pub key: AccountId,
+	/// Vesting starting block
+	pub start: BlockNumber,
+	/// Number of blocks between vest
+	pub period: BlockNumber,
+	/// Number of vest
+	pub period_count: u32,
+	/// Amount of tokens to release per vest
+	#[codec(compact)]
+	pub per_period: Balance,
 }

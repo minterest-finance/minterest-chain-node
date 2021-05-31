@@ -35,6 +35,7 @@ use frame_support::{
 	transactional,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
+use minterest_primitives::Bucket;
 use sp_runtime::{
 	traits::{AtLeast32Bit, CheckedAdd, Saturating, StaticLookup, Zero},
 	DispatchResult, RuntimeDebug,
@@ -43,6 +44,9 @@ use sp_std::{
 	cmp::{Eq, PartialEq},
 	vec::Vec,
 };
+
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 
 mod default_weight;
 mod mock;
@@ -57,6 +61,7 @@ pub const VESTING_LOCK_ID: LockIdentifier = *b"mod/vest";
 /// Benefits would be granted gradually, `per_period` amount every `period`
 /// of blocks after `start`.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct VestingSchedule<BlockNumber, Balance: HasCompact> {
 	/// Vesting starting block
 	pub start: BlockNumber,
