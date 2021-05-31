@@ -18,7 +18,7 @@ use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 use minterest_primitives::{Balance, CurrencyId, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{Borrowing, LiquidityPoolsManager, PoolsManager, PriceProvider};
+use pallet_traits::{Borrowing, LiquidityPoolsManager, PoolsManager, PricesManager};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -80,7 +80,7 @@ pub mod module {
 		type InitialExchangeRate: Get<Rate>;
 
 		/// The price source of currencies
-		type PriceSource: PriceProvider<CurrencyId>;
+		type PriceSource: PricesManager<CurrencyId>;
 
 		#[pallet::constant]
 		/// The Liquidity Pool's module id, keep all assets in Pools.

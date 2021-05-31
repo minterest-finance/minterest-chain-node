@@ -7,7 +7,7 @@ use liquidity_pools::{Pool, PoolUserData};
 pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
-use pallet_traits::PriceProvider;
+use pallet_traits::PricesManager;
 use sp_runtime::{
 	testing::{Header, H256},
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
@@ -67,7 +67,7 @@ ord_parameter_types! {
 
 pub struct MockPriceSource;
 
-impl PriceProvider<CurrencyId> for MockPriceSource {
+impl PricesManager<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
 		match currency_id {
 			DOT => return Some(Price::saturating_from_rational(5, 10)), // 0.5 USD

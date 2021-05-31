@@ -109,7 +109,7 @@ mock_impl_balances_config!(Test);
 
 pub struct MockPriceSource;
 
-impl PriceProvider<CurrencyId> for MockPriceSource {
+impl PricesManager<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
 		Some(Price::one())
 	}
