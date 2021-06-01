@@ -70,7 +70,7 @@ impl MockPriceSource {
 		UNDERLYING_PRICE.with(|v| *v.borrow_mut() = price);
 	}
 }
-impl PriceProvider<CurrencyId> for MockPriceSource {
+impl PricesManager<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
 		UNDERLYING_PRICE.with(|v| *v.borrow_mut())
 	}

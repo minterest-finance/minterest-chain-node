@@ -5,7 +5,7 @@ use crate::{
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::{
-	runtime_decl_for_ControllerApi::ControllerApi, BalanceInfo, HypotheticalLiquidityData, PoolState,
+	runtime_decl_for_ControllerRuntimeApi::ControllerRuntimeApi, BalanceInfo, HypotheticalLiquidityData, PoolState,
 	UserPoolBalanceData,
 };
 use frame_support::{
@@ -16,10 +16,10 @@ use liquidation_pools::{LiquidationPoolData, Sales};
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Operation, Price};
-use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenApi::MntTokenApi;
+use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerAPI, DEXManager, LiquidationPoolsManager, PoolsManager, PriceProvider};
-use prices_rpc_runtime_api::runtime_decl_for_PricesApi::PricesApi;
+use pallet_traits::{ControllerManager, DEXManager, LiquidationPoolsManager, PoolsManager, PricesManager};
+use prices_rpc_runtime_api::runtime_decl_for_PricesRuntimeApi::PricesRuntimeApi;
 use risk_manager::RiskManagerData;
 use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};
 use test_helper::{BTC, DOT, ETH, KSM, MDOT, METH, MNT};
@@ -329,7 +329,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		liquidation_pools::GenesisConfig::<Runtime> {
-			balancing_period: 30, // Blocks per 3 minutes.
+			phantom: PhantomData,
 			liquidation_pools: vec![
 				(
 					DOT,
@@ -409,7 +409,7 @@ fn dex_balance(pool_id: CurrencyId) -> Balance {
 }
 
 fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
-	<Runtime as ControllerApi<Block, AccountId>>::liquidity_pool_state(currency_id)
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::liquidity_pool_state(currency_id)
 }
 
 fn get_utilization_rate_rpc(pool_id: CurrencyId) -> Option<Rate> {
@@ -417,35 +417,35 @@ fn get_utilization_rate_rpc(pool_id: CurrencyId) -> Option<Rate> {
 }
 
 fn get_total_supply_and_borrowed_usd_balance_rpc(account_id: AccountId) -> Option<UserPoolBalanceData> {
-	<Runtime as ControllerApi<Block, AccountId>>::get_total_supply_and_borrowed_usd_balance(account_id)
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_total_supply_and_borrowed_usd_balance(account_id)
 }
 
 fn get_hypothetical_account_liquidity_rpc(account_id: AccountId) -> Option<HypotheticalLiquidityData> {
-	<Runtime as ControllerApi<Block, AccountId>>::get_hypothetical_account_liquidity(account_id)
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_hypothetical_account_liquidity(account_id)
 }
 
 fn is_admin_rpc(caller: AccountId) -> Option<bool> {
-	<Runtime as ControllerApi<Block, AccountId>>::is_admin(caller)
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::is_admin(caller)
 }
 
 fn get_user_total_collateral_rpc(account_id: AccountId) -> Balance {
-	<Runtime as ControllerApi<Block, AccountId>>::get_user_total_collateral(account_id)
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_total_collateral(account_id)
 		.unwrap()
 		.amount
 }
 
 fn get_user_borrow_per_asset_rpc(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
-	<Runtime as ControllerApi<Block, AccountId>>::get_user_borrow_per_asset(account_id, underlying_asset_id)
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_borrow_per_asset(account_id, underlying_asset_id)
 }
 
 fn get_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
-	<Runtime as MntTokenApi<Block, AccountId>>::get_unclaimed_mnt_balance(account_id)
+	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_unclaimed_mnt_balance(account_id)
 		.unwrap()
 		.amount
 }
 
 fn pool_exists_rpc(underlying_asset_id: CurrencyId) -> bool {
-	<Runtime as ControllerApi<Block, AccountId>>::pool_exists(underlying_asset_id)
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::pool_exists(underlying_asset_id)
 }
 
 fn dollars(amount: u128) -> u128 {
@@ -487,11 +487,11 @@ fn set_oracle_price_for_all_pools(price: u128) -> DispatchResult {
 }
 
 fn get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
-	<Runtime as PricesApi<Block>>::get_all_locked_prices()
+	<Runtime as PricesRuntimeApi<Block>>::get_all_locked_prices()
 }
 
 fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
-	<Runtime as PricesApi<Block>>::get_all_freshest_prices()
+	<Runtime as PricesRuntimeApi<Block>>::get_all_freshest_prices()
 }
 
 fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
@@ -499,7 +499,7 @@ fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 }
 
 fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> (Rate, Rate) {
-	<Runtime as MntTokenApi<Block, AccountId>>::get_mnt_borrow_and_supply_rates(pool_id).unwrap()
+	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_mnt_borrow_and_supply_rates(pool_id).unwrap()
 }
 
 pub fn run_to_block(n: u32) {

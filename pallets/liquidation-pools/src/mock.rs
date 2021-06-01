@@ -7,7 +7,7 @@ use liquidity_pools::Pool;
 use minterest_primitives::Price;
 pub use minterest_primitives::{currency::CurrencyType::WrappedToken, Balance, CurrencyId, Rate};
 use orml_traits::parameter_type_with_key;
-use pallet_traits::PriceProvider;
+use pallet_traits::PricesManager;
 use sp_core::H256;
 use sp_io::TestExternalities;
 use sp_runtime::testing::TestXt;
@@ -57,7 +57,7 @@ parameter_types! {
 
 pub struct MockPriceSource;
 
-impl PriceProvider<CurrencyId> for MockPriceSource {
+impl PricesManager<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
 		Some(Price::one())
 	}
@@ -116,7 +116,6 @@ pub struct ExternalityBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	liquidity_pools: Vec<(CurrencyId, Pool)>,
 	liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
-	balancing_period: BlockNumber,
 }
 
 impl Default for ExternalityBuilder {
@@ -157,7 +156,6 @@ impl Default for ExternalityBuilder {
 					max_ideal_balance: None,
 				},
 			)],
-			balancing_period: 600, // Blocks per 10 minutes
 		}
 	}
 }
@@ -192,7 +190,7 @@ impl ExternalityBuilder {
 
 		liquidation_pools::GenesisConfig::<Test> {
 			liquidation_pools: self.liquidation_pools,
-			balancing_period: self.balancing_period,
+			phantom: PhantomData,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

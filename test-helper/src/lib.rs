@@ -3,6 +3,9 @@
 //! ## Overview
 //!
 //! Contains macros with mocked implementations of several modules config traits
+
+pub mod offchain_ext;
+
 use minterest_primitives::{currency::TokenSymbol, CurrencyId};
 
 pub const MNT: CurrencyId = CurrencyId::Native(TokenSymbol::MNT);
@@ -94,16 +97,20 @@ macro_rules! mock_impl_orml_currencies_config {
 
 #[macro_export]
 macro_rules! mock_impl_liquidity_pools_config {
-	($target:ty) => {
+	($target:ty, $price_source:ty) => {
 		impl liquidity_pools::Config for $target {
 			type MultiCurrency = orml_currencies::Module<$target>;
-			type PriceSource = MockPriceSource;
+			type PriceSource = $price_source;
 			type ModuleId = LiquidityPoolsModuleId;
 			type LiquidityPoolAccountId = LiquidityPoolAccountId;
 			type InitialExchangeRate = InitialExchangeRate;
 			type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 			type EnabledWrappedTokensId = EnabledWrappedTokensId;
 		}
+	};
+
+	($target:ty) => {
+		mock_impl_liquidity_pools_config!($target, MockPriceSource);
 	};
 }
 
@@ -120,9 +127,9 @@ macro_rules! mock_impl_liquidation_pools_config {
 			type UnsignedPriority = MockLiquidityPoolsPriority;
 			type PriceSource = MockPriceSource;
 			type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
-			type LiquidationPoolAccountId = LiquidationPoolAccountId;
 			type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
+			type LiquidationPoolAccountId = LiquidationPoolAccountId;
 			type Dex = dex::Module<$target>;
 			type LiquidationPoolsWeightInfo = ();
 		}
@@ -201,7 +208,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type MntManager = mnt_token::Module<$target>;
 			type WhitelistMembers = WhitelistMembers;
 			type ProtocolWeightInfo = ();
-			type ControllerAPI = controller::Module<$target>;
+			type ControllerManager = controller::Module<$target>;
 			type RiskManagerAPI = TestRiskManager;
 			type MinterestModelAPI = TestMinterestModel;
 			type CreatePoolOrigin = EnsureSignedBy<$acc, AccountId>;
@@ -214,6 +221,7 @@ macro_rules! mock_impl_risk_manager_config {
 	($target:ty, $acc:ident) => {
 		parameter_types! {
 			pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
+			pub const MaxDurationMs: u64 = 1000;
 		}
 
 		impl risk_manager::Config for $target {
@@ -224,7 +232,8 @@ macro_rules! mock_impl_risk_manager_config {
 			type MntManager = mnt_token::Module<$target>;
 			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type RiskManagerWeightInfo = ();
-			type ControllerAPI = controller::Module<$target>;
+			type ControllerManager = controller::Module<$target>;
+			type OffchainWorkerMaxDurationMs = MaxDurationMs;
 		}
 	};
 }
@@ -242,7 +251,7 @@ macro_rules! mock_impl_mnt_token_config {
 			type UpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
 			type MultiCurrency = orml_currencies::Module<$target>;
-			type ControllerAPI = controller::Module<$target>;
+			type ControllerManager = controller::Module<$target>;
 			type MntTokenAccountId = MntTokenAccountId;
 			type SpeedRefreshPeriod = SpeedRefreshPeriod;
 			type MntTokenWeightInfo = ();
