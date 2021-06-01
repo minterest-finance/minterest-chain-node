@@ -408,6 +408,12 @@ fn dex_balance(pool_id: CurrencyId) -> Balance {
 	Currencies::free_balance(pool_id, &Dex::dex_account_id())
 }
 
+fn get_protocol_total_value_rpc() -> Balance {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_protocol_total_value()
+		.unwrap()
+		.amount
+}
+
 fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::liquidity_pool_state(currency_id)
 }

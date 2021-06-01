@@ -628,6 +628,11 @@ fn is_admin_should_work() {
 	})
 }
 
+#[test]
+fn get_protocol_total_value_rpc_should_work() {
+	// TODO: implement
+}
+
 // Test RPC behavior after changing state by standard protocol operations and changing oracle
 // price for collateral asset.
 #[test]
