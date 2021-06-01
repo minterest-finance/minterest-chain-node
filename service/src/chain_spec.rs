@@ -87,6 +87,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 					// Eugene
 					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
+					// Polina
+					hex!["a0a9c551ef3876b936712d2f96617c84b50ccb46e89e38c05129510d58de844d"].into(),
 				],
 				true,
 			)
