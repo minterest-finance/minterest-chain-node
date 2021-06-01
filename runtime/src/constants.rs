@@ -1,6 +1,7 @@
 //! A set of constant values used in runtime.
 
-use minterest_primitives::Rate;
+use crate::DOLLARS;
+use minterest_primitives::{Balance, Rate};
 
 /// Money matters.
 pub mod currency {
@@ -35,6 +36,9 @@ pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: minterest_primitives::Balance = 
 
 /// Initial exchange rate: 100%
 pub const INITIAL_EXCHANGE_RATE: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+
+/// Total allocation of MNT tokens
+pub const TOTAL_ALLOCATION: Balance = 100_000_000 * DOLLARS;
 
 pub mod fee {
 	use frame_support::weights::constants::ExtrinsicBaseWeight;

@@ -6,11 +6,11 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::{VestingBucket, VestingScheduleJson};
 use node_minterest_runtime::{
 	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, BlockNumber, ControllerConfig,
-	GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
-	MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, OperatorMembershipMinterestConfig, PricesConfig,
-	RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, VestingConfig,
-	WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
-	WASM_BINARY,
+	ExistentialDeposit, GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig,
+	MinterestCouncilMembershipConfig, MinterestModelConfig, MinterestOracleConfig, MntTokenConfig,
+	OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
+	TokensConfig, VestingConfig, WhitelistCouncilMembershipConfig, BLOCKS_PER_YEAR, BTC, DOLLARS, DOT, ETH, KSM, MNT,
+	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -19,6 +19,7 @@ use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
+use sp_runtime::traits::One;
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify, Zero},
 	FixedPointNumber, FixedU128,
@@ -72,42 +73,6 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		"dev",
 		ChainType::Development,
 		move || {
-			// FIXME:: fix in all genesis blocks
-			let dev_vesting_list_json = &include_bytes!("../../resources/dev-minterest-vesting-MNT.json")[..];
-
-			let dev_vesting_list_parse: HashMap<
-				VestingBucket,
-				Vec<VestingScheduleJson<AccountId, BlockNumber, Balance>>,
-			> = serde_json::from_slice(dev_vesting_list_json).unwrap();
-
-			let mut dev_vesting_list: Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)> =
-				Vec::new();
-
-			for (bucket, schedules) in dev_vesting_list_parse.iter() {
-				for schedule in schedules.iter() {
-					dev_vesting_list.push((
-						bucket.clone(),
-						schedule.account.clone(),
-						schedule.start,
-						schedule.period,
-						schedule.period_count,
-						schedule.per_period,
-					));
-				}
-			}
-
-			// ensure no duplicates exist.
-			let unique_dev_vesting_accounts = dev_vesting_list
-				.iter()
-				.map(|(_, account, _, _, _, _)| account)
-				.cloned()
-				.collect::<std::collections::BTreeSet<_>>();
-
-			assert!(
-				unique_dev_vesting_accounts.len() == dev_vesting_list.len(),
-				"duplicate vesting accounts in genesis."
-			);
-
 			testnet_genesis(
 				wasm_binary,
 				// Initial PoA authorities
@@ -127,7 +92,6 @@ pub fn development_config() -> Result<ChainSpec, String> {
 					// Eugene
 					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
 				],
-				dev_vesting_list,
 				true,
 			)
 		},
@@ -157,29 +121,14 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		"local_testnet",
 		ChainType::Local,
 		move || {
-			testnet_genesis(
+			minterest_genesis(
 				wasm_binary,
 				// Initial PoA authorities
 				vec![authority_keys_from_seed("Alice"), authority_keys_from_seed("Bob")],
 				// Sudo account
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				// Pre-funded accounts
-				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie"),
-					get_account_id_from_seed::<sr25519::Public>("Dave"),
-					get_account_id_from_seed::<sr25519::Public>("Eve"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-				],
-				// TODO: implement vesting_list with a json file
-				vec![],
+				vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
 				true,
 			)
 		},
@@ -207,7 +156,7 @@ pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
 		"turbo-latest",
 		ChainType::Live,
 		move || {
-			testnet_genesis(
+			minterest_genesis(
 				wasm_binary,
 				// Initial PoA authorities
 				vec![authority_keys_from_seed("Alice")],
@@ -222,8 +171,6 @@ pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 				],
-				// TODO: implement vesting_list with a json file
-				vec![],
 				true,
 			)
 		},
@@ -243,13 +190,351 @@ pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
 	))
 }
 
+fn minterest_genesis(
+	wasm_binary: &[u8],
+	initial_authorities: Vec<(AuraId, GrandpaId)>,
+	root_key: AccountId,
+	endowed_accounts: Vec<AccountId>,
+	_enable_println: bool,
+) -> GenesisConfig {
+	// Initial allocation calculation
+	let existential_deposit = ExistentialDeposit::get();
+	let mut total_allocated = Balance::zero();
+
+	let allocated_accounts_json = &include_bytes!("../../resources/dev-minterest-allocation-MNT.json")[..];
+
+	let allocated_list_parsed: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, Balance>>> =
+		serde_json::from_slice(allocated_accounts_json).unwrap();
+
+	// TODO implement checks for total_balance and calculate balance of mnt_token pallet balance
+
+	let initial_allocation = endowed_accounts
+		.iter()
+		.chain(get_all_modules_accounts())
+		.map(|account_id| (account_id.clone(), existential_deposit))
+		.chain(allocated_list_parsed.iter().flat_map(|(bucket, schedules)| {
+			schedules
+				.iter()
+				.map(|schedule| (schedule.account.clone(), schedule.amount))
+		}))
+		.collect::<Vec<(AccountId, Balance)>>();
+
+	// Vesting calculation
+	let mut vesting_list: Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)> = Vec::new();
+	for (bucket, schedules) in allocated_list_parsed.iter() {
+		for schedule in schedules.iter() {
+			let start: BlockNumber = bucket.unlock_begins_in_days().into();
+			let period: BlockNumber = BlockNumber::one(); // block by block
+
+			let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
+			if period_count.is_zero() {
+				continue;
+			}
+			let per_period: Balance = schedule.amount / period_count as u128;
+
+			vesting_list.push((
+				bucket.clone(),
+				schedule.account.clone(),
+				start,
+				period,
+				period_count,
+				per_period,
+			));
+		}
+	}
+
+	// ensure no duplicates exist.
+	let unique_vesting_accounts = vesting_list
+		.iter()
+		.map(|(_, account, _, _, _, _)| account)
+		.cloned()
+		.collect::<std::collections::BTreeSet<_>>();
+
+	assert!(
+		unique_vesting_accounts.len() == vesting_list.len(),
+		"duplicate vesting accounts in genesis."
+	);
+
+	GenesisConfig {
+		frame_system: Some(SystemConfig {
+			// Add Wasm runtime to storage.
+			code: wasm_binary.to_vec(),
+			changes_trie_config: Default::default(),
+		}),
+		// FIXME: change -> initial_allocation
+		pallet_balances: Some(BalancesConfig {
+			// Configure endowed accounts with initial balance of INITIAL_BALANCE.
+			balances: endowed_accounts
+				.iter()
+				.cloned()
+				.map(|k| (k, INITIAL_BALANCE))
+				.chain(
+					get_all_modules_accounts()
+						.get(0) // mnt-token module
+						.map(|x| (x.clone(), INITIAL_TREASURY)),
+				)
+				.collect(),
+		}),
+		pallet_aura: Some(AuraConfig {
+			authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
+		}),
+		pallet_grandpa: Some(GrandpaConfig {
+			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
+		}),
+		pallet_sudo: Some(SudoConfig {
+			// Assign network admin rights.
+			key: root_key.clone(),
+		}),
+		orml_tokens: Some(TokensConfig {
+			endowed_accounts: vec![],
+		}),
+		liquidity_pools: Some(LiquidityPoolsConfig {
+			pools: vec![
+				(
+					ETH,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: FixedU128::one(),
+						total_protocol_interest: Balance::zero(),
+					},
+				),
+				(
+					DOT,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: FixedU128::one(),
+						total_protocol_interest: Balance::zero(),
+					},
+				),
+				(
+					KSM,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: FixedU128::one(),
+						total_protocol_interest: Balance::zero(),
+					},
+				),
+				(
+					BTC,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: FixedU128::one(),
+						total_protocol_interest: Balance::zero(),
+					},
+				),
+			],
+			pool_user_data: vec![],
+		}),
+		controller: Some(ControllerConfig {
+			controller_dates: vec![
+				(
+					ETH,
+					ControllerData {
+						last_interest_accrued_block: 0,
+						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
+						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+					},
+				),
+				(
+					DOT,
+					ControllerData {
+						last_interest_accrued_block: 0,
+						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
+						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+					},
+				),
+				(
+					KSM,
+					ControllerData {
+						last_interest_accrued_block: 0,
+						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
+						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+					},
+				),
+				(
+					BTC,
+					ControllerData {
+						last_interest_accrued_block: 0,
+						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
+						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+					},
+				),
+			],
+			pause_keepers: vec![
+				(ETH, PauseKeeper::all_unpaused()),
+				(DOT, PauseKeeper::all_unpaused()),
+				(KSM, PauseKeeper::all_unpaused()),
+				(BTC, PauseKeeper::all_unpaused()),
+			],
+			whitelist_mode: false,
+		}),
+		minterest_model: Some(MinterestModelConfig {
+			minterest_model_params: vec![
+				(
+					ETH,
+					MinterestModelData {
+						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
+						base_rate_per_block: FixedU128::zero(),
+						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
+				(
+					DOT,
+					MinterestModelData {
+						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
+						base_rate_per_block: FixedU128::zero(),
+						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
+				(
+					KSM,
+					MinterestModelData {
+						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
+						base_rate_per_block: FixedU128::zero(),
+						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
+				(
+					BTC,
+					MinterestModelData {
+						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
+						base_rate_per_block: FixedU128::zero(),
+						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
+			],
+		}),
+		risk_manager: Some(RiskManagerConfig {
+			risk_manager_dates: vec![
+				(
+					ETH,
+					RiskManagerData {
+						max_attempts: 2,
+						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
+						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
+					},
+				),
+				(
+					DOT,
+					RiskManagerData {
+						max_attempts: 2,
+						min_partial_liquidation_sum: 100_000 * DOLLARS, // In USD. FIXME: temporary value.
+						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
+					},
+				),
+				(
+					KSM,
+					RiskManagerData {
+						max_attempts: 2,
+						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
+						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
+					},
+				),
+				(
+					BTC,
+					RiskManagerData {
+						max_attempts: 2,
+						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
+						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
+						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
+					},
+				),
+			],
+		}),
+		liquidation_pools: Some(LiquidationPoolsConfig {
+			phantom: Default::default(),
+			liquidation_pools: vec![
+				(
+					DOT,
+					LiquidationPoolData {
+						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
+						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
+					},
+				),
+				(
+					ETH,
+					LiquidationPoolData {
+						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
+						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
+					},
+				),
+				(
+					BTC,
+					LiquidationPoolData {
+						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
+						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
+					},
+				),
+				(
+					KSM,
+					LiquidationPoolData {
+						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
+						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
+					},
+				),
+			],
+		}),
+		module_prices: Some(PricesConfig {
+			locked_price: vec![],
+			_phantom: Default::default(),
+		}),
+		pallet_collective_Instance1: Some(Default::default()),
+		pallet_membership_Instance1: Some(MinterestCouncilMembershipConfig {
+			members: vec![root_key.clone()],
+			phantom: Default::default(),
+		}),
+		pallet_collective_Instance2: Some(Default::default()),
+		pallet_membership_Instance2: Some(WhitelistCouncilMembershipConfig {
+			members: vec![root_key.clone()],
+			phantom: Default::default(),
+		}),
+		pallet_membership_Instance3: Some(OperatorMembershipMinterestConfig {
+			members: vec![root_key],
+			phantom: Default::default(),
+		}),
+		orml_oracle_Instance1: Some(MinterestOracleConfig {
+			members: Default::default(), // initialized by OperatorMembership
+			phantom: Default::default(),
+		}),
+		mnt_token: Some(MntTokenConfig {
+			mnt_rate: 10 * DOLLARS,
+			mnt_claim_threshold: 0, // disable by default
+			minted_pools: vec![DOT, ETH, KSM, BTC],
+			_phantom: Default::default(),
+		}),
+		module_vesting: Some(VestingConfig { vesting: vesting_list }),
+	}
+}
+
 /// Configure initial storage state for FRAME pallets.
 fn testnet_genesis(
 	wasm_binary: &[u8],
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
-	vesting_list: Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)>,
 	_enable_println: bool,
 ) -> GenesisConfig {
 	GenesisConfig {
@@ -538,6 +823,6 @@ fn testnet_genesis(
 			minted_pools: vec![DOT, ETH, KSM, BTC],
 			_phantom: Default::default(),
 		}),
-		module_vesting: Some(VestingConfig { vesting: vesting_list }),
+		module_vesting: Some(VestingConfig { vesting: vec![] }),
 	}
 }

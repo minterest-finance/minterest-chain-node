@@ -70,7 +70,9 @@ pub use sp_runtime::{Perbill, Permill, Perquintill};
 pub use constants::{currency::*, time::*, *};
 use frame_support::traits::Contains;
 use frame_system::{EnsureOneOf, EnsureRoot, EnsureSigned};
+use minterest_primitives::currency::GetDecimals;
 use pallet_traits::PriceProvider;
+
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -229,7 +231,7 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u128 = 500;
+	pub const ExistentialDeposit: Balance = DOLLARS; // 1 MNT
 	pub const MaxLocks: u32 = 50;
 }
 
