@@ -9,7 +9,7 @@ use std::collections::HashMap;
 fn check_minterest_vesting_unique_accounts() {
 	let vesting_json = &include_bytes!("../../resources/dev-minterest-allocation-MNT.json")[..];
 
-	let vesting_parsed: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, BlockNumber, Balance>>> =
+	let vesting_parsed: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, Balance>>> =
 		serde_json::from_slice(vesting_json).unwrap();
 
 	let mut vesting: Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)> = Vec::new();

@@ -38,7 +38,7 @@ pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: minterest_primitives::Balance = 
 pub const INITIAL_EXCHANGE_RATE: Rate = Rate::from_inner(1_000_000_000_000_000_000);
 
 /// Total allocation of MNT tokens
-pub const TOTAL_ALLOCATION: Balance = 100_000_000 * DOLLARS;
+pub const TOTAL_ALLOCATION: Balance = 100_000_030 * DOLLARS;
 
 pub mod fee {
 	use frame_support::weights::constants::ExtrinsicBaseWeight;

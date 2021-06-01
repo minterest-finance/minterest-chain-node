@@ -10,7 +10,7 @@ use node_minterest_runtime::{
 	MinterestCouncilMembershipConfig, MinterestModelConfig, MinterestOracleConfig, MntTokenConfig,
 	OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
 	TokensConfig, VestingConfig, WhitelistCouncilMembershipConfig, BLOCKS_PER_YEAR, BTC, DOLLARS, DOT, ETH, KSM, MNT,
-	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
+	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -24,6 +24,7 @@ use sp_runtime::{
 	traits::{IdentifyAccount, Verify, Zero},
 	FixedPointNumber, FixedU128,
 };
+use sp_std::collections::btree_map::BTreeMap;
 use std::collections::HashMap;
 
 // The URL for the telemetry server.
@@ -206,19 +207,46 @@ fn minterest_genesis(
 	let allocated_list_parsed: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, Balance>>> =
 		serde_json::from_slice(allocated_accounts_json).unwrap();
 
-	// TODO implement checks for total_balance and calculate balance of mnt_token pallet balance
+	// TODO implement checks for total_balance in buckets and calculate balance of mnt_token pallet balance
 
 	let initial_allocation = endowed_accounts
-		.iter()
+		.clone()
+		.into_iter()
 		.chain(get_all_modules_accounts())
 		.map(|account_id| (account_id.clone(), existential_deposit))
-		.chain(allocated_list_parsed.iter().flat_map(|(bucket, schedules)| {
+		.chain(allocated_list_parsed.iter().flat_map(|(_bucket, schedules)| {
 			schedules
 				.iter()
 				.map(|schedule| (schedule.account.clone(), schedule.amount))
 		}))
+		.fold(
+			BTreeMap::<AccountId, Balance>::new(),
+			|mut acc, (account_id, amount)| {
+				// merge duplicated accounts
+				if let Some(balance) = acc.get_mut(&account_id) {
+					*balance = balance
+						.checked_add(amount)
+						.expect("balance cannot overflow when building genesis");
+				} else {
+					acc.insert(account_id.clone(), amount);
+				}
+
+				total_allocated = total_allocated
+					.checked_add(amount)
+					.expect("total allocation cannot overflow when building genesis");
+				acc
+			},
+		)
+		.into_iter()
 		.collect::<Vec<(AccountId, Balance)>>();
 
+	// check total allocated
+	assert_eq!(
+		total_allocated, TOTAL_ALLOCATION,
+		"total allocation must be equal to 100,000,030 MNT tokens"
+	);
+
+	// FIXME via Iterator
 	// Vesting calculation
 	let mut vesting_list: Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)> = Vec::new();
 	for (bucket, schedules) in allocated_list_parsed.iter() {
@@ -264,16 +292,7 @@ fn minterest_genesis(
 		// FIXME: change -> initial_allocation
 		pallet_balances: Some(BalancesConfig {
 			// Configure endowed accounts with initial balance of INITIAL_BALANCE.
-			balances: endowed_accounts
-				.iter()
-				.cloned()
-				.map(|k| (k, INITIAL_BALANCE))
-				.chain(
-					get_all_modules_accounts()
-						.get(0) // mnt-token module
-						.map(|x| (x.clone(), INITIAL_TREASURY)),
-				)
-				.collect(),
+			balances: initial_allocation,
 		}),
 		pallet_aura: Some(AuraConfig {
 			authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
