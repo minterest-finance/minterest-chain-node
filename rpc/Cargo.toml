@@ -15,7 +15,7 @@ sc-rpc-api = { git = "https://github.com/paritytech/substrate", branch = "polkad
 pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
 sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
-orml-oracle-rpc = { version = "0.4.0" }
+orml-oracle-rpc =  { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 
 # local dependencies
 node-minterest-runtime = { path = '../runtime', version = '0.6.0' }

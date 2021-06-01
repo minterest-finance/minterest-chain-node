@@ -18,8 +18,8 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false }
 
-orml-utilities = { version = '0.4.0', default-features = false }
-orml-traits = { version = '0.4.0', default-features = false }
+orml-utilities =  { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
+orml-traits =  { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
@@ -32,8 +32,8 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
 
-orml-tokens = { version = "0.4.0" }
-orml-currencies = { version = "0.4.0" }
+orml-tokens =  { git = "https://github.com/open-web3-stack/open-runtime-module-library"}
+orml-currencies =  { git = "https://github.com/open-web3-stack/open-runtime-module-library"}
 
 liquidity-pools = { path = "../liquidity-pools" }
 liquidation-pools = { path = "../liquidation-pools" }

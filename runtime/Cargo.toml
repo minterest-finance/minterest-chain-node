@@ -77,12 +77,12 @@ dex = { path = "../pallets/dex", default-features = false }
 
 
 # ORML dependencies
-orml-currencies = { version = "0.4.0", default-features = false }
-orml-tokens = { version = "0.4.0", default-features = false }
-orml-traits = { version = "0.4.0", default-features = false }
-orml-oracle = { version = "0.4.0", default-features = false }
-orml-oracle-rpc-runtime-api = { version = "0.4.0", default-features = false }
-orml-benchmarking = { version = "0.4.0", default-features = false, optional = true }
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
+orml-oracle = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
+orml-oracle-rpc-runtime-api = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
+orml-benchmarking = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, optional = true}
 
 #Cumulus dependencies
 cumulus-pallet-aura-ext = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.3', default-features = false }
