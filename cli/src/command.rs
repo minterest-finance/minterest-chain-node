@@ -16,18 +16,11 @@
 // limitations under the License.
 
 use crate::cli::{Cli, RelayChainCli, Subcommand};
-// use cumulus_primitives_core::ParaId;
-// use cumulus_client_service::genesis::generate_genesis_block;
-use node_minterest_runtime::{Block, RuntimeApi};
-// use sc_cli::{ChainSpec, Role, RuntimeVersion, SubstrateCli};
-// use sc_cli::{
-// 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
-// NetworkParams, Result, 	RuntimeVersion, SharedParams, SubstrateCli,
-// };
 use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use log::info;
+use node_minterest_runtime::{Block, RuntimeApi};
 use sc_service::PartialComponents;
 use service::{self, chain_spec};
 // use parachain_runtime::{RuntimeApi, Block};
@@ -37,11 +30,12 @@ use sc_cli::{
 	RuntimeVersion, SharedParams, SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
+use service::{new_partial, parachain_build_import_queue, ParachainRuntimeExecutor};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::Block as BlockT;
 use std::{io::Write, net::SocketAddr};
 
-fn load_spec(id: &str, para_id: ParaId) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
+fn load_spec(id: &str, para_id: ParaId) -> std::result::Result<Box<dyn ChainSpec>, String> {
 	Ok(match id {
 		"dev" => Box::new(chain_spec::development_config(para_id)),
 		"" | "local" => Box::new(chain_spec::local_testnet_config(para_id)),
@@ -51,7 +45,7 @@ fn load_spec(id: &str, para_id: ParaId) -> std::result::Result<Box<dyn sc_servic
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
-		"Substrate Node".into()
+		"Parachain Collator Template".into()
 	}
 
 	fn impl_version() -> String {
@@ -73,7 +67,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn support_url() -> String {
-		"https://google.com".into()
+		"https://github.com/substrate-developer-hub/substrate-parachain-template/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {
@@ -146,7 +140,7 @@ macro_rules! construct_async_run {
 				_
 			>(
 				&$config,
-				crate::service::parachain_build_import_queue,
+				parachain_build_import_queue,
 			)?;
 			let task_manager = $components.task_manager;
 			{ $( $code )* }.map(|v| (v, task_manager))
@@ -290,12 +284,14 @@ pub fn run() -> Result<()> {
 					if config.role.is_authority() { "yes" } else { "no" }
 				);
 
-				crate::service::start_node(config, key, polkadot_config, id)
+				service::start_node(config, key, polkadot_config, id)
 					.await
 					.map(|r| r.0)
 					.map_err(Into::into)
 			})
 		}
+		// FIXME: warning!
+		_ => Ok(()),
 	}
 }
 

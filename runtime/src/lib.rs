@@ -40,7 +40,7 @@ use sp_core::{
 	u32_trait::{_1, _2, _3, _4},
 	OpaqueMetadata,
 };
-use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, Zero};
+use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, One, Zero};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
@@ -215,15 +215,15 @@ impl frame_system::Config for Runtime {
 
 //FIXME:
 // to toml -> cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1", default-features = false }
-impl cumulus_pallet_parachain_system::Config for Runtime {
-	type Event = Event;
-	type OnValidationData = ();
-	type SelfParaId = ParachainInfo;
-	type DmpMessageHandler = ();
-	type OutboundXcmpMessageSource = ();
-	type XcmpMessageHandler = ();
-	type ReservedXcmpWeight = ();
-}
+// impl cumulus_pallet_parachain_system::Config for Runtime {
+// 	type Event = Event;
+// 	type OnValidationData = ();
+// 	type SelfParaId = ParachainInfo;
+// 	type DmpMessageHandler = ();
+// 	type OutboundXcmpMessageSource = ();
+// 	type XcmpMessageHandler = ();
+// 	type ReservedXcmpWeight = ();
+// }
 
 //FIXME:
 // to toml -> impl parachain_info::Config for Runtime {}
@@ -234,6 +234,10 @@ impl cumulus_pallet_aura_ext::Config for Runtime {}
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
 }
+const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND * 2;
+pub const UNIT: Balance = 1_000_000_000_000;
+pub const MILLIUNIT: Balance = 1_000_000_000;
+pub const MICROUNIT: Balance = 1_000_000;
 
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
@@ -497,6 +501,8 @@ impl pallet_membership::Config<MinterestCouncilMembershipInstance> for Runtime {
 	type PrimeOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
 	type MembershipInitialized = MinterestCouncil;
 	type MembershipChanged = MinterestCouncil;
+	type MaxMembers = MinterestCouncilMaxMembers;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -527,6 +533,8 @@ impl pallet_membership::Config<WhitelistCouncilMembershipInstance> for Runtime {
 	type PrimeOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
 	type MembershipInitialized = WhitelistCouncil;
 	type MembershipChanged = WhitelistCouncil;
+	type MaxMembers = MinterestCouncilMaxMembers;
+	type WeightInfo = ();
 }
 
 type OperatorMembershipInstanceMinterest = pallet_membership::Instance3;
@@ -537,8 +545,10 @@ impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime 
 	type SwapOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type ResetOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type PrimeOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
-	type MembershipInitialized = MinterestOracle;
+	type MembershipInitialized = ();
 	type MembershipChanged = MinterestOracle;
+	type MaxMembers = MinterestCouncilMaxMembers;
+	type WeightInfo = ();
 }
 
 impl minterest_protocol::Config for Runtime {
@@ -558,14 +568,14 @@ impl Contains<AccountId> for WhitelistCouncilProvider {
 		WhitelistCouncil::is_member(who)
 	}
 
-	fn sorted_members() -> Vec<AccountId> {
-		WhitelistCouncil::members()
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn add(_: &AccountId) {
-		todo!()
-	}
+	// fn sorted_members() -> Vec<AccountId> {
+	// 	WhitelistCouncil::members()
+	// }
+	//
+	// #[cfg(feature = "runtime-benchmarks")]
+	// fn add(_: &AccountId) {
+	// 	todo!()
+	// }
 }
 
 parameter_type_with_key! {
@@ -582,6 +592,7 @@ impl orml_tokens::Config for Runtime {
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
+	type MaxLocks = MaxLocks;
 }
 
 parameter_types! {
@@ -721,6 +732,7 @@ impl orml_oracle::Config<MinterestDataProvider> for Runtime {
 	type OracleValue = Price;
 	type RootOperatorAccountId = ZeroAccountId;
 	type WeightInfo = ();
+	type Members = OperatorMembershipMinterest;
 }
 
 create_median_value_data_provider!(
@@ -786,7 +798,7 @@ construct_runtime!(
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 
 		// Oracle and Prices
-		MinterestOracle: orml_oracle::<Instance1>::{Pallet, Storage, Call, Config<T>, Event<T>},
+		MinterestOracle: orml_oracle::<Instance1>::{Pallet, Storage, Call, Event<T>},
 		Prices: module_prices::{Pallet, Storage, Call, Event<T>, Config<T>},
 
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
@@ -875,9 +887,9 @@ impl_runtime_apis! {
 			data.check_extrinsics(&block)
 		}
 
-		fn random_seed() -> <Block as BlockT>::Hash {
-			RandomnessCollectiveFlip::random_seed()
-		}
+		// fn random_seed() -> <Block as BlockT>::Hash {
+		// 	RandomnessCollectiveFlip::random_seed()
+		// }
 	}
 
 	impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
@@ -896,12 +908,18 @@ impl_runtime_apis! {
 	}
 
 	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
-		fn slot_duration() -> u64 {
-			Aura::slot_duration()
+		fn slot_duration() -> sp_consensus_aura::SlotDuration {
+			sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
 		}
 
 		fn authorities() -> Vec<AuraId> {
 			Aura::authorities()
+		}
+	}
+
+	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
+		fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
+			ParachainSystem::collect_collation_info()
 		}
 	}
 

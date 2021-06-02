@@ -6,12 +6,13 @@ use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
 	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, GenesisConfig,
-	GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
-	MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, OperatorMembershipMinterestConfig,
-	ParachainInfoConfig, PricesConfig, Rate, RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig,
-	WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
+	LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig, MinterestModelConfig,
+	MntTokenConfig, OperatorMembershipMinterestConfig, ParachainInfoConfig, PricesConfig, Rate, RiskManagerConfig,
+	Signature, SudoConfig, SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM,
+	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
+use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
@@ -22,7 +23,7 @@ use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::One;
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify, Zero},
-	FixedPointNumber, Rate,
+	FixedPointNumber,
 };
 
 // The URL for the telemetry server.
@@ -41,7 +42,7 @@ pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 ///
 /// Additional parameters for some Substrate core modules,
 /// customizable from the chain spec.
-#[derive(Default, Clone, Serialize, Deserialize, ChainSpecExtension)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
 #[serde(rename_all = "camelCase")]
 pub struct Extensions {
 	/// The relay chain of the Parachain.
@@ -79,18 +80,18 @@ where
 // 	(get_from_seed::<AuraId>(seed), get_from_seed::<GrandpaId>(seed))
 // }
 
-pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
+pub fn development_config(id: ParaId) -> ChainSpec {
 	let mut properties = Map::new();
 	properties.insert("tokenDecimals".into(), 18.into());
 
-	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
+	let wasm_binary = WASM_BINARY.expect("WASM binary was not build, please build it!");
 
-	Ok(ChainSpec::from_genesis(
+	ChainSpec::from_genesis(
 		// Name
 		"Development",
 		// ID
 		"dev",
-		ChainType::local,
+		ChainType::Local,
 		move || {
 			testnet_genesis(
 				wasm_binary,
@@ -125,16 +126,16 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 			relay_chain: "rococo-local".into(),
 			para_id: id.into(),
 		},
-	))
+	)
 }
 
-pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
+pub fn local_testnet_config(id: ParaId) -> ChainSpec {
 	let mut properties = Map::new();
 	properties.insert("tokenDecimals".into(), 18.into());
 
-	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
+	let wasm_binary = WASM_BINARY.expect("WASM binary was not build, please build it!");
 
-	Ok(ChainSpec::from_genesis(
+	ChainSpec::from_genesis(
 		// Name
 		"Local Testnet",
 		// ID
@@ -179,16 +180,16 @@ pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 			relay_chain: "rococo-local".into(),
 			para_id: id.into(),
 		},
-	))
+	)
 }
 
-pub fn minterest_turbo_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
+pub fn minterest_turbo_testnet_config(id: ParaId) -> ChainSpec {
 	let mut properties = Map::new();
 	properties.insert("tokenDecimals".into(), 18.into());
 
-	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
+	let wasm_binary = WASM_BINARY.expect("WASM binary was not build, please build it!");
 
-	Ok(ChainSpec::from_genesis(
+	ChainSpec::from_genesis(
 		"Minterest Turbo",
 		"turbo-latest",
 		ChainType::Live,
@@ -228,7 +229,7 @@ pub fn minterest_turbo_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 			relay_chain: "rococo-turbo".into(),
 			para_id: id.into(),
 		},
-	))
+	)
 }
 
 /// Configure initial storage state for FRAME pallets.
@@ -240,13 +241,13 @@ fn testnet_genesis(
 	id: ParaId,
 ) -> GenesisConfig {
 	GenesisConfig {
-		frame_system: Some(SystemConfig {
+		frame_system: SystemConfig {
 			// Add Wasm runtime to storage.
 			code: wasm_binary.to_vec(),
 			changes_trie_config: Default::default(),
-		}),
-		parachain_info: Some(ParachainInfoConfig { parachain_id: id }),
-		pallet_balances: Some(BalancesConfig {
+		},
+		parachain_info: ParachainInfoConfig { parachain_id: id },
+		pallet_balances: BalancesConfig {
 			// Configure endowed accounts with initial balance of INITIAL_BALANCE.
 			balances: endowed_accounts
 				.iter()
@@ -258,16 +259,16 @@ fn testnet_genesis(
 						.map(|x| (x.clone(), INITIAL_TREASURY)),
 				)
 				.collect(),
-		}),
-		pallet_aura: Some(AuraConfig {
+		},
+		pallet_aura: AuraConfig {
 			authorities: initial_authorities,
-		}),
-		pallet_sudo: Some(SudoConfig {
+		},
+		pallet_sudo: SudoConfig {
 			// Assign network admin rights.
 			key: root_key.clone(),
-		}),
+		},
 		cumulus_pallet_aura_ext: Default::default(),
-		orml_tokens: Some(TokensConfig {
+		orml_tokens: TokensConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
 				.chain(get_all_modules_accounts()[1..3].iter()) // liquidation_pools + DEXes
@@ -280,8 +281,8 @@ fn testnet_genesis(
 					]
 				})
 				.collect(),
-		}),
-		liquidity_pools: Some(LiquidityPoolsConfig {
+		},
+		liquidity_pools: LiquidityPoolsConfig {
 			pools: vec![
 				(
 					ETH,
@@ -317,8 +318,8 @@ fn testnet_genesis(
 				),
 			],
 			pool_user_data: vec![],
-		}),
-		controller: Some(ControllerConfig {
+		},
+		controller: ControllerConfig {
 			controller_dates: vec![
 				(
 					ETH,
@@ -408,8 +409,8 @@ fn testnet_genesis(
 				),
 			],
 			whitelist_mode: false,
-		}),
-		minterest_model: Some(MinterestModelConfig {
+		},
+		minterest_model: MinterestModelConfig {
 			minterest_model_params: vec![
 				(
 					ETH,
@@ -448,8 +449,8 @@ fn testnet_genesis(
 					},
 				),
 			],
-		}),
-		risk_manager: Some(RiskManagerConfig {
+		},
+		risk_manager: RiskManagerConfig {
 			risk_manager_dates: vec![
 				(
 					ETH,
@@ -488,8 +489,8 @@ fn testnet_genesis(
 					},
 				),
 			],
-		}),
-		liquidation_pools: Some(LiquidationPoolsConfig {
+		},
+		liquidation_pools: LiquidationPoolsConfig {
 			balancing_period: 10, // FIXME: temporary value.
 			liquidation_pools: vec![
 				(
@@ -525,8 +526,8 @@ fn testnet_genesis(
 					},
 				),
 			],
-		}),
-		module_prices: Some(PricesConfig {
+		},
+		module_prices: PricesConfig {
 			locked_price: vec![
 				(DOT, Rate::saturating_from_integer(2)),
 				(KSM, Rate::saturating_from_integer(2)),
@@ -534,30 +535,26 @@ fn testnet_genesis(
 				(BTC, Rate::saturating_from_integer(2)),
 			],
 			_phantom: Default::default(),
-		}),
-		pallet_collective_Instance1: Some(Default::default()),
-		pallet_membership_Instance1: Some(MinterestCouncilMembershipConfig {
+		},
+		pallet_collective_Instance1: Default::default(),
+		pallet_membership_Instance1: MinterestCouncilMembershipConfig {
 			members: vec![root_key.clone()],
 			phantom: Default::default(),
-		}),
-		pallet_collective_Instance2: Some(Default::default()),
-		pallet_membership_Instance2: Some(WhitelistCouncilMembershipConfig {
+		},
+		pallet_collective_Instance2: Default::default(),
+		pallet_membership_Instance2: WhitelistCouncilMembershipConfig {
 			members: vec![root_key],
 			phantom: Default::default(),
-		}),
-		pallet_membership_Instance3: Some(OperatorMembershipMinterestConfig {
+		},
+		pallet_membership_Instance3: OperatorMembershipMinterestConfig {
 			members: endowed_accounts.clone(),
 			phantom: Default::default(),
-		}),
-		orml_oracle_Instance1: Some(MinterestOracleConfig {
-			members: Default::default(), // initialized by OperatorMembership
-			phantom: Default::default(),
-		}),
-		mnt_token: Some(MntTokenConfig {
+		},
+		mnt_token: MntTokenConfig {
 			mnt_rate: 10 * DOLLARS,
 			mnt_claim_threshold: 0, // disable by default
 			minted_pools: vec![DOT, ETH, KSM, BTC],
 			_phantom: Default::default(),
-		}),
+		},
 	}
 }

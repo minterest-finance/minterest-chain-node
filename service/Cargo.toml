@@ -35,11 +35,14 @@ sc-basic-authorship = { git = "https://github.com/paritytech/substrate", branch 
 sc-network = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
 sc-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", optional = true}
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3"}
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
-prometheus-endpoint = { package = "substrate-prometheus-endpoint", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3"}
+#prometheus-endpoint = { package = "substrate-prometheus-endpoint", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3"}
 sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
 sp-timestamp = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.3' }
+substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3"}
+sc-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
+
 
 
 
@@ -77,6 +80,7 @@ liquidity-pools = { path = "../pallets/liquidity-pools" }
 liquidation-pools = { path = "../pallets/liquidation-pools" }
 minterest-model = { path = "../pallets/minterest-model" }
 risk-manager = { path = "../pallets/risk-manager" }
+minterest-primitives = { path = "../primitives"}
 
 node-minterest-runtime = { path = '../runtime' }
 

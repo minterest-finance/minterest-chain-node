@@ -12,10 +12,13 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", optional = true}
 sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", optional = true}
 frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", optional = true}
-sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.3', optional = true }
+sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.3' }
 
 service = { package = "minterest-service", path = "../service", default-features = false, optional = true}
 node-minterest-runtime = { path = '../runtime' }
+sc-tracing = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.3' }
+sc-telemetry = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.3' }
+
 
 # Cumulus dependencies
 cumulus-client-consensus-aura = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.3' }
