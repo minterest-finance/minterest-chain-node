@@ -297,21 +297,24 @@ impl<T: Config> Pallet<T> {
 	fn locked_balance(who: &T::AccountId) -> BalanceOf<T> {
 		let now = <frame_system::Module<T>>::block_number();
 		<VestingSchedules<T>>::mutate_exists(who, |maybe_schedules| {
-			let total = if let Some(schedules) = maybe_schedules.as_mut() {
+			let total_locked = if let Some(schedules) = maybe_schedules.as_mut() {
 				let mut total: BalanceOf<T> = Zero::zero();
+				// leave only schedules with a locked balance
 				schedules.retain(|s| {
-					let amount = s.locked_amount(now);
-					total = total.saturating_add(amount);
-					!amount.is_zero()
+					// calculate the remaining number of locked tokens in the schedule
+					let locked_amount = s.locked_amount(now);
+					total = total.saturating_add(locked_amount);
+					!locked_amount.is_zero()
 				});
 				total
 			} else {
 				Zero::zero()
 			};
-			if total.is_zero() {
+			// If there is no locked balance left, then clear the schedule vector
+			if total_locked.is_zero() {
 				*maybe_schedules = None;
 			}
-			total
+			total_locked
 		})
 	}
 
@@ -324,12 +327,12 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::TooManyVestingSchedules
 		);
 
-		let total_amount = Self::locked_balance(to)
+		let total_locked = Self::locked_balance(to)
 			.checked_add(&schedule_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		T::Currency::transfer(from, to, schedule_amount, ExistenceRequirement::AllowDeath)?;
-		T::Currency::set_lock(VESTING_LOCK_ID, to, total_amount, WithdrawReasons::all());
+		T::Currency::set_lock(VESTING_LOCK_ID, to, total_locked, WithdrawReasons::all());
 		<VestingSchedules<T>>::append(to, schedule);
 		Ok(())
 	}

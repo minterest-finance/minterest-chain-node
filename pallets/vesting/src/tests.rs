@@ -32,6 +32,8 @@ fn vesting_from_chain_spec_works() {
 		System::set_block_number(13);
 
 		assert_ok!(Vesting::claim(Origin::signed(CHARLIE)));
+		let expected_event = Event::vesting(crate::Event::Claimed(CHARLIE, 5));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		assert_ok!(PalletBalances::ensure_can_withdraw(
 			&CHARLIE,
