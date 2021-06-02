@@ -578,6 +578,10 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Calculates total amount of money currently held in the protocol in usd.
+	/// Total value is calculated as: total_value_of_pool_1 + ... + total_value_of_pool_n
+	/// Where (total_value_of_pool_1, ..., total_value_of_pool_n) is a set of all existing pools
+	/// total_value_of_pool_i = liquidity_of_pool_i - protocol_interest_of_pool_i +
+	/// borrowed_of_pool_i + borrow_interest_of_pool_i
 	pub fn get_protocol_total_value() -> BalanceResult {
 		let total_value = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
@@ -589,14 +593,14 @@ impl<T: Config> Pallet<T> {
 					.checked_add(pool_data.total_borrowed)
 					.and_then(|v| v.checked_sub(pool_data.total_protocol_interest))
 					.ok_or(Error::<T>::NumOverflow)?;
-				let total_value = current_value
-					.checked_add(pool_total_value)
-					.ok_or(Error::<T>::NumOverflow)?;
-
 				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-				Ok(Rate::from_inner(total_value)
+				let pool_total_value_usd = Rate::from_inner(pool_total_value)
 					.checked_mul(&oracle_price)
 					.map(|val| val.into_inner())
+					.ok_or(Error::<T>::NumOverflow)?;
+
+				Ok(current_value
+					.checked_add(pool_total_value_usd)
 					.ok_or(Error::<T>::NumOverflow)?)
 			})?;
 		Ok(total_value)

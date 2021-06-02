@@ -274,6 +274,94 @@ fn test_rates_using_rpc() {
 }
 
 #[test]
+fn test_get_protocol_total_value_rpc() {
+	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
+		.build()
+		.execute_with(|| {
+			assert_ok!(set_oracle_prices(vec![
+				(DOT, Price::saturating_from_integer(2)),
+				(ETH, Price::saturating_from_integer(3)),
+			]));
+			assert_ok!(Prices::lock_price(origin_root(), DOT));
+			assert_ok!(Prices::lock_price(origin_root(), ETH));
+
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(100_000)));
+			// Total: 100 DOT * 2
+			assert_eq!(
+				get_protocol_total_value_rpc(),
+				Some(BalanceInfo {
+					amount: dollars(200_000)
+				})
+			);
+
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
+			// Total: 100 DOT * 2 + 100 ETH * 3
+			assert_eq!(
+				get_protocol_total_value_rpc(),
+				Some(BalanceInfo {
+					amount: dollars(500_000)
+				})
+			);
+
+			System::set_block_number(10);
+			// Total hasn`t changed due to no borrows
+			assert_eq!(
+				get_protocol_total_value_rpc(),
+				Some(BalanceInfo {
+					amount: dollars(500_000)
+				})
+			);
+
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
+			// Total: 100 DOT * 2 + 100 ETH * 3 + 50 DOT * 2 + 70 ETH * 3
+			assert_eq!(
+				get_protocol_total_value_rpc(),
+				Some(BalanceInfo {
+					amount: dollars(810_000)
+				})
+			);
+
+			System::set_block_number(20);
+
+			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(70_000)));
+			// Total is the same:
+			//   liquidity: 100 DOT * 2 + 100 ETH * 3 + 50 DOT * 2 + 70 ETH * 3 - (borrowed) 70 DOT * 2 +
+			//   borrowed: 70 DOT * 2
+			assert_eq!(
+				get_protocol_total_value_rpc(),
+				Some(BalanceInfo {
+					amount: dollars(810_000)
+				})
+			);
+
+			System::set_block_number(30);
+			// Total:
+			//   liquidity: 100 DOT * 2 + 100 ETH * 3 + 50 DOT * 2 + 70 ETH * 3 - (borrowed) 70 DOT * 2 +
+			//   borrowed: 70 DOT * 2 + interest
+			assert_eq!(
+				get_protocol_total_value_rpc(),
+				Some(BalanceInfo {
+					amount: 810_000_005_292_000_000_000_000
+				})
+			);
+
+			assert_ok!(MinterestProtocol::repay_all(bob(), DOT));
+			// Total hasn`t changed because protocol interest isn`t counted
+			assert_eq!(
+				get_protocol_total_value_rpc(),
+				Some(BalanceInfo {
+					amount: 810_000_005_292_000_000_000_000
+				})
+			);
+		});
+}
+
+#[test]
 fn test_get_utilization_rate_rpc() {
 	ExtBuilder::default()
 		.pool_initial(DOT)
