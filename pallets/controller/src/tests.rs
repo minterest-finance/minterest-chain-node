@@ -7,6 +7,54 @@ use frame_support::{assert_err, assert_noop, assert_ok};
 use sp_runtime::DispatchError::BadOrigin;
 
 #[test]
+fn operations_are_paused_by_default() {
+	ExtBuilder::default().build().execute_with(|| {
+		// All operations are paused when nothing is in storage
+		assert_eq!(Controller::pause_keepers(KSM), PauseKeeper::all_paused());
+	});
+}
+
+#[test]
+fn protocol_operations_not_working_for_nonexisting_pool() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_noop!(
+			Controller::pause_operation(alice(), ETH, Operation::Deposit),
+			Error::<Runtime>::PoolNotFound
+		);
+
+		assert_noop!(
+			Controller::resume_operation(alice(), ETH, Operation::Deposit),
+			Error::<Runtime>::PoolNotFound
+		);
+
+		assert_noop!(
+			Controller::set_protocol_interest_factor(alice(), ETH, Rate::one()),
+			Error::<Runtime>::PoolNotFound
+		);
+
+		assert_noop!(
+			Controller::set_max_borrow_rate(alice(), ETH, Rate::one()),
+			Error::<Runtime>::PoolNotFound
+		);
+
+		assert_noop!(
+			Controller::set_collateral_factor(alice(), ETH, Rate::one()),
+			Error::<Runtime>::PoolNotFound
+		);
+
+		assert_noop!(
+			Controller::set_borrow_cap(alice(), ETH, Some(100u128)),
+			Error::<Runtime>::PoolNotFound
+		);
+
+		assert_noop!(
+			Controller::set_protocol_interest_threshold(alice(), ETH, 100u128),
+			Error::<Runtime>::PoolNotFound
+		);
+	});
+}
+
+#[test]
 fn accrue_interest_should_work() {
 	ExtBuilder::default()
 		.pool_total_borrowed(DOT, dollars(80_u128))
@@ -98,6 +146,7 @@ fn calculate_interest_factor_should_work() {
 #[test]
 fn borrow_balance_stored_with_zero_balance_should_work() {
 	ExtBuilder::default()
+		.pool_mock(DOT)
 		.pool_user_data(DOT, ALICE, Balance::zero(), Rate::from_inner(0), true, 0)
 		.build()
 		.execute_with(|| {
@@ -179,6 +228,8 @@ fn calculate_utilization_rate_should_work() {
 #[test]
 fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work() {
 	ExtBuilder::default()
+		.pool_mock(DOT)
+		.pool_mock(BTC)
 		.pool_user_data(DOT, ALICE, Balance::zero(), Rate::from_inner(0), true, 0)
 		.pool_user_data(BTC, BOB, Balance::zero(), Rate::from_inner(0), false, 0)
 		.build()
@@ -306,6 +357,8 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 				Controller::get_liquidity_pool_exchange_rate(DOT),
 				Some(Rate::saturating_from_rational(32, 10))
 			);
+
+			assert_eq!(Controller::get_liquidity_pool_exchange_rate(ETH), None);
 		});
 }
 
@@ -323,6 +376,8 @@ fn get_liquidity_pool_borrow_and_supply_rates_less_than_kink() {
 				Controller::get_liquidity_pool_borrow_and_supply_rates(DOT),
 				Some((Rate::from_inner(6750000014), Rate::from_inner(4556250018)))
 			);
+
+			assert_eq!(Controller::get_liquidity_pool_borrow_and_supply_rates(ETH), None);
 		});
 }
 
@@ -707,7 +762,8 @@ fn set_collateral_factor_should_work() {
 
 #[test]
 fn pause_operation_should_work() {
-	ExtBuilder::default().pool_mock(DOT).build().execute_with(|| {
+	ExtBuilder::default()
+		.pool_mock(DOT).build().execute_with(|| {
 		assert!(!Controller::pause_keepers(&DOT).deposit_paused);
 		assert!(!Controller::pause_keepers(&DOT).redeem_paused);
 		assert!(!Controller::pause_keepers(&DOT).borrow_paused);

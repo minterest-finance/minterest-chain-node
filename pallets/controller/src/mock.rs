@@ -70,7 +70,7 @@ impl MockPriceSource {
 		UNDERLYING_PRICE.with(|v| *v.borrow_mut() = price);
 	}
 }
-impl PriceProvider<CurrencyId> for MockPriceSource {
+impl PricesManager<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
 		UNDERLYING_PRICE.with(|v| *v.borrow_mut())
 	}
@@ -245,46 +245,9 @@ impl ExtBuilder {
 				),
 			],
 			pause_keepers: vec![
-				(
-					ETH,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
-				(
-					DOT,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
-				(
-					KSM,
-					PauseKeeper {
-						deposit_paused: true,
-						redeem_paused: true,
-						borrow_paused: true,
-						repay_paused: true,
-						transfer_paused: true,
-					},
-				),
-				(
-					BTC,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
+				(ETH, PauseKeeper::all_unpaused()),
+				(DOT, PauseKeeper::all_unpaused()),
+				(BTC, PauseKeeper::all_unpaused()),
 			],
 			whitelist_mode: false,
 		}

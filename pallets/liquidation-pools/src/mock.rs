@@ -3,10 +3,11 @@ use super::*;
 use crate as liquidation_pools;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system::EnsureSignedBy;
+use liquidity_pools::Pool;
 use minterest_primitives::Price;
 pub use minterest_primitives::{currency::CurrencyType::WrappedToken, Balance, CurrencyId, Rate};
 use orml_traits::parameter_type_with_key;
-use pallet_traits::PriceProvider;
+use pallet_traits::PricesManager;
 use sp_core::H256;
 use sp_io::TestExternalities;
 use sp_runtime::testing::TestXt;
@@ -56,7 +57,7 @@ parameter_types! {
 
 pub struct MockPriceSource;
 
-impl PriceProvider<CurrencyId> for MockPriceSource {
+impl PricesManager<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
 		Some(Price::one())
 	}
@@ -113,14 +114,40 @@ pub fn alice() -> Origin {
 
 pub struct ExternalityBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+	liquidity_pools: Vec<(CurrencyId, Pool)>,
 	liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
-	balancing_period: BlockNumber,
 }
 
 impl Default for ExternalityBuilder {
 	fn default() -> Self {
 		Self {
 			endowed_accounts: vec![],
+			liquidity_pools: vec![
+				(
+					DOT,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						total_protocol_interest: Balance::zero(),
+					},
+				),
+				(
+					ETH,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						total_protocol_interest: Balance::zero(),
+					},
+				),
+				(
+					BTC,
+					Pool {
+						total_borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						total_protocol_interest: Balance::zero(),
+					},
+				),
+			],
 			liquidation_pools: vec![(
 				DOT,
 				LiquidationPoolData {
@@ -129,7 +156,6 @@ impl Default for ExternalityBuilder {
 					max_ideal_balance: None,
 				},
 			)],
-			balancing_period: 600, // Blocks per 10 minutes
 		}
 	}
 }
@@ -155,9 +181,16 @@ impl ExternalityBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
+		liquidity_pools::GenesisConfig::<Test> {
+			pools: self.liquidity_pools,
+			pool_user_data: vec![],
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 		liquidation_pools::GenesisConfig::<Test> {
 			liquidation_pools: self.liquidation_pools,
-			balancing_period: self.balancing_period,
+			phantom: PhantomData,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

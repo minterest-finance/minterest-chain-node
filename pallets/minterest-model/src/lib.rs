@@ -14,11 +14,12 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use minterest_primitives::{CurrencyId, Rate};
+use pallet_traits::MinterestModelAPI;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul},
-	DispatchError, FixedPointNumber, RuntimeDebug,
+	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, result};
 
@@ -63,8 +64,8 @@ pub mod module {
 		/// The approximate number of blocks per year
 		type BlocksPerYear: Get<u128>;
 
-		/// The origin which may update minterest model parameters. Root can
-		/// always do this.
+		/// The origin which may update minterest model parameters. Root or
+		/// Half Minterest Council can always do this.
 		type ModelUpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		/// Weight information for the extrinsics.
@@ -85,6 +86,8 @@ pub mod module {
 		KinkCannotBeMoreThanOne,
 		/// Borrow interest rate calculation error.
 		BorrowRateCalculationError,
+		/// Pool is already created
+		PoolAlreadyCreated,
 	}
 
 	#[pallet::event]
@@ -104,8 +107,7 @@ pub mod module {
 	/// jump_multiplier_per_block)`.
 	#[pallet::storage]
 	#[pallet::getter(fn minterest_model_params)]
-	pub(crate) type MinterestModelParams<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyId, MinterestModelData, ValueQuery>;
+	pub type MinterestModelParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, MinterestModelData, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -260,12 +262,13 @@ pub mod module {
 				.ok_or(Error::<T>::NumOverflow)?;
 
 			// Multiplier per block cannot be set to 0 at the same time as Base rate per block .
-			if new_multiplier_per_block.is_zero() {
-				ensure!(
-					!Self::minterest_model_params(pool_id).base_rate_per_block.is_zero(),
-					Error::<T>::MultiplierPerBlockCannotBeZero
-				);
-			}
+			ensure!(
+				Self::is_valid_base_rate_and_multiplier(
+					new_multiplier_per_block,
+					Self::minterest_model_params(pool_id).base_rate_per_block
+				),
+				Error::<T>::MultiplierPerBlockCannotBeZero
+			);
 
 			// Write the previously calculated values into storage.
 			MinterestModelParams::<T>::mutate(pool_id, |r| r.multiplier_per_block = new_multiplier_per_block);
@@ -288,7 +291,7 @@ pub mod module {
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
-			ensure!(kink <= Rate::one(), Error::<T>::KinkCannotBeMoreThanOne);
+			ensure!(Self::is_valid_kink(kink), Error::<T>::KinkCannotBeMoreThanOne);
 
 			// Write the previously calculated values into storage.
 			MinterestModelParams::<T>::mutate(pool_id, |r| r.kink = kink);
@@ -300,6 +303,40 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
+	/// This is a part of a pool creation flow
+	/// Checks parameters validity and creates storage records for MinterestModelParams
+	pub fn create_pool(
+		currency_id: CurrencyId,
+		kink: Rate,
+		base_rate_per_block: Rate,
+		multiplier_per_block: Rate,
+		jump_multiplier_per_block: Rate,
+	) -> DispatchResult {
+		ensure!(
+			!MinterestModelParams::<T>::contains_key(currency_id),
+			Error::<T>::PoolAlreadyCreated
+		);
+		ensure!(Self::is_valid_kink(kink), Error::<T>::KinkCannotBeMoreThanOne);
+		ensure!(
+			Self::is_valid_base_rate_and_multiplier(
+				multiplier_per_block,
+				Self::minterest_model_params(currency_id).base_rate_per_block
+			),
+			Error::<T>::MultiplierPerBlockCannotBeZero
+		);
+
+		MinterestModelParams::<T>::insert(
+			currency_id,
+			MinterestModelData {
+				kink,
+				base_rate_per_block,
+				multiplier_per_block,
+				jump_multiplier_per_block,
+			},
+		);
+		Ok(())
+	}
+
 	/// Calculates the current borrow rate per block.
 	/// - `underlying_asset`: Asset ID for which the borrow interest rate is calculated.
 	/// - `utilization_rate`: Current Utilization rate value.
@@ -342,5 +379,49 @@ impl<T: Config> Pallet<T> {
 		};
 
 		Ok(borrow_interest_rate)
+	}
+
+	pub fn is_valid_kink(kink: Rate) -> bool {
+		kink <= Rate::one()
+	}
+
+	pub fn is_valid_base_rate_and_multiplier(base_rate_per_block: Rate, multiplier_per_block: Rate) -> bool {
+		!(base_rate_per_block.is_zero() && multiplier_per_block.is_zero())
+	}
+}
+
+impl<T: Config> MinterestModelAPI for Pallet<T> {
+	/// This is a part of a pool creation flow
+	/// Checks parameters validity and creates storage records for MinterestModelParams
+	fn create_pool(
+		currency_id: CurrencyId,
+		kink: Rate,
+		base_rate_per_block: Rate,
+		multiplier_per_block: Rate,
+		jump_multiplier_per_block: Rate,
+	) -> DispatchResult {
+		ensure!(
+			!MinterestModelParams::<T>::contains_key(currency_id),
+			Error::<T>::PoolAlreadyCreated
+		);
+		ensure!(Self::is_valid_kink(kink), Error::<T>::KinkCannotBeMoreThanOne);
+		ensure!(
+			Self::is_valid_base_rate_and_multiplier(
+				multiplier_per_block,
+				Self::minterest_model_params(currency_id).base_rate_per_block
+			),
+			Error::<T>::MultiplierPerBlockCannotBeZero
+		);
+
+		MinterestModelParams::<T>::insert(
+			currency_id,
+			MinterestModelData {
+				kink,
+				base_rate_per_block,
+				multiplier_per_block,
+				jump_multiplier_per_block,
+			},
+		);
+		Ok(())
 	}
 }

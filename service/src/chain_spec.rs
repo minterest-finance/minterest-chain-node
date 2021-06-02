@@ -8,7 +8,7 @@ use node_minterest_runtime::{
 	GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
 	MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, OperatorMembershipMinterestConfig, PricesConfig,
 	RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, BTC,
-	DOLLARS, DOT, ETH, KSM, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
+	DOLLARS, DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -81,6 +81,10 @@ pub fn development_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie"),
+					get_account_id_from_seed::<sr25519::Public>("Dave"),
+					get_account_id_from_seed::<sr25519::Public>("Eve"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 					// Eugene
 					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
 				],
@@ -331,46 +335,10 @@ fn testnet_genesis(
 				),
 			],
 			pause_keepers: vec![
-				(
-					ETH,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
-				(
-					DOT,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
-				(
-					KSM,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
-				(
-					BTC,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
+				(ETH, PauseKeeper::all_unpaused()),
+				(DOT, PauseKeeper::all_unpaused()),
+				(KSM, PauseKeeper::all_unpaused()),
+				(BTC, PauseKeeper::all_unpaused()),
 			],
 			whitelist_mode: false,
 		}),
@@ -455,7 +423,7 @@ fn testnet_genesis(
 			],
 		}),
 		liquidation_pools: Some(LiquidationPoolsConfig {
-			balancing_period: 10, // FIXME: temporary value.
+			phantom: Default::default(),
 			liquidation_pools: vec![
 				(
 					DOT,
@@ -497,6 +465,7 @@ fn testnet_genesis(
 				(KSM, FixedU128::saturating_from_integer(2)),
 				(ETH, FixedU128::saturating_from_integer(2)),
 				(BTC, FixedU128::saturating_from_integer(2)),
+				(MNT, FixedU128::saturating_from_integer(2)),
 			],
 			_phantom: Default::default(),
 		}),

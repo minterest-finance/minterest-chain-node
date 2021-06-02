@@ -676,9 +676,11 @@ fn get_all_locked_prices_rpc_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(set_oracle_price_for_all_pools(10_000));
 
-		vec![DOT, KSM, BTC, ETH].into_iter().for_each(|pool_id| {
-			assert_ok!(Prices::lock_price(origin_root(), pool_id));
-		});
+		CurrencyId::get_enabled_tokens_in_protocol(minterest_primitives::currency::CurrencyType::UnderlyingAsset)
+			.into_iter()
+			.for_each(|pool_id| {
+				assert_ok!(Prices::lock_price(origin_root(), pool_id));
+			});
 
 		// Check that locked prices are returned
 		// By default all price set to 10_000
@@ -858,4 +860,86 @@ fn get_user_supply_and_borrow_apy_should_work() {
 				))
 			);
 		})
+}
+
+#[test]
+fn get_mnt_borrow_and_supply_rates_should_work() {
+	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
+		.pool_initial(BTC)
+		.pool_initial(KSM)
+		.set_mnt_rate(10)
+		.build()
+		.execute_with(|| {
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 10_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 15_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), BTC, 25_000 * DOLLARS));
+
+			LiquidityPools::enable_is_collateral_internal(&ALICE::get(), DOT);
+			LiquidityPools::enable_is_collateral_internal(&ALICE::get(), ETH);
+			LiquidityPools::enable_is_collateral_internal(&BOB::get(), BTC);
+
+			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 5_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::borrow(bob(), ETH, 10_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::borrow(alice(), BTC, 5_000 * DOLLARS));
+
+			run_to_block(5);
+			// Sum of all utilities: 40_000$
+			// Expected mnt_speed = pool_utilities / sum_of_all_utilities * MntRate
+			//DOT: 10000/40000*10 = 2.5
+			//ETH: 20000/40000*10 = 5
+			//BTC: 10000/40000*10= 2.5
+			assert_ok!(MntToken::refresh_mnt_speeds());
+			assert_eq!(MntToken::mnt_speeds(DOT), 2_500_000_000_000_000_000);
+			assert_eq!(MntToken::mnt_speeds(ETH), 5_000_000_000_000_000_000);
+			assert_eq!(MntToken::mnt_speeds(BTC), 2_500_000_000_000_000_000);
+
+			// Borrow and Supply rates per block
+			// Prices: DOT[0] = 2 USD, ETH[1] = 2 USD, BTC[3] = 2 USD, MNT[4] = 4 USD
+			// Expected borrow_rate = mnt_speed * mnt_price / (total_borrow * price):
+			// DOT: 2.5 * 4 / (5000 * 2) = 0.001
+			// ETH: 5 * 4 / (10000 * 2) = 0.001
+			// BTC: 2.5 * 4 / (5000 * 2) = 0.001
+			// Expected supply_rate = mnt_speed * mnt_price / (total_supply * price):
+			// DOT: 2.5 * 4 / (10000 * 2) = 0.0005
+			// ETH: 5 * 4 / (15000 * 2) = 0.00066
+			// BTC: 2.5 * 4 / (25000 * 2) = 0.0002
+			assert_eq!(
+				get_mnt_borrow_and_supply_rates(DOT),
+				(
+					Rate::saturating_from_rational(1, 1000),
+					Rate::saturating_from_rational(5, 10000)
+				)
+			);
+			assert_eq!(
+				get_mnt_borrow_and_supply_rates(ETH),
+				(
+					Rate::saturating_from_rational(1, 1000),
+					Rate::from_inner(666_666_666_666_666)
+				)
+			);
+			assert_eq!(
+				get_mnt_borrow_and_supply_rates(BTC),
+				(
+					Rate::saturating_from_rational(1, 1000),
+					Rate::saturating_from_rational(2, 10000)
+				)
+			);
+			// Check that (0,0) will be returned for pool with 0 borrow
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), KSM, 10_000 * DOLLARS));
+			run_to_block(7);
+			assert_eq!(
+				get_mnt_borrow_and_supply_rates(KSM),
+				(Rate::saturating_from_integer(0), Rate::saturating_from_integer(0))
+			);
+		});
+}
+
+#[test]
+fn pool_exists_should_work() {
+	ExtBuilder::default().pool_initial(DOT).build().execute_with(|| {
+		assert_eq!(pool_exists_rpc(DOT), true);
+		assert_eq!(pool_exists_rpc(ETH), false);
+	});
 }

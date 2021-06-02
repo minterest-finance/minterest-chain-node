@@ -31,7 +31,7 @@ use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
-use pallet_traits::ControllerAPI;
+use pallet_traits::{ControllerManager, MntManager, PoolsManager};
 use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -70,7 +70,7 @@ pub use sp_runtime::{Perbill, Permill, Perquintill};
 pub use constants::{currency::*, time::*, *};
 use frame_support::traits::Contains;
 use frame_system::{EnsureOneOf, EnsureRoot};
-use pallet_traits::PriceProvider;
+use pallet_traits::PricesManager;
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -363,7 +363,10 @@ impl minterest_protocol::Config for Runtime {
 	type MntManager = MntToken;
 	type WhitelistMembers = WhitelistCouncilProvider;
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
-	type ControllerAPI = Controller;
+	type ControllerManager = Controller;
+	type RiskManagerAPI = RiskManager;
+	type MinterestModelAPI = MinterestModel;
+	type CreatePoolOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 
 pub struct WhitelistCouncilProvider;
@@ -462,6 +465,7 @@ impl minterest_model::Config for Runtime {
 parameter_types! {
 	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
 	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
+	pub const RiskManagerWorkerMaxDurationMs: u64 = 2000;
 }
 
 impl risk_manager::Config for Runtime {
@@ -472,11 +476,13 @@ impl risk_manager::Config for Runtime {
 	type MntManager = MntToken;
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type RiskManagerWeightInfo = weights::risk_manager::WeightInfo<Runtime>;
-	type ControllerAPI = Controller;
+	type ControllerManager = Controller;
+	type OffchainWorkerMaxDurationMs = RiskManagerWorkerMaxDurationMs;
 }
 
 parameter_types! {
 	pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
+	pub RefreshSpeedPeriod: BlockNumber = REFRESH_SPEED_PERIOD;
 }
 
 impl mnt_token::Config for Runtime {
@@ -485,9 +491,10 @@ impl mnt_token::Config for Runtime {
 	type UpdateOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type LiquidityPoolsManager = LiquidityPools;
 	type MultiCurrency = Currencies;
-	type ControllerAPI = Controller;
+	type ControllerManager = Controller;
 	type MntTokenAccountId = MntTokenAccountId;
 	type MntTokenWeightInfo = weights::mnt_token::WeightInfo<Runtime>;
+	type SpeedRefreshPeriod = RefreshSpeedPeriod;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -506,9 +513,9 @@ impl liquidation_pools::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type UnsignedPriority = LiquidityPoolsPriority;
+	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type PriceSource = Prices;
 	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
-	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type LiquidityPoolsManager = LiquidityPools;
 	type Dex = Dex;
@@ -767,7 +774,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl controller_rpc_runtime_api::ControllerApi<Block, AccountId> for Runtime {
+	impl controller_rpc_runtime_api::ControllerRuntimeApi<Block, AccountId> for Runtime {
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState> {
 			let exchange_rate = Controller::get_liquidity_pool_exchange_rate(pool_id)?;
 			let (borrow_rate, supply_rate) = Controller::get_liquidity_pool_borrow_and_supply_rates(pool_id)?;
@@ -806,14 +813,22 @@ impl_runtime_apis! {
 				Some(BalanceInfo{amount: Controller::get_user_borrow_per_asset(&account_id, underlying_asset_id).ok()?})
 		}
 
+		fn pool_exists(underlying_asset_id: CurrencyId) -> bool {
+			LiquidityPools::pool_exists(&underlying_asset_id)
+		}
+
 		fn get_user_supply_and_borrow_apy(account_id: AccountId) -> Option<(Rate, Rate)> {
 				Controller::get_user_supply_and_borrow_apy(account_id).ok()
 		}
 	}
 
-	impl mnt_token_rpc_runtime_api::MntTokenApi<Block, AccountId> for Runtime {
+	impl mnt_token_rpc_runtime_api::MntTokenRuntimeApi<Block, AccountId> for Runtime {
 		fn get_unclaimed_mnt_balance(account_id: AccountId) -> Option<MntBalanceInfo> {
 				Some(MntBalanceInfo{amount: MntToken::get_unclaimed_mnt_balance(&account_id).ok()?})
+		}
+
+		fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
+			MntToken::get_mnt_borrow_and_supply_rates(pool_id).ok()
 		}
 	}
 
@@ -838,7 +853,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl prices_rpc_runtime_api::PricesApi<Block> for Runtime {
+	impl prices_rpc_runtime_api::PricesRuntimeApi<Block> for Runtime {
 		fn  get_current_price(currency_id: CurrencyId) -> Option<Price> {
 			Prices::get_underlying_price(currency_id)
 		}

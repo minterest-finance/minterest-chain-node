@@ -13,7 +13,7 @@ pub use minterest_primitives::{
 };
 pub(crate) use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
-pub(crate) use pallet_traits::{PoolsManager, PriceProvider};
+pub(crate) use pallet_traits::{LiquidationPoolsManager, PricesManager};
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
@@ -48,7 +48,7 @@ mock_impl_balances_config!(Runtime);
 
 pub struct MockPriceSource;
 
-impl PriceProvider<CurrencyId> for MockPriceSource {
+impl PricesManager<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
 		Some(Price::one())
 	}

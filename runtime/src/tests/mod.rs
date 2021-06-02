@@ -5,7 +5,7 @@ use crate::{
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::{
-	runtime_decl_for_ControllerApi::ControllerApi, BalanceInfo, HypotheticalLiquidityData, PoolState,
+	runtime_decl_for_ControllerRuntimeApi::ControllerRuntimeApi, BalanceInfo, HypotheticalLiquidityData, PoolState,
 	UserPoolBalanceData,
 };
 use frame_support::{
@@ -16,11 +16,10 @@ use liquidation_pools::{LiquidationPoolData, Sales};
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Operation, Price};
-use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenApi::MntTokenApi;
+use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
 use orml_traits::MultiCurrency;
-use pallet_traits::ControllerAPI;
-use pallet_traits::{DEXManager, PoolsManager, PriceProvider};
-use prices_rpc_runtime_api::runtime_decl_for_PricesApi::PricesApi;
+use pallet_traits::{ControllerManager, DEXManager, LiquidationPoolsManager, PoolsManager, PricesManager};
+use prices_rpc_runtime_api::runtime_decl_for_PricesRuntimeApi::PricesRuntimeApi;
 use risk_manager::RiskManagerData;
 use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};
 use test_helper::{BTC, DOT, ETH, KSM, MDOT, METH, MNT};
@@ -45,6 +44,8 @@ struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
+	minted_pools: Vec<CurrencyId>,
+	mnt_rate: Balance,
 }
 
 impl Default for ExtBuilder {
@@ -56,17 +57,22 @@ impl Default for ExtBuilder {
 				(ALICE::get(), DOT, 100_000 * DOLLARS),
 				(ALICE::get(), ETH, 100_000 * DOLLARS),
 				(ALICE::get(), BTC, 100_000 * DOLLARS),
+				(ALICE::get(), KSM, 100_000 * DOLLARS),
 				(BOB::get(), MNT, 100_000 * DOLLARS),
 				(BOB::get(), DOT, 100_000 * DOLLARS),
 				(BOB::get(), ETH, 100_000 * DOLLARS),
 				(BOB::get(), BTC, 100_000 * DOLLARS),
+				(BOB::get(), KSM, 100_000 * DOLLARS),
 				(CHARLIE::get(), MNT, 100_000 * DOLLARS),
 				(CHARLIE::get(), DOT, 100_000 * DOLLARS),
 				(CHARLIE::get(), ETH, 100_000 * DOLLARS),
 				(CHARLIE::get(), BTC, 100_000 * DOLLARS),
+				(CHARLIE::get(), KSM, 100_000 * DOLLARS),
 			],
 			pools: vec![],
 			pool_user_data: vec![],
+			mnt_rate: 10 * DOLLARS,
+			minted_pools: vec![KSM, DOT, ETH, BTC],
 		}
 	}
 }
@@ -146,6 +152,11 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn set_mnt_rate(mut self, rate: u128) -> Self {
+		self.mnt_rate = rate * DOLLARS;
+		self
+	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
@@ -218,38 +229,24 @@ impl ExtBuilder {
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
+				(
+					KSM,
+					ControllerData {
+						// Set the timestamp to one, so that the accrue_interest_rate() does not work.
+						last_interest_accrued_block: 1,
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
+						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
+						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+					},
+				),
 			],
 			pause_keepers: vec![
-				(
-					DOT,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
-				(
-					ETH,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
-				(
-					BTC,
-					PauseKeeper {
-						deposit_paused: false,
-						redeem_paused: false,
-						borrow_paused: false,
-						repay_paused: false,
-						transfer_paused: false,
-					},
-				),
+				(DOT, PauseKeeper::all_unpaused()),
+				(ETH, PauseKeeper::all_unpaused()),
+				(BTC, PauseKeeper::all_unpaused()),
+				(KSM, PauseKeeper::all_unpaused()),
 			],
 			whitelist_mode: false,
 		}
@@ -332,7 +329,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		liquidation_pools::GenesisConfig::<Runtime> {
-			balancing_period: 30, // Blocks per 3 minutes.
+			phantom: PhantomData,
 			liquidation_pools: vec![
 				(
 					DOT,
@@ -377,6 +374,7 @@ impl ExtBuilder {
 				(KSM, Rate::saturating_from_integer(2)),
 				(ETH, Rate::saturating_from_integer(2)),
 				(BTC, Rate::saturating_from_integer(2)),
+				(MNT, Rate::saturating_from_integer(4)),
 			],
 			_phantom: PhantomData,
 		}
@@ -384,9 +382,9 @@ impl ExtBuilder {
 		.unwrap();
 
 		mnt_token::GenesisConfig::<Runtime> {
-			mnt_rate: 10 * DOLLARS,
+			mnt_rate: self.mnt_rate,
 			mnt_claim_threshold: 0, // disable by default
-			minted_pools: vec![DOT, ETH, KSM, BTC],
+			minted_pools: self.minted_pools,
 			_phantom: std::marker::PhantomData,
 		}
 		.assimilate_storage(&mut t)
@@ -411,39 +409,43 @@ fn dex_balance(pool_id: CurrencyId) -> Balance {
 }
 
 fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
-	<Runtime as ControllerApi<Block, AccountId>>::liquidity_pool_state(currency_id)
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::liquidity_pool_state(currency_id)
 }
 
 fn get_user_total_supply_and_borrowed_usd_balance_rpc(account_id: AccountId) -> Option<UserPoolBalanceData> {
-	<Runtime as ControllerApi<Block, AccountId>>::get_user_total_supply_and_borrowed_usd_balance(account_id)
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_total_supply_and_borrowed_usd_balance(account_id)
 }
 
 fn get_hypothetical_account_liquidity_rpc(account_id: AccountId) -> Option<HypotheticalLiquidityData> {
-	<Runtime as ControllerApi<Block, AccountId>>::get_hypothetical_account_liquidity(account_id)
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_hypothetical_account_liquidity(account_id)
 }
 
 fn is_admin_rpc(caller: AccountId) -> Option<bool> {
-	<Runtime as ControllerApi<Block, AccountId>>::is_admin(caller)
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::is_admin(caller)
 }
 
 fn get_user_total_collateral_rpc(account_id: AccountId) -> Balance {
-	<Runtime as ControllerApi<Block, AccountId>>::get_user_total_collateral(account_id)
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_total_collateral(account_id)
 		.unwrap()
 		.amount
 }
 
 fn get_user_borrow_per_asset_rpc(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
-	<Runtime as ControllerApi<Block, AccountId>>::get_user_borrow_per_asset(account_id, underlying_asset_id)
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_borrow_per_asset(account_id, underlying_asset_id)
 }
 
 fn get_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
-	<Runtime as MntTokenApi<Block, AccountId>>::get_unclaimed_mnt_balance(account_id)
+	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_unclaimed_mnt_balance(account_id)
 		.unwrap()
 		.amount
 }
 
 fn get_user_supply_and_borrow_apy_rpc(account_id: AccountId) -> Option<(Rate, Rate)> {
-	<Runtime as ControllerApi<Block, AccountId>>::get_user_supply_and_borrow_apy(account_id)
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_supply_and_borrow_apy(account_id)
+}
+
+fn pool_exists_rpc(underlying_asset_id: CurrencyId) -> bool {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::pool_exists(underlying_asset_id)
 }
 
 fn dollars(amount: u128) -> u128 {
@@ -485,15 +487,19 @@ fn set_oracle_price_for_all_pools(price: u128) -> DispatchResult {
 }
 
 fn get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
-	<Runtime as PricesApi<Block>>::get_all_locked_prices()
+	<Runtime as PricesRuntimeApi<Block>>::get_all_locked_prices()
 }
 
 fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
-	<Runtime as PricesApi<Block>>::get_all_freshest_prices()
+	<Runtime as PricesRuntimeApi<Block>>::get_all_freshest_prices()
 }
 
 fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 	Prices::unlock_price(origin_root(), currency_id)
+}
+
+fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> (Rate, Rate) {
+	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_mnt_borrow_and_supply_rates(pool_id).unwrap()
 }
 
 pub fn run_to_block(n: u32) {

@@ -16,6 +16,7 @@ mod tests {
 	use liquidity_pools::{Pool, PoolUserData};
 	pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 	use minterest_primitives::{Balance, CurrencyId, Price, Rate};
+	use minterest_protocol::PoolInitData;
 	use orml_traits::{parameter_type_with_key, MultiCurrency};
 	use sp_core::H256;
 	use sp_runtime::{
@@ -29,7 +30,7 @@ mod tests {
 	use frame_support::traits::Contains;
 	use minterest_model::MinterestModelData;
 	use minterest_protocol::Error as MinterestProtocolError;
-	use pallet_traits::{PoolsManager, PriceProvider};
+	use pallet_traits::{PoolsManager, PricesManager};
 	use sp_std::cell::RefCell;
 	use test_helper::*;
 
@@ -60,9 +61,10 @@ mod tests {
 			TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 			TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
 			TestController: controller::{Module, Storage, Call, Event, Config<T>},
-			MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+			TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 			TestDex: dex::{Module, Storage, Call, Event<T>},
 			TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
+			TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config},
 		}
 	);
 
@@ -92,12 +94,13 @@ mod tests {
 	mock_impl_controller_config!(Test, ZeroAdmin);
 	mock_impl_minterest_model_config!(Test, ZeroAdmin);
 	mock_impl_dex_config!(Test);
-	mock_impl_minterest_protocol_config!(Test);
+	mock_impl_minterest_protocol_config!(Test, ZeroAdmin);
 	mock_impl_mnt_token_config!(Test, ZeroAdmin);
+	mock_impl_risk_manager_config!(Test, ZeroAdmin);
 
 	pub struct MockPriceSource;
 
-	impl PriceProvider<CurrencyId> for MockPriceSource {
+	impl PricesManager<CurrencyId> for MockPriceSource {
 		fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
 			Some(Price::one())
 		}
@@ -152,6 +155,9 @@ mod tests {
 		endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 		pools: Vec<(CurrencyId, Pool)>,
 		pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
+		minted_pools: Vec<CurrencyId>,
+		controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
+		minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
 	}
 
 	impl Default for ExtBuilder {
@@ -160,11 +166,91 @@ mod tests {
 				endowed_accounts: vec![],
 				pools: vec![],
 				pool_user_data: vec![],
+				minted_pools: vec![],
+				controller_data: vec![
+					(
+						DOT,
+						ControllerData {
+							last_interest_accrued_block: 0,
+							protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+							borrow_cap: None,
+							protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+						},
+					),
+					(
+						ETH,
+						ControllerData {
+							last_interest_accrued_block: 0,
+							protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+							borrow_cap: None,
+							protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+						},
+					),
+					(
+						BTC,
+						ControllerData {
+							last_interest_accrued_block: 0,
+							protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+							borrow_cap: None,
+							protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+						},
+					),
+				],
+				minterest_model_params: vec![
+					(
+						DOT,
+						MinterestModelData {
+							kink: Rate::saturating_from_rational(8, 10),
+							base_rate_per_block: Rate::zero(),
+							multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+							jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						},
+					),
+					(
+						ETH,
+						MinterestModelData {
+							kink: Rate::saturating_from_rational(8, 10),
+							base_rate_per_block: Rate::zero(),
+							multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+							jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						},
+					),
+					(
+						BTC,
+						MinterestModelData {
+							kink: Rate::saturating_from_rational(8, 10),
+							base_rate_per_block: Rate::zero(),
+							multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+							jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+						},
+					),
+				],
 			}
 		}
 	}
 
 	impl ExtBuilder {
+		pub fn set_controller_data(mut self, pools: Vec<(CurrencyId, ControllerData<BlockNumber>)>) -> Self {
+			self.controller_data = pools;
+			self
+		}
+
+		pub fn set_minterest_model_params(mut self, pools: Vec<(CurrencyId, MinterestModelData)>) -> Self {
+			self.minterest_model_params = pools;
+			self
+		}
+
+		pub fn mnt_enabled_pools(mut self, pools: Vec<CurrencyId>) -> Self {
+			self.minted_pools = pools;
+			self
+		}
+
 		pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
 			self.endowed_accounts.push((user, currency_id, balance));
 			self
@@ -254,82 +340,12 @@ mod tests {
 			.unwrap();
 
 			controller::GenesisConfig::<Test> {
-				controller_dates: vec![
-					(
-						DOT,
-						ControllerData {
-							last_interest_accrued_block: 0,
-							protocol_interest_factor: Rate::saturating_from_rational(1, 10),
-							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-							borrow_cap: None,
-							protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
-						},
-					),
-					(
-						ETH,
-						ControllerData {
-							last_interest_accrued_block: 0,
-							protocol_interest_factor: Rate::saturating_from_rational(1, 10),
-							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-							borrow_cap: None,
-							protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
-						},
-					),
-					(
-						BTC,
-						ControllerData {
-							last_interest_accrued_block: 0,
-							protocol_interest_factor: Rate::saturating_from_rational(1, 10),
-							max_borrow_rate: Rate::saturating_from_rational(5, 1000),
-							collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
-							borrow_cap: None,
-							protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
-						},
-					),
-				],
+				controller_dates: self.controller_data,
 				pause_keepers: vec![
-					(
-						ETH,
-						PauseKeeper {
-							deposit_paused: false,
-							redeem_paused: false,
-							borrow_paused: false,
-							repay_paused: false,
-							transfer_paused: false,
-						},
-					),
-					(
-						DOT,
-						PauseKeeper {
-							deposit_paused: false,
-							redeem_paused: false,
-							borrow_paused: false,
-							repay_paused: false,
-							transfer_paused: false,
-						},
-					),
-					(
-						KSM,
-						PauseKeeper {
-							deposit_paused: true,
-							redeem_paused: true,
-							borrow_paused: true,
-							repay_paused: true,
-							transfer_paused: true,
-						},
-					),
-					(
-						BTC,
-						PauseKeeper {
-							deposit_paused: false,
-							redeem_paused: false,
-							borrow_paused: false,
-							repay_paused: false,
-							transfer_paused: false,
-						},
-					),
+					(ETH, PauseKeeper::all_unpaused()),
+					(DOT, PauseKeeper::all_unpaused()),
+					(KSM, PauseKeeper::all_paused()),
+					(BTC, PauseKeeper::all_unpaused()),
 				],
 				whitelist_mode: false,
 			}
@@ -344,35 +360,7 @@ mod tests {
 			.unwrap();
 
 			minterest_model::GenesisConfig {
-				minterest_model_params: vec![
-					(
-						DOT,
-						MinterestModelData {
-							kink: Rate::saturating_from_rational(8, 10),
-							base_rate_per_block: Rate::zero(),
-							multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-							jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						},
-					),
-					(
-						ETH,
-						MinterestModelData {
-							kink: Rate::saturating_from_rational(8, 10),
-							base_rate_per_block: Rate::zero(),
-							multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-							jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						},
-					),
-					(
-						BTC,
-						MinterestModelData {
-							kink: Rate::saturating_from_rational(8, 10),
-							base_rate_per_block: Rate::zero(),
-							multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
-							jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
-						},
-					),
-				],
+				minterest_model_params: self.minterest_model_params,
 			}
 			.assimilate_storage::<Test>(&mut t)
 			.unwrap();
@@ -380,7 +368,7 @@ mod tests {
 			mnt_token::GenesisConfig::<Test> {
 				mnt_rate: 100_000_000_000_000_000, // 0.1
 				mnt_claim_threshold: 100 * DOLLARS,
-				minted_pools: vec![DOT, ETH],
+				minted_pools: self.minted_pools,
 				_phantom: Default::default(),
 			}
 			.assimilate_storage(&mut t)

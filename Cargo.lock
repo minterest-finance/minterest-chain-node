@@ -2764,6 +2764,7 @@ dependencies = [
  "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
+ "risk-manager",
  "serde",
  "sp-core",
  "sp-io",
@@ -5844,6 +5845,7 @@ dependencies = [
  "minterest-primitives",
  "minterest-protocol",
  "mnt-token",
+ "module-prices",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -8280,6 +8282,7 @@ dependencies = [
 name = "test-helper"
 version = "0.6.2"
 dependencies = [
+ "frame-support",
  "minterest-primitives",
 ]
 

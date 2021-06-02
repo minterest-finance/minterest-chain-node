@@ -6,22 +6,32 @@ use mock::{Event, *};
 use sp_runtime::traits::{BadOrigin, Zero};
 
 #[test]
-fn set_balancing_period_should_work() {
+fn protocol_operations_not_working_for_nonexisting_pool() {
 	ExternalityBuilder::default().build().execute_with(|| {
-		// Can be set to 0.0
-		assert_ok!(TestLiquidationPools::set_balancing_period(admin(), u64::zero()));
-		assert_eq!(TestLiquidationPools::balancing_period(), u64::zero());
-		let expected_event = Event::liquidation_pools(crate::Event::BalancingPeriodChanged(u64::zero()));
-		assert!(System::events().iter().any(|record| record.event == expected_event));
+		assert_noop!(
+			TestLiquidationPools::set_deviation_threshold(admin(), KSM, 123),
+			Error::<Test>::PoolNotFound
+		);
 
-		// Admin set period equal amount of blocks per year.
-		assert_ok!(TestLiquidationPools::set_balancing_period(admin(), 5256000));
-		assert_eq!(TestLiquidationPools::balancing_period(), 5256000);
-		let expected_event = Event::liquidation_pools(crate::Event::BalancingPeriodChanged(5256000));
-		assert!(System::events().iter().any(|record| record.event == expected_event));
+		assert_noop!(
+			TestLiquidationPools::set_balance_ratio(admin(), KSM, 123),
+			Error::<Test>::PoolNotFound
+		);
 
-		// The dispatch origin of this call must be Root or half MinterestCouncil.
-		assert_noop!(TestLiquidationPools::set_balancing_period(alice(), 10), BadOrigin);
+		assert_noop!(
+			TestLiquidationPools::set_max_ideal_balance(admin(), KSM, Some(123)),
+			Error::<Test>::PoolNotFound
+		);
+
+		assert_noop!(
+			TestLiquidationPools::balance_liquidation_pools(Origin::none(), KSM, DOT, Balance::zero(), Balance::zero()),
+			Error::<Test>::PoolNotFound
+		);
+
+		assert_noop!(
+			TestLiquidationPools::transfer_to_liquidation_pool(admin(), KSM, 123),
+			Error::<Test>::PoolNotFound
+		);
 	});
 }
 

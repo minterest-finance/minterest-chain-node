@@ -50,13 +50,34 @@ pub trait LiquidityPoolsManager {
 	fn get_pool_total_protocol_interest(pool_id: CurrencyId) -> Balance;
 }
 
-pub trait PriceProvider<CurrencyId> {
+/// An abstraction of pools basic functionalities.
+pub trait LiquidationPoolsManager<AccountId> {
+	/// Return module account id.
+	fn pools_account_id() -> AccountId;
+
+	/// Return liquidity balance of `pool_id`.
+	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance;
+
+	/// This is a part of a pool creation flow
+	/// Checks parameters validity and creates storage records for LiquidationPoolsData
+	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult;
+}
+
+/// An abstraction of prices basic functionalities.
+pub trait PricesManager<CurrencyId> {
+	/// Get price underlying token in USD.
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price>;
+
+	/// Locks price when get valid price from source.
 	fn lock_price(currency_id: CurrencyId);
+
+	/// Unlocks price when get valid price from source.
 	fn unlock_price(currency_id: CurrencyId);
 }
 
+/// An abstraction of DEXs basic functionalities.
 pub trait DEXManager<AccountId, CurrencyId, Balance> {
+	//TODO: Add function description
 	fn swap_with_exact_supply(
 		who: &AccountId,
 		target_currency_id: CurrencyId,
@@ -65,6 +86,7 @@ pub trait DEXManager<AccountId, CurrencyId, Balance> {
 		min_target_amount: Balance,
 	) -> Result<Balance, DispatchError>;
 
+	//TODO: Add function description
 	fn swap_with_exact_target(
 		who: &AccountId,
 		supply_currency_id: CurrencyId,
@@ -74,7 +96,19 @@ pub trait DEXManager<AccountId, CurrencyId, Balance> {
 	) -> Result<Balance, DispatchError>;
 }
 
-pub trait ControllerAPI<AccountId> {
+/// An abstraction of controller basic functionalities.
+pub trait ControllerManager<AccountId> {
+	/// This is a part of a pool creation flow
+	/// Creates storage records for ControllerParams and PauseKeepers
+	/// All operations are unpaused after this function call
+	fn create_pool(
+		currency_id: CurrencyId,
+		protocol_interest_factor: Rate,
+		max_borrow_rate: Rate,
+		collateral_factor: Rate,
+		protocol_interest_threshold: Balance,
+	) -> DispatchResult;
+
 	/// Return the borrow balance of account based on stored data.
 	fn borrow_balance_stored(who: &AccountId, underlying_asset_id: CurrencyId) -> Result<Balance, DispatchError>;
 
@@ -143,4 +177,36 @@ pub trait MntManager<AccountId> {
 		borrower: &AccountId,
 		distribute_all: bool,
 	) -> Result<Balance, DispatchError>;
+
+	/// Return MNT Borrow Rate and MNT Supply Rate values per block for current pool.
+	/// - `pool_id` - the pool to calculate rates
+	///
+	/// returns (`borrow_apy`, `supply_apy`): - percentage yield per block
+	fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Price, Price), DispatchError>;
+}
+
+/// An abstraction of risk-manager basic functionalities.
+pub trait RiskManagerAPI {
+	/// This is a part of a pool creation flow
+	/// Creates storage records for RiskManagerParams
+	fn create_pool(
+		currency_id: CurrencyId,
+		max_attempts: u8,
+		min_partial_liquidation_sum: Balance,
+		threshold: Rate,
+		liquidation_fee: Rate,
+	) -> DispatchResult;
+}
+
+/// An abstraction of minterest-model basic functionalities.
+pub trait MinterestModelAPI {
+	/// This is a part of a pool creation flow
+	/// Checks parameters validity and creates storage records for MinterestModelParams
+	fn create_pool(
+		currency_id: CurrencyId,
+		kink: Rate,
+		base_rate_per_block: Rate,
+		multiplier_per_block: Rate,
+		jump_multiplier_per_block: Rate,
+	) -> DispatchResult;
 }
