@@ -861,3 +861,18 @@ fn testnet_genesis(
 		module_vesting: Some(VestingConfig { vesting: vec![] }),
 	}
 }
+
+/// Calculates the total allocation and generates a list of accounts with balance for allocation.
+///
+/// - `ed_accounts`:
+/// - `allocated_list`:
+fn calculate_initial_allocations(
+	ed_accounts: Vec<AccountId>,
+	allocated_list: Vec<(AccountId, Balance)>,
+) -> (Balance, Vec<(AccountId, Balance)>) {
+	// FIXME
+	(
+		Balance::zero(),
+		vec![(MntTokenModuleId::get().into_account(), Balance::zero())],
+	)
+}
