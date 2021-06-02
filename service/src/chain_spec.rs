@@ -4,11 +4,12 @@ use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use node_minterest_runtime::{
-	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, GenesisConfig,
-	GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
+	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, BlockNumber, ControllerConfig,
+	GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
 	MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, OperatorMembershipMinterestConfig, PricesConfig,
-	RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, WhitelistCouncilMembershipConfig, BTC,
-	DOLLARS, DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, WASM_BINARY,
+	RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, VestingConfig,
+	WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+	WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -69,6 +70,21 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		"dev",
 		ChainType::Development,
 		move || {
+			let dev_vesting_list_json = &include_bytes!("../../resources/dev-minterest-vesting-MNT.json")[..];
+			let dev_vesting_list: Vec<(AccountId, BlockNumber, BlockNumber, u32, Balance)> =
+				serde_json::from_slice(dev_vesting_list_json).unwrap();
+
+			// ensure no duplicates exist.
+			let unique_dev_vesting_accounts = dev_vesting_list
+				.iter()
+				.map(|(account, _, _, _, _)| account)
+				.cloned()
+				.collect::<std::collections::BTreeSet<_>>();
+			assert!(
+				unique_dev_vesting_accounts.len() == dev_vesting_list.len(),
+				"duplicate vesting accounts in genesis."
+			);
+
 			testnet_genesis(
 				wasm_binary,
 				// Initial PoA authorities
@@ -90,6 +106,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 					// Polina
 					hex!["a0a9c551ef3876b936712d2f96617c84b50ccb46e89e38c05129510d58de844d"].into(),
 				],
+				dev_vesting_list,
 				true,
 			)
 		},
@@ -140,6 +157,8 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
+				// TODO: implement vesting_list with a json file
+				vec![],
 				true,
 			)
 		},
@@ -182,6 +201,8 @@ pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 				],
+				// TODO: implement vesting_list with a json file
+				vec![],
 				true,
 			)
 		},
@@ -207,6 +228,7 @@ fn testnet_genesis(
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
+	vesting_list: Vec<(AccountId, BlockNumber, BlockNumber, u32, Balance)>,
 	_enable_println: bool,
 ) -> GenesisConfig {
 	GenesisConfig {
@@ -495,5 +517,6 @@ fn testnet_genesis(
 			minted_pools: vec![DOT, ETH, KSM, BTC],
 			_phantom: Default::default(),
 		}),
+		module_vesting: Some(VestingConfig { vesting: vesting_list }),
 	}
 }

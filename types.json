@@ -136,7 +136,31 @@
       "value": "OracleValue",
       "timestamp": "Moment"
     },
-    "TimestampedValueOf": "TimestampedValue"
+    "TimestampedValueOf": "TimestampedValue",
+    "AccountData": {
+      "free": "Balance",
+      "reserved": "Balance",
+      "misc_frozen": "Balance",
+      "fee_frozen": "Balance"
+    },
+    "BalanceLock": {
+      "id": "LockIdentifier",
+      "amount": "Balance",
+      "reasons": "Reasons"
+    },
+    "VestingSchedule": {
+      "start": "BlockNumber",
+      "period": "BlockNumber",
+      "periodCount": "u32",
+      "perPeriod": "Compact<Balance>"
+    },
+    "VestingScheduleOf": "VestingSchedule",
+    "AccountInfo": {
+      "nonce": "Index",
+      "consumers": "RefCount",
+      "providers": "RefCount",
+      "data": "AccountData"
+    }
   },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
 }

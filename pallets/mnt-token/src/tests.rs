@@ -360,7 +360,7 @@ fn test_update_mnt_borrow_index() {
 		.build()
 		.execute_with(|| {
 			let initial_index = Rate::one();
-			let mnt_rate = 1 * DOLLARS;
+			let mnt_rate = DOLLARS;
 			assert_ok!(MntToken::set_mnt_rate(admin(), mnt_rate));
 			// Input parameters:
 			// mnt_rate: 1

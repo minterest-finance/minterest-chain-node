@@ -2,7 +2,7 @@
 name = "risk-manager"
 description = 'Pallet for risk manager implementation'
 version = "0.6.0"
-authors = ["Minterest <https://github.com/minterest-defi>"]
+authors = ["Minterest developers"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

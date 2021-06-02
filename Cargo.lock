@@ -4101,6 +4101,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "module-vesting"
+version = "0.6.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "more-asserts"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4256,6 +4271,7 @@ dependencies = [
  "mnt-token",
  "mnt-token-rpc-runtime-api",
  "module-prices",
+ "module-vesting",
  "orml-benchmarking",
  "orml-currencies",
  "orml-oracle",

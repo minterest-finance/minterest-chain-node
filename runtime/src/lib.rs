@@ -69,7 +69,7 @@ pub use sp_runtime::{Perbill, Permill, Perquintill};
 
 pub use constants::{currency::*, time::*, *};
 use frame_support::traits::Contains;
-use frame_system::{EnsureOneOf, EnsureRoot};
+use frame_system::{EnsureOneOf, EnsureRoot, EnsureSigned};
 use pallet_traits::PricesManager;
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -567,6 +567,22 @@ impl dex::Config for Runtime {
 	type DexAccountId = DexAccountId;
 }
 
+parameter_types! {
+	pub MinVestedTransfer: Balance = DOLLARS; // 1 USD
+	pub const MaxVestingSchedules: u32 = 2;
+}
+
+impl module_vesting::Config for Runtime {
+	type Event = Event;
+	type Currency = pallet_balances::Module<Runtime>;
+	type MinVestedTransfer = MinVestedTransfer;
+	// FIXME: ask who can transfer and then fix it
+	type VestedTransferOrigin = EnsureSigned<AccountId>;
+	// FIXME: implement weights
+	type WeightInfo = ();
+	type MaxVestingSchedules = MaxVestingSchedules;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -578,7 +594,11 @@ construct_runtime!(
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
 
+		// Tokens & Related
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Module, Call, Event<T>},
+		Vesting: module_vesting::{Module, Storage, Call, Event<T>, Config<T>},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 
 		// Consensus & Staking
@@ -590,10 +610,6 @@ construct_runtime!(
 		MinterestCouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
 		WhitelistCouncil: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		WhitelistCouncilMembership: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
-
-		//ORML palletts
-		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
-		Currencies: orml_currencies::{Module, Call, Event<T>},
 
 		// Oracle and Prices
 		MinterestOracle: orml_oracle::<Instance1>::{Module, Storage, Call, Config<T>, Event<T>},
