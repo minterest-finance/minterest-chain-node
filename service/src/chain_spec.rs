@@ -201,7 +201,6 @@ fn minterest_genesis(
 	// Initial allocation calculation
 	let existential_deposit = ExistentialDeposit::get();
 	let mut total_allocated = Balance::zero();
-	let mut total_allocated = Balance::zero();
 
 	// Reading the initial allocations from the file.
 	let allocated_accounts_json = &include_bytes!("../../resources/dev-minterest-allocation-MNT.json")[..];
@@ -218,7 +217,7 @@ fn minterest_genesis(
 		.collect();
 	let total_existential = existential_balances.iter().map(|(_, x)| x).sum::<u128>();
 
-	// The community bucket balance: community_bucket_total_amount - total_existential
+	// The mnt-token pallet balance: community_bucket_total_amount - total_existential
 	let mnt_token_pallet_balance = VestingBucket::Community
 		.total_amount()
 		.checked_sub(total_existential)
@@ -232,11 +231,25 @@ fn minterest_genesis(
 				.iter()
 				.map(|schedule| (schedule.account.clone(), schedule.amount))
 		}))
-		.inspect(|(_, amount)| {
-			total_allocated = total_allocated
-				.checked_add(*amount)
-				.expect("total allocation cannot overflow when building genesis");
-		})
+		.fold(
+			BTreeMap::<AccountId, Balance>::new(),
+			|mut acc, (account_id, amount)| {
+				// merge duplicated accounts
+				if let Some(balance) = acc.get_mut(&account_id) {
+					*balance = balance
+						.checked_add(amount)
+						.expect("balance cannot overflow when building genesis");
+				} else {
+					acc.insert(account_id.clone(), amount);
+				}
+
+				total_allocated = total_allocated
+					.checked_add(amount)
+					.expect("total insurance cannot overflow when building genesis");
+				acc
+			},
+		)
+		.into_iter()
 		.collect::<Vec<(AccountId, Balance)>>();
 
 	// check total allocated
@@ -260,10 +273,11 @@ fn minterest_genesis(
 			let period: BlockNumber = BlockNumber::one(); // block by block
 
 			let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
-			if period_count.is_zero() {
-				continue;
-			}
-			let per_period: Balance = schedule.amount / period_count as u128;
+
+			let per_period: Balance = schedule
+				.amount
+				.checked_div(period_count as u128)
+				.unwrap_or(schedule.amount);
 
 			vesting_list.push((
 				bucket.clone(),
@@ -294,9 +308,7 @@ fn minterest_genesis(
 			code: wasm_binary.to_vec(),
 			changes_trie_config: Default::default(),
 		}),
-		// FIXME: change -> initial_allocation
 		pallet_balances: Some(BalancesConfig {
-			// Configure endowed accounts with initial balance of INITIAL_BALANCE.
 			balances: initial_allocation,
 		}),
 		pallet_aura: Some(AuraConfig {
