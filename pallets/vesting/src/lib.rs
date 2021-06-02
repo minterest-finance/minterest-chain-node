@@ -88,16 +88,18 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 	/// Note this func assumes schedule is a valid one(non-zero period and
 	/// non-overflow total amount), and it should be guaranteed by callers.
 	pub fn locked_amount(&self, time: BlockNumber) -> Balance {
-		// full = (time - start) / period
-		// unrealized = period_count - full
-		// per_period * unrealized
-		let full = time
+		// expired_periods = (time - start) / period
+		// unrealized_periods = period_count - expired_periods
+		// locked_amount = per_period * unrealized_periods
+		let expired_periods = time
 			.saturating_sub(self.start)
 			.checked_div(&self.period)
 			.expect("ensured non-zero period; qed");
-		let unrealized = self.period_count.saturating_sub(full.unique_saturated_into());
+		let unrealized_periods = self
+			.period_count
+			.saturating_sub(expired_periods.unique_saturated_into());
 		self.per_period
-			.checked_mul(&unrealized.into())
+			.checked_mul(&unrealized_periods.into())
 			.expect("ensured non-overflow total amount; qed")
 	}
 }
@@ -112,9 +114,13 @@ pub mod module {
 		fn update_vesting_schedules(i: u32) -> Weight;
 	}
 
+	/// This new BalanceOf<T> type satisfies the type constraints of Self::Balance for the
+	/// provided methods of Currency.
 	pub(crate) type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	/// Type alias for VestingSchedule.
 	pub(crate) type VestingScheduleOf<T> = VestingSchedule<<T as frame_system::Config>::BlockNumber, BalanceOf<T>>;
+	/// Tuple struct for GenesisConfig. `(account_id, start, period, period_count, per_period)`
 	pub type ScheduledItem<T> = (
 		<T as frame_system::Config>::AccountId,
 		<T as frame_system::Config>::BlockNumber,
@@ -276,6 +282,7 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
+	/// Claim unlocked balances.
 	fn do_claim(who: &T::AccountId) -> BalanceOf<T> {
 		let locked = Self::locked_balance(who);
 		if locked.is_zero() {
@@ -346,16 +353,16 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	/// Returns `Ok(amount)` if valid schedule, or error.
+	/// Returns `Ok(total_amount)` if valid schedule, or error.
 	fn ensure_valid_vesting_schedule(schedule: &VestingScheduleOf<T>) -> Result<BalanceOf<T>, Error<T>> {
 		ensure!(!schedule.period.is_zero(), Error::<T>::ZeroVestingPeriod);
 		ensure!(!schedule.period_count.is_zero(), Error::<T>::ZeroVestingPeriodCount);
 		ensure!(schedule.end().is_some(), Error::<T>::NumOverflow);
 
-		let total = schedule.total_amount().ok_or(Error::<T>::NumOverflow)?;
+		let total_amount = schedule.total_amount().ok_or(Error::<T>::NumOverflow)?;
 
-		ensure!(total >= T::MinVestedTransfer::get(), Error::<T>::AmountLow);
+		ensure!(total_amount >= T::MinVestedTransfer::get(), Error::<T>::AmountLow);
 
-		Ok(total)
+		Ok(total_amount)
 	}
 }

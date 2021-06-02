@@ -111,7 +111,11 @@ fn add_new_vesting_schedule_merges_with_current_locked_balance_and_until() {
 			period_count: 1u32,
 			per_period: 7u64,
 		};
-		assert_ok!(Vesting::vested_transfer(Origin::signed(ALICE), BOB, another_schedule));
+		assert_ok!(Vesting::vested_transfer(
+			Origin::signed(ALICE),
+			BOB,
+			another_schedule.clone()
+		));
 
 		assert_eq!(
 			PalletBalances::locks(&BOB).pop(),
@@ -120,6 +124,11 @@ fn add_new_vesting_schedule_merges_with_current_locked_balance_and_until() {
 				amount: 17u64,
 				reasons: Reasons::All,
 			})
+		);
+
+		assert_noop!(
+			Vesting::vested_transfer(Origin::signed(ALICE), BOB, another_schedule),
+			Error::<Runtime>::TooManyVestingSchedules
 		);
 
 		assert_ok!(Vesting::claim(Origin::signed(BOB)));

@@ -4106,7 +4106,6 @@ version = "0.6.0"
 dependencies = [
  "frame-support",
  "frame-system",
- "funty",
  "pallet-balances",
  "parity-scale-codec",
  "serde",
