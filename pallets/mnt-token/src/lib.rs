@@ -10,7 +10,7 @@ use frame_system::pallet_prelude::*;
 use minterest_primitives::{currency::MNT, Balance, CurrencyId, Price, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerAPI, LiquidityPoolsManager, MntManager, PoolsManager, PriceProvider};
+use pallet_traits::{ControllerManager, LiquidityPoolsManager, MntManager, PoolsManager, PricesManager};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
 	DispatchResult, FixedPointNumber, FixedU128,
@@ -88,13 +88,13 @@ pub mod module {
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		/// The price source of currencies
-		type PriceSource: PriceProvider<CurrencyId>;
+		type PriceSource: PricesManager<CurrencyId>;
 
 		/// The `MultiCurrency` implementation for wrapped.
 		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 
 		/// Public API of controller pallet
-		type ControllerAPI: ControllerAPI<Self::AccountId>;
+		type ControllerManager: ControllerManager<Self::AccountId>;
 
 		#[pallet::constant]
 		/// The Mnt-token's account id, keep assets that should be distributed to users
@@ -581,7 +581,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			return Ok(Balance::zero());
 		}
 
-		let borrow_balance = T::ControllerAPI::borrow_balance_stored(&borrower, underlying_id)?;
+		let borrow_balance = T::ControllerManager::borrow_balance_stored(&borrower, underlying_id)?;
 		let pool_borrow_index = T::LiquidityPoolsManager::get_pool_borrow_index(underlying_id);
 		let borrower_amount = Price::from_inner(borrow_balance)
 			.checked_div(&pool_borrow_index)

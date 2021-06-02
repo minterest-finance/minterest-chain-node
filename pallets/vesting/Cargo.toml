@@ -2,7 +2,7 @@
 name = "module-vesting"
 description = "Pallet for scheduled balance locking mechanism, in a *graded vesting* way."
 version = "0.6.0"
-authors = ["Minterest <https://github.com/minterest-defi>"]
+authors = ["Minterest Developers"]
 edition = "2018"
 
 [dependencies]
@@ -16,8 +16,6 @@ frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
-
-funty = { version = "=1.1.0", default-features = false } # https://github.com/bitvecto-rs/bitvec/issues/105
 
 [dev-dependencies]
 sp-core = { version = "3.0.0", default-features = false }

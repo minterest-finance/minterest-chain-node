@@ -8,7 +8,7 @@
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
 use minterest_primitives::{CurrencyId, Price};
-pub use prices_rpc_runtime_api::PricesApi as PricesRuntimeApi;
+pub use prices_rpc_runtime_api::PricesRuntimeApi;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
@@ -16,14 +16,17 @@ use std::sync::Arc;
 
 #[rpc]
 /// Base trait for RPC interface of prices
-pub trait PricesApi<BlockHash> {
+pub trait PricesRpcApi<BlockHash> {
 	/// This function returns a price for a currency.
 	/// If currency price has been locked, locked value will be returned.
 	/// Otherwise the value from Oracle will be returned
 	///
 	///  - `&self` :  Self reference
-	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///  - `currency_id`: currency type.
+	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///
+	/// Return:
+	/// - price: price for currency
 	///
 	///  # Example:
 	/// ``` ignore
@@ -40,6 +43,9 @@ pub trait PricesApi<BlockHash> {
 	///  - `&self` :  Self reference
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
+	/// Return:
+	/// - Vec<(currency_id, price)>: vector of (id, price) pairs for all locked currencies
+	///
 	/// # Example:
 	/// ``` ignore
 	/// curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d '{"jsonrpc":"2.0",
@@ -53,6 +59,9 @@ pub trait PricesApi<BlockHash> {
 	///  - `&self` :  Self reference
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
+	/// Return:
+	/// - Vec<(currency_id, price)>: vector of (id, price) pairs for all currencies
+	///
 	/// # Example:
 	/// ``` ignore
 	/// curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d '{"jsonrpc":"2.0",
@@ -62,14 +71,14 @@ pub trait PricesApi<BlockHash> {
 	fn get_all_freshest_prices(&self, at: Option<BlockHash>) -> Result<Vec<(CurrencyId, Option<Price>)>>;
 }
 
-/// Struct that implement 'PricesApi'.
-pub struct Prices<C, M> {
+/// Struct that implement 'PricesRpcApi'.
+pub struct PricesRpcImpl<C, M> {
 	client: Arc<C>,
 	_marker: std::marker::PhantomData<M>,
 }
 
-impl<C, M> Prices<C, M> {
-	/// Create new `Prices` instance with the given reference to the client.
+impl<C, M> PricesRpcImpl<C, M> {
+	/// Create new `PricesRpcImpl` instance with the given reference to the client.
 	pub fn new(client: Arc<C>) -> Self {
 		Self {
 			client,
@@ -78,7 +87,7 @@ impl<C, M> Prices<C, M> {
 	}
 }
 
-// Error enum
+/// Error enum
 pub enum Error {
 	RuntimeError,
 }
@@ -91,8 +100,8 @@ impl From<Error> for i64 {
 	}
 }
 
-/// Implementation of 'PricesApi'
-impl<C, Block> PricesApi<<Block as BlockT>::Hash> for Prices<C, Block>
+/// Implementation of 'PricesRpcApi'
+impl<C, Block> PricesRpcApi<<Block as BlockT>::Hash> for PricesRpcImpl<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,

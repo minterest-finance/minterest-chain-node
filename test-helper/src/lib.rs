@@ -208,7 +208,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type MntManager = mnt_token::Module<$target>;
 			type WhitelistMembers = WhitelistMembers;
 			type ProtocolWeightInfo = ();
-			type ControllerAPI = controller::Module<$target>;
+			type ControllerManager = controller::Module<$target>;
 			type RiskManagerAPI = TestRiskManager;
 			type MinterestModelAPI = TestMinterestModel;
 			type CreatePoolOrigin = EnsureSignedBy<$acc, AccountId>;
@@ -232,7 +232,7 @@ macro_rules! mock_impl_risk_manager_config {
 			type MntManager = mnt_token::Module<$target>;
 			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type RiskManagerWeightInfo = ();
-			type ControllerAPI = controller::Module<$target>;
+			type ControllerManager = controller::Module<$target>;
 			type OffchainWorkerMaxDurationMs = MaxDurationMs;
 		}
 	};
@@ -251,7 +251,7 @@ macro_rules! mock_impl_mnt_token_config {
 			type UpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
 			type MultiCurrency = orml_currencies::Module<$target>;
-			type ControllerAPI = controller::Module<$target>;
+			type ControllerManager = controller::Module<$target>;
 			type MntTokenAccountId = MntTokenAccountId;
 			type SpeedRefreshPeriod = SpeedRefreshPeriod;
 			type MntTokenWeightInfo = ();
