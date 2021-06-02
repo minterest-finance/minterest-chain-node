@@ -148,7 +148,20 @@
       "amount": "Balance",
       "reasons": "Reasons"
     },
+    "VestingBucket": {
+      "_enum": [
+        "Community",
+        "PrivateSale",
+        "PublicSale",
+        "MarketMaking",
+        "StrategicPartners",
+        "Marketing",
+        "Ecosystem",
+        "Team"
+      ]
+    },
     "VestingSchedule": {
+      "bucket": "VestingBucket",
       "start": "BlockNumber",
       "period": "BlockNumber",
       "periodCount": "u32",

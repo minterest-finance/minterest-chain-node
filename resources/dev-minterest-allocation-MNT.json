@@ -3,6 +3,10 @@
     {
       "account": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
       "amount": 10001000000000000000000000
+    },
+    {
+      "account": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+      "amount": 10001000000000000000000000
     }],
   "PublicSale": [
     {
@@ -33,11 +37,11 @@
     [
       {
         "account": "5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw",
-        "amount": 20017000000000000000000000
+        "amount": 14017000000000000000000000
       },
       {
         "account": "5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL",
-        "amount": 4017000000000000000000000
+        "amount": 10000000000000000000000000
       }
     ]
 }

@@ -7,7 +7,7 @@ use minterest_primitives::{VestingBucket, VestingScheduleJson};
 use node_minterest_runtime::{
 	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, BlockNumber, ControllerConfig,
 	ExistentialDeposit, GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig,
-	MinterestCouncilMembershipConfig, MinterestModelConfig, MinterestOracleConfig, MntTokenConfig,
+	MinterestCouncilMembershipConfig, MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, MntTokenModuleId,
 	OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
 	TokensConfig, VestingConfig, WhitelistCouncilMembershipConfig, BLOCKS_PER_YEAR, BTC, DOLLARS, DOT, ETH, KSM, MNT,
 	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
@@ -19,7 +19,7 @@ use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
-use sp_runtime::traits::One;
+use sp_runtime::traits::{AccountIdConversion, One};
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify, Zero},
 	FixedPointNumber, FixedU128,
@@ -201,55 +201,60 @@ fn minterest_genesis(
 	// Initial allocation calculation
 	let existential_deposit = ExistentialDeposit::get();
 	let mut total_allocated = Balance::zero();
+	let mut total_allocated = Balance::zero();
 
+	// Reading the initial allocations from the file.
 	let allocated_accounts_json = &include_bytes!("../../resources/dev-minterest-allocation-MNT.json")[..];
-
 	let allocated_list_parsed: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, Balance>>> =
 		serde_json::from_slice(allocated_accounts_json).unwrap();
 
-	// TODO implement checks for total_balance in buckets and calculate balance of mnt_token pallet balance
-
-	let initial_allocation = endowed_accounts
+	// Calculation existential balance for the pallets accounts and sudo account.
+	let existential_balances: Vec<(AccountId, Balance)> = endowed_accounts
 		.clone()
 		.into_iter()
-		.chain(get_all_modules_accounts())
+		// all pallets excluding mnt-token pallet
+		.chain(get_all_modules_accounts().into_iter().skip(1))
 		.map(|account_id| (account_id.clone(), existential_deposit))
+		.collect();
+	let total_existential = existential_balances.iter().map(|(_, x)| x).sum::<u128>();
+
+	// The community bucket balance: community_bucket_total_amount - total_existential
+	let mnt_token_pallet_balance = VestingBucket::Community
+		.total_amount()
+		.checked_sub(total_existential)
+		.expect("overflow in the calculation of the mnt-token pallet balance");
+
+	let initial_allocation = existential_balances
+		.into_iter()
+		.chain(vec![(MntTokenModuleId::get().into_account(), mnt_token_pallet_balance)])
 		.chain(allocated_list_parsed.iter().flat_map(|(_bucket, schedules)| {
 			schedules
 				.iter()
 				.map(|schedule| (schedule.account.clone(), schedule.amount))
 		}))
-		.fold(
-			BTreeMap::<AccountId, Balance>::new(),
-			|mut acc, (account_id, amount)| {
-				// merge duplicated accounts
-				if let Some(balance) = acc.get_mut(&account_id) {
-					*balance = balance
-						.checked_add(amount)
-						.expect("balance cannot overflow when building genesis");
-				} else {
-					acc.insert(account_id.clone(), amount);
-				}
-
-				total_allocated = total_allocated
-					.checked_add(amount)
-					.expect("total allocation cannot overflow when building genesis");
-				acc
-			},
-		)
-		.into_iter()
+		.inspect(|(_, amount)| {
+			total_allocated = total_allocated
+				.checked_add(*amount)
+				.expect("total allocation cannot overflow when building genesis");
+		})
 		.collect::<Vec<(AccountId, Balance)>>();
 
 	// check total allocated
 	assert_eq!(
 		total_allocated, TOTAL_ALLOCATION,
-		"total allocation must be equal to 100,000,030 MNT tokens"
+		"total allocation must be equal to 100,000,030 MNT tokens."
 	);
 
-	// FIXME via Iterator
 	// Vesting calculation
 	let mut vesting_list: Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)> = Vec::new();
 	for (bucket, schedules) in allocated_list_parsed.iter() {
+		let total_bucket_amount: Balance = schedules.iter().map(|schedule| schedule.amount).sum();
+		assert_eq!(
+			total_bucket_amount,
+			bucket.total_amount(),
+			"total amount of distributed tokens must be equal to the number of tokens in the bucket."
+		);
+
 		for schedule in schedules.iter() {
 			let start: BlockNumber = bucket.unlock_begins_in_days().into();
 			let period: BlockNumber = BlockNumber::one(); // block by block
