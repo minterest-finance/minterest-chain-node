@@ -209,11 +209,10 @@ fn minterest_genesis(
 
 	// Calculation existential balance for the pallets accounts and sudo account.
 	let existential_balances: Vec<(AccountId, Balance)> = endowed_accounts
-		.clone()
 		.into_iter()
 		// all pallets excluding mnt-token pallet
 		.chain(get_all_modules_accounts().into_iter().skip(1))
-		.map(|account_id| (account_id.clone(), existential_deposit))
+		.map(|account_id| (account_id, existential_deposit))
 		.collect();
 	let total_existential = existential_balances.iter().map(|(_, x)| x).sum::<u128>();
 
@@ -280,7 +279,7 @@ fn minterest_genesis(
 				.unwrap_or(schedule.amount);
 
 			vesting_list.push((
-				bucket.clone(),
+				*bucket,
 				schedule.account.clone(),
 				start,
 				period,

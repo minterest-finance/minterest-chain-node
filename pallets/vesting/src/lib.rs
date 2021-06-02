@@ -219,17 +219,19 @@ pub mod module {
 						"Account do not have enough balance"
 					);
 
-					T::Currency::set_lock(VESTING_LOCK_ID, who, total, WithdrawReasons::all());
-					VestingSchedules::<T>::insert(
-						who,
-						vec![VestingSchedule {
-							bucket: *bucket,
-							start: *start,
-							period: *period,
-							period_count: *period_count,
-							per_period: *per_period,
-						}],
-					);
+					if !period_count.is_zero() {
+						T::Currency::set_lock(VESTING_LOCK_ID, who, total, WithdrawReasons::all());
+						VestingSchedules::<T>::insert(
+							who,
+							vec![VestingSchedule {
+								bucket: *bucket,
+								start: *start,
+								period: *period,
+								period_count: *period_count,
+								per_period: *per_period,
+							}],
+						);
+					}
 				});
 		}
 	}

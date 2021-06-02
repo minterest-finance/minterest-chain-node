@@ -4,7 +4,7 @@
 
 use minterest_primitives::{AccountId, Balance, BlockNumber, VestingBucket, VestingScheduleJson};
 use node_minterest_runtime::BLOCKS_PER_YEAR;
-use sp_runtime::traits::{One, Zero};
+use sp_runtime::traits::One;
 use std::collections::HashMap;
 
 #[test]
