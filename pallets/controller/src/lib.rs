@@ -855,6 +855,10 @@ impl<T: Config> Pallet<T> {
 	pub fn calculate_current_pool_data(pool_id: CurrencyId) -> result::Result<Pool, DispatchError> {
 		let current_block_number = <frame_system::Module<T>>::block_number();
 		let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
+		if current_block_number == accrual_block_number_previous {
+			return Ok(<LiquidityPools<T>>::get_pool_data(pool_id));
+		}
+
 		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
 		Self::calculate_interest_params(pool_id, block_delta)
 	}
