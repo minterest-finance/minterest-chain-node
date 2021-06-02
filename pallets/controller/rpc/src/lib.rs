@@ -21,7 +21,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - amount: account total collateral converted to usd.
+	/// - amount: total amount of money currently held in the protocol in usd.
 	#[rpc(name = "controller_protocolTotalValue")]
 	fn get_protocol_total_value(&self, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
 

@@ -284,8 +284,8 @@ fn test_get_protocol_total_value_rpc() {
 				(DOT, Price::saturating_from_integer(2)),
 				(ETH, Price::saturating_from_integer(3)),
 			]));
-			assert_ok!(Prices::lock_price(origin_root(), DOT));
-			assert_ok!(Prices::lock_price(origin_root(), ETH));
+			assert_ok!(lock_price(DOT));
+			assert_ok!(lock_price(ETH));
 
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(100_000)));
 			// Total: 100 DOT * 2
