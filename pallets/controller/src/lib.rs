@@ -667,6 +667,32 @@ impl<T: Config> Pallet<T> {
 		let borrow_balance = Self::calculate_borrow_balance(&who, underlying_asset_id, pool_data.borrow_index)?;
 		Ok(borrow_balance)
 	}
+
+	/// Calculates user balance converted to underlying asset using exchange rate calculated for the
+	/// current block
+	///
+	/// - `who`: the AccountId whose balance should be calculated.
+	/// - `pool_id` - ID of the pool to calculate balance for.
+	pub fn get_user_underlying_balance_per_asset(who: &T::AccountId, pool_id: CurrencyId) -> BalanceResult {
+		ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+		let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+
+		let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
+		if user_balance_wrapped_tokens.is_zero() {
+			return Ok(Balance::zero());
+		}
+
+		let pool_data = Self::calculate_current_pool_data(pool_id)?;
+		let current_exchange_rate = <LiquidityPools<T>>::get_exchange_rate_by_interest_params(
+			pool_id,
+			pool_data.total_protocol_interest,
+			pool_data.total_borrowed,
+		)?;
+		Ok(Rate::from_inner(user_balance_wrapped_tokens)
+			.checked_mul(&current_exchange_rate)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?)
+	}
 }
 
 // Private methods

@@ -804,6 +804,85 @@ fn get_user_total_collateral_rpc_should_work() {
 }
 
 #[test]
+fn test_get_user_underlying_balance_per_asset_rpc() {
+	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
+		.build()
+		.execute_with(|| {
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(90_000)));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(90_000)));
+			// Underlying balance is equal to what user have deposited
+			assert_eq!(
+				get_user_underlying_balance_per_asset_rpc(ALICE::get(), DOT),
+				Some(BalanceInfo {
+					amount: dollars(90_000)
+				})
+			);
+			assert_eq!(
+				get_user_underlying_balance_per_asset_rpc(ALICE::get(), ETH),
+				Some(BalanceInfo {
+					amount: dollars(90_000)
+				})
+			);
+
+			// Make a borrow to update exchange rate
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+			assert_ok!(MinterestProtocol::borrow(alice(), ETH, dollars(40_000)));
+
+			// Underlying balance hasn`t changed in the block when first borrow occurred
+			assert_eq!(
+				get_user_underlying_balance_per_asset_rpc(ALICE::get(), DOT),
+				Some(BalanceInfo {
+					amount: dollars(90_000)
+				})
+			);
+			assert_eq!(
+				get_user_underlying_balance_per_asset_rpc(ALICE::get(), ETH),
+				Some(BalanceInfo {
+					amount: dollars(90_000)
+				})
+			);
+
+			// Skip some blocks to accrue interest
+			System::set_block_number(100);
+			// Underlying balance hasn`t changed for DOT because it have no borrows
+			assert_eq!(
+				get_user_underlying_balance_per_asset_rpc(ALICE::get(), DOT),
+				Some(BalanceInfo {
+					amount: dollars(90_000)
+				})
+			);
+			// Underlying balance changed as the interest accrued
+			let balance_converted_to_underlying_after_borrowing = 90_000_014_255_999_996_400_000;
+			assert_eq!(
+				get_user_underlying_balance_per_asset_rpc(ALICE::get(), ETH),
+				Some(BalanceInfo {
+					amount: balance_converted_to_underlying_after_borrowing
+				})
+			);
+
+			assert_ok!(MinterestProtocol::repay_all(alice(), ETH));
+			let eth_balance_after_repay = 9_999_984_160_000_003_960_000;
+			assert_eq!(
+				get_user_underlying_balance_per_asset_rpc(ALICE::get(), ETH),
+				Some(BalanceInfo {
+					amount: balance_converted_to_underlying_after_borrowing
+				})
+			);
+			assert_eq!(Currencies::free_balance(ETH, &ALICE::get()), eth_balance_after_repay);
+
+			assert_ok!(MinterestProtocol::redeem(alice(), ETH));
+			// Check that after redeem user ETH balance increased by a value that was previousely returned by
+			// get_user_underlying_balance_per_asset
+			assert_eq!(
+				Currencies::free_balance(ETH, &ALICE::get()),
+				eth_balance_after_repay + balance_converted_to_underlying_after_borrowing
+			);
+		})
+}
+
+#[test]
 fn get_all_locked_prices_rpc_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(set_oracle_price_for_all_pools(10_000));
