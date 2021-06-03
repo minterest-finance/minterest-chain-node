@@ -782,6 +782,10 @@ impl_runtime_apis! {
 			Some(PoolState { exchange_rate, borrow_rate, supply_rate })
 		}
 
+		fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate> {
+			Controller::get_utilization_rate(pool_id)
+		}
+
 		fn get_user_total_supply_and_borrowed_usd_balance(account_id: AccountId) -> Option<UserPoolBalanceData> {
 			let (total_supply, total_borrowed) = Controller::get_user_total_supply_and_borrowed_usd_balance(&account_id).ok()?;
 
@@ -813,12 +817,12 @@ impl_runtime_apis! {
 				Some(BalanceInfo{amount: Controller::get_user_borrow_per_asset(&account_id, underlying_asset_id).ok()?})
 		}
 
-		fn pool_exists(underlying_asset_id: CurrencyId) -> bool {
-			LiquidityPools::pool_exists(&underlying_asset_id)
+		fn get_user_supply_and_borrow_apy(account_id: AccountId) -> Option<(Rate, Rate)> {
+			Controller::get_user_supply_and_borrow_apy(account_id).ok()
 		}
 
-		fn get_user_supply_and_borrow_apy(account_id: AccountId) -> Option<(Rate, Rate)> {
-				Controller::get_user_supply_and_borrow_apy(account_id).ok()
+		fn pool_exists(underlying_asset_id: CurrencyId) -> bool {
+			LiquidityPools::pool_exists(&underlying_asset_id)
 		}
 	}
 

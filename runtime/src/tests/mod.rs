@@ -412,6 +412,10 @@ fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::liquidity_pool_state(currency_id)
 }
 
+fn get_utilization_rate_rpc(pool_id: CurrencyId) -> Option<Rate> {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_utilization_rate(pool_id)
+}
+
 fn get_user_total_supply_and_borrowed_usd_balance_rpc(account_id: AccountId) -> Option<UserPoolBalanceData> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_total_supply_and_borrowed_usd_balance(account_id)
 }
@@ -438,10 +442,6 @@ fn get_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
 	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_unclaimed_mnt_balance(account_id)
 		.unwrap()
 		.amount
-}
-
-fn get_user_supply_and_borrow_apy_rpc(account_id: AccountId) -> Option<(Rate, Rate)> {
-	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_supply_and_borrow_apy(account_id)
 }
 
 fn pool_exists_rpc(underlying_asset_id: CurrencyId) -> bool {

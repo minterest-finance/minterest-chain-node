@@ -506,6 +506,21 @@ impl<T: Config> Pallet<T> {
 		Some((borrow_rate, supply_rate))
 	}
 
+	/// Gets current utilization rate of the pool.
+	pub fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate> {
+		let current_block_number = <frame_system::Module<T>>::block_number();
+		let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
+		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous).ok()?;
+		let pool_data = Self::calculate_interest_params(pool_id, block_delta).ok()?;
+		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
+		Self::calculate_utilization_rate(
+			current_total_balance,
+			pool_data.total_borrowed,
+			pool_data.total_protocol_interest,
+		)
+		.ok()
+	}
+
 	/// Calculates total supply and total borrowed balance in usd based on
 	/// total_borrowed, total_protocol_interest, borrow_index values calculated for current block
 	pub fn get_user_total_supply_and_borrowed_usd_balance(
@@ -678,7 +693,7 @@ impl<T: Config> Pallet<T> {
 	/// - `who`: The address whose balance should be calculated.
 	/// - `underlying_asset`: ID of the currency, the balance of borrowing of which we calculate.
 	/// - `pool_borrow_index`: borrow index for the pool
-	pub fn calculate_borrow_balance(
+	fn calculate_borrow_balance(
 		who: &T::AccountId,
 		underlying_asset: CurrencyId,
 		pool_borrow_index: Rate,
