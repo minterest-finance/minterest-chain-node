@@ -273,6 +273,50 @@ fn test_rates_using_rpc() {
 		});
 }
 
+#[test]
+fn test_get_utilization_rate_rpc() {
+	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
+		.build()
+		.execute_with(|| {
+			// Set price = 2.00 USD for all pools.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(100_000)));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
+
+			System::set_block_number(10);
+
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
+			// No borrows -> utilization rates equal to 0
+			assert_eq!(get_utilization_rate_rpc(DOT), Some(Rate::zero()));
+			assert_eq!(get_utilization_rate_rpc(ETH), Some(Rate::zero()));
+
+			System::set_block_number(20);
+
+			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(70_000)));
+			assert_eq!(pool_balance(DOT), dollars(80_000));
+			// 70 / (80 + 70) = 0.466666667
+			assert_eq!(
+				get_utilization_rate_rpc(DOT),
+				Some(Rate::from_inner(466_666_666_666_666_667))
+			);
+			assert_eq!(get_utilization_rate_rpc(ETH), Some(Rate::zero()));
+
+			System::set_block_number(100);
+			// Utilization rate grows with time as interest is accrued
+			assert_eq!(
+				get_utilization_rate_rpc(DOT),
+				Some(Rate::from_inner(466_666_757_610_653_833))
+			);
+			assert_eq!(get_utilization_rate_rpc(ETH), Some(Rate::zero()));
+		});
+}
+
 /// Test that returned values are changed after some blocks passed
 #[test]
 fn test_user_balances_using_rpc() {

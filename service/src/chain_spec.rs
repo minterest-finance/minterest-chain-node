@@ -92,6 +92,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 					// Eugene
 					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
+					// Polina
+					hex!["a0a9c551ef3876b936712d2f96617c84b50ccb46e89e38c05129510d58de844d"].into(),
 				],
 				true,
 			)
@@ -198,108 +200,24 @@ fn minterest_genesis(
 	endowed_accounts: Vec<AccountId>,
 	_enable_println: bool,
 ) -> GenesisConfig {
-	// Initial allocation calculation
-	let existential_deposit = ExistentialDeposit::get();
-	let mut total_allocated = Balance::zero();
-
 	// Reading the initial allocations from the file.
 	let allocated_accounts_json = &include_bytes!("../../resources/dev-minterest-allocation-MNT.json")[..];
 	let allocated_list_parsed: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, Balance>>> =
 		serde_json::from_slice(allocated_accounts_json).unwrap();
 
-	// Calculation existential balance for the pallets accounts and sudo account.
-	let existential_balances: Vec<(AccountId, Balance)> = endowed_accounts
-		.into_iter()
-		// all pallets excluding mnt-token pallet
-		.chain(get_all_modules_accounts().into_iter().skip(1))
-		.map(|account_id| (account_id, existential_deposit))
-		.collect();
-	let total_existential = existential_balances.iter().map(|(_, x)| x).sum::<u128>();
-
-	// The mnt-token pallet balance: community_bucket_total_amount - total_existential
-	let mnt_token_pallet_balance = VestingBucket::Community
-		.total_amount()
-		.checked_sub(total_existential)
-		.expect("overflow in the calculation of the mnt-token pallet balance");
-
-	let initial_allocation = existential_balances
-		.into_iter()
-		.chain(vec![(MntTokenModuleId::get().into_account(), mnt_token_pallet_balance)])
-		.chain(allocated_list_parsed.iter().flat_map(|(_bucket, schedules)| {
+	let allocated_list = allocated_list_parsed
+		.iter()
+		.flat_map(|(_bucket, schedules)| {
 			schedules
 				.iter()
 				.map(|schedule| (schedule.account.clone(), schedule.amount))
-		}))
-		.fold(
-			BTreeMap::<AccountId, Balance>::new(),
-			|mut acc, (account_id, amount)| {
-				// merge duplicated accounts
-				if let Some(balance) = acc.get_mut(&account_id) {
-					*balance = balance
-						.checked_add(amount)
-						.expect("balance cannot overflow when building genesis");
-				} else {
-					acc.insert(account_id.clone(), amount);
-				}
-
-				total_allocated = total_allocated
-					.checked_add(amount)
-					.expect("total insurance cannot overflow when building genesis");
-				acc
-			},
-		)
-		.into_iter()
+		})
 		.collect::<Vec<(AccountId, Balance)>>();
 
-	// check total allocated
-	assert_eq!(
-		total_allocated, TOTAL_ALLOCATION,
-		"total allocation must be equal to 100,000,030 MNT tokens."
-	);
-
+	// Initial allocation calculation
+	let initial_allocations = calculate_initial_allocations(endowed_accounts, allocated_list);
 	// Vesting calculation
-	let mut vesting_list: Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)> = Vec::new();
-	for (bucket, schedules) in allocated_list_parsed.iter() {
-		let total_bucket_amount: Balance = schedules.iter().map(|schedule| schedule.amount).sum();
-		assert_eq!(
-			total_bucket_amount,
-			bucket.total_amount(),
-			"total amount of distributed tokens must be equal to the number of tokens in the bucket."
-		);
-
-		for schedule in schedules.iter() {
-			let start: BlockNumber = bucket.unlock_begins_in_days().into();
-			let period: BlockNumber = BlockNumber::one(); // block by block
-
-			let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
-
-			let per_period: Balance = schedule
-				.amount
-				.checked_div(period_count as u128)
-				.unwrap_or(schedule.amount);
-
-			vesting_list.push((
-				*bucket,
-				schedule.account.clone(),
-				start,
-				period,
-				period_count,
-				per_period,
-			));
-		}
-	}
-
-	// ensure no duplicates exist.
-	let unique_vesting_accounts = vesting_list
-		.iter()
-		.map(|(_, account, _, _, _, _)| account)
-		.cloned()
-		.collect::<std::collections::BTreeSet<_>>();
-
-	assert!(
-		unique_vesting_accounts.len() == vesting_list.len(),
-		"duplicate vesting accounts in genesis."
-	);
+	let vesting_list = calculate_vesting_list(allocated_list_parsed);
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -308,7 +226,7 @@ fn minterest_genesis(
 			changes_trie_config: Default::default(),
 		}),
 		pallet_balances: Some(BalancesConfig {
-			balances: initial_allocation,
+			balances: initial_allocations,
 		}),
 		pallet_aura: Some(AuraConfig {
 			authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
@@ -533,7 +451,13 @@ fn minterest_genesis(
 			],
 		}),
 		module_prices: Some(PricesConfig {
-			locked_price: vec![],
+			locked_price: vec![
+				(DOT, FixedU128::saturating_from_integer(2)),
+				(KSM, FixedU128::saturating_from_integer(2)),
+				(ETH, FixedU128::saturating_from_integer(2)),
+				(BTC, FixedU128::saturating_from_integer(2)),
+				(MNT, FixedU128::saturating_from_integer(2)),
+			],
 			_phantom: Default::default(),
 		}),
 		pallet_collective_Instance1: Some(Default::default()),
@@ -864,15 +788,111 @@ fn testnet_genesis(
 
 /// Calculates the total allocation and generates a list of accounts with balance for allocation.
 ///
-/// - `ed_accounts`:
-/// - `allocated_list`:
+/// - `ed_accounts`: accounts to which the existential balance should be deposited
+/// - `allocated_list`: vector of accounts with their initial allocations
+///
+/// Return:
+/// `vec[(account_id, allocation)]` - vector of accounts with their initial allocations
 fn calculate_initial_allocations(
 	ed_accounts: Vec<AccountId>,
 	allocated_list: Vec<(AccountId, Balance)>,
-) -> (Balance, Vec<(AccountId, Balance)>) {
-	// FIXME
-	(
-		Balance::zero(),
-		vec![(MntTokenModuleId::get().into_account(), Balance::zero())],
-	)
+) -> Vec<(AccountId, Balance)> {
+	// Initial allocation calculation
+	let existential_deposit = ExistentialDeposit::get();
+	let mut total_allocated = Balance::zero();
+
+	// Calculation existential balance for the pallets accounts and sudo account.
+	let existential_balances: Vec<(AccountId, Balance)> = ed_accounts
+		.into_iter()
+		.map(|account_id| (account_id, existential_deposit))
+		.collect();
+	let total_existential = existential_balances.iter().map(|(_, x)| x).sum::<u128>();
+
+	// The mnt-token pallet balance: community_bucket_total_amount - total_existential
+	let mnt_token_pallet_balance = VestingBucket::Community
+		.total_amount()
+		.checked_sub(total_existential)
+		.expect("overflow in the calculation of the mnt-token pallet balance");
+
+	let initial_allocations = existential_balances
+		.into_iter()
+		.chain(vec![(MntTokenModuleId::get().into_account(), mnt_token_pallet_balance)])
+		.chain(allocated_list)
+		.fold(
+			BTreeMap::<AccountId, Balance>::new(),
+			|mut acc, (account_id, amount)| {
+				// merge duplicated accounts
+				if let Some(balance) = acc.get_mut(&account_id) {
+					*balance = balance
+						.checked_add(amount)
+						.expect("balance cannot overflow when building genesis");
+				} else {
+					acc.insert(account_id.clone(), amount);
+				}
+
+				total_allocated = total_allocated
+					.checked_add(amount)
+					.expect("total insurance cannot overflow when building genesis");
+				acc
+			},
+		)
+		.into_iter()
+		.collect::<Vec<(AccountId, Balance)>>();
+
+	// check total allocated
+	assert_eq!(
+		total_allocated, TOTAL_ALLOCATION,
+		"total allocation must be equal to 100,000,030 MNT tokens."
+	);
+	initial_allocations
+}
+
+///
+fn calculate_vesting_list(
+	allocated_list_parsed: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, Balance>>>,
+) -> Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)> {
+	let mut vesting_list: Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)> = Vec::new();
+	for (bucket, schedules) in allocated_list_parsed.iter() {
+		let total_bucket_amount: Balance = schedules.iter().map(|schedule| schedule.amount).sum();
+		assert_eq!(
+			total_bucket_amount,
+			bucket.total_amount(),
+			"total amount of distributed tokens must be equal to the number of tokens in the bucket."
+		);
+
+		for schedule in schedules.iter() {
+			let start: BlockNumber = bucket.unlock_begins_in_days().into();
+			let period: BlockNumber = BlockNumber::one(); // block by block
+
+			let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
+
+			let per_period: Balance = schedule
+				.amount
+				.checked_div(period_count as u128)
+				.unwrap_or(schedule.amount);
+
+			vesting_list.push((
+				*bucket,
+				schedule.account.clone(),
+				start,
+				period,
+				period_count,
+				per_period,
+			));
+		}
+	}
+
+	// ensure no duplicates exist.
+	let unique_vesting_accounts = vesting_list
+		.iter()
+		.map(|(_, account, _, _, _, _)| account)
+		.cloned()
+		.collect::<std::collections::BTreeSet<_>>();
+
+	assert!(
+		unique_vesting_accounts.len() == vesting_list.len(),
+		"duplicate vesting accounts in genesis."
+	);
+
+	vesting_list
 }
