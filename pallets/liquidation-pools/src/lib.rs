@@ -408,7 +408,6 @@ impl<T: Config> Pallet<T> {
 		let mut lock = StorageLock::<Time>::new(&OFFCHAIN_LIQUIDATION_WORKER_LOCK);
 		// If pools balancing procedure already started should be returned OffchainLock error.
 		// To prevent any race condition sutiations.
-		// TODO Add test to cover this situation in MIN-178
 		let _guard = lock.try_lock().map_err(|_| OffchainErr::OffchainLock)?;
 		Self::pools_balancing().map_err(|_| OffchainErr::PoolsBalancingError)?;
 		Ok(())
