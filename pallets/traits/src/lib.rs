@@ -38,7 +38,7 @@ pub trait PoolsManager<AccountId> {
 }
 
 /// Provides liquidity pool functionality
-pub trait LiquidityPoolsManager {
+pub trait LiquidityPoolsManager<AccountId>: PoolsManager<AccountId> {
 	/// Gets total amount borrowed from the pool.
 	fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance;
 
