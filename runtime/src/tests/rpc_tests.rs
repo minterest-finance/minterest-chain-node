@@ -803,6 +803,19 @@ fn get_user_total_collateral_rpc_should_work() {
 		})
 }
 
+/// This test checks get_user_underlying_balance_per_asset RPC.
+///
+/// Test scenario:
+/// - Alice deposits 90 to DOT pool
+/// - Alice deposits 90 to ETH pool
+/// - Balance converted to underlying is equal to deposited amount for both pools
+/// - Alice borrows 40 from ETH pool
+/// - Balance converted to underlying is still equal to deposited amount for both pools
+/// - Jump to block #100
+/// - Balance converted to underlying has increased for ETH pool
+/// - Alice repays all
+/// - Alice redeems money from protocol
+/// - Alice ETH balance increased by a value that was previously returned by RPC
 #[test]
 fn test_get_user_underlying_balance_per_asset_rpc() {
 	ExtBuilder::default()
@@ -873,7 +886,7 @@ fn test_get_user_underlying_balance_per_asset_rpc() {
 			assert_eq!(Currencies::free_balance(ETH, &ALICE::get()), eth_balance_after_repay);
 
 			assert_ok!(MinterestProtocol::redeem(alice(), ETH));
-			// Check that after redeem user ETH balance increased by a value that was previousely returned by
+			// Check that after redeem user ETH balance increased by a value that was previously returned by
 			// get_user_underlying_balance_per_asset
 			assert_eq!(
 				Currencies::free_balance(ETH, &ALICE::get()),
