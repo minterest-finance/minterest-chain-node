@@ -70,6 +70,8 @@ sp_api::decl_runtime_apis! {
 	where
 		AccountId: Codec,
 	{
+		fn get_protocol_total_value() -> Option<BalanceInfo>;
+
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState>;
 
 		fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate>;

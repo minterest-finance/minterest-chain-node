@@ -791,6 +791,10 @@ impl_runtime_apis! {
 	}
 
 	impl controller_rpc_runtime_api::ControllerRuntimeApi<Block, AccountId> for Runtime {
+		fn get_protocol_total_value() -> Option<BalanceInfo> {
+				Some(BalanceInfo{amount: Controller::get_protocol_total_value().ok()?})
+		}
+
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState> {
 			let exchange_rate = Controller::get_liquidity_pool_exchange_rate(pool_id)?;
 			let (borrow_rate, supply_rate) = Controller::get_liquidity_pool_borrow_and_supply_rates(pool_id)?;

@@ -408,6 +408,10 @@ fn dex_balance(pool_id: CurrencyId) -> Balance {
 	Currencies::free_balance(pool_id, &Dex::dex_account_id())
 }
 
+fn get_protocol_total_value_rpc() -> Option<BalanceInfo> {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_protocol_total_value()
+}
+
 fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::liquidity_pool_state(currency_id)
 }
@@ -486,12 +490,22 @@ fn set_oracle_price_for_all_pools(price: u128) -> DispatchResult {
 	Ok(())
 }
 
+fn set_oracle_prices(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
+	MinterestOracle::on_finalize(System::block_number());
+	assert_ok!(MinterestOracle::feed_values(origin_of(ORACLE1::get().clone()), prices));
+	Ok(())
+}
+
 fn get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
 	<Runtime as PricesRuntimeApi<Block>>::get_all_locked_prices()
 }
 
 fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
 	<Runtime as PricesRuntimeApi<Block>>::get_all_freshest_prices()
+}
+
+fn lock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
+	Prices::lock_price(origin_root(), currency_id)
 }
 
 fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
