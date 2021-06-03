@@ -3,7 +3,55 @@
 use super::*;
 use frame_support::{assert_noop, assert_ok};
 use mock::{Event, *};
+use sp_core::offchain::{
+	testing::{TestOffchainExt, TestTransactionPoolExt},
+	OffchainExt, TransactionPoolExt,
+};
 use sp_runtime::traits::{BadOrigin, Zero};
+
+use test_helper::offchain_ext::OffChainExtWithHooks;
+
+#[test]
+fn offchain_worker_balancing_test() {
+	// balance ratio = 0.2 for two pools. Price the same.
+	// The offchain worker must send transaction for balancing.
+	// It must change 10_000 ETH to 10_000 DOT
+	let mut ext = ExternalityBuilder::default()
+		.liquidation_pool_balance(DOT, 10_000 * DOLLARS)
+		.liquidation_pool_balance(ETH, 30_000 * DOLLARS)
+		.liquidity_pool_balance(DOT, 100_000 * DOLLARS)
+		.liquidity_pool_balance(ETH, 100_000 * DOLLARS)
+		.build();
+	let (offchain, _) = TestOffchainExt::new();
+	let offchain_ext = OffChainExtWithHooks::new(offchain, None);
+
+	let (pool, trans_pool_state) = TestTransactionPoolExt::new();
+	ext.register_extension(OffchainExt::new(offchain_ext));
+	ext.register_extension(TransactionPoolExt::new(pool));
+
+	ext.execute_with(|| {
+		assert_ok!(TestLiquidationPools::_offchain_worker(0));
+
+		// 1 balancing transcation in transactions pool
+		assert_eq!(trans_pool_state.read().transactions.len(), 1);
+		let transaction = trans_pool_state.write().transactions.pop().unwrap();
+		let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
+		// Called extrinsic input params
+		let (supply_pool_id, target_pool_id, max_supply_amount, target_supply_amount) = match ex.call {
+			crate::mock::Call::TestLiquidationPools(crate::Call::balance_liquidation_pools(
+				supply_pool_id,
+				target_pool_id,
+				max_supply_amount,
+				target_supply_amount,
+			)) => (supply_pool_id, target_pool_id, max_supply_amount, target_supply_amount),
+			e => panic!("Unexpected call: {:?}", e),
+		};
+		assert_eq!(supply_pool_id, ETH);
+		assert_eq!(target_pool_id, DOT);
+		assert_eq!(max_supply_amount, 10_000 * DOLLARS);
+		assert_eq!(target_supply_amount, 10_000 * DOLLARS);
+	});
+}
 
 #[test]
 fn protocol_operations_not_working_for_nonexisting_pool() {
@@ -208,13 +256,13 @@ fn calculate_ideal_balance_should_work() {
 #[test]
 fn transfer_to_liquidation_pool_should_work() {
 	ExternalityBuilder::default()
-		.liquidity_pool_balance(DOT, 500_000)
+		.liquidation_pool_balance(DOT, 500_000)
 		.user_balance(ADMIN, DOT, 20_000)
 		.build()
 		.execute_with(|| {
 			let who = ensure_signed(admin());
-			//  Check that transfer to liquidation pool works correctly
-			// Liquidity pool value: 500_000
+			// Check that transfer to liquidation pool works correctly
+			// Liquidation pool value: 500_000
 			// Transfer amount: 20_000
 			assert_ok!(TestLiquidationPools::transfer_to_liquidation_pool(admin(), DOT, 20_000));
 
@@ -225,8 +273,8 @@ fn transfer_to_liquidation_pool_should_work() {
 			assert_eq!(TestLiquidationPools::get_pool_available_liquidity(DOT), 520_000);
 
 			// Check that transfer with zero amount returns error.
-			//  Transfer amount: 0
-			//  Expected error: ZeroBalanceTransaction
+			// Transfer amount: 0
+			// Expected error: ZeroBalanceTransaction
 			assert_noop!(
 				TestLiquidationPools::transfer_to_liquidation_pool(admin(), DOT, 0),
 				Error::<Test>::ZeroBalanceTransaction
