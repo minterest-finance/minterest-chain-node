@@ -14,7 +14,7 @@ use test_helper::offchain_ext::OffChainExtWithHooks;
 #[test]
 fn offchain_worker_balancing_test() {
 	// balance ratio = 0.2 for two pools. Price the same.
-	// The offchain worker must send transaction por balancing.
+	// The offchain worker must send transaction for balancing.
 	// It must change 10_000 ETH to 10_000 DOT
 	let mut ext = ExternalityBuilder::default()
 		.liquidation_pool_balance(DOT, 10_000 * DOLLARS)
@@ -261,8 +261,8 @@ fn transfer_to_liquidation_pool_should_work() {
 		.build()
 		.execute_with(|| {
 			let who = ensure_signed(admin());
-			//  Check that transfer to liquidation pool works correctly
-			// Liquidity pool value: 500_000
+			// Check that transfer to liquidation pool works correctly
+			// Liquidation pool value: 500_000
 			// Transfer amount: 20_000
 			assert_ok!(TestLiquidationPools::transfer_to_liquidation_pool(admin(), DOT, 20_000));
 
@@ -273,8 +273,8 @@ fn transfer_to_liquidation_pool_should_work() {
 			assert_eq!(TestLiquidationPools::get_pool_available_liquidity(DOT), 520_000);
 
 			// Check that transfer with zero amount returns error.
-			//  Transfer amount: 0
-			//  Expected error: ZeroBalanceTransaction
+			// Transfer amount: 0
+			// Expected error: ZeroBalanceTransaction
 			assert_noop!(
 				TestLiquidationPools::transfer_to_liquidation_pool(admin(), DOT, 0),
 				Error::<Test>::ZeroBalanceTransaction
