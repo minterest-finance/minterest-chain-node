@@ -291,11 +291,10 @@ fn calculate_vesting_list_should_work() {
 			&(
 				VestingBucket::MarketMaking,
 				AccountId::from_string("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty").unwrap(),
-				0_u32, // from the start of the protocol
-				1_u32, // block by block
-				0_u32, /* means that the user will receive all tokens in block 0.
-				       	* The lock will not be established */
-				3000000000000000000000000_u128 // all 30 millions MNT tokens
+				0_u32,                          // from the start of the protocol
+				1_u32,                          // block by block
+				0_u32,                          // user will receive all tokens in block 0. The lock will not be established
+				3000000000000000000000000_u128  // all 30 millions MNT tokens
 			)
 		)
 	});
