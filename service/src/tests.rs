@@ -2,55 +2,208 @@
 
 //! Unit tests for the genesis resources data.
 
-use minterest_primitives::{AccountId, Balance, BlockNumber, VestingBucket, VestingScheduleJson};
-use node_minterest_runtime::BLOCKS_PER_YEAR;
-use sp_runtime::traits::One;
+use crate::chain_spec::{calculate_initial_allocations, calculate_vesting_list};
+use frame_benchmarking::frame_support::sp_io;
+use minterest_primitives::{AccountId, Balance, VestingBucket, VestingScheduleJson};
+use node_minterest_runtime::get_all_modules_accounts;
+use sp_runtime::traits::AccountIdConversion;
 use std::collections::HashMap;
 
+// Check the order of accounts. The mnt-token pallet must be placed first.
 #[test]
-fn check_minterest_vesting_unique_accounts_and_buckets_balance() {
-	let allocated_accounts_json = &include_bytes!("../../resources/dev-minterest-allocation-MNT.json")[..];
-	let allocated_list_parsed: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, Balance>>> =
-		serde_json::from_slice(allocated_accounts_json).unwrap();
+fn get_all_modules_accounts_should_work() {
+	assert_eq!(
+		get_all_modules_accounts()[0],
+		node_minterest_runtime::MntTokenModuleId::get().into_account()
+	);
+	assert_eq!(
+		get_all_modules_accounts()[1],
+		node_minterest_runtime::LiquidationPoolsModuleId::get().into_account()
+	);
+	assert_eq!(
+		get_all_modules_accounts()[2],
+		node_minterest_runtime::DexModuleId::get().into_account()
+	);
+	assert_eq!(
+		get_all_modules_accounts()[3],
+		node_minterest_runtime::LiquidityPoolsModuleId::get().into_account()
+	);
+}
 
-	let mut vesting_list: Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)> = Vec::new();
+// Checks for the existence of a json file with initial token allocations.
+// Checks the amounts of allocations and vesting.
+#[test]
+fn check_minterest_allocation_and_vesting() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		let endowed_accounts = vec![AccountId::from([1u8; 32]), AccountId::from([2u8; 32])];
+		let allocated_accounts_json = &include_bytes!("../../resources/dev-minterest-allocation-MNT.json")[..];
+		let allocated_list_parsed: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, Balance>>> =
+			serde_json::from_slice(allocated_accounts_json).unwrap();
+		let allocated_list = allocated_list_parsed
+			.iter()
+			.flat_map(|(_bucket, schedules)| {
+				schedules
+					.iter()
+					.map(|schedule| (schedule.account.clone(), schedule.amount))
+			})
+			.collect::<Vec<(AccountId, Balance)>>();
+		let _ = calculate_initial_allocations(endowed_accounts, allocated_list);
+		let _ = calculate_vesting_list(allocated_list_parsed);
+	});
+}
 
-	for (bucket, schedules) in allocated_list_parsed.iter() {
-		let total_bucket_amount: Balance = schedules.iter().map(|schedule| schedule.amount).sum();
-		assert_eq!(
-			total_bucket_amount,
-			bucket.total_amount(),
-			"total amount of distributed tokens must be equal to the number of tokens in the bucket."
-		);
+#[test]
+#[should_panic(expected = "The total number of buckets in the allocation json file must be seven, but passed: 6")]
+fn calculate_vesting_list_schould_panic_if_missed_bucket() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		let allocated_accounts_json = r#"{
+			  "PrivateSale": [
+				{
+				  "account": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+				  "amount": 10001000000000000000000000
+				}],
+			  "PublicSale": [
+				{
+				  "account": "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY",
+				  "amount": 2500250000000000000000000
+				}],
+			  "MarketMaking": [
+				{
+				  "account": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+				  "amount": 3000000000000000000000000
+				}],
+			  "StrategicPartners": [
+				{
+				  "account": "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
+				  "amount": 1949100000000000000000000
+				}],
+			  "Marketing": [
+				{
+				  "account": "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y",
+				  "amount": 4000400000000000000000000
+				}],
+			  "Ecosystem": [
+				{
+				  "account": "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy",
+				  "amount": 4499880000000000000000000
+				}]
+		}"#;
+		let allocated_list_parsed: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, Balance>>> =
+			serde_json::from_str(allocated_accounts_json).unwrap();
+		let _ = calculate_vesting_list(allocated_list_parsed);
+	});
+}
 
-		for schedule in schedules.iter() {
-			let start: BlockNumber = bucket.unlock_begins_in_days().into();
-			let period: BlockNumber = BlockNumber::one(); // block by block
+// Bucket Market Making has wrong number of tokens - 6000000 MNT instead 3000000 MNT
+#[test]
+#[should_panic(
+	expected = "The total amount of distributed tokens must be equal to the number of tokens in the bucket."
+)]
+fn calculate_vesting_list_should_panic_if_incorrect_account_balance() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		let allocated_accounts_json = r#"{
+			  "PrivateSale": [
+				{
+				  "account": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+				  "amount": 10001000000000000000000000
+				}],
+			  "PublicSale": [
+				{
+				  "account": "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY",
+				  "amount": 2500250000000000000000000
+				}],
+			  "MarketMaking": [
+				{
+				  "account": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+				  "amount": 6000000000000000000000000
+				}],
+			  "StrategicPartners": [
+				{
+				  "account": "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
+				  "amount": 1949100000000000000000000
+				}],
+			  "Marketing": [
+				{
+				  "account": "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y",
+				  "amount": 4000400000000000000000000
+				}],
+			  "Ecosystem": [
+				{
+				  "account": "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy",
+				  "amount": 4499880000000000000000000
+				}],
+				"Team":
+				[
+				  {
+					"account": "5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw",
+					"amount": 14017000000000000000000000
+				  },
+				  {
+					"account": "5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL",
+					"amount": 10000000000000000000000000
+				  }
+				]
+		}"#;
+		let allocated_list_parsed: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, Balance>>> =
+			serde_json::from_str(allocated_accounts_json).unwrap();
+		let _ = calculate_vesting_list(allocated_list_parsed);
+	});
+}
 
-			let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
-
-			let per_period: Balance = schedule
-				.amount
-				.checked_div(period_count as u128)
-				.unwrap_or(schedule.amount);
-
-			vesting_list.push((
-				bucket.clone(),
-				schedule.account.clone(),
-				start,
-				period,
-				period_count,
-				per_period,
-			));
-		}
-	}
-
-	// ensure no duplicates exist.
-	let unique_vesting_accounts = vesting_list
-		.iter()
-		.map(|(_, account, _, _, _, _)| account)
-		.cloned()
-		.collect::<std::collections::BTreeSet<_>>();
-
-	assert_eq!(unique_vesting_accounts.len(), vesting_list.len());
+// Account 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY occurs twice.
+#[test]
+#[should_panic(expected = "duplicate vesting accounts in genesis.")]
+fn calculate_vesting_list_should_panic_if_duplicate_vesting_accounts() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		let allocated_accounts_json = r#"{
+			  "PrivateSale": [
+				{
+				  "account": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+				  "amount": 5001000000000000000000000
+				},
+				{
+				  "account": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+				  "amount": 5000000000000000000000000
+				}],
+			  "PublicSale": [
+				{
+				  "account": "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY",
+				  "amount": 2500250000000000000000000
+				}],
+			  "MarketMaking": [
+				{
+				  "account": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+				  "amount": 3000000000000000000000000
+				}],
+			  "StrategicPartners": [
+				{
+				  "account": "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
+				  "amount": 1949100000000000000000000
+				}],
+			  "Marketing": [
+				{
+				  "account": "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y",
+				  "amount": 4000400000000000000000000
+				}],
+			  "Ecosystem": [
+				{
+				  "account": "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy",
+				  "amount": 4499880000000000000000000
+				}],
+				"Team":
+				[
+				  {
+					"account": "5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw",
+					"amount": 14017000000000000000000000
+				  },
+				  {
+					"account": "5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL",
+					"amount": 10000000000000000000000000
+				  }
+				]
+		}"#;
+		let allocated_list_parsed: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, Balance>>> =
+			serde_json::from_str(allocated_accounts_json).unwrap();
+		let _ = calculate_vesting_list(allocated_list_parsed);
+	});
 }

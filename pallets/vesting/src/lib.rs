@@ -219,6 +219,8 @@ pub mod module {
 						"Account do not have enough balance"
 					);
 
+					// We do not set a schedule if the number of periods is zero.
+					// period_count are set to zero for the Market Making bucket.
 					if !period_count.is_zero() {
 						T::Currency::set_lock(VESTING_LOCK_ID, who, total, WithdrawReasons::all());
 						VestingSchedules::<T>::insert(

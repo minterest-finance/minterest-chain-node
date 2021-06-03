@@ -1,23 +1,4 @@
 use super::*;
-use crate::{
-	get_all_modules_accounts, DexModuleId, LiquidationPoolsModuleId, LiquidityPoolsModuleId, MntTokenModuleId,
-};
-use sp_runtime::traits::AccountIdConversion;
-
-// Check the order of accounts.
-#[test]
-fn get_all_modules_accounts_should_work() {
-	assert_eq!(get_all_modules_accounts()[0], MntTokenModuleId::get().into_account());
-	assert_eq!(
-		get_all_modules_accounts()[1],
-		LiquidationPoolsModuleId::get().into_account()
-	);
-	assert_eq!(get_all_modules_accounts()[2], DexModuleId::get().into_account());
-	assert_eq!(
-		get_all_modules_accounts()[3],
-		LiquidityPoolsModuleId::get().into_account()
-	);
-}
 
 #[test]
 fn whitelist_mode_should_work() {

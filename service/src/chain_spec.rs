@@ -25,7 +25,7 @@ use sp_runtime::{
 	FixedPointNumber, FixedU128,
 };
 use sp_std::collections::btree_map::BTreeMap;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -793,7 +793,7 @@ fn testnet_genesis(
 ///
 /// Return:
 /// `vec[(account_id, allocation)]` - vector of accounts with their initial allocations
-fn calculate_initial_allocations(
+pub(crate) fn calculate_initial_allocations(
 	ed_accounts: Vec<AccountId>,
 	allocated_list: Vec<(AccountId, Balance)>,
 ) -> Vec<(AccountId, Balance)> {
@@ -847,19 +847,37 @@ fn calculate_initial_allocations(
 	initial_allocations
 }
 
+/// Checks vesting buckets and generates a list of vesting.
 ///
-fn calculate_vesting_list(
+/// - `allocated_list_parsed`: a HashMap of the following type:
+/// "PrivateSale": [
+///     {
+///       "account": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+///       "amount": 10000000000000000000000000
+///     }]
+/// Return:
+/// `vesting_list` - vector of accounts with their initial vesting.
+pub(crate) fn calculate_vesting_list(
 	allocated_list_parsed: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, Balance>>>,
 ) -> Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)> {
 	let mut vesting_list: Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)> = Vec::new();
+
+	assert_eq!(
+		allocated_list_parsed.len(),
+		7_usize,
+		"The total number of buckets in the allocation json file must be seven, but passed: {}",
+		allocated_list_parsed.len()
+	);
+
 	for (bucket, schedules) in allocated_list_parsed.iter() {
 		let total_bucket_amount: Balance = schedules.iter().map(|schedule| schedule.amount).sum();
 		assert_eq!(
 			total_bucket_amount,
 			bucket.total_amount(),
-			"total amount of distributed tokens must be equal to the number of tokens in the bucket."
+			"The total amount of distributed tokens must be equal to the number of tokens in the bucket."
 		);
 
+		// Calculate vesting schedules.
 		for schedule in schedules.iter() {
 			let start: BlockNumber = bucket.unlock_begins_in_days().into();
 			let period: BlockNumber = BlockNumber::one(); // block by block
@@ -883,14 +901,13 @@ fn calculate_vesting_list(
 	}
 
 	// ensure no duplicates exist.
-	let unique_vesting_accounts = vesting_list
-		.iter()
-		.map(|(_, account, _, _, _, _)| account)
-		.cloned()
-		.collect::<std::collections::BTreeSet<_>>();
-
+	let mut uniq = HashSet::new();
 	assert!(
-		unique_vesting_accounts.len() == vesting_list.len(),
+		vesting_list
+			.iter()
+			.map(|(_, account, _, _, _, _)| account)
+			.cloned()
+			.all(move |x| uniq.insert(x)),
 		"duplicate vesting accounts in genesis."
 	);
 
