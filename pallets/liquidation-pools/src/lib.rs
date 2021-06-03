@@ -359,7 +359,7 @@ pub mod module {
 				Error::<T>::NotEnoughLiquidityAvailable
 			);
 
-			T::MultiCurrency::transfer(underlying_asset_id, &who, &Self::pools_account_id(), underlying_amount);
+			T::MultiCurrency::transfer(underlying_asset_id, &who, &Self::pools_account_id(), underlying_amount)?;
 
 			Self::deposit_event(Event::TransferToLiquidationPool(
 				underlying_asset_id,
@@ -635,7 +635,7 @@ impl<T: Config> ValidateUnsigned for Pallet<T> {
 			Call::balance_liquidation_pools(_supply_pool_id, _target_pool_id, _max_supply_amount, _target_amount) => {
 				ValidTransaction::with_tag_prefix("LiquidationPoolsOffchainWorker")
 					.priority(T::UnsignedPriority::get())
-					.and_provides(<frame_system::Module<T>>::block_number())
+					.and_provides(<frame_system::Pallet<T>>::block_number())
 					.longevity(64_u64)
 					.propagate(true)
 					.build()

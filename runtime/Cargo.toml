@@ -12,14 +12,6 @@ targets = ['x86_64-unknown-linux-gnu']
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
 
-
-# alias "parity-scale-codec" to "codec"
-#[dependencies.codec]
-#default-features = false
-#features = ['derive']
-#package = 'parity-scale-codec'
-#version = '2.0.0'
-
 [dependencies]
 codec = { package = 'parity-scale-codec', version = '2.0.0', default-features = false, features = ['derive']}
 log = { version = "0.4.14", default-features = false }
@@ -35,7 +27,6 @@ frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", b
 frame-system-rpc-runtime-api = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false }
 pallet-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false}
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false }
-#pallet-grandpa = { default-features = false, version = '3.0.0' }
 pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false }
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false }
@@ -56,7 +47,6 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false }
 sp-version = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false }
 smallvec = { default-features = false, version = '1.6.0' }
-#getrandom = { version = "0.2.3", features = ["js"] }
 
 # local dependencies
 mnt-token = { path = "../pallets/mnt-token", default-features = false }
@@ -118,10 +108,8 @@ runtime-benchmarks = [
     'sp-runtime/runtime-benchmarks',
 ]
 std = [
-#    "parity-scale-codec/std",
     'codec/std',
     'serde',
-#    'getrandom/std',
 
     'sp-core/std',
     "sp-io/std",
@@ -136,7 +124,6 @@ std = [
     'frame-system-rpc-runtime-api/std',
     'pallet-aura/std',
     'pallet-balances/std',
-#    'pallet-grandpa/std',
     "pallet-membership/std",
     "pallet-collective/std",
     'pallet-randomness-collective-flip/std',

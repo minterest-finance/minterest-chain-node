@@ -5045,6 +5045,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "module-example"
+version = "0.6.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "module-prices"
 version = "0.6.2"
 dependencies = [

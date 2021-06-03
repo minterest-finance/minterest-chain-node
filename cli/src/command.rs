@@ -21,15 +21,13 @@ use cumulus_client_service::genesis::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use log::info;
 use node_minterest_runtime::{Block, RuntimeApi};
-use sc_service::PartialComponents;
-use service::{self, chain_spec};
-// use parachain_runtime::{RuntimeApi, Block};
 use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams, NetworkParams, Result,
 	RuntimeVersion, SharedParams, SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
+use service::{self, chain_spec};
 use service::{new_partial, parachain_build_import_queue, ParachainRuntimeExecutor};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::Block as BlockT;
@@ -163,10 +161,10 @@ pub fn run() -> Result<()> {
 			})
 		}
 		Some(Subcommand::ExportBlocks(cmd)) => {
-			construct_async_run!(|components, cli, cmd, config| { Ok(cmd.run(components.client, config.database)) })
+			construct_async_run!(|components, cli, cmd, config| Ok(cmd.run(components.client, config.database)))
 		}
 		Some(Subcommand::ExportState(cmd)) => {
-			construct_async_run!(|components, cli, cmd, config| { Ok(cmd.run(components.client, config.chain_spec)) })
+			construct_async_run!(|components, cli, cmd, config| Ok(cmd.run(components.client, config.chain_spec)))
 		}
 		Some(Subcommand::ImportBlocks(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
@@ -192,7 +190,7 @@ pub fn run() -> Result<()> {
 			})
 		}
 		Some(Subcommand::Revert(cmd)) => {
-			construct_async_run!(|components, cli, cmd, config| { Ok(cmd.run(components.client, components.backend)) })
+			construct_async_run!(|components, cli, cmd, config| Ok(cmd.run(components.client, components.backend)))
 		}
 		Some(Subcommand::ExportGenesisState(params)) => {
 			let mut builder = sc_cli::LoggerBuilder::new("");

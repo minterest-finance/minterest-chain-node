@@ -9,15 +9,13 @@ log = '0.4.14'
 codec = { package = 'parity-scale-codec', version = '2.0.0' }
 structopt = "0.3.8"
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", optional = true}
-sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", optional = true}
-sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", optional = true}
-frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", optional = true}
 sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.3' }
+frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", optional = true}
 
-service = { package = "minterest-service", path = "../service", default-features = false, optional = true}
-node-minterest-runtime = { path = '../runtime' }
 sc-tracing = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.3' }
 sc-telemetry = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.3' }
+sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", optional = true}
+sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", optional = true}
 
 
 # Cumulus dependencies
@@ -37,8 +35,12 @@ polkadot-cli = { git = 'https://github.com/paritytech/polkadot', branch = 'relea
 polkadot-test-service = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.3'}
 polkadot-parachain = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.3'}
 
+# Local dependencies
+node-minterest-runtime = { path = '../runtime' }
+service = { package = "minterest-service", path = "../service", default-features = false, optional = true}
+
+
 [build-dependencies]
-#substrate-build-script-utils = { version = "3.0.0", default-features = false }
 substrate-build-script-utils = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.3' }
 
 [features]

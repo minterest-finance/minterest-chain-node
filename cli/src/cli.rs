@@ -1,5 +1,4 @@
 use cumulus_client_cli;
-use sc_cli::RunCmd;
 use service::{self, chain_spec};
 use std::path::PathBuf;
 use structopt::StructOpt;

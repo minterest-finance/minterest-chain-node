@@ -19,7 +19,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
-use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::One;
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify, Zero},
@@ -236,7 +235,7 @@ pub fn minterest_turbo_testnet_config(id: ParaId) -> ChainSpec {
 fn testnet_genesis(
 	wasm_binary: &[u8],
 	root_key: AccountId,
-	initial_authorities: Vec<(AuraId)>,
+	initial_authorities: Vec<AuraId>,
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
 ) -> GenesisConfig {

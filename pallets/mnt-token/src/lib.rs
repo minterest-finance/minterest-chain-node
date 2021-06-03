@@ -43,7 +43,7 @@ impl<T: Config> MntState<T> {
 	fn new() -> MntState<T> {
 		MntState {
 			mnt_distribution_index: Rate::one(), // initial index
-			index_updated_at_block: frame_system::Module::<T>::block_number(),
+			index_updated_at_block: frame_system::Pallet::<T>::block_number(),
 		}
 	}
 }
@@ -366,7 +366,7 @@ impl<T: Config> Pallet<T> {
 		if user_accrued >= threshold && user_accrued > 0 {
 			let mnt_treasury_balance = T::MultiCurrency::free_balance(MNT, &Self::get_account_id());
 			if user_accrued <= mnt_treasury_balance {
-				T::MultiCurrency::transfer(MNT, &Self::get_account_id(), &user, user_accrued);
+				T::MultiCurrency::transfer(MNT, &Self::get_account_id(), &user, user_accrued)?;
 				MntAccrued::<T>::remove(user); // set to 0
 			}
 		} else {
@@ -401,7 +401,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		// supply_state.mnt_distribution_index += ratio
 		// supply_state.index_updated_at_block = current_block_number
 
-		let current_block = frame_system::Module::<T>::block_number();
+		let current_block = frame_system::Pallet::<T>::block_number();
 		let mut pool_state = MntPoolsState::<T>::get(underlying_id);
 		let block_delta = current_block
 			.checked_sub(&pool_state.supply_state.index_updated_at_block)
@@ -454,7 +454,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		// borrow_state.mnt_distribution_index(for current pool) += ratio
 		// borrow_state.index_updated_at_block = current_block_number
 
-		let current_block = frame_system::Module::<T>::block_number();
+		let current_block = frame_system::Pallet::<T>::block_number();
 		let mut pool_state = MntPoolsState::<T>::get(underlying_id);
 		let block_delta = current_block
 			.checked_sub(&pool_state.borrow_state.index_updated_at_block)

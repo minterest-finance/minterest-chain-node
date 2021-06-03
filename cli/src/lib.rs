@@ -1,7 +1,7 @@
-// #[cfg(feature = "cli")]
-// mod cli;
-// #[cfg(feature = "cli")]
-// mod command;
+#[cfg(feature = "cli")]
+mod cli;
+#[cfg(feature = "cli")]
+mod command;
 
 #[cfg(feature = "cli")]
 pub use cli::*;
@@ -11,8 +11,3 @@ pub use command::*;
 
 #[cfg(feature = "cli")]
 pub use sc_cli::{Error, Result};
-
-//FIXME: ><
-#[macro_use]
-mod cli;
-mod command;

@@ -40,7 +40,7 @@ use sp_core::{
 	u32_trait::{_1, _2, _3, _4},
 	OpaqueMetadata,
 };
-use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, One, Zero};
+use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, One, Zero};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
@@ -844,7 +844,7 @@ pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signatu
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
 /// Executive: handles dispatch to the various pallets.
 pub type Executive =
-	frame_executive::Executive<Runtime, Block, frame_system::ChainContext<Runtime>, Runtime, AllModules>;
+	frame_executive::Executive<Runtime, Block, frame_system::ChainContext<Runtime>, Runtime, AllPallets>;
 
 impl_runtime_apis! {
 	impl sp_api::Core<Block> for Runtime {

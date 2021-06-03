@@ -83,8 +83,8 @@ pub struct PauseKeeper {
 	pub transfer_paused: bool,
 }
 
-type LiquidityPools<T> = liquidity_pools::Module<T>;
-type MinterestModel<T> = minterest_model::Module<T>;
+type LiquidityPools<T> = liquidity_pools::Pallet<T>;
+type MinterestModel<T> = minterest_model::Pallet<T>;
 type RateResult = result::Result<Rate, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 type LiquidityResult = result::Result<(Balance, Balance), DispatchError>;
@@ -476,7 +476,7 @@ impl<T: Config> Pallet<T> {
 						}
 
 						let (current_supply_in_usd, current_borrowed_in_usd) = current_value;
-						let current_block_number = <frame_system::Module<T>>::block_number();
+						let current_block_number = <frame_system::Pallet<T>>::block_number();
 						let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
 						// Calculate the number of blocks elapsed since the last accrual
 						let block_delta =
@@ -534,7 +534,7 @@ impl<T: Config> Pallet<T> {
 
 				let collateral_factor = Self::controller_dates(pool_id).collateral_factor;
 
-				let current_block_number = <frame_system::Module<T>>::block_number();
+				let current_block_number = <frame_system::Pallet<T>>::block_number();
 				let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
 				let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
 
@@ -567,7 +567,7 @@ impl<T: Config> Pallet<T> {
 			underlying_asset_id.is_supported_underlying_asset(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
-		let current_block_number = <frame_system::Module<T>>::block_number();
+		let current_block_number = <frame_system::Pallet<T>>::block_number();
 		let accrual_block_number_previous = Self::controller_dates(underlying_asset_id).last_interest_accrued_block;
 		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
 		let pool_data = Self::calculate_interest_params(underlying_asset_id, block_delta)?;
@@ -875,7 +875,7 @@ impl<T: Config> ControllerAPI<T::AccountId> for Pallet<T> {
 	/// up to the current block and writes new checkpoint to storage.
 	fn accrue_interest_rate(underlying_asset: CurrencyId) -> DispatchResult {
 		//Remember the initial block number.
-		let current_block_number = <frame_system::Module<T>>::block_number();
+		let current_block_number = <frame_system::Pallet<T>>::block_number();
 		let accrual_block_number_previous = Self::controller_dates(underlying_asset).last_interest_accrued_block;
 		// Calculate the number of blocks elapsed since the last accrual
 		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
