@@ -68,3 +68,69 @@ pub struct VestingScheduleJson<AccountId, Balance> {
 	/// Vesting amount of tokens
 	pub amount: Balance,
 }
+
+#[cfg(test)]
+mod tests {
+	use crate::VestingBucket;
+	use sp_runtime::traits::Zero;
+
+	#[test]
+	fn check_vesting_buckets_begins() {
+		assert_eq!(VestingBucket::Community.vesting_duration(), 5_u8);
+		assert_eq!(VestingBucket::PrivateSale.vesting_duration(), 1_u8);
+		assert_eq!(VestingBucket::PublicSale.vesting_duration(), 1_u8);
+		assert_eq!(VestingBucket::MarketMaking.vesting_duration(), 0_u8);
+		assert_eq!(VestingBucket::StrategicPartners.vesting_duration(), 2_u8);
+		assert_eq!(VestingBucket::Marketing.vesting_duration(), 1_u8);
+		assert_eq!(VestingBucket::Ecosystem.vesting_duration(), 4_u8);
+		assert_eq!(VestingBucket::Team.vesting_duration(), 5_u8)
+	}
+
+	#[test]
+	fn check_vesting_buckets_durations() {
+		assert_eq!(VestingBucket::Team.unlock_begins_in_days(), 182_u8);
+		assert_eq!(VestingBucket::Community.unlock_begins_in_days(), u8::zero());
+		assert_eq!(VestingBucket::PrivateSale.unlock_begins_in_days(), u8::zero());
+		assert_eq!(VestingBucket::PublicSale.unlock_begins_in_days(), u8::zero());
+		assert_eq!(VestingBucket::MarketMaking.unlock_begins_in_days(), u8::zero());
+		assert_eq!(VestingBucket::StrategicPartners.unlock_begins_in_days(), u8::zero());
+		assert_eq!(VestingBucket::Marketing.unlock_begins_in_days(), u8::zero());
+		assert_eq!(VestingBucket::Ecosystem.unlock_begins_in_days(), u8::zero())
+	}
+
+	#[test]
+	fn check_vesting_buckets_total_amounts() {
+		assert_eq!(
+			VestingBucket::Community.total_amount(),
+			50_032_400_000_000_000_000_000_000_u128
+		);
+		assert_eq!(
+			VestingBucket::PrivateSale.total_amount(),
+			10_001_000_000_000_000_000_000_000_u128
+		);
+		assert_eq!(
+			VestingBucket::PublicSale.total_amount(),
+			2_500_250_000_000_000_000_000_000_u128
+		);
+		assert_eq!(
+			VestingBucket::MarketMaking.total_amount(),
+			3_000_000_000_000_000_000_000_000_u128
+		);
+		assert_eq!(
+			VestingBucket::StrategicPartners.total_amount(),
+			1_949_100_000_000_000_000_000_000_u128
+		);
+		assert_eq!(
+			VestingBucket::Marketing.total_amount(),
+			4_000_400_000_000_000_000_000_000_u128
+		);
+		assert_eq!(
+			VestingBucket::Ecosystem.total_amount(),
+			4_499_880_000_000_000_000_000_000_u128
+		);
+		assert_eq!(
+			VestingBucket::Team.total_amount(),
+			24_017_000_000_000_000_000_000_000_u128
+		)
+	}
+}

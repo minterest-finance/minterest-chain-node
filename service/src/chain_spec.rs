@@ -3,6 +3,7 @@ use hex_literal::hex;
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
+use minterest_primitives::currency::GetDecimals;
 use minterest_primitives::{VestingBucket, VestingScheduleJson};
 use node_minterest_runtime::{
 	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, BlockNumber, ControllerConfig,
@@ -841,8 +842,10 @@ pub(crate) fn calculate_initial_allocations(
 
 	// check total allocated
 	assert_eq!(
-		total_allocated, TOTAL_ALLOCATION,
-		"total allocation must be equal to 100,000,030 MNT tokens."
+		total_allocated,
+		TOTAL_ALLOCATION,
+		"Total allocation must be equal to 100,000,030 MNT tokens, but passed: {} MNT",
+		total_allocated / 10_u128.pow(MNT.decimals())
 	);
 	initial_allocations
 }
