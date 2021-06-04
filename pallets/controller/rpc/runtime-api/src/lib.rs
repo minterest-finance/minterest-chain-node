@@ -89,6 +89,11 @@ sp_api::decl_runtime_apis! {
 			underlying_asset_id: CurrencyId,
 		) -> Option<BalanceInfo>;
 
+		fn get_user_underlying_balance_per_asset(
+			account_id: AccountId,
+			pool_id: CurrencyId,
+		) -> Option<BalanceInfo>;
+
 		fn pool_exists(underlying_asset_id: CurrencyId) -> bool;
 	}
 }

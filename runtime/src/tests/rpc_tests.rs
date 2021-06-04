@@ -803,6 +803,60 @@ fn get_user_total_collateral_rpc_should_work() {
 		})
 }
 
+/// This test checks get_user_underlying_balance_per_asset RPC.
+///
+/// Test scenario:
+/// - Bob deposits 90 to ETH pool
+/// - Alice deposits 100 to ETH pool
+/// - Balance converted to underlying is equal to deposited amount
+/// - Bob borrows 40 from ETH pool
+/// - Balance converted to underlying is still equal to deposited amount
+/// - Jump to block #100
+/// - Balance converted to underlying has increased
+/// - Alice redeems money from protocol
+/// - Alice ETH balance increased by a value that was previously returned by RPC
+#[test]
+fn test_get_user_underlying_balance_per_asset_rpc() {
+	ExtBuilder::default().pool_initial(ETH).build().execute_with(|| {
+		assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(90_000)));
+		// Alice deposited ALL ETH tokens to protocol
+		assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
+		assert_eq!(
+			get_user_underlying_balance_per_asset_rpc(ALICE::get(), ETH),
+			Some(BalanceInfo {
+				amount: dollars(100_000)
+			})
+		);
+		// Bob makes a borrow to update exchange rate
+		assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
+		assert_ok!(MinterestProtocol::borrow(bob(), ETH, dollars(40_000)));
+		// Alice Underlying balance hasn`t changed in the block when first borrow occurred
+		assert_eq!(
+			get_user_underlying_balance_per_asset_rpc(ALICE::get(), ETH),
+			Some(BalanceInfo {
+				amount: dollars(100_000)
+			})
+		);
+		// Skip some blocks to accrue interest. Bob repay his borrow
+		System::set_block_number(100);
+		// 3554127423600000 - this is interest that alice earn for depositing
+		let alice_balance_after_borrowing = dollars(100_000) + 3554127423600000;
+		assert_eq!(
+			get_user_underlying_balance_per_asset_rpc(ALICE::get(), ETH),
+			Some(BalanceInfo {
+				amount: alice_balance_after_borrowing
+			})
+		);
+		// Converts ALL mTokens into a specified quantity of the underlying asset
+		assert_ok!(MinterestProtocol::redeem(alice(), ETH));
+		// Check that value got by rpc and value after redeem the same
+		assert_eq!(
+			Currencies::free_balance(ETH, &ALICE::get()),
+			alice_balance_after_borrowing
+		);
+	})
+}
+
 #[test]
 fn get_all_locked_prices_rpc_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
