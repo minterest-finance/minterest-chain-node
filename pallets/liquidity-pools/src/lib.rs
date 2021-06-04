@@ -240,8 +240,8 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Calculates the exchange rate from the underlying to the mToken.
-	/// - `total_cash`: The total amount of cash the pool has.
-	/// - `total_supply`: Total number of tokens in circulation.
+	/// - `total_cash`: The total amount of underlying tokens the pool has.
+	/// - `total_supply`: Total number of wrapped tokens in circulation.
 	/// - `total_protocol_interest`: Total amount of interest of the underlying held in the pool.
 	/// - `total_borrowed`: Total amount of outstanding borrows of the underlying in this pool.
 	///
