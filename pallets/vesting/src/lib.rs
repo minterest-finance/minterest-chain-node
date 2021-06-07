@@ -62,7 +62,7 @@ pub const VESTING_LOCK_ID: LockIdentifier = *b"mod/vest";
 /// of blocks after `start`.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct VestingSchedule<BlockNumber, Balance: HasCompact, VestingBucket> {
+pub struct VestingSchedule<BlockNumber, Balance: HasCompact> {
 	/// Vesting bucket type
 	pub bucket: VestingBucket,
 	/// Vesting starting block
@@ -76,9 +76,22 @@ pub struct VestingSchedule<BlockNumber, Balance: HasCompact, VestingBucket> {
 	pub per_period: Balance,
 }
 
-impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy, VestingBucket: Eq + PartialEq>
-	VestingSchedule<BlockNumber, Balance, VestingBucket>
-{
+impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSchedule<BlockNumber, Balance> {
+	/// Creates a new schedule.
+	pub fn new(bucket: VestingBucket, amount: Balance) -> Self {
+		let start: BlockNumber = bucket.unlock_begins_in_days().into();
+		let period: BlockNumber = BlockNumber::one(); // block by block
+		let period_count: u32 = bucket.vesting_duration() as u32 * 5_256_000 as u32;
+		let per_period: Balance = amount.checked_div(&Balance::from(period_count)).unwrap_or(amount);
+		Self {
+			bucket,
+			start,
+			period,
+			period_count,
+			per_period,
+		}
+	}
+
 	/// Returns the end of all periods, `None` if calculation overflows.
 	pub fn end(&self) -> Option<BlockNumber> {
 		// period * period_count + start
@@ -128,8 +141,7 @@ pub mod module {
 	pub(crate) type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 	/// Type alias for VestingSchedule.
-	pub(crate) type VestingScheduleOf<T> =
-		VestingSchedule<<T as frame_system::Config>::BlockNumber, BalanceOf<T>, VestingBucket>;
+	pub(crate) type VestingScheduleOf<T> = VestingSchedule<<T as frame_system::Config>::BlockNumber, BalanceOf<T>>;
 	/// Tuple struct for GenesisConfig. `(account_id, start, period, period_count, per_period)`
 	pub type ScheduledItem<T> = (
 		VestingBucket,

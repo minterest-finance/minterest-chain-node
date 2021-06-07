@@ -1,12 +1,18 @@
-use crate::currency::{GetDecimals, MNT};
-use crate::{AccountId, Balance};
+//! # Vesting primitives Module
+//!
+//! This module declares primitives for Vesting logic.
+//! Constants declared: total amount of tokens for each bucket, vesting duration for each bucket,
+//! the beginning of the vesting for each bucket.
+
+use crate::currency::{AccountId, Balance, GetDecimals, MNT};
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::traits::Zero;
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{traits::Zero, RuntimeDebug};
 
 /// Vesting bucket type. Each bucket has its own rules for vesting.
+/// Each type of bucket differs from each other in the total number of tokens, the duration of
+/// the vesting, the beginning of the vesting.
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum VestingBucket {
@@ -93,7 +99,7 @@ mod tests {
 	use sp_runtime::traits::Zero;
 
 	#[test]
-	fn check_vesting_buckets_begins() {
+	fn check_vesting_buckets_durations() {
 		assert_eq!(VestingBucket::Community.vesting_duration(), 5_u8);
 		assert_eq!(VestingBucket::PrivateSale.vesting_duration(), 1_u8);
 		assert_eq!(VestingBucket::PublicSale.vesting_duration(), 1_u8);
@@ -105,7 +111,7 @@ mod tests {
 	}
 
 	#[test]
-	fn check_vesting_buckets_durations() {
+	fn check_vesting_buckets_begins() {
 		assert_eq!(VestingBucket::Team.unlock_begins_in_days(), 182_u8);
 		assert_eq!(VestingBucket::Community.unlock_begins_in_days(), u8::zero());
 		assert_eq!(VestingBucket::PrivateSale.unlock_begins_in_days(), u8::zero());
@@ -149,7 +155,20 @@ mod tests {
 		assert_eq!(
 			VestingBucket::Team.total_amount(),
 			24_017_000_000_000_000_000_000_000_u128
-		)
+		);
+		// The sum of total_amount all buckets must be equal to the const TOTAL_ALLOCATION,
+		// declared in the file in runtime/constants.rs
+		assert_eq!(
+			VestingBucket::Community.total_amount()
+				+ VestingBucket::PrivateSale.total_amount()
+				+ VestingBucket::PublicSale.total_amount()
+				+ VestingBucket::MarketMaking.total_amount()
+				+ VestingBucket::StrategicPartners.total_amount()
+				+ VestingBucket::Marketing.total_amount()
+				+ VestingBucket::Ecosystem.total_amount()
+				+ VestingBucket::Team.total_amount(),
+			100_000_030_000_000_000_000_000_000
+		);
 	}
 
 	#[test]

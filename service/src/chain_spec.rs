@@ -20,9 +20,8 @@ use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
-use sp_runtime::traits::{AccountIdConversion, One};
 use sp_runtime::{
-	traits::{IdentifyAccount, Verify, Zero},
+	traits::{AccountIdConversion, IdentifyAccount, One, Verify, Zero},
 	FixedPointNumber, FixedU128,
 };
 use sp_std::collections::btree_map::BTreeMap;
