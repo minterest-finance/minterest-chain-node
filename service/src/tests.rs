@@ -31,9 +31,6 @@ fn get_all_modules_accounts_should_work() {
 	);
 }
 
-#[test]
-fn check_vesting_buckets_balances() {}
-
 // Checks for the existence of a json file with initial token allocations.
 // Checks the amounts of allocations and vesting.
 #[test]

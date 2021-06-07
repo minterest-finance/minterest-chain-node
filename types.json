@@ -124,6 +124,9 @@
     "BalanceInfo": {
       "amount": "Balance"
     },
+    "MntBalanceInfo": {
+      "amount": "Balance"
+    },
     "OracleKey": "CurrencyId",
     "OracleValue": "Price",
     "DataProviderId": {
