@@ -19,7 +19,7 @@ use frame_system::{
 use minterest_primitives::{arithmetic::sum_with_mult_result, Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 
-use pallet_traits::{DEXManager, LiquidationPoolsManager, PoolsManager, PricesManager};
+use pallet_traits::{DEXManager, LiquidationPoolsManager, LiquidityPoolsManager, PoolsManager, PricesManager};
 use sp_runtime::{
 	offchain::storage_lock::{StorageLock, Time},
 	traits::{AccountIdConversion, CheckedDiv, CheckedMul, Zero},
@@ -91,7 +91,7 @@ pub mod module {
 		type PriceSource: PricesManager<CurrencyId>;
 
 		/// The basic liquidity pools manager.
-		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
+		type LiquidityPoolsManager: LiquidityPoolsManager<Self::AccountId>;
 
 		/// The origin which may update liquidation pools parameters. Root or
 		/// Half Minterest Council can always do this.
@@ -628,18 +628,19 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
+impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	/// Gets module account id.
 	fn pools_account_id() -> T::AccountId {
 		T::LiquidationPoolsModuleId::get().into_account()
 	}
-
 	/// Gets current the total amount of cash the liquidation pool has.
 	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance {
 		let module_account_id = Self::pools_account_id();
 		T::MultiCurrency::free_balance(pool_id, &module_account_id)
 	}
+}
 
+impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for LiquidationPoolsData
 	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult {

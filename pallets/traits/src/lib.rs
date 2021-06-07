@@ -31,10 +31,6 @@ pub trait PoolsManager<AccountId> {
 
 	/// Return liquidity balance of `pool_id`.
 	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance;
-
-	// FIXME: Consider removing
-	/// Check if pool exists
-	fn pool_exists(underlying_asset: &CurrencyId) -> bool;
 }
 
 /// Provides liquidity pool functionality
@@ -48,16 +44,17 @@ pub trait LiquidityPoolsManager<AccountId>: PoolsManager<AccountId> {
 
 	/// Gets current total amount of protocol interest of the underlying held in this pool.
 	fn get_pool_total_protocol_interest(pool_id: CurrencyId) -> Balance;
+
+	/// Check if pool exists
+	fn pool_exists(underlying_asset: &CurrencyId) -> bool;
+
+	/// This is a part of a pool creation flow
+	/// Creates storage records for LiquidityPool
+	fn create_pool(currency_id: CurrencyId) -> DispatchResult;
 }
 
 /// An abstraction of pools basic functionalities.
-pub trait LiquidationPoolsManager<AccountId> {
-	/// Return module account id.
-	fn pools_account_id() -> AccountId;
-
-	/// Return liquidity balance of `pool_id`.
-	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance;
-
+pub trait LiquidationPoolsManager<AccountId>: PoolsManager<AccountId> {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for LiquidationPoolsData
 	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult;

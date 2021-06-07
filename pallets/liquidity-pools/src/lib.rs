@@ -349,22 +349,6 @@ impl<T: Config> Pallet<T> {
 	pub fn disable_is_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
 		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = false);
 	}
-
-	/// This is a part of a pool creation flow
-	/// Creates storage records for LiquidationPoolsData
-	pub fn create_pool(currency_id: CurrencyId) -> DispatchResult {
-		ensure!(!Self::pool_exists(&currency_id), Error::<T>::PoolAlreadyCreated);
-
-		Pools::<T>::insert(
-			currency_id,
-			Pool {
-				total_borrowed: Balance::zero(),
-				borrow_index: Rate::one(),
-				total_protocol_interest: Balance::zero(),
-			},
-		);
-		Ok(())
-	}
 }
 
 impl<T: Config> Pallet<T> {
@@ -546,11 +530,6 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 		let module_account_id = Self::pools_account_id();
 		T::MultiCurrency::free_balance(pool_id, &module_account_id)
 	}
-
-	/// Check if pool exists
-	fn pool_exists(underlying_asset: &CurrencyId) -> bool {
-		Pools::<T>::contains_key(underlying_asset)
-	}
 }
 
 impl<T: Config> LiquidityPoolsManager<T::AccountId> for Pallet<T> {
@@ -567,5 +546,25 @@ impl<T: Config> LiquidityPoolsManager<T::AccountId> for Pallet<T> {
 	/// Accumulator of the total earned interest rate since the opening of the pool
 	fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate {
 		Self::pools(pool_id).borrow_index
+	}
+	/// Check if pool exists
+	fn pool_exists(underlying_asset: &CurrencyId) -> bool {
+		Pools::<T>::contains_key(underlying_asset)
+	}
+
+	/// This is a part of a pool creation flow
+	/// Creates storage records for LiquidityPool data
+	fn create_pool(currency_id: CurrencyId) -> DispatchResult {
+		ensure!(!Self::pool_exists(&currency_id), Error::<T>::PoolAlreadyCreated);
+
+		Pools::<T>::insert(
+			currency_id,
+			Pool {
+				total_borrowed: Balance::zero(),
+				borrow_index: Rate::one(),
+				total_protocol_interest: Balance::zero(),
+			},
+		);
+		Ok(())
 	}
 }
