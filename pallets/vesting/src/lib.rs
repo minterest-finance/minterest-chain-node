@@ -39,6 +39,7 @@ use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use minterest_primitives::VestingBucket;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+use sp_runtime::traits::CheckedDiv;
 use sp_runtime::{
 	traits::{AtLeast32Bit, CheckedAdd, Saturating, StaticLookup, Zero},
 	DispatchResult, RuntimeDebug,
@@ -77,11 +78,12 @@ pub struct VestingSchedule<BlockNumber, Balance: HasCompact> {
 }
 
 impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSchedule<BlockNumber, Balance> {
+	//TODO: Implement via constant BLOCKS_PER_YEAR or remove!!!
 	/// Creates a new schedule.
 	pub fn new(bucket: VestingBucket, amount: Balance) -> Self {
 		let start: BlockNumber = bucket.unlock_begins_in_days().into();
 		let period: BlockNumber = BlockNumber::one(); // block by block
-		let period_count: u32 = bucket.vesting_duration() as u32 * 5_256_000 as u32;
+		let period_count: u32 = bucket.vesting_duration() as u32 * 5_256_000_u32;
 		let per_period: Balance = amount.checked_div(&Balance::from(period_count)).unwrap_or(amount);
 		Self {
 			bucket,
@@ -129,6 +131,8 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
+	use minterest_primitives::{Balance, BlockNumber};
+	use sp_runtime::traits::One;
 
 	pub trait WeightInfo {
 		fn vested_transfer() -> Weight;
@@ -188,13 +192,16 @@ pub mod module {
 		TooManyVestingSchedules,
 		/// The vested transfer amount is too low
 		AmountLow,
+		/// Incorrect vesting bucket type. Only vestings from Marketing, Team and
+		/// Strategic Partners buckets can be created.
+		IncorrectVestingBucketType,
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Added new vesting schedule. [from, to, vesting_schedule]
-		VestingScheduleAdded(T::AccountId, T::AccountId, VestingScheduleOf<T>),
+		/// Added new vesting schedule. [to, vesting_schedule]
+		VestingScheduleAdded(T::AccountId, VestingScheduleOf<T>),
 		/// Claimed vesting. [who, locked_amount]
 		Claimed(T::AccountId, BalanceOf<T>),
 		/// Updated vesting schedules. [who]
@@ -280,16 +287,39 @@ pub mod module {
 		#[pallet::weight(T::WeightInfo::vested_transfer())]
 		pub fn vested_transfer(
 			origin: OriginFor<T>,
-			source: <T::Lookup as StaticLookup>::Source,
 			target: <T::Lookup as StaticLookup>::Source,
-			schedule: VestingScheduleOf<T>,
+			bucket: VestingBucket,
+			start: BlockNumber,
+			amount: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			T::VestedTransferOrigin::ensure_origin(origin)?;
-			let source = T::Lookup::lookup(source)?;
 			let target = T::Lookup::lookup(target)?;
-			Self::do_vested_transfer(&source, &target, schedule.clone())?;
 
-			Self::deposit_event(Event::VestingScheduleAdded(source, target, schedule));
+			ensure!(
+				(bucket == VestingBucket::Team || bucket == VestingBucket::Team || bucket == VestingBucket::Team),
+				Error::<T>::IncorrectVestingBucketType
+			);
+			let period: BlockNumber = BlockNumber::one(); // block by block
+			let period_count: u32 = bucket.vesting_duration() as u32 * 5_256_000_u32;
+			let per_period: BalanceOf<T> = amount
+				.checked_div(&Into::<BalanceOf<T>>::into(period_count))
+				.unwrap_or(amount);
+
+			let schedule = VestingSchedule {
+				bucket,
+				start,
+				period,
+				period_count,
+				per_period,
+			};
+
+			let bucket_account_id = bucket
+				.bucket_account_id()
+				.ok_or(Error::<T>::IncorrectVestingBucketType)?;
+
+			Self::do_vested_transfer(&bucket_account_id, &target, schedule.clone())?;
+
+			Self::deposit_event(Event::VestingScheduleAdded(target, schedule));
 			Ok(().into())
 		}
 
@@ -352,16 +382,6 @@ impl<T: Config> Pallet<T> {
 	#[transactional]
 	fn do_vested_transfer(from: &T::AccountId, to: &T::AccountId, schedule: VestingScheduleOf<T>) -> DispatchResult {
 		let schedule_amount = Self::ensure_valid_vesting_schedule(&schedule)?;
-
-		ensure!(
-			vec![
-				T::AccountId::decode(&mut VestingBucket::Marketing.bucket_account_id().unwrap()),
-				VestingBucket::StrategicPartners.bucket_account_id(),
-				VestingBucket::Team.bucket_account_id(),
-			]
-			.contains(&Some(from.clone())),
-			Error::<T>::TooManyVestingSchedules
-		);
 
 		ensure!(
 			<VestingSchedules<T>>::decode_len(to).unwrap_or(0) < T::MaxVestingSchedules::get() as usize,

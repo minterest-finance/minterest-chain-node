@@ -4,7 +4,10 @@
 //! Constants declared: total amount of tokens for each bucket, vesting duration for each bucket,
 //! the beginning of the vesting for each bucket.
 
-use crate::currency::{AccountId, Balance, GetDecimals, MNT};
+use crate::{
+	currency::{GetDecimals, MNT},
+	AccountId, Balance,
+};
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
