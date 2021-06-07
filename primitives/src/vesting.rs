@@ -153,7 +153,7 @@ mod tests {
 	}
 
 	#[test]
-	fn check_vesting_buckets_accounts() {
+	fn check_vesting_buckets_accounts_should_work() {
 		use sp_core::crypto::Ss58Codec;
 		assert_eq!(
 			VestingBucket::Marketing.bucket_account_id(),

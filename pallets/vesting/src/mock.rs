@@ -7,7 +7,7 @@ use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{EnsureOrigin, GenesisBuild},
 };
-use frame_system::RawOrigin;
+use frame_system::{EnsureSignedBy, RawOrigin};
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup};
 
@@ -61,29 +61,15 @@ impl pallet_balances::Config for Runtime {
 	type WeightInfo = ();
 }
 
-pub struct EnsureAliceOrBob;
-impl EnsureOrigin<Origin> for EnsureAliceOrBob {
-	type Success = AccountId;
-
-	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
-		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
-			RawOrigin::Signed(ALICE) => Ok(ALICE),
-			RawOrigin::Signed(BOB) => Ok(BOB),
-			r => Err(Origin::from(r)),
-		})
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_origin() -> Origin {
-		Origin::from(RawOrigin::Signed(Default::default()))
-	}
+ord_parameter_types! {
+	pub const ZeroAdmin: AccountId = 0;
 }
 
 impl Config for Runtime {
 	type Event = Event;
 	type Currency = PalletBalances;
 	type MinVestedTransfer = MinVestedTransfer;
-	type VestedTransferOrigin = EnsureAliceOrBob;
+	type VestedTransferOrigin = EnsureSignedBy<OneAlice, AccountId>;
 	type WeightInfo = ();
 	type MaxVestingSchedules = MaxVestingSchedules;
 }
@@ -106,6 +92,9 @@ construct_runtime!(
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
 pub const CHARLIE: AccountId = 3;
+pub const BUCKET_TEAM: AccountId = 4;
+pub const BUCKET_MARKETING: AccountId = 5;
+pub const BUCKET_STRATEGIC_PARTNERS: AccountId = 6;
 
 #[derive(Default)]
 pub struct ExtBuilder;

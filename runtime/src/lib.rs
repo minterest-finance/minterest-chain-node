@@ -69,7 +69,7 @@ pub use sp_runtime::{Perbill, Permill, Perquintill};
 
 pub use constants::{currency::*, time::*, *};
 use frame_support::traits::Contains;
-use frame_system::{EnsureOneOf, EnsureRoot, EnsureSigned};
+use frame_system::{EnsureOneOf, EnsureRoot};
 use pallet_traits::PricesManager;
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -576,8 +576,7 @@ impl module_vesting::Config for Runtime {
 	type Event = Event;
 	type Currency = pallet_balances::Module<Runtime>;
 	type MinVestedTransfer = MinVestedTransfer;
-	// FIXME:  fix it sudo + 1/3 MinterestCouncil
-	type VestedTransferOrigin = EnsureSigned<AccountId>;
+	type VestedTransferOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	// FIXME: implement weights
 	type WeightInfo = ();
 	type MaxVestingSchedules = MaxVestingSchedules;

@@ -28,6 +28,7 @@
 #![allow(clippy::unused_unit)]
 
 use codec::HasCompact;
+use codec::{Decode, Encode};
 use frame_support::{
 	ensure,
 	pallet_prelude::*,
@@ -36,6 +37,8 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use minterest_primitives::VestingBucket;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	traits::{AtLeast32Bit, CheckedAdd, Saturating, StaticLookup, Zero},
 	DispatchResult, RuntimeDebug,
@@ -44,9 +47,6 @@ use sp_std::{
 	cmp::{Eq, PartialEq},
 	vec::Vec,
 };
-
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
 
 mod default_weight;
 mod mock;
@@ -151,8 +151,9 @@ pub mod module {
 		/// The minimum amount transferred to call `vested_transfer`.
 		type MinVestedTransfer: Get<BalanceOf<Self>>;
 
-		/// Required origin for vested transfer.
-		type VestedTransferOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
+		/// Required origin for vested transfer.  Root or
+		/// Two thirds of Minterest Council can always do this.
+		type VestedTransferOrigin: EnsureOrigin<Self::Origin>;
 
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
@@ -267,14 +268,16 @@ pub mod module {
 		#[pallet::weight(T::WeightInfo::vested_transfer())]
 		pub fn vested_transfer(
 			origin: OriginFor<T>,
-			dest: <T::Lookup as StaticLookup>::Source,
+			source: <T::Lookup as StaticLookup>::Source,
+			target: <T::Lookup as StaticLookup>::Source,
 			schedule: VestingScheduleOf<T>,
 		) -> DispatchResultWithPostInfo {
-			let from = T::VestedTransferOrigin::ensure_origin(origin)?;
-			let to = T::Lookup::lookup(dest)?;
-			Self::do_vested_transfer(&from, &to, schedule.clone())?;
+			T::VestedTransferOrigin::ensure_origin(origin)?;
+			let source = T::Lookup::lookup(source)?;
+			let target = T::Lookup::lookup(target)?;
+			Self::do_vested_transfer(&source, &target, schedule.clone())?;
 
-			Self::deposit_event(Event::VestingScheduleAdded(from, to, schedule));
+			Self::deposit_event(Event::VestingScheduleAdded(source, target, schedule));
 			Ok(().into())
 		}
 
@@ -337,6 +340,16 @@ impl<T: Config> Pallet<T> {
 	#[transactional]
 	fn do_vested_transfer(from: &T::AccountId, to: &T::AccountId, schedule: VestingScheduleOf<T>) -> DispatchResult {
 		let schedule_amount = Self::ensure_valid_vesting_schedule(&schedule)?;
+
+		ensure!(
+			vec![
+				T::AccountId::decode(&mut VestingBucket::Marketing.bucket_account_id().unwrap()),
+				VestingBucket::StrategicPartners.bucket_account_id(),
+				VestingBucket::Team.bucket_account_id(),
+			]
+			.contains(&Some(from.clone())),
+			Error::<T>::TooManyVestingSchedules
+		);
 
 		ensure!(
 			<VestingSchedules<T>>::decode_len(to).unwrap_or(0) < T::MaxVestingSchedules::get() as usize,
