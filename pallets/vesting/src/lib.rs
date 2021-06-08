@@ -152,6 +152,7 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 pub mod module {
 	use super::*;
 	use minterest_primitives::{Balance, BlockNumber};
+	use sp_io::hashing::blake2_256;
 	use sp_runtime::traits::One;
 
 	pub trait WeightInfo {
@@ -319,23 +320,17 @@ pub mod module {
 				(bucket == VestingBucket::Team || bucket == VestingBucket::Team || bucket == VestingBucket::Team),
 				Error::<T>::IncorrectVestingBucketType
 			);
-			let period: BlockNumber = BlockNumber::one(); // block by block
-			let period_count: u32 = bucket.vesting_duration() as u32 * 5_256_000_u32;
-			let per_period: BalanceOf<T> = amount
-				.checked_div(&Into::<BalanceOf<T>>::into(period_count))
-				.unwrap_or(amount);
 
-			let schedule = VestingSchedule {
-				bucket,
-				start,
-				period,
-				period_count,
-				per_period,
-			};
+			let schedule = VestingSchedule::new_beginning_from(bucket, start, amount);
 
-			let bucket_account_id = bucket
-				.bucket_account_id()
-				.ok_or(Error::<T>::IncorrectVestingBucketType)?;
+			// FIXME: вот первый крокодил из-за несоответсвия типов AccountId32
+			let bucket_account_id = T::AccountId::decode(
+				&mut &bucket
+					.bucket_account_id()
+					.ok_or(Error::<T>::IncorrectVestingBucketType)?
+					.using_encoded(blake2_256)[..],
+			)
+			.unwrap_or_default();
 
 			Self::do_vested_transfer(&bucket_account_id, &target, schedule.clone())?;
 
