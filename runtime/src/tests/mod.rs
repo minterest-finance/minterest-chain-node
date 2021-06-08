@@ -442,6 +442,10 @@ fn get_user_borrow_per_asset_rpc(account_id: AccountId, underlying_asset_id: Cur
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_borrow_per_asset(account_id, underlying_asset_id)
 }
 
+fn get_user_underlying_balance_per_asset_rpc(account_id: AccountId, pool_id: CurrencyId) -> Option<BalanceInfo> {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_underlying_balance_per_asset(account_id, pool_id)
+}
+
 fn get_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
 	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_unclaimed_mnt_balance(account_id)
 		.unwrap()
