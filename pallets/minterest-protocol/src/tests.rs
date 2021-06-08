@@ -232,6 +232,12 @@ fn deposit_underlying_should_work() {
 			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
+			// Check liquidation_attempts has been reset.
+			assert_eq!(
+				LiquidityPools::<Test>::pool_user_data(DOT, ALICE).liquidation_attempts,
+				u8::zero()
+			);
+
 			// MDOT pool does not exist.
 			assert_noop!(
 				TestProtocol::deposit_underlying(alice(), MDOT, 10),
