@@ -5,13 +5,14 @@ use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use minterest_primitives::currency::GetDecimals;
 use minterest_primitives::{VestingBucket, VestingScheduleJson};
+use module_vesting::VestingSchedule;
 use node_minterest_runtime::{
 	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, BlockNumber, ControllerConfig,
 	ExistentialDeposit, GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig,
 	MinterestCouncilMembershipConfig, MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, MntTokenModuleId,
 	OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
-	TokensConfig, VestingConfig, WhitelistCouncilMembershipConfig, BLOCKS_PER_YEAR, BTC, DAYS, DOLLARS, DOT, ETH, KSM,
-	MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
+	TokensConfig, VestingConfig, WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM, MNT,
+	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -21,7 +22,7 @@ use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::{
-	traits::{AccountIdConversion, IdentifyAccount, One, Verify, Zero},
+	traits::{AccountIdConversion, IdentifyAccount, Verify, Zero},
 	FixedPointNumber, FixedU128,
 };
 use sp_std::collections::btree_map::BTreeMap;
@@ -883,24 +884,16 @@ pub(crate) fn calculate_vesting_list(
 		);
 
 		// Calculate vesting schedules.
-		for schedule in schedules.iter() {
-			let start: BlockNumber = bucket.unlock_begins_in_days() as u32 * DAYS;
-			let period: BlockNumber = BlockNumber::one(); // block by block
-
-			let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
-
-			let per_period: Balance = schedule
-				.amount
-				.checked_div(period_count as u128)
-				.unwrap_or(schedule.amount);
+		for schedule_json in schedules.iter() {
+			let vesting_schedule = VestingSchedule::new(*bucket, schedule_json.amount);
 
 			vesting_list.push((
 				*bucket,
-				schedule.account.clone(),
-				start,
-				period,
-				period_count,
-				per_period,
+				schedule_json.account.clone(),
+				vesting_schedule.start,
+				vesting_schedule.period,
+				vesting_schedule.period_count,
+				vesting_schedule.per_period,
 			));
 		}
 	}
