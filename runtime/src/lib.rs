@@ -65,7 +65,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill, Perquintill};
 
 use frame_support::traits::Contains;
-use frame_system::{EnsureOneOf, EnsureRoot, EnsureSigned};
+use frame_system::{EnsureOneOf, EnsureRoot};
 pub use minterest_primitives::{
 	constants::{currency::*, time::*, *},
 	currency::*,

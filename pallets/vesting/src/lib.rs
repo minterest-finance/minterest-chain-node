@@ -39,7 +39,6 @@ use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use minterest_primitives::VestingBucket;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::traits::CheckedDiv;
 use sp_runtime::{
 	traits::{AtLeast32Bit, CheckedAdd, Saturating, StaticLookup, Zero},
 	DispatchResult, RuntimeDebug,
@@ -150,9 +149,7 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use minterest_primitives::{Balance, BlockNumber};
 	use sp_io::hashing::blake2_256;
-	use sp_runtime::traits::One;
 
 	pub trait WeightInfo {
 		fn vested_transfer() -> Weight;
@@ -215,6 +212,7 @@ pub mod module {
 		/// Incorrect vesting bucket type. Only vestings from Marketing, Team and
 		/// Strategic Partners buckets can be created.
 		IncorrectVestingBucketType,
+		IncorrectVestingBucketAccountId,
 	}
 
 	#[pallet::event]
@@ -309,7 +307,7 @@ pub mod module {
 			origin: OriginFor<T>,
 			target: <T::Lookup as StaticLookup>::Source,
 			bucket: VestingBucket,
-			start: BlockNumber,
+			start: T::BlockNumber,
 			amount: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			T::VestedTransferOrigin::ensure_origin(origin)?;
@@ -320,16 +318,16 @@ pub mod module {
 				Error::<T>::IncorrectVestingBucketType
 			);
 
-			let schedule = VestingSchedule::new_beginning_from(bucket, start, amount);
+			let schedule: VestingSchedule<T::BlockNumber, _> =
+				VestingSchedule::new_beginning_from(bucket, start, amount);
 
-			// FIXME: вот первый крокодил из-за несоответсвия типов AccountId32
 			let bucket_account_id = T::AccountId::decode(
 				&mut &bucket
 					.bucket_account_id()
 					.ok_or(Error::<T>::IncorrectVestingBucketType)?
 					.using_encoded(blake2_256)[..],
 			)
-			.unwrap_or_default();
+			.map_err(|_| Error::<T>::IncorrectVestingBucketAccountId)?;
 
 			Self::do_vested_transfer(&bucket_account_id, &target, schedule.clone())?;
 
