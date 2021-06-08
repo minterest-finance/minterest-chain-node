@@ -77,6 +77,7 @@ pub struct VestingScheduleJson<AccountId, Balance> {
 
 #[cfg(test)]
 mod tests {
+	use crate::constants::TOTAL_ALLOCATION;
 	use crate::VestingBucket;
 	use sp_runtime::traits::Zero;
 
@@ -149,7 +150,7 @@ mod tests {
 				+ VestingBucket::Marketing.total_amount()
 				+ VestingBucket::Ecosystem.total_amount()
 				+ VestingBucket::Team.total_amount(),
-			100_000_030_000_000_000_000_000_000
+			TOTAL_ALLOCATION
 		);
 	}
 }
