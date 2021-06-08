@@ -25,7 +25,8 @@ use frame_system::{
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	ControllerManager, LiquidationPoolsManager, MntManager, PoolsManager, PricesManager, RiskManagerAPI,
+	ControllerManager, LiquidationPoolsManager, LiquidityPoolsManager, MntManager, PoolsManager, PricesManager,
+	RiskManagerAPI,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -96,7 +97,7 @@ pub mod module {
 		type LiquidationPoolsManager: LiquidationPoolsManager<Self::AccountId>;
 
 		/// Pools are responsible for holding funds for automatic liquidation.
-		type LiquidityPoolsManager: PoolsManager<Self::AccountId>;
+		type LiquidityPoolsManager: LiquidityPoolsManager<Self::AccountId>;
 
 		/// Public API of controller pallet
 		type ControllerManager: ControllerManager<Self::AccountId>;
