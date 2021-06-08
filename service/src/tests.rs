@@ -331,7 +331,7 @@ fn calculate_initial_allocations_should_work() {
 
 /// In this case, incorrectly composed initial allocations are checked:
 /// Community allocation = 50,032,400 MNT
-/// 50,032,400 MNT + 19,967,630 MNT + 20,000,000 MNT + 10,000,000 MNT + 10,000,000 MNT = 110,000,030 MNT
+/// 50,032,400 + 19,967,630 + 20,000,000 + 10,000,000 + 10,000,000 = 110,000,030 MNT
 /// Should be equal 100,000,030 MNT.
 #[test]
 #[should_panic(expected = "Total allocation must be equal to 100,000,030 MNT tokens, but passed: 110000030 MNT")]
