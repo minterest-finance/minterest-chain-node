@@ -46,7 +46,8 @@ use sp_runtime::{
 };
 use sp_std::{cmp::Ordering, convert::TryFrom, prelude::*};
 #[cfg(feature = "std")]
-use sp_version::{NativeVersion, RuntimeVersion};
+use sp_version::NativeVersion;
+use sp_version::RuntimeVersion;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
