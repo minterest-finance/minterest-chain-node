@@ -1083,16 +1083,16 @@ fn claim_mnt_should_work() {
 		)
 		.build()
 		.execute_with(|| {
-			set_block_number_and_refresh_speeds(10);
+			System::set_block_number(10);
 			// Bob's operations are needed to calculate distribution speeds.
 			assert_ok!(TestProtocol::deposit_underlying(bob(), DOT, dollars(100_u128)));
 			assert_ok!(TestProtocol::borrow(bob(), DOT, dollars(50_u128)));
 
-			set_block_number_and_refresh_speeds(50);
+			System::set_block_number(50);
 
 			assert_ok!(TestProtocol::deposit_underlying(alice(), DOT, dollars(60_u128)));
 
-			set_block_number_and_refresh_speeds(100);
+			System::set_block_number(100);
 
 			assert_ok!(TestProtocol::claim_mnt(alice(), vec![DOT]));
 			// Calculation of the balance of Alice in MNT tokens (only supply distribution):
@@ -1102,11 +1102,11 @@ fn claim_mnt_should_work() {
 			let expected_event = Event::minterest_protocol(crate::Event::Claimed(ALICE));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			set_block_number_and_refresh_speeds(200);
+			System::set_block_number(200);
 
 			assert_ok!(TestProtocol::borrow(alice(), DOT, dollars(10_u128)));
 
-			set_block_number_and_refresh_speeds(300);
+			System::set_block_number(300);
 
 			assert_ok!(TestProtocol::claim_mnt(alice(), vec![DOT]));
 			/*
@@ -1121,11 +1121,11 @@ fn claim_mnt_should_work() {
 			 */
 			assert_eq!(Currencies::free_balance(MNT, &ALICE), 11_041_666_666_666_666_660);
 
-			set_block_number_and_refresh_speeds(400);
+			System::set_block_number(400);
 
 			assert_ok!(TestProtocol::borrow(alice(), DOT, dollars(30_u128)));
 
-			set_block_number_and_refresh_speeds(500);
+			System::set_block_number(500);
 
 			assert_ok!(TestProtocol::claim_mnt(alice(), vec![DOT]));
 			/*

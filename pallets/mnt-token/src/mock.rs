@@ -87,13 +87,15 @@ pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
-	minted_pools: Vec<CurrencyId>,
-	mnt_rate: Balance,
+	minted_pools: Vec<(CurrencyId, Balance)>,
 	mnt_claim_threshold: Balance,
 }
 
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
+pub fn alice() -> Origin {
+	Origin::signed(ALICE)
+}
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 
 impl Default for ExtBuilder {
@@ -104,19 +106,18 @@ impl Default for ExtBuilder {
 			pool_user_data: vec![],
 			endowed_accounts: vec![],
 			mnt_claim_threshold: Balance::zero(),
-			mnt_rate: Balance::zero(),
 		}
 	}
 }
 
 impl ExtBuilder {
-	pub fn enable_minting_for_all_pools(mut self) -> Self {
-		self.minted_pools = vec![KSM, DOT, ETH, BTC];
+	pub fn mnt_enabled_pools(mut self, pools: Vec<(CurrencyId, Balance)>) -> Self {
+		self.minted_pools = pools;
 		self
 	}
 
-	pub fn set_mnt_rate(mut self, rate: u128) -> Self {
-		self.mnt_rate = rate * DOLLARS;
+	pub fn enable_minting_for_all_pools(mut self, speed: Balance) -> Self {
+		self.minted_pools = vec![(KSM, speed), (DOT, speed), (ETH, speed), (BTC, speed)];
 		self
 	}
 
@@ -199,7 +200,6 @@ impl ExtBuilder {
 		.unwrap();
 
 		mnt_token::GenesisConfig::<Runtime> {
-			mnt_rate: self.mnt_rate,
 			mnt_claim_threshold: self.mnt_claim_threshold,
 			minted_pools: self.minted_pools,
 			_phantom: PhantomData,

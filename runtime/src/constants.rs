@@ -25,9 +25,6 @@ pub mod time {
 
 	pub const BLOCKS_PER_YEAR: u128 = 365 * DAYS as u128;
 	// BLOCKS_PER_YEAR has to be 5256000
-
-	// The MntSpeed update period.
-	pub const REFRESH_SPEED_PERIOD: BlockNumber = 5;
 }
 
 /// A maximum number of admins. When membership reaches this number, no new members may join.

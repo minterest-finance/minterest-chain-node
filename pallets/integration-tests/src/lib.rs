@@ -30,7 +30,7 @@ mod tests {
 	use frame_support::traits::Contains;
 	use minterest_model::MinterestModelData;
 	use minterest_protocol::Error as MinterestProtocolError;
-	use pallet_traits::{PoolsManager, PricesManager};
+	use pallet_traits::{MntManager, PoolsManager, PricesManager};
 	use sp_std::cell::RefCell;
 	use test_helper::*;
 
@@ -155,7 +155,7 @@ mod tests {
 		endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 		pools: Vec<(CurrencyId, Pool)>,
 		pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
-		minted_pools: Vec<CurrencyId>,
+		minted_pools: Vec<(CurrencyId, Balance)>,
 		controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
 		minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
 	}
@@ -246,7 +246,7 @@ mod tests {
 			self
 		}
 
-		pub fn mnt_enabled_pools(mut self, pools: Vec<CurrencyId>) -> Self {
+		pub fn mnt_enabled_pools(mut self, pools: Vec<(CurrencyId, Balance)>) -> Self {
 			self.minted_pools = pools;
 			self
 		}
@@ -366,7 +366,6 @@ mod tests {
 			.unwrap();
 
 			mnt_token::GenesisConfig::<Test> {
-				mnt_rate: 100_000_000_000_000_000, // 0.1
 				mnt_claim_threshold: 100 * DOLLARS,
 				minted_pools: self.minted_pools,
 				_phantom: Default::default(),

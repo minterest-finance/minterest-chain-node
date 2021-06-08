@@ -15,7 +15,7 @@ use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
 	DispatchResult, FixedPointNumber, FixedU128,
 };
-use sp_std::{convert::TryInto, result, vec::Vec};
+use sp_std::{convert::TryInto, result};
 pub mod weights;
 pub use weights::WeightInfo;
 
@@ -100,10 +100,6 @@ pub mod module {
 		/// The Mnt-token's account id, keep assets that should be distributed to users
 		type MntTokenAccountId: Get<Self::AccountId>;
 
-		#[pallet::constant]
-		// The MntSpeed update period.
-		type SpeedRefreshPeriod: Get<Self::BlockNumber>;
-
 		/// Weight information for the extrinsics.
 		type MntTokenWeightInfo: WeightInfo;
 	}
@@ -129,14 +125,14 @@ pub mod module {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Change rate event (old rate, new rate)
-		NewMntRate(Balance, Balance),
-
 		/// MNT minting enabled for pool
-		MntMintingEnabled(CurrencyId),
+		MntMintingEnabled(CurrencyId, Balance),
 
 		/// MNT minting disabled for pool
 		MntMintingDisabled(CurrencyId),
+
+		/// MNT speed had been changed for pool
+		MntSpeedChanged(CurrencyId, Balance),
 
 		/// Emitted when MNT is distributed to a supplier
 		/// (pool id, receiver, amount of distributed tokens, supply index)
@@ -146,12 +142,6 @@ pub mod module {
 		/// (pool id, receiver, amount of distributed tokens, index)
 		MntDistributedToBorrower(CurrencyId, T::AccountId, Balance, Rate),
 	}
-
-	/// The rate at which the flywheel distributes MNT, per block.
-	/// Doubling this number shows how much MNT goes to all suppliers and borrowers from all pools.
-	#[pallet::storage]
-	#[pallet::getter(fn mnt_rate)]
-	type MntRate<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
 	/// The threshold above which the flywheel transfers MNT
 	#[pallet::storage]
@@ -189,9 +179,8 @@ pub mod module {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub mnt_rate: Balance,
 		pub mnt_claim_threshold: Balance,
-		pub minted_pools: Vec<CurrencyId>,
+		pub minted_pools: Vec<(CurrencyId, Balance)>,
 		pub _phantom: PhantomData<T>,
 	}
 
@@ -199,7 +188,6 @@ pub mod module {
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			GenesisConfig {
-				mnt_rate: Balance::zero(),
 				mnt_claim_threshold: Balance::zero(),
 				minted_pools: vec![],
 				_phantom: PhantomData,
@@ -210,10 +198,9 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			MntRate::<T>::put(&self.mnt_rate);
 			MntClaimThreshold::<T>::put(&self.mnt_claim_threshold);
-			for currency_id in &self.minted_pools {
-				MntSpeeds::<T>::insert(currency_id, Balance::zero());
+			for (currency_id, speed) in &self.minted_pools {
+				MntSpeeds::<T>::insert(currency_id, speed);
 				MntPoolsState::<T>::insert(currency_id, MntPoolState::new());
 			}
 		}
@@ -223,26 +210,18 @@ pub mod module {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		fn on_finalize(block: T::BlockNumber) {
-			if block % T::SpeedRefreshPeriod::get() == T::BlockNumber::zero() {
-				if let Err(msg) = Pallet::<T>::refresh_mnt_speeds() {
-					debug::error!(
-						"MntToken module: Cannot run refresh_mnt_speed() at {:?}: {:?}",
-						block,
-						msg
-					)
-				}
-			}
-		}
-	}
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(T::MntTokenWeightInfo::enable_mnt_minting())]
 		#[transactional]
 		/// Enable MNT minting for pool and recalculate MntSpeeds
-		pub fn enable_mnt_minting(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
+		pub fn enable_mnt_minting(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			speed: Balance,
+		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				currency_id.is_supported_underlying_asset(),
@@ -256,10 +235,11 @@ pub mod module {
 				!MntSpeeds::<T>::contains_key(currency_id),
 				Error::<T>::MntMintingAlreadyEnabled
 			);
-			MntSpeeds::<T>::insert(currency_id, Balance::zero());
+			Self::update_mnt_supply_index(currency_id)?;
+			Self::update_mnt_borrow_index(currency_id)?;
+			MntSpeeds::<T>::insert(currency_id, speed);
 			MntPoolsState::<T>::insert(currency_id, MntPoolState::new());
-			Self::refresh_mnt_speeds()?;
-			Self::deposit_event(Event::MntMintingEnabled(currency_id));
+			Self::deposit_event(Event::MntMintingEnabled(currency_id, speed));
 			Ok(().into())
 		}
 
@@ -276,22 +256,35 @@ pub mod module {
 				MntSpeeds::<T>::contains_key(currency_id),
 				Error::<T>::MntMintingNotEnabled
 			);
+			Self::update_mnt_supply_index(currency_id)?;
+			Self::update_mnt_borrow_index(currency_id)?;
 			MntSpeeds::<T>::remove(currency_id);
 			MntPoolsState::<T>::remove(currency_id);
-			Self::refresh_mnt_speeds()?;
 			Self::deposit_event(Event::MntMintingDisabled(currency_id));
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::MntTokenWeightInfo::set_mnt_rate())]
+		#[pallet::weight(T::MntTokenWeightInfo::update_speed())]
 		#[transactional]
-		/// Set MNT rate and recalculate MntSpeeds distribution
-		pub fn set_mnt_rate(origin: OriginFor<T>, rate: Balance) -> DispatchResultWithPostInfo {
+		/// Disable MNT minting for pool and recalculate MntSpeeds
+		pub fn update_speed(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			speed: Balance,
+		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			let old_rate = MntRate::<T>::get();
-			MntRate::<T>::put(rate);
-			Self::refresh_mnt_speeds()?;
-			Self::deposit_event(Event::NewMntRate(old_rate, rate));
+			ensure!(
+				currency_id.is_supported_underlying_asset(),
+				Error::<T>::NotValidUnderlyingAssetId
+			);
+			ensure!(
+				MntSpeeds::<T>::contains_key(currency_id),
+				Error::<T>::MntMintingNotEnabled
+			);
+			Self::update_mnt_supply_index(currency_id)?;
+			Self::update_mnt_borrow_index(currency_id)?;
+			MntSpeeds::<T>::insert(currency_id, speed);
+			Self::deposit_event(Event::MntSpeedChanged(currency_id, speed));
 			Ok(().into())
 		}
 	}
@@ -303,56 +296,6 @@ impl<T: Config> Pallet<T> {
 		T::MntTokenAccountId::get()
 	}
 
-	/// Calculate utilities for enabled pools and sum of all pools utilities
-	///
-	/// returns (Vector<CurrencyId, pool_utility>, sum_of_all_pools_utilities)
-	fn calculate_enabled_pools_utilities() -> result::Result<(Vec<(CurrencyId, Balance)>, Balance), DispatchError> {
-		let minted_pools = MntSpeeds::<T>::iter();
-		let mut result: Vec<(CurrencyId, Balance)> = Vec::new();
-		let mut total_utility: Balance = Balance::zero();
-		for (currency_id, _) in minted_pools {
-			let underlying_price =
-				T::PriceSource::get_underlying_price(currency_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
-			let total_borrow = T::LiquidityPoolsManager::get_pool_total_borrowed(currency_id);
-
-			// utility = m_tokens_total_borrows * asset_price
-			let utility = Price::from_inner(total_borrow)
-				.checked_mul(&underlying_price)
-				.map(|x| x.into_inner())
-				.ok_or(Error::<T>::NumOverflow)?;
-
-			total_utility = total_utility.checked_add(utility).ok_or(Error::<T>::NumOverflow)?;
-
-			result.push((currency_id, utility));
-		}
-		Ok((result, total_utility))
-	}
-
-	/// Recalculate MNT speeds
-	pub fn refresh_mnt_speeds() -> DispatchResult {
-		MntSpeeds::<T>::iter().try_for_each(|(pool_id, _)| -> DispatchResult {
-			Self::update_mnt_supply_index(pool_id)?;
-			Self::update_mnt_borrow_index(pool_id)?;
-			Ok(())
-		})?;
-
-		let (pool_utilities, sum_of_all_utilities) = Self::calculate_enabled_pools_utilities()?;
-		if sum_of_all_utilities.is_zero() {
-			// There is nothing to calculate.
-			return Ok(());
-		}
-
-		let mnt_rate = Self::mnt_rate();
-		for (currency_id, utility) in pool_utilities {
-			let utility_fraction = Rate::saturating_from_rational(utility, sum_of_all_utilities);
-			let pool_mnt_speed = Rate::from_inner(mnt_rate)
-				.checked_mul(&utility_fraction)
-				.ok_or(Error::<T>::NumOverflow)?;
-			MntSpeeds::<T>::insert(currency_id, pool_mnt_speed.into_inner());
-		}
-		Ok(())
-	}
-
 	/// Transfer MNT tokens to user balance if they are above the threshold.
 	/// Otherwise, put them into internal storage.
 	///
@@ -361,7 +304,7 @@ impl<T: Config> Pallet<T> {
 	/// - `distribute_all`: boolean, distribute all or part of accrued MNT tokens.
 	fn transfer_mnt(user: &T::AccountId, user_accrued: Balance, distribute_all: bool) -> DispatchResult {
 		//TODO: Need to discuss what we should do.
-		// Erorr/Event/save money to MntAccrued/stop producing mnt tokens
+		// Error/Event/save money to MntAccrued/stop producing mnt tokens
 
 		let threshold = match distribute_all {
 			true => Balance::zero(),
@@ -630,7 +573,6 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			return Ok((Rate::zero(), Rate::zero()));
 		}
 
-		Self::refresh_mnt_speeds()?;
 		let mnt_speed = MntSpeeds::<T>::get(pool_id);
 
 		let mnt_price = T::PriceSource::get_underlying_price(MNT).ok_or(Error::<T>::GetUnderlyingPriceFail)?;

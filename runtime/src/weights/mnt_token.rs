@@ -25,17 +25,17 @@ use sp_std::marker::PhantomData;
 /// Weight functions for mnt_token.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> mnt_token::WeightInfo for WeightInfo<T> {
-	fn set_mnt_rate() -> Weight {
-		(470_192_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(22 as Weight))
-			.saturating_add(T::DbWeight::get().writes(9 as Weight))
-	}
 	fn disable_mnt_minting() -> Weight {
 		(378_227_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(18 as Weight))
 			.saturating_add(T::DbWeight::get().writes(8 as Weight))
 	}
 	fn enable_mnt_minting() -> Weight {
+		(460_451_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(20 as Weight))
+			.saturating_add(T::DbWeight::get().writes(8 as Weight))
+	}
+	fn update_speed() -> Weight {
 		(460_451_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(20 as Weight))
 			.saturating_add(T::DbWeight::get().writes(8 as Weight))

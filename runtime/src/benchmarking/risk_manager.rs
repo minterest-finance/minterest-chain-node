@@ -58,7 +58,6 @@ runtime_benchmarks! {
 		let borrower_lookup = lookup_of_account(borrower.clone());
 
 		System::set_block_number(10);
-		MntToken::refresh_mnt_speeds()?;
 
 		enable_whitelist_mode_and_add_member(&borrower)?;
 
@@ -86,7 +85,7 @@ runtime_benchmarks! {
 		assert_eq!(LiquidityPools::get_pool_available_liquidity(ETH), 43_249_998_019_999_999_547_975);
 		assert_eq!(LiquidityPools::get_pool_available_liquidity(KSM), 39_999_999_977_499_999_322_900);
 		assert_eq!(LiquidityPools::get_pool_available_liquidity(BTC), 39_999_999_977_499_999_322_900);
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 36_111_110_988_333_296_544);
+		assert_eq!(Currencies::free_balance(MNT, &borrower), 28_888_888_790_666_631_236);
 	}
 }
 

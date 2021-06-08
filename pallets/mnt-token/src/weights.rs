@@ -45,19 +45,14 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for mnt_token.
 pub trait WeightInfo {
-	fn set_mnt_rate() -> Weight;
 	fn disable_mnt_minting() -> Weight;
 	fn enable_mnt_minting() -> Weight;
+	fn update_speed() -> Weight;
 }
 
 /// Weights for mnt_token using the Minterest node and recommended hardware.
 pub struct MinterestWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for MinterestWeight<T> {
-	fn set_mnt_rate() -> Weight {
-		(387_287_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(22 as Weight))
-			.saturating_add(T::DbWeight::get().writes(9 as Weight))
-	}
 	fn disable_mnt_minting() -> Weight {
 		(286_081_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(18 as Weight))
@@ -68,21 +63,26 @@ impl<T: frame_system::Config> WeightInfo for MinterestWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(20 as Weight))
 			.saturating_add(T::DbWeight::get().writes(8 as Weight))
 	}
+	fn update_speed() -> Weight {
+		(333_237_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(20 as Weight))
+			.saturating_add(T::DbWeight::get().writes(8 as Weight))
+	}
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn set_mnt_rate() -> Weight {
-		(387_287_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(22 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(9 as Weight))
-	}
 	fn disable_mnt_minting() -> Weight {
 		(286_081_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(18 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(8 as Weight))
 	}
 	fn enable_mnt_minting() -> Weight {
+		(333_237_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(20 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(8 as Weight))
+	}
+	fn update_speed() -> Weight {
 		(333_237_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(20 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(8 as Weight))

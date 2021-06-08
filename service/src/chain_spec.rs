@@ -515,9 +515,13 @@ fn testnet_genesis(
 			phantom: Default::default(),
 		}),
 		mnt_token: Some(MntTokenConfig {
-			mnt_rate: 10 * DOLLARS,
 			mnt_claim_threshold: 0, // disable by default
-			minted_pools: vec![DOT, ETH, KSM, BTC],
+			minted_pools: vec![
+				(DOT, 2 * DOLLARS),
+				(ETH, 2 * DOLLARS),
+				(KSM, 2 * DOLLARS),
+				(BTC, 2 * DOLLARS),
+			],
 			_phantom: Default::default(),
 		}),
 		module_vesting: Some(VestingConfig { vesting: vesting_list }),

@@ -8,22 +8,12 @@ runtime_benchmarks! {
 	{ Runtime, mnt_token }
 
 	_ {}
-	set_mnt_rate {
-		let pools = EnabledUnderlyingAssetsIds::get();
-		create_pools(&pools);
-		prepare_for_mnt_distribution(pools)?;
-		System::set_block_number(10);
-		MntToken::refresh_mnt_speeds()?;
-		System::set_block_number(11);
-	}: _(RawOrigin::Root, 15 * DOLLARS)
 
 	disable_mnt_minting {
 		let pools = EnabledUnderlyingAssetsIds::get();
 		create_pools(&pools);
 		prepare_for_mnt_distribution(pools)?;
 		System::set_block_number(10);
-		MntToken::refresh_mnt_speeds()?;
-		System::set_block_number(11);
 	}: _(RawOrigin::Root, BTC)
 
 	enable_mnt_minting {
@@ -31,10 +21,19 @@ runtime_benchmarks! {
 		create_pools(&pools);
 		prepare_for_mnt_distribution(pools)?;
 		System::set_block_number(10);
-		MntToken::refresh_mnt_speeds()?;
 		MntToken::disable_mnt_minting(RawOrigin::Root.into(), DOT)?;
 		System::set_block_number(11);
-	}: _(RawOrigin::Root, DOT)
+	}: _(RawOrigin::Root, DOT, 10 * DOLLARS)
+
+	update_speed {
+		let pools = EnabledUnderlyingAssetsIds::get();
+		create_pools(&pools);
+		prepare_for_mnt_distribution(pools)?;
+		System::set_block_number(10);
+		MntToken::disable_mnt_minting(RawOrigin::Root.into(), DOT)?;
+		MntToken::enable_mnt_minting(RawOrigin::Root.into(), DOT, 1 * DOLLARS)?;
+		System::set_block_number(11);
+	}: _(RawOrigin::Root, DOT, 10 * DOLLARS)
 }
 
 #[cfg(test)]
@@ -42,13 +41,6 @@ pub mod tests {
 	use super::*;
 	use crate::benchmarking::utils::tests::test_externalities;
 	use frame_support::assert_ok;
-
-	#[test]
-	fn test_set_mnt_rate() {
-		test_externalities().execute_with(|| {
-			assert_ok!(test_benchmark_set_mnt_rate());
-		})
-	}
 
 	#[test]
 	fn test_disable_mnt_minting() {
@@ -61,6 +53,13 @@ pub mod tests {
 	fn test_enable_mnt_minting() {
 		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_enable_mnt_minting());
+		})
+	}
+
+	#[test]
+	fn test_update_speed() {
+		test_externalities().execute_with(|| {
+			assert_ok!(test_benchmark_update_speed());
 		})
 	}
 }

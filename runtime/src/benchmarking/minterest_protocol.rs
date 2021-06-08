@@ -95,7 +95,6 @@ runtime_benchmarks! {
 		set_balance(DOT, &lender, 50_000 * DOLLARS)?;
 
 		System::set_block_number(10);
-		MntToken::refresh_mnt_speeds()?;
 
 		MinterestProtocol::deposit_underlying(RawOrigin::Signed(lender.clone()).into(), DOT, 10_000 * DOLLARS)?;
 
@@ -104,8 +103,8 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(lender.clone()), DOT, 10_000 * DOLLARS)
 	verify {
 		assert_eq!(Currencies::free_balance(DOT, &LiquidityPoolsModuleId::get().into_account() ), 60_000 * DOLLARS);
-		// mnt_balance = 10(speed) * 10(delta_blocks) * 10(lender_supply) / 60(total_supply) = 16.66 MNT
-		assert_eq!(Currencies::free_balance(MNT, &lender), 16_666_666_621_666_660_145)
+		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(lender_supply) / 60(total_supply) = 3.33 MNT
+		assert_eq!(Currencies::free_balance(MNT, &lender), 3_333_333_324_333_330_029)
 	}
 
 	redeem {
@@ -113,19 +112,16 @@ runtime_benchmarks! {
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
-		System::set_block_number(10);
-		MntToken::refresh_mnt_speeds()?;
-
 		enable_whitelist_mode_and_add_member(&borrower)?;
 		hypothetical_liquidity_setup(&borrower, &lender)?;
 
-		System::set_block_number(20);
+		System::set_block_number(10);
 
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
 	verify {
-		assert_eq!(Currencies::free_balance(DOT, &borrower), 8_750_000_028_928_571_410_000);
-		// mnt_balance = 10(speed) * 10(delta_blocks) * 10(borrower_supply) / 80(total_supply) = 12.5 MNT
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 12_500_000_000_000_000_000)
+		assert_eq!(Currencies::free_balance(DOT, &borrower), 8_750_000_014_464_285_710_000);
+		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(borrower_supply) / 80(total_supply) = 2.5 MNT
+		assert_eq!(Currencies::free_balance(MNT, &borrower), 2_500_000_000_000_000_000)
 	}
 
 	redeem_underlying {
@@ -133,19 +129,16 @@ runtime_benchmarks! {
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
-		System::set_block_number(10);
-		MntToken::refresh_mnt_speeds()?;
-
 		enable_whitelist_mode_and_add_member(&borrower)?;
 		hypothetical_liquidity_setup(&borrower, &lender)?;
 
-		System::set_block_number(20);
+		System::set_block_number(10);
 
 	}: _(RawOrigin::Signed(borrower.clone()), DOT, 1_000 * DOLLARS)
 	verify {
-		assert_eq!(Currencies::free_balance(DOT, &borrower ), 1_000 * DOLLARS);
-		// mnt_balance = 10(speed) * 10(delta_blocks) * 10(borrower_supply) / 80(total_supply) = 12.5 MNT
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 12_500_000_000_000_000_000)
+		assert_eq!(Currencies::free_balance(DOT, &borrower), 1_000 * DOLLARS);
+		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(borrower_supply) / 80(total_supply) = 2.5 MNT
+		assert_eq!(Currencies::free_balance(MNT, &borrower), 2_500_000_000_000_000_000)
 	}
 
 	redeem_wrapped {
@@ -153,19 +146,16 @@ runtime_benchmarks! {
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
-		System::set_block_number(10);
-		MntToken::refresh_mnt_speeds()?;
-
 		enable_whitelist_mode_and_add_member(&borrower)?;
 		hypothetical_liquidity_setup(&borrower, &lender)?;
 
-		System::set_block_number(20);
+		System::set_block_number(10);
 
 	}: _(RawOrigin::Signed(borrower.clone()), MDOT, 10_000 * DOLLARS)
 	verify {
-		assert_eq!(Currencies::free_balance(DOT, &borrower), 8_750_000_028_928_571_410_000);
-		// mnt_balance = 10(speed) * 10(delta_blocks) * 10(borrower_supply) / 80(total_supply) = 12.5 MNT
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 12_500_000_000_000_000_000)
+		assert_eq!(Currencies::free_balance(DOT, &borrower), 8_750_000_014_464_285_710_000);
+		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(borrower_supply) / 80(total_supply) = 2.5 MNT
+		assert_eq!(Currencies::free_balance(MNT, &borrower), 2_500_000_000_000_000_000)
 	}
 
 	borrow {
@@ -173,20 +163,17 @@ runtime_benchmarks! {
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
-		System::set_block_number(10);
-		MntToken::refresh_mnt_speeds()?;
-
 		enable_whitelist_mode_and_add_member(&borrower)?;
 		hypothetical_liquidity_setup(&borrower, &lender)?;
 
 		MinterestProtocol::borrow(RawOrigin::Signed(borrower.clone()).into(), DOT, 5_000 * DOLLARS)?;
 
-		System::set_block_number(20);
+		System::set_block_number(10);
 
 	}: _(RawOrigin::Signed(borrower.clone()), DOT, 5_000 * DOLLARS)
 	verify {
 		assert_eq!(Currencies::free_balance(DOT, &borrower ), 10_000 * DOLLARS);
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 99_999_999_999_999_985_340)
+		assert_eq!(Currencies::free_balance(MNT, &borrower), 19_999_999_999_999_995_000)
 	}
 
 	repay {
@@ -197,7 +184,6 @@ runtime_benchmarks! {
 		MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), DOT, 50_000 * DOLLARS)?;
 
 		System::set_block_number(10);
-		MntToken::refresh_mnt_speeds()?;
 
 		MinterestProtocol::enable_is_collateral(Origin::signed(borrower.clone()).into(), DOT)?;
 		MinterestProtocol::borrow(RawOrigin::Signed(borrower.clone()).into(), DOT, 10_000 * DOLLARS)?;
@@ -207,7 +193,7 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(borrower.clone()), DOT, 10_000 * DOLLARS)
 	verify {
 		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).total_borrowed, 180_000_000_600_000);
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 49_999_999_774_999_992_025)
+		assert_eq!(Currencies::free_balance(MNT, &borrower), 9_999_999_954_999_990_405)
 	}
 
 	repay_all {
@@ -218,7 +204,6 @@ runtime_benchmarks! {
 		MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), DOT, 50_000 * DOLLARS)?;
 
 		System::set_block_number(10);
-		MntToken::refresh_mnt_speeds()?;
 
 		MinterestProtocol::enable_is_collateral(Origin::signed(borrower.clone()).into(), DOT)?;
 		MinterestProtocol::borrow(RawOrigin::Signed(borrower.clone()).into(), DOT, 10_000 * DOLLARS)?;
@@ -228,7 +213,7 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
 	verify {
 		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).total_borrowed, Balance::zero());
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 49_999_999_774_999_992_025)
+		assert_eq!(Currencies::free_balance(MNT, &borrower), 9_999_999_954_999_990_405)
 	}
 
 	repay_on_behalf {
@@ -242,7 +227,6 @@ runtime_benchmarks! {
 		MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), DOT, 50_000 * DOLLARS)?;
 
 		System::set_block_number(10);
-		MntToken::refresh_mnt_speeds()?;
 
 		MinterestProtocol::enable_is_collateral(Origin::signed(borrower.clone()).into(), DOT)?;
 		MinterestProtocol::borrow(RawOrigin::Signed(borrower.clone()).into(), DOT, 10_000 * DOLLARS)?;
@@ -252,7 +236,7 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(lender.clone()), DOT, borrower.clone(), 10_000 * DOLLARS)
 	verify {
 		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).total_borrowed, 180_000_000_600_000);
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 49_999_999_774_999_992_025);
+		assert_eq!(Currencies::free_balance(MNT, &borrower), 9_999_999_954_999_990_405);
 		assert_eq!(Currencies::free_balance(MNT, &lender), Balance::zero());
 	}
 
@@ -262,7 +246,6 @@ runtime_benchmarks! {
 		let lender: AccountId = account("lender", 0, SEED);
 
 		System::set_block_number(10);
-		MntToken::refresh_mnt_speeds()?;
 
 		enable_whitelist_mode_and_add_member(&borrower)?;
 		hypothetical_liquidity_setup(&borrower, &lender)?;
@@ -273,8 +256,8 @@ runtime_benchmarks! {
 	verify  {
 		assert_eq!(Currencies::free_balance(MDOT, &borrower.clone()), Balance::zero());
 		assert_eq!(Currencies::free_balance(MDOT, &lender.clone()), 30_000 * DOLLARS);
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 12_500_000_000_000_000_000);
-		assert_eq!(Currencies::free_balance(MNT, &lender), 25_000_000_000_000_000_000);
+		assert_eq!(Currencies::free_balance(MNT, &borrower), 5_000_000_000_000_000_000);
+		assert_eq!(Currencies::free_balance(MNT, &lender), 10_000_000_000_000_000_000);
 	 }
 
 	enable_is_collateral {
@@ -323,7 +306,6 @@ runtime_benchmarks! {
 			})?;
 
 		System::set_block_number(50);
-		MntToken::refresh_mnt_speeds()?;
 
 		EnabledUnderlyingAssetsIds::get()
 			.into_iter()
@@ -342,12 +324,12 @@ runtime_benchmarks! {
 		/*
 		Accrued MNT:
 		Supply per pool: prev + speed_pool * block_delta * borrower_supply / total_supply
-		supply_balance = 0 + (2.5 * 50 * 0.5) * 4 = 250 MNT
+		supply_balance = 0 + (2 * 50 * 0.5) * 4 = 200 MNT
 		Borrow: prev + speed_pool * block_delta * borrower_borrow / total_borrow
-		borrow_balance = 0 + (2.5 * 50 * 0.5) * 4 = 250 MNT
-		accrued MNT tokens: 250 + 250 = ~500_000 MNT
+		borrow_balance = 0 + (2 * 50 * 0.5) * 4 = 200 MNT
+		accrued MNT tokens: 250 + 250 = ~400_000 MNT
 		 */
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 499_999_959_218_753_609_568)
+		assert_eq!(Currencies::free_balance(MNT, &borrower), 399_999_967_375_002_687_652)
 	}
 
 }
