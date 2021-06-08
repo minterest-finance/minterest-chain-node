@@ -84,7 +84,7 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 		//TODO implement via constants DAYS and BLOCKS_PER_YEAR from constants.rs
 		let start: BlockNumber = (bucket.unlock_begins_in_days() as u32 * 14_400).into();
 		let period: BlockNumber = BlockNumber::one(); // block by block
-		let period_count: u32 = bucket.vesting_duration() as u32 * 5_256_000 as u32;
+		let period_count: u32 = bucket.vesting_duration() as u32 * 5_256_000_u32;
 		let per_period: Balance = amount.checked_div(&Balance::from(period_count)).unwrap_or(amount);
 		Self {
 			bucket,
@@ -102,7 +102,7 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 	pub fn new_beginning_from(bucket: VestingBucket, start: BlockNumber, amount: Balance) -> Self {
 		//TODO implement via constant BLOCKS_PER_YEAR from constants.rs
 		let period: BlockNumber = BlockNumber::one(); // block by block
-		let period_count: u32 = bucket.vesting_duration() as u32 * 5_256_000 as u32;
+		let period_count: u32 = bucket.vesting_duration() as u32 * 5_256_000_u32;
 		let per_period: Balance = amount.checked_div(&Balance::from(period_count)).unwrap_or(amount);
 		Self {
 			bucket,
