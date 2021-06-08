@@ -79,7 +79,7 @@ pub struct VestingSchedule<BlockNumber, Balance: HasCompact> {
 impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSchedule<BlockNumber, Balance> {
 	/// Creates a new schedule.
 	pub fn new(bucket: VestingBucket, amount: Balance) -> Self {
-		let start: BlockNumber = bucket.unlock_begins_in_days().into();
+		let start: BlockNumber = bucket.unlock_begins_in_days() as u32 * 14_400;
 		let period: BlockNumber = BlockNumber::one(); // block by block
 		let period_count: u32 = bucket.vesting_duration() as u32 * 5_256_000 as u32;
 		let per_period: Balance = amount.checked_div(&Balance::from(period_count)).unwrap_or(amount);

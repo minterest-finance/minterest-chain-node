@@ -268,7 +268,7 @@ fn calculate_vesting_list_should_work() {
 			Some(&(
 				VestingBucket::Team,
 				AccountId::from_string("5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw").unwrap(),
-				182_u32,                 // half a year
+				2_620_800_u32,           // half a year
 				1_u32,                   // block by block
 				26280000_u32,            // 5years * 5256000 = 26280000
 				533371385083713850_u128  // 14017000000000000000000000 / 26280000 = 533371385083713850
@@ -329,6 +329,10 @@ fn calculate_initial_allocations_should_work() {
 	);
 }
 
+/// In this case, incorrectly composed initial allocations are checked:
+/// Community allocation = 50,032,400 MNT
+/// 50,032,400 MNT + 19,967,630 MNT + 20,000,000 MNT + 10,000,000 MNT + 10,000,000 MNT = 110,000,030 MNT
+/// Should be equal 100,000,030 MNT.
 #[test]
 #[should_panic(expected = "Total allocation must be equal to 100,000,030 MNT tokens, but passed: 110000030 MNT")]
 fn calculate_initial_allocations_should_panic_incorrect_sum_allocation() {

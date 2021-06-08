@@ -10,8 +10,8 @@ use node_minterest_runtime::{
 	ExistentialDeposit, GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig,
 	MinterestCouncilMembershipConfig, MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, MntTokenModuleId,
 	OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
-	TokensConfig, VestingConfig, WhitelistCouncilMembershipConfig, BLOCKS_PER_YEAR, BTC, DOLLARS, DOT, ETH, KSM, MNT,
-	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
+	TokensConfig, VestingConfig, WhitelistCouncilMembershipConfig, BLOCKS_PER_YEAR, BTC, DAYS, DOLLARS, DOT, ETH, KSM,
+	MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -884,7 +884,7 @@ pub(crate) fn calculate_vesting_list(
 
 		// Calculate vesting schedules.
 		for schedule in schedules.iter() {
-			let start: BlockNumber = bucket.unlock_begins_in_days().into();
+			let start: BlockNumber = bucket.unlock_begins_in_days() as u32 * DAYS;
 			let period: BlockNumber = BlockNumber::one(); // block by block
 
 			let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
