@@ -14,6 +14,7 @@ use sp_runtime::{
 pub use vesting::{VestingBucket, VestingScheduleJson};
 
 pub mod arithmetic;
+pub mod constants;
 pub mod currency;
 pub mod vesting;
 
