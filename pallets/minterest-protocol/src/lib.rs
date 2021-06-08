@@ -87,7 +87,7 @@ pub mod module {
 		type ManagerLiquidationPools: LiquidationPoolsManager<Self::AccountId>;
 
 		/// The basic liquidity pools.
-		type ManagerLiquidityPools: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
+		type ManagerLiquidityPools: LiquidityPoolsManager<Self::AccountId>;
 
 		/// Provides MNT token distribution functionality.
 		type MntManager: MntManager<Self::AccountId>;

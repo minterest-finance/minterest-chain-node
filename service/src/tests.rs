@@ -4,6 +4,7 @@
 
 use crate::chain_spec::{calculate_initial_allocations, calculate_vesting_list};
 use frame_benchmarking::frame_support::sp_io;
+use minterest_primitives::constants::currency::DOLLARS;
 use minterest_primitives::{AccountId, Balance, VestingBucket, VestingScheduleJson};
 use node_minterest_runtime::{get_all_modules_accounts, MntTokenModuleId};
 use sp_core::crypto::Ss58Codec;
@@ -263,15 +264,12 @@ fn calculate_vesting_list_should_work() {
 		assert_eq!(
 			vesting_list
 				.iter()
-				.find(|(schedule, account, _, _, _, _)| schedule == &VestingBucket::Team
+				.find(|(schedule, account, _)| schedule == &VestingBucket::Team
 					&& account == &AccountId::from_string("5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw").unwrap()),
 			Some(&(
 				VestingBucket::Team,
 				AccountId::from_string("5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw").unwrap(),
-				2_620_800_u32,           // half a year
-				1_u32,                   // block by block
-				26280000_u32,            // 5years * 5256000 = 26280000
-				533371385083713850_u128  // 14017000000000000000000000 / 26280000 = 533371385083713850
+				14_017_000 * DOLLARS
 			))
 		);
 
@@ -279,19 +277,13 @@ fn calculate_vesting_list_should_work() {
 		assert_eq!(
 			vesting_list
 				.iter()
-				.find(
-					|(schedule, account, _, _, _, _)| schedule == &VestingBucket::MarketMaking
-						&& account
-							== &AccountId::from_string("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty").unwrap()
-				)
+				.find(|(schedule, account, _)| schedule == &VestingBucket::MarketMaking
+					&& account == &AccountId::from_string("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty").unwrap())
 				.unwrap(),
 			&(
 				VestingBucket::MarketMaking,
 				AccountId::from_string("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty").unwrap(),
-				0_u32,                          // from the start of the protocol
-				1_u32,                          // block by block
-				0_u32,                          // receive all tokens in block 0, lock won't be established
-				3000000000000000000000000_u128  // all 30 millions MNT tokens
+				3_000_000 * DOLLARS // all 3 millions MNT tokens
 			)
 		)
 	});
@@ -301,10 +293,10 @@ fn calculate_vesting_list_should_work() {
 fn calculate_initial_allocations_should_work() {
 	let endowed_accounts = vec![AccountId::from([1u8; 32]), AccountId::from([2u8; 32])];
 	let allocated_list = vec![
-		(AccountId::from([1u8; 32]), 19967630000000000000000000_u128), // 19,967,630 MNT
-		(AccountId::from([3u8; 32]), 10000000000000000000000000_u128), // 10,000,000 MNT
-		(AccountId::from([4u8; 32]), 10000000000000000000000000_u128), // 10,000,000 MNT
-		(AccountId::from([5u8; 32]), 10000000000000000000000000_u128), // 10,000,000 MNT
+		(AccountId::from([1u8; 32]), 19_967_630 * DOLLARS), // 19,967,630 MNT
+		(AccountId::from([3u8; 32]), 10_000_000 * DOLLARS), // 10,000,000 MNT
+		(AccountId::from([4u8; 32]), 10_000_000 * DOLLARS), // 10,000,000 MNT
+		(AccountId::from([5u8; 32]), 10_000_000 * DOLLARS), // 10,000,000 MNT
 	];
 	let initial_allocations = calculate_initial_allocations(endowed_accounts, allocated_list);
 
@@ -315,7 +307,7 @@ fn calculate_initial_allocations_should_work() {
 			.iter()
 			.find(|(account_id, _)| account_id == &AccountId::from([1u8; 32]))
 			.unwrap(),
-		&(AccountId::from([1u8; 32]), 19967631000000000000000000_u128)
+		&(AccountId::from([1u8; 32]), 19_967_631 * DOLLARS)
 	);
 
 	// Initial allocation for the mnt_token pallet equal `50,032,400 - sum(ED)`:
@@ -325,7 +317,7 @@ fn calculate_initial_allocations_should_work() {
 			.iter()
 			.find(|(account_id, _)| account_id == &MntTokenModuleId::get().into_account())
 			.unwrap(),
-		&(MntTokenModuleId::get().into_account(), 50032398000000000000000000_u128)
+		&(MntTokenModuleId::get().into_account(), 50_032_398 * DOLLARS)
 	);
 }
 
@@ -338,10 +330,10 @@ fn calculate_initial_allocations_should_work() {
 fn calculate_initial_allocations_should_panic_incorrect_sum_allocation() {
 	let endowed_accounts = vec![AccountId::from([1u8; 32]), AccountId::from([2u8; 32])];
 	let allocated_list = vec![
-		(AccountId::from([1u8; 32]), 19967630000000000000000000_u128), // 19,967,630 MNT
-		(AccountId::from([3u8; 32]), 20000000000000000000000000_u128), // 20,000,000 MNT
-		(AccountId::from([4u8; 32]), 10000000000000000000000000_u128), // 10,000,000 MNT
-		(AccountId::from([5u8; 32]), 10000000000000000000000000_u128), // 10,000,000 MNT
+		(AccountId::from([1u8; 32]), 19_967_630 * DOLLARS), // 19,967,630 MNT
+		(AccountId::from([3u8; 32]), 20_000_000 * DOLLARS), // 20,000,000 MNT
+		(AccountId::from([4u8; 32]), 10_000_000 * DOLLARS), // 10,000,000 MNT
+		(AccountId::from([5u8; 32]), 10_000_000 * DOLLARS), // 10,000,000 MNT
 	];
 	let _ = calculate_initial_allocations(endowed_accounts, allocated_list);
 }

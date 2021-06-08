@@ -127,7 +127,7 @@ pub mod module {
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Provides the basic liquidity pools manager and liquidity pool functionality.
-		type LiquidityPoolsManager: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
+		type LiquidityPoolsManager: LiquidityPoolsManager<Self::AccountId>;
 
 		#[pallet::constant]
 		/// Maximum total borrow amount per pool in usd.
