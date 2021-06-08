@@ -4,7 +4,7 @@
 
 use super::*;
 use frame_support::{
-	construct_runtime, parameter_types,
+	construct_runtime, ord_parameter_types, parameter_types,
 	traits::{EnsureOrigin, GenesisBuild},
 };
 use frame_system::{EnsureSignedBy, RawOrigin};
@@ -69,7 +69,7 @@ impl Config for Runtime {
 	type Event = Event;
 	type Currency = PalletBalances;
 	type MinVestedTransfer = MinVestedTransfer;
-	type VestedTransferOrigin = EnsureSignedBy<OneAlice, AccountId>;
+	type VestedTransferOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	type WeightInfo = ();
 	type MaxVestingSchedules = MaxVestingSchedules;
 }
@@ -89,6 +89,7 @@ construct_runtime!(
 	}
 );
 
+pub const ADMIN: AccountId = 0;
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
 pub const CHARLIE: AccountId = 3;

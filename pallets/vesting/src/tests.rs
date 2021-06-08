@@ -71,7 +71,13 @@ fn vested_transfer_works() {
 			period_count: 1u32,
 			per_period: 100u64,
 		};
-		assert_ok!(Vesting::vested_transfer(Origin::signed(ALICE), BOB, schedule.clone()));
+		assert_ok!(Vesting::vested_transfer(
+			Origin::signed(ADMIN),
+			BOB,
+			VestingBucket::Team,
+			0u64,
+			100u64
+		));
 		assert_eq!(Vesting::vesting_schedules(&BOB), vec![schedule.clone()]);
 
 		let vested_event = Event::vesting(crate::Event::VestingScheduleAdded(BOB, schedule));
@@ -103,7 +109,13 @@ fn add_new_vesting_schedule_merges_with_current_locked_balance_and_until() {
 			period_count: 2u32,
 			per_period: 10u64,
 		};
-		assert_ok!(Vesting::vested_transfer(Origin::signed(ALICE), BOB, schedule));
+		assert_ok!(Vesting::vested_transfer(
+			Origin::signed(ADMIN),
+			BOB,
+			VestingBucket::Team,
+			0u64,
+			20u64
+		));
 
 		assert_eq!(PalletBalances::free_balance(BOB), 20);
 		assert_eq!(PalletBalances::usable_balance(BOB), 0);
@@ -118,9 +130,11 @@ fn add_new_vesting_schedule_merges_with_current_locked_balance_and_until() {
 			per_period: 7u64,
 		};
 		assert_ok!(Vesting::vested_transfer(
-			Origin::signed(ALICE),
+			Origin::signed(ADMIN),
 			BOB,
-			another_schedule.clone()
+			VestingBucket::Team,
+			10u64,
+			7u64
 		));
 
 		assert_eq!(
@@ -133,7 +147,7 @@ fn add_new_vesting_schedule_merges_with_current_locked_balance_and_until() {
 		);
 
 		assert_noop!(
-			Vesting::vested_transfer(Origin::signed(ALICE), BOB, another_schedule),
+			Vesting::vested_transfer(Origin::signed(ADMIN), BOB, VestingBucket::Team, 10u64, 7_u64),
 			Error::<Runtime>::TooManyVestingSchedules
 		);
 
@@ -158,37 +172,14 @@ fn cannot_use_fund_if_not_claimed() {
 			period_count: 1u32,
 			per_period: 50u64,
 		};
-		assert_ok!(Vesting::vested_transfer(Origin::signed(ALICE), BOB, schedule.clone()));
+		assert_ok!(Vesting::vested_transfer(
+			Origin::signed(ADMIN),
+			BOB,
+			VestingBucket::Team,
+			10u64,
+			50_u64
+		));
 		assert!(PalletBalances::ensure_can_withdraw(&BOB, 1, WithdrawReasons::TRANSFER, 49).is_err());
-	});
-}
-
-#[test]
-fn vested_transfer_fails_if_zero_period_or_count() {
-	ExtBuilder::build().execute_with(|| {
-		let schedule = VestingSchedule {
-			bucket: VestingBucket::Team,
-			start: 1u64,
-			period: 0u64,
-			period_count: 1u32,
-			per_period: 100u64,
-		};
-		assert_noop!(
-			Vesting::vested_transfer(Origin::signed(ALICE), BOB, schedule.clone()),
-			Error::<Runtime>::ZeroVestingPeriod
-		);
-
-		let schedule = VestingSchedule {
-			bucket: VestingBucket::Team,
-			start: 1u64,
-			period: 1u64,
-			period_count: 0u32,
-			per_period: 100u64,
-		};
-		assert_noop!(
-			Vesting::vested_transfer(Origin::signed(ALICE), BOB, schedule.clone()),
-			Error::<Runtime>::ZeroVestingPeriodCount
-		);
 	});
 }
 
@@ -203,7 +194,7 @@ fn vested_transfer_fails_if_transfer_err() {
 			per_period: 100u64,
 		};
 		assert_noop!(
-			Vesting::vested_transfer(Origin::signed(BOB), ALICE, schedule.clone()),
+			Vesting::vested_transfer(Origin::signed(ADMIN), BOB, VestingBucket::Team, 1u64, 100_u64),
 			pallet_balances::Error::<Runtime, _>::InsufficientBalance,
 		);
 	});
@@ -220,7 +211,7 @@ fn vested_transfer_fails_if_overflow() {
 			per_period: u64::max_value(),
 		};
 		assert_noop!(
-			Vesting::vested_transfer(Origin::signed(ALICE), BOB, schedule),
+			Vesting::vested_transfer(Origin::signed(ADMIN), BOB, VestingBucket::Team, 1u64, u64::MAX),
 			Error::<Runtime>::NumOverflow
 		);
 
@@ -232,7 +223,7 @@ fn vested_transfer_fails_if_overflow() {
 			per_period: 1u64,
 		};
 		assert_noop!(
-			Vesting::vested_transfer(Origin::signed(ALICE), BOB, another_schedule),
+			Vesting::vested_transfer(Origin::signed(ADMIN), BOB, VestingBucket::Team, u64::MAX, 2_u64),
 			Error::<Runtime>::NumOverflow
 		);
 	});
@@ -249,7 +240,7 @@ fn vested_transfer_fails_if_bad_origin() {
 			per_period: 100u64,
 		};
 		assert_noop!(
-			Vesting::vested_transfer(Origin::signed(CHARLIE), BOB, schedule.clone()),
+			Vesting::vested_transfer(Origin::signed(ALICE), BOB, VestingBucket::Team, 0u64, 100_u64),
 			BadOrigin
 		);
 	});
@@ -265,7 +256,13 @@ fn claim_works() {
 			period_count: 2u32,
 			per_period: 10u64,
 		};
-		assert_ok!(Vesting::vested_transfer(Origin::signed(ALICE), BOB, schedule.clone()));
+		assert_ok!(Vesting::vested_transfer(
+			Origin::signed(ADMIN),
+			BOB,
+			VestingBucket::Team,
+			0u64,
+			20_u64
+		));
 
 		System::set_block_number(11);
 		// remain locked if not claimed
@@ -298,7 +295,13 @@ fn update_vesting_schedules_works() {
 			period_count: 2u32,
 			per_period: 10u64,
 		};
-		assert_ok!(Vesting::vested_transfer(Origin::signed(ALICE), BOB, schedule.clone()));
+		assert_ok!(Vesting::vested_transfer(
+			Origin::signed(ADMIN),
+			BOB,
+			VestingBucket::Team,
+			0u64,
+			20_u64
+		));
 
 		let updated_schedule = VestingSchedule {
 			bucket: VestingBucket::Team,
@@ -343,7 +346,7 @@ fn vested_transfer_check_for_min() {
 			per_period: 3u64,
 		};
 		assert_noop!(
-			Vesting::vested_transfer(Origin::signed(BOB), ALICE, schedule.clone()),
+			Vesting::vested_transfer(Origin::signed(ADMIN), BOB, VestingBucket::Team, 1u64, 3_u64),
 			Error::<Runtime>::AmountLow
 		);
 	});
@@ -359,7 +362,13 @@ fn multiple_vesting_schedule_claim_works() {
 			period_count: 2u32,
 			per_period: 10u64,
 		};
-		assert_ok!(Vesting::vested_transfer(Origin::signed(ALICE), BOB, schedule.clone()));
+		assert_ok!(Vesting::vested_transfer(
+			Origin::signed(ADMIN),
+			BOB,
+			VestingBucket::Team,
+			0u64,
+			20_u64
+		));
 		let schedule2 = VestingSchedule {
 			bucket: VestingBucket::Team,
 			start: 0u64,
@@ -367,7 +376,13 @@ fn multiple_vesting_schedule_claim_works() {
 			period_count: 3u32,
 			per_period: 10u64,
 		};
-		assert_ok!(Vesting::vested_transfer(Origin::signed(ALICE), BOB, schedule2.clone()));
+		assert_ok!(Vesting::vested_transfer(
+			Origin::signed(ADMIN),
+			BOB,
+			VestingBucket::Team,
+			0u64,
+			30_u64
+		));
 
 		// There are 2 active vesting schedules for BOB
 		assert_eq!(

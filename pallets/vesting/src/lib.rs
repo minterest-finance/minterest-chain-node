@@ -102,6 +102,7 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 	pub fn new_beginning_from(bucket: VestingBucket, start: BlockNumber, amount: Balance) -> Self {
 		let period: BlockNumber = BlockNumber::one(); // block by block
 		let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
+		let help = Balance::from(period_count);
 		let per_period: Balance = amount.checked_div(&Balance::from(period_count)).unwrap_or(amount);
 		Self {
 			bucket,
