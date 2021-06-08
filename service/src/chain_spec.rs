@@ -5,14 +5,13 @@ use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use minterest_primitives::currency::GetDecimals;
 use minterest_primitives::{VestingBucket, VestingScheduleJson};
-use module_vesting::VestingSchedule;
 use node_minterest_runtime::{
-	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, BlockNumber, ControllerConfig,
-	ExistentialDeposit, GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig,
-	MinterestCouncilMembershipConfig, MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, MntTokenModuleId,
-	OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
-	TokensConfig, VestingConfig, WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM, MNT,
-	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
+	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, ExistentialDeposit,
+	GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
+	MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, MntTokenModuleId, OperatorMembershipMinterestConfig,
+	PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, VestingConfig,
+	WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+	TOTAL_ALLOCATION, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -869,8 +868,8 @@ pub(crate) fn calculate_initial_allocations(
 /// `vesting_list` - vector of accounts with their initial vesting.
 pub(crate) fn calculate_vesting_list(
 	allocated_list_parsed: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, Balance>>>,
-) -> Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)> {
-	let mut vesting_list: Vec<(VestingBucket, AccountId, BlockNumber, BlockNumber, u32, Balance)> = Vec::new();
+) -> Vec<(VestingBucket, AccountId, Balance)> {
+	let mut vesting_list: Vec<(VestingBucket, AccountId, Balance)> = Vec::new();
 
 	assert_eq!(
 		allocated_list_parsed.len(),
@@ -889,16 +888,7 @@ pub(crate) fn calculate_vesting_list(
 
 		// Calculate vesting schedules.
 		for schedule_json in schedules.iter() {
-			let vesting_schedule = VestingSchedule::new(*bucket, schedule_json.amount);
-
-			vesting_list.push((
-				*bucket,
-				schedule_json.account.clone(),
-				vesting_schedule.start,
-				vesting_schedule.period,
-				vesting_schedule.period_count,
-				vesting_schedule.per_period,
-			));
+			vesting_list.push((*bucket, schedule_json.account.clone(), schedule_json.amount));
 		}
 	}
 
@@ -907,7 +897,7 @@ pub(crate) fn calculate_vesting_list(
 	assert!(
 		vesting_list
 			.iter()
-			.map(|(_, account, _, _, _, _)| account)
+			.map(|(_, account, _)| account)
 			.cloned()
 			.all(move |x| uniq.insert(x)),
 		"duplicate vesting accounts in genesis."

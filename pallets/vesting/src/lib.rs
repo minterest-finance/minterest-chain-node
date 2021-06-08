@@ -163,14 +163,7 @@ pub mod module {
 	/// Type alias for VestingSchedule.
 	pub(crate) type VestingScheduleOf<T> = VestingSchedule<<T as frame_system::Config>::BlockNumber, BalanceOf<T>>;
 	/// Tuple struct for GenesisConfig. `(account_id, start, period, period_count, per_period)`
-	pub type ScheduledItem<T> = (
-		VestingBucket,
-		<T as frame_system::Config>::AccountId,
-		<T as frame_system::Config>::BlockNumber,
-		<T as frame_system::Config>::BlockNumber,
-		u32,
-		BalanceOf<T>,
-	);
+	pub type ScheduledItem<T> = (VestingBucket, <T as frame_system::Config>::AccountId, BalanceOf<T>);
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -241,32 +234,21 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.vesting
-				.iter()
-				.for_each(|(bucket, who, start, period, period_count, per_period)| {
-					let total = *per_period * Into::<BalanceOf<T>>::into(*period_count);
+			self.vesting.iter().for_each(|(bucket, who, total)| {
+				assert!(
+					T::Currency::free_balance(who) >= *total,
+					"Account do not have enough balance"
+				);
+				let schedule = VestingSchedule::new(*bucket, *total);
+				let _ = Pallet::<T>::ensure_valid_vesting_schedule(&schedule).unwrap();
 
-					assert!(
-						T::Currency::free_balance(who) >= total,
-						"Account do not have enough balance"
-					);
-
-					// We do not set a schedule if the number of periods is zero.
-					// period_count are set to zero for the Market Making bucket.
-					if !period_count.is_zero() {
-						T::Currency::set_lock(VESTING_LOCK_ID, who, total, WithdrawReasons::all());
-						VestingSchedules::<T>::insert(
-							who,
-							vec![VestingSchedule {
-								bucket: *bucket,
-								start: *start,
-								period: *period,
-								period_count: *period_count,
-								per_period: *per_period,
-							}],
-						);
-					}
-				});
+				// We do not set a schedule if the number of periods is zero.
+				// period_count are set to zero for the Market Making bucket.
+				if !schedule.period_count.is_zero() {
+					T::Currency::set_lock(VESTING_LOCK_ID, who, *total, WithdrawReasons::all());
+					VestingSchedules::<T>::insert(who, vec![schedule]);
+				}
+			});
 		}
 	}
 
