@@ -315,17 +315,18 @@ pub mod module {
 				VestingSchedule::new_beginning_from(bucket, start, amount);
 
 			// FIXME
-			let _bucket_account_id = VestingBucket::Marketing
+			let bucket_account_id = VestingBucket::Marketing
 				.bucket_account_id()
 				.ok_or(Error::<T>::IncorrectVestingBucketType)?;
 
-			let bucket_account_id = T::AccountId::decode(
-				&mut &bucket
-					.bucket_account_id()
-					.ok_or(Error::<T>::IncorrectVestingBucketType)?
-					.using_encoded(blake2_256)[..],
-			)
-			.map_err(|_| Error::<T>::IncorrectVestingBucketAccountId)?;
+			// FIXME
+			// let bucket_account_id = T::AccountId::decode(
+			// 	&mut &bucket
+			// 		.bucket_account_id()
+			// 		.ok_or(Error::<T>::IncorrectVestingBucketType)?
+			// 		.using_encoded(blake2_256)[..],
+			// )
+			// .map_err(|_| Error::<T>::IncorrectVestingBucketAccountId)?;
 
 			Self::do_vested_transfer(&bucket_account_id, &target, schedule.clone())?;
 
