@@ -272,7 +272,7 @@ pub mod module {
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {
+	impl<T: Config> Pallet<T> where <T as frame_system::Config>::AccountId: From<[u8; 32]> {
 		/// Claim unlocked balances.
 		/// Can not get VestingSchedule count from `who`, so use `MaxVestingSchedules / 2`.
 		#[pallet::weight(T::WeightInfo::claim((<T as Config>::MaxVestingSchedules::get() / 2) as u32))]
@@ -315,9 +315,9 @@ pub mod module {
 				VestingSchedule::new_beginning_from(bucket, start, amount);
 
 			// FIXME
-			let bucket_account_id = VestingBucket::Marketing
+			let raw_bucket_account_id: [u8; 32] = VestingBucket::Marketing
 				.bucket_account_id()
-				.ok_or(Error::<T>::IncorrectVestingBucketType)?;
+				.ok_or(Error::<T>::IncorrectVestingBucketType)?.into();
 
 			// FIXME
 			// let bucket_account_id = T::AccountId::decode(
@@ -328,7 +328,7 @@ pub mod module {
 			// )
 			// .map_err(|_| Error::<T>::IncorrectVestingBucketAccountId)?;
 
-			Self::do_vested_transfer(&bucket_account_id, &target, schedule.clone())?;
+			Self::do_vested_transfer(&raw_bucket_account_id.into(), &target, schedule.clone())?;
 
 			Self::deposit_event(Event::VestingScheduleAdded(target, schedule));
 			Ok(().into())
