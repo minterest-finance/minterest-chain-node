@@ -12,8 +12,13 @@
 //! from the block number of `start`, for every `period` amount of blocks,
 //! `per_period` amount of balance would unlocked, until number of periods
 //! `period_count` reached. Note in vesting schedules, *time* is measured by
-//! block number. All `VestingSchedule`s under an account could be queried in
-//! chain state.
+//! block number. `bucket` - Vesting bucket type. All `VestingSchedule`s under
+//! an account could be queried in chain state.
+//!
+//! ### Vesting Buckets
+//!
+//! In the Minterest protocol, all Vesting are divided into `VestingBucket`. Each vesting bucket
+//! has its own vesting start, vesting duration and total number of tokens.
 //!
 //! ## Interface
 //!
@@ -21,8 +26,8 @@
 //!
 //! - `claim` - Claim unlocked balances.
 //! - `vested_transfer` - Add a new vesting schedule for an account.
-//! - `update_vesting_schedules` - Update all vesting schedules under an account, `root` origin
-//! required.
+//! - `remove_vesting_schedules` - Remove a vesting schedule from an account. Unlocks the user's
+//! balance, transfers unvested tokens to the vesting bucket.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
@@ -98,6 +103,7 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 
 	/// Creates a new schedule with default parameters (period, period_count, per_period).
 	///
+	/// - `bucket`: vesting bucket type (must be `Team` or `Marketing` or `Strategic Partners`).
 	/// - `start`: the number of tokens for which need to create a schedule.
 	/// - `amount`: the number of tokens for which need to create a schedule.
 	pub fn new_beginning_from(bucket: VestingBucket, start: BlockNumber, amount: Balance) -> Self {
@@ -203,8 +209,9 @@ pub mod module {
 		/// The vested transfer amount is too low
 		AmountLow,
 		/// Incorrect vesting bucket type. Only vestings from Marketing, Team and
-		/// Strategic Partners buckets can be created.
+		/// Strategic Partners buckets can be created or removed.
 		IncorrectVestingBucketType,
+		/// Incorrect vesting bucket account id.
 		IncorrectVestingBucketAccountId,
 	}
 
@@ -249,7 +256,7 @@ pub mod module {
 				let _ = Pallet::<T>::ensure_valid_vesting_schedule(&schedule).unwrap();
 
 				// We do not set a schedule if the number of periods is zero.
-				// period_count are set to zero for the Market Making bucket.
+				// `period_count` are set to zero for the Market Making bucket.
 				if !schedule.period_count.is_zero() {
 					T::Currency::set_lock(VESTING_LOCK_ID, who, *total, WithdrawReasons::all());
 					VestingSchedules::<T>::insert(who, vec![schedule]);
@@ -277,12 +284,13 @@ pub mod module {
 			Ok(().into())
 		}
 
-		/// Add a new vesting schedule for an account. Removes the transferred balance
-		/// from the vesting bucket account.
+		/// Add a new vesting schedule for an account. Transfer balance
+		/// from the vesting bucket account to target account.
 		///
 		/// The dispatch origin of this call must be `VestedTransferOrigin`.
 		///
-		/// - `bucket`: vesting bucket type;
+		/// - `target`: The AccountId on which the vesting schedule is created;
+		/// - `bucket`: vesting bucket type (must be `Team` or `Marketing` or `Strategic Partners`);
 		/// - `start`: block number in which the vesting schedule starts to work;
 		/// - `amount`: the balance for which the vesting schedule is created.
 		#[pallet::weight(T::WeightInfo::vested_transfer())]
@@ -325,7 +333,7 @@ pub mod module {
 			Ok(().into())
 		}
 
-		/// Remove a vesting schedule from an account. Transfers unvested tokens to the
+		/// Remove a vesting schedule from an account. Transfer unvested tokens to the
 		/// vesting bucket.
 		///
 		/// The dispatch origin of this call must be `VestedTransferOrigin`.
@@ -333,20 +341,12 @@ pub mod module {
 		/// - `target`: the account that receives vesting schedule of the MNT tokens;
 		/// - `schedule`: the schedule that is created on the AccountId `dest`.
 		#[pallet::weight(T::WeightInfo::vested_transfer())]
-		pub fn vested_remove(
+		pub fn remove_vesting_schedules(
 			origin: OriginFor<T>,
 			target: <T::Lookup as StaticLookup>::Source,
-			bucket: VestingBucket,
 		) -> DispatchResultWithPostInfo {
 			T::VestedTransferOrigin::ensure_origin(origin)?;
 			let account = T::Lookup::lookup(target)?;
-
-			ensure!(
-				(bucket == VestingBucket::Team
-					|| bucket == VestingBucket::Marketing
-					|| bucket == VestingBucket::StrategicPartners),
-				Error::<T>::IncorrectVestingBucketType
-			);
 
 			Self::do_remove_vesting_schedule(&account)?;
 
@@ -393,6 +393,8 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
+	/// Add a new vesting schedule for an account. Transfer balance
+	/// from the vesting bucket account to target account.
 	#[transactional]
 	fn do_vested_transfer(from: &T::AccountId, to: &T::AccountId, schedule: VestingScheduleOf<T>) -> DispatchResult {
 		let schedule_amount = Self::ensure_valid_vesting_schedule(&schedule)?;
@@ -412,15 +414,25 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	///
+	/// Remove a vesting schedule from an account. Transfer unvested tokens to the
+	/// vesting bucket.
+	#[transactional]
 	fn do_remove_vesting_schedule(target: &T::AccountId) -> DispatchResult {
-		let locked = Self::locked_balance(who);
+		let locked = Self::locked_balance(target);
 
 		T::Currency::remove_lock(VESTING_LOCK_ID, target);
 
+		// TODO: implement the test, the schedule has not been deleted, if the bucket type is not correct
 		<VestingSchedules<T>>::take(target)
 			.into_iter()
 			.try_for_each(|schedule| -> DispatchResult {
+				ensure!(
+					(schedule.bucket == VestingBucket::Team
+						|| schedule.bucket == VestingBucket::Marketing
+						|| schedule.bucket == VestingBucket::StrategicPartners),
+					Error::<T>::IncorrectVestingBucketType
+				);
+
 				// FIXME
 				let bucket_account_id = T::AccountId::decode(
 					&mut &schedule
