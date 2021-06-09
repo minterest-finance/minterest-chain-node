@@ -13,7 +13,7 @@ use minterest_protocol::PoolInitData;
 use orml_benchmarking::runtime_benchmarks;
 use orml_traits::MultiCurrency;
 use sp_runtime::{
-	traits::{AccountIdConversion, Zero},
+	traits::{AccountIdConversion, One, Zero},
 	FixedPointNumber,
 };
 use sp_std::prelude::*;
@@ -93,6 +93,9 @@ runtime_benchmarks! {
 
 		// set balance for lender
 		set_balance(DOT, &lender, 50_000 * DOLLARS)?;
+
+		// Set liquidation_attempts grater that zero to reset them.
+		liquidity_pools::PoolUserParams::<Runtime>::mutate(DOT, lender.clone(), |p| p.liquidation_attempts = u8::one());
 
 		System::set_block_number(10);
 		MntToken::refresh_mnt_speeds()?;
