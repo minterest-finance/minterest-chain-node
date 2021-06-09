@@ -14,6 +14,7 @@ sp-std = { default-features = false, version = '3.0.0' }
 frame-support = { version = "3.0.0", default-features = false }
 smallvec = { default-features = false, version = '1.6.0' }
 
+frame-system = { version = '3.0.0', default-features = false }
 
 [features]
 default = ["std"]
@@ -24,4 +25,5 @@ std = [
     "sp-core/std",
     'sp-std/std',
     'frame-support/std',
+    'frame-system/std',
 ]

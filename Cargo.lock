@@ -3869,6 +3869,7 @@ name = "minterest-primitives"
 version = "0.5.0"
 dependencies = [
  "frame-support",
+ "frame-system",
  "hex-literal",
  "parity-scale-codec",
  "serde",

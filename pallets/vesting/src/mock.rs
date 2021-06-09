@@ -3,23 +3,19 @@
 #![cfg(test)]
 
 use super::*;
-use frame_support::{
-	construct_runtime, ord_parameter_types, parameter_types,
-	traits::{EnsureOrigin, GenesisBuild},
-};
-use frame_system::{EnsureSignedBy, RawOrigin};
+use frame_support::{construct_runtime, ord_parameter_types, parameter_types, traits::GenesisBuild};
+use frame_system::EnsureSignedBy;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup};
 
 use crate as vesting;
 use minterest_primitives::constants::currency::DOLLARS;
-use minterest_primitives::Balance;
+use minterest_primitives::{AccountId, Balance};
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 }
 
-pub type AccountId = u128;
 impl frame_system::Config for Runtime {
 	type Origin = Origin;
 	type Call = Call;
@@ -62,14 +58,14 @@ impl pallet_balances::Config for Runtime {
 }
 
 ord_parameter_types! {
-	pub const ZeroAdmin: AccountId = 0;
+	pub const ADMIN: AccountId = AccountId::from([0u8; 32]);
 }
 
 impl Config for Runtime {
 	type Event = Event;
 	type Currency = PalletBalances;
 	type MinVestedTransfer = MinVestedTransfer;
-	type VestedTransferOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	type VestedTransferOrigin = EnsureSignedBy<ADMIN, AccountId>;
 	type WeightInfo = ();
 	type MaxVestingSchedules = MaxVestingSchedules;
 }
@@ -89,13 +85,12 @@ construct_runtime!(
 	}
 );
 
-pub const ADMIN: AccountId = 0;
-pub const ALICE: AccountId = 1;
-pub const BOB: AccountId = 2;
-pub const CHARLIE: AccountId = 3;
-pub const BUCKET_TEAM: AccountId = 4;
-pub const BUCKET_MARKETING: AccountId = 5;
-pub const BUCKET_STRATEGIC_PARTNERS: AccountId = 6;
+parameter_types! {
+	pub ALICE: AccountId = AccountId::from([1u8; 32]);
+	pub BOB: AccountId = AccountId::from([2u8; 32]);
+	pub CHARLIE: AccountId = AccountId::from([3u8; 32]);
+
+}
 
 #[derive(Default)]
 pub struct ExtBuilder;
@@ -107,13 +102,22 @@ impl ExtBuilder {
 			.unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
-			balances: vec![(ALICE, 100 * DOLLARS), (CHARLIE, 30 * DOLLARS)],
+			balances: vec![
+				(ALICE::get(), 100 * DOLLARS),
+				(CHARLIE::get(), 30 * DOLLARS),
+				(VestingBucket::Marketing.bucket_account_id().unwrap(), 1000 * DOLLARS),
+				(
+					VestingBucket::StrategicPartners.bucket_account_id().unwrap(),
+					1000 * DOLLARS,
+				),
+				(VestingBucket::Team.bucket_account_id().unwrap(), 1000 * DOLLARS),
+			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
 
 		vesting::GenesisConfig::<Runtime> {
-			vesting: vec![(VestingBucket::Team, CHARLIE, 20 * DOLLARS)], // who, start, amount
+			vesting: vec![(VestingBucket::Team, CHARLIE::get(), 20 * DOLLARS)], // who, start, amount
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

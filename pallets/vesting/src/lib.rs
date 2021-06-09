@@ -36,7 +36,7 @@ use frame_support::{
 	transactional,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
-use minterest_primitives::VestingBucket;
+use minterest_primitives::{AccountId, VestingBucket};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -102,7 +102,6 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 	pub fn new_beginning_from(bucket: VestingBucket, start: BlockNumber, amount: Balance) -> Self {
 		let period: BlockNumber = BlockNumber::one(); // block by block
 		let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
-		let help = Balance::from(period_count);
 		let per_period: Balance = amount.checked_div(&Balance::from(period_count)).unwrap_or(amount);
 		Self {
 			bucket,
@@ -150,6 +149,7 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
+	use minterest_primitives::AccountId;
 	use sp_io::hashing::blake2_256;
 
 	pub trait WeightInfo {
@@ -297,20 +297,27 @@ pub mod module {
 			let target = T::Lookup::lookup(target)?;
 
 			ensure!(
-				(bucket == VestingBucket::Team || bucket == VestingBucket::Team || bucket == VestingBucket::Team),
+				(bucket == VestingBucket::Team
+					|| bucket == VestingBucket::Marketing
+					|| bucket == VestingBucket::StrategicPartners),
 				Error::<T>::IncorrectVestingBucketType
 			);
 
 			let schedule: VestingSchedule<T::BlockNumber, _> =
 				VestingSchedule::new_beginning_from(bucket, start, amount);
 
-			let bucket_account_id = T::AccountId::decode(
-				&mut &bucket
-					.bucket_account_id()
-					.ok_or(Error::<T>::IncorrectVestingBucketType)?
-					.using_encoded(blake2_256)[..],
-			)
-			.map_err(|_| Error::<T>::IncorrectVestingBucketAccountId)?;
+			// FIXME
+			let bucket_account_id = VestingBucket::Marketing
+				.bucket_account_id()
+				.ok_or(Error::<T>::IncorrectVestingBucketType)?;
+
+			// let bucket_account_id = T::AccountId::decode(
+			// 	&mut &bucket
+			// 		.bucket_account_id()
+			// 		.ok_or(Error::<T>::IncorrectVestingBucketType)?
+			// 		.using_encoded(blake2_256)[..],
+			// )
+			// .map_err(|_| Error::<T>::IncorrectVestingBucketAccountId)?;
 
 			Self::do_vested_transfer(&bucket_account_id, &target, schedule.clone())?;
 
