@@ -11,7 +11,7 @@
 #![allow(clippy::unnecessary_mut_passed)]
 
 use codec::{Codec, Decode, Encode};
-use minterest_primitives::{Amount, Balance, CurrencyId, Rate};
+use minterest_primitives::{Amount, Balance, CurrencyId, Interest, Rate};
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
 
@@ -87,7 +87,7 @@ sp_api::decl_runtime_apis! {
 			underlying_asset_id: CurrencyId,
 		) -> Option<BalanceInfo>;
 
-		fn get_user_supply_and_borrow_apy(account_id: AccountId) -> Option<(Rate, Rate)>;
+		fn get_user_supply_borrow_and_net_apy(account_id: AccountId) -> Option<(Interest, Interest, Interest)>;
 
 		fn pool_exists(underlying_asset_id: CurrencyId) -> bool;
 	}

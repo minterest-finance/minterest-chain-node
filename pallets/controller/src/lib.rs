@@ -15,9 +15,9 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use liquidity_pools::Pool;
-use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
+use minterest_primitives::{Amount, Balance, CurrencyId, Interest, Operation, Rate};
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerManager, LiquidityPoolsManager, PoolsManager, PricesManager};
+use pallet_traits::{ControllerManager, LiquidityPoolsManager, MntManager, PoolsManager, PricesManager};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;
@@ -139,6 +139,9 @@ pub mod module {
 
 		/// Weight information for the extrinsics.
 		type ControllerWeightInfo: WeightInfo;
+
+		/// Provides MNT token distribution functionality.
+		type MntManager: MntManager<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -601,15 +604,17 @@ impl<T: Config> Pallet<T> {
 		Ok(borrow_balance)
 	}
 
-	/// Calculate total user's supply and borrow APY.
+	/// Calculate total user's supply APY, borrow APY and Net APY.
 	///
 	/// - `who`: the AccountId whose APY should be calculated.
-	pub fn get_user_supply_and_borrow_apy(who: T::AccountId) -> Result<(Rate, Rate), DispatchError> {
+	pub fn get_user_supply_borrow_and_net_apy(
+		who: T::AccountId,
+	) -> Result<(Interest, Interest, Interest), DispatchError> {
 		// Get vector of balances for each asset(in USD).
-		let total_supply_and_borrow_per_asset = Self::get_vec_of_supply_and_borrow_balance(&who)?;
+		let supply_and_borrow_per_asset = Self::get_vec_of_supply_and_borrow_balance(&who)?;
 
-		// Calculate total supply and borrow balance.
-		let (total_supply, total_borrow) = total_supply_and_borrow_per_asset.iter().fold(
+		// Calculate total supply and borrow balance for current user for all pools.
+		let (total_supply, total_borrow) = supply_and_borrow_per_asset.iter().fold(
 			(Balance::zero(), Balance::zero()),
 			|(total_supply, total_borrow), &(_, supply_balance, borrow_balance)| -> (Balance, Balance) {
 				(total_supply + supply_balance, total_borrow + borrow_balance)
@@ -617,48 +622,85 @@ impl<T: Config> Pallet<T> {
 		);
 
 		if total_supply.is_zero() {
-			return Ok((Rate::zero(), Rate::zero()));
+			return Ok((Interest::zero(), Interest::zero(), Interest::zero()));
 		}
 
-		// Calculate hypothetical interest on the supply and borrow.
-		let (hypothetical_earned, hypothetical_payed) = total_supply_and_borrow_per_asset.into_iter().try_fold(
-			(Balance::zero(), Balance::zero()),
-			|(sum_supply_interest, sum_borrow_interest),
-			 (pool_id, current_supply_in_usd, current_borrow_in_usd)|
-			 -> result::Result<(Balance, Balance), DispatchError> {
-				if current_supply_in_usd.is_zero() && current_borrow_in_usd.is_zero() {
-					return Ok((sum_supply_interest, sum_borrow_interest));
-				}
+		// Calculate expected interest on all supplies and borrows for particular user on all pools;
+		// Calculate indicator for NET APY formula
+		let (total_supply_interest, total_borrow_interest, net_apy_indicator) =
+			supply_and_borrow_per_asset.into_iter().try_fold(
+				(Interest::zero(), Interest::zero(), Interest::zero()),
+				|(sum_supply_interest, sum_borrow_interest, sum_net_apy_dividend),
+				 (pool_id, current_supply_in_usd, current_borrow_in_usd)|
+				 -> result::Result<(Interest, Interest, Interest), DispatchError> {
+					if current_supply_in_usd.is_zero() && current_borrow_in_usd.is_zero() {
+						return Ok((sum_supply_interest, sum_borrow_interest, sum_net_apy_dividend));
+					}
 
-				let (borrow_rate, supply_rate) =
-					Self::get_liquidity_pool_borrow_and_supply_rates(pool_id).ok_or(Error::<T>::NumOverflow)?;
+					let (borrow_rate, supply_rate) =
+						Self::get_liquidity_pool_borrow_and_supply_rates(pool_id).ok_or(Error::<T>::NumOverflow)?;
 
-				let supply_interest = Rate::from_inner(current_supply_in_usd)
-					.checked_mul(&supply_rate)
-					.map(|x| x.into_inner())
-					.ok_or(Error::<T>::NumOverflow)?;
+					let calculate_interest = |amount: Balance, rate: Balance| {
+						Interest::from_inner(amount as Amount)
+							.checked_mul(&Interest::from_inner(rate as Amount))
+							.ok_or(Error::<T>::NumOverflow)
+					};
 
-				let borrow_interest = Rate::from_inner(current_borrow_in_usd)
-					.checked_mul(&borrow_rate)
-					.map(|x| x.into_inner())
-					.ok_or(Error::<T>::NumOverflow)?;
+					let supply_interest = calculate_interest(current_supply_in_usd, supply_rate.into_inner())?;
+					let borrow_interest = calculate_interest(current_borrow_in_usd, borrow_rate.into_inner())?;
 
-				Ok((
-					sum_supply_interest + supply_interest,
-					sum_borrow_interest + borrow_interest,
-				))
-			},
-		)?;
+					// Calculate mnt interest for both borrow and supply.
+					let (mnt_borrow_rate, mnt_supply_rate) = T::MntManager::get_mnt_borrow_and_supply_rates(pool_id)?;
+
+					let mnt_supply_inerest = calculate_interest(current_supply_in_usd, mnt_supply_rate.into_inner())?;
+					let mnt_borrow_inerest = calculate_interest(current_borrow_in_usd, mnt_borrow_rate.into_inner())?;
+
+					// Calculate NET API indicator:
+					// net_apy_indicator = supply_interest - borrow_interest + mnt_supply_interest + mnt_borrow_inerest
+					let current_net_apy_indicator = supply_interest
+						.checked_sub(&borrow_interest)
+						.and_then(|v| v.checked_add(&mnt_supply_inerest))
+						.and_then(|v| v.checked_add(&mnt_borrow_inerest))
+						.ok_or(Error::<T>::NumOverflow)?;
+
+					Ok((
+						sum_supply_interest + supply_interest,
+						sum_borrow_interest + borrow_interest,
+						sum_net_apy_dividend + current_net_apy_indicator,
+					))
+				},
+			)?;
 
 		// Calculate APY given the amount of blocks per year.
-		let supply_apy = Rate::saturating_from_rational(hypothetical_earned, total_supply)
-			.checked_mul(&Rate::saturating_from_integer(T::BlocksPerYear::get()))
-			.ok_or(Error::<T>::NumOverflow)?;
-		let borrow_apy = Rate::checked_from_rational(hypothetical_payed, total_borrow)
-			.and_then(|v| v.checked_mul(&Rate::saturating_from_integer(T::BlocksPerYear::get())))
-			.unwrap_or_else(Default::default);
+		// supply_apy = total_supply_interest / total_supply * BlocksPerYear
+		// borrow_apy = total_borrow_interest / total_borrow * BlocksPerYear
+		let calculate_apy = |interest: Interest, amount: Balance| {
+			interest
+				.checked_div(&Interest::from_inner(amount as Amount))
+				.and_then(|v| v.checked_mul(&Interest::from_inner(T::BlocksPerYear::get() as Amount)))
+				.ok_or(Error::<T>::NumOverflow)
+		};
 
-		Ok((supply_apy, borrow_apy))
+		let supply_apy = calculate_apy(total_supply_interest, total_supply)?;
+		let borrow_apy = calculate_apy(total_borrow_interest, total_borrow)?;
+
+		// Calculate NET APY:
+		// if net_apy_indicator > 0
+		//		net_apy = net_apy_indicator / total_supply * BlocksPerYear
+		// if net_apy_indicator < 0
+		//		net_apy = net_apy_indicator / total_borrow * BlocksPerYear
+
+		let net_apy = match net_apy_indicator {
+			net_apy_indicator if net_apy_indicator > Interest::zero() => {
+				calculate_apy(net_apy_indicator, total_supply)?
+			}
+			net_apy_indicator if net_apy_indicator < Interest::zero() => {
+				calculate_apy(net_apy_indicator, total_borrow)?
+			}
+			_ => Interest::zero(),
+		};
+
+		Ok((supply_apy, borrow_apy, net_apy))
 	}
 }
 
@@ -912,6 +954,8 @@ impl<T: Config> Pallet<T> {
 					let oracle_price =
 						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
+					// TODO: refactor and optimize this is_zero() checks
+
 					// Convert to USD if balance exists.
 					if !supply_balance.is_zero() {
 						supply_balance = Rate::from_inner(supply_balance)
@@ -950,7 +994,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn is_valid_borrow_cap(borrow_cap: Option<Balance>) -> bool {
- 		match borrow_cap {
+		match borrow_cap {
 			Some(cap) => cap >= Balance::zero() && cap <= T::MaxBorrowCap::get(),
 			None => true,
 		}

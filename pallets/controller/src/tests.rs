@@ -399,7 +399,7 @@ fn get_liquidity_pool_borrow_and_supply_rates_above_kink() {
 }
 
 #[test]
-fn get_user_supply_and_borrow_apy_should_work() {
+fn get_user_supply_borrow_and_net_apy_should_work() {
 	ExtBuilder::default()
 		.pool_balance(DOT, dollars(100_u128))
 		.pool_total_borrowed(DOT, dollars(500_u128))
@@ -762,8 +762,7 @@ fn set_collateral_factor_should_work() {
 
 #[test]
 fn pause_operation_should_work() {
-	ExtBuilder::default()
-		.pool_mock(DOT).build().execute_with(|| {
+	ExtBuilder::default().pool_mock(DOT).build().execute_with(|| {
 		assert!(!Controller::pause_keepers(&DOT).deposit_paused);
 		assert!(!Controller::pause_keepers(&DOT).redeem_paused);
 		assert!(!Controller::pause_keepers(&DOT).borrow_paused);

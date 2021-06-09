@@ -6,7 +6,7 @@ pub use controller_rpc_runtime_api::{
 };
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use minterest_primitives::{CurrencyId, Rate};
+use minterest_primitives::{CurrencyId, Interest, Rate};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
@@ -109,12 +109,19 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 		at: Option<BlockHash>,
 	) -> Result<Option<BalanceInfo>>;
 
-	#[rpc(name = "controller_getUserSupplyAndBorrowApy")]
-	fn get_user_supply_and_borrow_apy(
+	/// Return borrow APY, supply APY and Net APY for current user
+	///
+	///  - `&self` :  Self reference
+	///  - `account_id`: current account id.
+	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	/// Return:
+	/// - (supply_apy, borrow_apy, net_apy)
+	#[rpc(name = "controller_getUserSupplyBorrowAndNetApy")]
+	fn get_user_supply_borrow_and_net_apy(
 		&self,
 		account_id: AccountId,
 		at: Option<BlockHash>,
-	) -> Result<Option<(Rate, Rate)>>;
+	) -> Result<Option<(Interest, Interest, Interest)>>;
 
 	/// Checks whether the pool is created in storage.
 	///
@@ -284,16 +291,16 @@ where
 		})
 	}
 
-	fn get_user_supply_and_borrow_apy(
+	fn get_user_supply_borrow_and_net_apy(
 		&self,
 		account_id: AccountId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<Option<(Rate, Rate)>> {
+	) -> Result<Option<(Interest, Interest, Interest)>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
-		api.get_user_supply_and_borrow_apy(&at, account_id)
+		api.get_user_supply_borrow_and_net_apy(&at, account_id)
 			.map_err(|e| RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
 				message: "Unable to get user's APY.".into(),

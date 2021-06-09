@@ -829,7 +829,7 @@ fn get_unclaimed_mnt_balance_should_work() {
 }
 
 #[test]
-fn get_user_supply_and_borrow_apy_should_work() {
+fn get_user_supply_borrow_and_net_apy_should_work() {
 	ExtBuilder::default()
 		.mnt_account_balance(1_000_000 * DOLLARS)
 		.pool_initial(DOT)
@@ -876,6 +876,16 @@ fn get_user_supply_and_borrow_apy_should_work() {
 			// ETH: 160_000 * 0.0378 = 6048 $
 			// Sum = 2360 + 6048 = 8408 $
 			// sum_borrow_apy = 8408/260_000 = 3.23 %
+
+			// MNT year supply interest(for the pool):
+			// mnt_borrow_rate = mnt_speed * mnt_price / (total_borrow * currency_price)
+			// mnt_supply_rate = mnt_speed * mnt_price / (total_supply * currency_price)
+			// where:
+			//	total_supply = total_cash - total_protocol_interest + total_borrow
+			// DOT mnt borrow:  mnt_speed * mnt_price / 50000 * 5256000
+			// DOT mnt supply:  mnt_speed * mnt_price / 100000 * 5256000
+			// ETH mnt borrow:  mnt_speed * mnt_price / 80000 * 5256000
+			// ETH mnt supply:  mnt_speed * mnt_price / 100000 * 5256000
 
 			assert_eq!(
 				get_user_supply_and_borrow_apy_rpc(ALICE::get()),

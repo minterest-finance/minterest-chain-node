@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	FixedU128, MultiSignature, RuntimeDebug,
+	FixedI128, FixedU128, MultiSignature, RuntimeDebug,
 };
 
 pub mod arithmetic;
@@ -67,6 +67,9 @@ pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
 
 /// An instant or duration in time.
 pub type Moment = u64;
+
+/// Decimal representation of interest. Signed.
+pub type Interest = FixedI128;
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
