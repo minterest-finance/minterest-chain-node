@@ -28,3 +28,6 @@ venv.bak/
 .cargo-remote.toml
 !./cargo/audit.toml
 ./cargo/*
+
+#Ingnore merge artifacts
+*.orig
