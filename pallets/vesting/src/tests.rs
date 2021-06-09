@@ -318,49 +318,6 @@ fn claim_works() {
 }
 
 #[test]
-fn update_vesting_schedules_works() {
-	ExtBuilder::build().execute_with(|| {
-		assert_ok!(Vesting::vested_transfer(
-			Origin::signed(ADMIN::get()),
-			BOB::get(),
-			VestingBucket::Team,
-			0u64,
-			20 * DOLLARS
-		));
-
-		let updated_schedule = VestingSchedule {
-			bucket: VestingBucket::Team,
-			start: 0u64,
-			period: 20u64,
-			period_count: 2u32,
-			per_period: 10 * DOLLARS,
-		};
-		assert_ok!(Vesting::update_vesting_schedules(
-			Origin::root(),
-			BOB::get(),
-			vec![updated_schedule]
-		));
-
-		System::set_block_number(11);
-		assert_ok!(Vesting::claim(Origin::signed(BOB::get())));
-		assert!(PalletBalances::transfer(Origin::signed(BOB::get()), ALICE::get(), 1 * DOLLARS).is_err());
-		assert_eq!(PalletBalances::usable_balance(BOB::get()), Balance::zero());
-
-		System::set_block_number(21);
-		assert_ok!(Vesting::claim(Origin::signed(BOB::get())));
-		assert_eq!(PalletBalances::usable_balance(BOB::get()), 10 * DOLLARS);
-		assert_eq!(
-			PalletBalances::locks(&BOB::get()).pop(),
-			Some(BalanceLock {
-				id: VESTING_LOCK_ID,
-				amount: 10 * DOLLARS,
-				reasons: Reasons::All,
-			})
-		);
-	});
-}
-
-#[test]
 fn vested_transfer_check_for_min() {
 	ExtBuilder::build().execute_with(|| {
 		assert_noop!(
@@ -451,33 +408,33 @@ fn multiple_vesting_schedule_claim_works() {
 
 #[test]
 fn vesting_schedule_constructors_should_work() {
-	let schedule1: VestingSchedule<BlockNumber, Balance> = VestingSchedule::new(VestingBucket::Ecosystem, DOLLARS);
+	let schedule1: VestingSchedule<BlockNumber> = VestingSchedule::new(VestingBucket::Ecosystem, DOLLARS);
 	assert_eq!(schedule1.bucket, VestingBucket::Ecosystem);
 	assert_eq!(schedule1.start, BlockNumber::zero());
 	assert_eq!(schedule1.period_count as u128, 4 * BLOCKS_PER_YEAR);
 	assert_eq!(schedule1.period, 1_u32);
 	assert_eq!(schedule1.per_period, 47_564_687_975); // 1 MNT / 21_024_000 blocks ~ 0,0000000476
 
-	let schedule2: VestingSchedule<BlockNumber, Balance> = VestingSchedule::new(VestingBucket::Team, 100_000 * DOLLARS);
+	let schedule2: VestingSchedule<BlockNumber> = VestingSchedule::new(VestingBucket::Team, 100_000 * DOLLARS);
 	assert_eq!(schedule2.bucket, VestingBucket::Team);
 	assert_eq!(schedule2.start, 2_620_800);
-	assert_eq!(schedule2.period_count, 5 * BLOCKS_PER_YEAR);
+	assert_eq!(schedule2.period_count as u128, 5 * BLOCKS_PER_YEAR);
 	assert_eq!(schedule2.period, 1_u32);
 	assert_eq!(schedule2.per_period, 3_805_175_038_051_750); // 100_000 MNT / 26_280_000 blocks ~ 0,0038
 
-	let schedule3: VestingSchedule<BlockNumber, Balance> =
+	let schedule3: VestingSchedule<BlockNumber> =
 		VestingSchedule::new_beginning_from(VestingBucket::Marketing, 1234, 10 * DOLLARS);
 	assert_eq!(schedule3.bucket, VestingBucket::Marketing);
 	assert_eq!(schedule3.start, 1234);
-	assert_eq!(schedule3.period_count, BLOCKS_PER_YEAR);
+	assert_eq!(schedule3.period_count as u128, BLOCKS_PER_YEAR);
 	assert_eq!(schedule3.period, 1_u32);
 	assert_eq!(schedule3.per_period, 1_902_587_519_025); // 1 MNT / 5256000 blocks ~ 0,00000019
 
-	let schedule4: VestingSchedule<BlockNumber, Balance> =
+	let schedule4: VestingSchedule<BlockNumber> =
 		VestingSchedule::new_beginning_from(VestingBucket::StrategicPartners, 5000, 20 * DOLLARS);
 	assert_eq!(schedule4.bucket, VestingBucket::StrategicPartners);
 	assert_eq!(schedule4.start, 5000);
-	assert_eq!(schedule4.period_count, 2 * BLOCKS_PER_YEAR);
+	assert_eq!(schedule4.period_count as u128, 2 * BLOCKS_PER_YEAR);
 	assert_eq!(schedule4.period, 1_u32);
-	assert_eq!(schedule4.per_period, 1_902_587_519_025); // 20 MNT / 10512000 blocks ~ 0,0000019
+	assert_eq!(schedule4.per_period, 190_258_751_902_587_519_u128); // 20 MNT / 10512000 blocks ~ 0,0000019
 }
