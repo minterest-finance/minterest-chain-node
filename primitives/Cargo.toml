@@ -11,6 +11,8 @@ serde = { version = "1.0.101", optional = true }
 sp-core = { default-features = false, version = '3.0.0' }
 sp-std = { default-features = false, version = '3.0.0' }
 frame-support = { version = "3.0.0", default-features = false }
+smallvec = { default-features = false, version = '1.6.0' }
+
 
 [features]
 default = ["std"]
