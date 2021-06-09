@@ -69,6 +69,7 @@ minterest-model = { path = "../pallets/minterest-model", default-features = fals
 risk-manager = { path = "../pallets/risk-manager", default-features = false }
 liquidation-pools = { path = "../pallets/liquidation-pools", default-features = false }
 dex = { path = "../pallets/dex", default-features = false }
+module-vesting = { path = "../pallets/vesting", default-features = false }
 
 # ORML dependencies
 orml-currencies = { version = "0.4.0", default-features = false }
@@ -149,4 +150,5 @@ std = [
     'risk-manager/std',
     'liquidation-pools/std',
     'dex/std',
+    'module-vesting/std',
 ]

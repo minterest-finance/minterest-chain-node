@@ -70,6 +70,8 @@ sp_api::decl_runtime_apis! {
 	where
 		AccountId: Codec,
 	{
+		fn get_protocol_total_value() -> Option<BalanceInfo>;
+
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState>;
 
 		fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate>;
@@ -85,6 +87,11 @@ sp_api::decl_runtime_apis! {
 		fn get_user_borrow_per_asset(
 			account_id: AccountId,
 			underlying_asset_id: CurrencyId,
+		) -> Option<BalanceInfo>;
+
+		fn get_user_underlying_balance_per_asset(
+			account_id: AccountId,
+			pool_id: CurrencyId,
 		) -> Option<BalanceInfo>;
 
 		fn get_user_supply_borrow_and_net_apy(account_id: AccountId) -> Option<(Interest, Interest, Interest)>;

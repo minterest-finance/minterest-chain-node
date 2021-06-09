@@ -274,6 +274,94 @@ fn test_rates_using_rpc() {
 }
 
 #[test]
+fn test_get_protocol_total_value_rpc() {
+	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
+		.build()
+		.execute_with(|| {
+			assert_ok!(set_oracle_prices(vec![
+				(DOT, Price::saturating_from_integer(2)),
+				(ETH, Price::saturating_from_integer(3)),
+			]));
+			assert_ok!(lock_price(DOT));
+			assert_ok!(lock_price(ETH));
+
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(100_000)));
+			// Total: 100 DOT * 2
+			assert_eq!(
+				get_protocol_total_value_rpc(),
+				Some(BalanceInfo {
+					amount: dollars(200_000)
+				})
+			);
+
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
+			// Total: 100 DOT * 2 + 100 ETH * 3
+			assert_eq!(
+				get_protocol_total_value_rpc(),
+				Some(BalanceInfo {
+					amount: dollars(500_000)
+				})
+			);
+
+			System::set_block_number(10);
+			// Total hasn`t changed due to no borrows
+			assert_eq!(
+				get_protocol_total_value_rpc(),
+				Some(BalanceInfo {
+					amount: dollars(500_000)
+				})
+			);
+
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
+			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
+			// Total: 100 DOT * 2 + 100 ETH * 3 + 50 DOT * 2 + 70 ETH * 3
+			assert_eq!(
+				get_protocol_total_value_rpc(),
+				Some(BalanceInfo {
+					amount: dollars(810_000)
+				})
+			);
+
+			System::set_block_number(20);
+
+			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(70_000)));
+			// Total is the same:
+			//   liquidity: 100 DOT * 2 + 100 ETH * 3 + 50 DOT * 2 + 70 ETH * 3 - (borrowed) 70 DOT * 2 +
+			//   borrowed: 70 DOT * 2
+			assert_eq!(
+				get_protocol_total_value_rpc(),
+				Some(BalanceInfo {
+					amount: dollars(810_000)
+				})
+			);
+
+			System::set_block_number(30);
+			// Total:
+			//   liquidity: 100 DOT * 2 + 100 ETH * 3 + 50 DOT * 2 + 70 ETH * 3 - (borrowed) 70 DOT * 2 +
+			//   borrowed: 70 DOT * 2 + interest
+			assert_eq!(
+				get_protocol_total_value_rpc(),
+				Some(BalanceInfo {
+					amount: 810_000_005_292_000_000_000_000
+				})
+			);
+
+			assert_ok!(MinterestProtocol::repay_all(bob(), DOT));
+			// Total hasn`t changed because protocol interest isn`t counted
+			assert_eq!(
+				get_protocol_total_value_rpc(),
+				Some(BalanceInfo {
+					amount: 810_000_005_292_000_000_000_000
+				})
+			);
+		});
+}
+
+#[test]
 fn test_get_utilization_rate_rpc() {
 	ExtBuilder::default()
 		.pool_initial(DOT)
@@ -713,6 +801,60 @@ fn get_user_total_collateral_rpc_should_work() {
 
 			assert_eq!(get_user_total_collateral_rpc(BOB::get()), expected_bob_collateral * 2);
 		})
+}
+
+/// This test checks get_user_underlying_balance_per_asset RPC.
+///
+/// Test scenario:
+/// - Bob deposits 90 to ETH pool
+/// - Alice deposits 100 to ETH pool
+/// - Balance converted to underlying is equal to deposited amount
+/// - Bob borrows 40 from ETH pool
+/// - Balance converted to underlying is still equal to deposited amount
+/// - Jump to block #100
+/// - Balance converted to underlying has increased
+/// - Alice redeems money from protocol
+/// - Alice ETH balance increased by a value that was previously returned by RPC
+#[test]
+fn test_get_user_underlying_balance_per_asset_rpc() {
+	ExtBuilder::default().pool_initial(ETH).build().execute_with(|| {
+		assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(90_000)));
+		// Alice deposited ALL ETH tokens to protocol
+		assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
+		assert_eq!(
+			get_user_underlying_balance_per_asset_rpc(ALICE::get(), ETH),
+			Some(BalanceInfo {
+				amount: dollars(100_000)
+			})
+		);
+		// Bob makes a borrow to update exchange rate
+		assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
+		assert_ok!(MinterestProtocol::borrow(bob(), ETH, dollars(40_000)));
+		// Alice Underlying balance hasn`t changed in the block when first borrow occurred
+		assert_eq!(
+			get_user_underlying_balance_per_asset_rpc(ALICE::get(), ETH),
+			Some(BalanceInfo {
+				amount: dollars(100_000)
+			})
+		);
+		// Skip some blocks to accrue interest. Bob repay his borrow
+		System::set_block_number(100);
+		// 3554127423600000 - this is interest that alice earn for depositing
+		let alice_balance_after_borrowing = dollars(100_000) + 3554127423600000;
+		assert_eq!(
+			get_user_underlying_balance_per_asset_rpc(ALICE::get(), ETH),
+			Some(BalanceInfo {
+				amount: alice_balance_after_borrowing
+			})
+		);
+		// Converts ALL mTokens into a specified quantity of the underlying asset
+		assert_ok!(MinterestProtocol::redeem(alice(), ETH));
+		// Check that value got by rpc and value after redeem the same
+		assert_eq!(
+			Currencies::free_balance(ETH, &ALICE::get()),
+			alice_balance_after_borrowing
+		);
+	})
 }
 
 #[test]

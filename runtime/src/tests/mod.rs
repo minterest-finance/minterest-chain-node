@@ -18,7 +18,7 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Operation, Price};
 use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerManager, DEXManager, LiquidationPoolsManager, PoolsManager, PricesManager};
+use pallet_traits::{ControllerManager, DEXManager, PoolsManager, PricesManager};
 use prices_rpc_runtime_api::runtime_decl_for_PricesRuntimeApi::PricesRuntimeApi;
 use risk_manager::RiskManagerData;
 use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};
@@ -408,6 +408,10 @@ fn dex_balance(pool_id: CurrencyId) -> Balance {
 	Currencies::free_balance(pool_id, &Dex::dex_account_id())
 }
 
+fn get_protocol_total_value_rpc() -> Option<BalanceInfo> {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_protocol_total_value()
+}
+
 fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::liquidity_pool_state(currency_id)
 }
@@ -436,6 +440,10 @@ fn get_user_total_collateral_rpc(account_id: AccountId) -> Balance {
 
 fn get_user_borrow_per_asset_rpc(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_borrow_per_asset(account_id, underlying_asset_id)
+}
+
+fn get_user_underlying_balance_per_asset_rpc(account_id: AccountId, pool_id: CurrencyId) -> Option<BalanceInfo> {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_underlying_balance_per_asset(account_id, pool_id)
 }
 
 fn get_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
@@ -486,12 +494,22 @@ fn set_oracle_price_for_all_pools(price: u128) -> DispatchResult {
 	Ok(())
 }
 
+fn set_oracle_prices(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
+	MinterestOracle::on_finalize(System::block_number());
+	assert_ok!(MinterestOracle::feed_values(origin_of(ORACLE1::get().clone()), prices));
+	Ok(())
+}
+
 fn get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
 	<Runtime as PricesRuntimeApi<Block>>::get_all_locked_prices()
 }
 
 fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
 	<Runtime as PricesRuntimeApi<Block>>::get_all_freshest_prices()
+}
+
+fn lock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
+	Prices::lock_price(origin_root(), currency_id)
 }
 
 fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {

@@ -127,7 +127,7 @@ pub mod module {
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Provides the basic liquidity pools manager and liquidity pool functionality.
-		type LiquidityPoolsManager: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
+		type LiquidityPoolsManager: LiquidityPoolsManager<Self::AccountId>;
 
 		#[pallet::constant]
 		/// Maximum total borrow amount per pool in usd.
@@ -485,8 +485,7 @@ impl<T: Config> Pallet<T> {
 			return None;
 		}
 		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
-		let block_delta = Self::get_block_delta(pool_id).ok()?;
-		let pool_data = Self::calculate_interest_params(pool_id, block_delta).ok()?;
+		let pool_data = <LiquidityPools<T>>::get_pool_data(pool_id);
 		let protocol_interest_factor = Self::controller_dates(pool_id).protocol_interest_factor;
 
 		let utilization_rate = Self::calculate_utilization_rate(
@@ -511,10 +510,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Gets current utilization rate of the pool.
 	pub fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate> {
-		let current_block_number = <frame_system::Module<T>>::block_number();
-		let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
-		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous).ok()?;
-		let pool_data = Self::calculate_interest_params(pool_id, block_delta).ok()?;
+		let pool_data = Self::calculate_current_pool_data(pool_id).ok()?;
 		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
 		Self::calculate_utilization_rate(
 			current_total_balance,
@@ -550,6 +546,40 @@ impl<T: Config> Pallet<T> {
 		Ok((total_supply_balance, total_borrowed_balance))
 	}
 
+	/// Calculates total amount of money currently held in the protocol in usd.
+	/// Total value is calculated as: sum(total_issuance_n * exchange_rate_n * oracle_price_n),
+	/// where:
+	///     `total_issuance_n` - total number of wrapped tokens in the n pool;
+	///     `exchange_rate_n` - exchange rate in the n pool;
+	///     `oracle_price_n` - oracle price for the n pool.
+	pub fn get_protocol_total_value() -> BalanceResult {
+		let total_value = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.iter()
+			.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
+			.try_fold(Balance::zero(), |current_value, &pool_id| -> BalanceResult {
+				let pool_data = Self::calculate_current_pool_data(pool_id)?;
+				let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+				let wrapped_balance = T::MultiCurrency::total_issuance(wrapped_id);
+				let pool_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
+				let current_exchange_rate = <LiquidityPools<T>>::calculate_exchange_rate(
+					pool_balance,
+					wrapped_balance,
+					pool_data.total_protocol_interest,
+					pool_data.total_borrowed,
+				)?;
+				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+				let pool_total_value_usd = Rate::from_inner(wrapped_balance)
+					.checked_mul(&current_exchange_rate)
+					.and_then(|v| v.checked_mul(&oracle_price))
+					.map(|x| x.into_inner())
+					.ok_or(Error::<T>::BalanceOverflow)?;
+				Ok(current_value
+					.checked_add(pool_total_value_usd)
+					.ok_or(Error::<T>::BalanceOverflow)?)
+			})?;
+		Ok(total_value)
+	}
+
 	/// Calculate total collateral in usd based on collateral factor, fresh exchange rate and latest
 	/// oracle price.
 	///
@@ -567,7 +597,6 @@ impl<T: Config> Pallet<T> {
 				}
 
 				let collateral_factor = Self::controller_dates(pool_id).collateral_factor;
-
 				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
 				let collateral_in_usd = Rate::from_inner(user_supply_balance)
@@ -583,7 +612,7 @@ impl<T: Config> Pallet<T> {
 	/// Calculate actual borrow balance for user per asset based on fresh latest indexes.
 	///
 	/// - `who`: the AccountId whose balance should be calculated.
-	/// - `underlying_asset_id`: ID of the currency, the balance of borrowing of which we calculate.
+	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
 	pub fn get_user_borrow_per_asset(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
 		ensure!(
 			<LiquidityPools<T>>::pool_exists(&underlying_asset_id),
@@ -598,8 +627,7 @@ impl<T: Config> Pallet<T> {
 			return Ok(Balance::zero());
 		};
 
-		let block_delta = Self::get_block_delta(underlying_asset_id)?;
-		let pool_data = Self::calculate_interest_params(underlying_asset_id, block_delta)?;
+		let pool_data = Self::calculate_current_pool_data(underlying_asset_id)?;
 		let borrow_balance = Self::calculate_borrow_balance(&who, underlying_asset_id, pool_data.borrow_index)?;
 		Ok(borrow_balance)
 	}
@@ -702,6 +730,32 @@ impl<T: Config> Pallet<T> {
 
 		Ok((supply_apy, borrow_apy, net_apy))
 	}
+
+	/// Calculates user balance converted to underlying asset using exchange rate calculated for the
+	/// current block
+	///
+	/// - `who`: the AccountId whose balance should be calculated.
+	/// - `pool_id` - ID of the pool to calculate balance for.
+	pub fn get_user_underlying_balance_per_asset(who: &T::AccountId, pool_id: CurrencyId) -> BalanceResult {
+		ensure!(<LiquidityPools<T>>::pool_exists(&pool_id), Error::<T>::PoolNotFound);
+		let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+
+		let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
+		if user_balance_wrapped_tokens.is_zero() {
+			return Ok(Balance::zero());
+		}
+
+		let pool_data = Self::calculate_current_pool_data(pool_id)?;
+		let current_exchange_rate = <LiquidityPools<T>>::get_exchange_rate_by_interest_params(
+			pool_id,
+			pool_data.total_protocol_interest,
+			pool_data.total_borrowed,
+		)?;
+		Ok(Rate::from_inner(user_balance_wrapped_tokens)
+			.checked_mul(&current_exchange_rate)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?)
+	}
 }
 
 // Private methods
@@ -763,8 +817,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Calculates total borrows, total protocol interest and borrow index for given pool.
 	/// Applies accrued interest to total borrows and protocol interest and calculates interest
-	/// accrued from the last checkpointed block up to the current block and writes new checkpoint
-	/// to storage.
+	/// accrued from the last checkpointed block up to the current block.
 	///
 	/// - `underlying_asset`: ID of the currency to make calculations for.
 	/// - `block_delta`: number of blocks passed since last accrue interest
@@ -881,6 +934,22 @@ impl<T: Config> Pallet<T> {
 		);
 
 		Ok(current_block_number - accrual_block_number_previous)
+	}
+
+	/// Calculates number of blocks passed since the last pool update and updates pool values based
+	/// on block delta
+	/// - `pool_id`: CurrencyId to calculate parameters for.
+	///
+	/// returns pool parameters calculated for a current block
+	pub fn calculate_current_pool_data(pool_id: CurrencyId) -> result::Result<Pool, DispatchError> {
+		let current_block_number = <frame_system::Module<T>>::block_number();
+		let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
+		if current_block_number == accrual_block_number_previous {
+			return Ok(<LiquidityPools<T>>::get_pool_data(pool_id));
+		}
+
+		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
+		Self::calculate_interest_params(pool_id, block_delta)
 	}
 
 	/// Calculates the simple interest factor.
@@ -1152,17 +1221,12 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	/// This calculates interest accrued from the last checkpointed block
 	/// up to the current block and writes new checkpoint to storage.
 	fn accrue_interest_rate(underlying_asset: CurrencyId) -> DispatchResult {
-		//Remember the initial block number.
 		let current_block_number = <frame_system::Module<T>>::block_number();
-		let accrual_block_number_previous = Self::controller_dates(underlying_asset).last_interest_accrued_block;
-		// Calculate the number of blocks elapsed since the last accrual
-		let block_delta = Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
-		//Short-circuit accumulating 0 interest.
-		if block_delta == T::BlockNumber::zero() {
+		if Self::controller_dates(underlying_asset).last_interest_accrued_block == current_block_number {
 			return Ok(());
 		}
 
-		let pool_data = Self::calculate_interest_params(underlying_asset, block_delta)?;
+		let pool_data = Self::calculate_current_pool_data(underlying_asset)?;
 		// Save new params
 		ControllerParams::<T>::mutate(underlying_asset, |data| {
 			data.last_interest_accrued_block = current_block_number

@@ -1,0 +1,43 @@
+{
+  "PrivateSale": [
+    {
+      "account": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+      "amount": 10001000000000000000000000
+    }],
+  "PublicSale": [
+    {
+      "account": "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY",
+      "amount": 2500250000000000000000000
+    }],
+  "MarketMaking": [
+    {
+      "account": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+      "amount": 3000000000000000000000000
+    }],
+  "StrategicPartners": [
+    {
+      "account": "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
+      "amount": 1949100000000000000000000
+    }],
+  "Marketing": [
+    {
+      "account": "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y",
+      "amount": 4000400000000000000000000
+    }],
+  "Ecosystem": [
+    {
+      "account": "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy",
+      "amount": 4499880000000000000000000
+    }],
+  "Team":
+    [
+      {
+        "account": "5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw",
+        "amount": 14017000000000000000000000
+      },
+      {
+        "account": "5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL",
+        "amount": 10000000000000000000000000
+      }
+    ]
+}

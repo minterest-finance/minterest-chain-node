@@ -15,6 +15,16 @@ use std::sync::Arc;
 #[rpc]
 /// Base trait for RPC interface of controller
 pub trait ControllerRpcApi<BlockHash, AccountId> {
+	/// Returns total amount of money currently held in the protocol in usd.
+	///
+	///  - `&self` :  Self reference
+	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///
+	/// Return:
+	/// - amount: total amount of money currently held in the protocol in usd.
+	#[rpc(name = "controller_protocolTotalValue")]
+	fn get_protocol_total_value(&self, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
+
 	/// Returns current Liquidity Pool State.
 	///
 	///  - `&self` :  Self reference
@@ -123,6 +133,15 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 		at: Option<BlockHash>,
 	) -> Result<Option<(Interest, Interest, Interest)>>;
 
+	/// Returns user underlying asset balance for the pool
+	#[rpc(name = "controller_getUserUnderlyingBalancePerAsset")]
+	fn get_user_underlying_balance_per_asset(
+		&self,
+		account_id: AccountId,
+		pool_id: CurrencyId,
+		at: Option<BlockHash>,
+	) -> Result<Option<BalanceInfo>>;
+
 	/// Checks whether the pool is created in storage.
 	///
 	///  - `&self` :  Self reference
@@ -171,6 +190,18 @@ where
 	C::Api: ControllerRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
 {
+	fn get_protocol_total_value(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Option<BalanceInfo>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+		api.get_protocol_total_value(&at).map_err(|e| RpcError {
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
+			message: "Unable to get protocol total value.".into(),
+			data: Some(format!("{:?}", e).into()),
+		})
+	}
+
 	fn liquidity_pool_state(
 		&self,
 		pool_id: CurrencyId,
@@ -275,6 +306,24 @@ where
 			.map_err(|e| RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
 				message: "Unable to get total user borrow balance.".into(),
+				data: Some(format!("{:?}", e).into()),
+			})
+	}
+
+	fn get_user_underlying_balance_per_asset(
+		&self,
+		account_id: AccountId,
+		pool_id: CurrencyId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<Option<BalanceInfo>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+		api.get_user_underlying_balance_per_asset(&at, account_id, pool_id)
+			.map_err(|e| RpcError {
+				code: ErrorCode::ServerError(Error::RuntimeError.into()),
+				message: "Unable to get user underlying balance.".into(),
 				data: Some(format!("{:?}", e).into()),
 			})
 	}

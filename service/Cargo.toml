@@ -1,7 +1,7 @@
 [package]
 name = "minterest-service"
 version = "0.5.0"
-authors = ["Minterest <https://github.com/minterest-defi>"]
+authors = ["Minterest developers"]
 edition = "2018"
 
 [dependencies]
@@ -54,6 +54,8 @@ liquidity-pools = { path = "../pallets/liquidity-pools" }
 liquidation-pools = { path = "../pallets/liquidation-pools" }
 minterest-model = { path = "../pallets/minterest-model" }
 risk-manager = { path = "../pallets/risk-manager" }
+module-vesting = { path = "../pallets/vesting" }
+minterest-primitives = { path = "../primitives" }
 
 node-minterest-runtime = { path = '../runtime' }
 

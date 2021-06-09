@@ -2,7 +2,7 @@
 name = "minterest-model"
 description = 'Pallet for minteres model implementation'
 version = "0.5.0"
-authors = ["Minterest <https://github.com/minterest-defi>"]
+authors = ["Minterest developers"]
 edition = "2018"
 
 [dependencies]
