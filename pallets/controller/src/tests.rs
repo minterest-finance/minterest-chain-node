@@ -422,8 +422,8 @@ fn get_user_supply_borrow_and_net_apy_should_work() {
 			// Set price = 2.00 USD for all assets.
 			MockPriceSource::set_underlying_price(Some(Price::from_inner(2 * DOLLARS)));
 
-			// borrow_rate_per_year = 0.0000001452 * 5256000 = 76,3171226327304 %
-			// supply_rate_per_year = 0,0000001089 * 5256000 = 57,2378440518504 %
+			// borrow_rate_per_year = 0.0000001452 * 5256000 = 76.3171226327304 %
+			// supply_rate_per_year = 0,0000001089 * 5256000 = 57.2378440518504 %
 
 			assert_eq!(
 				Controller::get_liquidity_pool_borrow_and_supply_rates(DOT),
@@ -431,22 +431,22 @@ fn get_user_supply_borrow_and_net_apy_should_work() {
 			);
 
 			// borrow_rate_per_year = 0.000000006750000014 * 5256000 = 3,5478 %
-			// supply_rate_per_year = 0,000000004556250018 * 5256000 = 2,3947 %
+			// supply_rate_per_year = 0.000000004556250018 * 5256000 = 2,3947 %
 
 			assert_eq!(
 				Controller::get_liquidity_pool_borrow_and_supply_rates(ETH),
 				Some((Rate::from_inner(6750000014), Rate::from_inner(4556250018)))
 			);
 
-			// borrow_rate_per_year = 0,000000004500000011 * 5256000 = 2,3652 %
-			// supply_rate_per_year = 0,000000002025000009 * 5256000 = 1,0643 %
+			// borrow_rate_per_year = 0.000000004500000011 * 5256000 = 2,3652 %
+			// supply_rate_per_year = 0.000000002025000009 * 5256000 = 1,0643 %
 			assert_eq!(
 				Controller::get_liquidity_pool_borrow_and_supply_rates(BTC),
 				Some((Rate::from_inner(4500000011), Rate::from_inner(2025000009)))
 			);
 
-			// borrow_rate_per_year = 0,000000004500000011 * 5256000 = 2,3652 %
-			// supply_rate_per_year = 0,000000002025000009 * 5256000 = 1,0643 %
+			// borrow_rate_per_year = 0.000000004500000011 * 5256000 = 2,3652 %
+			// supply_rate_per_year = 0.000000002025000009 * 5256000 = 1,0643 %
 			assert_eq!(
 				Controller::get_liquidity_pool_borrow_and_supply_rates(KSM),
 				Some((Rate::from_inner(4500000011), Rate::from_inner(2025000009)))
@@ -472,10 +472,11 @@ fn get_user_supply_borrow_and_net_apy_should_work() {
 			// sum_borrow_apy = 789.186/1800 = 43.84 %
 
 			assert_eq!(
-				Controller::get_user_supply_and_borrow_apy(ALICE),
+				Controller::get_user_supply_borrow_and_net_apy(ALICE),
 				Ok((
-					Rate::from_inner(255_188_217_480_048_000),
-					Rate::from_inner(438_438_039_737_112_000)
+					Interest::from_inner(255_188_217_480_048_000),
+					Interest::from_inner(438_438_039_737_112_000),
+					Interest::from_inner(255_188_217_480_048_000), // FIXME: stub
 				))
 			);
 		});

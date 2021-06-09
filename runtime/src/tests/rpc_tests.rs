@@ -1030,10 +1030,11 @@ fn get_user_supply_borrow_and_net_apy_should_work() {
 			// ETH mnt supply:  mnt_speed * mnt_price / 100000 * 5256000
 
 			assert_eq!(
-				get_user_supply_and_borrow_apy_rpc(ALICE::get()),
+				get_user_supply_borrow_and_net_apy_rpc(ALICE::get()),
 				Some((
-					Rate::from_inner(18_945_252_000_000_000),
-					Rate::from_inner(32_385_046_151_016_000)
+					Interest::from_inner(18_945_252_000_000_000),
+					Interest::from_inner(32_385_046_151_016_000),
+					Interest::from_inner(32_385_046_151_016_000) //FIXME: stub
 				))
 			);
 
@@ -1049,10 +1050,11 @@ fn get_user_supply_borrow_and_net_apy_should_work() {
 
 			// sumSupplyApy = 7560/(400_000 + 100_000) = 1.51 %
 			assert_eq!(
-				get_user_supply_and_borrow_apy_rpc(ALICE::get()),
+				get_user_supply_borrow_and_net_apy_rpc(ALICE::get()),
 				Some((
-					Rate::from_inner(15_156_201_600_000_000),
-					Rate::from_inner(32_385_046_151_016_000)
+					Interest::from_inner(15_156_201_600_000_000),
+					Interest::from_inner(32_385_046_151_016_000),
+					Interest::from_inner(32_385_046_151_016_000) //FIXME: stub
 				))
 			);
 		})

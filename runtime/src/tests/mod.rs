@@ -15,7 +15,7 @@ use frame_support::{
 use liquidation_pools::{LiquidationPoolData, Sales};
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
-use minterest_primitives::{CurrencyId, Operation, Price};
+use minterest_primitives::{CurrencyId, Interest, Operation, Price};
 use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
 use orml_traits::MultiCurrency;
 use pallet_traits::{ControllerManager, DEXManager, PoolsManager, PricesManager};
@@ -519,7 +519,9 @@ fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> (Rate, Rate) {
 	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_mnt_borrow_and_supply_rates(pool_id).unwrap()
 }
-
+fn get_user_supply_borrow_and_net_apy_rpc(account_id: AccountId) -> Option<(Interest, Interest, Interest)> {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_supply_borrow_and_net_apy(account_id)
+}
 pub fn run_to_block(n: u32) {
 	while System::block_number() < n {
 		MinterestProtocol::on_finalize(System::block_number());
