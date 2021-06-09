@@ -19,8 +19,8 @@
 //!
 //! ### Dispatchable Functions
 //!
-//! - `vested_transfer` - Add a new vesting schedule for an account.
 //! - `claim` - Claim unlocked balances.
+//! - `vested_transfer` - Add a new vesting schedule for an account.
 //! - `update_vesting_schedules` - Update all vesting schedules under an account, `root` origin
 //! required.
 
@@ -35,8 +35,8 @@ use frame_support::{
 	traits::{Currency, EnsureOrigin, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons},
 	transactional,
 };
-use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
-use minterest_primitives::{AccountId, VestingBucket};
+use frame_system::{ensure_signed, pallet_prelude::*};
+use minterest_primitives::VestingBucket;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -54,6 +54,7 @@ mod tests;
 
 use minterest_primitives::constants::time::{BLOCKS_PER_YEAR, DAYS};
 pub use module::*;
+use sp_io::hashing::blake2_256;
 
 pub const VESTING_LOCK_ID: LockIdentifier = *b"mod/vest";
 
@@ -149,8 +150,6 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use minterest_primitives::AccountId;
-	use sp_io::hashing::blake2_256;
 
 	pub trait WeightInfo {
 		fn vested_transfer() -> Weight;
@@ -216,8 +215,8 @@ pub mod module {
 		VestingScheduleAdded(T::AccountId, VestingScheduleOf<T>),
 		/// Claimed vesting. [who, locked_amount]
 		Claimed(T::AccountId, BalanceOf<T>),
-		/// Updated vesting schedules. [who]
-		VestingSchedulesUpdated(T::AccountId),
+		/// Removed vesting schedules. [who]
+		VestingSchedulesRemoved(T::AccountId),
 	}
 
 	/// Vesting schedules of an account.
@@ -279,12 +278,13 @@ pub mod module {
 		}
 
 		/// Add a new vesting schedule for an account. Removes the transferred balance
-		/// from the sender.
+		/// from the vesting bucket account.
 		///
 		/// The dispatch origin of this call must be `VestedTransferOrigin`.
 		///
-		/// - `dest`: the account that receives vesting schedule of the MNT tokens;
-		/// - `schedule`: the schedule that is created on the AccountId `dest`.
+		/// - `bucket`: vesting bucket type;
+		/// - `start`: block number in which the vesting schedule starts to work;
+		/// - `amount`: the balance for which the vesting schedule is created.
 		#[pallet::weight(T::WeightInfo::vested_transfer())]
 		pub fn vested_transfer(
 			origin: OriginFor<T>,
@@ -307,17 +307,17 @@ pub mod module {
 				VestingSchedule::new_beginning_from(bucket, start, amount);
 
 			// FIXME
-			let bucket_account_id = VestingBucket::Marketing
+			let _bucket_account_id = VestingBucket::Marketing
 				.bucket_account_id()
 				.ok_or(Error::<T>::IncorrectVestingBucketType)?;
 
-			// let bucket_account_id = T::AccountId::decode(
-			// 	&mut &bucket
-			// 		.bucket_account_id()
-			// 		.ok_or(Error::<T>::IncorrectVestingBucketType)?
-			// 		.using_encoded(blake2_256)[..],
-			// )
-			// .map_err(|_| Error::<T>::IncorrectVestingBucketAccountId)?;
+			let bucket_account_id = T::AccountId::decode(
+				&mut &bucket
+					.bucket_account_id()
+					.ok_or(Error::<T>::IncorrectVestingBucketType)?
+					.using_encoded(blake2_256)[..],
+			)
+			.map_err(|_| Error::<T>::IncorrectVestingBucketAccountId)?;
 
 			Self::do_vested_transfer(&bucket_account_id, &target, schedule.clone())?;
 
@@ -325,20 +325,32 @@ pub mod module {
 			Ok(().into())
 		}
 
-		/// Update all vesting schedules under an account, `root` origin required.
-		#[pallet::weight(T::WeightInfo::update_vesting_schedules(vesting_schedules.len() as u32))]
-		pub fn update_vesting_schedules(
+		/// Remove a vesting schedule from an account. Transfers unvested tokens to the
+		/// vesting bucket.
+		///
+		/// The dispatch origin of this call must be `VestedTransferOrigin`.
+		///
+		/// - `target`: the account that receives vesting schedule of the MNT tokens;
+		/// - `schedule`: the schedule that is created on the AccountId `dest`.
+		#[pallet::weight(T::WeightInfo::vested_transfer())]
+		pub fn vested_remove(
 			origin: OriginFor<T>,
-			who: <T::Lookup as StaticLookup>::Source,
-			vesting_schedules: Vec<VestingScheduleOf<T>>,
+			target: <T::Lookup as StaticLookup>::Source,
+			bucket: VestingBucket,
 		) -> DispatchResultWithPostInfo {
-			// FIXME: root only? maybe add council?
-			ensure_root(origin)?;
+			T::VestedTransferOrigin::ensure_origin(origin)?;
+			let account = T::Lookup::lookup(target)?;
 
-			let account = T::Lookup::lookup(who)?;
-			Self::do_update_vesting_schedules(&account, vesting_schedules)?;
+			ensure!(
+				(bucket == VestingBucket::Team
+					|| bucket == VestingBucket::Marketing
+					|| bucket == VestingBucket::StrategicPartners),
+				Error::<T>::IncorrectVestingBucketType
+			);
 
-			Self::deposit_event(Event::VestingSchedulesUpdated(account));
+			Self::do_remove_vesting_schedule(&account)?;
+
+			Self::deposit_event(Event::VestingSchedulesRemoved(account));
 			Ok(().into())
 		}
 	}
@@ -400,22 +412,27 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	fn do_update_vesting_schedules(who: &T::AccountId, schedules: Vec<VestingScheduleOf<T>>) -> DispatchResult {
-		let total_amount = schedules.iter().try_fold::<_, _, Result<BalanceOf<T>, Error<T>>>(
-			Zero::zero(),
-			|acc_amount, schedule| {
-				let amount = Self::ensure_valid_vesting_schedule(schedule)?;
-				Ok(acc_amount + amount)
-			},
-		)?;
-		ensure!(
-			T::Currency::free_balance(who) >= total_amount,
-			Error::<T>::InsufficientBalanceToLock,
-		);
+	///
+	fn do_remove_vesting_schedule(target: &T::AccountId) -> DispatchResult {
+		let locked = Self::locked_balance(who);
 
-		T::Currency::set_lock(VESTING_LOCK_ID, who, total_amount, WithdrawReasons::all());
-		<VestingSchedules<T>>::insert(who, schedules);
+		T::Currency::remove_lock(VESTING_LOCK_ID, target);
 
+		<VestingSchedules<T>>::take(target)
+			.into_iter()
+			.try_for_each(|schedule| -> DispatchResult {
+				// FIXME
+				let bucket_account_id = T::AccountId::decode(
+					&mut &schedule
+						.bucket
+						.bucket_account_id()
+						.ok_or(Error::<T>::IncorrectVestingBucketType)?
+						.using_encoded(blake2_256)[..],
+				)
+				.map_err(|_| Error::<T>::IncorrectVestingBucketAccountId)?;
+				T::Currency::transfer(target, &bucket_account_id, locked, ExistenceRequirement::AllowDeath)?;
+				Ok(())
+			})?;
 		Ok(())
 	}
 

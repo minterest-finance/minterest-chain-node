@@ -9,7 +9,6 @@ use crate::{
 	AccountId, Balance,
 };
 use codec::{Decode, Encode};
-use frame_system::Config;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{traits::Zero, RuntimeDebug};
