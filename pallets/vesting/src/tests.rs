@@ -430,7 +430,7 @@ fn vesting_schedule_constructors_should_work() {
 	let schedule2: VestingSchedule<BlockNumber, Balance> = VestingSchedule::new(VestingBucket::Team, 100_000 * DOLLARS);
 	assert_eq!(schedule2.bucket, VestingBucket::Team);
 	assert_eq!(schedule2.start, 2_620_800);
-	assert_eq!(schedule2.period_count, 5 * BLOCKS_PER_YEAR);
+	assert_eq!(schedule2.period_count as u128, 5 * BLOCKS_PER_YEAR);
 	assert_eq!(schedule2.period, 1_u32);
 	assert_eq!(schedule2.per_period, 3_805_175_038_051_750); // 100_000 MNT / 26_280_000 blocks ~ 0,0038
 
@@ -438,7 +438,7 @@ fn vesting_schedule_constructors_should_work() {
 		VestingSchedule::new_beginning_from(VestingBucket::Marketing, 1234, 10 * DOLLARS);
 	assert_eq!(schedule3.bucket, VestingBucket::Marketing);
 	assert_eq!(schedule3.start, 1234);
-	assert_eq!(schedule3.period_count, BLOCKS_PER_YEAR);
+	assert_eq!(schedule3.period_count as u128, BLOCKS_PER_YEAR);
 	assert_eq!(schedule3.period, 1_u32);
 	assert_eq!(schedule3.per_period, 1_902_587_519_025); // 1 MNT / 5256000 blocks ~ 0,00000019
 
@@ -446,7 +446,7 @@ fn vesting_schedule_constructors_should_work() {
 		VestingSchedule::new_beginning_from(VestingBucket::StrategicPartners, 5000, 20 * DOLLARS);
 	assert_eq!(schedule4.bucket, VestingBucket::StrategicPartners);
 	assert_eq!(schedule4.start, 5000);
-	assert_eq!(schedule4.period_count, 2 * BLOCKS_PER_YEAR);
+	assert_eq!(schedule4.period_count as u128, 2 * BLOCKS_PER_YEAR);
 	assert_eq!(schedule4.period, 1_u32);
 	assert_eq!(schedule4.per_period, 1_902_587_519_025); // 20 MNT / 10512000 blocks ~ 0,0000019
 }
