@@ -117,7 +117,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		vesting::GenesisConfig::<Runtime> {
-			vesting: vec![(VestingBucket::Team, CHARLIE::get(), 20 * DOLLARS)], // who, start, amount
+			vesting: vec![(VestingBucket::PrivateSale, CHARLIE::get(), 20 * DOLLARS)], // who, start, amount
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
