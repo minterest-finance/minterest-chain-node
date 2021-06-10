@@ -1,78 +1,22 @@
 //! Mocks for the vesting module.
 
 #![cfg(test)]
-
 use super::*;
+use crate as vesting;
 use frame_support::{construct_runtime, ord_parameter_types, parameter_types, traits::GenesisBuild};
 use frame_system::EnsureSignedBy;
+use minterest_primitives::{constants::currency::DOLLARS, AccountId, Balance};
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup};
-
-use crate as vesting;
-use minterest_primitives::constants::currency::DOLLARS;
-use minterest_primitives::{AccountId, Balance};
-
-parameter_types! {
-	pub const BlockHashCount: u64 = 250;
-}
-
-impl frame_system::Config for Runtime {
-	type Origin = Origin;
-	type Call = Call;
-	type Index = u64;
-	type BlockNumber = u64;
-	type Hash = H256;
-	type Hashing = ::sp_runtime::traits::BlakeTwo256;
-	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<u128>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type DbWeight = ();
-	type BaseCallFilter = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
-}
-
-parameter_types! {
-	pub const ExistentialDeposit: u128 = DOLLARS; // 1 MNT token
-	pub const MinVestedTransfer: u128 = 5 * DOLLARS;
-	pub const MaxVestingSchedules: u32 = 2;
-}
-
-impl pallet_balances::Config for Runtime {
-	type Balance = Balance;
-	type DustRemoval = ();
-	type Event = Event;
-	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = frame_system::Module<Runtime>;
-	type MaxLocks = ();
-	type WeightInfo = ();
-}
-
-ord_parameter_types! {
-	pub const ADMIN: AccountId = AccountId::from([0u8; 32]);
-}
-
-impl Config for Runtime {
-	type Event = Event;
-	type Currency = PalletBalances;
-	type MinVestedTransfer = MinVestedTransfer;
-	type VestedTransferOrigin = EnsureSignedBy<ADMIN, AccountId>;
-	type WeightInfo = ();
-	type MaxVestingSchedules = MaxVestingSchedules;
-}
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentityLookup},
+};
+use test_helper::{mock_impl_balances_config, mock_impl_system_config};
 
 pub type Block = sp_runtime::generic::Block<Header, UncheckedExtrinsic>;
 pub type UncheckedExtrinsic = sp_runtime::generic::UncheckedExtrinsic<u32, Call, u32, ()>;
 
+// Configure a mock runtime to test the pallet.
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -86,13 +30,31 @@ construct_runtime!(
 );
 
 parameter_types! {
-	pub ALICE: AccountId = AccountId::from([1u8; 32]);
-	pub BOB: AccountId = AccountId::from([2u8; 32]);
-	pub CHARLIE: AccountId = AccountId::from([3u8; 32]);
-	pub BucketMarketing: AccountId = VestingBucket::Marketing.bucket_account_id().unwrap();
-	pub BucketTeam: AccountId = VestingBucket::Team.bucket_account_id().unwrap();
-	pub BucketStrategicPartners: AccountId = VestingBucket::StrategicPartners.bucket_account_id().unwrap();
+	pub const BlockHashCount: u64 = 250;
+	pub const MinVestedTransfer: u128 = 5 * DOLLARS;
+	pub const MaxVestingSchedules: u32 = 2;
+}
 
+ord_parameter_types! {
+	pub const ADMIN: AccountId = AccountId::from([0u8; 32]);
+	pub const ALICE: AccountId = AccountId::from([1u8; 32]);
+	pub const BOB: AccountId = AccountId::from([2u8; 32]);
+	pub const CHARLIE: AccountId = AccountId::from([3u8; 32]);
+	pub const BucketMarketing: AccountId = VestingBucket::Marketing.bucket_account_id().unwrap();
+	pub const BucketTeam: AccountId = VestingBucket::Team.bucket_account_id().unwrap();
+	pub const BucketStrategicPartners: AccountId = VestingBucket::StrategicPartners.bucket_account_id().unwrap();
+}
+
+mock_impl_balances_config!(Runtime);
+mock_impl_system_config!(Runtime, AccountId);
+
+impl Config for Runtime {
+	type Event = Event;
+	type Currency = PalletBalances;
+	type MinVestedTransfer = MinVestedTransfer;
+	type VestedTransferOrigin = EnsureSignedBy<ADMIN, AccountId>;
+	type WeightInfo = ();
+	type MaxVestingSchedules = MaxVestingSchedules;
 }
 
 #[derive(Default)]

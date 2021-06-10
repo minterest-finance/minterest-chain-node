@@ -4145,6 +4145,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]
