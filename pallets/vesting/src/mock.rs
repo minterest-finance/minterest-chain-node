@@ -89,6 +89,9 @@ parameter_types! {
 	pub ALICE: AccountId = AccountId::from([1u8; 32]);
 	pub BOB: AccountId = AccountId::from([2u8; 32]);
 	pub CHARLIE: AccountId = AccountId::from([3u8; 32]);
+	pub BucketMarketing: AccountId = VestingBucket::Marketing.bucket_account_id().unwrap();
+	pub BucketTeam: AccountId = VestingBucket::Team.bucket_account_id().unwrap();
+	pub BucketStrategicPartners: AccountId = VestingBucket::StrategicPartners.bucket_account_id().unwrap();
 
 }
 
@@ -105,12 +108,9 @@ impl ExtBuilder {
 			balances: vec![
 				(ALICE::get(), 100 * DOLLARS),
 				(CHARLIE::get(), 30 * DOLLARS),
-				(VestingBucket::Marketing.bucket_account_id().unwrap(), 1000 * DOLLARS),
-				(
-					VestingBucket::StrategicPartners.bucket_account_id().unwrap(),
-					1000 * DOLLARS,
-				),
-				(VestingBucket::Team.bucket_account_id().unwrap(), 1000 * DOLLARS),
+				(BucketMarketing::get(), 1000 * DOLLARS),
+				(BucketStrategicPartners::get(), 1000 * DOLLARS),
+				(BucketTeam::get(), 1000 * DOLLARS),
 			],
 		}
 		.assimilate_storage(&mut t)

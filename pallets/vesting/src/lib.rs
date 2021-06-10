@@ -56,6 +56,7 @@ mod default_weight;
 mod mock;
 mod tests;
 
+use frame_support::sp_runtime::traits::CheckedMul;
 use frame_support::sp_runtime::FixedPointNumber;
 use minterest_primitives::constants::time::{BLOCKS_PER_YEAR, DAYS};
 pub use module::*;
@@ -79,7 +80,7 @@ pub struct VestingSchedule<BlockNumber> {
 	pub period_count: u32,
 	/// Amount of tokens to release per vest
 	#[codec(compact)]
-	pub per_period: Balance,
+	pub per_period: Rate,
 }
 
 impl<BlockNumber: AtLeast32Bit + Copy> VestingSchedule<BlockNumber> {
@@ -90,7 +91,8 @@ impl<BlockNumber: AtLeast32Bit + Copy> VestingSchedule<BlockNumber> {
 		let start: BlockNumber = (bucket.unlock_begins_in_days() as u32 * DAYS).into();
 		let period: BlockNumber = BlockNumber::one(); // block by block
 		let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
-		let per_period: Balance = amount.checked_div(period_count.into()).unwrap_or(amount);
+		let per_period =
+			Rate::checked_from_rational(amount, period_count).unwrap_or(Rate::saturating_from_integer(amount));
 		Self {
 			bucket,
 			start,
@@ -108,9 +110,8 @@ impl<BlockNumber: AtLeast32Bit + Copy> VestingSchedule<BlockNumber> {
 	pub fn new_beginning_from(bucket: VestingBucket, start: BlockNumber, amount: Balance) -> Self {
 		let period: BlockNumber = BlockNumber::one(); // block by block
 		let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
-		let per_period: Balance = amount.checked_div(period_count.into()).unwrap_or(amount);
-		let help1 = Rate::checked_from_rational(amount, period_count).unwrap().into_inner();
-		let help2 = Rate::checked_from_rational(amount, period_count).unwrap();
+		let per_period =
+			Rate::checked_from_rational(amount, period_count).unwrap_or(Rate::saturating_from_integer(amount));
 		Self {
 			bucket,
 			start,
@@ -130,7 +131,10 @@ impl<BlockNumber: AtLeast32Bit + Copy> VestingSchedule<BlockNumber> {
 
 	/// Returns all locked amount, `None` if calculation overflows.
 	pub fn total_amount(&self) -> Option<Balance> {
-		self.per_period.checked_mul(self.period_count.into())
+		Rate::from_inner(self.period_count as u128)
+			.checked_mul(&self.per_period)
+			// TODO round?
+			.map(|x| x.round().into_inner())
 	}
 
 	/// Returns locked amount for a given `time`.
@@ -148,8 +152,10 @@ impl<BlockNumber: AtLeast32Bit + Copy> VestingSchedule<BlockNumber> {
 		let unrealized_periods = self
 			.period_count
 			.saturating_sub(expired_periods.unique_saturated_into());
-		self.per_period
-			.checked_mul(unrealized_periods.into())
+		// TODO round?
+		Rate::from_inner(unrealized_periods as u128)
+			.checked_mul(&self.per_period)
+			.map(|x| x.round().into_inner())
 			.expect("ensured non-overflow total amount; qed")
 	}
 }
@@ -313,7 +319,7 @@ pub mod module {
 
 			let schedule: VestingSchedule<T::BlockNumber> = VestingSchedule::new_beginning_from(bucket, start, amount);
 
-			let raw_bucket_account_id: [u8; 32] = VestingBucket::Marketing
+			let raw_bucket_account_id: [u8; 32] = bucket
 				.bucket_account_id()
 				.ok_or(Error::<T>::IncorrectVestingBucketType)?
 				.into();

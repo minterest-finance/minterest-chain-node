@@ -34,7 +34,7 @@ fn vesting_from_chain_spec_works() {
 				start: 2620800u64,
 				period: 1u64,
 				period_count: 26280000u32,
-				per_period: 761035007610,
+				per_period: Rate::from_inner(761035007610_350076103500761035),
 			}]
 		);
 
@@ -42,15 +42,15 @@ fn vesting_from_chain_spec_works() {
 		System::set_block_number(15760800);
 
 		assert_ok!(Vesting::claim(Origin::signed(CHARLIE::get())));
-		// ~ 10 MNT
-		let expected_event = Event::vesting(crate::Event::Claimed(CHARLIE::get(), 9_999_999_999_995_400_000));
+		// 10 MNT
+		let expected_event = Event::vesting(crate::Event::Claimed(CHARLIE::get(), 10 * DOLLARS));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		assert_ok!(PalletBalances::ensure_can_withdraw(
 			&CHARLIE::get(),
-			20_000_000_000_004_600_000,
+			20 * DOLLARS,
 			WithdrawReasons::TRANSFER,
-			9_999_999_999_995_400_000
+			10 * DOLLARS
 		));
 		assert!(PalletBalances::ensure_can_withdraw(
 			&CHARLIE::get(),
@@ -59,23 +59,20 @@ fn vesting_from_chain_spec_works() {
 			9 * DOLLARS
 		)
 		.is_err());
-		assert_eq!(
-			PalletBalances::usable_balance(CHARLIE::get()),
-			20_000_000_000_004_600_000
-		);
+		assert_eq!(PalletBalances::usable_balance(CHARLIE::get()), 20 * DOLLARS);
 
 		// The entire period of vesting from the team bucket has passed
 		System::set_block_number(28900800);
 
 		assert_ok!(Vesting::claim(Origin::signed(CHARLIE::get())));
 
+		assert_eq!(PalletBalances::usable_balance(CHARLIE::get()), 30 * DOLLARS);
 		assert_ok!(PalletBalances::ensure_can_withdraw(
 			&CHARLIE::get(),
 			30 * DOLLARS,
 			WithdrawReasons::TRANSFER,
 			Balance::zero()
 		));
-		assert_eq!(PalletBalances::usable_balance(CHARLIE::get()), 30 * DOLLARS);
 	});
 }
 
@@ -87,10 +84,11 @@ fn vested_transfer_works() {
 		let schedule = VestingSchedule {
 			bucket: VestingBucket::Team,
 			start: 0u64,
-			period: 10u64,
-			period_count: 1u32,
-			per_period: 100 * DOLLARS,
+			period: 1u64,
+			period_count: 26280000u32,
+			per_period: Rate::from_inner(3805175038051_750380517503805175),
 		};
+
 		assert_ok!(Vesting::vested_transfer(
 			Origin::signed(ADMIN::get()),
 			BOB::get(),
@@ -103,56 +101,67 @@ fn vested_transfer_works() {
 		let vested_event = Event::vesting(crate::Event::VestingScheduleAdded(BOB::get(), schedule));
 		assert!(System::events().iter().any(|record| record.event == vested_event));
 
-		assert_eq!(PalletBalances::free_balance(ALICE::get()), Balance::zero());
+		assert_eq!(PalletBalances::free_balance(BucketTeam::get()), 900 * DOLLARS);
 		assert_eq!(PalletBalances::free_balance(BOB::get()), 100 * DOLLARS);
 		assert_eq!(PalletBalances::usable_balance(BOB::get()), Balance::zero());
-
-		assert_ok!(Vesting::claim(Origin::signed(BOB::get())));
-		assert_eq!(PalletBalances::free_balance(BOB::get()), 100 * DOLLARS);
-		assert_eq!(PalletBalances::usable_balance(BOB::get()), Balance::zero());
-
-		System::set_block_number(10);
-
-		assert_ok!(Vesting::claim(Origin::signed(BOB::get())));
-		assert_eq!(PalletBalances::free_balance(BOB::get()), 100 * DOLLARS);
-		assert_eq!(PalletBalances::usable_balance(BOB::get()), 100 * DOLLARS);
 	});
 }
 
 #[test]
 fn add_new_vesting_schedule_merges_with_current_locked_balance_and_until() {
 	ExtBuilder::build().execute_with(|| {
-		assert_eq!(
-			PalletBalances::free_balance(VestingBucket::Marketing.bucket_account_id().unwrap()),
-			1000 * DOLLARS
-		);
-
 		assert_ok!(Vesting::vested_transfer(
 			Origin::signed(ADMIN::get()),
 			BOB::get(),
 			VestingBucket::Team,
 			0u64,
-			20 * DOLLARS
+			10_900_000_000_000_000_000 // 10.9 MNT
 		));
 
-		assert_eq!(PalletBalances::free_balance(BOB::get()), 20 * DOLLARS);
+		assert_eq!(PalletBalances::free_balance(BOB::get()), 10_900_000_000_000_000_000);
 		assert_eq!(PalletBalances::usable_balance(BOB::get()), Balance::zero());
 
-		System::set_block_number(12);
+		let schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
+			start: 0u64,
+			period: 1u64,
+			period_count: 26280000u32,
+			per_period: Rate::from_inner(761035007610_350076103500761035),
+		};
+
+		// Check vesting schedules for BOB::get()
+		assert_eq!(Vesting::vesting_schedules(&BOB::get()), vec![schedule.clone()]);
+
+		System::set_block_number(100_000);
 
 		assert_ok!(Vesting::vested_transfer(
 			Origin::signed(ADMIN::get()),
 			BOB::get(),
 			VestingBucket::Team,
-			10u64,
+			10_000_u64,
 			7 * DOLLARS
 		));
 
+		let second_schedule = VestingSchedule {
+			bucket: VestingBucket::Team,
+			start: 10_000_u64,
+			period: 1u64,
+			period_count: 26280000u32,
+			per_period: Rate::from_inner(266362252663_622526636225266362),
+		};
+
+		// Check vesting schedules for BOB::get()
+		assert_eq!(
+			Vesting::vesting_schedules(&BOB::get()),
+			vec![schedule.clone(), second_schedule.clone()]
+		);
+
+		// TODO ADD Description.
 		assert_eq!(
 			PalletBalances::locks(&BOB::get()).pop(),
 			Some(BalanceLock {
 				id: VESTING_LOCK_ID,
-				amount: 17 * DOLLARS,
+				amount: 26923896499238964991,
 				reasons: Reasons::All,
 			})
 		);
@@ -169,13 +178,13 @@ fn add_new_vesting_schedule_merges_with_current_locked_balance_and_until() {
 		);
 
 		assert_ok!(Vesting::claim(Origin::signed(BOB::get())));
-		assert_eq!(PalletBalances::free_balance(BOB::get()), 27 * DOLLARS);
-		assert_eq!(PalletBalances::usable_balance(BOB::get()), 10 * DOLLARS);
+		assert_eq!(PalletBalances::free_balance(BOB::get()), 26999999999999999998);
+		assert_eq!(PalletBalances::usable_balance(BOB::get()), 100076103500761034);
 
-		System::set_block_number(23);
+		System::set_block_number(26290000);
 
 		assert_ok!(Vesting::claim(Origin::signed(BOB::get())));
-		assert_eq!(PalletBalances::usable_balance(BOB::get()), 27 * DOLLARS);
+		assert_eq!(PalletBalances::usable_balance(BOB::get()), 26999999999999999998);
 	});
 }
 
@@ -283,12 +292,15 @@ fn claim_works() {
 		assert_ok!(Vesting::vested_transfer(
 			Origin::signed(ADMIN::get()),
 			BOB::get(),
-			VestingBucket::Team,
+			VestingBucket::Marketing,
 			0u64,
 			20 * DOLLARS
 		));
 
-		System::set_block_number(11);
+		assert_eq!(PalletBalances::free_balance(BOB::get()), 20 * DOLLARS);
+
+		// Half of the vesting period for the bucket Marketing
+		System::set_block_number(2628000);
 		// remain locked if not claimed
 		assert!(PalletBalances::transfer(Origin::signed(BOB::get()), ALICE::get(), 10 * DOLLARS).is_err());
 		// unlocked after claiming
@@ -301,7 +313,7 @@ fn claim_works() {
 		// more are still locked
 		assert!(PalletBalances::transfer(Origin::signed(BOB::get()), ALICE::get(), 1 * DOLLARS).is_err());
 
-		System::set_block_number(21);
+		System::set_block_number(5256000);
 		// claim more
 		assert_ok!(Vesting::claim(Origin::signed(BOB::get())));
 		assert_ok!(PalletBalances::transfer(
@@ -341,7 +353,7 @@ fn multiple_vesting_schedule_claim_works() {
 			start: 0u64,
 			period: 10u64,
 			period_count: 2u32,
-			per_period: 10 * DOLLARS,
+			per_period: Rate::saturating_from_integer(10),
 		};
 		assert_ok!(Vesting::vested_transfer(
 			Origin::signed(ADMIN::get()),
@@ -355,7 +367,7 @@ fn multiple_vesting_schedule_claim_works() {
 			start: 0u64,
 			period: 10u64,
 			period_count: 3u32,
-			per_period: 10 * DOLLARS,
+			per_period: Rate::saturating_from_integer(10),
 		};
 		assert_ok!(Vesting::vested_transfer(
 			Origin::signed(ADMIN::get()),
@@ -413,14 +425,14 @@ fn vesting_schedule_constructors_should_work() {
 	assert_eq!(schedule1.start, BlockNumber::zero());
 	assert_eq!(schedule1.period_count as u128, 4 * BLOCKS_PER_YEAR);
 	assert_eq!(schedule1.period, 1_u32);
-	assert_eq!(schedule1.per_period, 47_564_687_975); // 1 MNT / 21_024_000 blocks ~ 0,0000000476
+	assert_eq!(schedule1.per_period, Rate::from_inner(47_564_687_975)); // 1 MNT / 21_024_000 blocks ~ 0,0000000476
 
 	let schedule2: VestingSchedule<BlockNumber> = VestingSchedule::new(VestingBucket::Team, 100_000 * DOLLARS);
 	assert_eq!(schedule2.bucket, VestingBucket::Team);
 	assert_eq!(schedule2.start, 2_620_800);
 	assert_eq!(schedule2.period_count as u128, 5 * BLOCKS_PER_YEAR);
 	assert_eq!(schedule2.period, 1_u32);
-	assert_eq!(schedule2.per_period, 3_805_175_038_051_750); // 100_000 MNT / 26_280_000 blocks ~ 0,0038
+	assert_eq!(schedule2.per_period, Rate::from_inner(3_805_175_038_051_750)); // 100_000 MNT / 26_280_000 blocks ~ 0,0038
 
 	let schedule3: VestingSchedule<BlockNumber> =
 		VestingSchedule::new_beginning_from(VestingBucket::Marketing, 1234, 10 * DOLLARS);
@@ -428,7 +440,7 @@ fn vesting_schedule_constructors_should_work() {
 	assert_eq!(schedule3.start, 1234);
 	assert_eq!(schedule3.period_count as u128, BLOCKS_PER_YEAR);
 	assert_eq!(schedule3.period, 1_u32);
-	assert_eq!(schedule3.per_period, 1_902_587_519_025); // 1 MNT / 5256000 blocks ~ 0,00000019
+	assert_eq!(schedule3.per_period, Rate::from_inner(1_902_587_519_025)); // 1 MNT / 5256000 blocks ~ 0,00000019
 
 	let schedule4: VestingSchedule<BlockNumber> =
 		VestingSchedule::new_beginning_from(VestingBucket::StrategicPartners, 5000, 20 * DOLLARS);
@@ -436,5 +448,6 @@ fn vesting_schedule_constructors_should_work() {
 	assert_eq!(schedule4.start, 5000);
 	assert_eq!(schedule4.period_count as u128, 2 * BLOCKS_PER_YEAR);
 	assert_eq!(schedule4.period, 1_u32);
-	assert_eq!(schedule4.per_period, 190_258_751_902_587_519_u128); // 20 MNT / 10512000 blocks ~ 0,0000019
+	assert_eq!(schedule4.per_period, Rate::from_inner(190_258_751_902_587_519_u128));
+	// 20 MNT / 10512000 blocks ~ 0,0000019
 }
