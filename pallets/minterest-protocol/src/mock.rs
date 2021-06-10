@@ -283,7 +283,7 @@ impl ExtBuilder {
 						total_borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
-						liquidation_attempts: 0,
+						liquidation_attempts: 3,
 					},
 				),
 				(
