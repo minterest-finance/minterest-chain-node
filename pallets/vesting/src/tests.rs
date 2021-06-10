@@ -38,8 +38,7 @@ fn vesting_from_chain_spec_works() {
 			}]
 		);
 
-		// Half vesting duration for Team's vesting bucket
-		System::set_block_number(15760800);
+		System::set_block_number(13);
 
 		assert_ok!(Vesting::claim(Origin::signed(CHARLIE::get())));
 		// 10 MNT. (-1 written due to math problems)
@@ -62,8 +61,7 @@ fn vesting_from_chain_spec_works() {
 		// 20 MNT. (+1 written due to math problems)
 		assert_eq!(PalletBalances::usable_balance(CHARLIE::get()), 20 * DOLLARS + 1);
 
-		// The entire period of vesting from the team bucket has passed
-		System::set_block_number(28900800);
+		System::set_block_number(14);
 
 		assert_ok!(Vesting::claim(Origin::signed(CHARLIE::get())));
 
@@ -83,7 +81,6 @@ fn vested_transfer_works() {
 		System::set_block_number(1);
 
 		let schedule = VestingSchedule {
-			bucket: VestingBucket::Team,
 			start: 0u64,
 			period: 1u64,
 			period_count: 26280000u32,
