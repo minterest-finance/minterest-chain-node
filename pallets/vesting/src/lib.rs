@@ -111,7 +111,7 @@ impl<BlockNumber: AtLeast32Bit + Copy> VestingSchedule<BlockNumber> {
 		let period: BlockNumber = BlockNumber::one(); // block by block
 		let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
 		let per_period =
-			Rate::checked_from_rational(amount, period_count).unwrap_or(Rate::saturating_from_integer(amount));
+			Rate::checked_from_rational(amount, period_count).unwrap_or_else(|| Rate::saturating_from_integer(amount));
 		Self {
 			bucket,
 			start,

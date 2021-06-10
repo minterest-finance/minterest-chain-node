@@ -216,6 +216,7 @@ fn vested_transfer_fails_if_transfer_err() {
 #[test]
 fn vested_transfer_fails_if_overflow() {
 	ExtBuilder::build().execute_with(|| {
+		// start = u64::MAX
 		assert_noop!(
 			Vesting::vested_transfer(
 				Origin::signed(ADMIN::get()),
@@ -230,8 +231,12 @@ fn vested_transfer_fails_if_overflow() {
 }
 
 #[test]
-fn vested_transfer_fails_if_bad_origin() {
+fn vested_transfer_and_remove_fails_if_bad_origin() {
 	ExtBuilder::build().execute_with(|| {
+		assert_noop!(
+			Vesting::remove_vesting_schedules(Origin::signed(ALICE::get()), CHARLIE::get()),
+			BadOrigin
+		);
 		assert_noop!(
 			Vesting::vested_transfer(
 				Origin::signed(ALICE::get()),
@@ -410,6 +415,16 @@ fn multiple_vesting_schedule_claim_works() {
 		assert_eq!(PalletBalances::usable_balance(BOB::get()), 50 * DOLLARS - 2);
 		assert_eq!(VestingSchedules::<Runtime>::contains_key(&BOB::get()), false);
 		assert_eq!(PalletBalances::locks(&BOB::get()), vec![]);
+	});
+}
+
+#[test]
+fn remove_vesting_schedule_should_work() {
+	ExtBuilder::build().execute_with(|| {
+		assert_ok!(Vesting::remove_vesting_schedules(
+			Origin::signed(ADMIN::get()),
+			BOB::get()
+		));
 	});
 }
 
