@@ -133,8 +133,7 @@ impl<BlockNumber: AtLeast32Bit + Copy> VestingSchedule<BlockNumber> {
 	pub fn total_amount(&self) -> Option<Balance> {
 		Rate::from_inner(self.period_count as u128)
 			.checked_mul(&self.per_period)
-			// TODO round?
-			.map(|x| x.round().into_inner())
+			.map(|x| x.into_inner())
 	}
 
 	/// Returns locked amount for a given `time`.
@@ -152,10 +151,9 @@ impl<BlockNumber: AtLeast32Bit + Copy> VestingSchedule<BlockNumber> {
 		let unrealized_periods = self
 			.period_count
 			.saturating_sub(expired_periods.unique_saturated_into());
-		// TODO round?
 		Rate::from_inner(unrealized_periods as u128)
 			.checked_mul(&self.per_period)
-			.map(|x| x.round().into_inner())
+			.map(|x| x.into_inner())
 			.expect("ensured non-overflow total amount; qed")
 	}
 }
@@ -211,7 +209,7 @@ pub mod module {
 		TooManyVestingSchedules,
 		/// The vested transfer amount is too low
 		AmountLow,
-		/// Incorrect vesting bucket type. Only vestings from Marketing, Team and
+		/// Incorrect vesting bucket type. Only vesting from Marketing, Team and
 		/// Strategic Partners buckets can be created or removed.
 		IncorrectVestingBucketType,
 		/// Incorrect vesting bucket account id.
