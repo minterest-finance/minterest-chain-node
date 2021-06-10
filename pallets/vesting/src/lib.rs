@@ -254,11 +254,11 @@ pub mod module {
 					"Account do not have enough balance"
 				);
 				let schedule = VestingSchedule::new(*bucket, *total);
-				Pallet::<T>::ensure_valid_vesting_schedule(&schedule).unwrap();
 
 				// We do not set a schedule if the number of periods is zero.
 				// `period_count` are set to zero for the Market Making bucket.
-				if !schedule.period_count.is_zero() {
+				if schedule.bucket != VestingBucket::MarketMaking {
+					Pallet::<T>::ensure_valid_vesting_schedule(&schedule).unwrap();
 					T::Currency::set_lock(VESTING_LOCK_ID, who, *total, WithdrawReasons::all());
 					VestingSchedules::<T>::insert(who, vec![schedule]);
 				}
