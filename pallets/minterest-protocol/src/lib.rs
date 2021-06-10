@@ -626,7 +626,12 @@ impl<T: Config> Pallet<T> {
 
 		T::MultiCurrency::deposit(wrapped_id, &who, wrapped_amount)?;
 
-		liquidity_pools::PoolUserParams::<T>::mutate(underlying_asset, &who, |p| p.liquidation_attempts = u8::zero());
+		// Reset liquidation_attempts if it's greater than zero.
+		let mut pool_params = <LiquidityPools<T>>::pool_user_data(underlying_asset, &who);
+		if !pool_params.liquidation_attempts.is_zero() {
+			pool_params.liquidation_attempts = u8::zero();
+			liquidity_pools::PoolUserParams::<T>::insert(underlying_asset, &who, pool_params);
+		}
 
 		Ok((underlying_amount, wrapped_id, wrapped_amount))
 	}
