@@ -92,7 +92,7 @@ impl<BlockNumber: AtLeast32Bit + Copy> VestingSchedule<BlockNumber> {
 		let period: BlockNumber = BlockNumber::one(); // block by block
 		let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
 		let per_period =
-			Rate::checked_from_rational(amount, period_count).unwrap_or(Rate::saturating_from_integer(amount));
+			Rate::checked_from_rational(amount, period_count).unwrap_or_else(|| Rate::saturating_from_integer(amount));
 		Self {
 			bucket,
 			start,
@@ -416,11 +416,9 @@ impl<T: Config> Pallet<T> {
 	where
 		<T as frame_system::Config>::AccountId: From<[u8; 32]>,
 	{
-		let locked = Self::locked_balance(target);
-
+		let now = <frame_system::Module<T>>::block_number();
 		T::Currency::remove_lock(VESTING_LOCK_ID, target);
 
-		// TODO: implement the test, the schedule has not been deleted, if the bucket type is not correct
 		<VestingSchedules<T>>::take(target)
 			.into_iter()
 			.try_for_each(|schedule| -> DispatchResult {
@@ -430,8 +428,10 @@ impl<T: Config> Pallet<T> {
 						|| schedule.bucket == VestingBucket::StrategicPartners),
 					Error::<T>::IncorrectVestingBucketType
 				);
+				let locked_amount = schedule.locked_amount(now);
 
-				let raw_bucket_account_id: [u8; 32] = VestingBucket::Marketing
+				let raw_bucket_account_id: [u8; 32] = schedule
+					.bucket
 					.bucket_account_id()
 					.ok_or(Error::<T>::IncorrectVestingBucketType)?
 					.into();
@@ -439,7 +439,7 @@ impl<T: Config> Pallet<T> {
 				T::Currency::transfer(
 					target,
 					&raw_bucket_account_id.into(),
-					locked,
+					locked_amount,
 					ExistenceRequirement::AllowDeath,
 				)?;
 				Ok(())
