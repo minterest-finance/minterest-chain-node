@@ -86,37 +86,6 @@ impl VestingBucket {
 	}
 }
 
-// TODO
-// pub trait BucketAccount<AccountId> {
-// 	fn trait_bucket_account_id(&self) -> Option<AccountId>;
-// }
-//
-// impl<AccountId> BucketAccount<AccountId> for VestingBucket {
-// 	fn trait_bucket_account_id(&self) -> Option<AccountId> {
-// 		match self {
-// 			VestingBucket::Marketing => {
-// 				// 5DeU3wfJJqNsEmrhLy8Tbq3CaK3RfhEnUs3iXM5yJokG6iWT
-// 				Some(hex_literal::hex!["45fc1a76497800f75b283f6df15933a51c8c16c050c5c6156a9f7003781e6a7b"].into())
-// 				// T::AccountId::decode(&mut "45fc1a76497800f75b283f6df15933a51c8c16c050c5c6156a9f7003781e6a7b".as_bytes())
-// 				// 	.ok()
-// 			}
-// 			VestingBucket::StrategicPartners => {
-// 				// 5DJpUxkx2TDrS2igf3wejnXLJHUqKzo9m3x76VWvai6NR6zF
-// 				Some(hex_literal::hex!["36fff92edbfe9a75ae88915e5c2e019ff65bedff0bf11cdb5921863283f8bdb1"].into())
-// 				// T::AccountId::decode(&mut "36fff92edbfe9a75ae88915e5c2e019ff65bedff0bf11cdb5921863283f8bdb1".as_bytes())
-// 				// 	.ok()
-// 			}
-// 			VestingBucket::Team => {
-// 				// 5GfxgwrBUmYMKu6AeBAEzpYwC5TxrxRLJdg9oh2HrVnXQRs6
-// 				Some(hex_literal::hex!["cbd474041eb2dd3d3bc63d411bdf25bd3b2df3e2b7ab4774bcd1c4cf5ce685ef"].into())
-// 				// T::AccountId::decode(&mut "cbd474041eb2dd3d3bc63d411bdf25bd3b2df3e2b7ab4774bcd1c4cf5ce685ef".as_bytes())
-// 				// 	.ok()
-// 			}
-// 			_ => None,
-// 		}
-// 	}
-// }
-
 /// The vesting schedule. Used to parse json file when creating a Genesis Block
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
