@@ -415,39 +415,49 @@ impl<T: Config> Pallet<T> {
 	where
 		<T as frame_system::Config>::AccountId: From<[u8; 32]>,
 	{
-		let now = <frame_system::Pallet<T>>::block_number();
+		<VestingSchedules<T>>::try_mutate_exists(target, |maybe_schedules| -> DispatchResult {
+			let now = <frame_system::Pallet<T>>::block_number();
+			// `total_locked` - the balance that needs to be locked for the user after deleting the schedule
+			// `total_removed` - the balance to be sent from the user account to the bucket account
+			let (mut total_locked, mut total_removed) = (Balance::zero(), Balance::zero());
 
-		let total_locked = Self::locked_balance(target);
-		let total_removed = <VestingSchedules<T>>::get(target)
-			.into_iter()
-			.filter(|s| s.bucket == bucket)
-			.fold(Balance::zero(), |mut removed_balance, schedule| {
-				removed_balance += schedule.locked_amount(now);
-				removed_balance
-			});
+			if let Some(schedules) = maybe_schedules.as_mut() {
+				// leave only the schedules that are not deleted
+				schedules.retain(|schedule| {
+					if schedule.bucket == bucket {
+						total_removed += schedule.locked_amount(now);
+					} else {
+						total_locked += schedule.locked_amount(now);
+					}
+					schedule.bucket != bucket
+				});
 
-		ensure!(!total_removed.is_zero(), Error::<T>::UserDoesNotHaveSuchSchedule);
+				ensure!(!total_removed.is_zero(), Error::<T>::UserDoesNotHaveSuchSchedule);
 
-		<VestingSchedules<T>>::mutate(target, |schedules| schedules.retain(|s| s.bucket != bucket));
+				if total_locked.is_zero() {
+					T::Currency::remove_lock(VESTING_LOCK_ID, target);
+				} else {
+					T::Currency::set_lock(VESTING_LOCK_ID, target, total_locked, WithdrawReasons::all());
+				}
 
-		let raw_bucket_account_id: [u8; 32] = bucket
-			.bucket_account_id()
-			.ok_or(Error::<T>::IncorrectVestingBucketType)?
-			.into();
+				let raw_bucket_account_id: [u8; 32] = bucket
+					.bucket_account_id()
+					.ok_or(Error::<T>::IncorrectVestingBucketType)?
+					.into();
+				T::Currency::transfer(
+					target,
+					&raw_bucket_account_id.into(),
+					total_removed,
+					ExistenceRequirement::AllowDeath,
+				)?;
 
-		let lockable = total_locked.checked_sub(total_removed).ok_or(Error::<T>::NumOverflow)?;
-		if lockable.is_zero() {
-			T::Currency::remove_lock(VESTING_LOCK_ID, target);
-		} else {
-			T::Currency::set_lock(VESTING_LOCK_ID, target, lockable, WithdrawReasons::all());
-		}
-		T::Currency::transfer(
-			target,
-			&raw_bucket_account_id.into(),
-			total_removed,
-			ExistenceRequirement::AllowDeath,
-		)?;
-		Ok(())
+				// If there is no schedules left, then clear the schedule vector
+				if schedules.is_empty() {
+					*maybe_schedules = None;
+				}
+			}
+			Ok(())
+		})
 	}
 
 	/// Returns `Ok(total_amount)` if valid schedule, or error.
