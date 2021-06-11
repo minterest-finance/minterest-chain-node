@@ -234,7 +234,7 @@ fn vested_transfer_fails_if_overflow() {
 fn vested_transfer_and_remove_fails_if_bad_origin() {
 	ExtBuilder::build().execute_with(|| {
 		assert_noop!(
-			Vesting::remove_vesting_schedules(Origin::signed(ALICE::get()), CHARLIE::get()),
+			Vesting::remove_vesting_schedules(Origin::signed(ALICE::get()), CHARLIE::get(), VestingBucket::PrivateSale),
 			BadOrigin
 		);
 		assert_noop!(
@@ -273,7 +273,7 @@ fn vested_transfer_and_remove_fails_if_incorrect_bucket_type() {
 			Error::<Runtime>::IncorrectVestingBucketType
 		);
 		assert_noop!(
-			Vesting::remove_vesting_schedules(Origin::signed(ADMIN::get()), CHARLIE::get()),
+			Vesting::remove_vesting_schedules(Origin::signed(ADMIN::get()), CHARLIE::get(), VestingBucket::PrivateSale),
 			Error::<Runtime>::IncorrectVestingBucketType
 		);
 		// After a failed deletion, the schedule should remain on the account.
@@ -443,12 +443,12 @@ fn multiple_vesting_schedule_claim_works() {
 
 #[test]
 fn remove_vesting_schedule_should_work() {
-	let marketing_schedule = VestingSchedule {
-		bucket: VestingBucket::Marketing,
+	let private_sale_schedule = VestingSchedule {
+		bucket: VestingBucket::PrivateSale,
 		start: 0u64,
 		period: 1u64,
 		period_count: BLOCKS_PER_YEAR as u32,
-		per_period: Rate::from_inner(9550989345509_893455098934550989), // total = 50,2 MNT
+		per_period: Rate::from_inner(3805175038051_750380517503805175), // total = 20 MNT
 	};
 	let strategic_partners_schedule = VestingSchedule {
 		bucket: VestingBucket::StrategicPartners,
@@ -460,30 +460,18 @@ fn remove_vesting_schedule_should_work() {
 	ExtBuilder::build().execute_with(|| {
 		assert_ok!(Vesting::vested_transfer(
 			Origin::signed(ADMIN::get()),
-			BOB::get(),
-			VestingBucket::Marketing,
-			0u64,
-			50_200_000_000_000_000_000 // 50.2 MNT
-		));
-		assert_ok!(Vesting::vested_transfer(
-			Origin::signed(ADMIN::get()),
-			BOB::get(),
+			CHARLIE::get(),
 			VestingBucket::StrategicPartners,
 			0u64,
 			940 * DOLLARS
 		));
 
-		// There are 2 active vesting schedules for BOB.
+		// There are 2 active vesting schedules for CHARLIE.
 		assert_eq!(
-			Vesting::vesting_schedules(&BOB::get()),
-			vec![marketing_schedule.clone(), strategic_partners_schedule.clone()]
+			Vesting::vesting_schedules(&CHARLIE::get()),
+			vec![private_sale_schedule.clone(), strategic_partners_schedule.clone()]
 		);
 
-		// Marketing vesting bucket balance equal: 1000 MNT - 50.2 MNT = 949.8 MNT
-		assert_eq!(
-			PalletBalances::free_balance(BucketMarketing::get()),
-			949_800_000_000_000_000_000 + 1
-		);
 		// Strategic Partners vesting bucket balance equal: 1000 MNT - 940 MNT = 60.0 MNT
 		assert_eq!(
 			PalletBalances::free_balance(BucketStrategicPartners::get()),
@@ -492,20 +480,25 @@ fn remove_vesting_schedule_should_work() {
 
 		// Set the block number equal to half a year and do claim().
 		System::set_block_number(BLOCKS_PER_YEAR as u64 / 2);
-		assert_ok!(Vesting::claim(Origin::signed(BOB::get())));
+		assert_ok!(Vesting::claim(Origin::signed(CHARLIE::get())));
 
-		// Should be usable 25.1 MNT from Marketing bucket and 235 MNT from Strategic Partners bucket.
-		// (-1 written due to math problems)
+		// CHARLIE free balance should be equal 10.0 MNT from genesis +
+		// + 940.0 MNT from Strategic Partners bucket + 20.0 MNT from Private Sale bucket
 		assert_eq!(
-			PalletBalances::free_balance(BOB::get()),
-			990_200_000_000_000_000_000 - 1
+			PalletBalances::free_balance(CHARLIE::get()),
+			970_000_000_000_000_000_000
 		);
-		assert_eq!(PalletBalances::usable_balance(BOB::get()), 260_100_000_000_000_000_000);
-
-		// There are 2 active vesting schedules for BOB.
+		// Should be usable 10.0 MNT from Private Sale bucket, 235.0 MNT from Strategic Partners bucket.
+		// and 10.0 MNT from genesis block (-1 written due to math problems)
 		assert_eq!(
-			Vesting::vesting_schedules(&BOB::get()),
-			vec![marketing_schedule, strategic_partners_schedule.clone()]
+			PalletBalances::usable_balance(CHARLIE::get()),
+			255_000_000_000_000_000_000 + 1
+		);
+
+		// There are 2 active vesting schedules for CHARLIE.
+		assert_eq!(
+			Vesting::vesting_schedules(&CHARLIE::get()),
+			vec![private_sale_schedule.clone(), strategic_partners_schedule]
 		);
 
 		// Set the block number equal to 9 months and remove schedules.
@@ -513,27 +506,91 @@ fn remove_vesting_schedule_should_work() {
 
 		assert_ok!(Vesting::remove_vesting_schedules(
 			Origin::signed(ADMIN::get()),
-			BOB::get()
+			CHARLIE::get(),
+			VestingBucket::StrategicPartners,
 		));
 
-		// Bob usable balance should be equal 37.65 MNT from Marketing bucket
-		// and 352.5 MNT from Strategic Partners bucket
-		assert_eq!(PalletBalances::free_balance(BOB::get()), 390_150_000_000_000_000_000);
-		assert_eq!(PalletBalances::usable_balance(BOB::get()), 390_150_000_000_000_000_000);
-
-		// All schedules are removed.
-		assert_eq!(Vesting::vesting_schedules(&BOB::get()), vec![]);
-
-		// Marketing vesting bucket balance equal: 949.8 MNT + 12.55 MNT = 962.35 MNT
+		// CHARLIE free balance should be equal 10.0 MNT from genesis +
+		// + (940.0 - 587.5) MNT from Strategic Partners bucket + 20.0 MNT from Private Sale bucket.
 		assert_eq!(
-			PalletBalances::free_balance(BucketMarketing::get()),
-			962_350_000_000_000_000_000
+			PalletBalances::free_balance(CHARLIE::get()),
+			382_500_000_000_000_000_000
 		);
+		// CHARLIE usable balance should be equal 352.5 MNT from Strategic Partners bucket,
+		// 15.0 MNT from Private Sale bucket and 10.0 MNT from genesis block.
+		assert_eq!(
+			PalletBalances::usable_balance(CHARLIE::get()),
+			377_500_000_000_000_000_000 + 1
+		);
+
+		// Strategic partners schedule is removed.
+		assert_eq!(Vesting::vesting_schedules(&CHARLIE::get()), vec![private_sale_schedule]);
+
+		// CHARLIE doesn't have schedule from Strategic Partners vesting bucket.
+		assert_noop!(
+			Vesting::remove_vesting_schedules(
+				Origin::signed(ADMIN::get()),
+				CHARLIE::get(),
+				VestingBucket::StrategicPartners,
+			),
+			Error::<Runtime>::UserDoesNotHaveSuchSchedule
+		);
+
 		// Strategic Partners vesting bucket balance equal: 60.0 MNT + 587.5 MNT = 647.5 MNT
 		assert_eq!(
 			PalletBalances::free_balance(BucketStrategicPartners::get()),
 			647_500_000_000_000_000_000
 		);
+	});
+}
+
+#[test]
+fn remove_vesting_schedules_from_one_bucket_should_work() {
+	let team_schedule1 = VestingSchedule {
+		bucket: VestingBucket::Team,
+		start: 0u64,
+		period: 1u64,
+		period_count: 5 * BLOCKS_PER_YEAR as u32,
+		per_period: Rate::from_inner(19025875190258_751902587519025875), // total = 500 MNT
+	};
+	let team_schedule2 = VestingSchedule {
+		bucket: VestingBucket::Team,
+		start: 1000u64,
+		period: 1u64,
+		period_count: 5 * BLOCKS_PER_YEAR as u32,
+		per_period: Rate::from_inner(3805175038051_750380517503805175), // total = 100 MNT
+	};
+
+	ExtBuilder::build().execute_with(|| {
+		assert_ok!(Vesting::vested_transfer(
+			Origin::signed(ADMIN::get()),
+			BOB::get(),
+			VestingBucket::Team,
+			0u64,
+			500 * DOLLARS
+		));
+		assert_ok!(Vesting::vested_transfer(
+			Origin::signed(ADMIN::get()),
+			BOB::get(),
+			VestingBucket::Team,
+			1000u64,
+			100 * DOLLARS
+		));
+
+		// There are 2 active vesting schedules for BOB.
+		assert_eq!(
+			Vesting::vesting_schedules(&BOB::get()),
+			vec![team_schedule1.clone(), team_schedule2.clone()]
+		);
+
+		assert_ok!(Vesting::remove_vesting_schedules(
+			Origin::signed(ADMIN::get()),
+			BOB::get(),
+			VestingBucket::Team,
+		));
+
+		// All schedules are removed.
+		assert_eq!(Vesting::vesting_schedules(&BOB::get()), vec![]);
 	});
 }
 

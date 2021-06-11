@@ -84,6 +84,11 @@ impl VestingBucket {
 			_ => None,
 		}
 	}
+
+	/// Returns a Boolean value indicating whether the schedule from this vesting bucket can be removed or added.
+	pub fn is_manipulated_bucket(&self) -> bool {
+		*self == VestingBucket::Team || *self == VestingBucket::Marketing || *self == VestingBucket::StrategicPartners
+	}
 }
 
 /// The vesting schedule. Used to parse json file when creating a Genesis Block

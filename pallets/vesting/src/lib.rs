@@ -214,6 +214,8 @@ pub mod module {
 		IncorrectVestingBucketType,
 		/// Incorrect vesting bucket account id.
 		IncorrectVestingBucketAccountId,
+		/// The user does not have such a schedule
+		UserDoesNotHaveSuchSchedule,
 	}
 
 	#[pallet::event]
@@ -308,12 +310,7 @@ pub mod module {
 			T::VestedTransferOrigin::ensure_origin(origin)?;
 			let target = T::Lookup::lookup(target)?;
 
-			ensure!(
-				(bucket == VestingBucket::Team
-					|| bucket == VestingBucket::Marketing
-					|| bucket == VestingBucket::StrategicPartners),
-				Error::<T>::IncorrectVestingBucketType
-			);
+			ensure!(bucket.is_manipulated_bucket(), Error::<T>::IncorrectVestingBucketType);
 
 			let schedule: VestingSchedule<T::BlockNumber> = VestingSchedule::new_beginning_from(bucket, start, amount);
 
@@ -339,11 +336,13 @@ pub mod module {
 		pub fn remove_vesting_schedules(
 			origin: OriginFor<T>,
 			target: <T::Lookup as StaticLookup>::Source,
+			bucket: VestingBucket,
 		) -> DispatchResultWithPostInfo {
 			T::VestedTransferOrigin::ensure_origin(origin)?;
 			let account = T::Lookup::lookup(target)?;
+			ensure!(bucket.is_manipulated_bucket(), Error::<T>::IncorrectVestingBucketType);
 
-			Self::do_remove_vesting_schedule(&account)?;
+			Self::do_remove_vesting_schedule(&account, bucket)?;
 
 			Self::deposit_event(Event::VestingSchedulesRemoved(account));
 			Ok(().into())
@@ -412,38 +411,42 @@ impl<T: Config> Pallet<T> {
 	/// Remove a vesting schedule from an account. Transfer unvested tokens to the
 	/// vesting bucket.
 	#[transactional]
-	fn do_remove_vesting_schedule(target: &T::AccountId) -> DispatchResult
+	fn do_remove_vesting_schedule(target: &T::AccountId, bucket: VestingBucket) -> DispatchResult
 	where
 		<T as frame_system::Config>::AccountId: From<[u8; 32]>,
 	{
-		let now = <frame_system::Module<T>>::block_number();
-		T::Currency::remove_lock(VESTING_LOCK_ID, target);
+		let now = <frame_system::Pallet<T>>::block_number();
 
-		<VestingSchedules<T>>::take(target)
+		let total_locked = Self::locked_balance(target);
+		let total_removed = <VestingSchedules<T>>::get(target)
 			.into_iter()
-			.try_for_each(|schedule| -> DispatchResult {
-				ensure!(
-					(schedule.bucket == VestingBucket::Team
-						|| schedule.bucket == VestingBucket::Marketing
-						|| schedule.bucket == VestingBucket::StrategicPartners),
-					Error::<T>::IncorrectVestingBucketType
-				);
-				let locked_amount = schedule.locked_amount(now);
+			.filter(|s| s.bucket == bucket)
+			.fold(Balance::zero(), |mut removed_balance, schedule| {
+				removed_balance += schedule.locked_amount(now);
+				removed_balance
+			});
 
-				let raw_bucket_account_id: [u8; 32] = schedule
-					.bucket
-					.bucket_account_id()
-					.ok_or(Error::<T>::IncorrectVestingBucketType)?
-					.into();
+		ensure!(!total_removed.is_zero(), Error::<T>::UserDoesNotHaveSuchSchedule);
 
-				T::Currency::transfer(
-					target,
-					&raw_bucket_account_id.into(),
-					locked_amount,
-					ExistenceRequirement::AllowDeath,
-				)?;
-				Ok(())
-			})?;
+		<VestingSchedules<T>>::mutate(target, |schedules| schedules.retain(|s| s.bucket != bucket));
+
+		let raw_bucket_account_id: [u8; 32] = bucket
+			.bucket_account_id()
+			.ok_or(Error::<T>::IncorrectVestingBucketType)?
+			.into();
+
+		let lockable = total_locked.checked_sub(total_removed).ok_or(Error::<T>::NumOverflow)?;
+		if lockable.is_zero() {
+			T::Currency::remove_lock(VESTING_LOCK_ID, target);
+		} else {
+			T::Currency::set_lock(VESTING_LOCK_ID, target, lockable, WithdrawReasons::all());
+		}
+		T::Currency::transfer(
+			target,
+			&raw_bucket_account_id.into(),
+			total_removed,
+			ExistenceRequirement::AllowDeath,
+		)?;
 		Ok(())
 	}
 
