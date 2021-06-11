@@ -295,7 +295,7 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be `VestedTransferOrigin`.
 		///
-		/// - `target`: The AccountId on which the vesting schedule is created;
+		/// - `target`: the AccountId on which the vesting schedule is created;
 		/// - `bucket`: vesting bucket type (must be `Team` or `Marketing` or `Strategic Partners`);
 		/// - `start`: block number in which the vesting schedule starts to work;
 		/// - `amount`: the balance for which the vesting schedule is created.
@@ -331,7 +331,7 @@ pub mod module {
 		/// The dispatch origin of this call must be `VestedTransferOrigin`.
 		///
 		/// - `target`: the account that receives vesting schedule of the MNT tokens;
-		/// - `schedule`: the schedule that is created on the AccountId `dest`.
+		/// - `bucket`: the type of vesting bucket from which we want to delete the schedule;
 		#[pallet::weight(T::WeightInfo::vested_transfer())]
 		pub fn remove_vesting_schedules(
 			origin: OriginFor<T>,
