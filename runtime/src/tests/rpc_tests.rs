@@ -818,6 +818,9 @@ fn get_user_total_collateral_rpc_should_work() {
 #[test]
 fn test_get_user_underlying_balance_per_asset_rpc() {
 	ExtBuilder::default().pool_initial(ETH).build().execute_with(|| {
+		// Set price = 2.00 USD for all pools.
+		assert_ok!(set_oracle_price_for_all_pools(2));
+
 		assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(90_000)));
 		// Alice deposited ALL ETH tokens to protocol
 		assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
@@ -914,6 +917,9 @@ fn get_unclaimed_mnt_balance_should_work() {
 		.pool_initial(BTC)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all pools.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
 			// Set initial state of pools for distribution MNT tokens.
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, 100_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
@@ -980,6 +986,9 @@ fn get_mnt_borrow_and_supply_rates_should_work() {
 		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all pools.
+			assert_ok!(set_oracle_price_for_all_pools(2));
+
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 10_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 15_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), BTC, 25_000 * DOLLARS));

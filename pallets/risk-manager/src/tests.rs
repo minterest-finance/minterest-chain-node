@@ -272,10 +272,7 @@ fn liquidate_should_work() {
 		assert_noop!(TestRiskManager::liquidate(Origin::signed(ALICE), ALICE, DOT), BadOrigin);
 
 		// Origin::none is available origin for fn liquidate.
-		assert_noop!(
-			TestRiskManager::liquidate(Origin::none(), ALICE, DOT),
-			minterest_protocol::Error::<Test>::ZeroBalanceTransaction
-		);
+		assert_ok!(TestRiskManager::liquidate(Origin::none(), ALICE, DOT));
 	})
 }
 

@@ -147,9 +147,10 @@ pub mod module {
 		/// Unsafe loan has been successfully liquidated: \[who, liquidate_amount_in_usd,
 		/// liquidated_pool_id, seized_pools, partial_liquidation\]
 		LiquidateUnsafeLoan(T::AccountId, Balance, CurrencyId, Vec<CurrencyId>, bool),
-
 		/// New pool had been created: \[pool_id\]
 		PoolAdded(CurrencyId),
+		/// Liquidation pool is depleted: \[pool_id\]
+		DepletedLiquidationPool(CurrencyId),
 	}
 
 	/// Liquidation params for pools: `(max_attempts, min_partial_liquidation_sum, threshold,
@@ -518,19 +519,25 @@ impl<T: Config> Pallet<T> {
 		let (seize_amount, is_attempt_increment_required) =
 			Self::calculate_liquidation_info(liquidated_pool_id, total_repay_amount, is_partial_liquidation)?;
 
-		let (seized_pools, repay_amount) = Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, seize_amount)?;
-
 		if is_attempt_increment_required {
 			Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation);
 		}
 
-		Self::deposit_event(Event::LiquidateUnsafeLoan(
-			borrower,
-			repay_amount,
-			liquidated_pool_id,
-			seized_pools,
-			is_partial_liquidation,
-		));
+		match seize_amount.is_zero() {
+			true => Self::deposit_event(Event::DepletedLiquidationPool(liquidated_pool_id)),
+			false => {
+				let (seized_pools, repay_amount) =
+					Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, seize_amount)?;
+
+				Self::deposit_event(Event::LiquidateUnsafeLoan(
+					borrower,
+					repay_amount,
+					liquidated_pool_id,
+					seized_pools,
+					is_partial_liquidation,
+				));
+			}
+		}
 
 		Ok(())
 	}
@@ -558,6 +565,9 @@ impl<T: Config> Pallet<T> {
 		// Collect seized pools.
 		let mut seized_pools: Vec<CurrencyId> = Vec::new();
 		let mut already_seized_amount = Balance::zero();
+
+		// Make a copy of initial value for the case of lack of collateral.
+		let stamp_of_seize_amount = seize_amount.clone();
 
 		for collateral_pool_id in collateral_pools.into_iter() {
 			if !seize_amount.is_zero() {
@@ -627,15 +637,21 @@ impl<T: Config> Pallet<T> {
 			}
 		}
 
+		let price_borrowed =
+			T::PriceSource::get_underlying_price(liquidated_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+
 		let liquidation_fee = Self::risk_manager_dates(liquidated_pool_id).liquidation_fee;
 
-		let repay_amount = Rate::from_inner(already_seized_amount)
+		// The target amount to be debited from the user's debt.
+		let target = match seize_amount.cmp(&Balance::zero()) {
+			Ordering::Equal => already_seized_amount,
+			_ => stamp_of_seize_amount,
+		};
+
+		let repay_amount = Rate::from_inner(target)
 			.checked_div(&liquidation_fee)
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
-
-		let price_borrowed =
-			T::PriceSource::get_underlying_price(liquidated_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
 		// Calculating the number of assets that must be repaid out of the liquidation pool.
 		// repay_assets = already_seized_amount / (liquidation_fee * price_borrowed)
