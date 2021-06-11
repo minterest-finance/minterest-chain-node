@@ -567,7 +567,7 @@ impl<T: Config> Pallet<T> {
 		let mut already_seized_amount = Balance::zero();
 
 		// Make a copy of initial value for the case of lack of collateral.
-		let stamp_of_seize_amount = seize_amount.clone();
+		let stamp_of_seize_amount = seize_amount;
 
 		for collateral_pool_id in collateral_pools.into_iter() {
 			if !seize_amount.is_zero() {
