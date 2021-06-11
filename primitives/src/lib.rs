@@ -11,9 +11,12 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
 	FixedU128, MultiSignature, RuntimeDebug,
 };
+pub use vesting::{VestingBucket, VestingScheduleJson};
 
 pub mod arithmetic;
+pub mod constants;
 pub mod currency;
+pub mod vesting;
 
 /// An index to a block.
 pub type BlockNumber = u32;

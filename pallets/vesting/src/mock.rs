@@ -12,6 +12,8 @@ use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup};
 
 use crate as vesting;
+use minterest_primitives::constants::currency::DOLLARS;
+use minterest_primitives::Balance;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -34,7 +36,7 @@ impl frame_system::Config for Runtime {
 	type BlockLength = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<u64>;
+	type AccountData = pallet_balances::AccountData<u128>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type DbWeight = ();
@@ -43,11 +45,9 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = ();
 }
 
-type Balance = u64;
-
 parameter_types! {
-	pub const ExistentialDeposit: u64 = 1;
-	pub const MinVestedTransfer: u64 = 5;
+	pub const ExistentialDeposit: u128 = DOLLARS; // 1 MNT token
+	pub const MinVestedTransfer: u128 = 5 * DOLLARS;
 	pub const MaxVestingSchedules: u32 = 2;
 }
 
@@ -117,13 +117,13 @@ impl ExtBuilder {
 			.unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
-			balances: vec![(ALICE, 100), (CHARLIE, 30)],
+			balances: vec![(ALICE, 100 * DOLLARS), (CHARLIE, 30 * DOLLARS)],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
 
 		vesting::GenesisConfig::<Runtime> {
-			vesting: vec![(CHARLIE, 2, 3, 4, 5)], // who, start, period, period_count, per_period
+			vesting: vec![(VestingBucket::Team, CHARLIE, 20 * DOLLARS)], // who, start, amount
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

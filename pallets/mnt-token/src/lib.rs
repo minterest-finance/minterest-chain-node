@@ -81,7 +81,7 @@ pub mod module {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Provides Liquidity Pool functionality
-		type LiquidityPoolsManager: LiquidityPoolsManager + PoolsManager<Self::AccountId>;
+		type LiquidityPoolsManager: LiquidityPoolsManager<Self::AccountId>;
 
 		/// The origin which may update MNT token parameters. Root or
 		/// Two Thirds Minterest Council can always do this

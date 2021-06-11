@@ -35,6 +35,7 @@ use frame_support::{
 	transactional,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
+use minterest_primitives::VestingBucket;
 use sp_runtime::{
 	traits::{AtLeast32Bit, CheckedAdd, Saturating, StaticLookup, Zero},
 	DispatchResult, RuntimeDebug,
@@ -44,10 +45,14 @@ use sp_std::{
 	vec::Vec,
 };
 
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
 mod default_weight;
 mod mock;
 mod tests;
 
+use minterest_primitives::constants::time::{BLOCKS_PER_YEAR, DAYS};
 pub use module::*;
 
 pub const VESTING_LOCK_ID: LockIdentifier = *b"mod/vest";
@@ -57,7 +62,10 @@ pub const VESTING_LOCK_ID: LockIdentifier = *b"mod/vest";
 /// Benefits would be granted gradually, `per_period` amount every `period`
 /// of blocks after `start`.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct VestingSchedule<BlockNumber, Balance: HasCompact> {
+	/// Vesting bucket type
+	pub bucket: VestingBucket,
 	/// Vesting starting block
 	pub start: BlockNumber,
 	/// Number of blocks between vest
@@ -70,6 +78,40 @@ pub struct VestingSchedule<BlockNumber, Balance: HasCompact> {
 }
 
 impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSchedule<BlockNumber, Balance> {
+	/// Creates a new schedule with default parameters (start, period, period_count, per_period).
+	///
+	/// - `amount`: the number of tokens for which need to create a schedule.
+	pub fn new(bucket: VestingBucket, amount: Balance) -> Self {
+		let start: BlockNumber = (bucket.unlock_begins_in_days() as u32 * DAYS).into();
+		let period: BlockNumber = BlockNumber::one(); // block by block
+		let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
+		let per_period: Balance = amount.checked_div(&Balance::from(period_count)).unwrap_or(amount);
+		Self {
+			bucket,
+			start,
+			period,
+			period_count,
+			per_period,
+		}
+	}
+
+	/// Creates a new schedule with default parameters (period, period_count, per_period).
+	///
+	/// - `start`: the number of tokens for which need to create a schedule.
+	/// - `amount`: the number of tokens for which need to create a schedule.
+	pub fn new_beginning_from(bucket: VestingBucket, start: BlockNumber, amount: Balance) -> Self {
+		let period: BlockNumber = BlockNumber::one(); // block by block
+		let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
+		let per_period: Balance = amount.checked_div(&Balance::from(period_count)).unwrap_or(amount);
+		Self {
+			bucket,
+			start,
+			period,
+			period_count,
+			per_period,
+		}
+	}
+
 	/// Returns the end of all periods, `None` if calculation overflows.
 	pub fn end(&self) -> Option<BlockNumber> {
 		// period * period_count + start
@@ -121,13 +163,7 @@ pub mod module {
 	/// Type alias for VestingSchedule.
 	pub(crate) type VestingScheduleOf<T> = VestingSchedule<<T as frame_system::Config>::BlockNumber, BalanceOf<T>>;
 	/// Tuple struct for GenesisConfig. `(account_id, start, period, period_count, per_period)`
-	pub type ScheduledItem<T> = (
-		<T as frame_system::Config>::AccountId,
-		<T as frame_system::Config>::BlockNumber,
-		<T as frame_system::Config>::BlockNumber,
-		u32,
-		BalanceOf<T>,
-	);
+	pub type ScheduledItem<T> = (VestingBucket, <T as frame_system::Config>::AccountId, BalanceOf<T>);
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -198,27 +234,21 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.vesting
-				.iter()
-				.for_each(|(who, start, period, period_count, per_period)| {
-					let total = *per_period * Into::<BalanceOf<T>>::into(*period_count);
+			self.vesting.iter().for_each(|(bucket, who, total)| {
+				assert!(
+					T::Currency::free_balance(who) >= *total,
+					"Account do not have enough balance"
+				);
+				let schedule = VestingSchedule::new(*bucket, *total);
+				Pallet::<T>::ensure_valid_vesting_schedule(&schedule).unwrap();
 
-					assert!(
-						T::Currency::free_balance(who) >= total,
-						"Account do not have enough balance"
-					);
-
-					T::Currency::set_lock(VESTING_LOCK_ID, who, total, WithdrawReasons::all());
-					VestingSchedules::<T>::insert(
-						who,
-						vec![VestingSchedule {
-							start: *start,
-							period: *period,
-							period_count: *period_count,
-							per_period: *per_period,
-						}],
-					);
-				});
+				// We do not set a schedule if the number of periods is zero.
+				// period_count are set to zero for the Market Making bucket.
+				if !schedule.period_count.is_zero() {
+					T::Currency::set_lock(VESTING_LOCK_ID, who, *total, WithdrawReasons::all());
+					VestingSchedules::<T>::insert(who, vec![schedule]);
+				}
+			});
 		}
 	}
 

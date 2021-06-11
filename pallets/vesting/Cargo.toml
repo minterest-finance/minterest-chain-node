@@ -15,6 +15,8 @@ sp-std = { version = "3.0.0", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 
+minterest-primitives = { path = "../../primitives", default-features = false }
+
 [dev-dependencies]
 sp-core = { version = "3.0.0", default-features = false }
 pallet-balances = "3.0.0"
@@ -29,4 +31,6 @@ std = [
 	"sp-io/std",
 	"frame-support/std",
 	"frame-system/std",
+
+	"minterest-primitives/std",
 ]

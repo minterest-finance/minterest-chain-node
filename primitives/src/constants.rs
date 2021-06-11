@@ -1,19 +1,11 @@
 //! A set of constant values used in runtime.
 
-use minterest_primitives::Rate;
+use crate::constants::currency::DOLLARS;
+use crate::{Balance, Rate};
 
-/// Money matters.
-pub mod currency {
-	use minterest_primitives::Balance;
-
-	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
-	pub const CENTS: Balance = DOLLARS / 100;
-	pub const MILLICENTS: Balance = CENTS / 1000;
-}
-
-/// Time.
 pub mod time {
-	use minterest_primitives::BlockNumber;
+	use crate::BlockNumber;
+
 	pub const MILLISECS_PER_BLOCK: u64 = 6000;
 
 	pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
@@ -27,19 +19,19 @@ pub mod time {
 	// BLOCKS_PER_YEAR has to be 5256000
 }
 
-/// A maximum number of admins. When membership reaches this number, no new members may join.
-pub const MAX_MEMBERS: u8 = 16;
+pub mod currency {
+	use crate::Balance;
 
-pub const MAX_BORROW_CAP: minterest_primitives::Balance = 1_000_000_000_000_000_000_000_000;
-pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: minterest_primitives::Balance = 1_000_000_000_000_000_000_000;
-
-/// Initial exchange rate: 100%
-pub const INITIAL_EXCHANGE_RATE: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
+	pub const CENTS: Balance = DOLLARS / 100;
+	pub const MILLICENTS: Balance = CENTS / 1000;
+}
 
 pub mod fee {
-	use frame_support::weights::constants::ExtrinsicBaseWeight;
-	use frame_support::weights::{WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial};
-	use minterest_primitives::Balance;
+	use crate::Balance;
+	use frame_support::weights::{
+		constants::ExtrinsicBaseWeight, WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
+	};
 	use smallvec::smallvec;
 	use sp_runtime::Perbill;
 
@@ -59,3 +51,12 @@ pub mod fee {
 		}
 	}
 }
+
+pub const MAX_BORROW_CAP: Balance = 1_000_000_000_000_000_000_000_000;
+pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
+
+/// Initial exchange rate: 100%
+pub const INITIAL_EXCHANGE_RATE: Rate = Rate::from_inner(1_000_000_000_000_000_000);
+
+/// Total allocation of MNT tokens
+pub const TOTAL_ALLOCATION: Balance = 100_000_030 * DOLLARS;

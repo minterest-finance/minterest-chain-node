@@ -10,14 +10,13 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod benchmarking;
-mod constants;
 #[cfg(test)]
 mod tests;
 mod weights;
 mod weights_test;
 
-use crate::constants::fee::WeightToFee;
 pub use controller_rpc_runtime_api::{BalanceInfo, HypotheticalLiquidityData, PoolState, UserPoolBalanceData};
+use minterest_primitives::constants::fee::WeightToFee;
 pub use minterest_primitives::{
 	currency::{
 		CurrencyType::{UnderlyingAsset, WrappedToken},
@@ -29,9 +28,8 @@ pub use minterest_primitives::{
 pub use mnt_token_rpc_runtime_api::MntBalanceInfo;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
-use pallet_grandpa::fg_primitives;
-use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
-use pallet_traits::{ControllerManager, MntManager, PoolsManager};
+use pallet_grandpa::{fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
+use pallet_traits::{ControllerManager, LiquidityPoolsManager, MntManager};
 use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -40,9 +38,9 @@ use sp_core::{
 	u32_trait::{_1, _2, _3, _4},
 	OpaqueMetadata,
 };
-use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, Zero};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
+	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, Zero},
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchResult, FixedPointNumber, ModuleId,
 };
@@ -67,9 +65,13 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill, Perquintill};
 
-pub use constants::{currency::*, time::*, *};
 use frame_support::traits::Contains;
 use frame_system::{EnsureOneOf, EnsureRoot, EnsureSigned};
+pub use minterest_primitives::{
+	constants::{currency::*, time::*, *},
+	currency::*,
+	*,
+};
 use pallet_traits::PricesManager;
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -122,7 +124,7 @@ parameter_types! {
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 }
 
-// Do not change the order of modules. Used for test genesis block.
+// Do not change the order of modules. Used for genesis block.
 pub fn get_all_modules_accounts() -> Vec<AccountId> {
 	vec![
 		MntTokenModuleId::get().into_account(),
@@ -229,7 +231,7 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u128 = 500;
+	pub const ExistentialDeposit: Balance = DOLLARS; // 1 MNT
 	pub const MaxLocks: u32 = 50;
 }
 
@@ -574,7 +576,7 @@ impl module_vesting::Config for Runtime {
 	type Event = Event;
 	type Currency = pallet_balances::Module<Runtime>;
 	type MinVestedTransfer = MinVestedTransfer;
-	// FIXME: ask who can transfer and then fix it
+	// FIXME:  fix it sudo + 1/3 MinterestCouncil
 	type VestedTransferOrigin = EnsureSigned<AccountId>;
 	// FIXME: implement weights
 	type WeightInfo = ();
