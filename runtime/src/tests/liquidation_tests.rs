@@ -204,7 +204,7 @@ Description of scenario:
 This scenario handles the case, when user has not enough collateral to cover liquidation.
 This is a rare but possible case (may be caused by Flash Crashes of BTC or outage of oracles).
 This is a VERY painful case.
-The algorithm performs liquidation, liquidation pool repays full user's loan, even in case if there
+The algorithm performs liquidation: liquidation pool repays full user's loan, even in case if there
 is not enough collateral and burn all available user's collateral.
  */
 #[test]
@@ -296,8 +296,7 @@ Description of scenario:
 This scenario handles the case, when user has not enough collateral to cover liquidation and user's
 liquidation attempts are equal to zero.
 This is a rare but possible case (may be caused by Flash Crashes of BTC or outage of oracles).
-The algorithm performs liquidation, liquidation pool can not repay full user's loan, all available
-user's collateral is burned, the part of borrow balance and collateral remains with the user,
+The algorithm performs liquidation: liquidation pool can not repay full user's loan, the part of borrow balance and collateral remains with the user,
 DepletedLiquidationPool event is emitted.
  */
 #[test]
