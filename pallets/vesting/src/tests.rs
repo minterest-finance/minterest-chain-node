@@ -26,13 +26,6 @@ fn vesting_from_chain_spec_works() {
 			WithdrawReasons::TRANSFER,
 			20 * DOLLARS
 		));
-		assert!(PalletBalances::ensure_can_withdraw(
-			&CHARLIE::get(),
-			11 * DOLLARS,
-			WithdrawReasons::TRANSFER,
-			19 * DOLLARS
-		)
-		.is_err());
 		assert_eq!(PalletBalances::usable_balance(CHARLIE::get()), 10 * DOLLARS);
 
 		assert_eq!(Vesting::vesting_schedules(&CHARLIE::get()), vec![private_sale_schedule]);
@@ -52,13 +45,6 @@ fn vesting_from_chain_spec_works() {
 			WithdrawReasons::TRANSFER,
 			10 * DOLLARS
 		));
-		assert!(PalletBalances::ensure_can_withdraw(
-			&CHARLIE::get(),
-			21 * DOLLARS,
-			WithdrawReasons::TRANSFER,
-			9 * DOLLARS
-		)
-		.is_err());
 		// 10 MNT free + 10 MNT from Private Sale bucket. (+1 written due to math problems)
 		assert_eq!(PalletBalances::usable_balance(CHARLIE::get()), 20 * DOLLARS + 1);
 
@@ -616,7 +602,7 @@ fn vesting_schedule_constructors_should_work() {
 	);
 
 	let schedule3: VestingSchedule<BlockNumber> =
-		VestingSchedule::new_beginning_from(VestingBucket::Marketing, 1234, 10 * DOLLARS);
+		VestingSchedule::new_beginning_from(VestingBucket::Marketing, 1234, 10 * DOLLARS).unwrap();
 	assert_eq!(schedule3.bucket, VestingBucket::Marketing);
 	assert_eq!(schedule3.start, 1234);
 	assert_eq!(schedule3.period_count as u128, BLOCKS_PER_YEAR);
@@ -625,7 +611,7 @@ fn vesting_schedule_constructors_should_work() {
 	assert_eq!(schedule3.per_period, Rate::from_inner(1902587519025_875190258751902587));
 
 	let schedule4: VestingSchedule<BlockNumber> =
-		VestingSchedule::new_beginning_from(VestingBucket::StrategicPartners, 5000, 20 * DOLLARS);
+		VestingSchedule::new_beginning_from(VestingBucket::StrategicPartners, 5000, 20 * DOLLARS).unwrap();
 	assert_eq!(schedule4.bucket, VestingBucket::StrategicPartners);
 	assert_eq!(schedule4.start, 5000);
 	assert_eq!(schedule4.period_count as u128, 2 * BLOCKS_PER_YEAR);

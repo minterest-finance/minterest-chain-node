@@ -56,8 +56,7 @@ mod default_weight;
 mod mock;
 mod tests;
 
-use frame_support::sp_runtime::traits::CheckedMul;
-use frame_support::sp_runtime::FixedPointNumber;
+use frame_support::sp_runtime::{traits::CheckedMul, FixedPointNumber};
 use minterest_primitives::constants::time::{BLOCKS_PER_YEAR, DAYS};
 pub use module::*;
 
@@ -87,12 +86,12 @@ impl<BlockNumber: AtLeast32Bit + Copy> VestingSchedule<BlockNumber> {
 	/// Creates a new schedule with default parameters (start, period, period_count, per_period).
 	///
 	/// - `amount`: the number of tokens for which need to create a schedule.
+	/// Note: this constructor can only be used when configuring a genesis block.
 	pub fn new(bucket: VestingBucket, amount: Balance) -> Self {
 		let start: BlockNumber = (bucket.unlock_begins_in_days() as u32 * DAYS).into();
 		let period: BlockNumber = BlockNumber::one(); // block by block
 		let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
-		let per_period =
-			Rate::checked_from_rational(amount, period_count).unwrap_or_else(|| Rate::saturating_from_integer(amount));
+		let per_period = Rate::checked_from_rational(amount, period_count).unwrap();
 		Self {
 			bucket,
 			start,
@@ -107,18 +106,20 @@ impl<BlockNumber: AtLeast32Bit + Copy> VestingSchedule<BlockNumber> {
 	/// - `bucket`: vesting bucket type (must be `Team` or `Marketing` or `Strategic Partners`).
 	/// - `start`: the number of tokens for which need to create a schedule.
 	/// - `amount`: the number of tokens for which need to create a schedule.
-	pub fn new_beginning_from(bucket: VestingBucket, start: BlockNumber, amount: Balance) -> Self {
+	pub fn new_beginning_from(bucket: VestingBucket, start: BlockNumber, amount: Balance) -> Option<Self> {
+		if !bucket.is_manipulated_bucket() {
+			return None;
+		}
 		let period: BlockNumber = BlockNumber::one(); // block by block
 		let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
-		let per_period =
-			Rate::checked_from_rational(amount, period_count).unwrap_or_else(|| Rate::saturating_from_integer(amount));
-		Self {
+		let per_period = Rate::saturating_from_rational(amount, period_count);
+		Some(Self {
 			bucket,
 			start,
 			period,
 			period_count,
 			per_period,
-		}
+		})
 	}
 
 	/// Returns the end of all periods, `None` if calculation overflows.
@@ -257,8 +258,7 @@ pub mod module {
 				);
 				let schedule = VestingSchedule::new(*bucket, *total);
 
-				// We do not set a schedule if the number of periods is zero.
-				// `period_count` are set to zero for the Market Making bucket.
+				// We do not set a schedule for Market Making vesting bucket.
 				if schedule.bucket != VestingBucket::MarketMaking {
 					Pallet::<T>::ensure_valid_vesting_schedule(&schedule).unwrap();
 					T::Currency::set_lock(VESTING_LOCK_ID, who, *total, WithdrawReasons::all());
@@ -310,9 +310,8 @@ pub mod module {
 			T::VestedTransferOrigin::ensure_origin(origin)?;
 			let target = T::Lookup::lookup(target)?;
 
-			ensure!(bucket.is_manipulated_bucket(), Error::<T>::IncorrectVestingBucketType);
-
-			let schedule: VestingSchedule<T::BlockNumber> = VestingSchedule::new_beginning_from(bucket, start, amount);
+			let schedule: VestingSchedule<T::BlockNumber> = VestingSchedule::new_beginning_from(bucket, start, amount)
+				.ok_or(Error::<T>::IncorrectVestingBucketType)?;
 
 			let raw_bucket_account_id: [u8; 32] = bucket
 				.bucket_account_id()
@@ -415,8 +414,8 @@ impl<T: Config> Pallet<T> {
 	where
 		<T as frame_system::Config>::AccountId: From<[u8; 32]>,
 	{
+		let now = <frame_system::Pallet<T>>::block_number();
 		<VestingSchedules<T>>::try_mutate_exists(target, |maybe_schedules| -> DispatchResult {
-			let now = <frame_system::Pallet<T>>::block_number();
 			// `total_locked` - the balance that needs to be locked for the user after deleting the schedule
 			// `total_removed` - the balance to be sent from the user account to the bucket account
 			let (mut total_locked, mut total_removed) = (Balance::zero(), Balance::zero());
