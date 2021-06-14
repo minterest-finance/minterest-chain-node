@@ -53,18 +53,20 @@ pub trait WeightInfo {
 /// Weights for module_vesting using the Minterest node and recommended hardware.
 pub struct MinterestWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for MinterestWeight<T> {
-	fn claim(_i: u32, ) -> Weight {
-		(72_602_000 as Weight)
+	fn claim(i: u32, ) -> Weight {
+		(61_860_000 as Weight)
+			// Standard Error: 254_000
+			.saturating_add((1_370_000 as Weight).saturating_mul(i as Weight))
 			.saturating_add(T::DbWeight::get().reads(3 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
 	fn vested_transfer() -> Weight {
-		(171_634_000 as Weight)
+		(151_707_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
 	fn remove_vesting_schedules() -> Weight {
-		(141_161_000 as Weight)
+		(122_962_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
@@ -72,18 +74,20 @@ impl<T: frame_system::Config> WeightInfo for MinterestWeight<T> {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn claim(_i: u32, ) -> Weight {
-		(72_602_000 as Weight)
+	fn claim(i: u32, ) -> Weight {
+		(61_860_000 as Weight)
+			// Standard Error: 254_000
+			.saturating_add((1_370_000 as Weight).saturating_mul(i as Weight))
 			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
 	}
 	fn vested_transfer() -> Weight {
-		(171_634_000 as Weight)
+		(151_707_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
 	}
 	fn remove_vesting_schedules() -> Weight {
-		(141_161_000 as Weight)
+		(122_962_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
 	}

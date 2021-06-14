@@ -1,9 +1,7 @@
 use super::utils::{lookup_of_account, set_balance};
 use crate::{
-	AccountId, Currencies, MaxVestingSchedules, MinVestedTransfer, Runtime, System, Vesting, BLOCKS_PER_YEAR, DOLLARS,
-	MNT,
+	AccountId, BlockNumber, Currencies, MaxVestingSchedules, Runtime, System, Vesting, BLOCKS_PER_YEAR, DOLLARS, MNT,
 };
-use core::convert::TryInto;
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
 use minterest_primitives::VestingBucket;
@@ -20,13 +18,10 @@ runtime_benchmarks! {
 	_ {}
 
 	claim {
-		// The number of schedules on the account is set equal MaxVestingSchedules.
 		let i in 1 .. MaxVestingSchedules::get();
 
-		// The number of MNT tokens that are transferred according to the schedule.
-		// Doubled due to math problems (total_amount = 0.999 < MinVestedTransfer = 1.0)
-		let schedule_amount = 2_u128 * MinVestedTransfer::get();
-		let mut schedule = VestingSchedule::new(VestingBucket::Team, schedule_amount);
+		let schedule_amount = 10 * DOLLARS; // 10 MNT
+		let mut schedule: VestingSchedule<BlockNumber> = VestingSchedule::new(VestingBucket::Team, schedule_amount);
 
 		set_balance(MNT, &VestingBucket::Team.bucket_account_id().unwrap(), schedule_amount * i as u128)?;
 
@@ -38,7 +33,6 @@ runtime_benchmarks! {
 			Vesting::vested_transfer(RawOrigin::Root.into(), claimer_lookup.clone(), VestingBucket::Team, i, schedule_amount)?;
 		}
 		System::set_block_number(schedule.end().unwrap() + 1u32);
-
 	}: _(RawOrigin::Signed(claimer.clone()))
 	verify {
 		assert_eq!(
@@ -48,9 +42,8 @@ runtime_benchmarks! {
 	}
 
 	vested_transfer {
-		// The number of MNT tokens that are transferred according to the schedule.
-		// Doubled due to math problems (total_amount = 0.999 < MinVestedTransfer = 1.0)
-		let schedule_amount = 2_u128 * MinVestedTransfer::get();
+		let schedule_amount = 10 * DOLLARS; // 10 MNT
+		let schedule: VestingSchedule<BlockNumber> = VestingSchedule::new(VestingBucket::Team, schedule_amount);
 
 		set_balance(MNT, &VestingBucket::Team.bucket_account_id().unwrap(), schedule_amount)?;
 
@@ -60,12 +53,13 @@ runtime_benchmarks! {
 	verify {
 		assert_eq!(
 			<Currencies as MultiCurrency<_>>::total_balance(MNT, &to),
-			schedule_amount - 1_u128
+			schedule.total_amount().unwrap()
 		);
 	}
 
 	remove_vesting_schedules {
-		let schedule_amount = 100 * DOLLARS; // 100 MNT
+		let schedule_amount = 10 * DOLLARS; // 10 MNT
+
 		set_balance(MNT, &VestingBucket::Team.bucket_account_id().unwrap(), schedule_amount * MaxVestingSchedules::get() as u128)?;
 
 		let teammate: AccountId = account("teammate", 0, SEED);
@@ -74,13 +68,13 @@ runtime_benchmarks! {
 		for _ in 0..MaxVestingSchedules::get() {
 			Vesting::vested_transfer(RawOrigin::Root.into(), teammate_lookup.clone(), VestingBucket::Team, 0, schedule_amount)?;
 		}
-		System::set_block_number((BLOCKS_PER_YEAR * 5 / 2).try_into().unwrap());
 
+		System::set_block_number((VestingBucket::Team.vesting_duration() as u128 * BLOCKS_PER_YEAR / 2_u128) as u32);
 	}: _(RawOrigin::Root, teammate_lookup.clone(), VestingBucket::Team)
 	verify {
 		assert_eq!(
 			<Currencies as MultiCurrency<_>>::free_balance(MNT, &teammate),
-			schedule_amount,
+			schedule_amount * MaxVestingSchedules::get() as u128 / 2_u128,
 		);
 	}
 }
