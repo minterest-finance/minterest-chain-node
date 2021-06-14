@@ -82,7 +82,6 @@ pub struct VestingSchedule<BlockNumber> {
 	/// Number of vest
 	pub period_count: u32,
 	/// Amount of tokens to release per vest
-	#[codec(compact)]
 	pub per_period: Rate,
 }
 
@@ -254,10 +253,10 @@ pub mod module {
 					T::Currency::free_balance(who) >= *total,
 					"Account do not have enough balance"
 				);
-				let schedule = VestingSchedule::new(*bucket, *total);
 
 				// We do not set a schedule for Market Making vesting bucket.
-				if schedule.bucket != VestingBucket::MarketMaking {
+				if *bucket != VestingBucket::MarketMaking {
+					let schedule = VestingSchedule::new(*bucket, *total);
 					Pallet::<T>::ensure_valid_vesting_schedule(&schedule).unwrap();
 					T::Currency::set_lock(VESTING_LOCK_ID, who, *total, WithdrawReasons::all());
 					VestingSchedules::<T>::insert(who, vec![schedule]);
