@@ -3,7 +3,7 @@
 use super::*;
 use crate as minterest_protocol;
 use controller::{ControllerData, PauseKeeper};
-use frame_support::{assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
+use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;

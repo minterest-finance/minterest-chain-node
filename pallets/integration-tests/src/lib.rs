@@ -30,7 +30,7 @@ mod tests {
 	use frame_support::traits::Contains;
 	use minterest_model::MinterestModelData;
 	use minterest_protocol::Error as MinterestProtocolError;
-	use pallet_traits::{MntManager, PoolsManager, PricesManager};
+	use pallet_traits::{PoolsManager, PricesManager};
 	use sp_std::cell::RefCell;
 	use test_helper::*;
 
