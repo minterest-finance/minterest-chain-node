@@ -7,3 +7,4 @@ pub mod minterest_protocol;
 pub mod mnt_token;
 pub mod prices;
 pub mod risk_manager;
+pub mod vesting;

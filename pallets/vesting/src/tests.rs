@@ -1,7 +1,5 @@
 //! Unit tests for the vesting module.
 
-#![cfg(test)]
-
 use super::*;
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 use minterest_primitives::constants::currency::DOLLARS;

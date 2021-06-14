@@ -1,6 +1,4 @@
 //! Mocks for the vesting module.
-
-#![cfg(test)]
 use super::*;
 use crate as vesting;
 use frame_support::{construct_runtime, ord_parameter_types, parameter_types, traits::GenesisBuild};

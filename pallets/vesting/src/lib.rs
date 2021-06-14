@@ -33,6 +33,7 @@
 #![allow(clippy::unused_unit)]
 
 use codec::{Decode, Encode};
+use frame_support::sp_runtime::{traits::CheckedMul, FixedPointNumber};
 use frame_support::{
 	ensure,
 	pallet_prelude::*,
@@ -40,9 +41,10 @@ use frame_support::{
 	transactional,
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
+use minterest_primitives::constants::time::{BLOCKS_PER_YEAR, DAYS};
 use minterest_primitives::{Balance, Rate, VestingBucket};
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
+pub use module::*;
+
 use sp_runtime::{
 	traits::{AtLeast32Bit, StaticLookup, Zero},
 	DispatchResult, RuntimeDebug,
@@ -51,14 +53,16 @@ use sp_std::{
 	cmp::{Eq, PartialEq},
 	vec::Vec,
 };
+pub mod weights;
+pub use weights::WeightInfo;
 
-mod default_weight;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
+#[cfg(test)]
 mod mock;
+#[cfg(test)]
 mod tests;
-
-use frame_support::sp_runtime::{traits::CheckedMul, FixedPointNumber};
-use minterest_primitives::constants::time::{BLOCKS_PER_YEAR, DAYS};
-pub use module::*;
 
 pub const VESTING_LOCK_ID: LockIdentifier = *b"mod/vest";
 
@@ -162,12 +166,6 @@ impl<BlockNumber: AtLeast32Bit + Copy> VestingSchedule<BlockNumber> {
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-
-	pub trait WeightInfo {
-		fn vested_transfer() -> Weight;
-		fn claim(i: u32) -> Weight;
-		fn update_vesting_schedules(i: u32) -> Weight;
-	}
 
 	/// Type alias for VestingSchedule.
 	pub(crate) type VestingScheduleOf<T> = VestingSchedule<<T as frame_system::Config>::BlockNumber>;
@@ -331,7 +329,7 @@ pub mod module {
 		///
 		/// - `target`: the account that receives vesting schedule of the MNT tokens;
 		/// - `bucket`: the type of vesting bucket from which we want to delete the schedule;
-		#[pallet::weight(T::WeightInfo::vested_transfer())]
+		#[pallet::weight(T::WeightInfo::remove_vesting_schedules())]
 		pub fn remove_vesting_schedules(
 			origin: OriginFor<T>,
 			target: <T::Lookup as StaticLookup>::Source,
