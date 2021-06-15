@@ -191,6 +191,11 @@ pub mod module {
 
 		/// The maximum number of vesting schedules an account can have.
 		type MaxVestingSchedules: Get<u32>;
+
+		#[pallet::constant]
+		/// Information for each vesting bucket:
+		/// (vesting bucket type, vesting_duration, unlock_begins_in_days, total_amount).
+		type VestingBucketsInfo: Get<Vec<(VestingBucket, u8, u8, Balance)>>;
 	}
 
 	#[pallet::error]

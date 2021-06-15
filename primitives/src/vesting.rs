@@ -12,6 +12,7 @@ use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{traits::Zero, RuntimeDebug};
+use sp_std::{prelude::Vec, vec};
 
 macro_rules! create_vesting_bucket_info {
 	($(#[$meta:meta])*
@@ -24,10 +25,18 @@ macro_rules! create_vesting_bucket_info {
         }
 
 		impl VestingBucket {
-			pub fn get_enabled_vesting_buckets() -> Vec<VestingBucket> {
-				let mut enabled_buckets = vec![];
+			/// This associated function is implemented for the frontend part of the protocol.
+			/// Returns information for each vesting bucket:
+			/// (vesting bucket type, vesting_duration, unlock_begins_in_days, total_amount)
+			pub fn get_vesting_buckets_info() -> Vec<(VestingBucket, u8, u8, Balance)> {
+				let mut enabled_buckets: Vec<(VestingBucket, u8, u8, Balance)>  = vec![];
 				$(
-					enabled_buckets.push(VestingBucket::$bucket_type);
+					enabled_buckets.push((
+						VestingBucket::$bucket_type,
+						VestingBucket::$bucket_type.vesting_duration(),
+						VestingBucket::$bucket_type.unlock_begins_in_days(),
+						VestingBucket::$bucket_type.total_amount(),
+					));
 				)*
 				enabled_buckets
 			}
@@ -226,16 +235,56 @@ mod tests {
 	#[test]
 	fn check_vesting_buckets_info() {
 		assert_eq!(
-			VestingBucket::get_enabled_vesting_buckets(),
+			VestingBucket::get_vesting_buckets_info(),
 			vec![
-				VestingBucket::Community,
-				VestingBucket::PrivateSale,
-				VestingBucket::PublicSale,
-				VestingBucket::MarketMaking,
-				VestingBucket::StrategicPartners,
-				VestingBucket::Marketing,
-				VestingBucket::Ecosystem,
-				VestingBucket::Team
+				(
+					VestingBucket::Community,
+					5_u8,
+					0_u8,
+					50_032_400_000_000_000_000_000_000_u128
+				),
+				(
+					VestingBucket::PrivateSale,
+					1_u8,
+					0_u8,
+					10_001_000_000_000_000_000_000_000_u128
+				),
+				(
+					VestingBucket::PublicSale,
+					1_u8,
+					0_u8,
+					2_500_250_000_000_000_000_000_000_u128
+				),
+				(
+					VestingBucket::MarketMaking,
+					0_u8,
+					0_u8,
+					3_000_000_000_000_000_000_000_000_u128
+				),
+				(
+					VestingBucket::StrategicPartners,
+					2_u8,
+					0_u8,
+					1_949_100_000_000_000_000_000_000_u128
+				),
+				(
+					VestingBucket::Marketing,
+					1_u8,
+					0_u8,
+					4_000_400_000_000_000_000_000_000_u128
+				),
+				(
+					VestingBucket::Ecosystem,
+					4_u8,
+					0_u8,
+					4_499_880_000_000_000_000_000_000_u128
+				),
+				(
+					VestingBucket::Team,
+					5_u8,
+					182_u8,
+					24_017_000_000_000_000_000_000_000_u128
+				)
 			]
 		);
 	}

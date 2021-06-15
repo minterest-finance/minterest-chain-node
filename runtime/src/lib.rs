@@ -572,6 +572,7 @@ impl dex::Config for Runtime {
 parameter_types! {
 	pub MinVestedTransfer: Balance = DOLLARS; // 1 USD
 	pub const MaxVestingSchedules: u32 = 2;
+	pub VestingBucketsInfo: Vec<(VestingBucket, u8, u8, Balance)> = VestingBucket::get_vesting_buckets_info();
 }
 
 impl module_vesting::Config for Runtime {
@@ -581,6 +582,7 @@ impl module_vesting::Config for Runtime {
 	type VestedTransferOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type WeightInfo = weights::vesting::WeightInfo<Runtime>;
 	type MaxVestingSchedules = MaxVestingSchedules;
+	type VestingBucketsInfo = VestingBucketsInfo;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
