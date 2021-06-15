@@ -4,7 +4,7 @@ use super::utils::{
 };
 use crate::{
 	AccountId, Currencies, EnabledUnderlyingAssetsIds, LiquidationPoolsModuleId, LiquidityPools, MinterestProtocol,
-	MntToken, Origin, Rate, Runtime, System, BTC, DOLLARS, DOT, ETH, KSM, MNT,
+	Origin, Rate, Runtime, System, BTC, DOLLARS, DOT, ETH, KSM, MNT,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;

@@ -534,7 +534,7 @@ fn test_update_mnt_supply_index_simple() {
 
 			// set total_issuance to 20
 			Currencies::deposit(METH, &ALICE, 20 * DOLLARS).unwrap();
-			assert_ok!(MntToken::enable_mnt_minting(admin(), ETH, 10 * DOLLARS));
+			assert_ok!(MntToken::set_speed(admin(), ETH, 10 * DOLLARS));
 
 			System::set_block_number(2);
 			MntToken::update_mnt_supply_index(ETH).unwrap();
@@ -561,82 +561,47 @@ fn test_minting_enable_disable() {
 		.execute_with(|| {
 			// Unable to enable minting for non existing pool
 			assert_noop!(
-				MntToken::enable_mnt_minting(admin(), ETH, 2 * DOLLARS),
+				MntToken::set_speed(admin(), ETH, 2 * DOLLARS),
 				Error::<Runtime>::PoolNotFound
 			);
 			assert_noop!(
-				MntToken::enable_mnt_minting(admin(), MNT, 2 * DOLLARS),
+				MntToken::set_speed(admin(), MNT, 2 * DOLLARS),
 				Error::<Runtime>::NotValidUnderlyingAssetId
 			);
 			// Add new mnt minting
 			let dot_speed = 2 * DOLLARS;
-			assert_ok!(MntToken::enable_mnt_minting(admin(), DOT, dot_speed));
-			let new_minting_event = Event::mnt_token(crate::Event::MntMintingEnabled(DOT, dot_speed));
-			assert!(System::events().iter().any(|record| record.event == new_minting_event));
+			assert_ok!(MntToken::set_speed(admin(), DOT, dot_speed));
+			let speed_changed_event = Event::mnt_token(crate::Event::MntSpeedChanged(DOT, dot_speed));
+			assert!(System::events()
+				.iter()
+				.any(|record| record.event == speed_changed_event));
 			assert_eq!(MntToken::mnt_speeds(DOT), dot_speed);
-			// Try to add the same pool
-			assert_noop!(
-				MntToken::enable_mnt_minting(admin(), DOT, 2 * DOLLARS),
-				Error::<Runtime>::MntMintingAlreadyEnabled
-			);
 
 			// Add minting for another one pool
 			let ksm_speed = 2 * DOLLARS;
-			assert_ok!(MntToken::enable_mnt_minting(admin(), KSM, ksm_speed));
-			let new_minting_event = Event::mnt_token(crate::Event::MntMintingEnabled(KSM, ksm_speed));
-			assert!(System::events().iter().any(|record| record.event == new_minting_event));
+			assert_ok!(MntToken::set_speed(admin(), KSM, ksm_speed));
+			let speed_changed_event = Event::mnt_token(crate::Event::MntSpeedChanged(KSM, ksm_speed));
+			assert!(System::events()
+				.iter()
+				.any(|record| record.event == speed_changed_event));
 			assert_eq!(MntToken::mnt_speeds(KSM), ksm_speed);
 
 			// Disable MNT minting for DOT
-			assert_ok!(MntToken::disable_mnt_minting(admin(), DOT));
-			let disable_mnt_minting_event = Event::mnt_token(crate::Event::MntMintingDisabled(DOT));
+			assert_ok!(MntToken::set_speed(admin(), DOT, Balance::zero()));
+			let speed_changed_event = Event::mnt_token(crate::Event::MntSpeedChanged(DOT, Balance::zero()));
 			assert!(System::events()
 				.iter()
-				.any(|record| record.event == disable_mnt_minting_event));
-			assert_eq!(MntToken::mnt_speeds(DOT), Balance::zero());
+				.any(|record| record.event == speed_changed_event));
+			assert!(!crate::MntSpeeds::<Runtime>::contains_key(DOT));
 
-			// Try to disable minting that wasn't enabled
-			assert_noop!(
-				MntToken::disable_mnt_minting(admin(), DOT),
-				Error::<Runtime>::MntMintingNotEnabled,
-			);
 			// Try to disable minting for invalid underlying asset id
 			assert_noop!(
-				MntToken::disable_mnt_minting(admin(), MNT),
-				Error::<Runtime>::NotValidUnderlyingAssetId
-			);
-
-			// The dispatch origin of these calls must be Root or 2/3 MinterestCouncil.
-			assert_noop!(MntToken::enable_mnt_minting(alice(), DOT, 1 * DOLLARS), BadOrigin);
-			assert_noop!(MntToken::disable_mnt_minting(alice(), KSM), BadOrigin);
-		});
-}
-
-#[test]
-fn test_update_speed() {
-	ExtBuilder::default()
-		.pool_total_borrowed(DOT, Balance::zero())
-		.mnt_enabled_pools(vec![(DOT, 10 * DOLLARS)])
-		.build()
-		.execute_with(|| {
-			let speed = 20 * DOLLARS;
-			assert_ok!(MntToken::update_speed(admin(), DOT, speed));
-			assert_eq!(MntToken::mnt_speeds(DOT), speed);
-			let new_speed_event = Event::mnt_token(crate::Event::MntSpeedChanged(DOT, speed));
-			assert!(System::events().iter().any(|record| record.event == new_speed_event));
-
-			// Unable to enable minting for non existing pool
-			assert_noop!(
-				MntToken::update_speed(admin(), ETH, 2 * DOLLARS),
-				Error::<Runtime>::MntMintingNotEnabled
-			);
-			assert_noop!(
-				MntToken::update_speed(admin(), MNT, 2 * DOLLARS),
+				MntToken::set_speed(admin(), MNT, Balance::zero()),
 				Error::<Runtime>::NotValidUnderlyingAssetId
 			);
 
 			// The dispatch origin of this call must be Root or 2/3 MinterestCouncil.
-			assert_noop!(MntToken::update_speed(alice(), DOT, speed), BadOrigin);
+			assert_noop!(MntToken::set_speed(alice(), DOT, 1 * DOLLARS), BadOrigin);
 		});
 }
 

@@ -107,7 +107,7 @@ mod tests {
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
 				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
-				assert_ok!(TestMntToken::enable_mnt_minting(admin(), BTC, 2 * DOLLARS));
+				assert_ok!(TestMntToken::set_speed(admin(), BTC, 2 * DOLLARS));
 				test_mnt_speeds(
 					100_000_000_000_000_000,
 					100_000_000_000_000_000,
@@ -178,7 +178,7 @@ mod tests {
 	// This scenario works with one user and three pools.
 	// The test checks the parameters of the MNT token when new pool is created.
 	// Initial parameters: 	DOT + ETH - enabled in mnt minting;
-	// 						mnt_rate = 0.1 MNT per block;
+	// 						mnt_speed = 0.1 MNT per block;
 	// 1. Alice deposit() 100_000 DOT;
 	// 2. Alice borrow() 50_000 ETH;
 	// 3. Init BTC pool;
@@ -307,7 +307,7 @@ mod tests {
 				System::set_block_number(70);
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
 
-				assert_ok!(TestMntToken::enable_mnt_minting(admin(), BTC, 2 * DOLLARS));
+				assert_ok!(TestMntToken::set_speed(admin(), BTC, 2 * DOLLARS));
 				test_mnt_speeds(
 					100_000_000_000_000_000,
 					100_000_000_000_000_000,
@@ -334,7 +334,7 @@ mod tests {
 	// Also it checks that for a single user amount of distributed tokens is the same
 	// for pool created in genesis block and pool added later.
 	// Initial parameters: 	ETH - enabled in mnt minting;
-	// 						mnt_rate = 0.1 MNT per block;
+	// 						mnt_speed = 0.1 MNT per block;
 	// 1. Alice deposit() 100_000 ETH;
 	// 2. Alice borrow() 50_000 ETH;
 	// 3. Alice claim_mnt() 20 * 0.1 = 2 MNT
@@ -409,7 +409,7 @@ mod tests {
 					Currencies::free_balance(MNT, &TestMntToken::get_account_id()),
 					ONE_HUNDRED - distributed_to_alice_for_eth_pool
 				);
-				assert_ok!(TestMntToken::disable_mnt_minting(admin(), ETH));
+				assert_ok!(TestMntToken::set_speed(admin(), ETH, Balance::zero()));
 
 				// Init BTC pool
 				assert_ok!(MinterestProtocol::create_pool(
@@ -436,7 +436,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), BTC));
 				assert_ok!(MinterestProtocol::borrow(alice(), BTC, 50_000 * DOLLARS));
 				// Set the same speed for BTC pool
-				assert_ok!(TestMntToken::enable_mnt_minting(admin(), BTC, DOLLARS / 10));
+				assert_ok!(TestMntToken::set_speed(admin(), BTC, DOLLARS / 10));
 				System::set_block_number(30);
 				// Only BTC pool is enabled
 				test_mnt_speeds(0, 0, 100_000_000_000_000_000);

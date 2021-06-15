@@ -106,8 +106,6 @@ pub mod module {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Trying to enable already enabled minting for pool
-		MntMintingAlreadyEnabled,
 		/// Trying to disable MNT minting that wasn't enabled
 		MntMintingNotEnabled,
 		/// Arithmetic calculation overflow
@@ -125,13 +123,8 @@ pub mod module {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// MNT minting enabled for pool
-		MntMintingEnabled(CurrencyId, Balance),
-
-		/// MNT minting disabled for pool
-		MntMintingDisabled(CurrencyId),
-
-		/// MNT speed had been changed for pool
+		/// MNT speed had been changed for a pool
+		/// (pool_id, new_speed)
 		MntSpeedChanged(CurrencyId, Balance),
 
 		/// Emitted when MNT is distributed to a supplier
@@ -214,14 +207,10 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(T::MntTokenWeightInfo::enable_mnt_minting())]
+		#[pallet::weight(T::MntTokenWeightInfo::set_speed())]
 		#[transactional]
-		/// Enable MNT minting for pool and recalculate MntSpeeds
-		pub fn enable_mnt_minting(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			speed: Balance,
-		) -> DispatchResultWithPostInfo {
+		/// Disable MNT minting for pool and recalculate MntSpeeds
+		pub fn set_speed(origin: OriginFor<T>, currency_id: CurrencyId, speed: Balance) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				currency_id.is_supported_underlying_asset(),
@@ -231,59 +220,18 @@ pub mod module {
 				T::LiquidityPoolsManager::pool_exists(&currency_id),
 				Error::<T>::PoolNotFound
 			);
-			ensure!(
-				!MntSpeeds::<T>::contains_key(currency_id),
-				Error::<T>::MntMintingAlreadyEnabled
-			);
 			Self::update_mnt_supply_index(currency_id)?;
 			Self::update_mnt_borrow_index(currency_id)?;
-			MntSpeeds::<T>::insert(currency_id, speed);
-			MntPoolsState::<T>::insert(currency_id, MntPoolState::new());
-			Self::deposit_event(Event::MntMintingEnabled(currency_id, speed));
-			Ok(().into())
-		}
 
-		#[pallet::weight(T::MntTokenWeightInfo::disable_mnt_minting())]
-		#[transactional]
-		/// Disable MNT minting for pool and recalculate MntSpeeds
-		pub fn disable_mnt_minting(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
-			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				currency_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
-			ensure!(
-				MntSpeeds::<T>::contains_key(currency_id),
-				Error::<T>::MntMintingNotEnabled
-			);
-			Self::update_mnt_supply_index(currency_id)?;
-			Self::update_mnt_borrow_index(currency_id)?;
-			MntSpeeds::<T>::remove(currency_id);
-			MntPoolsState::<T>::remove(currency_id);
-			Self::deposit_event(Event::MntMintingDisabled(currency_id));
-			Ok(().into())
-		}
-
-		#[pallet::weight(T::MntTokenWeightInfo::update_speed())]
-		#[transactional]
-		/// Disable MNT minting for pool and recalculate MntSpeeds
-		pub fn update_speed(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			speed: Balance,
-		) -> DispatchResultWithPostInfo {
-			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				currency_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
-			ensure!(
-				MntSpeeds::<T>::contains_key(currency_id),
-				Error::<T>::MntMintingNotEnabled
-			);
-			Self::update_mnt_supply_index(currency_id)?;
-			Self::update_mnt_borrow_index(currency_id)?;
-			MntSpeeds::<T>::insert(currency_id, speed);
+			if speed == Balance::zero() {
+				MntSpeeds::<T>::remove(currency_id);
+				MntPoolsState::<T>::remove(currency_id);
+			} else {
+				MntSpeeds::<T>::insert(currency_id, speed);
+				if !MntPoolsState::<T>::contains_key(currency_id) {
+					MntPoolsState::<T>::insert(currency_id, MntPoolState::new());
+				}
+			}
 			Self::deposit_event(Event::MntSpeedChanged(currency_id, speed));
 			Ok(().into())
 		}
@@ -472,7 +420,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
 		// We use total_balance (not free balance). Because sum of balances should be equal to
-		// total_issuance. Otherwise, mnt_rate calculation will not be correct.
+		// total_issuance. Otherwise, calculations will not be correct.
 		// (see total_tokens_supply in update_mnt_supply_index)
 		let supplier_balance = Rate::from_inner(T::MultiCurrency::total_balance(wrapped_asset_id, supplier));
 

@@ -3,8 +3,8 @@ use super::utils::{
 };
 use crate::{
 	AccountId, Balance, Currencies, EnabledUnderlyingAssetsIds, EnabledWrappedTokensId, LiquidityPools,
-	LiquidityPoolsModuleId, MinterestProtocol, MntToken, MntTokenModuleId, Origin, Rate, Runtime, System, BTC, DOLLARS,
-	DOT, ETH, KSM, MBTC, MDOT, MNT,
+	LiquidityPoolsModuleId, MinterestProtocol, MntTokenModuleId, Origin, Rate, Runtime, System, BTC, DOLLARS, DOT, ETH,
+	KSM, MBTC, MDOT, MNT,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
