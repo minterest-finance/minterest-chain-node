@@ -13,20 +13,44 @@ use codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use sp_runtime::{traits::Zero, RuntimeDebug};
 
-/// Vesting bucket type. Each bucket has its own rules for vesting.
-/// Each type of bucket differs from each other in the total number of tokens, the duration of
-/// the vesting, the beginning of the vesting.
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum VestingBucket {
-	Community,
-	PrivateSale,
-	PublicSale,
-	MarketMaking,
-	StrategicPartners,
-	Marketing,
-	Ecosystem,
-	Team,
+macro_rules! create_vesting_bucket_info {
+	($(#[$meta:meta])*
+	$vis:vis enum VestingBucket {
+		$($(#[$vmeta:meta])* $bucket_type:ident,)*
+	}) => {
+		$(#[$meta])*
+        $vis enum VestingBucket {
+            $($(#[$vmeta])* $bucket_type,)*
+        }
+
+		impl VestingBucket {
+			pub fn get_enabled_vesting_buckets() -> Vec<VestingBucket> {
+				let mut enabled_buckets = vec![];
+				$(
+					enabled_buckets.push(VestingBucket::$bucket_type);
+				)*
+				enabled_buckets
+			}
+		}
+	}
+}
+
+create_vesting_bucket_info! {
+	/// Vesting bucket type. Each bucket has its own rules for vesting.
+	/// Each type of bucket differs from each other in the total number of tokens, the duration of
+	/// the vesting, the beginning of the vesting.
+	#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, Hash)]
+	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+	pub enum VestingBucket {
+		Community,
+		PrivateSale,
+		PublicSale,
+		MarketMaking,
+		StrategicPartners,
+		Marketing,
+		Ecosystem,
+		Team,
+	}
 }
 
 impl VestingBucket {
@@ -197,5 +221,22 @@ mod tests {
 			Some(AccountId::from_string("5GfxgwrBUmYMKu6AeBAEzpYwC5TxrxRLJdg9oh2HrVnXQRs6").unwrap())
 		);
 		assert_eq!(VestingBucket::Ecosystem.bucket_account_id(), None);
+	}
+
+	#[test]
+	fn check_vesting_buckets_info() {
+		assert_eq!(
+			VestingBucket::get_enabled_vesting_buckets(),
+			vec![
+				VestingBucket::Community,
+				VestingBucket::PrivateSale,
+				VestingBucket::PublicSale,
+				VestingBucket::MarketMaking,
+				VestingBucket::StrategicPartners,
+				VestingBucket::Marketing,
+				VestingBucket::Ecosystem,
+				VestingBucket::Team
+			]
+		);
 	}
 }
