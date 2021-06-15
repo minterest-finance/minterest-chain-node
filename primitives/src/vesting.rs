@@ -4,6 +4,8 @@
 //! Constants declared: total amount of tokens for each bucket, vesting duration for each bucket,
 //! the beginning of the vesting for each bucket.
 
+#![allow(clippy::vec_init_then_push)]
+
 use crate::{
 	currency::{GetDecimals, MNT},
 	AccountId, Balance,
@@ -29,7 +31,7 @@ macro_rules! create_vesting_bucket_info {
 			/// Returns information for each vesting bucket:
 			/// (vesting bucket type, vesting_duration, unlock_begins_in_days, total_amount)
 			pub fn get_vesting_buckets_info() -> Vec<(VestingBucket, u8, u8, Balance)> {
-				let mut enabled_buckets: Vec<(VestingBucket, u8, u8, Balance)>  = vec![];
+				let mut enabled_buckets: Vec<(VestingBucket, u8, u8, Balance)> = vec![];
 				$(
 					enabled_buckets.push((
 						VestingBucket::$bucket_type,

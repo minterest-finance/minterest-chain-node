@@ -31,6 +31,7 @@ parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const MinVestedTransfer: u128 = 5 * DOLLARS;
 	pub const MaxVestingSchedules: u32 = 2;
+	pub VestingBucketsInfo: Vec<(VestingBucket, u8, u8, Balance)> = VestingBucket::get_vesting_buckets_info();
 }
 
 ord_parameter_types! {
@@ -53,6 +54,7 @@ impl Config for Runtime {
 	type VestedTransferOrigin = EnsureSignedBy<ADMIN, AccountId>;
 	type WeightInfo = ();
 	type MaxVestingSchedules = MaxVestingSchedules;
+	type VestingBucketsInfo = VestingBucketsInfo;
 }
 
 #[derive(Default)]
