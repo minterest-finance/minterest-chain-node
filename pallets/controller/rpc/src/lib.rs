@@ -146,7 +146,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	/// Return:
 	/// - (supply_apy, borrow_apy, net_apy)
-	#[rpc(name = "controller_getUserSupplyBorrowAndNetApy")]
+	#[rpc(name = "controller_getUserTotalSupplyBorrowAndNetApy")]
 	fn get_user_total_supply_borrow_and_net_apy(
 		&self,
 		account_id: AccountId,

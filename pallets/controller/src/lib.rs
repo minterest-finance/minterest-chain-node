@@ -528,6 +528,7 @@ impl<T: Config> Pallet<T> {
 		let (total_supply_balance, total_borrowed_balance) =
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 				.iter()
+				.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
 				.try_fold(
 					(Balance::zero(), Balance::zero()),
 					|current_value, &pool_id| -> result::Result<(Balance, Balance), DispatchError> {
