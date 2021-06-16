@@ -230,6 +230,13 @@ pub mod module {
 			if speed.is_zero() {
 				MntSpeeds::<T>::remove(currency_id);
 			} else {
+				if !MntSpeeds::<T>::contains_key(currency_id) {
+					let current_block = frame_system::Module::<T>::block_number();
+					MntPoolsState::<T>::mutate(currency_id, |pool_state| {
+						pool_state.borrow_state.index_updated_at_block = current_block;
+						pool_state.supply_state.index_updated_at_block = current_block;
+					});
+				}
 				MntSpeeds::<T>::insert(currency_id, speed);
 				if !MntPoolsState::<T>::contains_key(currency_id) {
 					MntPoolsState::<T>::insert(currency_id, MntPoolState::new());
@@ -300,6 +307,12 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		// supply_state.mnt_distribution_index += ratio
 		// supply_state.index_updated_at_block = current_block_number
 
+		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
+		if mnt_speed.is_zero() {
+			// Distribution is off
+			return Ok(());
+		}
+
 		let current_block = frame_system::Module::<T>::block_number();
 		let mut pool_state = MntPoolsState::<T>::get(underlying_id);
 		let block_delta = current_block
@@ -311,35 +324,31 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			return Ok(());
 		}
 
-		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
-		if !mnt_speed.is_zero() {
-			let wrapped_asset_id = underlying_id
-				.wrapped_asset()
-				.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+		let wrapped_asset_id = underlying_id
+			.wrapped_asset()
+			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
-			let block_delta_as_u128 = TryInto::<u128>::try_into(block_delta).or(Err(Error::<T>::InternalError))?;
+		let block_delta_as_u128 = TryInto::<u128>::try_into(block_delta).or(Err(Error::<T>::InternalError))?;
 
-			let mnt_accrued = mnt_speed
-				.checked_mul(block_delta_as_u128)
-				.ok_or(Error::<T>::NumOverflow)?;
+		let mnt_accrued = mnt_speed
+			.checked_mul(block_delta_as_u128)
+			.ok_or(Error::<T>::NumOverflow)?;
 
-			let total_tokens_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
+		let total_tokens_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
 
-			let ratio = match total_tokens_supply.cmp(&Balance::zero()) {
-				Ordering::Greater => {
-					Rate::checked_from_rational(mnt_accrued, total_tokens_supply).ok_or(Error::<T>::NumOverflow)?
-				}
-				_ => Rate::zero(),
-			};
+		let ratio = match total_tokens_supply.cmp(&Balance::zero()) {
+			Ordering::Greater => {
+				Rate::checked_from_rational(mnt_accrued, total_tokens_supply).ok_or(Error::<T>::NumOverflow)?
+			}
+			_ => Rate::zero(),
+		};
 
-			pool_state.supply_state.mnt_distribution_index = pool_state
-				.supply_state
-				.mnt_distribution_index
-				.checked_add(&ratio)
-				.ok_or(Error::<T>::NumOverflow)?;
-		}
+		pool_state.supply_state.mnt_distribution_index = pool_state
+			.supply_state
+			.mnt_distribution_index
+			.checked_add(&ratio)
+			.ok_or(Error::<T>::NumOverflow)?;
 		pool_state.supply_state.index_updated_at_block = current_block;
-
 		MntPoolsState::<T>::insert(underlying_id, pool_state);
 		Ok(())
 	}
@@ -353,6 +362,12 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		// borrow_state.mnt_distribution_index(for current pool) += ratio
 		// borrow_state.index_updated_at_block = current_block_number
 
+		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
+		if mnt_speed.is_zero() {
+			// Distribution is off
+			return Ok(());
+		}
+
 		let current_block = frame_system::Module::<T>::block_number();
 		let mut pool_state = MntPoolsState::<T>::get(underlying_id);
 		let block_delta = current_block
@@ -364,35 +379,30 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			return Ok(());
 		}
 
-		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
-		if !mnt_speed.is_zero() {
-			let block_delta_as_u128 = TryInto::<u128>::try_into(block_delta).or(Err(Error::<T>::InternalError))?;
+		let block_delta_as_u128 = TryInto::<u128>::try_into(block_delta).or(Err(Error::<T>::InternalError))?;
 
-			let mnt_accrued = mnt_speed
-				.checked_mul(block_delta_as_u128)
-				.ok_or(Error::<T>::NumOverflow)?;
+		let mnt_accrued = mnt_speed
+			.checked_mul(block_delta_as_u128)
+			.ok_or(Error::<T>::NumOverflow)?;
 
-			let total_borrowed_as_rate =
-				Rate::from_inner(T::LiquidityPoolsManager::get_pool_total_borrowed(underlying_id));
+		let total_borrowed_as_rate = Rate::from_inner(T::LiquidityPoolsManager::get_pool_total_borrowed(underlying_id));
 
-			let borrow_amount = total_borrowed_as_rate
-				.checked_div(&T::LiquidityPoolsManager::get_pool_borrow_index(underlying_id))
-				.ok_or(Error::<T>::NumOverflow)?;
+		let borrow_amount = total_borrowed_as_rate
+			.checked_div(&T::LiquidityPoolsManager::get_pool_borrow_index(underlying_id))
+			.ok_or(Error::<T>::NumOverflow)?;
 
-			let ratio = match borrow_amount.cmp(&Rate::zero()) {
-				Ordering::Greater => Rate::from_inner(mnt_accrued)
-					.checked_div(&borrow_amount)
-					.ok_or(Error::<T>::NumOverflow)?,
-				_ => Rate::zero(),
-			};
+		let ratio = match borrow_amount.cmp(&Rate::zero()) {
+			Ordering::Greater => Rate::from_inner(mnt_accrued)
+				.checked_div(&borrow_amount)
+				.ok_or(Error::<T>::NumOverflow)?,
+			_ => Rate::zero(),
+		};
 
-			pool_state.borrow_state.mnt_distribution_index = pool_state
-				.borrow_state
-				.mnt_distribution_index
-				.checked_add(&ratio)
-				.ok_or(Error::<T>::NumOverflow)?;
-		}
-
+		pool_state.borrow_state.mnt_distribution_index = pool_state
+			.borrow_state
+			.mnt_distribution_index
+			.checked_add(&ratio)
+			.ok_or(Error::<T>::NumOverflow)?;
 		pool_state.borrow_state.index_updated_at_block = current_block;
 		MntPoolsState::<T>::insert(underlying_id, pool_state);
 		Ok(())
