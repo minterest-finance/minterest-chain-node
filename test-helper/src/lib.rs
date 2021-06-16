@@ -160,6 +160,7 @@ macro_rules! mock_impl_controller_config {
 			type MaxBorrowCap = MaxBorrowCap;
 			type UpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type ControllerWeightInfo = ();
+			type MntManager = mnt_token::Module<$target>;
 		}
 	};
 }
