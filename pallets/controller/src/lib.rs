@@ -525,14 +525,6 @@ impl<T: Config> Pallet<T> {
 	pub fn get_total_supply_and_borrowed_usd_balance(
 		who: &T::AccountId,
 	) -> result::Result<(Balance, Balance), DispatchError> {
-		/*let total_supply_and_borrow_in_usd = Self::get_vec_supply_and_borrow_balance(who)?;
-
-		let (total_supply_balance, total_borrowed_balance) = total_supply_and_borrow_in_usd.into_iter().fold(
-			(Balance::zero(), Balance::zero()),
-			|(total_supply, total_borrow), (_, supply_balance, borrow_balance)| -> (Balance, Balance) {
-				(total_supply + supply_balance, total_borrow + borrow_balance)
-			},
-		);*/
 		let (total_supply_balance, total_borrowed_balance) =
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 				.iter()
@@ -552,12 +544,7 @@ impl<T: Config> Pallet<T> {
 						}
 
 						let (current_supply_in_usd, current_borrowed_in_usd) = current_value;
-						let current_block_number = <frame_system::Module<T>>::block_number();
-						let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
-						// Calculate the number of blocks elapsed since the last accrual
-						let block_delta =
-							Self::calculate_block_delta(current_block_number, accrual_block_number_previous)?;
-						let pool_data = Self::calculate_interest_params(pool_id, block_delta)?;
+						let pool_data = Self::calculate_current_pool_data(pool_id)?;
 						let oracle_price =
 							T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
