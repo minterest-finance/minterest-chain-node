@@ -107,7 +107,7 @@ impl<BlockNumber: AtLeast32Bit + Copy> VestingSchedule<BlockNumber> {
 	/// Creates a new schedule with default parameters (period, period_count, per_period).
 	///
 	/// - `bucket`: vesting bucket type (must be `Team` or `Marketing` or `Strategic Partners`).
-	/// - `start`: the number of tokens for which need to create a schedule.
+	/// - `start`: the vesting schedule starting block.
 	/// - `amount`: the number of tokens for which need to create a schedule.
 	pub fn new_beginning_from(bucket: VestingBucket, start: BlockNumber, amount: Balance) -> Option<Self> {
 		if !bucket.is_manipulated_bucket() {
@@ -367,7 +367,7 @@ impl<T: Config> Pallet<T> {
 	fn locked_balance(who: &T::AccountId) -> Balance {
 		let now = <frame_system::Module<T>>::block_number();
 		<VestingSchedules<T>>::mutate_exists(who, |maybe_schedules| {
-			let total_locked = if let Some(schedules) = maybe_schedules.as_mut() {
+			let total_locked = if let Some(schedules) = maybe_schedules {
 				let mut total: Balance = Zero::zero();
 				// leave only schedules with a locked balance
 				schedules.retain(|s| {
@@ -422,7 +422,7 @@ impl<T: Config> Pallet<T> {
 			// `total_removed` - the balance to be sent from the user account to the bucket account
 			let (mut total_locked, mut total_removed) = (Balance::zero(), Balance::zero());
 
-			if let Some(schedules) = maybe_schedules.as_mut() {
+			if let Some(schedules) = maybe_schedules {
 				// leave only the schedules that are not deleted
 				schedules.retain(|schedule| {
 					if schedule.bucket == bucket {
