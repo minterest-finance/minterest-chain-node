@@ -143,6 +143,11 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts.push((user, currency_id, balance));
+		self
+	}
+
 	pub fn pool_user_data(
 		mut self,
 		pool_id: CurrencyId,

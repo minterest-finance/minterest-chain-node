@@ -207,9 +207,13 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Set MNT minting speed for pool.
+		/// - `currency_id`: currency id for which speed is being set
+		/// - `speed`: new minting speed. Zero speed means minting will be disabled.
+		///
+		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::MntTokenWeightInfo::set_speed())]
 		#[transactional]
-		/// Disable MNT minting for pool and recalculate MntSpeeds
 		pub fn set_speed(origin: OriginFor<T>, currency_id: CurrencyId, speed: Balance) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
@@ -223,9 +227,8 @@ pub mod module {
 			Self::update_mnt_supply_index(currency_id)?;
 			Self::update_mnt_borrow_index(currency_id)?;
 
-			if speed == Balance::zero() {
+			if speed.is_zero() {
 				MntSpeeds::<T>::remove(currency_id);
-				MntPoolsState::<T>::remove(currency_id);
 			} else {
 				MntSpeeds::<T>::insert(currency_id, speed);
 				if !MntPoolsState::<T>::contains_key(currency_id) {

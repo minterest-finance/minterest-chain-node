@@ -90,7 +90,7 @@ mod tests {
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), 499_999_978_624_951_827);
 
-				// Alice started taking part in DOT pool distribution at block 20 as a supplier
+				// Alice started taking part in DOT pool distribution at block 10 as a supplier
 				// mnt_balance = 0.5 MNT + 0.1(dot_speed) * 20(delta_blocks) * 100(supply) / 200(total_supply) = 1.5
 				// MNT
 				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
@@ -454,6 +454,72 @@ mod tests {
 					Currencies::free_balance(MNT, &TestMntToken::get_account_id()),
 					ONE_HUNDRED - (distributed_to_alice_for_eth_pool + distributed_to_alice_for_btc_pool)
 				);
+			})
+	}
+
+	// This scenarion works with one user and one pool.
+	// It checks that distribution works correctly after being stopped and resumed.
+	// Initial parameters: 	DOT - enabled in mnt minting;
+	// 						mnt_speed = 10 MNT per block;
+	// 1. Alice deposit() 100_000 DOT;
+	// 2. Alice claim_mnt(DOT)
+	// 3. Disable MNT distribution for DOT pool;
+	// 4. Enable MNT distribution for DOT pool;
+	// 5. Alice claim_mnt(DOT)
+	#[test]
+	fn test_mnt_token_scenario_n_4() {
+		ExtBuilder::default()
+			.pool_initial(DOT)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED)
+			.user_balance(ALICE, DOT, ONE_HUNDRED)
+			.user_balance(BOB, DOT, ONE_HUNDRED)
+			.mnt_enabled_pools(vec![(DOT, 10 * DOLLARS)])
+			.mnt_account_balance(ONE_HUNDRED)
+			.build()
+			.execute_with(|| {
+				assert!(mnt_token::MntSpeeds::<Test>::contains_key(DOT));
+				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(ETH));
+				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(BTC));
+				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(KSM));
+				// Initialize distribution of MNT tokens.
+				assert_ok!(MinterestProtocol::deposit_underlying(admin(), DOT, ONE_HUNDRED));
+				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), DOT));
+				assert_ok!(MinterestProtocol::borrow(admin(), DOT, 50_000 * DOLLARS));
+
+				System::set_block_number(10);
+
+				// ALice deposits DOT and enables her DOT pool as a collateral.
+				// At this moment Alice starts receiving (dot_speed / 2) MNT per block as a supplier
+				assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, ONE_HUNDRED));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+
+				System::set_block_number(20);
+
+				// Accrued MNT tokens are equal to zero, since distribution occurs only at
+				// the moment of repeated user interaction with the protocol
+				// (deposit, redeem, borrow, repay, transfer, claim).
+				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
+				assert_eq!(Tokens::free_balance(MNT, &ALICE), Balance::zero());
+
+				// Alice started taking part in DOT pool distribution at block 10 as a supplier
+				// mnt_balance = 10(dot_speed) * 10(delta_blocks) * 100(supply) / 200(total_supply) = 50 MNT
+				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
+				assert_eq!(Currencies::free_balance(MNT, &ALICE), 49_999_999_544_374_908_303);
+
+				// Disable DOT pool distribution
+				assert_ok!(TestMntToken::set_speed(admin(), DOT, Balance::zero()));
+
+				System::set_block_number(30);
+
+				assert_ok!(TestMntToken::set_speed(admin(), DOT, 10 * DOLLARS));
+
+				System::set_block_number(40);
+
+				// DOT pool distribution was resumed at block 30
+				// mnt_balance = 50 MNT (current) + 10(dot_speed) * 10(delta_blocks) * 100(supply) /
+				// 200(total_supply) = 100 MNT
+				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
+				assert_eq!(Currencies::free_balance(MNT, &ALICE), 99_999_999_088_749_816_606);
 			})
 	}
 

@@ -555,8 +555,10 @@ fn test_update_mnt_supply_index_simple() {
 #[test]
 fn test_minting_enable_disable() {
 	ExtBuilder::default()
+		.user_balance(ADMIN, MDOT, 100 * DOLLARS)
 		.pool_total_borrowed(DOT, 50 * DOLLARS)
 		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.mnt_account_balance(100 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Unable to enable minting for non existing pool
@@ -586,6 +588,8 @@ fn test_minting_enable_disable() {
 				.any(|record| record.event == speed_changed_event));
 			assert_eq!(MntToken::mnt_speeds(KSM), ksm_speed);
 
+			System::set_block_number(10);
+
 			// Disable MNT minting for DOT
 			assert_ok!(MntToken::set_speed(admin(), DOT, Balance::zero()));
 			let speed_changed_event = Event::mnt_token(crate::Event::MntSpeedChanged(DOT, Balance::zero()));
@@ -593,6 +597,16 @@ fn test_minting_enable_disable() {
 				.iter()
 				.any(|record| record.event == speed_changed_event));
 			assert!(!crate::MntSpeeds::<Runtime>::contains_key(DOT));
+			assert_ne!(
+				MntToken::mnt_pools_state(DOT).borrow_state.mnt_distribution_index,
+				Rate::one()
+			);
+			assert_ne!(
+				MntToken::mnt_pools_state(DOT).supply_state.mnt_distribution_index,
+				Rate::one()
+			);
+			assert_eq!(MntToken::mnt_pools_state(DOT).borrow_state.index_updated_at_block, 10);
+			assert_eq!(MntToken::mnt_pools_state(DOT).supply_state.index_updated_at_block, 10);
 
 			// Try to disable minting for invalid underlying asset id
 			assert_noop!(
