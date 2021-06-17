@@ -66,7 +66,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill, Perquintill};
 
 use frame_support::traits::Contains;
-use frame_system::{EnsureOneOf, EnsureRoot, EnsureSigned};
+use frame_system::{EnsureOneOf, EnsureRoot};
 pub use minterest_primitives::{
 	constants::{currency::*, time::*, *},
 	currency::*,
@@ -578,8 +578,7 @@ impl module_vesting::Config for Runtime {
 	type Event = Event;
 	type Currency = pallet_balances::Module<Runtime>;
 	type MinVestedTransfer = MinVestedTransfer;
-	// FIXME:  fix it sudo + 1/3 MinterestCouncil
-	type VestedTransferOrigin = EnsureSigned<AccountId>;
+	type VestedTransferOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	// FIXME: implement weights
 	type WeightInfo = ();
 	type MaxVestingSchedules = MaxVestingSchedules;

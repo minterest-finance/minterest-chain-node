@@ -20,7 +20,7 @@ pub const METH: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::METH);
 
 #[macro_export]
 macro_rules! mock_impl_system_config {
-	($target:ty) => {
+	($target:ty, $account_id:ty) => {
 		parameter_types! {
 			pub const MockBlockHashCount: u64 = 250;
 			pub const MockSS58Prefix: u8 = 42;
@@ -37,7 +37,7 @@ macro_rules! mock_impl_system_config {
 			type BlockNumber = u64;
 			type Hash = H256;
 			type Hashing = BlakeTwo256;
-			type AccountId = u64;
+			type AccountId = $account_id;
 			type Lookup = IdentityLookup<Self::AccountId>;
 			type Header = Header;
 			type Event = Event;
@@ -50,6 +50,10 @@ macro_rules! mock_impl_system_config {
 			type SystemWeightInfo = ();
 			type SS58Prefix = MockSS58Prefix;
 		}
+	};
+
+	($target:ty) => {
+		mock_impl_system_config!($target, u64);
 	};
 }
 

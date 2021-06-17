@@ -1,7 +1,7 @@
 {
   "PrivateSale": [
     {
-      "account": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+      "account": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
       "amount": 10001000000000000000000000
     }],
   "PublicSale": [
@@ -11,7 +11,7 @@
     }],
   "MarketMaking": [
     {
-      "account": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+      "account": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
       "amount": 3000000000000000000000000
     }],
   "StrategicPartners": [

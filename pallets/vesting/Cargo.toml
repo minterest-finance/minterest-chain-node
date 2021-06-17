@@ -20,6 +20,7 @@ minterest-primitives = { path = "../../primitives", default-features = false }
 [dev-dependencies]
 sp-core = { version = "3.0.0", default-features = false }
 pallet-balances = "3.0.0"
+test-helper = { path = "../../test-helper" }
 
 [features]
 default = ["std"]
