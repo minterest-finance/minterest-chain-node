@@ -26,9 +26,6 @@ fn collects_sales_list_should_work_2_2() {
 				(ETH, Price::saturating_from_integer(1_500)),
 				(BTC, Price::saturating_from_integer(50_000)),
 			];
-
-			MinterestOracle::on_finalize(0);
-
 			assert_ok!(MinterestOracle::feed_values(origin_of(ORACLE1::get().clone()), prices));
 
 			/*
@@ -86,8 +83,6 @@ fn balance_liquidation_pools_should_work() {
 				(ETH, Price::saturating_from_integer(5)),
 				(BTC, Price::saturating_from_integer(10)),
 			];
-
-			MinterestOracle::on_finalize(0);
 
 			assert_ok!(MinterestOracle::feed_values(origin_of(ORACLE1::get().clone()), prices));
 			/*
@@ -178,10 +173,7 @@ fn balance_liquidation_pools_two_pools_should_work_test() {
 			let prices: Vec<(CurrencyId, Price)> = vec![
 				(DOT, Price::saturating_from_integer(2)),
 				(ETH, Price::saturating_from_integer(4)),
-				(BTC, Price::saturating_from_integer(0)), // unused
-				(KSM, Price::saturating_from_integer(0)), // unused
 			];
-			MinterestOracle::on_finalize(0);
 			assert_ok!(MinterestOracle::feed_values(origin_of(ORACLE1::get().clone()), prices));
 			/*
 			Liquidity Pools balances (in assets): [500_000, 300_000]
