@@ -330,7 +330,7 @@ runtime_benchmarks! {
 		supply_balance = 0 + (2 * 50 * 0.5) * 4 = 200 MNT
 		Borrow: prev + speed_pool * block_delta * borrower_borrow / total_borrow
 		borrow_balance = 0 + (2 * 50 * 0.5) * 4 = 200 MNT
-		accrued MNT tokens: 250 + 250 = ~400_000 MNT
+		accrued MNT tokens: 200 + 200 = ~400_000 MNT
 		 */
 		assert_eq!(Currencies::free_balance(MNT, &borrower), 399_999_967_375_002_687_652)
 	}

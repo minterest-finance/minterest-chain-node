@@ -14,7 +14,7 @@ runtime_benchmarks! {
 		create_pools(&pools);
 		prepare_for_mnt_distribution(pools)?;
 		System::set_block_number(10);
-		MntToken::set_speed(RawOrigin::Root.into(), DOT, 0)?;
+		MntToken::set_speed(RawOrigin::Root.into(), DOT, 1)?;
 		System::set_block_number(11);
 	}: _(RawOrigin::Root, DOT, 10 * DOLLARS)
 }
