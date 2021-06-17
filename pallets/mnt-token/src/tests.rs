@@ -604,10 +604,11 @@ fn test_minting_enable_disable() {
 
 			System::set_block_number(5);
 
-			//FIXME: Should we write information to the storage when disable an already disabled pool?
-			// Maybe we should throw an error in this case?
-			assert_ok!(MntToken::set_speed(admin(), KSM, Balance::zero()));
-			check_mnt_storage(KSM, Balance::zero(), Rate::one(), Rate::one(), 5);
+			// Unable to disable an already disabled pool
+			assert_noop!(
+				MntToken::set_speed(admin(), KSM, Balance::zero()),
+				Error::<Runtime>::MntMintingNotEnabled
+			);
 
 			// Enable the distribution of MNT tokens in the KSM liquidity pool
 			let ksm_speed = 2 * DOLLARS;

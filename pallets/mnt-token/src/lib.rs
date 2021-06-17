@@ -227,9 +227,16 @@ pub mod module {
 			Self::update_mnt_supply_index(currency_id)?;
 			Self::update_mnt_borrow_index(currency_id)?;
 
+			// New speed is zero. Disable distribution.
 			if speed.is_zero() {
+				ensure!(
+					MntSpeeds::<T>::contains_key(currency_id),
+					Error::<T>::MntMintingNotEnabled
+				);
 				MntSpeeds::<T>::remove(currency_id);
 			} else {
+				// Distribution is currently off.
+				// Update 'index_updated_at_block' and leave indices unchanged.
 				if !MntSpeeds::<T>::contains_key(currency_id) {
 					let current_block = frame_system::Module::<T>::block_number();
 					MntPoolsState::<T>::mutate(currency_id, |pool_state| {
@@ -238,9 +245,6 @@ pub mod module {
 					});
 				}
 				MntSpeeds::<T>::insert(currency_id, speed);
-				if !MntPoolsState::<T>::contains_key(currency_id) {
-					MntPoolsState::<T>::insert(currency_id, MntPoolState::new());
-				}
 			}
 			Self::deposit_event(Event::MntSpeedChanged(currency_id, speed));
 			Ok(().into())
@@ -300,6 +304,7 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 	/// Update mnt supply index for pool
+	/// Do nothing in case if distribution is off or index have already been updated in this block.
 	fn update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult {
 		// block_delta = current_block_number - supply_state.index_updated_at_block
 		// mnt_accrued = block_delta * mnt_speed
@@ -354,6 +359,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 	}
 
 	/// Update mnt borrow index for pool
+	/// Do nothing in case if distribution is off or index have already been updated in this block.
 	fn update_mnt_borrow_index(underlying_id: CurrencyId) -> DispatchResult {
 		// block_delta = current_block_number - borrow_state.index_updated_at_block
 		// mnt_accrued = delta_blocks * mnt_speed
