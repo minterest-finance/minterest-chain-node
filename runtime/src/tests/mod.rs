@@ -22,7 +22,6 @@ use prices_rpc_runtime_api::runtime_decl_for_PricesRuntimeApi::PricesRuntimeApi;
 use risk_manager::RiskManagerData;
 use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};
 use test_helper::{BTC, DOT, ETH, KSM, MDOT, METH, MNT};
-mod liquidation_tests;
 mod misc;
 mod rpc_tests;
 use frame_support::pallet_prelude::{DispatchResultWithPostInfo, PhantomData};

@@ -11,13 +11,17 @@
 
 #[cfg(test)]
 mod tests {
+	use controller::{ControllerData, PauseKeeper};
+	use frame_support::traits::Contains;
 	use frame_support::{assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
 	use frame_system::{offchain::SendTransactionTypes, EnsureSignedBy};
 	use liquidity_pools::{Pool, PoolUserData};
+	use minterest_model::MinterestModelData;
 	pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 	use minterest_primitives::{Balance, CurrencyId, Price, Rate};
-	use minterest_protocol::PoolInitData;
+	use minterest_protocol::{Error as MinterestProtocolError, PoolInitData};
 	use orml_traits::{parameter_type_with_key, MultiCurrency};
+	use pallet_traits::{PoolsManager, PricesManager};
 	use sp_core::H256;
 	use sp_runtime::{
 		testing::{Header, TestXt},
@@ -25,16 +29,13 @@ mod tests {
 		transaction_validity::TransactionPriority,
 		FixedPointNumber, ModuleId,
 	};
-
-	use controller::{ControllerData, PauseKeeper};
-	use frame_support::traits::Contains;
-	use minterest_model::MinterestModelData;
-	use minterest_protocol::Error as MinterestProtocolError;
-	use pallet_traits::{PoolsManager, PricesManager};
 	use sp_std::cell::RefCell;
+	use std::collections::HashMap;
+	use std::thread;
 	use test_helper::*;
 
 	mod controller_tests;
+	mod liquidation_tests;
 	mod liquidity_pools_tests;
 	mod minterest_model_tests;
 	mod minterest_protocol_tests;
@@ -73,8 +74,8 @@ mod tests {
 	}
 
 	parameter_types! {
-		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
-		pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"lqdy/min");
+		pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"lqdn/min");
 		pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
 		pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 		pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
@@ -98,11 +99,34 @@ mod tests {
 	mock_impl_mnt_token_config!(Test, ZeroAdmin);
 	mock_impl_risk_manager_config!(Test, ZeroAdmin);
 
+	thread_local! {
+		static UNDERLYING_PRICE: RefCell<HashMap<CurrencyId, Price>> = RefCell::new(
+			[
+				(DOT, Price::one()),
+				(ETH, Price::one()),
+				(BTC, Price::one()),
+				(KSM, Price::one()),
+			]
+			.iter()
+			.cloned()
+			.collect());
+	}
+
 	pub struct MockPriceSource;
+	impl MockPriceSource {
+		pub fn set_underlying_price(currency_id: CurrencyId, price: Price) {
+			UNDERLYING_PRICE.with(|v| v.borrow_mut().insert(currency_id, price));
+		}
+	}
 
 	impl PricesManager<CurrencyId> for MockPriceSource {
-		fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
-			Some(Price::one())
+		fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
+			if currency_id == BTC {
+				// This sleep is need to emulate hard computation in offchain worker.
+				let one_sec = std::time::Duration::from_millis(1000);
+				thread::sleep(one_sec);
+			}
+			UNDERLYING_PRICE.with(|v| v.borrow().get(&currency_id).copied())
 		}
 
 		fn lock_price(_currency_id: CurrencyId) {}
@@ -135,6 +159,9 @@ mod tests {
 	pub const ONE_HUNDRED: Balance = 100_000 * DOLLARS;
 	pub const BALANCE_ZERO: Balance = 0;
 	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
+	pub fn dollars(amount: u128) -> u128 {
+		amount.saturating_mul(Price::accuracy())
+	}
 	pub const RATE_ZERO: Rate = Rate::from_inner(0);
 	pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
 
@@ -262,6 +289,12 @@ mod tests {
 			self
 		}
 
+		pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+			self.endowed_accounts
+				.push((TestLiquidationPools::pools_account_id(), currency_id, balance));
+			self
+		}
+
 		pub fn pool_total_borrowed(mut self, pool_id: CurrencyId, total_borrowed: Balance) -> Self {
 			self.pools.push((
 				pool_id,
@@ -378,5 +411,11 @@ mod tests {
 			ext.execute_with(|| System::set_block_number(1));
 			ext
 		}
+	}
+
+	pub(crate) fn set_prices_for_assets(prices: Vec<(CurrencyId, Price)>) {
+		prices.into_iter().for_each(|(currency_id, price)| {
+			MockPriceSource::set_underlying_price(currency_id, price);
+		});
 	}
 }
