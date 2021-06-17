@@ -66,6 +66,7 @@ parameter_types! {
 
 pub struct MockDataProvider;
 impl DataProvider<CurrencyId, Price> for MockDataProvider {
+	// This function is only called after the token price is unlocked
 	fn get(currency_id: &CurrencyId) -> Option<Price> {
 		match currency_id {
 			&DOT => Some(Price::saturating_from_integer(5)),
@@ -75,6 +76,8 @@ impl DataProvider<CurrencyId, Price> for MockDataProvider {
 				thread::sleep(one_sec);
 				Some(Price::saturating_from_integer(2))
 			}
+			&KSM => Some(Price::saturating_from_integer(2)),
+			&ETH => Some(Price::saturating_from_integer(2)),
 			_ => panic!("Price for this currency wasn't set"),
 		}
 	}
@@ -148,6 +151,9 @@ impl Contains<u64> for WhitelistMembers {
 
 pub const ONE_HUNDRED: Balance = 100;
 pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
+pub fn dollars(amount: u128) -> u128 {
+	amount.saturating_mul(Price::accuracy())
+}
 pub const ADMIN: AccountId = 0;
 pub fn admin() -> Origin {
 	Origin::signed(ADMIN)
@@ -155,6 +161,14 @@ pub fn admin() -> Origin {
 pub const ALICE: AccountId = 1;
 pub fn alice() -> Origin {
 	Origin::signed(ALICE)
+}
+pub const BOB: AccountId = 2;
+pub fn bob() -> Origin {
+	Origin::signed(BOB)
+}
+pub const CHARLIE: AccountId = 3;
+pub fn charlie() -> Origin {
+	Origin::signed(CHARLIE)
 }
 
 pub struct ExtBuilder {
@@ -218,15 +232,58 @@ impl ExtBuilder {
 		));
 		self
 	}
+
+	pub fn pool_user_data(
+		mut self,
+		pool_id: CurrencyId,
+		user: AccountId,
+		total_borrowed: Balance,
+		interest_index: Rate,
+		is_collateral: bool,
+		liquidation_attempts: u8,
+	) -> Self {
+		self.pool_user_data.push((
+			pool_id,
+			user,
+			PoolUserData {
+				total_borrowed,
+				interest_index,
+				is_collateral,
+				liquidation_attempts,
+			},
+		));
+		self
+	}
+
+	pub fn pool_total_borrowed(mut self, pool_id: CurrencyId, total_borrowed: Balance) -> Self {
+		self.pools.push((
+			pool_id,
+			Pool {
+				total_borrowed,
+				borrow_index: Rate::one(),
+				total_protocol_interest: Balance::zero(),
+			},
+		));
+		self
+	}
+
 	pub fn liquidity_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((TestPools::pools_account_id(), currency_id, balance));
 		self
 	}
+
+	pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts
+			.push((LiquidationPools::pools_account_id(), currency_id, balance));
+		self
+	}
+
 	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts.push((user, currency_id, balance));
 		self
 	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 

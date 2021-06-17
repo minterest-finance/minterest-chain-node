@@ -12,10 +12,6 @@ use sp_runtime::traits::{BadOrigin, Zero};
 use minterest_primitives::Price;
 use test_helper::offchain_ext::OffChainExtWithHooks;
 
-fn liquidation_pool_balance(pool_id: CurrencyId) -> Balance {
-	Currencies::free_balance(pool_id, &TestLiquidationPools::pools_account_id())
-}
-
 #[test]
 fn offchain_worker_balancing_test() {
 	// balance ratio = 0.2 for two pools. Price the same.
@@ -323,15 +319,12 @@ fn collects_sales_list_should_work_2_2() {
 		.liquidation_pool_balance(BTC, 100_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			let prices: Vec<(CurrencyId, Option<Price>)> = vec![
-				(DOT, Some(Price::saturating_from_integer(30))),
-				(KSM, Some(Price::saturating_from_integer(5))),
-				(ETH, Some(Price::saturating_from_integer(1_500))),
-				(BTC, Some(Price::saturating_from_integer(50_000))),
-			];
-			prices.into_iter().for_each(|(currency_id, price)| {
-				MockPriceSource::set_underlying_price(currency_id, price);
-			});
+			set_prices_for_assets(vec![
+				(DOT, Price::saturating_from_integer(30)),
+				(KSM, Price::saturating_from_integer(5)),
+				(ETH, Price::saturating_from_integer(1_500)),
+				(BTC, Price::saturating_from_integer(50_000)),
+			]);
 
 			/*
 			Liquidity Pools balances (in assets): [2_700_000, 1_000_000, 2_500_000_000, 1_200_000]
@@ -382,15 +375,12 @@ fn balance_liquidation_pools_should_work() {
 		.dex_balance(BTC, 500_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			let prices: Vec<(CurrencyId, Option<Price>)> = vec![
-				(DOT, Some(Price::saturating_from_integer(1))),
-				(KSM, Some(Price::saturating_from_integer(2))),
-				(ETH, Some(Price::saturating_from_integer(5))),
-				(BTC, Some(Price::saturating_from_integer(10))),
-			];
-			prices.into_iter().for_each(|(currency_id, price)| {
-				MockPriceSource::set_underlying_price(currency_id, price);
-			});
+			set_prices_for_assets(vec![
+				(DOT, Price::saturating_from_integer(1)),
+				(KSM, Price::saturating_from_integer(2)),
+				(ETH, Price::saturating_from_integer(5)),
+				(BTC, Price::saturating_from_integer(10)),
+			]);
 
 			/*
 			Liquidity Pools balances (in assets): [500_000, 1_000_000, 1_500_000, 2_000_000]
@@ -480,13 +470,11 @@ fn balance_liquidation_pools_two_pools_should_work_test() {
 		.dex_balance(ETH, 500_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			let prices: Vec<(CurrencyId, Option<Price>)> = vec![
-				(DOT, Some(Price::saturating_from_integer(2))),
-				(ETH, Some(Price::saturating_from_integer(4))),
-			];
-			prices.into_iter().for_each(|(currency_id, price)| {
-				MockPriceSource::set_underlying_price(currency_id, price);
-			});
+			set_prices_for_assets(vec![
+				(DOT, Price::saturating_from_integer(2)),
+				(ETH, Price::saturating_from_integer(4)),
+			]);
+
 			/*
 			Liquidity Pools balances (in assets): [500_000, 300_000]
 			Liquidity Pools balances (in USD): [1_000_000, 1_200_000]

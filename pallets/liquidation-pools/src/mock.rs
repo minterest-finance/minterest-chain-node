@@ -17,6 +17,7 @@ use sp_runtime::{
 	FixedPointNumber,
 };
 use sp_std::cell::RefCell;
+use std::collections::HashMap;
 pub use test_helper::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -57,34 +58,28 @@ parameter_types! {
 }
 
 thread_local! {
-	static DOT_PRICE: RefCell<Option<Price>> = RefCell::new(Some(Price::one()));
-	static ETH_PRICE: RefCell<Option<Price>> = RefCell::new(Some(Price::one()));
-	static BTC_PRICE: RefCell<Option<Price>> = RefCell::new(Some(Price::one()));
-	static KSM_PRICE: RefCell<Option<Price>> = RefCell::new(Some(Price::one()));
+	static UNDERLYING_PRICE: RefCell<HashMap<CurrencyId, Price>> = RefCell::new(
+		[
+			(DOT, Price::one()),
+			(ETH, Price::one()),
+			(BTC, Price::one()),
+			(KSM, Price::one()),
+		]
+		.iter()
+		.cloned()
+		.collect());
 }
 
 pub struct MockPriceSource;
 impl MockPriceSource {
-	pub fn set_underlying_price(currency_id: CurrencyId, price: Option<Price>) {
-		match currency_id {
-			DOT => DOT_PRICE.with(|v| *v.borrow_mut() = price),
-			ETH => ETH_PRICE.with(|v| *v.borrow_mut() = price),
-			BTC => BTC_PRICE.with(|v| *v.borrow_mut() = price),
-			KSM => KSM_PRICE.with(|v| *v.borrow_mut() = price),
-			_ => panic!(),
-		}
+	pub fn set_underlying_price(currency_id: CurrencyId, price: Price) {
+		UNDERLYING_PRICE.with(|v| v.borrow_mut().insert(currency_id, price));
 	}
 }
 
 impl PricesManager<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
-		match currency_id {
-			DOT => DOT_PRICE.with(|v| *v.borrow_mut()),
-			ETH => ETH_PRICE.with(|v| *v.borrow_mut()),
-			BTC => BTC_PRICE.with(|v| *v.borrow_mut()),
-			KSM => KSM_PRICE.with(|v| *v.borrow_mut()),
-			_ => None,
-		}
+		UNDERLYING_PRICE.with(|v| v.borrow().get(&currency_id).copied())
 	}
 
 	fn lock_price(_currency_id: CurrencyId) {}
@@ -274,4 +269,14 @@ impl ExternalityBuilder {
 		ext.execute_with(|| System::set_block_number(1));
 		ext
 	}
+}
+
+pub(crate) fn set_prices_for_assets(prices: Vec<(CurrencyId, Price)>) {
+	prices.into_iter().for_each(|(currency_id, price)| {
+		MockPriceSource::set_underlying_price(currency_id, price);
+	});
+}
+
+pub(crate) fn liquidation_pool_balance(pool_id: CurrencyId) -> Balance {
+	Currencies::free_balance(pool_id, &TestLiquidationPools::pools_account_id())
 }
