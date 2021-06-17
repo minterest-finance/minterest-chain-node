@@ -369,13 +369,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		module_prices::GenesisConfig::<Runtime> {
-			locked_price: vec![
-				(DOT, Rate::saturating_from_integer(2)),
-				(KSM, Rate::saturating_from_integer(2)),
-				(ETH, Rate::saturating_from_integer(2)),
-				(BTC, Rate::saturating_from_integer(2)),
-				(MNT, Rate::saturating_from_integer(4)),
-			],
+			locked_price: vec![(MNT, Rate::saturating_from_integer(4))],
 			_phantom: PhantomData,
 		}
 		.assimilate_storage(&mut t)
