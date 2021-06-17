@@ -8,7 +8,7 @@ use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::{Pool, PoolUserData};
 pub use minterest_primitives::currency::CurrencyType::WrappedToken;
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
-use orml_traits::{parameter_type_with_key, DataFeeder, DataProvider};
+use orml_traits::{parameter_type_with_key, DataProvider};
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
@@ -16,6 +16,7 @@ use sp_runtime::{
 	FixedPointNumber, ModuleId,
 };
 use sp_std::cell::RefCell;
+use std::collections::HashMap;
 use std::thread;
 pub use test_helper::*;
 
@@ -36,7 +37,6 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
-		Prices: module_prices::{Module, Storage, Call, Event<T>, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
 		TestMinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
@@ -83,24 +83,11 @@ impl DataProvider<CurrencyId, Price> for MockDataProvider {
 	}
 }
 
-impl DataFeeder<CurrencyId, Price, AccountId> for MockDataProvider {
-	fn feed_value(_: AccountId, _: CurrencyId, _: Price) -> sp_runtime::DispatchResult {
-		Ok(())
-	}
-}
-
-impl module_prices::Config for Test {
-	type Event = Event;
-	type Source = MockDataProvider;
-	type LockOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-	type WeightInfo = ();
-}
-
 pub struct WhitelistMembers;
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
 mock_impl_orml_currencies_config!(Test);
-mock_impl_liquidity_pools_config!(Test, Prices);
+mock_impl_liquidity_pools_config!(Test);
 mock_impl_liquidation_pools_config!(Test);
 mock_impl_controller_config!(Test, ZeroAdmin);
 mock_impl_minterest_model_config!(Test, ZeroAdmin);
@@ -110,11 +97,34 @@ mock_impl_risk_manager_config!(Test, ZeroAdmin);
 mock_impl_mnt_token_config!(Test, ZeroAdmin);
 mock_impl_balances_config!(Test);
 
+thread_local! {
+	static UNDERLYING_PRICE: RefCell<HashMap<CurrencyId, Price>> = RefCell::new(
+		[
+			(DOT, Price::one()),
+			(ETH, Price::one()),
+			(BTC, Price::one()),
+			(KSM, Price::one()),
+		]
+		.iter()
+		.cloned()
+		.collect());
+}
+
 pub struct MockPriceSource;
+impl MockPriceSource {
+	pub fn set_underlying_price(currency_id: CurrencyId, price: Price) {
+		UNDERLYING_PRICE.with(|v| v.borrow_mut().insert(currency_id, price));
+	}
+}
 
 impl PricesManager<CurrencyId> for MockPriceSource {
-	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
-		Some(Price::one())
+	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
+		if currency_id == BTC {
+			// This sleep is need to emulate hard computation in offchain worker.
+			let one_sec = std::time::Duration::from_millis(1000);
+			thread::sleep(one_sec);
+		}
+		UNDERLYING_PRICE.with(|v| v.borrow().get(&currency_id).copied())
 	}
 
 	fn lock_price(_currency_id: CurrencyId) {}
@@ -163,13 +173,7 @@ pub fn alice() -> Origin {
 	Origin::signed(ALICE)
 }
 pub const BOB: AccountId = 2;
-pub fn bob() -> Origin {
-	Origin::signed(BOB)
-}
 pub const CHARLIE: AccountId = 3;
-pub fn charlie() -> Origin {
-	Origin::signed(CHARLIE)
-}
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -456,20 +460,22 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		module_prices::GenesisConfig::<Test> {
-			locked_price: vec![
-				(DOT, Rate::saturating_from_integer(10)),
-				(KSM, Rate::saturating_from_integer(10)),
-				(ETH, Rate::saturating_from_integer(10)),
-				(BTC, Rate::saturating_from_integer(10)),
-			],
-			_phantom: PhantomData,
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));
 		ext
 	}
+}
+
+pub(crate) fn set_price_for_all_assets(price: Price) {
+	CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+		.iter()
+		.for_each(|&currency_id| {
+			MockPriceSource::set_underlying_price(currency_id, price);
+		})
+}
+
+pub(crate) fn set_prices_for_assets(prices: Vec<(CurrencyId, Price)>) {
+	prices.into_iter().for_each(|(currency_id, price)| {
+		MockPriceSource::set_underlying_price(currency_id, price);
+	});
 }

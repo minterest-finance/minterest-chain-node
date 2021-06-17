@@ -9,8 +9,7 @@ use controller_rpc_runtime_api::{
 	UserPoolBalanceData,
 };
 use frame_support::{
-	assert_err, assert_noop, assert_ok, error::BadOrigin, pallet_prelude::GenesisBuild, parameter_types,
-	traits::OnFinalize,
+	assert_noop, assert_ok, error::BadOrigin, pallet_prelude::GenesisBuild, parameter_types, traits::OnFinalize,
 };
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::{Pool, PoolUserData};
@@ -88,32 +87,9 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
-		self.endowed_accounts.push((user, currency_id, balance));
-		self
-	}
-
-	pub fn liquidity_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-		self.endowed_accounts
-			.push((LiquidityPools::pools_account_id(), currency_id, balance));
-		self
-	}
-
 	pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((LiquidationPools::pools_account_id(), currency_id, balance));
-		self
-	}
-
-	pub fn pool_total_borrowed(mut self, pool_id: CurrencyId, total_borrowed: Balance) -> Self {
-		self.pools.push((
-			pool_id,
-			Pool {
-				total_borrowed,
-				borrow_index: Rate::one(),
-				total_protocol_interest: Balance::zero(),
-			},
-		));
 		self
 	}
 

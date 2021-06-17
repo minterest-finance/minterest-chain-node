@@ -1,16 +1,13 @@
 //! Tests for the risk-manager pallet.
-/// Unit tests for liquidation functions see in unit-tests for runtime.
 use super::*;
-use mock::{Event, *};
-
 use frame_support::{assert_err, assert_noop, assert_ok};
-use sp_runtime::{traits::BadOrigin, FixedPointNumber};
-
+use minterest_primitives::Price;
+use mock::{Event, *};
 use sp_core::offchain::{
 	testing::{TestOffchainExt, TestTransactionPoolExt},
 	OffchainExt, TransactionPoolExt,
 };
-
+use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 use test_helper::offchain_ext::OffChainExtWithHooks;
 
 #[test]
@@ -31,6 +28,8 @@ fn test_offchain_worker_lock_expired() {
 	ext.register_extension(TransactionPoolExt::new(pool));
 
 	ext.execute_with(|| {
+		set_price_for_all_assets(Price::saturating_from_integer(10));
+
 		System::set_block_number(2);
 		assert_ok!(TestMinterestProtocol::deposit_underlying(
 			alice(),
@@ -44,8 +43,8 @@ fn test_offchain_worker_lock_expired() {
 
 		System::set_block_number(4);
 		// Decrease DOT price. Now alice collateral isn't enough
-		// and loan shoud be liquidated
-		Prices::unlock_price(admin(), BTC).unwrap();
+		// and loan should be liquidated
+		set_prices_for_assets(vec![(BTC, Price::saturating_from_integer(2))]);
 
 		assert_ok!(TestRiskManager::_offchain_worker());
 
@@ -95,6 +94,8 @@ fn test_offchain_worker_simple_liquidation() {
 	ext.register_extension(TransactionPoolExt::new(pool));
 
 	ext.execute_with(|| {
+		set_price_for_all_assets(Price::saturating_from_integer(10));
+
 		System::set_block_number(2);
 		assert_ok!(TestMinterestProtocol::deposit_underlying(
 			alice(),
@@ -108,8 +109,8 @@ fn test_offchain_worker_simple_liquidation() {
 
 		System::set_block_number(4);
 		// Decrease DOT price. Now alice collateral isn't enough
-		// and loan shoud be liquidated
-		Prices::unlock_price(admin(), DOT).unwrap();
+		// and loan should be liquidated
+		set_prices_for_assets(vec![(DOT, Price::saturating_from_integer(5))]);
 
 		assert_ok!(TestRiskManager::_offchain_worker());
 
@@ -311,6 +312,9 @@ fn complete_liquidation_one_collateral_should_work() {
 		.pool_total_borrowed(DOT, dollars(90_000))
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all pools.
+			set_price_for_all_assets(Price::saturating_from_integer(2));
+
 			assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, DOT));
 
 			let expected_event = Event::risk_manager(crate::Event::LiquidateUnsafeLoan(
@@ -352,6 +356,9 @@ fn complete_liquidation_multi_collateral_should_work() {
 		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all pools.
+			set_price_for_all_assets(Price::saturating_from_integer(2));
+
 			assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, DOT));
 
 			let expected_event = Event::risk_manager(crate::Event::LiquidateUnsafeLoan(
@@ -390,6 +397,9 @@ fn partial_liquidation_one_collateral_should_work() {
 		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all pools.
+			set_price_for_all_assets(Price::saturating_from_integer(2));
+
 			assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, DOT));
 
 			let expected_event = Event::risk_manager(crate::Event::LiquidateUnsafeLoan(
@@ -431,6 +441,9 @@ fn partial_liquidation_multi_collateral_should_work() {
 		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all pools.
+			set_price_for_all_assets(Price::saturating_from_integer(2));
+
 			assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, DOT));
 
 			let expected_event = Event::risk_manager(crate::Event::LiquidateUnsafeLoan(
@@ -513,6 +526,9 @@ fn complete_liquidation_one_collateral_not_enough_balance_should_work() {
 		.pool_total_borrowed(DOT, dollars(90_000))
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all pools.
+			set_price_for_all_assets(Price::saturating_from_integer(2));
+
 			assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, DOT));
 
 			let expected_event = Event::risk_manager(crate::Event::LiquidateUnsafeLoan(
@@ -554,6 +570,9 @@ fn complete_liquidation_multi_collateral_not_enough_balance_should_work() {
 		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all pools.
+			set_price_for_all_assets(Price::saturating_from_integer(2));
+
 			assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, DOT));
 
 			let expected_event = Event::risk_manager(crate::Event::LiquidateUnsafeLoan(
@@ -599,6 +618,9 @@ fn partial_liquidation_multi_collateral_not_enough_balance_should_work() {
 		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all pools.
+			set_price_for_all_assets(Price::saturating_from_integer(2));
+
 			assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, DOT));
 
 			let expected_event = Event::risk_manager(crate::Event::LiquidateUnsafeLoan(
