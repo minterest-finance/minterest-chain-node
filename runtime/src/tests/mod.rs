@@ -1,5 +1,5 @@
 use crate::{
-	AccountId, Balance, Block, Controller, Currencies, Dex, EnabledUnderlyingAssetsIds, Event, LiquidationPools,
+	AccountId, Balance, Block, Controller, Currencies, EnabledUnderlyingAssetsIds, Event, LiquidationPools,
 	LiquidityPools, MinterestCouncilMembership, MinterestOracle, MinterestProtocol, MntToken, Prices, Rate,
 	RiskManager, Runtime, System, WhitelistCouncilMembership, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 };
@@ -18,12 +18,11 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Operation, Price};
 use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerManager, DEXManager, PoolsManager, PricesManager};
+use pallet_traits::{ControllerManager, PoolsManager, PricesManager};
 use prices_rpc_runtime_api::runtime_decl_for_PricesRuntimeApi::PricesRuntimeApi;
 use risk_manager::RiskManagerData;
 use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};
 use test_helper::{BTC, DOT, ETH, KSM, MDOT, METH, MNT};
-mod dexes_tests;
 mod liquidation_tests;
 mod misc;
 mod rpc_tests;
@@ -103,12 +102,6 @@ impl ExtBuilder {
 	pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((LiquidationPools::pools_account_id(), currency_id, balance));
-		self
-	}
-
-	pub fn dex_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-		self.endowed_accounts
-			.push((Dex::dex_account_id(), currency_id, balance));
 		self
 	}
 
@@ -392,15 +385,6 @@ impl ExtBuilder {
 fn pool_balance(pool_id: CurrencyId) -> Balance {
 	Currencies::free_balance(pool_id, &LiquidityPools::pools_account_id())
 }
-
-fn liquidation_pool_balance(pool_id: CurrencyId) -> Balance {
-	Currencies::free_balance(pool_id, &LiquidationPools::pools_account_id())
-}
-
-fn dex_balance(pool_id: CurrencyId) -> Balance {
-	Currencies::free_balance(pool_id, &Dex::dex_account_id())
-}
-
 fn get_protocol_total_value_rpc() -> Option<BalanceInfo> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_protocol_total_value()
 }
