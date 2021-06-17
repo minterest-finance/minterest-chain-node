@@ -572,6 +572,7 @@ impl dex::Config for Runtime {
 parameter_types! {
 	pub MinVestedTransfer: Balance = DOLLARS; // 1 USD
 	pub const MaxVestingSchedules: u32 = 2;
+	pub VestingBucketsInfo: Vec<(VestingBucket, u8, u8, Balance)> = VestingBucket::get_vesting_buckets_info();
 }
 
 impl module_vesting::Config for Runtime {
@@ -579,9 +580,9 @@ impl module_vesting::Config for Runtime {
 	type Currency = pallet_balances::Module<Runtime>;
 	type MinVestedTransfer = MinVestedTransfer;
 	type VestedTransferOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
-	// FIXME: implement weights
-	type WeightInfo = ();
+	type WeightInfo = weights::vesting::WeightInfo<Runtime>;
 	type MaxVestingSchedules = MaxVestingSchedules;
+	type VestingBucketsInfo = VestingBucketsInfo;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -926,6 +927,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, liquidation_pools, benchmarking::liquidation_pools);
 			add_benchmark!(params, batches, minterest_protocol, benchmarking::minterest_protocol);
 			add_benchmark!(params, batches, mnt_token, benchmarking::mnt_token);
+			add_benchmark!(params, batches, module_vesting, benchmarking::vesting);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

@@ -4,6 +4,8 @@
 //! Constants declared: total amount of tokens for each bucket, vesting duration for each bucket,
 //! the beginning of the vesting for each bucket.
 
+#![allow(clippy::vec_init_then_push)]
+
 use crate::{
 	currency::{GetDecimals, MNT},
 	AccountId, Balance,
@@ -12,21 +14,54 @@ use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{traits::Zero, RuntimeDebug};
+use sp_std::{prelude::Vec, vec};
 
-/// Vesting bucket type. Each bucket has its own rules for vesting.
-/// Each type of bucket differs from each other in the total number of tokens, the duration of
-/// the vesting, the beginning of the vesting.
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum VestingBucket {
-	Community,
-	PrivateSale,
-	PublicSale,
-	MarketMaking,
-	StrategicPartners,
-	Marketing,
-	Ecosystem,
-	Team,
+macro_rules! create_vesting_bucket_info {
+	($(#[$meta:meta])*
+	$vis:vis enum VestingBucket {
+		$($bucket_type:ident,)*
+	}) => {
+		$(#[$meta])*
+        $vis enum VestingBucket {
+            $($bucket_type,)*
+        }
+
+		impl VestingBucket {
+			/// This associated function is implemented for the frontend part of the protocol.
+			/// Returns information for each vesting bucket:
+			/// (vesting bucket type, vesting_duration, unlock_begins_in_days, total_amount)
+			pub fn get_vesting_buckets_info() -> Vec<(VestingBucket, u8, u8, Balance)> {
+				let mut enabled_buckets: Vec<(VestingBucket, u8, u8, Balance)> = vec![];
+				$(
+					enabled_buckets.push((
+						VestingBucket::$bucket_type,
+						VestingBucket::$bucket_type.vesting_duration(),
+						VestingBucket::$bucket_type.unlock_begins_in_days(),
+						VestingBucket::$bucket_type.total_amount(),
+					));
+				)*
+				enabled_buckets
+			}
+		}
+	}
+}
+
+create_vesting_bucket_info! {
+	/// Vesting bucket type. Each bucket has its own rules for vesting.
+	/// Each type of bucket differs from each other in the total number of tokens, the duration of
+	/// the vesting, the beginning of the vesting.
+	#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, Hash)]
+	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+	pub enum VestingBucket {
+		Community,
+		PrivateSale,
+		PublicSale,
+		MarketMaking,
+		StrategicPartners,
+		Marketing,
+		Ecosystem,
+		Team,
+	}
 }
 
 impl VestingBucket {
@@ -197,5 +232,62 @@ mod tests {
 			Some(AccountId::from_string("5GfxgwrBUmYMKu6AeBAEzpYwC5TxrxRLJdg9oh2HrVnXQRs6").unwrap())
 		);
 		assert_eq!(VestingBucket::Ecosystem.bucket_account_id(), None);
+	}
+
+	#[test]
+	fn check_vesting_buckets_info() {
+		assert_eq!(
+			VestingBucket::get_vesting_buckets_info(),
+			vec![
+				(
+					VestingBucket::Community,
+					5_u8,
+					0_u8,
+					50_032_400_000_000_000_000_000_000_u128
+				),
+				(
+					VestingBucket::PrivateSale,
+					1_u8,
+					0_u8,
+					10_001_000_000_000_000_000_000_000_u128
+				),
+				(
+					VestingBucket::PublicSale,
+					1_u8,
+					0_u8,
+					2_500_250_000_000_000_000_000_000_u128
+				),
+				(
+					VestingBucket::MarketMaking,
+					0_u8,
+					0_u8,
+					3_000_000_000_000_000_000_000_000_u128
+				),
+				(
+					VestingBucket::StrategicPartners,
+					2_u8,
+					0_u8,
+					1_949_100_000_000_000_000_000_000_u128
+				),
+				(
+					VestingBucket::Marketing,
+					1_u8,
+					0_u8,
+					4_000_400_000_000_000_000_000_000_u128
+				),
+				(
+					VestingBucket::Ecosystem,
+					4_u8,
+					0_u8,
+					4_499_880_000_000_000_000_000_000_u128
+				),
+				(
+					VestingBucket::Team,
+					5_u8,
+					182_u8,
+					24_017_000_000_000_000_000_000_000_u128
+				)
+			]
+		);
 	}
 }

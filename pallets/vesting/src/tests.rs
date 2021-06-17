@@ -1,7 +1,5 @@
 //! Unit tests for the vesting module.
 
-#![cfg(test)]
-
 use super::*;
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 use minterest_primitives::constants::currency::DOLLARS;
@@ -607,7 +605,7 @@ fn vesting_schedule_constructors_should_work() {
 	assert_eq!(schedule3.start, 1234);
 	assert_eq!(schedule3.period_count as u128, BLOCKS_PER_YEAR);
 	assert_eq!(schedule3.period, 1_u32);
-	// 1 MNT / 5256000 blocks ~ 0,00000019
+	// 10 MNT / 5256000 blocks ~ 0,0000019
 	assert_eq!(schedule3.per_period, Rate::from_inner(1902587519025_875190258751902587));
 
 	let schedule4: VestingSchedule<BlockNumber> =

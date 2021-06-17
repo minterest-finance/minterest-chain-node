@@ -10,11 +10,11 @@ use CurrencyType::*;
 macro_rules! create_currency_id {
 	($(#[$meta:meta])*
 	$vis:vis enum TokenSymbol {
-        $($(#[$vmeta:meta])* $symbol:ident($name:expr, $deci:literal, $ctype:ident) = $val:literal,)*
+        $($symbol:ident($name:expr, $deci:literal, $ctype:ident) = $val:literal,)*
     }) => {
         $(#[$meta])*
         $vis enum TokenSymbol {
-            $($(#[$vmeta])* $symbol = $val,)*
+            $($symbol = $val,)*
         }
 
 		impl TryFrom<u8> for TokenSymbol {
