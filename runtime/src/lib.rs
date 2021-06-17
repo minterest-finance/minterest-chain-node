@@ -485,7 +485,6 @@ impl risk_manager::Config for Runtime {
 
 parameter_types! {
 	pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
-	pub RefreshSpeedPeriod: BlockNumber = REFRESH_SPEED_PERIOD;
 }
 
 impl mnt_token::Config for Runtime {
@@ -497,7 +496,6 @@ impl mnt_token::Config for Runtime {
 	type ControllerManager = Controller;
 	type MntTokenAccountId = MntTokenAccountId;
 	type MntTokenWeightInfo = weights::mnt_token::WeightInfo<Runtime>;
-	type SpeedRefreshPeriod = RefreshSpeedPeriod;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime

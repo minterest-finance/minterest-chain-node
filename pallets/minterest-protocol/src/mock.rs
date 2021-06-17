@@ -3,7 +3,7 @@
 use super::*;
 use crate as minterest_protocol;
 use controller::{ControllerData, PauseKeeper};
-use frame_support::{assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
+use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
@@ -361,9 +361,8 @@ impl ExtBuilder {
 		.unwrap();
 
 		mnt_token::GenesisConfig::<Test> {
-			mnt_rate: 100_000_000_000_000_000, // 0.1
 			mnt_claim_threshold: 100 * DOLLARS,
-			minted_pools: vec![DOT, ETH],
+			minted_pools: vec![(DOT, DOLLARS / 10), (ETH, DOLLARS / 10)],
 			_phantom: Default::default(),
 		}
 		.assimilate_storage(&mut t)
@@ -373,11 +372,6 @@ impl ExtBuilder {
 		ext.execute_with(|| System::set_block_number(1));
 		ext
 	}
-}
-
-pub(crate) fn set_block_number_and_refresh_speeds(n: u64) {
-	System::set_block_number(n);
-	assert_ok!(TestMntToken::refresh_mnt_speeds());
 }
 
 pub(crate) fn create_dummy_pool_init_data() -> PoolInitData {
