@@ -12,7 +12,7 @@ use frame_support::{
 	assert_err, assert_noop, assert_ok, error::BadOrigin, pallet_prelude::GenesisBuild, parameter_types,
 	traits::OnFinalize,
 };
-use liquidation_pools::{LiquidationPoolData, Sales};
+use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Operation, Price};
@@ -23,7 +23,6 @@ use prices_rpc_runtime_api::runtime_decl_for_PricesRuntimeApi::PricesRuntimeApi;
 use risk_manager::RiskManagerData;
 use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};
 use test_helper::{BTC, DOT, ETH, KSM, MDOT, METH, MNT};
-mod balancing_pools_tests;
 mod dexes_tests;
 mod liquidation_tests;
 mod misc;
@@ -468,10 +467,6 @@ fn charlie() -> <Runtime as frame_system::Config>::Origin {
 
 fn origin_of(account_id: AccountId) -> <Runtime as frame_system::Config>::Origin {
 	<Runtime as frame_system::Config>::Origin::signed(account_id)
-}
-
-fn origin_none() -> <Runtime as frame_system::Config>::Origin {
-	<Runtime as frame_system::Config>::Origin::none()
 }
 
 fn origin_root() -> <Runtime as frame_system::Config>::Origin {

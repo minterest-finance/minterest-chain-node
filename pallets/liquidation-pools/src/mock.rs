@@ -16,6 +16,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 	FixedPointNumber,
 };
+use sp_std::cell::RefCell;
 pub use test_helper::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -55,11 +56,35 @@ parameter_types! {
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
+thread_local! {
+	static DOT_PRICE: RefCell<Option<Price>> = RefCell::new(Some(Price::one()));
+	static ETH_PRICE: RefCell<Option<Price>> = RefCell::new(Some(Price::one()));
+	static BTC_PRICE: RefCell<Option<Price>> = RefCell::new(Some(Price::one()));
+	static KSM_PRICE: RefCell<Option<Price>> = RefCell::new(Some(Price::one()));
+}
+
 pub struct MockPriceSource;
+impl MockPriceSource {
+	pub fn set_underlying_price(currency_id: CurrencyId, price: Option<Price>) {
+		match currency_id {
+			DOT => DOT_PRICE.with(|v| *v.borrow_mut() = price),
+			ETH => ETH_PRICE.with(|v| *v.borrow_mut() = price),
+			BTC => BTC_PRICE.with(|v| *v.borrow_mut() = price),
+			KSM => KSM_PRICE.with(|v| *v.borrow_mut() = price),
+			_ => panic!(),
+		}
+	}
+}
 
 impl PricesManager<CurrencyId> for MockPriceSource {
-	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
-		Some(Price::one())
+	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
+		match currency_id {
+			DOT => DOT_PRICE.with(|v| *v.borrow_mut()),
+			ETH => ETH_PRICE.with(|v| *v.borrow_mut()),
+			BTC => BTC_PRICE.with(|v| *v.borrow_mut()),
+			KSM => KSM_PRICE.with(|v| *v.borrow_mut()),
+			_ => None,
+		}
 	}
 
 	fn lock_price(_currency_id: CurrencyId) {}
@@ -165,6 +190,22 @@ impl Default for ExternalityBuilder {
 						max_ideal_balance: None,
 					},
 				),
+				(
+					BTC,
+					LiquidationPoolData {
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
+					},
+				),
+				(
+					KSM,
+					LiquidationPoolData {
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+						max_ideal_balance: None,
+					},
+				),
 			],
 		}
 	}
@@ -173,6 +214,18 @@ impl Default for ExternalityBuilder {
 impl ExternalityBuilder {
 	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts.push((user, currency_id, balance));
+		self
+	}
+
+	pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
+		self.liquidity_pools.push((
+			pool_id,
+			Pool {
+				total_borrowed: Balance::zero(),
+				borrow_index: Rate::one(),
+				total_protocol_interest: Balance::zero(),
+			},
+		));
 		self
 	}
 
@@ -185,6 +238,12 @@ impl ExternalityBuilder {
 	pub fn liquidity_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((TestLiquidityPools::pools_account_id(), currency_id, balance));
+		self
+	}
+
+	pub fn dex_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts
+			.push((TestDex::dex_account_id(), currency_id, balance));
 		self
 	}
 
