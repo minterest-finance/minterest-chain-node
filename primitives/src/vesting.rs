@@ -19,11 +19,11 @@ use sp_std::{prelude::Vec, vec};
 macro_rules! create_vesting_bucket_info {
 	($(#[$meta:meta])*
 	$vis:vis enum VestingBucket {
-		$($(#[$vmeta:meta])* $bucket_type:ident,)*
+		$($bucket_type:ident,)*
 	}) => {
 		$(#[$meta])*
         $vis enum VestingBucket {
-            $($(#[$vmeta])* $bucket_type,)*
+            $($bucket_type,)*
         }
 
 		impl VestingBucket {
