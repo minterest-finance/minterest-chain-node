@@ -19,12 +19,12 @@ mod tests {
 			.pool_initial(DOT)
 			.pool_initial(BTC)
 			.pool_initial(ETH)
-			.user_balance(ALICE, DOT, ONE_HUNDRED)
-			.user_balance(ALICE, BTC, ONE_HUNDRED)
-			.user_balance(ALICE, ETH, ONE_HUNDRED)
-			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
-			.pool_user_data(BTC, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
-			.pool_user_data(ETH, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
+			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false, 0)
+			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), false, 0)
+			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), false, 0)
 			.build()
 			.execute_with(|| {
 				// ALICE deposit 60 DOT, 50 BTC, 40 ETH.
@@ -74,8 +74,8 @@ mod tests {
 	fn set_protocol_interest_factor_greater_than_zero() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ALICE, DOT, ONE_HUNDRED)
-			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
@@ -102,7 +102,7 @@ mod tests {
 					alice_deposited_amount - alice_borrowed_amount_in_dot
 				);
 				// Checking total interest for DOT pool.
-				assert_eq!(TestPools::pools(DOT).total_protocol_interest, BALANCE_ZERO);
+				assert_eq!(TestPools::pools(DOT).total_protocol_interest, Balance::zero());
 
 				System::set_block_number(10);
 
@@ -125,7 +125,7 @@ mod tests {
 				);
 				assert_eq!(
 					TestPools::pools(DOT).total_protocol_interest,
-					BALANCE_ZERO + (expected_interest_accumulated / 2)
+					Balance::zero() + (expected_interest_accumulated / 2)
 				);
 			});
 	}
@@ -140,8 +140,8 @@ mod tests {
 	fn set_protocol_interest_factor_equal_zero() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ALICE, DOT, ONE_HUNDRED)
-			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
@@ -168,18 +168,18 @@ mod tests {
 					alice_deposited_amount - alice_borrowed_amount_in_dot
 				);
 				// Checking total interest for DOT pool.
-				assert_eq!(TestPools::pools(DOT).total_protocol_interest, BALANCE_ZERO);
+				assert_eq!(TestPools::pools(DOT).total_protocol_interest, Balance::zero());
 
 				System::set_block_number(10);
 
 				// Set interest factor equal to zero.
-				assert_ok!(TestController::set_protocol_interest_factor(admin(), DOT, RATE_ZERO));
+				assert_ok!(TestController::set_protocol_interest_factor(admin(), DOT, Rate::zero()));
 
 				// Alice repay full loan in DOTs.
 				assert_ok!(MinterestProtocol::repay_all(Origin::signed(ALICE), DOT));
 
 				// Checking pool total interest.
-				assert_eq!(TestPools::pools(DOT).total_protocol_interest, BALANCE_ZERO);
+				assert_eq!(TestPools::pools(DOT).total_protocol_interest, Balance::zero());
 			});
 	}
 }

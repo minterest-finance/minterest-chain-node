@@ -20,7 +20,6 @@ use std::collections::HashMap;
 use std::thread;
 pub use test_helper::*;
 
-pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -157,14 +156,6 @@ impl Contains<u64> for WhitelistMembers {
 		})
 	}
 }
-
-pub const ONE_HUNDRED: Balance = 100;
-pub const ADMIN: AccountId = 0;
-pub fn admin() -> Origin {
-	Origin::signed(ADMIN)
-}
-pub const BOB: AccountId = 2;
-pub const CHARLIE: AccountId = 3;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,

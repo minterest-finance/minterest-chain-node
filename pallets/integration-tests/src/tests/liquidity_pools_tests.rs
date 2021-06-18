@@ -10,8 +10,8 @@ mod tests {
 	fn get_exchange_rate_deposit() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ALICE, DOT, ONE_HUNDRED)
-			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, false, 0)
+			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false, 0)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
@@ -37,8 +37,8 @@ mod tests {
 	fn get_exchange_rate_deposit_and_borrow() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ALICE, DOT, ONE_HUNDRED)
-			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
@@ -74,10 +74,10 @@ mod tests {
 	fn get_exchange_rate_few_deposits_and_borrows() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ALICE, DOT, ONE_HUNDRED)
-			.user_balance(BOB, DOT, ONE_HUNDRED)
-			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
-			.pool_user_data(DOT, BOB, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, BOB, Balance::zero(), Rate::zero(), true, 0)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool

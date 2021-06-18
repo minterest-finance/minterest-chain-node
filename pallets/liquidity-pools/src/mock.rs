@@ -75,10 +75,6 @@ impl Default for ExtBuilder {
 	}
 }
 
-pub const BOB: AccountId = 2;
-pub const CHARLIE: AccountId = 3;
-pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
-pub const ONE_HUNDRED: Balance = 100;
 pub const TEN_THOUSAND: Balance = 10_000 * DOLLARS;
 
 impl ExtBuilder {

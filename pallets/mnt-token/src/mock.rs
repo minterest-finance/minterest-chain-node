@@ -54,10 +54,6 @@ mock_impl_controller_config!(Runtime, ZeroAdmin);
 mock_impl_balances_config!(Runtime);
 mock_impl_mnt_token_config!(Runtime, ZeroAdmin);
 
-pub const ADMIN: AccountId = 0;
-pub fn admin() -> Origin {
-	Origin::signed(ADMIN)
-}
 ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
 	pub const BlockHashCount: u64 = 250;

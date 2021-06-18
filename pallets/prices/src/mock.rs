@@ -63,11 +63,6 @@ impl module_prices::Config for Test {
 	type WeightInfo = ();
 }
 
-pub const BOB: AccountId = 2;
-pub fn bob() -> Origin {
-	Origin::signed(BOB)
-}
-
 pub struct ExtBuilder;
 
 impl Default for ExtBuilder {

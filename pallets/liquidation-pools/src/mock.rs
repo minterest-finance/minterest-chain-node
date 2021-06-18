@@ -121,7 +121,6 @@ where
 	type Extrinsic = Extrinsic;
 }
 
-pub const ADMIN: AccountId = 0;
 pub fn admin() -> Origin {
 	Origin::signed(ADMIN)
 }

@@ -145,27 +145,6 @@ mod tests {
 		}
 	}
 
-	pub const ADMIN: AccountId = 0;
-	pub const BOB: AccountId = 2;
-	pub const CAROL: AccountId = 3;
-	pub const ONE_HUNDRED: Balance = 100_000 * DOLLARS;
-	pub const BALANCE_ZERO: Balance = 0;
-	pub const RATE_ZERO: Rate = Rate::from_inner(0);
-	pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
-
-	pub fn admin() -> Origin {
-		Origin::signed(ADMIN)
-	}
-	pub fn alice() -> Origin {
-		Origin::signed(ALICE)
-	}
-	pub fn bob() -> Origin {
-		Origin::signed(BOB)
-	}
-	pub fn carol() -> Origin {
-		Origin::signed(CAROL)
-	}
-
 	pub struct ExtBuilder {
 		endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 		pools: Vec<(CurrencyId, Pool)>,

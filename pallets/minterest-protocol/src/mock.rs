@@ -123,15 +123,6 @@ impl Contains<u64> for WhitelistMembers {
 	}
 }
 
-pub const BOB: AccountId = 2;
-pub fn bob() -> Origin {
-	Origin::signed(BOB)
-}
-pub const ONE_MILL_DOLLARS: Balance = 1_000_000 * DOLLARS;
-pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
-pub const TEN_THOUSAND_DOLLARS: Balance = 10_000 * DOLLARS;
-pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
-
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,

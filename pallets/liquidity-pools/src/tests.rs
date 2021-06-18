@@ -228,7 +228,7 @@ fn update_state_on_borrow_should_work() {
 #[test]
 fn update_state_on_repay_should_work() {
 	ExtBuilder::default()
-		.user_balance(ALICE, DOT, ONE_HUNDRED_DOLLARS)
+		.user_balance(ALICE, DOT, ONE_HUNDRED)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_user_borrow_index(&ALICE, DOT), Rate::from_inner(0));
@@ -395,7 +395,7 @@ fn get_pool_members_with_loans_should_work() {
 		.pool_user_data_with_params(DOT, CHARLIE, 100, Rate::default(), true, 0)
 		.pool_user_data_with_params(BTC, ALICE, 0, Rate::default(), true, 0)
 		.pool_user_data_with_params(BTC, BOB, 0, Rate::default(), true, 0)
-		.pool_user_data_with_params(BTC, CHARLIE, ONE_HUNDRED, Rate::default(), true, 0)
+		.pool_user_data_with_params(BTC, CHARLIE, ONE_HUNDRED_DOLLARS, Rate::default(), true, 0)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_pool_members_with_loans(DOT), Ok(vec![3, 1]));
