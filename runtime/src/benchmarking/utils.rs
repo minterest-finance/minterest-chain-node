@@ -180,7 +180,7 @@ pub mod tests {
 		.assimilate_storage(&mut storage)
 		.unwrap();
 
-		minterest_model::GenesisConfig {
+		minterest_model::GenesisConfig::<Runtime> {
 			minterest_model_params: vec![
 				(
 					ETH,
@@ -219,8 +219,9 @@ pub mod tests {
 					},
 				),
 			],
+			_phantom: Default::default(),
 		}
-		.assimilate_storage::<Runtime>(&mut storage)
+		.assimilate_storage(&mut storage)
 		.unwrap();
 
 		risk_manager::GenesisConfig::<Runtime> {
