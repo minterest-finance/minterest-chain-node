@@ -53,6 +53,20 @@ pub struct BalanceInfo {
 	pub amount: Balance,
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Eq, PartialEq, Encode, Decode, Default, RuntimeDebug)]
+pub struct BalanceInfoExtended {
+	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
+	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
+	pub total_supply: Balance,
+	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
+	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
+	pub total_borrow: Balance,
+	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
+	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
+	pub tvl: Balance,
+}
+
 #[cfg(feature = "std")]
 fn serialize_as_string<S: Serializer, T: std::fmt::Display>(t: &T, serializer: S) -> Result<S::Ok, S::Error> {
 	serializer.serialize_str(&t.to_string())
@@ -70,7 +84,7 @@ sp_api::decl_runtime_apis! {
 	where
 		AccountId: Codec,
 	{
-		fn get_protocol_total_value() -> Option<BalanceInfo>;
+		fn get_protocol_total_values() -> Option<BalanceInfoExtended>;
 
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState>;
 

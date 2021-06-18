@@ -577,38 +577,67 @@ impl<T: Config> Pallet<T> {
 		Ok((total_supply_balance, total_borrowed_balance))
 	}
 
+	//FIXME:
 	/// Calculates total amount of money currently held in the protocol in usd.
 	/// Total value is calculated as: sum(total_issuance_n * exchange_rate_n * oracle_price_n),
 	/// where:
 	///     `total_issuance_n` - total number of wrapped tokens in the n pool;
 	///     `exchange_rate_n` - exchange rate in the n pool;
 	///     `oracle_price_n` - oracle price for the n pool.
-	pub fn get_protocol_total_value() -> BalanceResult {
-		let total_value = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+	pub fn get_protocol_total_values() -> result::Result<(Balance, Balance, Balance), DispatchError> {
+		let (a, b, c) = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
 			.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
-			.try_fold(Balance::zero(), |current_value, &pool_id| -> BalanceResult {
-				let pool_data = Self::calculate_current_pool_data(pool_id)?;
-				let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
-				let wrapped_balance = T::MultiCurrency::total_issuance(wrapped_id);
-				let pool_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
-				let current_exchange_rate = <LiquidityPools<T>>::calculate_exchange_rate(
-					pool_balance,
-					wrapped_balance,
-					pool_data.total_protocol_interest,
-					pool_data.total_borrowed,
-				)?;
-				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-				let pool_total_value_usd = Rate::from_inner(wrapped_balance)
-					.checked_mul(&current_exchange_rate)
-					.and_then(|v| v.checked_mul(&oracle_price))
-					.map(|x| x.into_inner())
-					.ok_or(Error::<T>::BalanceOverflow)?;
-				Ok(current_value
-					.checked_add(pool_total_value_usd)
-					.ok_or(Error::<T>::BalanceOverflow)?)
-			})?;
-		Ok(total_value)
+			.try_fold(
+				(Balance::zero(), Balance::zero(), Balance::zero()),
+				|current_value, &pool_id| -> result::Result<(Balance, Balance, Balance), DispatchError> {
+					let (pool_total_supply, pool_total_borrow, tvl) = current_value;
+					let pool_data = Self::calculate_current_pool_data(pool_id)?;
+					let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+					let wrapped_balance = T::MultiCurrency::total_issuance(wrapped_id);
+					let pool_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
+					let current_exchange_rate = <LiquidityPools<T>>::calculate_exchange_rate(
+						pool_balance,
+						wrapped_balance,
+						pool_data.total_protocol_interest,
+						pool_data.total_borrowed,
+					)?;
+					let oracle_price =
+						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+
+					// Calculate Total Value Locked
+					let pool_tvl_in_usd = Rate::from_inner(wrapped_balance)
+						.checked_mul(&current_exchange_rate)
+						.and_then(|v| v.checked_mul(&oracle_price))
+						.map(|x| x.into_inner())
+						.ok_or(Error::<T>::BalanceOverflow)?;
+					// Calculate pool available liquidity exclude protocol interest
+					let pool_liquidity = pool_balance
+						.checked_sub(pool_data.total_protocol_interest)
+						.ok_or(Error::<T>::BalanceOverflow)?;
+					let pool_supply_in_usd = Rate::from_inner(pool_liquidity)
+						.checked_mul(&oracle_price)
+						.map(|x| x.into_inner())
+						.ok_or(Error::<T>::NumOverflow)?;
+
+					// Calculate pool borrow
+					let pool_borrow_in_usd = Rate::from_inner(pool_data.total_borrowed)
+						.checked_mul(&oracle_price)
+						.map(|x| x.into_inner())
+						.ok_or(Error::<T>::NumOverflow)?;
+
+					Ok((
+						pool_total_supply
+							.checked_add(pool_supply_in_usd)
+							.ok_or(Error::<T>::BalanceOverflow)?,
+						pool_total_borrow
+							.checked_add(pool_borrow_in_usd)
+							.ok_or(Error::<T>::BalanceOverflow)?,
+						tvl.checked_add(pool_tvl_in_usd).ok_or(Error::<T>::BalanceOverflow)?,
+					))
+				},
+			)?;
+		Ok((a, b, c))
 	}
 
 	/// Calculate total collateral in usd based on collateral factor, fresh exchange rate and latest

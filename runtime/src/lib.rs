@@ -15,7 +15,9 @@ mod tests;
 mod weights;
 mod weights_test;
 
-pub use controller_rpc_runtime_api::{BalanceInfo, HypotheticalLiquidityData, PoolState, UserPoolBalanceData};
+pub use controller_rpc_runtime_api::{
+	BalanceInfo, BalanceInfoExtended, HypotheticalLiquidityData, PoolState, UserPoolBalanceData,
+};
 use minterest_primitives::constants::fee::WeightToFee;
 pub use minterest_primitives::{
 	currency::{
@@ -791,8 +793,9 @@ impl_runtime_apis! {
 	}
 
 	impl controller_rpc_runtime_api::ControllerRuntimeApi<Block, AccountId> for Runtime {
-		fn get_protocol_total_value() -> Option<BalanceInfo> {
-				Some(BalanceInfo{amount: Controller::get_protocol_total_value().ok()?})
+		fn get_protocol_total_values() -> Option<BalanceInfoExtended> {
+		let (pool_total_supply, pool_total_borrow, tvl) = Controller::get_protocol_total_values().ok()?;
+				Some(BalanceInfoExtended{total_supply: pool_total_supply, total_borrow: pool_total_borrow, tvl: tvl })
 		}
 
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState> {

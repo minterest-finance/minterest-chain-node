@@ -2,7 +2,7 @@
 
 use codec::Codec;
 pub use controller_rpc_runtime_api::{
-	BalanceInfo, ControllerRuntimeApi, HypotheticalLiquidityData, PoolState, UserPoolBalanceData,
+	BalanceInfo, BalanceInfoExtended, ControllerRuntimeApi, HypotheticalLiquidityData, PoolState, UserPoolBalanceData,
 };
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
@@ -22,8 +22,8 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///
 	/// Return:
 	/// - amount: total amount of money currently held in the protocol in usd.
-	#[rpc(name = "controller_protocolTotalValue")]
-	fn get_protocol_total_value(&self, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
+	#[rpc(name = "controller_protocolTotalValues")]
+	fn get_protocol_total_values(&self, at: Option<BlockHash>) -> Result<Option<BalanceInfoExtended>>;
 
 	/// Returns current Liquidity Pool State.
 	///
@@ -176,14 +176,14 @@ where
 	C::Api: ControllerRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
 {
-	fn get_protocol_total_value(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Option<BalanceInfo>> {
+	fn get_protocol_total_values(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Option<BalanceInfoExtended>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
-		api.get_protocol_total_value(&at).map_err(|e| RpcError {
+		api.get_protocol_total_values(&at).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
-			message: "Unable to get protocol total value.".into(),
+			message: "Unable to get protocol total values.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})
 	}
