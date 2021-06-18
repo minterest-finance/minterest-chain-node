@@ -5,7 +5,6 @@
 //! Contains macros with mocked implementations of several modules config traits
 
 pub mod offchain_ext;
-
 use minterest_primitives::{currency::TokenSymbol, CurrencyId};
 
 pub const MNT: CurrencyId = CurrencyId::Native(TokenSymbol::MNT);

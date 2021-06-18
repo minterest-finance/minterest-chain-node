@@ -1,7 +1,7 @@
 use crate::{
-	AccountId, Balance, Block, Controller, Currencies, EnabledUnderlyingAssetsIds, Event, LiquidationPools,
-	LiquidityPools, MinterestCouncilMembership, MinterestOracle, MinterestProtocol, MntToken, Prices, Rate,
-	RiskManager, Runtime, System, WhitelistCouncilMembership, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+	AccountId, Balance, Block, Controller, Currencies, EnabledUnderlyingAssetsIds, LiquidationPools, LiquidityPools,
+	MinterestCouncilMembership, MinterestOracle, MinterestProtocol, MntToken, Prices, Rate, Runtime, System,
+	WhitelistCouncilMembership, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::{
@@ -17,11 +17,11 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Operation, Price};
 use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerManager, PoolsManager, PricesManager};
+use pallet_traits::{PoolsManager, PricesManager};
 use prices_rpc_runtime_api::runtime_decl_for_PricesRuntimeApi::PricesRuntimeApi;
 use risk_manager::RiskManagerData;
 use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};
-use test_helper::{BTC, DOT, ETH, KSM, MDOT, METH, MNT};
+use test_helper::{BTC, DOT, ETH, KSM, MDOT, MNT};
 mod misc;
 mod rpc_tests;
 use frame_support::pallet_prelude::{DispatchResultWithPostInfo, PhantomData};
@@ -47,7 +47,7 @@ impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
 			endowed_accounts: vec![
-				// seed: initial assets. Initial MINT to pay for gas.
+				// seed: initial assets. Initial MNT to pay for gas.
 				(ALICE::get(), MNT, 100_000 * DOLLARS),
 				(ALICE::get(), DOT, 100_000 * DOLLARS),
 				(ALICE::get(), ETH, 100_000 * DOLLARS),
@@ -94,34 +94,6 @@ impl ExtBuilder {
 				total_borrowed: Balance::zero(),
 				borrow_index: Rate::one(),
 				total_protocol_interest: Balance::zero(),
-			},
-		));
-		self
-	}
-
-	pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-		self.endowed_accounts
-			.push((LiquidationPools::pools_account_id(), currency_id, balance));
-		self
-	}
-
-	pub fn pool_user_data(
-		mut self,
-		pool_id: CurrencyId,
-		user: AccountId,
-		total_borrowed: Balance,
-		interest_index: Rate,
-		is_collateral: bool,
-		liquidation_attempts: u8,
-	) -> Self {
-		self.pool_user_data.push((
-			pool_id,
-			user,
-			PoolUserData {
-				total_borrowed,
-				interest_index,
-				is_collateral,
-				liquidation_attempts,
 			},
 		));
 		self
