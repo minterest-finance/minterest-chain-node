@@ -223,7 +223,7 @@ pub mod tests {
 		.assimilate_storage::<Runtime>(&mut storage)
 		.unwrap();
 
-		risk_manager::GenesisConfig {
+		risk_manager::GenesisConfig::<Runtime> {
 			risk_manager_params: vec![
 				(
 					ETH,
@@ -262,8 +262,9 @@ pub mod tests {
 					},
 				),
 			],
+			_phantom: Default::default(),
 		}
-		.assimilate_storage::<Runtime>(&mut storage)
+		.assimilate_storage(&mut storage)
 		.unwrap();
 
 		module_prices::GenesisConfig::<Runtime> {

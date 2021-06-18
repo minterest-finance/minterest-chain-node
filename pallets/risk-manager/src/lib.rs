@@ -159,44 +159,29 @@ pub mod module {
 	pub type RiskManagerParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, RiskManagerData, ValueQuery>;
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig {
+	pub struct GenesisConfig<T: Config> {
 		pub risk_manager_params: Vec<(CurrencyId, RiskManagerData)>,
+		pub _phantom: sp_std::marker::PhantomData<T>,
 	}
 
 	#[cfg(feature = "std")]
-	impl Default for GenesisConfig {
+	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			GenesisConfig {
 				risk_manager_params: vec![],
+				_phantom: PhantomData,
 			}
 		}
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			self.risk_manager_params
 				.iter()
 				.for_each(|(currency_id, risk_manager_data)| {
 					RiskManagerParams::<T>::insert(currency_id, RiskManagerData { ..*risk_manager_data })
 				});
-		}
-	}
-
-	#[cfg(feature = "std")]
-	impl GenesisConfig {
-		/// Direct implementation of `GenesisBuild::build_storage`.
-		///
-		/// Kept in order not to break dependency.
-		pub fn build_storage<T: Config>(&self) -> Result<sp_runtime::Storage, String> {
-			<Self as frame_support::traits::GenesisBuild<T>>::build_storage(self)
-		}
-
-		/// Direct implementation of `GenesisBuild::assimilate_storage`.
-		///
-		/// Kept in order not to break dependency.
-		pub fn assimilate_storage<T: Config>(&self, storage: &mut sp_runtime::Storage) -> Result<(), String> {
-			<Self as frame_support::traits::GenesisBuild<T>>::assimilate_storage(self, storage)
 		}
 	}
 

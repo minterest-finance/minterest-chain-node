@@ -198,7 +198,7 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		minterest_model::GenesisConfig {
+		minterest_model::GenesisConfig::<Runtime> {
 			minterest_model_params: vec![
 				(
 					DOT,
@@ -228,11 +228,12 @@ impl ExtBuilder {
 					},
 				),
 			],
+			_phantom: Default::default(),
 		}
-		.assimilate_storage::<Runtime>(&mut t)
+		.assimilate_storage(&mut t)
 		.unwrap();
 
-		risk_manager::GenesisConfig {
+		risk_manager::GenesisConfig::<Runtime> {
 			risk_manager_params: vec![
 				(
 					DOT,
@@ -262,8 +263,9 @@ impl ExtBuilder {
 					},
 				),
 			],
+			_phantom: Default::default(),
 		}
-		.assimilate_storage::<Runtime>(&mut t)
+		.assimilate_storage(&mut t)
 		.unwrap();
 
 		pallet_membership::GenesisConfig::<Runtime, pallet_membership::Instance3> {

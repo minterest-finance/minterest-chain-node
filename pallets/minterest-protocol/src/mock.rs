@@ -35,7 +35,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
 		TestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
@@ -338,10 +338,11 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		minterest_model::GenesisConfig {
+		minterest_model::GenesisConfig::<Test> {
 			minterest_model_params: self.minterest_model_params,
+			_phantom: Default::default(),
 		}
-		.assimilate_storage::<Test>(&mut t)
+		.assimilate_storage(&mut t)
 		.unwrap();
 
 		mnt_token::GenesisConfig::<Test> {

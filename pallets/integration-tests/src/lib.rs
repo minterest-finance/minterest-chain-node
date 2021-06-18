@@ -60,10 +60,10 @@ mod tests {
 			TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 			TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
 			TestController: controller::{Module, Storage, Call, Event, Config<T>},
-			TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+			TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
 			TestDex: dex::{Module, Storage, Call, Event<T>},
 			TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
-			TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config},
+			TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config<T>},
 		}
 	);
 
@@ -381,16 +381,18 @@ mod tests {
 			.assimilate_storage(&mut t)
 			.unwrap();
 
-			minterest_model::GenesisConfig {
+			minterest_model::GenesisConfig::<Test> {
 				minterest_model_params: self.minterest_model_params,
+				_phantom: Default::default(),
 			}
-			.assimilate_storage::<Test>(&mut t)
+			.assimilate_storage(&mut t)
 			.unwrap();
 
-			risk_manager::GenesisConfig {
+			risk_manager::GenesisConfig::<Test> {
 				risk_manager_params: self.risk_manager_params,
+				_phantom: Default::default(),
 			}
-			.assimilate_storage::<Test>(&mut t)
+			.assimilate_storage(&mut t)
 			.unwrap();
 
 			mnt_token::GenesisConfig::<Test> {

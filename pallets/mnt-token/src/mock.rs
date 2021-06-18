@@ -30,7 +30,7 @@ construct_runtime!(
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
-		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 	}
 );

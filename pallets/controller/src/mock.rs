@@ -31,7 +31,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 	}
 );
@@ -230,7 +230,7 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		minterest_model::GenesisConfig {
+		minterest_model::GenesisConfig::<Runtime> {
 			minterest_model_params: vec![
 				(
 					DOT,
@@ -260,8 +260,9 @@ impl ExtBuilder {
 					},
 				),
 			],
+			_phantom: Default::default(),
 		}
-		.assimilate_storage::<Runtime>(&mut t)
+		.assimilate_storage(&mut t)
 		.unwrap();
 
 		let mut ext = sp_io::TestExternalities::new(t);

@@ -36,10 +36,10 @@ frame_support::construct_runtime!(
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
 		TestMinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
-		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
+		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		TestDex: dex::{Module, Storage, Call, Event<T>},
 		TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
@@ -286,7 +286,7 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		risk_manager::GenesisConfig {
+		risk_manager::GenesisConfig::<Test> {
 			risk_manager_params: vec![
 				(
 					DOT,
@@ -316,8 +316,9 @@ impl ExtBuilder {
 					},
 				),
 			],
+			_phantom: Default::default(),
 		}
-		.assimilate_storage::<Test>(&mut t)
+		.assimilate_storage(&mut t)
 		.unwrap();
 
 		liquidation_pools::GenesisConfig::<Test> {
