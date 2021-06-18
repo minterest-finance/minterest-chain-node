@@ -11,7 +11,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod benchmarking;
 #[cfg(test)]
-mod tests;
+mod rpc_tests;
 mod weights;
 mod weights_test;
 
