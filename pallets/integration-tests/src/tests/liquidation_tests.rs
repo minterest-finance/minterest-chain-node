@@ -26,12 +26,18 @@ mod tests {
 			.pool_initial(DOT)
 			.pool_initial(ETH)
 			.pool_initial(BTC)
+			.user_balance(ALICE, DOT, dollars(100_000))
+			.user_balance(ALICE, ETH, dollars(100_000))
+			.user_balance(ALICE, BTC, dollars(100_000))
+			.user_balance(BOB, DOT, dollars(100_000))
+			.user_balance(BOB, ETH, dollars(100_000))
 			.liquidation_pool_balance(DOT, dollars(20_000))
 			.liquidation_pool_balance(ETH, dollars(20_000))
 			.liquidation_pool_balance(BTC, dollars(20_000))
 			.pool_user_data(DOT, BOB, Balance::zero(), Rate::one(), false, 0)
 			.pool_user_data(ETH, BOB, Balance::zero(), Rate::one(), false, 0)
 			.pool_user_data(BTC, BOB, Balance::zero(), Rate::one(), false, 0)
+			.risk_manager_params_default(BTC)
 			.build()
 			.execute_with(|| {
 				// Set prices for currencies.
@@ -215,6 +221,7 @@ mod tests {
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::one(), false, 0)
 			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::one(), false, 0)
 			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::one(), false, 3)
+			.risk_manager_params_default(BTC)
 			.build()
 			.execute_with(|| {
 				// Set prices for currencies.

@@ -22,6 +22,7 @@ mod tests {
 	use minterest_protocol::{Error as MinterestProtocolError, PoolInitData};
 	use orml_traits::{parameter_type_with_key, MultiCurrency};
 	use pallet_traits::{PoolsManager, PricesManager};
+	use risk_manager::RiskManagerData;
 	use sp_core::H256;
 	use sp_runtime::{
 		testing::{Header, TestXt},
@@ -31,7 +32,6 @@ mod tests {
 	};
 	use sp_std::cell::RefCell;
 	use std::collections::HashMap;
-	use std::thread;
 	use test_helper::*;
 
 	mod controller_tests;
@@ -121,11 +121,6 @@ mod tests {
 
 	impl PricesManager<CurrencyId> for MockPriceSource {
 		fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
-			if currency_id == BTC {
-				// This sleep is need to emulate hard computation in offchain worker.
-				let one_sec = std::time::Duration::from_millis(1000);
-				thread::sleep(one_sec);
-			}
 			UNDERLYING_PRICE.with(|v| v.borrow().get(&currency_id).copied())
 		}
 
@@ -185,6 +180,8 @@ mod tests {
 		minted_pools: Vec<(CurrencyId, Balance)>,
 		controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
 		minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
+		mnt_claim_threshold: Balance,
+		risk_manager_params: Vec<(CurrencyId, RiskManagerData)>,
 	}
 
 	impl Default for ExtBuilder {
@@ -258,6 +255,8 @@ mod tests {
 						},
 					),
 				],
+				mnt_claim_threshold: 0, // disable by default
+				risk_manager_params: vec![],
 			}
 		}
 	}
@@ -347,6 +346,24 @@ mod tests {
 			self
 		}
 
+		pub fn mnt_claim_threshold(mut self, threshold: Balance) -> Self {
+			self.mnt_claim_threshold = threshold;
+			self
+		}
+
+		pub fn risk_manager_params_default(mut self, pool_id: CurrencyId) -> Self {
+			self.risk_manager_params.push((
+				pool_id,
+				RiskManagerData {
+					max_attempts: 3,
+					min_partial_liquidation_sum: 100_000 * DOLLARS,
+					threshold: Rate::saturating_from_rational(103, 100),
+					liquidation_fee: Rate::saturating_from_rational(105, 100),
+				},
+			));
+			self
+		}
+
 		pub fn build(self) -> sp_io::TestExternalities {
 			let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
@@ -398,8 +415,14 @@ mod tests {
 			.assimilate_storage::<Test>(&mut t)
 			.unwrap();
 
+			risk_manager::GenesisConfig {
+				risk_manager_params: self.risk_manager_params,
+			}
+			.assimilate_storage::<Test>(&mut t)
+			.unwrap();
+
 			mnt_token::GenesisConfig::<Test> {
-				mnt_claim_threshold: 100 * DOLLARS,
+				mnt_claim_threshold: self.mnt_claim_threshold,
 				minted_pools: self.minted_pools,
 				_phantom: Default::default(),
 			}

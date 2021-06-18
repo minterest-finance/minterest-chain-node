@@ -381,7 +381,7 @@ fn minterest_genesis(
 			],
 		}),
 		risk_manager: Some(RiskManagerConfig {
-			risk_manager_dates: vec![
+			risk_manager_params: vec![
 				(
 					ETH,
 					RiskManagerData {
@@ -683,7 +683,7 @@ fn testnet_genesis(
 			],
 		}),
 		risk_manager: Some(RiskManagerConfig {
-			risk_manager_dates: vec![
+			risk_manager_params: vec![
 				(
 					ETH,
 					RiskManagerData {

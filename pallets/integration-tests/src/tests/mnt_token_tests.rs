@@ -45,6 +45,7 @@ mod tests {
 			.user_balance(BOB, BTC, ONE_HUNDRED)
 			.mnt_enabled_pools(vec![(DOT, DOLLARS / 10), (ETH, DOLLARS / 10)])
 			.mnt_account_balance(ONE_HUNDRED)
+			.mnt_claim_threshold(dollars(100))
 			.build()
 			.execute_with(|| {
 				assert!(mnt_token::MntSpeeds::<Test>::contains_key(DOT));
@@ -246,6 +247,7 @@ mod tests {
 			.user_balance(BOB, BTC, ONE_HUNDRED)
 			.mnt_enabled_pools(vec![(DOT, DOLLARS / 10), (ETH, DOLLARS / 10)])
 			.mnt_account_balance(ONE_HUNDRED)
+			.mnt_claim_threshold(dollars(100))
 			.build()
 			.execute_with(|| {
 				assert!(mnt_token::MntSpeeds::<Test>::contains_key(DOT));

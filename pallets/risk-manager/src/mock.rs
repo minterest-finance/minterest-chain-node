@@ -305,7 +305,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		risk_manager::GenesisConfig {
-			risk_manager_dates: vec![
+			risk_manager_params: vec![
 				(
 					DOT,
 					RiskManagerData {

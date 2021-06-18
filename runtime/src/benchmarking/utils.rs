@@ -224,7 +224,7 @@ pub mod tests {
 		.unwrap();
 
 		risk_manager::GenesisConfig {
-			risk_manager_dates: vec![
+			risk_manager_params: vec![
 				(
 					ETH,
 					RiskManagerData {

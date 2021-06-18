@@ -155,19 +155,19 @@ pub mod module {
 	/// Liquidation params for pools: `(max_attempts, min_partial_liquidation_sum, threshold,
 	/// liquidation_fee)`.
 	#[pallet::storage]
-	#[pallet::getter(fn risk_manager_dates)]
+	#[pallet::getter(fn risk_manager_params)]
 	pub type RiskManagerParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, RiskManagerData, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
-		pub risk_manager_dates: Vec<(CurrencyId, RiskManagerData)>,
+		pub risk_manager_params: Vec<(CurrencyId, RiskManagerData)>,
 	}
 
 	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
 		fn default() -> Self {
 			GenesisConfig {
-				risk_manager_dates: vec![],
+				risk_manager_params: vec![],
 			}
 		}
 	}
@@ -175,7 +175,7 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
-			self.risk_manager_dates
+			self.risk_manager_params
 				.iter()
 				.for_each(|(currency_id, risk_manager_data)| {
 					RiskManagerParams::<T>::insert(currency_id, RiskManagerData { ..*risk_manager_data })
@@ -627,7 +627,7 @@ impl<T: Config> Pallet<T> {
 			}
 		}
 
-		let liquidation_fee = Self::risk_manager_dates(liquidated_pool_id).liquidation_fee;
+		let liquidation_fee = Self::risk_manager_params(liquidated_pool_id).liquidation_fee;
 
 		let repay_amount = Rate::from_inner(already_seized_amount)
 			.checked_div(&liquidation_fee)
@@ -673,7 +673,7 @@ impl<T: Config> Pallet<T> {
 		total_repay_amount: Balance,
 		is_partial_liquidation: bool,
 	) -> result::Result<(Balance, bool), DispatchError> {
-		let liquidation_fee = Self::risk_manager_dates(liquidated_pool_id).liquidation_fee;
+		let liquidation_fee = Self::risk_manager_params(liquidated_pool_id).liquidation_fee;
 		let price_borrowed =
 			T::PriceSource::get_underlying_price(liquidated_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
