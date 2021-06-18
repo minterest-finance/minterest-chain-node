@@ -18,8 +18,6 @@ use sp_runtime::{
 use sp_std::cell::RefCell;
 pub use test_helper::*;
 
-pub type AccountId = u64;
-
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
 
@@ -98,19 +96,11 @@ impl Default for ExtBuilder {
 	}
 }
 
-pub const ALICE: AccountId = 1;
-pub fn alice() -> Origin {
-	Origin::signed(ALICE)
-}
 pub const BOB: AccountId = 2;
 pub fn bob() -> Origin {
 	Origin::signed(BOB)
 }
 pub const ONE_HUNDRED: Balance = 100;
-pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
-pub fn dollars<T: Into<u128>>(d: T) -> Balance {
-	DOLLARS.saturating_mul(d.into())
-}
 
 impl ExtBuilder {
 	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {

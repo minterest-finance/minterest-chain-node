@@ -121,15 +121,9 @@ where
 	type Extrinsic = Extrinsic;
 }
 
-type AccountId = u64;
-pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ADMIN: AccountId = 0;
 pub fn admin() -> Origin {
 	Origin::signed(ADMIN)
-}
-pub const ALICE: AccountId = 1;
-pub fn alice() -> Origin {
-	Origin::signed(ALICE)
 }
 
 pub struct ExternalityBuilder {

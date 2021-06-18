@@ -42,8 +42,6 @@ mod tests {
 	mod mnt_token_tests;
 	mod scenario_tests;
 
-	pub type AccountId = u64;
-
 	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 	type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -148,15 +146,10 @@ mod tests {
 	}
 
 	pub const ADMIN: AccountId = 0;
-	pub const ALICE: AccountId = 1;
 	pub const BOB: AccountId = 2;
 	pub const CAROL: AccountId = 3;
 	pub const ONE_HUNDRED: Balance = 100_000 * DOLLARS;
 	pub const BALANCE_ZERO: Balance = 0;
-	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
-	pub fn dollars(amount: u128) -> u128 {
-		amount.saturating_mul(Price::accuracy())
-	}
 	pub const RATE_ZERO: Rate = Rate::from_inner(0);
 	pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
 

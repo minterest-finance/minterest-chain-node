@@ -22,8 +22,6 @@ use sp_runtime::{
 };
 pub use test_helper::*;
 
-pub type AccountId = u64;
-
 ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
 }
@@ -76,8 +74,6 @@ construct_runtime!(
 		TestDex: dex::{Module, Storage, Call, Event<T>},
 	}
 );
-
-pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,

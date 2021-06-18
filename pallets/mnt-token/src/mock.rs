@@ -45,8 +45,6 @@ parameter_types! {
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
-pub type AccountId = u64;
-
 mock_impl_system_config!(Runtime);
 mock_impl_orml_tokens_config!(Runtime);
 mock_impl_orml_currencies_config!(Runtime);
@@ -91,12 +89,7 @@ pub struct ExtBuilder {
 	mnt_claim_threshold: Balance,
 }
 
-pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
-pub fn alice() -> Origin {
-	Origin::signed(ALICE)
-}
-pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 
 impl Default for ExtBuilder {
 	fn default() -> Self {

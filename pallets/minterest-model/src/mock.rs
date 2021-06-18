@@ -16,8 +16,6 @@ use sp_runtime::{
 };
 pub use test_helper::*;
 
-pub type AccountId = u64;
-
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -64,10 +62,6 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
-pub const ALICE: AccountId = 1;
-pub fn alice() -> Origin {
-	Origin::signed(ALICE)
-}
 pub const BOB: AccountId = 2;
 pub fn bob() -> Origin {
 	Origin::signed(BOB)

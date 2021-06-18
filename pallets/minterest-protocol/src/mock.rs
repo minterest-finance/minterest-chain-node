@@ -20,8 +20,6 @@ use sp_runtime::{
 use sp_std::cell::RefCell;
 pub use test_helper::*;
 
-pub type AccountId = u64;
-
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -125,15 +123,10 @@ impl Contains<u64> for WhitelistMembers {
 	}
 }
 
-pub const ALICE: AccountId = 1;
-pub fn alice() -> Origin {
-	Origin::signed(ALICE)
-}
 pub const BOB: AccountId = 2;
 pub fn bob() -> Origin {
 	Origin::signed(BOB)
 }
-pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 pub const ONE_MILL_DOLLARS: Balance = 1_000_000 * DOLLARS;
 pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
 pub const TEN_THOUSAND_DOLLARS: Balance = 10_000 * DOLLARS;

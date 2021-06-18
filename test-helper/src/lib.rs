@@ -5,7 +5,9 @@
 //! Contains macros with mocked implementations of several modules config traits
 
 pub mod offchain_ext;
-use minterest_primitives::{currency::TokenSymbol, CurrencyId};
+use frame_support::sp_runtime::FixedPointNumber;
+use frame_support::traits::OriginTrait;
+use minterest_primitives::{currency::TokenSymbol, Balance, CurrencyId, Price};
 
 pub const MNT: CurrencyId = CurrencyId::Native(TokenSymbol::MNT);
 pub const DOT: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::DOT);
@@ -16,6 +18,17 @@ pub const BTC: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::BTC);
 pub const MBTC: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MBTC);
 pub const ETH: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::ETH);
 pub const METH: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::METH);
+
+pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
+pub fn dollars(amount: u128) -> u128 {
+	amount.saturating_mul(Price::accuracy())
+}
+
+pub type AccountId = u64;
+pub const ALICE: AccountId = 1;
+pub fn alice<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
+	Origin::signed(ALICE)
+}
 
 #[macro_export]
 macro_rules! mock_impl_system_config {
