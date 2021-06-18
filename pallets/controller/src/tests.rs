@@ -1,9 +1,8 @@
 //! Tests for the controller pallet.
 
 use super::*;
-use mock::{Event, *};
-
 use frame_support::{assert_err, assert_noop, assert_ok};
+use mock::{Event, *};
 use sp_runtime::DispatchError::BadOrigin;
 
 #[test]

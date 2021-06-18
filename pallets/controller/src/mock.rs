@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use super::*;
 use crate as controller;
 use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};

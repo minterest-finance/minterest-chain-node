@@ -2,13 +2,13 @@
 //!
 //! ## Overview
 //!
-//! Contains macros with mocked implementations of several modules config traits
+//! Contains constants, functions and macros with mocked implementations
+//! of several modules config traits
 
 pub mod offchain_ext;
 pub use currency_mock::*;
 pub use users_mock::*;
 
-/// TODO: Add comments
 pub mod currency_mock {
 	use frame_support::sp_runtime::FixedPointNumber;
 	use minterest_primitives::{currency::TokenSymbol, Balance, CurrencyId, Price};
@@ -37,7 +37,6 @@ pub mod currency_mock {
 	pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
 }
 
-/// TODO: Add comments
 pub mod users_mock {
 	use frame_support::traits::OriginTrait;
 
