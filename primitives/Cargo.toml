@@ -13,7 +13,7 @@ sp-std = { default-features = false, version = '3.0.0' }
 frame-support = { version = "3.0.0", default-features = false }
 smallvec = { default-features = false, version = '1.6.0' }
 hex-literal = { version = "0.3.1" }
-
+orml-traits = { version = "0.4.0", default-features = false }
 frame-system = { version = '3.0.0', default-features = false }
 
 [features]

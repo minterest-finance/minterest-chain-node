@@ -842,6 +842,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "chainlink-price-adapter"
+version = "0.6.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "minterest-primitives",
+ "orml-traits",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3871,6 +3886,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
+ "orml-traits",
  "parity-scale-codec",
  "serde",
  "smallvec 1.6.1",
@@ -4275,6 +4291,7 @@ dependencies = [
 name = "node-minterest-runtime"
 version = "0.6.0"
 dependencies = [
+ "chainlink-price-adapter",
  "controller",
  "controller-rpc-runtime-api",
  "dex",
