@@ -1005,11 +1005,11 @@ fn get_mnt_borrow_and_supply_rates_should_work() {
 
 			// Borrow and Supply rates per block
 			// Prices: DOT[0] = 2 USD, ETH[1] = 2 USD, BTC[3] = 2 USD, MNT[4] = 4 USD
-			// Expected borrow_rate = mnt_speed * mnt_price / (total_borrow * price):
+			// Expected borrow_rate = mnt_speed * mnt_price / (pool_borrow * price):
 			// DOT: 2.5 * 4 / (5000 * 2) = 0.001
 			// ETH: 5 * 4 / (10000 * 2) = 0.001
 			// BTC: 2.5 * 4 / (5000 * 2) = 0.001
-			// Expected supply_rate = mnt_speed * mnt_price / (total_supply * price):
+			// Expected supply_rate = mnt_speed * mnt_price / (pool_supply * price):
 			// DOT: 2.5 * 4 / (10000 * 2) = 0.0005
 			// ETH: 5 * 4 / (15000 * 2) = 0.00066
 			// BTC: 2.5 * 4 / (25000 * 2) = 0.0002
@@ -1101,22 +1101,65 @@ fn get_user_total_supply_borrow_and_net_apy_should_work() {
 			// Sum = 2360 + 6048 = 8408 $
 			// sum_borrow_apy = 8408/260_000 = 3.23 %
 
-			// MNT year supply interest(for the pool):
-			// mnt_borrow_rate = mnt_speed * mnt_price / (total_borrow * currency_price)
-			// mnt_supply_rate = mnt_speed * mnt_price / (total_supply * currency_price)
-			// where:
-			//	total_supply = total_cash - total_protocol_interest + total_borrow
-			// DOT mnt borrow:  mnt_speed * mnt_price / 50000 * 5256000
-			// DOT mnt supply:  mnt_speed * mnt_price / 100000 * 5256000
-			// ETH mnt borrow:  mnt_speed * mnt_price / 80000 * 5256000
-			// ETH mnt supply:  mnt_speed * mnt_price / 100000 * 5256000
+			// Prices: DOT[0] = 2 USD, ETH[1] = 2 USD, MNT[4] = 4 USD
+			// Sum of all utilities: 50_000 * 2 + 80_000 * 2 = 260_000 $
+			// Expected mnt_speed = pool_borrow / pool_total_borrow * mnt_rate
+			//
+			// DOT: 50_000 * 2 / 260_000 * 10 = 3.846153846153846150
+			// ETH: 80_000 * 2 / 260_000 * 10 = 6.153846153846153850
+			assert_ok!(MntToken::refresh_mnt_speeds());
+			assert_eq!(MntToken::mnt_speeds(DOT), 3_846_153_846_153_846_150);
+			assert_eq!(MntToken::mnt_speeds(ETH), 6_153_846_153_846_153_850);
+
+			// MNT rates for the pool:
+			// mnt_borrow_rate = mnt_speed * mnt_price / (pool_borrow * currency_price)
+			// mnt_supply_rate = mnt_speed * mnt_price / (pool_supply * currency_price)
+			//
+			// MNT price: 4 USD
+			//
+			// DOT mnt borrow:  3.846153846153846150 * 4 / (50_000 * 2)  = 0.000153846153846153
+			// DOT mnt supply:  3.846153846153846150 * 4 / (100_000 * 2) = 0.000076923076923076
+			// ETH mnt borrow:  6.153846153846153850 * 4 / (80_000 * 2) = 0.000153846153846153
+			// ETH mnt supply:  6.153846153846153850 * 4 / (100_000 * 2) = 0.000123076923076923
+			assert_eq!(
+				get_mnt_borrow_and_supply_rates(DOT),
+				(Rate::from_inner(153846153846153), Rate::from_inner(76923076923076))
+			);
+
+			// mnt_borrow_interest = user_borrow_in_usd * mnt_borrow_rate * BlocksPerYear
+			// mnt_supply_interest = user_supply_in_usd * mnt_supply_rate * BlocksPerYear
+			assert_eq!(
+				get_mnt_borrow_and_supply_rates(ETH),
+				(Rate::from_inner(153846153846153), Rate::from_inner(123076923076923))
+			);
+
+			// MNT interest for 1 block
+			// mnt_borrow_interest = user_borrow_in_usd * mnt_borrow_rate * BlocksPerYear
+			// mnt_supply_interest = user_supply_in_usd * mnt_supply_rate * mnt_price * BlocksPerYear
+			// DOT mnt borrow interest: 50_000 * 2 * 0.000153846153846153 × 5_256_000 = 80861538.4615
+			// DOT mnt supply interest: 100_000 * 2 * 0.000076923076923076 × 5_256_000 = 80861538.4615
+			// ETH mnt borrow interest: 80_000 * 2 * 0.000153846153846153 × 5_256_000 = 129378461.538
+			// ETH mnt supply interest: 100_000 * 2 * 0.000123076923076923  × 5_256_000 = 129378461.538
+			//
+			// net_apy_indicator =
+			// (SUM(user_supply_in_usd * supply_rate) - SUM(user_borrow_in_usd * borrow_rate)
+			// + SUM(mnt_borrow_interest) - SUM(mnt_supply_interest)) * BlocksPerYear
+			// were SUM - sum over all pools where user have borrows/supplies
+			//
+			// net_apy_indicator = (2120 + 5440) - (2360 + 6048) + (80861538.4615 + 129378461.538)
+			// + (80861538.4615 + 129378461.538) = 420479151.999
+			//
+			// if net_apy_indicator > 0: net_apy = net_apy_indicator / user_total_supply_in_usd
+			// if net_apy_indicator < 0: net_apy = net_apy_indicator / user_total_borrow_in_usd
+			//
+			// net_apy = 420479151.999 / 400_000 = 1051.19788
 
 			assert_eq!(
 				get_user_total_supply_borrow_and_net_apy_rpc(ALICE::get()),
 				Some((
 					Interest::from_inner(18_945_252_000_000_000),
 					Interest::from_inner(32_385_046_151_016_000),
-					Interest::from_inner(32_385_046_151_016_000) //FIXME: stub
+					Interest::from_inner(1_051_197_894_971_989_488_000)
 				))
 			);
 
@@ -1130,13 +1173,14 @@ fn get_user_total_supply_borrow_and_net_apy_should_work() {
 				Some((Rate::zero(), Rate::zero()))
 			);
 
-			// sumSupplyApy = 7560/(400_000 + 100_000) = 1.51 %
+			// sum_supply_apy = 7560/(400_000 + 100_000) = 1.51 %
+			// net_apy = 420479151.999 / (400_000 + 100_000) = 840.95
 			assert_eq!(
 				get_user_total_supply_borrow_and_net_apy_rpc(ALICE::get()),
 				Some((
 					Interest::from_inner(15_156_201_600_000_000),
 					Interest::from_inner(32_385_046_151_016_000),
-					Interest::from_inner(32_385_046_151_016_000) //FIXME: stub
+					Interest::from_inner(840_958_315_977_594_744_000)
 				))
 			);
 		})
