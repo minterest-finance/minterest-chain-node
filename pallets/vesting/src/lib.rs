@@ -12,48 +12,57 @@
 //! from the block number of `start`, for every `period` amount of blocks,
 //! `per_period` amount of balance would unlocked, until number of periods
 //! `period_count` reached. Note in vesting schedules, *time* is measured by
-//! block number. All `VestingSchedule`s under an account could be queried in
-//! chain state.
+//! block number. `bucket` - Vesting bucket type. All `VestingSchedule`s under
+//! an account could be queried in chain state.
+//!
+//! ### Vesting Buckets
+//!
+//! In the Minterest protocol, all Vesting are divided into `VestingBucket`. Each vesting bucket
+//! has its own vesting start, vesting duration and total number of tokens.
 //!
 //! ## Interface
 //!
 //! ### Dispatchable Functions
 //!
-//! - `vested_transfer` - Add a new vesting schedule for an account.
 //! - `claim` - Claim unlocked balances.
-//! - `update_vesting_schedules` - Update all vesting schedules under an account, `root` origin
-//! required.
+//! - `vested_transfer` - Add a new vesting schedule for an account.
+//! - `remove_vesting_schedules` - Remove a vesting schedule from an account. Unlocks the user's
+//! balance, transfers unvested tokens to the vesting bucket.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
-use codec::HasCompact;
+use codec::{Decode, Encode};
+use frame_support::sp_runtime::{traits::CheckedMul, FixedPointNumber};
 use frame_support::{
 	ensure,
 	pallet_prelude::*,
 	traits::{Currency, EnsureOrigin, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons},
 	transactional,
 };
-use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
-use minterest_primitives::VestingBucket;
+use frame_system::{ensure_signed, pallet_prelude::*};
+use minterest_primitives::constants::time::{BLOCKS_PER_YEAR, DAYS};
+use minterest_primitives::{Balance, Rate, VestingBucket};
+pub use module::*;
+
 use sp_runtime::{
-	traits::{AtLeast32Bit, CheckedAdd, Saturating, StaticLookup, Zero},
+	traits::{AtLeast32Bit, StaticLookup, Zero},
 	DispatchResult, RuntimeDebug,
 };
 use sp_std::{
 	cmp::{Eq, PartialEq},
 	vec::Vec,
 };
+pub mod weights;
+pub use weights::WeightInfo;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-mod default_weight;
+#[cfg(test)]
 mod mock;
+#[cfg(test)]
 mod tests;
-
-use minterest_primitives::constants::time::{BLOCKS_PER_YEAR, DAYS};
-pub use module::*;
 
 pub const VESTING_LOCK_ID: LockIdentifier = *b"mod/vest";
 
@@ -63,7 +72,7 @@ pub const VESTING_LOCK_ID: LockIdentifier = *b"mod/vest";
 /// of blocks after `start`.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct VestingSchedule<BlockNumber, Balance: HasCompact> {
+pub struct VestingSchedule<BlockNumber> {
 	/// Vesting bucket type
 	pub bucket: VestingBucket,
 	/// Vesting starting block
@@ -73,19 +82,19 @@ pub struct VestingSchedule<BlockNumber, Balance: HasCompact> {
 	/// Number of vest
 	pub period_count: u32,
 	/// Amount of tokens to release per vest
-	#[codec(compact)]
-	pub per_period: Balance,
+	pub per_period: Rate,
 }
 
-impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSchedule<BlockNumber, Balance> {
+impl<BlockNumber: AtLeast32Bit + Copy> VestingSchedule<BlockNumber> {
 	/// Creates a new schedule with default parameters (start, period, period_count, per_period).
 	///
 	/// - `amount`: the number of tokens for which need to create a schedule.
+	/// Note: this constructor can only be used when configuring a genesis block.
 	pub fn new(bucket: VestingBucket, amount: Balance) -> Self {
 		let start: BlockNumber = (bucket.unlock_begins_in_days() as u32 * DAYS).into();
 		let period: BlockNumber = BlockNumber::one(); // block by block
 		let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
-		let per_period: Balance = amount.checked_div(&Balance::from(period_count)).unwrap_or(amount);
+		let per_period = Rate::checked_from_rational(amount, period_count).expect("ensured non-zero period_count; qed");
 		Self {
 			bucket,
 			start,
@@ -97,19 +106,23 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 
 	/// Creates a new schedule with default parameters (period, period_count, per_period).
 	///
-	/// - `start`: the number of tokens for which need to create a schedule.
+	/// - `bucket`: vesting bucket type (must be `Team` or `Marketing` or `Strategic Partners`).
+	/// - `start`: the vesting schedule starting block.
 	/// - `amount`: the number of tokens for which need to create a schedule.
-	pub fn new_beginning_from(bucket: VestingBucket, start: BlockNumber, amount: Balance) -> Self {
+	pub fn new_beginning_from(bucket: VestingBucket, start: BlockNumber, amount: Balance) -> Option<Self> {
+		if !bucket.is_manipulated_bucket() {
+			return None;
+		}
 		let period: BlockNumber = BlockNumber::one(); // block by block
 		let period_count: u32 = bucket.vesting_duration() as u32 * BLOCKS_PER_YEAR as u32;
-		let per_period: Balance = amount.checked_div(&Balance::from(period_count)).unwrap_or(amount);
-		Self {
+		let per_period = Rate::saturating_from_rational(amount, period_count);
+		Some(Self {
 			bucket,
 			start,
 			period,
 			period_count,
 			per_period,
-		}
+		})
 	}
 
 	/// Returns the end of all periods, `None` if calculation overflows.
@@ -122,7 +135,9 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 
 	/// Returns all locked amount, `None` if calculation overflows.
 	pub fn total_amount(&self) -> Option<Balance> {
-		self.per_period.checked_mul(&self.period_count.into())
+		Rate::from_inner(self.period_count as u128)
+			.checked_mul(&self.per_period)
+			.map(|x| x.into_inner())
 	}
 
 	/// Returns locked amount for a given `time`.
@@ -140,8 +155,9 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 		let unrealized_periods = self
 			.period_count
 			.saturating_sub(expired_periods.unique_saturated_into());
-		self.per_period
-			.checked_mul(&unrealized_periods.into())
+		Rate::from_inner(unrealized_periods as u128)
+			.checked_mul(&self.per_period)
+			.map(|x| x.into_inner())
 			.expect("ensured non-overflow total amount; qed")
 	}
 }
@@ -150,40 +166,36 @@ impl<BlockNumber: AtLeast32Bit + Copy, Balance: AtLeast32Bit + Copy> VestingSche
 pub mod module {
 	use super::*;
 
-	pub trait WeightInfo {
-		fn vested_transfer() -> Weight;
-		fn claim(i: u32) -> Weight;
-		fn update_vesting_schedules(i: u32) -> Weight;
-	}
-
-	/// This new BalanceOf<T> type satisfies the type constraints of Self::Balance for the
-	/// provided methods of Currency.
-	pub(crate) type BalanceOf<T> =
-		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 	/// Type alias for VestingSchedule.
-	pub(crate) type VestingScheduleOf<T> = VestingSchedule<<T as frame_system::Config>::BlockNumber, BalanceOf<T>>;
+	pub(crate) type VestingScheduleOf<T> = VestingSchedule<<T as frame_system::Config>::BlockNumber>;
 	/// Tuple struct for GenesisConfig. `(account_id, start, period, period_count, per_period)`
-	pub type ScheduledItem<T> = (VestingBucket, <T as frame_system::Config>::AccountId, BalanceOf<T>);
+	pub type ScheduledItem<T> = (VestingBucket, <T as frame_system::Config>::AccountId, Balance);
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// A currency whose accounts can have liquidity restrictions.
-		type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
+		type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber, Balance = Balance>;
 
 		#[pallet::constant]
 		/// The minimum amount transferred to call `vested_transfer`.
-		type MinVestedTransfer: Get<BalanceOf<Self>>;
+		type MinVestedTransfer: Get<Balance>;
 
-		/// Required origin for vested transfer.
-		type VestedTransferOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
+		/// Required origin for vested transfer.  Root or
+		/// Two thirds of Minterest Council can always do this.
+		type VestedTransferOrigin: EnsureOrigin<Self::Origin>;
 
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
 
 		/// The maximum number of vesting schedules an account can have.
 		type MaxVestingSchedules: Get<u32>;
+
+		#[pallet::constant]
+		/// Information for each vesting bucket:
+		/// (vesting bucket type, vesting_duration, unlock_begins_in_days, total_amount).
+		type VestingBucketsInfo: Get<Vec<(VestingBucket, u8, u8, Balance)>>;
 	}
 
 	#[pallet::error]
@@ -200,17 +212,24 @@ pub mod module {
 		TooManyVestingSchedules,
 		/// The vested transfer amount is too low
 		AmountLow,
+		/// Incorrect vesting bucket type. Only vesting from Marketing, Team and
+		/// Strategic Partners buckets can be created or removed.
+		IncorrectVestingBucketType,
+		/// Incorrect vesting bucket account id.
+		IncorrectVestingBucketAccountId,
+		/// The user does not have such a schedule
+		UserDoesNotHaveSuchSchedule,
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Added new vesting schedule. [from, to, vesting_schedule]
-		VestingScheduleAdded(T::AccountId, T::AccountId, VestingScheduleOf<T>),
+		/// Added new vesting schedule. [to, vesting_schedule]
+		VestingScheduleAdded(T::AccountId, VestingScheduleOf<T>),
 		/// Claimed vesting. [who, locked_amount]
-		Claimed(T::AccountId, BalanceOf<T>),
-		/// Updated vesting schedules. [who]
-		VestingSchedulesUpdated(T::AccountId),
+		Claimed(T::AccountId, Balance),
+		/// Removed vesting schedules. [who]
+		VestingSchedulesRemoved(T::AccountId),
 	}
 
 	/// Vesting schedules of an account.
@@ -239,12 +258,11 @@ pub mod module {
 					T::Currency::free_balance(who) >= *total,
 					"Account do not have enough balance"
 				);
-				let schedule = VestingSchedule::new(*bucket, *total);
-				Pallet::<T>::ensure_valid_vesting_schedule(&schedule).unwrap();
 
-				// We do not set a schedule if the number of periods is zero.
-				// period_count are set to zero for the Market Making bucket.
-				if !schedule.period_count.is_zero() {
+				// We do not set a schedule for Market Making vesting bucket.
+				if *bucket != VestingBucket::MarketMaking {
+					let schedule = VestingSchedule::new(*bucket, *total);
+					Pallet::<T>::ensure_valid_vesting_schedule(&schedule).unwrap();
 					T::Currency::set_lock(VESTING_LOCK_ID, who, *total, WithdrawReasons::all());
 					VestingSchedules::<T>::insert(who, vec![schedule]);
 				}
@@ -259,7 +277,10 @@ pub mod module {
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {
+	impl<T: Config> Pallet<T>
+	where
+		<T as frame_system::Config>::AccountId: From<[u8; 32]>,
+	{
 		/// Claim unlocked balances.
 		/// Can not get VestingSchedule count from `who`, so use `MaxVestingSchedules / 2`.
 		#[pallet::weight(T::WeightInfo::claim((<T as Config>::MaxVestingSchedules::get() / 2) as u32))]
@@ -271,41 +292,60 @@ pub mod module {
 			Ok(().into())
 		}
 
-		/// Add a new vesting schedule for an account. Removes the transferred balance
-		/// from the sender.
+		/// Add a new vesting schedule for an account. Transfer balance
+		/// from the vesting bucket account to target account.
 		///
 		/// The dispatch origin of this call must be `VestedTransferOrigin`.
 		///
-		/// - `dest`: the account that receives vesting schedule of the MNT tokens;
-		/// - `schedule`: the schedule that is created on the AccountId `dest`.
+		/// - `target`: the AccountId on which the vesting schedule is created;
+		/// - `bucket`: vesting bucket type (must be `Team` or `Marketing` or `Strategic Partners`);
+		/// - `start`: block number in which the vesting schedule starts to work;
+		/// - `amount`: the balance for which the vesting schedule is created.
 		#[pallet::weight(T::WeightInfo::vested_transfer())]
 		pub fn vested_transfer(
 			origin: OriginFor<T>,
-			dest: <T::Lookup as StaticLookup>::Source,
-			schedule: VestingScheduleOf<T>,
+			target: <T::Lookup as StaticLookup>::Source,
+			bucket: VestingBucket,
+			start: T::BlockNumber,
+			amount: Balance,
 		) -> DispatchResultWithPostInfo {
-			let from = T::VestedTransferOrigin::ensure_origin(origin)?;
-			let to = T::Lookup::lookup(dest)?;
-			Self::do_vested_transfer(&from, &to, schedule.clone())?;
+			T::VestedTransferOrigin::ensure_origin(origin)?;
+			let target = T::Lookup::lookup(target)?;
 
-			Self::deposit_event(Event::VestingScheduleAdded(from, to, schedule));
+			let schedule: VestingSchedule<T::BlockNumber> = VestingSchedule::new_beginning_from(bucket, start, amount)
+				.ok_or(Error::<T>::IncorrectVestingBucketType)?;
+
+			let raw_bucket_account_id: [u8; 32] = bucket
+				.bucket_account_id()
+				.ok_or(Error::<T>::IncorrectVestingBucketType)?
+				.into();
+
+			Self::do_vested_transfer(&raw_bucket_account_id.into(), &target, schedule.clone())?;
+
+			Self::deposit_event(Event::VestingScheduleAdded(target, schedule));
 			Ok(().into())
 		}
 
-		/// Update all vesting schedules under an account, `root` origin required.
-		#[pallet::weight(T::WeightInfo::update_vesting_schedules(vesting_schedules.len() as u32))]
-		pub fn update_vesting_schedules(
+		/// Remove a vesting schedule from an account. Transfer unvested tokens to the
+		/// vesting bucket.
+		///
+		/// The dispatch origin of this call must be `VestedTransferOrigin`.
+		///
+		/// - `target`: the account that receives vesting schedule of the MNT tokens;
+		/// - `bucket`: the type of vesting bucket from which we want to delete the schedule;
+		#[pallet::weight(T::WeightInfo::remove_vesting_schedules())]
+		pub fn remove_vesting_schedules(
 			origin: OriginFor<T>,
-			who: <T::Lookup as StaticLookup>::Source,
-			vesting_schedules: Vec<VestingScheduleOf<T>>,
+			target: <T::Lookup as StaticLookup>::Source,
+			bucket: VestingBucket,
 		) -> DispatchResultWithPostInfo {
-			// FIXME: root only? maybe add council?
-			ensure_root(origin)?;
+			T::VestedTransferOrigin::ensure_origin(origin)?;
+			let account = T::Lookup::lookup(target)?;
+			ensure!(bucket.is_manipulated_bucket(), Error::<T>::IncorrectVestingBucketType);
 
-			let account = T::Lookup::lookup(who)?;
-			Self::do_update_vesting_schedules(&account, vesting_schedules)?;
+			Self::do_remove_vesting_schedule(&account, bucket)?;
 
-			Self::deposit_event(Event::VestingSchedulesUpdated(account));
+			Self::deposit_event(Event::VestingSchedulesRemoved(account));
 			Ok(().into())
 		}
 	}
@@ -313,7 +353,7 @@ pub mod module {
 
 impl<T: Config> Pallet<T> {
 	/// Claim unlocked balances.
-	fn do_claim(who: &T::AccountId) -> BalanceOf<T> {
+	fn do_claim(who: &T::AccountId) -> Balance {
 		let locked = Self::locked_balance(who);
 		if locked.is_zero() {
 			T::Currency::remove_lock(VESTING_LOCK_ID, who);
@@ -324,11 +364,11 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Returns locked balance based on current block number.
-	fn locked_balance(who: &T::AccountId) -> BalanceOf<T> {
+	fn locked_balance(who: &T::AccountId) -> Balance {
 		let now = <frame_system::Module<T>>::block_number();
 		<VestingSchedules<T>>::mutate_exists(who, |maybe_schedules| {
-			let total_locked = if let Some(schedules) = maybe_schedules.as_mut() {
-				let mut total: BalanceOf<T> = Zero::zero();
+			let total_locked = if let Some(schedules) = maybe_schedules {
+				let mut total: Balance = Zero::zero();
 				// leave only schedules with a locked balance
 				schedules.retain(|s| {
 					// calculate the remaining number of locked tokens in the schedule
@@ -348,6 +388,8 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
+	/// Add a new vesting schedule for an account. Transfer balance
+	/// from the vesting bucket account to target account.
 	#[transactional]
 	fn do_vested_transfer(from: &T::AccountId, to: &T::AccountId, schedule: VestingScheduleOf<T>) -> DispatchResult {
 		let schedule_amount = Self::ensure_valid_vesting_schedule(&schedule)?;
@@ -358,7 +400,7 @@ impl<T: Config> Pallet<T> {
 		);
 
 		let total_locked = Self::locked_balance(to)
-			.checked_add(&schedule_amount)
+			.checked_add(schedule_amount)
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		T::Currency::transfer(from, to, schedule_amount, ExistenceRequirement::AllowDeath)?;
@@ -367,27 +409,60 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	fn do_update_vesting_schedules(who: &T::AccountId, schedules: Vec<VestingScheduleOf<T>>) -> DispatchResult {
-		let total_amount = schedules.iter().try_fold::<_, _, Result<BalanceOf<T>, Error<T>>>(
-			Zero::zero(),
-			|acc_amount, schedule| {
-				let amount = Self::ensure_valid_vesting_schedule(schedule)?;
-				Ok(acc_amount + amount)
-			},
-		)?;
-		ensure!(
-			T::Currency::free_balance(who) >= total_amount,
-			Error::<T>::InsufficientBalanceToLock,
-		);
+	/// Remove a vesting schedule from an account. Transfer unvested tokens to the
+	/// vesting bucket.
+	#[transactional]
+	fn do_remove_vesting_schedule(target: &T::AccountId, bucket: VestingBucket) -> DispatchResult
+	where
+		<T as frame_system::Config>::AccountId: From<[u8; 32]>,
+	{
+		let now = <frame_system::Pallet<T>>::block_number();
+		<VestingSchedules<T>>::try_mutate_exists(target, |maybe_schedules| -> DispatchResult {
+			// `total_locked` - the balance that needs to be locked for the user after deleting the schedule
+			// `total_removed` - the balance to be sent from the user account to the bucket account
+			let (mut total_locked, mut total_removed) = (Balance::zero(), Balance::zero());
 
-		T::Currency::set_lock(VESTING_LOCK_ID, who, total_amount, WithdrawReasons::all());
-		<VestingSchedules<T>>::insert(who, schedules);
+			if let Some(schedules) = maybe_schedules {
+				// leave only the schedules that are not deleted
+				schedules.retain(|schedule| {
+					if schedule.bucket == bucket {
+						total_removed += schedule.locked_amount(now);
+					} else {
+						total_locked += schedule.locked_amount(now);
+					}
+					schedule.bucket != bucket
+				});
 
-		Ok(())
+				ensure!(!total_removed.is_zero(), Error::<T>::UserDoesNotHaveSuchSchedule);
+
+				if total_locked.is_zero() {
+					T::Currency::remove_lock(VESTING_LOCK_ID, target);
+				} else {
+					T::Currency::set_lock(VESTING_LOCK_ID, target, total_locked, WithdrawReasons::all());
+				}
+
+				let raw_bucket_account_id: [u8; 32] = bucket
+					.bucket_account_id()
+					.ok_or(Error::<T>::IncorrectVestingBucketType)?
+					.into();
+				T::Currency::transfer(
+					target,
+					&raw_bucket_account_id.into(),
+					total_removed,
+					ExistenceRequirement::AllowDeath,
+				)?;
+
+				// If there is no schedules left, then clear the schedule vector
+				if schedules.is_empty() {
+					*maybe_schedules = None;
+				}
+			}
+			Ok(())
+		})
 	}
 
 	/// Returns `Ok(total_amount)` if valid schedule, or error.
-	fn ensure_valid_vesting_schedule(schedule: &VestingScheduleOf<T>) -> Result<BalanceOf<T>, Error<T>> {
+	fn ensure_valid_vesting_schedule(schedule: &VestingScheduleOf<T>) -> Result<Balance, Error<T>> {
 		ensure!(!schedule.period.is_zero(), Error::<T>::ZeroVestingPeriod);
 		ensure!(!schedule.period_count.is_zero(), Error::<T>::ZeroVestingPeriodCount);
 		ensure!(schedule.end().is_some(), Error::<T>::NumOverflow);

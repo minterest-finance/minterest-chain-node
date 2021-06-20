@@ -47,8 +47,7 @@ struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
-	minted_pools: Vec<CurrencyId>,
-	mnt_rate: Balance,
+	minted_pools: Vec<(CurrencyId, Balance)>,
 }
 
 impl Default for ExtBuilder {
@@ -74,13 +73,27 @@ impl Default for ExtBuilder {
 			],
 			pools: vec![],
 			pool_user_data: vec![],
-			mnt_rate: 10 * DOLLARS,
-			minted_pools: vec![KSM, DOT, ETH, BTC],
+			minted_pools: vec![
+				(KSM, 2 * DOLLARS),
+				(DOT, 2 * DOLLARS),
+				(ETH, 2 * DOLLARS),
+				(BTC, 2 * DOLLARS),
+			],
 		}
 	}
 }
 
 impl ExtBuilder {
+	pub fn enable_minting_for_all_pools(mut self, speed: Balance) -> Self {
+		self.minted_pools = vec![(KSM, speed), (DOT, speed), (ETH, speed), (BTC, speed)];
+		self
+	}
+
+	pub fn mnt_enabled_pools(mut self, pools: Vec<(CurrencyId, Balance)>) -> Self {
+		self.minted_pools = pools;
+		self
+	}
+
 	pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
 		self.pools.push((
 			pool_id,
@@ -152,11 +165,6 @@ impl ExtBuilder {
 
 	pub fn mnt_account_balance(mut self, balance: Balance) -> Self {
 		self.endowed_accounts.push((MntToken::get_account_id(), MNT, balance));
-		self
-	}
-
-	pub fn set_mnt_rate(mut self, rate: u128) -> Self {
-		self.mnt_rate = rate * DOLLARS;
 		self
 	}
 
@@ -385,7 +393,6 @@ impl ExtBuilder {
 		.unwrap();
 
 		mnt_token::GenesisConfig::<Runtime> {
-			mnt_rate: self.mnt_rate,
 			mnt_claim_threshold: 0, // disable by default
 			minted_pools: self.minted_pools,
 			_phantom: std::marker::PhantomData,

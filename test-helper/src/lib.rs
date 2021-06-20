@@ -20,7 +20,7 @@ pub const METH: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::METH);
 
 #[macro_export]
 macro_rules! mock_impl_system_config {
-	($target:ty) => {
+	($target:ty, $account_id:ty) => {
 		parameter_types! {
 			pub const MockBlockHashCount: u64 = 250;
 			pub const MockSS58Prefix: u8 = 42;
@@ -37,7 +37,7 @@ macro_rules! mock_impl_system_config {
 			type BlockNumber = u64;
 			type Hash = H256;
 			type Hashing = BlakeTwo256;
-			type AccountId = u64;
+			type AccountId = $account_id;
 			type Lookup = IdentityLookup<Self::AccountId>;
 			type Header = Header;
 			type Event = Event;
@@ -50,6 +50,10 @@ macro_rules! mock_impl_system_config {
 			type SystemWeightInfo = ();
 			type SS58Prefix = MockSS58Prefix;
 		}
+	};
+
+	($target:ty) => {
+		mock_impl_system_config!($target, u64);
 	};
 }
 
@@ -242,10 +246,6 @@ macro_rules! mock_impl_risk_manager_config {
 #[macro_export]
 macro_rules! mock_impl_mnt_token_config {
 	($target:ty, $acc:ident) => {
-		parameter_types! {
-			pub const SpeedRefreshPeriod: BlockNumber = 5;
-		}
-
 		impl mnt_token::Config for $target {
 			type Event = Event;
 			type PriceSource = MockPriceSource;
@@ -254,7 +254,6 @@ macro_rules! mock_impl_mnt_token_config {
 			type MultiCurrency = orml_currencies::Module<$target>;
 			type ControllerManager = controller::Module<$target>;
 			type MntTokenAccountId = MntTokenAccountId;
-			type SpeedRefreshPeriod = SpeedRefreshPeriod;
 			type MntTokenWeightInfo = ();
 		}
 	};

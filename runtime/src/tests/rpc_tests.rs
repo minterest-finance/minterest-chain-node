@@ -908,6 +908,7 @@ fn get_all_freshest_prices_rpc_should_work() {
 fn get_unclaimed_mnt_balance_should_work() {
 	ExtBuilder::default()
 		.mnt_account_balance(1_000_000 * DOLLARS)
+		.enable_minting_for_all_pools(10 * DOLLARS)
 		.pool_initial(DOT)
 		.pool_initial(KSM)
 		.pool_initial(ETH)
@@ -920,14 +921,12 @@ fn get_unclaimed_mnt_balance_should_work() {
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, 50_000 * DOLLARS));
 
 			run_to_block(10);
-			assert_ok!(MntToken::refresh_mnt_speeds());
 
 			// ALice deposits DOT and enables her DOT pool as a collateral.
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 50_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
 
 			run_to_block(15);
-			assert_ok!(MntToken::refresh_mnt_speeds());
 
 			// Calculation of the balance of Alice in MNT tokens (only supply distribution):
 			// supplier_mnt_accrued = previous_balance + speed_DOT * block_delta * alice_supply / total_supply;
@@ -937,7 +936,6 @@ fn get_unclaimed_mnt_balance_should_work() {
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 10_000 * DOLLARS));
 
 			run_to_block(20);
-			assert_ok!(MntToken::refresh_mnt_speeds());
 
 			// Calculation of the balance of Alice in MNT tokens (only supply distribution):
 			// supplier_mnt_accrued = previous_balance + speed_DOT * block_delta * alice_supply / total_supply;
@@ -953,7 +951,6 @@ fn get_unclaimed_mnt_balance_should_work() {
 			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 20_000 * DOLLARS));
 
 			run_to_block(30);
-			assert_ok!(MntToken::refresh_mnt_speeds());
 
 			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 66_071_426_707_059_137_419);
 			// In the test environment, the test storage changes.
@@ -962,7 +959,6 @@ fn get_unclaimed_mnt_balance_should_work() {
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 10_000 * DOLLARS));
 
 			run_to_block(40);
-			assert_ok!(MntToken::refresh_mnt_speeds());
 
 			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 69_747_897_200_110_984_655);
 			// In the test environment, the test storage changes.
@@ -973,11 +969,15 @@ fn get_unclaimed_mnt_balance_should_work() {
 #[test]
 fn get_mnt_borrow_and_supply_rates_should_work() {
 	ExtBuilder::default()
+		.mnt_enabled_pools(vec![
+			(DOT, (5 * DOLLARS) / 2),
+			(ETH, 5 * DOLLARS),
+			(BTC, (5 * DOLLARS) / 2),
+		])
 		.pool_initial(DOT)
 		.pool_initial(ETH)
 		.pool_initial(BTC)
 		.pool_initial(KSM)
-		.set_mnt_rate(10)
 		.build()
 		.execute_with(|| {
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 10_000 * DOLLARS));
@@ -993,12 +993,6 @@ fn get_mnt_borrow_and_supply_rates_should_work() {
 			assert_ok!(MinterestProtocol::borrow(alice(), BTC, 5_000 * DOLLARS));
 
 			run_to_block(5);
-			// Sum of all utilities: 40_000$
-			// Expected mnt_speed = pool_utilities / sum_of_all_utilities * MntRate
-			//DOT: 10000/40000*10 = 2.5
-			//ETH: 20000/40000*10 = 5
-			//BTC: 10000/40000*10= 2.5
-			assert_ok!(MntToken::refresh_mnt_speeds());
 			assert_eq!(MntToken::mnt_speeds(DOT), 2_500_000_000_000_000_000);
 			assert_eq!(MntToken::mnt_speeds(ETH), 5_000_000_000_000_000_000);
 			assert_eq!(MntToken::mnt_speeds(BTC), 2_500_000_000_000_000_000);

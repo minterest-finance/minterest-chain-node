@@ -66,7 +66,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill, Perquintill};
 
 use frame_support::traits::Contains;
-use frame_system::{EnsureOneOf, EnsureRoot, EnsureSigned};
+use frame_system::{EnsureOneOf, EnsureRoot};
 pub use minterest_primitives::{
 	constants::{currency::*, time::*, *},
 	currency::*,
@@ -485,7 +485,6 @@ impl risk_manager::Config for Runtime {
 
 parameter_types! {
 	pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
-	pub RefreshSpeedPeriod: BlockNumber = REFRESH_SPEED_PERIOD;
 }
 
 impl mnt_token::Config for Runtime {
@@ -497,7 +496,6 @@ impl mnt_token::Config for Runtime {
 	type ControllerManager = Controller;
 	type MntTokenAccountId = MntTokenAccountId;
 	type MntTokenWeightInfo = weights::mnt_token::WeightInfo<Runtime>;
-	type SpeedRefreshPeriod = RefreshSpeedPeriod;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -573,17 +571,17 @@ impl dex::Config for Runtime {
 parameter_types! {
 	pub MinVestedTransfer: Balance = DOLLARS; // 1 USD
 	pub const MaxVestingSchedules: u32 = 2;
+	pub VestingBucketsInfo: Vec<(VestingBucket, u8, u8, Balance)> = VestingBucket::get_vesting_buckets_info();
 }
 
 impl module_vesting::Config for Runtime {
 	type Event = Event;
 	type Currency = pallet_balances::Module<Runtime>;
 	type MinVestedTransfer = MinVestedTransfer;
-	// FIXME:  fix it sudo + 1/3 MinterestCouncil
-	type VestedTransferOrigin = EnsureSigned<AccountId>;
-	// FIXME: implement weights
-	type WeightInfo = ();
+	type VestedTransferOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
+	type WeightInfo = weights::vesting::WeightInfo<Runtime>;
 	type MaxVestingSchedules = MaxVestingSchedules;
+	type VestingBucketsInfo = VestingBucketsInfo;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -932,6 +930,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, liquidation_pools, benchmarking::liquidation_pools);
 			add_benchmark!(params, batches, minterest_protocol, benchmarking::minterest_protocol);
 			add_benchmark!(params, batches, mnt_token, benchmarking::mnt_token);
+			add_benchmark!(params, batches, module_vesting, benchmarking::vesting);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
