@@ -9,8 +9,8 @@ use node_minterest_runtime::{
 	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, ExistentialDeposit,
 	GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
 	MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, MntTokenModuleId, OperatorMembershipMinterestConfig,
-	PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, VestingConfig, BTC, DOLLARS,
-	DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
+	PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, VestingConfig, WhitelistConfig,
+	BTC, DOLLARS, DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -490,6 +490,7 @@ fn minterest_genesis(
 			_phantom: Default::default(),
 		}),
 		module_vesting: Some(VestingConfig { vesting: vesting_list }),
+		whitelist: Some(WhitelistConfig { members: vec![] }),
 	}
 }
 
@@ -787,6 +788,7 @@ fn testnet_genesis(
 			_phantom: Default::default(),
 		}),
 		module_vesting: Some(VestingConfig { vesting: vec![] }),
+		whitelist: Some(WhitelistConfig { members: vec![] }),
 	}
 }
 

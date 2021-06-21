@@ -52,7 +52,7 @@ pub mod module {
 	}
 
 	#[pallet::event]
-	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
+	#[pallet::generate_deposit(fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// The given member was added to the whitelist: \[who\]
 		MemberAdded(T::AccountId),
@@ -63,6 +63,34 @@ pub mod module {
 	#[pallet::storage]
 	#[pallet::getter(fn members)]
 	pub(crate) type Members<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub members: Vec<T::AccountId>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			GenesisConfig { members: vec![] }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			// ensure no duplicates exist.
+			let unique_whitelist_members = self.members.iter().cloned().collect::<std::collections::BTreeSet<_>>();
+			assert!(
+				unique_whitelist_members.len() == self.members.len(),
+				"duplicate member account in whitelist in genesis."
+			);
+
+			let mut members = self.members.clone();
+			members.sort();
+			Members::<T>::put(members)
+		}
+	}
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);

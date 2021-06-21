@@ -606,7 +606,7 @@ construct_runtime!(
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Module, Storage, Call, Event<T>},
-		Whitelist: whitelist::{Module, Storage, Call, Event<T>},
+		Whitelist: whitelist::{Module, Storage, Call, Event<T>, Config<T>},
 
 		// Dev
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
