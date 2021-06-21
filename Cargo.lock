@@ -9444,12 +9444,15 @@ version = "0.6.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "minterest-primitives",
+ "pallet-balances",
  "parity-scale-codec",
  "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "test-helper",
 ]
 
 [[package]]

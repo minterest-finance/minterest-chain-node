@@ -210,7 +210,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type ManagerLiquidationPools = liquidation_pools::Module<$target>;
 			type ManagerLiquidityPools = liquidity_pools::Module<$target>;
 			type MntManager = mnt_token::Module<$target>;
-			type WhitelistMembers = WhitelistMembers;
+			type WhitelistMembers = whitelist::Module<$target>;
 			type ProtocolWeightInfo = ();
 			type ControllerManager = controller::Module<$target>;
 			type RiskManagerAPI = TestRiskManager;

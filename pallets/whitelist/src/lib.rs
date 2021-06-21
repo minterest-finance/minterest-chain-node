@@ -2,24 +2,27 @@
 //!
 //! ## Overview
 //!
-//! TODO
+//! Whitelist module provides the necessary functionality for the protocol to work in whitelist mode.
+//! Allows control of membership of a set of `AccountID`s, useful for managing
+//! membership of a whitelist. There can be no more than `MaxMembers` in the whitelist at the same time,
+//! and there must always be at least one user in the whitelist.
 //!
-//! ### Vesting Schedule
-//!
-//! TODO
-
 //! ## Interface
 //!
 //! ### Dispatchable Functions
 //!
-//! TODO
+//! - `add_member` - Add a new member to the whitelist. Root or half Minterest Council can
+//! always do this.
+//! - `remove_member` - Remove a member from the whitelist. Root or half Minterest Council
+//! can always do this.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::unused_unit)]
+
 use frame_support::pallet_prelude::*;
 use frame_support::traits::Contains;
 pub use module::*;
 use sp_std::vec::Vec;
-
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -35,7 +38,7 @@ pub mod module {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// The origin which may umanage members in whitelist. Root or
+		/// The origin which may manage members in whitelist. Root or
 		/// Half Minterest Council can always do this.
 		type WhitelistOrigin: EnsureOrigin<Self::Origin>;
 
@@ -55,8 +58,6 @@ pub mod module {
 		MembershipLimitReached,
 		/// Cannot remove a member because at least one member must remain.
 		MustBeAtLeastOneMember,
-		/// The value does not exists or it fails to decode the length.
-		FailsDecodeLength,
 	}
 
 	#[pallet::event]
@@ -122,7 +123,7 @@ pub mod module {
 		pub fn add_member(origin: OriginFor<T>, new_account: T::AccountId) -> DispatchResultWithPostInfo {
 			T::WhitelistOrigin::ensure_origin(origin)?;
 			ensure!(
-				Members::<T>::decode_len().ok_or(Error::<T>::FailsDecodeLength)? < T::MaxMembers::get() as usize,
+				Members::<T>::decode_len().unwrap_or(0) < T::MaxMembers::get() as usize,
 				Error::<T>::MembershipLimitReached
 			);
 
@@ -148,7 +149,7 @@ pub mod module {
 			T::WhitelistOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				Members::<T>::decode_len().ok_or(Error::<T>::FailsDecodeLength)? > 1,
+				Members::<T>::decode_len().unwrap_or(0) > 1,
 				Error::<T>::MustBeAtLeastOneMember
 			);
 
