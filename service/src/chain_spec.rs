@@ -199,6 +199,9 @@ pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
 	))
 }
 
+/// Configure initial storage state for FRAME pallets.
+/// This initial storage state is used in `local_testnet_config` and
+/// `minterest_turbo_testnet_config`.
 fn minterest_genesis(
 	wasm_binary: &[u8],
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
@@ -224,6 +227,10 @@ fn minterest_genesis(
 	let initial_allocations = calculate_initial_allocations(endowed_accounts, allocated_list);
 	// Vesting calculation
 	let vesting_list = calculate_vesting_list(allocated_list_parsed);
+
+	// Reading whitelist members from the file.
+	let white_list_members_json = &include_bytes!("../../resources/whitelist-members.json")[..];
+	let whitelist_members: Vec<AccountId> = serde_json::from_slice(white_list_members_json).unwrap();
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -490,11 +497,14 @@ fn minterest_genesis(
 			_phantom: Default::default(),
 		}),
 		module_vesting: Some(VestingConfig { vesting: vesting_list }),
-		whitelist: Some(WhitelistConfig { members: vec![] }),
+		whitelist: Some(WhitelistConfig {
+			members: whitelist_members,
+		}),
 	}
 }
 
 /// Configure initial storage state for FRAME pallets.
+/// This initial storage state is used in `development_config`.
 fn testnet_genesis(
 	wasm_binary: &[u8],
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
@@ -788,7 +798,9 @@ fn testnet_genesis(
 			_phantom: Default::default(),
 		}),
 		module_vesting: Some(VestingConfig { vesting: vec![] }),
-		whitelist: Some(WhitelistConfig { members: vec![] }),
+		whitelist: Some(WhitelistConfig {
+			members: endowed_accounts,
+		}),
 	}
 }
 

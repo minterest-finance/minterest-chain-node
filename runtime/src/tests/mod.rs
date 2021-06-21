@@ -1,7 +1,7 @@
 use crate::{
 	AccountId, Balance, Block, Controller, Currencies, Dex, EnabledUnderlyingAssetsIds, Event, LiquidationPools,
 	LiquidityPools, MinterestCouncilMembership, MinterestOracle, MinterestProtocol, MntToken, Prices, Rate,
-	RiskManager, Runtime, System, WhitelistCouncilMembership, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+	RiskManager, Runtime, System, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::{
@@ -9,8 +9,7 @@ use controller_rpc_runtime_api::{
 	UserPoolBalanceData,
 };
 use frame_support::{
-	assert_err, assert_noop, assert_ok, error::BadOrigin, pallet_prelude::GenesisBuild, parameter_types,
-	traits::OnFinalize,
+	assert_err, assert_noop, assert_ok, pallet_prelude::GenesisBuild, parameter_types, traits::OnFinalize,
 };
 use liquidation_pools::{LiquidationPoolData, Sales};
 use liquidity_pools::{Pool, PoolUserData};

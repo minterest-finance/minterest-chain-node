@@ -65,7 +65,6 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill, Perquintill};
 
-use frame_support::traits::Contains;
 use frame_system::{EnsureOneOf, EnsureRoot};
 pub use minterest_primitives::{
 	constants::{currency::*, time::*, *},
@@ -333,30 +332,12 @@ impl minterest_protocol::Config for Runtime {
 	type ManagerLiquidationPools = LiquidationPools;
 	type ManagerLiquidityPools = LiquidityPools;
 	type MntManager = MntToken;
-	// FIXME
-	type WhitelistMembers = WhitelistCouncilProvider;
+	type WhitelistMembers = Whitelist;
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
 	type ControllerManager = Controller;
 	type RiskManagerAPI = RiskManager;
 	type MinterestModelAPI = MinterestModel;
 	type CreatePoolOrigin = EnsureRootOrHalfMinterestCouncil;
-}
-
-// FIXME
-pub struct WhitelistCouncilProvider;
-impl Contains<AccountId> for WhitelistCouncilProvider {
-	fn contains(who: &AccountId) -> bool {
-		vec![].contains(who)
-	}
-
-	fn sorted_members() -> Vec<AccountId> {
-		vec![]
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn add(_: &AccountId) {
-		todo!()
-	}
 }
 
 parameter_type_with_key! {
@@ -562,6 +543,7 @@ parameter_types! {
 impl whitelist::Config for Runtime {
 	type Event = Event;
 	type MaxMembers = MaxMembersWhitelistMode;
+	type WhitelistOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

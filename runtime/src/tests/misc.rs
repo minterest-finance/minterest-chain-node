@@ -1,36 +1,5 @@
 use super::*;
 
-#[test]
-fn whitelist_mode_should_work() {
-	ExtBuilder::default().pool_initial(DOT).build().execute_with(|| {
-		// Set price = 2.00 USD for all pools.
-		assert_ok!(set_oracle_price_for_all_pools(2));
-		System::set_block_number(1);
-		assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(10_000)));
-		System::set_block_number(2);
-
-		assert_ok!(Controller::switch_whitelist_mode(
-			<Runtime as frame_system::Config>::Origin::root()
-		));
-		System::set_block_number(3);
-
-		// In whitelist mode only members of 'WhitelistCouncil' can work with protocols.
-		assert_noop!(
-			MinterestProtocol::deposit_underlying(bob(), DOT, dollars(5_000)),
-			BadOrigin
-		);
-		System::set_block_number(4);
-
-		assert_ok!(WhitelistCouncilMembership::add_member(
-			<Runtime as frame_system::Config>::Origin::root(),
-			BOB::get()
-		));
-		System::set_block_number(5);
-
-		assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(10_000)));
-	})
-}
-
 //------------ Protocol interest transfer tests ----------------------
 
 // Protocol interest should be transferred to liquidation pool after block is finalized
