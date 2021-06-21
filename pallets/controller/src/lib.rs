@@ -875,7 +875,7 @@ impl<T: Config> Pallet<T> {
 	/// - `pool_id`: CurrencyId to calculate parameters for.
 	///
 	/// returns pool parameters calculated for a current block
-	pub fn calculate_current_pool_data(pool_id: CurrencyId) -> result::Result<Pool, DispatchError> {
+	fn calculate_current_pool_data(pool_id: CurrencyId) -> result::Result<Pool, DispatchError> {
 		let current_block_number = <frame_system::Module<T>>::block_number();
 		let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
 		if current_block_number == accrual_block_number_previous {

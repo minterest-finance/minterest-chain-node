@@ -451,7 +451,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Collects information about required transactions on DEX.
-	pub fn collects_sales_list() -> sp_std::result::Result<Vec<Sales>, DispatchError> {
+	fn collects_sales_list() -> sp_std::result::Result<Vec<Sales>, DispatchError> {
 		// Collecting information about the current state of liquidation pools.
 		let (mut information_vec, mut sum_oversupply, mut sum_shortfall) =
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
@@ -577,7 +577,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Temporary function
-	pub fn get_amounts(
+	fn get_amounts(
 		supply_pool_id: CurrencyId,
 		target_pool_id: CurrencyId,
 		amount: Balance,
