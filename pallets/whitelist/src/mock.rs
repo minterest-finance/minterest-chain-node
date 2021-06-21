@@ -9,7 +9,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use test_helper::{mock_impl_balances_config, mock_impl_system_config};
+use test_helper::{mock_impl_balances_config, mock_impl_system_config, mock_impl_whitelist_config};
 
 pub type AccountId = u64;
 
@@ -31,18 +31,10 @@ construct_runtime!(
 
 mock_impl_system_config!(Test);
 mock_impl_balances_config!(Test);
+mock_impl_whitelist_config!(Test, ZeroAdmin);
 
-parameter_types! {
-	pub const MaxMembersWhitelistMode: u8 = 16;
-}
 ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
-}
-
-impl Config for Test {
-	type Event = Event;
-	type MaxMembers = MaxMembersWhitelistMode;
-	type WhitelistOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 }
 
 pub const ADMIN: AccountId = 0;

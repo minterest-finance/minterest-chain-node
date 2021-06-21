@@ -776,7 +776,7 @@ fn testnet_genesis(
 		}),
 		pallet_collective_Instance1: Some(Default::default()),
 		pallet_membership_Instance1: Some(MinterestCouncilMembershipConfig {
-			members: vec![root_key.clone()],
+			members: vec![root_key],
 			phantom: Default::default(),
 		}),
 		pallet_membership_Instance2: Some(OperatorMembershipMinterestConfig {

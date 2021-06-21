@@ -847,8 +847,8 @@ fn repay_on_behalf_should_work() {
 				Error::<Test>::OperationPaused
 			);
 
-			// Whitelist Mode is enabled. In whitelist mode, only members
-			// 'WhitelistCouncil' can work with protocols.
+			// Whitelist Mode is enabled. In whitelist mode, only `whitelist` members
+			// can work with protocol.
 			controller::WhitelistMode::<Test>::put(true);
 
 			// Bob repaid 20 DOT for Alice.

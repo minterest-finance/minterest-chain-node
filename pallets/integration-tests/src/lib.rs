@@ -84,7 +84,6 @@ mod tests {
 		pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 	}
 
-	pub struct WhitelistMembers;
 	mock_impl_system_config!(Test);
 	mock_impl_balances_config!(Test);
 	mock_impl_orml_tokens_config!(Test);
@@ -114,6 +113,7 @@ mod tests {
 		static FOUR: RefCell<Vec<u64>> = RefCell::new(vec![4]);
 	}
 
+	pub struct WhitelistMembers;
 	impl Contains<u64> for WhitelistMembers {
 		fn sorted_members() -> Vec<u64> {
 			FOUR.with(|v| v.borrow().clone())

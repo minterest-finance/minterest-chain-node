@@ -210,7 +210,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type ManagerLiquidationPools = liquidation_pools::Module<$target>;
 			type ManagerLiquidityPools = liquidity_pools::Module<$target>;
 			type MntManager = mnt_token::Module<$target>;
-			type WhitelistMembers = whitelist::Module<$target>;
+			type WhitelistMembers = WhitelistMembers;
 			type ProtocolWeightInfo = ();
 			type ControllerManager = controller::Module<$target>;
 			type RiskManagerAPI = TestRiskManager;
@@ -274,6 +274,21 @@ macro_rules! mock_impl_balances_config {
 			type ExistentialDeposit = ExistentialDeposit;
 			type AccountStore = frame_system::Pallet<$target>;
 			type WeightInfo = pallet_balances::weights::SubstrateWeight<$target>;
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! mock_impl_whitelist_config {
+	($target:ty, $acc:ident) => {
+		parameter_types! {
+			pub const MaxMembersWhitelistMode: u8 = 16;
+		}
+
+		impl whitelist::Config for $target {
+			type Event = Event;
+			type MaxMembers = MaxMembersWhitelistMode;
+			type WhitelistOrigin = EnsureSignedBy<$acc, AccountId>;
 		}
 	};
 }

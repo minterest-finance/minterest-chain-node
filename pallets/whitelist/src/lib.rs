@@ -2,10 +2,10 @@
 //!
 //! ## Overview
 //!
-//! Whitelist module provides the necessary functionality for the protocol to work in whitelist mode.
-//! Allows control of membership of a set of `AccountID`s, useful for managing
-//! membership of a whitelist. There can be no more than `MaxMembers` in the whitelist at the same time,
-//! and there must always be at least one user in the whitelist.
+//! Whitelist module provides the necessary functionality for the protocol to work in whitelist
+//! mode. Allows control of membership of a set of `AccountID`s, useful for managing
+//! membership of a whitelist. There can be no more than `MaxMembers` in the whitelist at the same
+//! time, and there must always be at least one user in the whitelist.
 //!
 //! ## Interface
 //!
