@@ -889,6 +889,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, minterest_protocol, benchmarking::minterest_protocol);
 			add_benchmark!(params, batches, mnt_token, benchmarking::mnt_token);
 			add_benchmark!(params, batches, module_vesting, benchmarking::vesting);
+			add_benchmark!(params, batches, whitelist, benchmarking::whitelist);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

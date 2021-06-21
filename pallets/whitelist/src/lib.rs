@@ -71,7 +71,7 @@ pub mod module {
 
 	#[pallet::storage]
 	#[pallet::getter(fn members)]
-	pub(crate) type Members<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+	pub type Members<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
