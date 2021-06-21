@@ -4332,6 +4332,7 @@ dependencies = [
  "static_assertions",
  "substrate-wasm-builder",
  "test-helper",
+ "whitelist",
 ]
 
 [[package]]
@@ -9435,6 +9436,19 @@ checksum = "b55551e42cbdf2ce2bedd2203d0cc08dba002c27510f86dab6d0ce304cba3dfe"
 dependencies = [
  "either",
  "libc",
+]
+
+[[package]]
+name = "whitelist"
+version = "0.6.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]

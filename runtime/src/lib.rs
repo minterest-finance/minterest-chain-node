@@ -315,37 +315,7 @@ impl pallet_membership::Config<MinterestCouncilMembershipInstance> for Runtime {
 	type MembershipChanged = MinterestCouncil;
 }
 
-parameter_types! {
-	pub const WhitelistCouncilMotionDuration: BlockNumber = 7 * DAYS;
-	pub const WhitelistCouncilMaxProposals: u32 = 100;
-	pub const WhitelistCouncilMaxMembers: u32 = 100;
-}
-
-type WhitelistCouncilInstance = pallet_collective::Instance2;
-impl pallet_collective::Config<WhitelistCouncilInstance> for Runtime {
-	type Origin = Origin;
-	type Proposal = Call;
-	type Event = Event;
-	type MotionDuration = WhitelistCouncilMotionDuration;
-	type MaxProposals = WhitelistCouncilMaxProposals;
-	type MaxMembers = WhitelistCouncilMaxMembers;
-	type DefaultVote = pallet_collective::PrimeDefaultVote;
-	type WeightInfo = ();
-}
-
-type WhitelistCouncilMembershipInstance = pallet_membership::Instance2;
-impl pallet_membership::Config<WhitelistCouncilMembershipInstance> for Runtime {
-	type Event = Event;
-	type AddOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
-	type RemoveOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
-	type SwapOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
-	type ResetOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
-	type PrimeOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
-	type MembershipInitialized = WhitelistCouncil;
-	type MembershipChanged = WhitelistCouncil;
-}
-
-type OperatorMembershipInstanceMinterest = pallet_membership::Instance3;
+type OperatorMembershipInstanceMinterest = pallet_membership::Instance2;
 impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime {
 	type Event = Event;
 	type AddOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
@@ -363,6 +333,7 @@ impl minterest_protocol::Config for Runtime {
 	type ManagerLiquidationPools = LiquidationPools;
 	type ManagerLiquidityPools = LiquidityPools;
 	type MntManager = MntToken;
+	// FIXME
 	type WhitelistMembers = WhitelistCouncilProvider;
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
 	type ControllerManager = Controller;
@@ -371,14 +342,15 @@ impl minterest_protocol::Config for Runtime {
 	type CreatePoolOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 
+// FIXME
 pub struct WhitelistCouncilProvider;
 impl Contains<AccountId> for WhitelistCouncilProvider {
 	fn contains(who: &AccountId) -> bool {
-		WhitelistCouncil::is_member(who)
+		vec![].contains(who)
 	}
 
 	fn sorted_members() -> Vec<AccountId> {
-		WhitelistCouncil::members()
+		vec![]
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
@@ -583,6 +555,10 @@ impl module_vesting::Config for Runtime {
 	type VestingBucketsInfo = VestingBucketsInfo;
 }
 
+impl whitelist::Config for Runtime {
+	type Event = Event;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -608,15 +584,13 @@ construct_runtime!(
 		// Governance
 		MinterestCouncil: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		MinterestCouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
-		WhitelistCouncil: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		WhitelistCouncilMembership: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
 
 		// Oracle and Prices
 		MinterestOracle: orml_oracle::<Instance1>::{Module, Storage, Call, Config<T>, Event<T>},
 		Prices: module_prices::{Module, Storage, Call, Event<T>, Config<T>},
 
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
-		OperatorMembershipMinterest: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
+		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
 
 		// Minterest pallets
 		MinterestProtocol: minterest_protocol::{Module, Call, Event<T>},
@@ -627,6 +601,8 @@ construct_runtime!(
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Module, Storage, Call, Event<T>},
+		Whitelist: whitelist::{Module, Storage, Call, Event},
+
 		// Dev
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 	}
