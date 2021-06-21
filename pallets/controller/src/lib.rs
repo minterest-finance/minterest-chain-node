@@ -667,7 +667,10 @@ impl<T: Config> Pallet<T> {
 		Ok(borrow_balance)
 	}
 
-	/// TODO: add description
+	/// Calculate actual supply balance for user per asset.
+	///
+	/// - `who`: the AccountId whose balance should be calculated.
+	/// - `underlying_asset_id`: ID of the currency, the balance of supplying of which we calculate.
 	pub fn get_user_supply_per_asset(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
 		let wrapped_id = underlying_asset_id.wrapped_asset().ok_or(Error::<T>::PoolNotFound)?;
 

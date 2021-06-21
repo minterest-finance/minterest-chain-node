@@ -1046,6 +1046,7 @@ fn pool_exists_should_work() {
 	});
 }
 
+/// Check that get_user_total_supply_borrow_and_net_apy RPC call works as expected
 #[test]
 fn get_user_total_supply_borrow_and_net_apy_should_work() {
 	ExtBuilder::default()
