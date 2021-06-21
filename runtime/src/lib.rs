@@ -555,8 +555,13 @@ impl module_vesting::Config for Runtime {
 	type VestingBucketsInfo = VestingBucketsInfo;
 }
 
+parameter_types! {
+	pub const MaxMembersWhitelistMode: u8 = 100;
+}
+
 impl whitelist::Config for Runtime {
 	type Event = Event;
+	type MaxMembers = MaxMembersWhitelistMode;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -601,7 +606,7 @@ construct_runtime!(
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Module, Storage, Call, Event<T>},
-		Whitelist: whitelist::{Module, Storage, Call, Event},
+		Whitelist: whitelist::{Module, Storage, Call, Event<T>},
 
 		// Dev
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
