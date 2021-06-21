@@ -51,13 +51,24 @@ pub const BOB: AccountId = 2;
 pub const CHARLIE: AccountId = 3;
 
 #[derive(Default)]
-pub struct ExternalityBuilder;
+pub struct ExternalityBuilder {
+	members: Vec<AccountId>,
+}
 
 impl ExternalityBuilder {
-	pub fn build() -> sp_io::TestExternalities {
-		let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	pub fn set_members(mut self, members: Vec<AccountId>) -> Self {
+		self.members = members;
+		self
+	}
 
-		let mut ext = sp_io::TestExternalities::from(storage);
+	pub fn build(self) -> sp_io::TestExternalities {
+		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+		whitelist::GenesisConfig::<Test> { members: self.members }
+			.assimilate_storage(&mut storage)
+			.unwrap();
+
+		let mut ext: sp_io::TestExternalities = storage.into();
 		ext.execute_with(|| System::set_block_number(1));
 		ext
 	}
