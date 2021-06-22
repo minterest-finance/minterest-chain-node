@@ -11,13 +11,12 @@
 #![allow(clippy::unnecessary_mut_passed)]
 
 use codec::Codec;
-use sp_std::prelude::*;
 
 sp_api::decl_runtime_apis! {
 	pub trait WhitelistRuntimeApi<AccountId>
 	where
 		AccountId: Codec,
 	{
-		fn is_whitelist_member(account_id: AccountId) -> Option<bool>;
+		fn is_whitelist_member(who: AccountId) -> Option<bool>;
 	}
 }

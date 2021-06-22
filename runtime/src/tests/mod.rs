@@ -1,7 +1,7 @@
 use crate::{
 	AccountId, Balance, Block, Controller, Currencies, Dex, EnabledUnderlyingAssetsIds, Event, LiquidationPools,
 	LiquidityPools, MinterestCouncilMembership, MinterestOracle, MinterestProtocol, MntToken, Prices, Rate,
-	RiskManager, Runtime, System, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+	RiskManager, Runtime, System, Whitelist, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::{
@@ -22,6 +22,8 @@ use prices_rpc_runtime_api::runtime_decl_for_PricesRuntimeApi::PricesRuntimeApi;
 use risk_manager::RiskManagerData;
 use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};
 use test_helper::{BTC, DOT, ETH, KSM, MDOT, METH, MNT};
+use whitelist_rpc_runtime_api::runtime_decl_for_WhitelistRuntimeApi::WhitelistRuntimeApi;
+
 mod balancing_pools_tests;
 mod dexes_tests;
 mod liquidation_tests;
@@ -436,6 +438,10 @@ fn get_hypothetical_account_liquidity_rpc(account_id: AccountId) -> Option<Hypot
 
 fn is_admin_rpc(caller: AccountId) -> Option<bool> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::is_admin(caller)
+}
+
+fn is_whitelist_member_rpc(who: AccountId) -> Option<bool> {
+	<Runtime as WhitelistRuntimeApi<Block, AccountId>>::is_whitelist_member(who)
 }
 
 fn get_user_total_collateral_rpc(account_id: AccountId) -> Balance {

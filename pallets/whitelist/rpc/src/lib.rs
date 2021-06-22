@@ -15,13 +15,13 @@ pub trait WhitelistRpcApi<BlockHash, AccountId> {
 	/// Checks whether the user is a member of the whitelist.
 	///
 	///  - `&self` :  Self reference
-	///  - `account_id`: checked account id.
+	///  - `who`: checked account id.
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return
 	/// - is_admin: true / false
 	#[rpc(name = "whitelist_isWhitelistMember")]
-	fn is_whitelist_member(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<bool>>;
+	fn is_whitelist_member(&self, who: AccountId, at: Option<BlockHash>) -> Result<Option<bool>>;
 }
 
 /// A struct that implements the [`WhitelistApi`].
@@ -60,12 +60,12 @@ where
 	C::Api: WhitelistRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
 {
-	fn is_whitelist_member(&self, account_id: AccountId, at: Option<<Block as BlockT>::Hash>) -> Result<Option<bool>> {
+	fn is_whitelist_member(&self, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> Result<Option<bool>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
-		api.is_whitelist_member(&at, account_id).map_err(|e| RpcError {
+		api.is_whitelist_member(&at, who).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
 			message: "Unable to check if is a whitelist member.".into(),
 			data: Some(format!("{:?}", e).into()),
