@@ -39,22 +39,19 @@ fn add_member_should_works() {
 		assert_noop!(Whitelist::add_member(Origin::signed(ALICE), BOB), BadOrigin);
 
 		// Add Alice to whitelist.
-		assert_ok!(Whitelist::add_member(Origin::signed(ADMIN), ALICE));
+		assert_ok!(Whitelist::add_member(admin(), ALICE));
 		let expected_event = Event::whitelist_module(crate::Event::MemberAdded(ALICE));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(Members::<Test>::get().contains(&ALICE));
 
 		// Add Bob to whitelist.
-		assert_ok!(Whitelist::add_member(Origin::signed(ADMIN), BOB));
+		assert_ok!(Whitelist::add_member(admin(), BOB));
 		let expected_event = Event::whitelist_module(crate::Event::MemberAdded(BOB));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(Members::<Test>::get().contains(&BOB));
 
 		// Alice cannot be added to the whitelist because she has already been added.
-		assert_noop!(
-			Whitelist::add_member(Origin::signed(ADMIN), ALICE),
-			Error::<Test>::AlreadyMember
-		);
+		assert_noop!(Whitelist::add_member(admin(), ALICE), Error::<Test>::AlreadyMember);
 
 		assert_eq!(Whitelist::members(), vec![ALICE, BOB]);
 	});
@@ -65,12 +62,12 @@ fn cant_exceed_max_members() {
 	ExternalityBuilder::default().build().execute_with(|| {
 		// Add 16 members, reaching the max.
 		for i in (0..16).rev() {
-			assert_ok!(Whitelist::add_member(Origin::signed(ADMIN), i));
+			assert_ok!(Whitelist::add_member(admin(), i));
 		}
 
 		// Try to add the 17th member exceeding the max.
 		assert_noop!(
-			Whitelist::add_member(Origin::signed(ADMIN), 16),
+			Whitelist::add_member(admin(), 16),
 			Error::<Test>::MembershipLimitReached
 		);
 
@@ -85,25 +82,38 @@ fn remove_member_should_works() {
 		.set_members(vec![ALICE, BOB, CHARLIE])
 		.build()
 		.execute_with(|| {
-			assert_ok!(Whitelist::remove_member(Origin::signed(ADMIN), CHARLIE));
+			assert_ok!(Whitelist::remove_member(admin(), CHARLIE));
 			// Charlie was previously removed from the whitelist.
-			assert_noop!(
-				Whitelist::remove_member(Origin::signed(ADMIN), CHARLIE),
-				Error::<Test>::NotMember
-			);
+			assert_noop!(Whitelist::remove_member(admin(), CHARLIE), Error::<Test>::NotMember);
 
 			// Remove Bob from whitelist.
-			assert_ok!(Whitelist::remove_member(Origin::signed(ADMIN), BOB));
+			assert_ok!(Whitelist::remove_member(admin(), BOB));
 			let expected_event = Event::whitelist_module(crate::Event::MemberRemoved(2));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// Cannot remove Alice, because at least one member must remain.
 			assert_noop!(
-				Whitelist::remove_member(Origin::signed(ADMIN), ALICE),
+				Whitelist::remove_member(admin(), ALICE),
 				Error::<Test>::MustBeAtLeastOneMember
 			);
 
 			// Check storage changes.
 			assert_eq!(Whitelist::members(), vec![ALICE]);
 		})
+}
+
+#[test]
+fn switch_whitelist_mode_should_work() {
+	ExternalityBuilder::default().build().execute_with(|| {
+		assert_ok!(Whitelist::switch_whitelist_mode(admin()));
+		let expected_event = Event::whitelist_module(crate::Event::ProtocolOperationModeSwitched(true));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+		assert!(Whitelist::whitelist_mode());
+
+		assert_ok!(Whitelist::switch_whitelist_mode(admin()));
+		assert!(!Whitelist::whitelist_mode());
+
+		assert_noop!(Whitelist::switch_whitelist_mode(alice()), BadOrigin);
+		assert!(!Whitelist::whitelist_mode());
+	});
 }

@@ -1,6 +1,7 @@
 use crate::{benchmarking::utils::SEED, AccountId, MaxMembersWhitelistMode, Runtime, Whitelist};
 use frame_benchmarking::account;
 use frame_support::{assert_ok, traits::EnsureOrigin};
+use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
 use sp_std::prelude::*;
 
@@ -35,6 +36,11 @@ runtime_benchmarks! {
 	verify {
 		assert!(!Whitelist::members().contains(&to_remove));
 	}
+
+
+	switch_whitelist_mode {}: _(
+		RawOrigin::Root
+	)
 }
 
 #[cfg(test)]
@@ -54,6 +60,13 @@ mod tests {
 	fn test_remove_member() {
 		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_remove_member());
+		})
+	}
+
+	#[test]
+	fn test_switch_whitelist_mode() {
+		test_externalities().execute_with(|| {
+			assert_ok!(test_benchmark_switch_whitelist_mode());
 		})
 	}
 }

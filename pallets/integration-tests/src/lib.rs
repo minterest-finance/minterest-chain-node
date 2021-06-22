@@ -65,6 +65,7 @@ mod tests {
 			TestDex: dex::{Module, Storage, Call, Event<T>},
 			TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 			TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config},
+			TestWhitelist: whitelist_module::{Module, Storage, Call, Event<T>, Config<T>},
 		}
 	);
 
@@ -96,6 +97,7 @@ mod tests {
 	mock_impl_minterest_protocol_config!(Test, ZeroAdmin);
 	mock_impl_mnt_token_config!(Test, ZeroAdmin);
 	mock_impl_risk_manager_config!(Test, ZeroAdmin);
+	mock_impl_whitelist_module_config!(Test, ZeroAdmin);
 
 	pub struct MockPriceSource;
 
@@ -347,7 +349,6 @@ mod tests {
 					(KSM, PauseKeeper::all_paused()),
 					(BTC, PauseKeeper::all_unpaused()),
 				],
-				whitelist_mode: false,
 			}
 			.assimilate_storage(&mut t)
 			.unwrap();

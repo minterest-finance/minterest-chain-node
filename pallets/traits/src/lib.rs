@@ -133,10 +133,6 @@ pub trait ControllerManager<AccountId> {
 
 	/// Return minimum protocol interest needed to transfer it to liquidation pool
 	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance;
-
-	/// Protocol operation mode. In whitelist mode, only members 'WhitelistCouncil' can work with
-	/// protocols.
-	fn is_whitelist_mode_enabled() -> bool;
 }
 
 pub trait MntManager<AccountId> {
@@ -206,4 +202,11 @@ pub trait MinterestModelAPI {
 		multiplier_per_block: Rate,
 		jump_multiplier_per_block: Rate,
 	) -> DispatchResult;
+}
+
+/// An abstraction of controller basic functionalities.
+pub trait WhitelistManager {
+	/// Protocol operation mode. In whitelist mode, only members from
+	/// whitelist can work with protocol.
+	fn is_whitelist_mode_enabled() -> bool;
 }

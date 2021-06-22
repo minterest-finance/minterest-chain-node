@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use crate::{
 	AccountId, Balance, Currencies, CurrencyId, MinterestProtocol, MntTokenModuleId, Origin, Rate, Runtime, Vec,
 	Whitelist, BTC, DOLLARS, DOT, ETH, KSM, MNT,
@@ -32,7 +34,7 @@ pub fn enable_is_collateral_mock<T: frame_system::Config<Origin = Origin>>(
 }
 
 pub fn enable_whitelist_mode_and_add_member(who: &AccountId) -> DispatchResultWithPostInfo {
-	controller::WhitelistMode::<Runtime>::put(true);
+	Whitelist::switch_whitelist_mode(RawOrigin::Root.into());
 	Whitelist::add_member(RawOrigin::Root.into(), who.clone())?;
 	Ok(().into())
 }
@@ -175,7 +177,6 @@ pub mod tests {
 				(KSM, PauseKeeper::all_unpaused()),
 				(BTC, PauseKeeper::all_unpaused()),
 			],
-			whitelist_mode: false,
 		}
 		.assimilate_storage(&mut storage)
 		.unwrap();

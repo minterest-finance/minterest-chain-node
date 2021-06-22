@@ -41,6 +41,12 @@ pub const ADMIN: AccountId = 0;
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
 pub const CHARLIE: AccountId = 3;
+pub fn admin() -> Origin {
+	Origin::signed(ADMIN)
+}
+pub fn alice() -> Origin {
+	Origin::signed(ALICE)
+}
 
 #[derive(Default)]
 pub struct ExternalityBuilder {
@@ -56,9 +62,12 @@ impl ExternalityBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-		whitelist_module::GenesisConfig::<Test> { members: self.members }
-			.assimilate_storage(&mut storage)
-			.unwrap();
+		whitelist_module::GenesisConfig::<Test> {
+			members: self.members,
+			whitelist_mode: false,
+		}
+		.assimilate_storage(&mut storage)
+		.unwrap();
 
 		let mut ext: sp_io::TestExternalities = storage.into();
 		ext.execute_with(|| System::set_block_number(1));

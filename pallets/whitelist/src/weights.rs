@@ -47,20 +47,28 @@ use sp_std::marker::PhantomData;
 pub trait WeightInfo {
 	fn add_member(m: u32, ) -> Weight;
 	fn remove_member(m: u32, ) -> Weight;
+	fn switch_whitelist_mode() -> Weight;
 }
 
 /// Weights for whitelist_module using the Minterest node and recommended hardware.
 pub struct MinterestWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for MinterestWeight<T> {
-	fn add_member(_m: u32, ) -> Weight {
-		(68_796_000 as Weight)
+	fn add_member(m: u32, ) -> Weight {
+		(55_048_000 as Weight)
+			// Standard Error: 9_000
+			.saturating_add((157_000 as Weight).saturating_mul(m as Weight))
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 	fn remove_member(m: u32, ) -> Weight {
-		(47_118_000 as Weight)
-			// Standard Error: 13_000
+		(42_717_000 as Weight)
+			// Standard Error: 7_000
 			.saturating_add((96_000 as Weight).saturating_mul(m as Weight))
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+	fn switch_whitelist_mode() -> Weight {
+		(25_677_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
@@ -68,15 +76,22 @@ impl<T: frame_system::Config> WeightInfo for MinterestWeight<T> {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn add_member(_m: u32, ) -> Weight {
-		(68_796_000 as Weight)
+	fn add_member(m: u32, ) -> Weight {
+		(55_048_000 as Weight)
+			// Standard Error: 9_000
+			.saturating_add((157_000 as Weight).saturating_mul(m as Weight))
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
 	fn remove_member(m: u32, ) -> Weight {
-		(47_118_000 as Weight)
-			// Standard Error: 13_000
+		(42_717_000 as Weight)
+			// Standard Error: 7_000
 			.saturating_add((96_000 as Weight).saturating_mul(m as Weight))
+			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+	}
+	fn switch_whitelist_mode() -> Weight {
+		(25_677_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}

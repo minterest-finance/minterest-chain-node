@@ -45,6 +45,7 @@ frame_support::construct_runtime!(
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		TestDex: dex::{Module, Storage, Call, Event<T>},
 		TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
+		TestWhitelist: whitelist_module::{Module, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -93,7 +94,6 @@ impl module_prices::Config for Test {
 	type WeightInfo = ();
 }
 
-pub struct WhitelistMembers;
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
 mock_impl_orml_currencies_config!(Test);
@@ -106,6 +106,7 @@ mock_impl_minterest_protocol_config!(Test, ZeroAdmin);
 mock_impl_risk_manager_config!(Test, ZeroAdmin);
 mock_impl_mnt_token_config!(Test, ZeroAdmin);
 mock_impl_balances_config!(Test);
+mock_impl_whitelist_module_config!(Test, ZeroAdmin);
 
 pub struct MockPriceSource;
 
@@ -127,6 +128,7 @@ thread_local! {
 	static TWO: RefCell<Vec<u64>> = RefCell::new(vec![2]);
 }
 
+pub struct WhitelistMembers;
 impl Contains<u64> for WhitelistMembers {
 	fn contains(who: &AccountId) -> bool {
 		TWO.with(|v| v.borrow().contains(who))
@@ -394,7 +396,6 @@ impl ExtBuilder {
 					},
 				),
 			],
-			whitelist_mode: false,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

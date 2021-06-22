@@ -344,7 +344,6 @@ fn minterest_genesis(
 				(KSM, PauseKeeper::all_unpaused()),
 				(BTC, PauseKeeper::all_unpaused()),
 			],
-			whitelist_mode: false,
 		}),
 		minterest_model: Some(MinterestModelConfig {
 			minterest_model_params: vec![
@@ -499,6 +498,7 @@ fn minterest_genesis(
 		module_vesting: Some(VestingConfig { vesting: vesting_list }),
 		whitelist_module: Some(WhitelistConfig {
 			members: whitelist_members,
+			whitelist_mode: false,
 		}),
 	}
 }
@@ -645,7 +645,6 @@ fn testnet_genesis(
 				(KSM, PauseKeeper::all_unpaused()),
 				(BTC, PauseKeeper::all_unpaused()),
 			],
-			whitelist_mode: false,
 		}),
 		minterest_model: Some(MinterestModelConfig {
 			minterest_model_params: vec![
@@ -800,6 +799,7 @@ fn testnet_genesis(
 		module_vesting: Some(VestingConfig { vesting: vec![] }),
 		whitelist_module: Some(WhitelistConfig {
 			members: endowed_accounts,
+			whitelist_mode: false,
 		}),
 	}
 }

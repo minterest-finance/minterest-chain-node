@@ -24,7 +24,7 @@ use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
 	Borrowing, ControllerManager, LiquidationPoolsManager, LiquidityPoolsManager, MinterestModelAPI, MntManager,
-	PoolsManager, RiskManagerAPI,
+	PoolsManager, RiskManagerAPI, WhitelistManager,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -80,7 +80,7 @@ pub mod module {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// Basic borrowing functions
+		/// Basic borrowing functions.
 		type Borrowing: Borrowing<Self::AccountId>;
 
 		/// The basic liquidity pools.
@@ -98,18 +98,21 @@ pub mod module {
 		/// Weight information for the extrinsics.
 		type ProtocolWeightInfo: WeightInfo;
 
-		/// Public API of controller pallet
+		/// Public API of controller pallet.
 		type ControllerManager: ControllerManager<Self::AccountId>;
 
-		/// Public API of risk manager pallet
+		/// Public API of risk manager pallet.
 		type RiskManagerAPI: RiskManagerAPI;
 
-		/// Public API of risk manager pallet
+		/// Public API of risk manager pallet.
 		type MinterestModelAPI: MinterestModelAPI;
 
 		/// The origin which may create pools. Root or
 		/// Half Minterest Council can always do this.
 		type CreatePoolOrigin: EnsureOrigin<Self::Origin>;
+
+		/// Public API of whitelist module.
+		type WhitelistManager: WhitelistManager;
 	}
 
 	#[pallet::error]
@@ -248,7 +251,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if T::ControllerManager::is_whitelist_mode_enabled() {
+			if T::WhitelistManager::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -273,7 +276,7 @@ pub mod module {
 		pub fn redeem(origin: OriginFor<T>, underlying_asset: CurrencyId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if T::ControllerManager::is_whitelist_mode_enabled() {
+			if T::WhitelistManager::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 			let (underlying_amount, wrapped_id, wrapped_amount) =
@@ -303,7 +306,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if T::ControllerManager::is_whitelist_mode_enabled() {
+			if T::WhitelistManager::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 			let (_, wrapped_id, wrapped_amount) =
@@ -333,7 +336,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if T::ControllerManager::is_whitelist_mode_enabled() {
+			if T::WhitelistManager::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -366,7 +369,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if T::ControllerManager::is_whitelist_mode_enabled() {
+			if T::WhitelistManager::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -388,7 +391,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if T::ControllerManager::is_whitelist_mode_enabled() {
+			if T::WhitelistManager::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -405,7 +408,7 @@ pub mod module {
 		pub fn repay_all(origin: OriginFor<T>, underlying_asset: CurrencyId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if T::ControllerManager::is_whitelist_mode_enabled() {
+			if T::WhitelistManager::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -429,7 +432,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if T::ControllerManager::is_whitelist_mode_enabled() {
+			if T::WhitelistManager::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -453,7 +456,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if T::ControllerManager::is_whitelist_mode_enabled() {
+			if T::WhitelistManager::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&who), BadOrigin);
 			}
 
@@ -468,7 +471,7 @@ pub mod module {
 		pub fn enable_is_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 
-			if T::ControllerManager::is_whitelist_mode_enabled() {
+			if T::WhitelistManager::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&sender), BadOrigin);
 			}
 
@@ -502,7 +505,7 @@ pub mod module {
 		pub fn disable_is_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 
-			if T::ControllerManager::is_whitelist_mode_enabled() {
+			if T::WhitelistManager::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistMembers::contains(&sender), BadOrigin);
 			}
 

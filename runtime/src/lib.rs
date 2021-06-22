@@ -338,6 +338,7 @@ impl minterest_protocol::Config for Runtime {
 	type RiskManagerAPI = RiskManager;
 	type MinterestModelAPI = MinterestModel;
 	type CreatePoolOrigin = EnsureRootOrHalfMinterestCouncil;
+	type WhitelistManager = Whitelist;
 }
 
 parameter_type_with_key! {

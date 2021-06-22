@@ -2787,6 +2787,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "test-helper",
+ "whitelist-module",
 ]
 
 [[package]]
@@ -3905,6 +3906,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "test-helper",
+ "whitelist-module",
 ]
 
 [[package]]
@@ -5900,6 +5902,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "test-helper",
+ "whitelist-module",
 ]
 
 [[package]]
@@ -9448,6 +9451,7 @@ dependencies = [
  "frame-system",
  "minterest-primitives",
  "pallet-balances",
+ "pallet-traits",
  "parity-scale-codec",
  "serde",
  "sp-core",

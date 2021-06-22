@@ -216,6 +216,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type RiskManagerAPI = TestRiskManager;
 			type MinterestModelAPI = TestMinterestModel;
 			type CreatePoolOrigin = EnsureSignedBy<$acc, AccountId>;
+			type WhitelistManager = whitelist_module::Module<$target>;
 		}
 	};
 }

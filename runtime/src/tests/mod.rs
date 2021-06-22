@@ -38,7 +38,6 @@ parameter_types! {
 	pub ORACLE1: AccountId = AccountId::from([4u8; 32]);
 	pub ORACLE2: AccountId = AccountId::from([5u8; 32]);
 	pub ORACLE3: AccountId = AccountId::from([6u8; 32]);
-
 }
 
 struct ExtBuilder {
@@ -257,7 +256,6 @@ impl ExtBuilder {
 				(BTC, PauseKeeper::all_unpaused()),
 				(KSM, PauseKeeper::all_unpaused()),
 			],
-			whitelist_mode: false,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
