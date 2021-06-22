@@ -81,7 +81,7 @@ pub mod module {
 	pub(crate) type Members<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
 	/// Boolean variable. Protocol operation mode. In whitelist mode, only members
-	/// 'WhitelistCouncil' can work with protocols.
+	/// from whitelist can work with protocol.
 	#[pallet::storage]
 	#[pallet::getter(fn whitelist_mode)]
 	pub(crate) type WhitelistMode<T: Config> = StorageValue<_, bool, ValueQuery>;
