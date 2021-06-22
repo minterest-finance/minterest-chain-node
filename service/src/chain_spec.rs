@@ -497,7 +497,7 @@ fn minterest_genesis(
 			_phantom: Default::default(),
 		}),
 		module_vesting: Some(VestingConfig { vesting: vesting_list }),
-		whitelist: Some(WhitelistConfig {
+		whitelist_module: Some(WhitelistConfig {
 			members: whitelist_members,
 		}),
 	}
@@ -798,7 +798,7 @@ fn testnet_genesis(
 			_phantom: Default::default(),
 		}),
 		module_vesting: Some(VestingConfig { vesting: vec![] }),
-		whitelist: Some(WhitelistConfig {
+		whitelist_module: Some(WhitelistConfig {
 			members: endowed_accounts,
 		}),
 	}

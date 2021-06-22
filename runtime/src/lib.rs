@@ -540,10 +540,11 @@ parameter_types! {
 	pub const MaxMembersWhitelistMode: u8 = 100;
 }
 
-impl whitelist::Config for Runtime {
+impl whitelist_module::Config for Runtime {
 	type Event = Event;
 	type MaxMembers = MaxMembersWhitelistMode;
 	type WhitelistOrigin = EnsureRootOrHalfMinterestCouncil;
+	type WhitelistWeightInfo = weights::whitelist::WeightInfo<Runtime>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -588,7 +589,7 @@ construct_runtime!(
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Module, Storage, Call, Event<T>},
-		Whitelist: whitelist::{Module, Storage, Call, Event<T>, Config<T>},
+		Whitelist: whitelist_module::{Module, Storage, Call, Event<T>, Config<T>},
 
 		// Dev
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
@@ -889,7 +890,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, minterest_protocol, benchmarking::minterest_protocol);
 			add_benchmark!(params, batches, mnt_token, benchmarking::mnt_token);
 			add_benchmark!(params, batches, module_vesting, benchmarking::vesting);
-			add_benchmark!(params, batches, whitelist, benchmarking::whitelist);
+			add_benchmark!(params, batches, whitelist_module, benchmarking::whitelist);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

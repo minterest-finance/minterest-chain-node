@@ -23,6 +23,8 @@ use frame_support::pallet_prelude::*;
 use frame_support::traits::Contains;
 pub use module::*;
 use sp_std::vec::Vec;
+pub mod weights;
+pub use weights::WeightInfo;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -46,6 +48,9 @@ pub mod module {
 		/// A maximum number of members. When membership reaches this number, no new members may
 		/// join.
 		type MaxMembers: Get<u8>;
+
+		/// Weight information for the extrinsics.
+		type WhitelistWeightInfo: WeightInfo;
 	}
 
 	#[pallet::error]
@@ -119,7 +124,7 @@ pub mod module {
 		/// - `new_account`: the account that is being added to the whitelist.
 		///
 		/// The dispatch origin of this call must be 'WhitelistOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WhitelistWeightInfo::add_member((<T as Config>::MaxMembers::get() / 2) as u32))]
 		pub fn add_member(origin: OriginFor<T>, new_account: T::AccountId) -> DispatchResultWithPostInfo {
 			T::WhitelistOrigin::ensure_origin(origin)?;
 			ensure!(
@@ -144,7 +149,7 @@ pub mod module {
 		/// - `who`: the account that is being removed from the whitelist.
 		///
 		/// The dispatch origin of this call must be 'WhitelistOrigin'.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WhitelistWeightInfo::remove_member((<T as Config>::MaxMembers::get() / 2) as u32))]
 		pub fn remove_member(origin: OriginFor<T>, who: T::AccountId) -> DispatchResultWithPostInfo {
 			T::WhitelistOrigin::ensure_origin(origin)?;
 

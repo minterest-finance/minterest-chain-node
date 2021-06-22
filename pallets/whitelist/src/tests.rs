@@ -40,7 +40,7 @@ fn add_member_should_works() {
 
 		// Add Alice to whitelist.
 		assert_ok!(Whitelist::add_member(Origin::signed(ADMIN), ALICE));
-		let expected_event = Event::whitelist(crate::Event::MemberAdded(ALICE));
+		let expected_event = Event::whitelist_module(crate::Event::MemberAdded(ALICE));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(Members::<Test>::get().contains(&ALICE));
 

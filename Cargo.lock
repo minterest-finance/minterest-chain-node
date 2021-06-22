@@ -4332,7 +4332,7 @@ dependencies = [
  "static_assertions",
  "substrate-wasm-builder",
  "test-helper",
- "whitelist",
+ "whitelist-module",
 ]
 
 [[package]]
@@ -9439,7 +9439,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "whitelist"
+name = "whitelist-module"
 version = "0.6.0"
 dependencies = [
  "frame-support",

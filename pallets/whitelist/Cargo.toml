@@ -1,5 +1,5 @@
 [package]
-name = "whitelist"
+name = "whitelist-module"
 description = "Pallet for managing whitelist mode."
 version = "0.6.0"
 authors = ["Minterest Developers"]

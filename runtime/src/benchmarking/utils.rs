@@ -63,13 +63,6 @@ pub(crate) fn prepare_for_mnt_distribution(pools: Vec<CurrencyId>) -> Result<(),
 	})
 }
 
-pub(crate) fn set_whitelist_members(members: Vec<AccountId>) -> Result<(), &'static str> {
-	members.into_iter().try_for_each(|member| -> Result<(), &'static str> {
-		Whitelist::add_member(RawOrigin::Root.into(), member)?;
-		Ok(())
-	})
-}
-
 #[cfg(test)]
 pub mod tests {
 	use super::*;

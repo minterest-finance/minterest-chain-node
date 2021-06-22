@@ -279,13 +279,13 @@ macro_rules! mock_impl_balances_config {
 }
 
 #[macro_export]
-macro_rules! mock_impl_whitelist_config {
+macro_rules! mock_impl_whitelist_module_config {
 	($target:ty, $acc:ident) => {
 		parameter_types! {
 			pub const MaxMembersWhitelistMode: u8 = 16;
 		}
 
-		impl whitelist::Config for $target {
+		impl whitelist_module::Config for $target {
 			type Event = Event;
 			type MaxMembers = MaxMembersWhitelistMode;
 			type WhitelistOrigin = EnsureSignedBy<$acc, AccountId>;
