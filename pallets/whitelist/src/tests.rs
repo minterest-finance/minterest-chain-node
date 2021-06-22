@@ -46,7 +46,7 @@ fn add_member_should_works() {
 
 		// Add Bob to whitelist.
 		assert_ok!(Whitelist::add_member(Origin::signed(ADMIN), BOB));
-		let expected_event = Event::whitelist(crate::Event::MemberAdded(BOB));
+		let expected_event = Event::whitelist_module(crate::Event::MemberAdded(BOB));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(Members::<Test>::get().contains(&BOB));
 
@@ -94,7 +94,7 @@ fn remove_member_should_works() {
 
 			// Remove Bob from whitelist.
 			assert_ok!(Whitelist::remove_member(Origin::signed(ADMIN), BOB));
-			let expected_event = Event::whitelist(crate::Event::MemberRemoved(2));
+			let expected_event = Event::whitelist_module(crate::Event::MemberRemoved(2));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// Cannot remove Alice, because at least one member must remain.

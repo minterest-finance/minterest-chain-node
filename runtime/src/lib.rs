@@ -52,7 +52,7 @@ use sp_version::RuntimeVersion;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, debug, parameter_types,
-	traits::{KeyOwnerProofSystem, Randomness},
+	traits::{Contains, KeyOwnerProofSystem, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
@@ -817,6 +817,12 @@ impl_runtime_apis! {
 
 		fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
 			MntToken::get_mnt_borrow_and_supply_rates(pool_id).ok()
+		}
+	}
+
+	impl whitelist_rpc_runtime_api::WhitelistRuntimeApi<Block, AccountId> for Runtime {
+		fn is_whitelist_member(account_id: AccountId) -> Option<bool> {
+				Some(Whitelist::contains(&account_id))
 		}
 	}
 

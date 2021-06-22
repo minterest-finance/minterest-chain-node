@@ -1,6 +1,6 @@
 //! Mocks for the whitelist module.
 use super::*;
-use crate as whitelist;
+use crate as whitelist_module;
 use frame_support::{construct_runtime, ord_parameter_types, parameter_types};
 use frame_system::EnsureSignedBy;
 use minterest_primitives::Balance;
@@ -9,7 +9,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use test_helper::{mock_impl_balances_config, mock_impl_system_config, mock_impl_whitelist_config};
+use test_helper::{mock_impl_balances_config, mock_impl_system_config, mock_impl_whitelist_module_config};
 
 pub type AccountId = u64;
 
@@ -24,14 +24,14 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Module, Call, Storage, Config, Event<T>},
-		Whitelist: whitelist::{Module, Storage, Call, Event<T>, Config<T>},
+		Whitelist: whitelist_module::{Module, Storage, Call, Event<T>, Config<T>},
 		PalletBalances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 	}
 );
 
 mock_impl_system_config!(Test);
 mock_impl_balances_config!(Test);
-mock_impl_whitelist_config!(Test, ZeroAdmin);
+mock_impl_whitelist_module_config!(Test, ZeroAdmin);
 
 ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
@@ -56,7 +56,7 @@ impl ExternalityBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-		whitelist::GenesisConfig::<Test> { members: self.members }
+		whitelist_module::GenesisConfig::<Test> { members: self.members }
 			.assimilate_storage(&mut storage)
 			.unwrap();
 

@@ -289,6 +289,7 @@ macro_rules! mock_impl_whitelist_module_config {
 			type Event = Event;
 			type MaxMembers = MaxMembersWhitelistMode;
 			type WhitelistOrigin = EnsureSignedBy<$acc, AccountId>;
+			type WhitelistWeightInfo = ();
 		}
 	};
 }
