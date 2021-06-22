@@ -1050,10 +1050,7 @@ fn pool_exists_should_work() {
 fn is_whitelist_member_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_eq!(is_whitelist_member_rpc(ALICE::get()), Some(false));
-		assert_ok!(Whitelist::add_member(
-			<Runtime as frame_system::Config>::Origin::root(),
-			ALICE::get()
-		));
+		assert_ok!(Whitelist::add_member(origin_root(), ALICE::get()));
 		assert_eq!(is_whitelist_member_rpc(ALICE::get()), Some(true));
 		assert_eq!(is_whitelist_member_rpc(BOB::get()), Some(false));
 	})

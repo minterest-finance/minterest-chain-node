@@ -15,6 +15,7 @@
 //! always do this.
 //! - `remove_member` - Remove a member from the whitelist. Root or half Minterest Council
 //! can always do this.
+//! - `switch_whitelist_mode` - Enable / disable whitelist mode.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
@@ -78,7 +79,7 @@ pub mod module {
 
 	#[pallet::storage]
 	#[pallet::getter(fn members)]
-	pub(crate) type Members<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+	pub type Members<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
 	/// Boolean variable. Protocol operation mode. In whitelist mode, only members
 	/// from whitelist can work with protocol.
