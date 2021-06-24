@@ -6,12 +6,12 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::currency::GetDecimals;
 use minterest_primitives::{VestingBucket, VestingScheduleJson};
 use node_minterest_runtime::{
-	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, ExistentialDeposit,
-	GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
-	MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, MntTokenModuleId, OperatorMembershipMinterestConfig,
-	PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, VestingConfig,
-	WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
-	TOTAL_ALLOCATION, WASM_BINARY,
+	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ChainlinkFeedConfig, ControllerConfig,
+	ExistentialDeposit, GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig,
+	MinterestCouncilMembershipConfig, MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, MntTokenModuleId,
+	OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
+	TokensConfig, VestingConfig, WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM, MNT,
+	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -222,7 +222,7 @@ fn minterest_genesis(
 		.collect::<Vec<(AccountId, Balance)>>();
 
 	// Initial allocation calculation
-	let initial_allocations = calculate_initial_allocations(endowed_accounts, allocated_list);
+	let initial_allocations = calculate_initial_allocations(endowed_accounts.clone(), allocated_list);
 	// Vesting calculation
 	let vesting_list = calculate_vesting_list(allocated_list_parsed);
 
@@ -478,7 +478,7 @@ fn minterest_genesis(
 			phantom: Default::default(),
 		}),
 		pallet_membership_Instance3: Some(OperatorMembershipMinterestConfig {
-			members: vec![root_key],
+			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		}),
 		orml_oracle_Instance1: Some(MinterestOracleConfig {
@@ -496,6 +496,10 @@ fn minterest_genesis(
 			_phantom: Default::default(),
 		}),
 		module_vesting: Some(VestingConfig { vesting: vesting_list }),
+		pallet_chainlink_feed: Some(ChainlinkFeedConfig {
+			pallet_admin: Some(root_key.clone()),
+			feed_creators: endowed_accounts,
+		}),
 	}
 }
 
@@ -776,7 +780,7 @@ fn testnet_genesis(
 		}),
 		pallet_collective_Instance2: Some(Default::default()),
 		pallet_membership_Instance2: Some(WhitelistCouncilMembershipConfig {
-			members: vec![root_key],
+			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		}),
 		pallet_membership_Instance3: Some(OperatorMembershipMinterestConfig {
@@ -798,6 +802,11 @@ fn testnet_genesis(
 			_phantom: Default::default(),
 		}),
 		module_vesting: Some(VestingConfig { vesting: vec![] }),
+		pallet_chainlink_feed: Some(ChainlinkFeedConfig {
+			pallet_admin: Some(root_key.clone()),
+			feed_creators: endowed_accounts,
+		}),
+
 	}
 }
 

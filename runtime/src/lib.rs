@@ -122,6 +122,7 @@ parameter_types! {
 	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
 	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+	pub const ChainlinkFeedModuleId: ModuleId = ModuleId(*b"chl/feed");
 }
 
 // Do not change the order of modules. Used for genesis block.
@@ -197,6 +198,9 @@ impl frame_system::Config for Runtime {
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
 }
+
+
+// impl chainlink_price_adapter::Config for Runtime {}
 
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
@@ -582,7 +586,32 @@ impl module_vesting::Config for Runtime {
 	type MaxVestingSchedules = MaxVestingSchedules;
 	type VestingBucketsInfo = VestingBucketsInfo;
 }
+pub type FeedId = u32;
+pub type Value = u128;
+use weights::pallet_chainlink_feed::WeightInfo as ChainlinkWeightInfo;
 
+parameter_types! {
+	pub const StringLimit: u32 = 30;
+	pub const OracleCountLimit: u32 = 25;
+	pub const FeedLimit: FeedId = 100;
+	pub const MinimumReserve: Balance = ExistentialDeposit::get() * 1000;
+}
+
+impl pallet_chainlink_feed::Config for Runtime {
+	type Event = Event;
+	type FeedId = FeedId;
+	type Value = Value;
+	type Currency = Balances;
+	type ModuleId = ChainlinkFeedModuleId;
+
+	// TODO figure out about appropriate value
+	type MinimumReserve = MinimumReserve;
+	type StringLimit = StringLimit;
+	type OracleCountLimit = OracleCountLimit;
+	type FeedLimit = FeedLimit;
+	type OnAnswerHandler = ();
+	type WeightInfo = ChainlinkWeightInfo<Runtime>;
+}
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -614,6 +643,7 @@ construct_runtime!(
 		// Oracle and Prices
 		MinterestOracle: orml_oracle::<Instance1>::{Module, Storage, Call, Config<T>, Event<T>},
 		Prices: module_prices::{Module, Storage, Call, Event<T>, Config<T>},
+		ChainlinkFeed: pallet_chainlink_feed::{Module, Call, Config<T>, Storage, Event<T>},
 
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		OperatorMembershipMinterest: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},

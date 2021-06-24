@@ -14,6 +14,9 @@ frame-system = { version = "3.0.0", default-features = false }
 orml-traits = { version = "0.4.0", default-features = false }
 minterest-primitives = { path = "../../primitives", default-features = false }
 
+# Temporary use adapted fork, until we update the substrate
+pallet-chainlink-feed = { git = "https://github.com/kurotych/chainlink-polkadot", default-features = false }
+
 [dev-dependencies]
 sp-core = "3.0.0"
 sp-io = "3.0.0"
@@ -26,4 +29,6 @@ std = [
 	"sp-runtime/std",
 	"frame-support/std",
 	"frame-system/std",
+
+	"pallet-chainlink-feed/std",
 ]

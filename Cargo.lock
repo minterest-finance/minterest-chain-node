@@ -849,6 +849,7 @@ dependencies = [
  "frame-system",
  "minterest-primitives",
  "orml-traits",
+ "pallet-chainlink-feed",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -4320,6 +4321,7 @@ dependencies = [
  "orml-traits",
  "pallet-aura",
  "pallet-balances",
+ "pallet-chainlink-feed",
  "pallet-collective",
  "pallet-grandpa",
  "pallet-membership",
@@ -4700,6 +4702,22 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "serde",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-chainlink-feed"
+version = "0.1.0"
+source = "git+https://github.com/kurotych/chainlink-polkadot#a1482d465a73b99b1a4713177fedf5bc06792037"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
  "sp-runtime",
  "sp-std",
 ]
