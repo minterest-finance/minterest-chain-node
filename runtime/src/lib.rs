@@ -612,7 +612,7 @@ impl pallet_chainlink_feed::Config for Runtime {
 	type OracleCountLimit = OracleCountLimit;
 	type FeedLimit = FeedLimit;
 	type OnAnswerHandler = ();
-	type WeightInfo = weights::pallet_chainlink_feed::WeightInfo<Runtime>;
+	type WeightInfo = ();
 }
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(

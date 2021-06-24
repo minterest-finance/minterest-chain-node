@@ -4709,7 +4709,7 @@ dependencies = [
 [[package]]
 name = "pallet-chainlink-feed"
 version = "0.1.0"
-source = "git+https://github.com/kurotych/chainlink-polkadot#a1482d465a73b99b1a4713177fedf5bc06792037"
+source = "git+https://github.com/kurotych/chainlink-polkadot#4a9ff70fcb471f88f7f4993e31ab4e7f45ce896e"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -8862,7 +8862,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.3.23",
  "static_assertions",
 ]
 
