@@ -22,9 +22,6 @@ pub mod module {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_chainlink_feed::Config {
-		type Balance: Parameter + codec::HasCompact + From<u32> + Into<Weight> + Default + MaybeSerializeDeserialize;
-		#[pallet::constant]
-		type SomeConst: Get<Self::Balance>;
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 	}
 

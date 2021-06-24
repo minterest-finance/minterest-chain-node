@@ -199,9 +199,6 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = SS58Prefix;
 }
 
-
-// impl chainlink_price_adapter::Config for Runtime {}
-
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
 }
@@ -586,21 +583,26 @@ impl module_vesting::Config for Runtime {
 	type MaxVestingSchedules = MaxVestingSchedules;
 	type VestingBucketsInfo = VestingBucketsInfo;
 }
+
+impl chainlink_price_adapter::Config for Runtime {
+	type Event = Event;
+}
+
 pub type FeedId = u32;
 pub type Value = u128;
-use weights::pallet_chainlink_feed::WeightInfo as ChainlinkWeightInfo;
 
 parameter_types! {
 	pub const StringLimit: u32 = 30;
 	pub const OracleCountLimit: u32 = 25;
 	pub const FeedLimit: FeedId = 100;
+	// TODO REVIEW
 	pub const MinimumReserve: Balance = ExistentialDeposit::get() * 1000;
 }
 
 impl pallet_chainlink_feed::Config for Runtime {
 	type Event = Event;
-	type FeedId = FeedId;
-	type Value = Value;
+	type FeedId = u32;
+	type Value = u128;
 	type Currency = Balances;
 	type ModuleId = ChainlinkFeedModuleId;
 
@@ -610,7 +612,7 @@ impl pallet_chainlink_feed::Config for Runtime {
 	type OracleCountLimit = OracleCountLimit;
 	type FeedLimit = FeedLimit;
 	type OnAnswerHandler = ();
-	type WeightInfo = ChainlinkWeightInfo<Runtime>;
+	type WeightInfo = weights::pallet_chainlink_feed::WeightInfo<Runtime>;
 }
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -644,6 +646,7 @@ construct_runtime!(
 		MinterestOracle: orml_oracle::<Instance1>::{Module, Storage, Call, Config<T>, Event<T>},
 		Prices: module_prices::{Module, Storage, Call, Event<T>, Config<T>},
 		ChainlinkFeed: pallet_chainlink_feed::{Module, Call, Config<T>, Storage, Event<T>},
+		ChainlinkPriceAdapter: chainlink_price_adapter::{Module, Call, Storage, Event<T>},
 
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		OperatorMembershipMinterest: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
