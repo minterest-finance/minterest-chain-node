@@ -614,6 +614,7 @@ impl pallet_chainlink_feed::Config for Runtime {
 	type OnAnswerHandler = ();
 	type WeightInfo = ();
 }
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where

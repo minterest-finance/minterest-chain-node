@@ -849,12 +849,14 @@ dependencies = [
  "frame-system",
  "minterest-primitives",
  "orml-traits",
+ "pallet-balances",
  "pallet-chainlink-feed",
  "parity-scale-codec",
  "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "test-helper",
 ]
 
 [[package]]

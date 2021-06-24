@@ -20,6 +20,8 @@ pallet-chainlink-feed = { git = "https://github.com/kurotych/chainlink-polkadot"
 [dev-dependencies]
 sp-core = "3.0.0"
 sp-io = "3.0.0"
+test-helper = { path = "../../test-helper" }
+pallet-balances = { version = "3.0.0" }
 
 [features]
 default = ["std"]
