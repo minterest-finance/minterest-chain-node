@@ -3,8 +3,7 @@
 #![cfg(test)]
 
 use crate as chainlink_price_adapter;
-use frame_support::{construct_runtime, parameter_types};
-use minterest_primitives::AccountId;
+use frame_support::{construct_runtime, ord_parameter_types, parameter_types};
 use minterest_primitives::Balance;
 use sp_runtime::testing::Header;
 use sp_runtime::testing::H256;
@@ -35,16 +34,24 @@ mock_impl_balances_config!(Runtime);
 
 parameter_types! {
 	pub const ChainlinkFeedModuleId: ModuleId = ModuleId(*b"chl/feed");
-	pub LiquidityPoolAccountId: AccountId = ChainlinkFeedModuleId::get().into_account();
+	pub ChainlinkModuleAccountID: AccountId = ChainlinkFeedModuleId::get().into_account();
 }
 
+pub const FEED_CREATOR: AccountId = 1;
+pub fn feed_creator() -> Origin {
+	Origin::signed(FEED_CREATOR)
+}
+
+pub type AccountId = u64;
 pub type FeedId = u32;
-pub type Value = u128;
+
+const MIN_RESERVE: u128 = 100000;
+
 parameter_types! {
 	pub const StringLimit: u32 = 30;
 	pub const OracleCountLimit: u32 = 25;
 	pub const FeedLimit: FeedId = 100;
-	pub const MinimumReserve: Balance = 50000;
+	pub const MinimumReserve: Balance = MIN_RESERVE;
 }
 
 impl pallet_chainlink_feed::Config for Runtime {
@@ -65,12 +72,28 @@ impl pallet_chainlink_feed::Config for Runtime {
 
 impl chainlink_price_adapter::Config for Runtime {
 	type Event = Event;
+	type ChainlinkOracle = ChainlinkFeed;
 }
 
 pub fn test_externalities() -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default()
 		.build_storage::<Runtime>()
 		.unwrap();
+
+	let pallet_account: AccountId = ChainlinkFeedModuleId::get().into_account();
+	pallet_balances::GenesisConfig::<Runtime> {
+		balances: vec![(pallet_account, MIN_RESERVE)],
+	}
+	.assimilate_storage(&mut storage)
+	.unwrap();
+
+	pallet_chainlink_feed::GenesisConfig::<Runtime> {
+		pallet_admin: Some(pallet_account),
+		feed_creators: vec![FEED_CREATOR],
+	}
+	.assimilate_storage(&mut storage)
+	.unwrap();
+
 	let mut test_externalities = sp_io::TestExternalities::new(storage);
 	test_externalities.execute_with(|| System::set_block_number(1));
 	test_externalities

@@ -586,6 +586,7 @@ impl module_vesting::Config for Runtime {
 
 impl chainlink_price_adapter::Config for Runtime {
 	type Event = Event;
+	type ChainlinkOracle = ChainlinkFeed;
 }
 
 pub type FeedId = u32;

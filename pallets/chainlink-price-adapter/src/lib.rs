@@ -10,6 +10,7 @@ use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
 use minterest_primitives::{CurrencyId, Price};
 use orml_traits::DataProvider;
+use pallet_chainlink_feed::FeedOracle;
 
 mod mock;
 mod tests;
@@ -23,6 +24,8 @@ pub mod module {
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_chainlink_feed::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		type ChainlinkOracle: FeedOracle<Self>;
 	}
 
 	#[pallet::error]
