@@ -8,7 +8,7 @@ use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::{Pool, PoolUserData};
 pub use minterest_primitives::currency::CurrencyType::WrappedToken;
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
-use orml_traits::{parameter_type_with_key, DataProvider};
+use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
@@ -60,25 +60,6 @@ parameter_types! {
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
-}
-
-pub struct MockDataProvider;
-impl DataProvider<CurrencyId, Price> for MockDataProvider {
-	// This function is only called after the token price is unlocked
-	fn get(currency_id: &CurrencyId) -> Option<Price> {
-		match currency_id {
-			&DOT => Some(Price::saturating_from_integer(5)),
-			&BTC => {
-				// This sleep is need to emulate hard computation in offchain worker.
-				let one_sec = std::time::Duration::from_millis(1000);
-				thread::sleep(one_sec);
-				Some(Price::saturating_from_integer(2))
-			}
-			&KSM => Some(Price::saturating_from_integer(2)),
-			&ETH => Some(Price::saturating_from_integer(2)),
-			_ => panic!("Price for this currency wasn't set"),
-		}
-	}
 }
 
 pub struct WhitelistMembers;

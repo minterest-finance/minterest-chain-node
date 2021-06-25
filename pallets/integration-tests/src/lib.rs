@@ -127,13 +127,9 @@ mod tests {
 		fn unlock_price(_currency_id: CurrencyId) {}
 	}
 
-	thread_local! {
-		static FOUR: RefCell<Vec<u64>> = RefCell::new(vec![4]);
-	}
-
 	impl Contains<u64> for WhitelistMembers {
 		fn sorted_members() -> Vec<u64> {
-			FOUR.with(|v| v.borrow().clone())
+			vec![4]
 		}
 		#[cfg(feature = "runtime-benchmarks")]
 		fn add(new: &u128) {
