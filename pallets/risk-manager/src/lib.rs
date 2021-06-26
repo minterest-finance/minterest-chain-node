@@ -26,7 +26,7 @@ use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
 	ControllerManager, LiquidationPoolsManager, LiquidityPoolsManager, MntManager, PoolsManager, PricesManager,
-	RiskManagerManager,
+	RiskManager,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -721,7 +721,7 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config> RiskManagerManager for Pallet<T> {
+impl<T: Config> RiskManager for Pallet<T> {
 	/// This is a part of a pool creation flow
 	/// Creates storage records for RiskManagerParams
 	fn create_pool(

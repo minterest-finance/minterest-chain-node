@@ -183,7 +183,7 @@ pub trait MntManager<AccountId> {
 }
 
 /// An abstraction of risk-manager basic functionalities.
-pub trait RiskManagerManager {
+pub trait RiskManager {
 	/// This is a part of a pool creation flow
 	/// Creates storage records for RiskManagerParams
 	fn create_pool(

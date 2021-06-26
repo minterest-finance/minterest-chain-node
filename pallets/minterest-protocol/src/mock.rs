@@ -10,7 +10,7 @@ use minterest_model::MinterestModelData;
 pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
-use pallet_traits::{PricesManager, RiskManagerManager};
+use pallet_traits::{PricesManager, RiskManager};
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
@@ -76,7 +76,7 @@ mock_impl_balances_config!(Test);
 
 pub struct TestRiskManager;
 
-impl RiskManagerManager for TestRiskManager {
+impl RiskManager for TestRiskManager {
 	fn create_pool(
 		_currency_id: CurrencyId,
 		_max_attempts: u8,

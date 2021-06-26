@@ -6,11 +6,11 @@ use frame_support::assert_err;
 use orml_traits::MultiCurrency;
 use pallet_traits::DEXManager;
 
-fn liquidation_pool_balance(pool_id: CurrencyId) -> Balance {
+fn get_liquidation_pool_balance(pool_id: CurrencyId) -> Balance {
 	Currencies::free_balance(pool_id, &LiquidationPools::pools_account_id())
 }
 
-fn dex_balance(pool_id: CurrencyId) -> Balance {
+fn get_dex_balance(pool_id: CurrencyId) -> Balance {
 	Currencies::free_balance(pool_id, &TestDex::dex_account_id())
 }
 
@@ -34,11 +34,11 @@ fn swap_with_exact_target_should_work() {
 				Ok(50_000 * DOLLARS)
 			);
 
-			assert_eq!(liquidation_pool_balance(DOT), 250_000 * DOLLARS);
-			assert_eq!(liquidation_pool_balance(ETH), 450_000 * DOLLARS);
+			assert_eq!(get_liquidation_pool_balance(DOT), 250_000 * DOLLARS);
+			assert_eq!(get_liquidation_pool_balance(ETH), 450_000 * DOLLARS);
 
-			assert_eq!(dex_balance(DOT), 550_000 * DOLLARS);
-			assert_eq!(dex_balance(ETH), 450_000 * DOLLARS);
+			assert_eq!(get_dex_balance(DOT), 550_000 * DOLLARS);
+			assert_eq!(get_dex_balance(ETH), 450_000 * DOLLARS);
 		});
 }
 
@@ -70,11 +70,11 @@ fn do_swap_with_exact_target_should_work() {
 			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_eq!(liquidation_pool_balance(DOT), 290_000 * DOLLARS);
-			assert_eq!(liquidation_pool_balance(ETH), 410_000 * DOLLARS);
+			assert_eq!(get_liquidation_pool_balance(DOT), 290_000 * DOLLARS);
+			assert_eq!(get_liquidation_pool_balance(ETH), 410_000 * DOLLARS);
 
-			assert_eq!(dex_balance(DOT), 60_000 * DOLLARS);
-			assert_eq!(dex_balance(ETH), 40_000 * DOLLARS);
+			assert_eq!(get_dex_balance(DOT), 60_000 * DOLLARS);
+			assert_eq!(get_dex_balance(ETH), 40_000 * DOLLARS);
 
 			assert_err!(
 				TestDex::do_swap_with_exact_target(
