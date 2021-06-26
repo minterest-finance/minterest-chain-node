@@ -34,17 +34,17 @@ mod tests {
 			.pool_initial(DOT)
 			.pool_initial(ETH)
 			.pool_initial(BTC)
-			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ADMIN, BTC, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(BOB, ETH, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(BOB, BTC, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, BTC, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, ETH, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, BTC, ONE_HUNDRED_THOUSAND)
 			.mnt_enabled_pools(vec![(DOT, DOLLARS / 10), (ETH, DOLLARS / 10)])
-			.mnt_account_balance(ONE_HUNDRED_THOUSAND_DOLLARS)
+			.mnt_account_balance(ONE_HUNDRED_THOUSAND)
 			.mnt_claim_threshold(dollars(100))
 			.build()
 			.execute_with(|| {
@@ -57,7 +57,7 @@ mod tests {
 					assert_ok!(MinterestProtocol::deposit_underlying(
 						admin(),
 						pool_id,
-						ONE_HUNDRED_THOUSAND_DOLLARS
+						ONE_HUNDRED_THOUSAND
 					));
 					assert_ok!(MinterestProtocol::enable_is_collateral(admin(), pool_id));
 					assert_ok!(MinterestProtocol::borrow(admin(), pool_id, 50_000 * DOLLARS));
@@ -70,7 +70,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					alice(),
 					DOT,
-					ONE_HUNDRED_THOUSAND_DOLLARS
+					ONE_HUNDRED_THOUSAND
 				));
 				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
 
@@ -87,11 +87,7 @@ mod tests {
 
 				// BOB deposits ETH.
 				// At this moment Alice and Bob start receiving (eth_speed / 3) MNT per block as a suppliers
-				assert_ok!(MinterestProtocol::deposit_underlying(
-					bob(),
-					ETH,
-					ONE_HUNDRED_THOUSAND_DOLLARS
-				));
+				assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, ONE_HUNDRED_THOUSAND));
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), 0);
 				assert_eq!(TestMntToken::mnt_accrued(BOB), 0);
 
@@ -248,17 +244,17 @@ mod tests {
 			])
 			.pool_initial(DOT)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ADMIN, BTC, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(BOB, ETH, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(BOB, BTC, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, BTC, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, ETH, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, BTC, ONE_HUNDRED_THOUSAND)
 			.mnt_enabled_pools(vec![(DOT, DOLLARS / 10), (ETH, DOLLARS / 10)])
-			.mnt_account_balance(ONE_HUNDRED_THOUSAND_DOLLARS)
+			.mnt_account_balance(ONE_HUNDRED_THOUSAND)
 			.mnt_claim_threshold(dollars(100))
 			.build()
 			.execute_with(|| {
@@ -271,7 +267,7 @@ mod tests {
 					assert_ok!(MinterestProtocol::deposit_underlying(
 						bob(),
 						pool_id,
-						ONE_HUNDRED_THOUSAND_DOLLARS
+						ONE_HUNDRED_THOUSAND
 					));
 					assert_ok!(MinterestProtocol::enable_is_collateral(bob(), pool_id));
 					assert_ok!(MinterestProtocol::borrow(bob(), pool_id, 50_000 * DOLLARS));
@@ -283,7 +279,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					alice(),
 					DOT,
-					ONE_HUNDRED_THOUSAND_DOLLARS
+					ONE_HUNDRED_THOUSAND
 				));
 				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
 
@@ -323,7 +319,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					admin(),
 					BTC,
-					ONE_HUNDRED_THOUSAND_DOLLARS
+					ONE_HUNDRED_THOUSAND
 				));
 				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), BTC));
 				assert_ok!(MinterestProtocol::borrow(admin(), BTC, 50_000 * DOLLARS));
@@ -394,12 +390,12 @@ mod tests {
 				},
 			)])
 			.pool_initial(ETH)
-			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ADMIN, BTC, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, BTC, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND)
 			.mnt_enabled_pools(vec![(ETH, DOLLARS / 10)])
-			.mnt_account_balance(ONE_HUNDRED_THOUSAND_DOLLARS)
+			.mnt_account_balance(ONE_HUNDRED_THOUSAND)
 			.build()
 			.execute_with(|| {
 				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(DOT));
@@ -412,7 +408,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					alice(),
 					ETH,
-					ONE_HUNDRED_THOUSAND_DOLLARS
+					ONE_HUNDRED_THOUSAND
 				));
 				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
 				assert_ok!(MinterestProtocol::borrow(alice(), ETH, 50_000 * DOLLARS));
@@ -437,7 +433,7 @@ mod tests {
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), distributed_to_alice_for_eth_pool);
 				assert_eq!(
 					Currencies::free_balance(MNT, &TestMntToken::get_account_id()),
-					ONE_HUNDRED_THOUSAND_DOLLARS - distributed_to_alice_for_eth_pool
+					ONE_HUNDRED_THOUSAND - distributed_to_alice_for_eth_pool
 				);
 				assert_ok!(TestMntToken::set_speed(admin(), ETH, Balance::zero()));
 
@@ -465,7 +461,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					alice(),
 					BTC,
-					ONE_HUNDRED_THOUSAND_DOLLARS
+					ONE_HUNDRED_THOUSAND
 				));
 				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), BTC));
 				assert_ok!(MinterestProtocol::borrow(alice(), BTC, 50_000 * DOLLARS));
@@ -486,8 +482,7 @@ mod tests {
 				);
 				assert_eq!(
 					Currencies::free_balance(MNT, &TestMntToken::get_account_id()),
-					ONE_HUNDRED_THOUSAND_DOLLARS
-						- (distributed_to_alice_for_eth_pool + distributed_to_alice_for_btc_pool)
+					ONE_HUNDRED_THOUSAND - (distributed_to_alice_for_eth_pool + distributed_to_alice_for_btc_pool)
 				);
 			})
 	}
@@ -505,11 +500,11 @@ mod tests {
 	fn test_mnt_token_scenario_n_4() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
 			.mnt_enabled_pools(vec![(DOT, 10 * DOLLARS)])
-			.mnt_account_balance(ONE_HUNDRED_THOUSAND_DOLLARS)
+			.mnt_account_balance(ONE_HUNDRED_THOUSAND)
 			.build()
 			.execute_with(|| {
 				assert!(mnt_token::MntSpeeds::<Test>::contains_key(DOT));
@@ -520,7 +515,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					admin(),
 					DOT,
-					ONE_HUNDRED_THOUSAND_DOLLARS
+					ONE_HUNDRED_THOUSAND
 				));
 				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), DOT));
 				assert_ok!(MinterestProtocol::borrow(admin(), DOT, 50_000 * DOLLARS));
@@ -532,7 +527,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					alice(),
 					DOT,
-					ONE_HUNDRED_THOUSAND_DOLLARS
+					ONE_HUNDRED_THOUSAND
 				));
 				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
 
@@ -571,19 +566,19 @@ mod tests {
 	fn mnt_token_supplier_distribution_when_users_transferring_tokens() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(CHARLIE, DOT, 2 * ONE_HUNDRED_THOUSAND_DOLLARS)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
+			.user_balance(CHARLIE, DOT, 2 * ONE_HUNDRED_THOUSAND)
 			.mnt_enabled_pools(vec![(DOT, DOLLARS / 10)])
-			.mnt_account_balance(ONE_HUNDRED_THOUSAND_DOLLARS)
+			.mnt_account_balance(ONE_HUNDRED_THOUSAND)
 			.build()
 			.execute_with(|| {
 				// Set initial state of pools for distribution MNT tokens.
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					admin(),
 					DOT,
-					ONE_HUNDRED_THOUSAND_DOLLARS
+					ONE_HUNDRED_THOUSAND
 				));
 				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), DOT));
 				assert_ok!(MinterestProtocol::borrow(admin(), DOT, 50_000 * DOLLARS));
@@ -594,17 +589,13 @@ mod tests {
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					alice(),
 					DOT,
-					ONE_HUNDRED_THOUSAND_DOLLARS
+					ONE_HUNDRED_THOUSAND
 				));
-				assert_ok!(MinterestProtocol::deposit_underlying(
-					bob(),
-					DOT,
-					ONE_HUNDRED_THOUSAND_DOLLARS
-				));
+				assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, ONE_HUNDRED_THOUSAND));
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					charlie(),
 					DOT,
-					2 * ONE_HUNDRED_THOUSAND_DOLLARS
+					2 * ONE_HUNDRED_THOUSAND
 				));
 
 				System::set_block_number(20);

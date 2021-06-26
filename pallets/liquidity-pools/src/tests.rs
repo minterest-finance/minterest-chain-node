@@ -11,16 +11,16 @@ fn set_pool_data_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(TestPools::set_pool_data(
 			DOT,
-			ONE_HUNDRED_DOLLARS,
+			ONE_HUNDRED,
 			Rate::saturating_from_rational(125, 100),
-			ONE_HUNDRED_DOLLARS,
+			ONE_HUNDRED,
 		));
-		assert_eq!(<Pools<Test>>::get(DOT).total_borrowed, ONE_HUNDRED_DOLLARS);
+		assert_eq!(<Pools<Test>>::get(DOT).total_borrowed, ONE_HUNDRED);
 		assert_eq!(
 			<Pools<Test>>::get(DOT).borrow_index,
 			Rate::saturating_from_rational(125, 100)
 		);
-		assert_eq!(<Pools<Test>>::get(DOT).total_protocol_interest, ONE_HUNDRED_DOLLARS);
+		assert_eq!(<Pools<Test>>::get(DOT).total_protocol_interest, ONE_HUNDRED);
 	});
 }
 
@@ -28,8 +28,8 @@ fn set_pool_data_should_work() {
 fn set_pool_total_borrowed_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Set pool_total_borrowed eq 100 DOT
-		TestPools::set_pool_total_borrowed(DOT, ONE_HUNDRED_DOLLARS);
-		assert_eq!(<Pools<Test>>::get(DOT).total_borrowed, ONE_HUNDRED_DOLLARS);
+		TestPools::set_pool_total_borrowed(DOT, ONE_HUNDRED);
+		assert_eq!(<Pools<Test>>::get(DOT).total_borrowed, ONE_HUNDRED);
 	});
 }
 
@@ -37,8 +37,8 @@ fn set_pool_total_borrowed_should_work() {
 fn set_pool_total_protocol_interest_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Set pool_total_protocol_interest eq 100 DOT.
-		TestPools::set_pool_total_protocol_interest(DOT, ONE_HUNDRED_DOLLARS);
-		assert_eq!(<Pools<Test>>::get(DOT).total_protocol_interest, ONE_HUNDRED_DOLLARS);
+		TestPools::set_pool_total_protocol_interest(DOT, ONE_HUNDRED);
+		assert_eq!(<Pools<Test>>::get(DOT).total_protocol_interest, ONE_HUNDRED);
 	});
 }
 
@@ -49,13 +49,10 @@ fn set_user_total_borrowed_and_interest_index_should_work() {
 		TestPools::set_user_total_borrowed_and_interest_index(
 			&ALICE,
 			DOT,
-			ONE_HUNDRED_DOLLARS,
+			ONE_HUNDRED,
 			Rate::saturating_from_rational(33, 100),
 		);
-		assert_eq!(
-			<PoolUserParams<Test>>::get(DOT, ALICE).total_borrowed,
-			ONE_HUNDRED_DOLLARS
-		);
+		assert_eq!(<PoolUserParams<Test>>::get(DOT, ALICE).total_borrowed, ONE_HUNDRED);
 		assert_eq!(
 			<PoolUserParams<Test>>::get(DOT, ALICE).interest_index,
 			Rate::saturating_from_rational(33, 100)
@@ -156,10 +153,10 @@ fn get_pool_borrow_index_should_work() {
 #[test]
 fn get_user_total_borrowed_should_work() {
 	ExtBuilder::default()
-		.pool_user_data_with_params(DOT, ALICE, ONE_HUNDRED_DOLLARS, Rate::default(), true, 0)
+		.pool_user_data_with_params(DOT, ALICE, ONE_HUNDRED, Rate::default(), true, 0)
 		.build()
 		.execute_with(|| {
-			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, DOT), ONE_HUNDRED_DOLLARS);
+			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, DOT), ONE_HUNDRED);
 		});
 }
 
@@ -190,7 +187,7 @@ fn pool_should_exists() {
 #[test]
 fn update_state_on_borrow_should_work() {
 	ExtBuilder::default()
-		.user_balance(ALICE, DOT, ONE_HUNDRED_DOLLARS)
+		.user_balance(ALICE, DOT, ONE_HUNDRED)
 		.pool_mock(DOT)
 		.build()
 		.execute_with(|| {
@@ -224,7 +221,7 @@ fn update_state_on_borrow_should_work() {
 #[test]
 fn update_state_on_repay_should_work() {
 	ExtBuilder::default()
-		.user_balance(ALICE, DOT, ONE_HUNDRED_DOLLARS)
+		.user_balance(ALICE, DOT, ONE_HUNDRED)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_user_borrow_index(&ALICE, DOT), Rate::from_inner(0));
@@ -251,8 +248,8 @@ fn update_state_on_repay_should_work() {
 #[test]
 fn convert_to_wrapped_should_work() {
 	ExtBuilder::default()
-		.user_balance(ALICE, DOT, ONE_HUNDRED_DOLLARS)
-		.user_balance(ALICE, MDOT, ONE_HUNDRED_DOLLARS)
+		.user_balance(ALICE, DOT, ONE_HUNDRED)
+		.user_balance(ALICE, MDOT, ONE_HUNDRED)
 		.pool_total_borrowed(DOT, dollars(40))
 		.build()
 		.execute_with(|| {
@@ -273,10 +270,10 @@ fn convert_from_wrapped_should_work() {
 	ExtBuilder::default()
 		.pool_with_params(DOT, Balance::zero(), Rate::zero(), Balance::zero())
 		.pool_with_params(BTC, Balance::zero(), Rate::zero(), Balance::zero())
-		.user_balance(ALICE, DOT, ONE_HUNDRED_DOLLARS)
-		.user_balance(ALICE, MDOT, ONE_HUNDRED_DOLLARS)
+		.user_balance(ALICE, DOT, ONE_HUNDRED)
+		.user_balance(ALICE, MDOT, ONE_HUNDRED)
 		.user_balance(ALICE, MBTC, 1)
-		.pool_balance(BTC, ONE_HUNDRED_DOLLARS)
+		.pool_balance(BTC, ONE_HUNDRED)
 		.pool_total_borrowed(DOT, dollars(40))
 		.build()
 		.execute_with(|| {
@@ -376,7 +373,7 @@ fn get_exchange_rate_by_interest_params_should_work() {
 #[test]
 fn get_user_liquidation_attempts_should_work() {
 	ExtBuilder::default()
-		.pool_user_data_with_params(DOT, ALICE, ONE_HUNDRED_DOLLARS, Rate::default(), true, 12)
+		.pool_user_data_with_params(DOT, ALICE, ONE_HUNDRED, Rate::default(), true, 12)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_user_liquidation_attempts(&ALICE, DOT), 12);
@@ -386,12 +383,12 @@ fn get_user_liquidation_attempts_should_work() {
 #[test]
 fn get_pool_members_with_loans_should_work() {
 	ExtBuilder::default()
-		.pool_user_data_with_params(DOT, ALICE, ONE_HUNDRED_DOLLARS, Rate::default(), true, 0)
+		.pool_user_data_with_params(DOT, ALICE, ONE_HUNDRED, Rate::default(), true, 0)
 		.pool_user_data_with_params(DOT, BOB, 0, Rate::default(), true, 0)
 		.pool_user_data_with_params(DOT, CHARLIE, 100, Rate::default(), true, 0)
 		.pool_user_data_with_params(BTC, ALICE, 0, Rate::default(), true, 0)
 		.pool_user_data_with_params(BTC, BOB, 0, Rate::default(), true, 0)
-		.pool_user_data_with_params(BTC, CHARLIE, ONE_HUNDRED_DOLLARS, Rate::default(), true, 0)
+		.pool_user_data_with_params(BTC, CHARLIE, ONE_HUNDRED, Rate::default(), true, 0)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_pool_members_with_loans(DOT), Ok(vec![3, 1]));
@@ -406,10 +403,10 @@ fn get_is_collateral_pools_should_work() {
 		.pool_balance(DOT, 3 * TEN_THOUSAND)
 		.pool_balance(ETH, 2 * TEN_THOUSAND)
 		.pool_balance(BTC, 4 * TEN_THOUSAND)
-		.pool_total_borrowed(KSM, ONE_HUNDRED_DOLLARS)
-		.pool_total_borrowed(DOT, ONE_HUNDRED_DOLLARS)
-		.pool_total_borrowed(ETH, ONE_HUNDRED_DOLLARS)
-		.pool_total_borrowed(BTC, ONE_HUNDRED_DOLLARS)
+		.pool_total_borrowed(KSM, ONE_HUNDRED)
+		.pool_total_borrowed(DOT, ONE_HUNDRED)
+		.pool_total_borrowed(ETH, ONE_HUNDRED)
+		.pool_total_borrowed(BTC, ONE_HUNDRED)
 		.pool_user_data_with_params(KSM, ALICE, Balance::zero(), Rate::default(), true, 0)
 		.pool_user_data_with_params(DOT, ALICE, Balance::zero(), Rate::default(), true, 0)
 		.pool_user_data_with_params(ETH, ALICE, Balance::zero(), Rate::default(), true, 0)

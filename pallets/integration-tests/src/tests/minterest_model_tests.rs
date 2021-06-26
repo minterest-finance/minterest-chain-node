@@ -10,7 +10,7 @@ mod tests {
 	fn calculate_borrow_interest_rate_deposit() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
 			.build()
 			.execute_with(|| {
@@ -37,7 +37,7 @@ mod tests {
 	fn calculate_borrow_interest_rate_deposit_and_borrow() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
 			.build()
 			.execute_with(|| {
@@ -76,8 +76,8 @@ mod tests {
 	fn calculate_borrow_interest_rate_few_deposits_and_borrows() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
 			.pool_user_data(DOT, BOB, Balance::zero(), Rate::zero(), true, 0)
 			.build()

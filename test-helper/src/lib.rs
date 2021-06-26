@@ -28,10 +28,10 @@ pub mod currency_mock {
 		amount.saturating_mul(Price::accuracy())
 	}
 
-	pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
-	pub const TEN_THOUSAND_DOLLARS: Balance = 10_000 * DOLLARS;
-	pub const ONE_HUNDRED_THOUSAND_DOLLARS: Balance = 100_000 * DOLLARS;
-	pub const ONE_MILL_DOLLARS: Balance = 1_000_000 * DOLLARS;
+	pub const ONE_HUNDRED: Balance = 100 * DOLLARS;
+	pub const TEN_THOUSAND: Balance = 10_000 * DOLLARS;
+	pub const ONE_HUNDRED_THOUSAND: Balance = 100_000 * DOLLARS;
+	pub const ONE_MILL: Balance = 1_000_000 * DOLLARS;
 
 	pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
 }

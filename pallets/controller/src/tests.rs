@@ -680,7 +680,7 @@ fn switch_whitelist_mode_should_work() {
 fn set_borrow_cap_should_work() {
 	ExtBuilder::default()
 		.pool_mock(DOT)
-		.user_balance(ALICE, DOT, ONE_HUNDRED_DOLLARS)
+		.user_balance(ALICE, DOT, ONE_HUNDRED)
 		.build()
 		.execute_with(|| {
 			// The dispatch origin of this call must be Administrator.
@@ -713,7 +713,7 @@ fn set_borrow_cap_should_work() {
 fn set_protocol_interest_threshold_should_work() {
 	ExtBuilder::default()
 		.pool_mock(DOT)
-		.user_balance(ALICE, DOT, ONE_HUNDRED_DOLLARS)
+		.user_balance(ALICE, DOT, ONE_HUNDRED)
 		.build()
 		.execute_with(|| {
 			// The dispatch origin of this call must be Administrator.

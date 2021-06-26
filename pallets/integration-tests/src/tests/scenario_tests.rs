@@ -13,8 +13,8 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
-			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND_DOLLARS)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
 			.build()
 			.execute_with(|| {
@@ -22,7 +22,7 @@ mod tests {
 				/* ------------------------------------------------------------------------------ */
 				System::set_block_number(0);
 
-				let alice_dot_free_balance_start: Balance = ONE_HUNDRED_THOUSAND_DOLLARS;
+				let alice_dot_free_balance_start: Balance = ONE_HUNDRED_THOUSAND;
 				let alice_m_dot_free_balance_start: Balance = Balance::zero();
 				let alice_dot_total_borrow_start: Balance = Balance::zero();
 
@@ -486,7 +486,7 @@ mod tests {
 
 				// Checking free balance MDOT in pool.
 				// Expected: 100_00
-				assert_eq!(Currencies::total_issuance(MDOT), ONE_HUNDRED_THOUSAND_DOLLARS);
+				assert_eq!(Currencies::total_issuance(MDOT), ONE_HUNDRED_THOUSAND);
 
 				// Checking free balance DOT && MDOT
 				// ADMIN:

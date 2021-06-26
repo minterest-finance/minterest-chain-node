@@ -135,17 +135,17 @@ impl Default for ExtBuilder {
 		Self {
 			endowed_accounts: vec![
 				// seed: initial DOTs
-				(ALICE, DOT, ONE_HUNDRED_DOLLARS),
-				(ALICE, ETH, ONE_HUNDRED_DOLLARS),
-				(ALICE, KSM, ONE_HUNDRED_DOLLARS),
-				(BOB, DOT, ONE_HUNDRED_DOLLARS),
+				(ALICE, DOT, ONE_HUNDRED),
+				(ALICE, ETH, ONE_HUNDRED),
+				(ALICE, KSM, ONE_HUNDRED),
+				(BOB, DOT, ONE_HUNDRED),
 				// seed: initial interest, equal 10_000$
-				(TestPools::pools_account_id(), ETH, TEN_THOUSAND_DOLLARS),
-				(TestPools::pools_account_id(), DOT, TEN_THOUSAND_DOLLARS),
+				(TestPools::pools_account_id(), ETH, TEN_THOUSAND),
+				(TestPools::pools_account_id(), DOT, TEN_THOUSAND),
 				// seed: initial interest = 10_000$, initial pool balance = 1_000_000$
-				(TestPools::pools_account_id(), KSM, ONE_MILL_DOLLARS),
+				(TestPools::pools_account_id(), KSM, ONE_MILL),
 				// seed: initial MNT treasury = 1_000_000$
-				(TestMntToken::get_account_id(), MNT, ONE_MILL_DOLLARS),
+				(TestMntToken::get_account_id(), MNT, ONE_MILL),
 			],
 			pools: vec![],
 			controller_data: vec![

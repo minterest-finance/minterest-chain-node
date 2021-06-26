@@ -127,12 +127,7 @@ fn create_pool_should_not_work_when_minterest_model_storage_has_data() {
 #[test]
 fn protocol_operations_not_working_for_nonexisting_pool() {
 	ExtBuilder::default()
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			assert_noop!(
@@ -200,24 +195,9 @@ fn protocol_operations_not_working_for_nonexisting_pool() {
 #[test]
 fn deposit_underlying_should_work() {
 	ExtBuilder::default()
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
-		.pool_with_params(
-			ETH,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
-		.pool_with_params(
-			KSM,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(ETH, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(KSM, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposit 60 DOT; exchange_rate = 1.0
@@ -279,12 +259,7 @@ fn deposit_underlying_should_work() {
 #[test]
 fn redeem_should_work() {
 	ExtBuilder::default()
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposit 60 DOT; exchange_rate = 1.0
@@ -306,19 +281,9 @@ fn redeem_should_work() {
 #[test]
 fn redeem_should_not_work() {
 	ExtBuilder::default()
-		.user_balance(ALICE, MKSM, ONE_HUNDRED_DOLLARS)
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
-		.pool_with_params(
-			KSM,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.user_balance(ALICE, MKSM, ONE_HUNDRED)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(KSM, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Bob has 0 MDOT on her account, so she cannot make a redeem.
@@ -350,15 +315,15 @@ fn redeem_should_not_work() {
 fn redeem_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
 		.pool_with_params(BTC, Balance::zero(), Rate::one(), Balance::zero())
-		.user_balance(ALICE, BTC, TEN_THOUSAND_DOLLARS)
+		.user_balance(ALICE, BTC, TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 10_000$ to BTC pool.
-			assert_ok!(TestProtocol::deposit_underlying(alice(), BTC, TEN_THOUSAND_DOLLARS));
+			assert_ok!(TestProtocol::deposit_underlying(alice(), BTC, TEN_THOUSAND));
 
 			// Alice borrowed 100$ from BTC pool:
 			// pool_total_liquidity = 10_000 - 100 = 9_900$
-			assert_ok!(TestProtocol::borrow(alice(), BTC, ONE_HUNDRED_DOLLARS));
+			assert_ok!(TestProtocol::borrow(alice(), BTC, ONE_HUNDRED));
 
 			// Alice has 10_000 MBTC. exchange_rate = 1.0
 			// Alice is trying to change all her 10_000 MBTC tokens to BTC. She can't do it because:
@@ -373,19 +338,9 @@ fn redeem_fails_if_low_balance_in_pool() {
 #[test]
 fn redeem_underlying_should_work() {
 	ExtBuilder::default()
-		.user_balance(ALICE, MKSM, ONE_HUNDRED_DOLLARS)
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
-		.pool_with_params(
-			KSM,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.user_balance(ALICE, MKSM, ONE_HUNDRED)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(KSM, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 60 DOT to the pool.
@@ -442,21 +397,21 @@ fn redeem_underlying_should_work() {
 fn redeem_underlying_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
 		.pool_with_params(BTC, Balance::zero(), Rate::one(), Balance::zero())
-		.user_balance(ALICE, BTC, TEN_THOUSAND_DOLLARS)
+		.user_balance(ALICE, BTC, TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 10_000$ to BTC pool.
-			assert_ok!(TestProtocol::deposit_underlying(alice(), BTC, TEN_THOUSAND_DOLLARS));
+			assert_ok!(TestProtocol::deposit_underlying(alice(), BTC, TEN_THOUSAND));
 
 			// Alice borrowed 100$ from BTC pool:
 			// pool_total_liquidity = 10_000 - 100 = 9_900$
-			assert_ok!(TestProtocol::borrow(alice(), BTC, ONE_HUNDRED_DOLLARS));
+			assert_ok!(TestProtocol::borrow(alice(), BTC, ONE_HUNDRED));
 
 			// Alice has 10_000 MBTC. exchange_rate = 1.0
 			// Alice is trying to change all her 10_000 MBTC tokens to BTC. She can't do it because:
 			// pool_total_liquidity = 9_900 BTC < 10_000 BTC
 			assert_noop!(
-				TestProtocol::redeem_underlying(alice(), BTC, TEN_THOUSAND_DOLLARS),
+				TestProtocol::redeem_underlying(alice(), BTC, TEN_THOUSAND),
 				Error::<Test>::NotEnoughLiquidityAvailable
 			);
 		});
@@ -465,19 +420,9 @@ fn redeem_underlying_fails_if_low_balance_in_pool() {
 #[test]
 fn redeem_wrapped_should_work() {
 	ExtBuilder::default()
-		.user_balance(ALICE, MKSM, ONE_HUNDRED_DOLLARS)
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
-		.pool_with_params(
-			KSM,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.user_balance(ALICE, MKSM, ONE_HUNDRED)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(KSM, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 60 DOT to the pool.
@@ -530,21 +475,21 @@ fn redeem_wrapped_should_work() {
 fn redeem_wrapped_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
 		.pool_with_params(BTC, Balance::zero(), Rate::one(), Balance::zero())
-		.user_balance(ALICE, BTC, TEN_THOUSAND_DOLLARS)
+		.user_balance(ALICE, BTC, TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 10_000$ to BTC pool.
-			assert_ok!(TestProtocol::deposit_underlying(alice(), BTC, TEN_THOUSAND_DOLLARS));
+			assert_ok!(TestProtocol::deposit_underlying(alice(), BTC, TEN_THOUSAND));
 
 			// Alice borrowed 100$ from BTC pool:
 			// pool_total_liquidity = 10_000 - 100 = 9_900$
-			assert_ok!(TestProtocol::borrow(alice(), BTC, ONE_HUNDRED_DOLLARS));
+			assert_ok!(TestProtocol::borrow(alice(), BTC, ONE_HUNDRED));
 
 			// Alice has 10_000 MBTC. exchange_rate = 1.0
 			// Alice is trying to change all her 10_000 MBTC tokens to BTC. She can't do it because:
 			// pool_total_liquidity = 9_900 BTC < 10_000 MBTC * 1.0 = 10_000 BTC
 			assert_noop!(
-				TestProtocol::redeem_wrapped(alice(), MBTC, TEN_THOUSAND_DOLLARS),
+				TestProtocol::redeem_wrapped(alice(), MBTC, TEN_THOUSAND),
 				Error::<Test>::NotEnoughLiquidityAvailable
 			);
 		});
@@ -553,24 +498,9 @@ fn redeem_wrapped_fails_if_low_balance_in_pool() {
 #[test]
 fn borrow_should_work() {
 	ExtBuilder::default()
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
-		.pool_with_params(
-			ETH,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
-		.pool_with_params(
-			KSM,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(ETH, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(KSM, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 60 DOT to the pool.
@@ -620,11 +550,11 @@ fn borrow_should_work() {
 fn borrow_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
 		.pool_with_params(BTC, Balance::zero(), Rate::one(), Balance::zero())
-		.user_balance(ALICE, BTC, TEN_THOUSAND_DOLLARS)
+		.user_balance(ALICE, BTC, TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 100$ to BTC pool.
-			assert_ok!(TestProtocol::deposit_underlying(alice(), BTC, ONE_HUNDRED_DOLLARS));
+			assert_ok!(TestProtocol::deposit_underlying(alice(), BTC, ONE_HUNDRED));
 
 			// set total_pool_liquidity = 50 DOT
 			assert_ok!(Currencies::withdraw(
@@ -635,7 +565,7 @@ fn borrow_fails_if_low_balance_in_pool() {
 
 			// Alice cannot borrow 100 BTC because there is 50 BTC in the pool.
 			assert_noop!(
-				TestProtocol::borrow(alice(), BTC, ONE_HUNDRED_DOLLARS),
+				TestProtocol::borrow(alice(), BTC, ONE_HUNDRED),
 				Error::<Test>::NotEnoughLiquidityAvailable
 			);
 
@@ -648,7 +578,7 @@ fn borrow_fails_if_low_balance_in_pool() {
 
 			// Alice cannot borrow 100 BTC because there is 0 BTC in the pool.
 			assert_noop!(
-				TestProtocol::borrow(alice(), BTC, ONE_HUNDRED_DOLLARS),
+				TestProtocol::borrow(alice(), BTC, ONE_HUNDRED),
 				Error::<Test>::NotEnoughLiquidityAvailable
 			);
 		});
@@ -657,18 +587,8 @@ fn borrow_fails_if_low_balance_in_pool() {
 #[test]
 fn repay_should_work() {
 	ExtBuilder::default()
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
-		.pool_with_params(
-			KSM,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(KSM, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 60 DOT to the pool.
@@ -725,18 +645,8 @@ fn repay_should_work() {
 #[test]
 fn repay_all_should_work() {
 	ExtBuilder::default()
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
-		.pool_with_params(
-			KSM,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(KSM, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 60 DOT to the pool.
@@ -770,12 +680,7 @@ fn repay_all_should_work() {
 #[test]
 fn repay_all_fails_if_not_enough_underlying_assets() {
 	ExtBuilder::default()
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 60 DOT to the pool.
@@ -797,18 +702,8 @@ fn repay_all_fails_if_not_enough_underlying_assets() {
 #[test]
 fn repay_on_behalf_should_work() {
 	ExtBuilder::default()
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
-		.pool_with_params(
-			KSM,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(KSM, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 60 DOT to the pool.
@@ -861,18 +756,8 @@ fn repay_on_behalf_should_work() {
 #[test]
 fn enable_is_collateral_should_work() {
 	ExtBuilder::default()
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
-		.pool_with_params(
-			ETH,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(ETH, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice cannot enable as collateral ETH pool, because she has not deposited funds into the pool.
@@ -913,18 +798,8 @@ fn enable_is_collateral_should_work() {
 #[test]
 fn disable_is_collateral_should_work() {
 	ExtBuilder::default()
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
-		.pool_with_params(
-			ETH,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(ETH, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			assert_noop!(
@@ -966,31 +841,24 @@ fn disable_is_collateral_should_work() {
 #[test]
 fn transfer_wrapped_should_work() {
 	ExtBuilder::default()
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.pool_with_params(BTC, Balance::zero(), Rate::one(), Balance::zero())
-		.user_balance(ALICE, MDOT, ONE_HUNDRED_DOLLARS)
-		.user_balance(BOB, MBTC, ONE_HUNDRED_DOLLARS)
+		.user_balance(ALICE, MDOT, ONE_HUNDRED)
+		.user_balance(BOB, MBTC, ONE_HUNDRED)
 		.build()
 		.execute_with(|| {
 			// Alice can transfer all tokens to Bob
-			assert_ok!(TestProtocol::transfer_wrapped(alice(), BOB, MDOT, ONE_HUNDRED_DOLLARS));
-			let expected_event =
-				Event::minterest_protocol(crate::Event::Transferred(ALICE, BOB, MDOT, ONE_HUNDRED_DOLLARS));
+			assert_ok!(TestProtocol::transfer_wrapped(alice(), BOB, MDOT, ONE_HUNDRED));
+			let expected_event = Event::minterest_protocol(crate::Event::Transferred(ALICE, BOB, MDOT, ONE_HUNDRED));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(Currencies::free_balance(MDOT, &ALICE), 0);
-			assert_eq!(Currencies::free_balance(MDOT, &BOB), ONE_HUNDRED_DOLLARS);
+			assert_eq!(Currencies::free_balance(MDOT, &BOB), ONE_HUNDRED);
 
 			// Bob can transfer all tokens to Alice
-			assert_ok!(TestProtocol::transfer_wrapped(bob(), ALICE, MBTC, ONE_HUNDRED_DOLLARS,));
-			let expected_event =
-				Event::minterest_protocol(crate::Event::Transferred(BOB, ALICE, MBTC, ONE_HUNDRED_DOLLARS));
+			assert_ok!(TestProtocol::transfer_wrapped(bob(), ALICE, MBTC, ONE_HUNDRED,));
+			let expected_event = Event::minterest_protocol(crate::Event::Transferred(BOB, ALICE, MBTC, ONE_HUNDRED));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
-			assert_eq!(Currencies::free_balance(MBTC, &ALICE), ONE_HUNDRED_DOLLARS);
+			assert_eq!(Currencies::free_balance(MBTC, &ALICE), ONE_HUNDRED);
 			assert_eq!(Currencies::free_balance(MBTC, &BOB), 0);
 
 			// Alice can transfer part of all tokens to Bob
@@ -1014,31 +882,21 @@ fn transfer_wrapped_should_work() {
 #[test]
 fn transfer_wrapped_should_not_work() {
 	ExtBuilder::default()
-		.user_balance(ALICE, MDOT, ONE_HUNDRED_DOLLARS)
-		.user_balance(ALICE, MKSM, ONE_HUNDRED_DOLLARS)
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
-		.pool_with_params(
-			KSM,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.user_balance(ALICE, MDOT, ONE_HUNDRED)
+		.user_balance(ALICE, MKSM, ONE_HUNDRED)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(KSM, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice is unable to transfer more tokens tan she has
 			assert_noop!(
-				TestProtocol::transfer_wrapped(alice(), BOB, MNT, ONE_HUNDRED_DOLLARS),
+				TestProtocol::transfer_wrapped(alice(), BOB, MNT, ONE_HUNDRED),
 				Error::<Test>::NotValidWrappedTokenId
 			);
 
 			// Alice is unable to transfer tokens to self
 			assert_noop!(
-				TestProtocol::transfer_wrapped(alice(), ALICE, MDOT, ONE_HUNDRED_DOLLARS),
+				TestProtocol::transfer_wrapped(alice(), ALICE, MDOT, ONE_HUNDRED),
 				Error::<Test>::CannotTransferToSelf
 			);
 
@@ -1046,7 +904,7 @@ fn transfer_wrapped_should_not_work() {
 			// 'WhitelistCouncil' can work with protocols.
 			controller::WhitelistMode::<Test>::put(true);
 			assert_noop!(
-				TestProtocol::transfer_wrapped(alice(), BOB, MDOT, ONE_HUNDRED_DOLLARS),
+				TestProtocol::transfer_wrapped(alice(), BOB, MDOT, ONE_HUNDRED),
 				BadOrigin
 			);
 
@@ -1072,7 +930,7 @@ fn transfer_wrapped_should_not_work() {
 
 			// All operations in the KSM pool are paused.
 			assert_noop!(
-				TestProtocol::transfer_wrapped(alice(), BOB, MKSM, ONE_HUNDRED_DOLLARS),
+				TestProtocol::transfer_wrapped(alice(), BOB, MKSM, ONE_HUNDRED),
 				Error::<Test>::OperationPaused
 			);
 		});
@@ -1081,12 +939,7 @@ fn transfer_wrapped_should_not_work() {
 #[test]
 fn claim_mnt_should_work() {
 	ExtBuilder::default()
-		.pool_with_params(
-			DOT,
-			Balance::zero(),
-			Rate::saturating_from_rational(1, 1),
-			TEN_THOUSAND_DOLLARS,
-		)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			System::set_block_number(10);
