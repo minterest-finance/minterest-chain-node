@@ -6,10 +6,6 @@ use mock::*;
 use frame_support::{assert_err, assert_noop, assert_ok};
 use sp_arithmetic::FixedPointNumber;
 
-fn dollars<T: Into<u128>>(d: T) -> Balance {
-	1_000_000_000_000_000_000_u128.saturating_mul(d.into())
-}
-
 #[test]
 fn set_pool_data_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
@@ -228,22 +224,22 @@ fn update_state_on_borrow_should_work() {
 #[test]
 fn update_state_on_repay_should_work() {
 	ExtBuilder::default()
-		.user_balance(ALICE, DOT, ONE_HUNDRED)
+		.user_balance(ALICE, DOT, ONE_HUNDRED_DOLLARS)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_user_borrow_index(&ALICE, DOT), Rate::from_inner(0));
-			assert_ok!(TestPools::update_state_on_borrow(&ALICE, DOT, 60, 0));
-			assert_eq!(TestPools::get_pool_total_borrowed(DOT), 60);
-			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, DOT), 60);
+			assert_ok!(TestPools::update_state_on_borrow(&ALICE, DOT, dollars(60), 0));
+			assert_eq!(TestPools::get_pool_total_borrowed(DOT), dollars(60));
+			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, DOT), dollars(60));
 			assert_eq!(TestPools::get_user_borrow_index(&ALICE, DOT), Rate::default());
 
-			assert_ok!(TestPools::update_state_on_repay(&ALICE, DOT, 30, 60));
-			assert_eq!(TestPools::get_pool_total_borrowed(DOT), 30);
-			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, DOT), 30);
+			assert_ok!(TestPools::update_state_on_repay(&ALICE, DOT, dollars(30), dollars(60)));
+			assert_eq!(TestPools::get_pool_total_borrowed(DOT), dollars(30));
+			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, DOT), dollars(30));
 
-			assert_ok!(TestPools::update_state_on_repay(&ALICE, DOT, 10, 30));
-			assert_eq!(TestPools::get_pool_total_borrowed(DOT), 20);
-			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, DOT), 20);
+			assert_ok!(TestPools::update_state_on_repay(&ALICE, DOT, dollars(10), dollars(30)));
+			assert_eq!(TestPools::get_pool_total_borrowed(DOT), dollars(20));
+			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, DOT), dollars(20));
 
 			assert_noop!(
 				TestPools::update_state_on_repay(&ALICE, DOT, 100, 20),
@@ -255,9 +251,9 @@ fn update_state_on_repay_should_work() {
 #[test]
 fn convert_to_wrapped_should_work() {
 	ExtBuilder::default()
-		.user_balance(ALICE, DOT, ONE_HUNDRED)
-		.user_balance(ALICE, MDOT, ONE_HUNDRED)
-		.pool_total_borrowed(DOT, 40)
+		.user_balance(ALICE, DOT, ONE_HUNDRED_DOLLARS)
+		.user_balance(ALICE, MDOT, ONE_HUNDRED_DOLLARS)
+		.pool_total_borrowed(DOT, dollars(40))
 		.build()
 		.execute_with(|| {
 			// exchange_rate = 40 / 100 = 0.4
@@ -277,11 +273,11 @@ fn convert_from_wrapped_should_work() {
 	ExtBuilder::default()
 		.pool_with_params(DOT, Balance::zero(), Rate::zero(), Balance::zero())
 		.pool_with_params(BTC, Balance::zero(), Rate::zero(), Balance::zero())
-		.user_balance(ALICE, DOT, ONE_HUNDRED)
-		.user_balance(ALICE, MDOT, ONE_HUNDRED)
+		.user_balance(ALICE, DOT, ONE_HUNDRED_DOLLARS)
+		.user_balance(ALICE, MDOT, ONE_HUNDRED_DOLLARS)
 		.user_balance(ALICE, MBTC, 1)
-		.pool_balance(BTC, 100)
-		.pool_total_borrowed(DOT, 40)
+		.pool_balance(BTC, ONE_HUNDRED_DOLLARS)
+		.pool_total_borrowed(DOT, dollars(40))
 		.build()
 		.execute_with(|| {
 			// underlying_amount = 10 * 0.4 = 4

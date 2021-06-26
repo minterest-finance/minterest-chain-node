@@ -28,7 +28,6 @@ pub mod currency_mock {
 		amount.saturating_mul(Price::accuracy())
 	}
 
-	pub const ONE_HUNDRED: Balance = 100;
 	pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
 	pub const TEN_THOUSAND_DOLLARS: Balance = 10_000 * DOLLARS;
 	pub const ONE_HUNDRED_THOUSAND_DOLLARS: Balance = 100_000 * DOLLARS;

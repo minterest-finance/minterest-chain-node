@@ -180,15 +180,14 @@ fn set_min_partial_liquidation_sum_should_work() {
 		assert_ok!(TestRiskManager::set_min_partial_liquidation_sum(
 			admin(),
 			DOT,
-			ONE_HUNDRED * DOLLARS
+			ONE_HUNDRED_DOLLARS
 		));
 		assert_eq!(
 			TestRiskManager::risk_manager_params(DOT).min_partial_liquidation_sum,
-			ONE_HUNDRED * DOLLARS
+			ONE_HUNDRED_DOLLARS
 		);
-		let expected_event = Event::risk_manager(crate::Event::MinSumForPartialLiquidationHasChanged(
-			ONE_HUNDRED * DOLLARS,
-		));
+		let expected_event =
+			Event::risk_manager(crate::Event::MinSumForPartialLiquidationHasChanged(ONE_HUNDRED_DOLLARS));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Administrator.

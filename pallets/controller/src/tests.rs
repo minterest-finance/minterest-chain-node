@@ -680,15 +680,15 @@ fn switch_whitelist_mode_should_work() {
 fn set_borrow_cap_should_work() {
 	ExtBuilder::default()
 		.pool_mock(DOT)
-		.user_balance(ALICE, DOT, ONE_HUNDRED)
+		.user_balance(ALICE, DOT, ONE_HUNDRED_DOLLARS)
 		.build()
 		.execute_with(|| {
 			// The dispatch origin of this call must be Administrator.
-			assert_noop!(Controller::set_borrow_cap(bob(), DOT, Some(10_u128)), BadOrigin);
+			assert_noop!(Controller::set_borrow_cap(bob(), DOT, Some(dollars(10))), BadOrigin);
 
 			// ALICE set borrow cap to 10.
-			assert_ok!(Controller::set_borrow_cap(alice(), DOT, Some(10_u128)));
-			let expected_event = Event::controller(crate::Event::BorrowCapChanged(DOT, Some(10_u128)));
+			assert_ok!(Controller::set_borrow_cap(alice(), DOT, Some(dollars(10))));
+			let expected_event = Event::controller(crate::Event::BorrowCapChanged(DOT, Some(dollars(10))));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// ALICE is able to change borrow cap to 9999
@@ -713,7 +713,7 @@ fn set_borrow_cap_should_work() {
 fn set_protocol_interest_threshold_should_work() {
 	ExtBuilder::default()
 		.pool_mock(DOT)
-		.user_balance(ALICE, DOT, ONE_HUNDRED)
+		.user_balance(ALICE, DOT, ONE_HUNDRED_DOLLARS)
 		.build()
 		.execute_with(|| {
 			// The dispatch origin of this call must be Administrator.
