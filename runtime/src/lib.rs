@@ -123,6 +123,7 @@ parameter_types! {
 	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
 	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
 	pub const ChainlinkFeedModuleId: ModuleId = ModuleId(*b"chl/feed");
+	pub const ChainlinkPriceAdapterModuleId: ModuleId = ModuleId(*b"chl/prad");
 }
 
 // Do not change the order of modules. Used for genesis block.
@@ -572,6 +573,7 @@ parameter_types! {
 	pub MinVestedTransfer: Balance = DOLLARS; // 1 USD
 	pub const MaxVestingSchedules: u32 = 2;
 	pub VestingBucketsInfo: Vec<(VestingBucket, u8, u8, Balance)> = VestingBucket::get_vesting_buckets_info();
+	pub ChainlinkPriceAdapterAccountId: AccountId = ChainlinkPriceAdapterModuleId::get().into_account();
 }
 
 impl module_vesting::Config for Runtime {
@@ -587,6 +589,8 @@ impl module_vesting::Config for Runtime {
 impl chainlink_price_adapter::Config for Runtime {
 	type Event = Event;
 	type ChainlinkOracle = ChainlinkFeed;
+	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
+	type PalletAccountId = ChainlinkPriceAdapterAccountId;
 }
 
 pub type FeedId = u32;

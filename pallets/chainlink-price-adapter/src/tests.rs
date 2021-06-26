@@ -8,16 +8,20 @@ use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData};
 use sp_runtime::traits::AccountIdConversion;
 
 #[test]
-fn chainlink_example() {
-	let pallet_account: AccountId = ChainlinkFeedModuleId::get().into_account();
+fn create_feed_should_fail() {
+	// TODO check admin origin
+}
+
+#[test]
+fn create_feed_should_work() {
+	let chainlink_adapter_account: AccountId = ChainlinkPriceAdapterModuleId::get().into_account();
 	let oracles_admin: AccountId = 999;
 	let oracle1 = 100;
 	let oracle2 = 200;
 	let oracle3 = 300;
-
 	test_externalities().execute_with(|| {
-		ChainlinkFeed::create_feed(
-			feed_creator(),
+		ChainlinkPriceAdapter::create_feed(
+			admin(),
 			20,
 			10,
 			(10, 1_000),
@@ -35,8 +39,10 @@ fn chainlink_example() {
 		)
 		.unwrap();
 		let feed_id = 0;
-		let feed_created =
-			Event::pallet_chainlink_feed(pallet_chainlink_feed::Event::FeedCreated(feed_id, FEED_CREATOR));
+		let feed_created = Event::pallet_chainlink_feed(pallet_chainlink_feed::Event::FeedCreated(
+			feed_id,
+			chainlink_adapter_account,
+		));
 		assert!(System::events().iter().any(|record| record.event == feed_created));
 
 		let round_id = 1;

@@ -4,6 +4,7 @@
 
 use crate as chainlink_price_adapter;
 use frame_support::{construct_runtime, ord_parameter_types, parameter_types};
+use frame_system::EnsureSignedBy;
 use minterest_primitives::Balance;
 use sp_runtime::testing::Header;
 use sp_runtime::testing::H256;
@@ -34,12 +35,18 @@ mock_impl_balances_config!(Runtime);
 
 parameter_types! {
 	pub const ChainlinkFeedModuleId: ModuleId = ModuleId(*b"chl/feed");
-	pub ChainlinkModuleAccountID: AccountId = ChainlinkFeedModuleId::get().into_account();
+	pub ChainlinkModuleAccountId: AccountId = ChainlinkFeedModuleId::get().into_account();
+
+	pub const ChainlinkPriceAdapterModuleId: ModuleId = ModuleId(*b"chl/prad");
+	pub ChainlinkPriceAdapterAccountId: AccountId =  ChainlinkPriceAdapterModuleId::get().into_account();
 }
 
-pub const FEED_CREATOR: AccountId = 1;
-pub fn feed_creator() -> Origin {
-	Origin::signed(FEED_CREATOR)
+pub const ADMIN: AccountId = 0;
+pub fn admin() -> Origin {
+	Origin::signed(ADMIN)
+}
+ord_parameter_types! {
+	pub const ZeroAdmin: AccountId = 0;
 }
 
 pub type AccountId = u64;
@@ -73,6 +80,8 @@ impl pallet_chainlink_feed::Config for Runtime {
 impl chainlink_price_adapter::Config for Runtime {
 	type Event = Event;
 	type ChainlinkOracle = ChainlinkFeed;
+	type PalletAccountId = ChainlinkModuleAccountId;
+	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 }
 
 pub fn test_externalities() -> sp_io::TestExternalities {
@@ -80,16 +89,16 @@ pub fn test_externalities() -> sp_io::TestExternalities {
 		.build_storage::<Runtime>()
 		.unwrap();
 
-	let pallet_account: AccountId = ChainlinkFeedModuleId::get().into_account();
 	pallet_balances::GenesisConfig::<Runtime> {
-		balances: vec![(pallet_account, MIN_RESERVE)],
+		balances: vec![(ADMIN, MIN_RESERVE)],
 	}
 	.assimilate_storage(&mut storage)
 	.unwrap();
 
+	let chainlink_adapter_account: AccountId = ChainlinkFeedModuleId::get().into_account();
 	pallet_chainlink_feed::GenesisConfig::<Runtime> {
-		pallet_admin: Some(pallet_account),
-		feed_creators: vec![FEED_CREATOR],
+		pallet_admin: Some(ADMIN),
+		feed_creators: vec![ChainlinkPriceAdapterAccountId::get()],
 	}
 	.assimilate_storage(&mut storage)
 	.unwrap();
