@@ -38,9 +38,7 @@ runtime_benchmarks! {
 	}
 
 
-	switch_whitelist_mode {}: _(
-		RawOrigin::Root
-	)
+	switch_whitelist_mode {}: _(RawOrigin::Root, true)
 }
 
 #[cfg(test)]

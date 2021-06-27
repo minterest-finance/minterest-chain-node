@@ -264,14 +264,14 @@ fn deposit_underlying_should_work() {
 
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// from whitelist can work with protocol.
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), true));
 			assert_noop!(
 				TestProtocol::deposit_underlying(alice(), KSM, dollars(10_u128)),
 				BadOrigin
 			);
 			// Bob is a whitelist member.
 			assert_ok!(TestProtocol::deposit_underlying(bob(), DOT, dollars(10_u128)));
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), false));
 			assert_ok!(TestProtocol::deposit_underlying(alice(), DOT, dollars(10_u128)));
 		});
 }
@@ -338,10 +338,10 @@ fn redeem_should_not_work() {
 
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// from whitelist can work with protocol.
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), true));
 			assert_noop!(TestProtocol::redeem(alice(), DOT), BadOrigin);
 
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), false));
 			assert_ok!(TestProtocol::redeem(alice(), DOT,));
 		});
 }
@@ -418,13 +418,13 @@ fn redeem_underlying_should_work() {
 
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// from whitelist can work with protocol.
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), true));
 			assert_noop!(
 				TestProtocol::redeem_underlying(alice(), DOT, dollars(30_u128)),
 				BadOrigin
 			);
 
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), false));
 
 			assert_ok!(TestProtocol::redeem_underlying(alice(), DOT, dollars(30_u128)));
 			let expected_event = Event::minterest_protocol(crate::Event::Redeemed(
@@ -509,10 +509,10 @@ fn redeem_wrapped_should_work() {
 
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// from whitelist can work with protocol.
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), true));
 			assert_noop!(TestProtocol::redeem_wrapped(alice(), MDOT, dollars(35_u128)), BadOrigin);
 
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), false));
 
 			assert_ok!(TestProtocol::redeem_wrapped(alice(), MDOT, dollars(35_u128)));
 			let expected_event = Event::minterest_protocol(crate::Event::Redeemed(
@@ -604,10 +604,10 @@ fn borrow_should_work() {
 
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// from whitelist can work with protocol.
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), true));
 			assert_noop!(TestProtocol::borrow(alice(), DOT, dollars(30_u128)), BadOrigin);
 
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), false));
 
 			// Alice borrowed 30 DOT
 			assert_ok!(TestProtocol::borrow(alice(), DOT, dollars(30_u128)));
@@ -710,10 +710,10 @@ fn repay_should_work() {
 
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// from whitelist can work with protocol.
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), true));
 			assert_noop!(TestProtocol::repay(alice(), DOT, dollars(20_u128)), BadOrigin);
 
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), false));
 
 			// Alice repaid 20 DOT. Her borrow_balance = 10 DOT.
 			assert_ok!(TestProtocol::repay(alice(), DOT, dollars(20_u128)));
@@ -755,10 +755,10 @@ fn repay_all_should_work() {
 
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// from whitelist can work with protocol.
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), true));
 			assert_noop!(TestProtocol::repay_all(alice(), DOT), BadOrigin);
 
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), false));
 
 			// Alice repaid all 30 DOT.
 			assert_ok!(TestProtocol::repay_all(alice(), DOT));
@@ -849,7 +849,7 @@ fn repay_on_behalf_should_work() {
 
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// from whitelist can work with protocol.
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), true));
 
 			// Bob repaid 20 DOT for Alice.
 			assert_ok!(TestProtocol::repay_on_behalf(bob(), DOT, ALICE, dollars(20_u128)));
@@ -886,10 +886,10 @@ fn enable_is_collateral_should_work() {
 
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// from whitelist can work with protocol.
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), true));
 			assert_noop!(TestProtocol::enable_is_collateral(alice(), ETH), BadOrigin);
 
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), false));
 
 			// Alice enable as collateral her ETH pool.
 			assert_ok!(TestProtocol::enable_is_collateral(alice(), ETH));
@@ -940,10 +940,10 @@ fn disable_is_collateral_should_work() {
 
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// from whitelist can work with protocol.
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), true));
 			assert_noop!(TestProtocol::disable_is_collateral(alice(), ETH), BadOrigin);
 
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), false));
 
 			// Alice disable collateral her ETH pool.
 			assert_ok!(TestProtocol::disable_is_collateral(alice(), ETH));
@@ -1044,13 +1044,13 @@ fn transfer_wrapped_should_not_work() {
 
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// from whitelist can work with protocol.
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), true));
 			assert_noop!(
 				TestProtocol::transfer_wrapped(alice(), BOB, MDOT, ONE_HUNDRED_DOLLARS),
 				BadOrigin
 			);
 
-			assert_ok!(TestWhitelist::switch_whitelist_mode(alice()));
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), false));
 
 			// Alice is unable to transfer more tokens than she has
 			assert_noop!(

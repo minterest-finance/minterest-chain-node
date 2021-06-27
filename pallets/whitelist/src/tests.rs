@@ -51,7 +51,7 @@ fn add_member_should_works() {
 		assert!(Members::<Test>::get().contains(&BOB));
 
 		// Alice cannot be added to the whitelist because she has already been added.
-		assert_noop!(Whitelist::add_member(admin(), ALICE), Error::<Test>::AlreadyMember);
+		assert_noop!(Whitelist::add_member(admin(), ALICE), Error::<Test>::MemberAlreadyAdded);
 
 		assert_eq!(Whitelist::members(), vec![ALICE, BOB]);
 	});
@@ -84,7 +84,10 @@ fn remove_member_should_works() {
 		.execute_with(|| {
 			assert_ok!(Whitelist::remove_member(admin(), CHARLIE));
 			// Charlie was previously removed from the whitelist.
-			assert_noop!(Whitelist::remove_member(admin(), CHARLIE), Error::<Test>::NotMember);
+			assert_noop!(
+				Whitelist::remove_member(admin(), CHARLIE),
+				Error::<Test>::MemberNotExist
+			);
 
 			// Remove Bob from whitelist.
 			assert_ok!(Whitelist::remove_member(admin(), BOB));
@@ -105,15 +108,21 @@ fn remove_member_should_works() {
 #[test]
 fn switch_whitelist_mode_should_work() {
 	ExternalityBuilder::default().build().execute_with(|| {
-		assert_ok!(Whitelist::switch_whitelist_mode(admin()));
+		assert_ok!(Whitelist::switch_whitelist_mode(admin(), true));
 		let expected_event = Event::whitelist_module(crate::Event::ProtocolOperationModeSwitched(true));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(Whitelist::whitelist_mode());
 
-		assert_ok!(Whitelist::switch_whitelist_mode(admin()));
+		assert_ok!(Whitelist::switch_whitelist_mode(admin(), false));
 		assert!(!Whitelist::whitelist_mode());
 
-		assert_noop!(Whitelist::switch_whitelist_mode(alice()), BadOrigin);
+		assert_noop!(Whitelist::switch_whitelist_mode(alice(), true), BadOrigin);
+		assert!(!Whitelist::whitelist_mode());
+
+		assert_noop!(
+			Whitelist::switch_whitelist_mode(admin(), false),
+			Error::<Test>::ModeChangeError
+		);
 		assert!(!Whitelist::whitelist_mode());
 	});
 }

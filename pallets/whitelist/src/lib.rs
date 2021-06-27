@@ -57,13 +57,15 @@ pub mod module {
 	#[pallet::error]
 	pub enum Error<T> {
 		/// The member cannot be added to the whitelist because it has already been added.
-		AlreadyMember,
+		MemberAlreadyAdded,
 		/// The member cannot be removed from the whitelist because it is not a member.
-		NotMember,
+		MemberNotExist,
 		/// Cannot add another member because the limit is already reached.
 		MembershipLimitReached,
 		/// Cannot remove a member because at least one member must remain.
 		MustBeAtLeastOneMember,
+		/// Error changing the protocol mode. The mode you want to set is already in effect.
+		ModeChangeError,
 	}
 
 	#[pallet::event]
@@ -150,7 +152,7 @@ pub mod module {
 			let location = members
 				.binary_search(&new_account)
 				.err()
-				.ok_or(Error::<T>::AlreadyMember)?;
+				.ok_or(Error::<T>::MemberAlreadyAdded)?;
 			members.insert(location, new_account.clone());
 			Members::<T>::put(&members);
 
@@ -173,7 +175,7 @@ pub mod module {
 			);
 
 			let mut members = Self::members();
-			let location = members.binary_search(&who).ok().ok_or(Error::<T>::NotMember)?;
+			let location = members.binary_search(&who).ok().ok_or(Error::<T>::MemberNotExist)?;
 			members.remove(location);
 			Members::<T>::put(&members);
 
@@ -186,14 +188,14 @@ pub mod module {
 		/// The dispatch origin of this call must be 'WhitelistOrigin'.
 		#[pallet::weight(T::WhitelistWeightInfo::switch_whitelist_mode())]
 		#[transactional]
-		pub fn switch_whitelist_mode(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn switch_whitelist_mode(origin: OriginFor<T>, new_state: bool) -> DispatchResultWithPostInfo {
 			T::WhitelistOrigin::ensure_origin(origin)?;
-			let mode = WhitelistMode::<T>::mutate(|mode| {
-				*mode = !*mode;
-				*mode
-			});
-			Self::deposit_event(Event::ProtocolOperationModeSwitched(mode));
-			Ok(().into())
+			WhitelistMode::<T>::try_mutate(|mode| -> DispatchResultWithPostInfo {
+				ensure!(*mode != new_state, Error::<T>::ModeChangeError);
+				*mode = new_state;
+				Self::deposit_event(Event::ProtocolOperationModeSwitched(new_state));
+				Ok(().into())
+			})
 		}
 	}
 }
