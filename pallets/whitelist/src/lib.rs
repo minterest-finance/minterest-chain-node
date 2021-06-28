@@ -80,10 +80,13 @@ pub mod module {
 		ProtocolOperationModeSwitched(bool),
 	}
 
+	/// The set of all members.
 	#[pallet::storage]
 	#[pallet::getter(fn members)]
 	pub type Members<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, (), OptionQuery>;
 
+	/// The total number of members stored in the map.
+	/// Because the map does not store its size, we must store it separately.
 	#[pallet::storage]
 	#[pallet::getter(fn member_count)]
 	pub type MemberCount<T: Config> = StorageValue<_, u8, ValueQuery>;
