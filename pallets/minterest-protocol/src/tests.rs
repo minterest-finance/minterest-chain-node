@@ -265,6 +265,7 @@ fn deposit_underlying_should_work() {
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// from whitelist can work with protocol.
 			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), true));
+			assert_ok!(TestWhitelist::add_member(alice(), BOB));
 			assert_noop!(
 				TestProtocol::deposit_underlying(alice(), KSM, dollars(10_u128)),
 				BadOrigin
@@ -850,6 +851,7 @@ fn repay_on_behalf_should_work() {
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// from whitelist can work with protocol.
 			assert_ok!(TestWhitelist::switch_whitelist_mode(alice(), true));
+			assert_ok!(TestWhitelist::add_member(alice(), BOB));
 
 			// Bob repaid 20 DOT for Alice.
 			assert_ok!(TestProtocol::repay_on_behalf(bob(), DOT, ALICE, dollars(20_u128)));

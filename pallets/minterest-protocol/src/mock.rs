@@ -17,7 +17,6 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	FixedPointNumber, ModuleId,
 };
-use sp_std::cell::RefCell;
 pub use test_helper::*;
 
 pub type AccountId = u64;
@@ -101,30 +100,6 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 	fn lock_price(_currency_id: CurrencyId) {}
 
 	fn unlock_price(_currency_id: CurrencyId) {}
-}
-
-thread_local! {
-	static TWO: RefCell<Vec<u64>> = RefCell::new(vec![2]);
-}
-
-pub struct WhitelistMembers;
-impl Contains<u64> for WhitelistMembers {
-	fn contains(who: &AccountId) -> bool {
-		TWO.with(|v| v.borrow().contains(who))
-	}
-
-	fn sorted_members() -> Vec<u64> {
-		TWO.with(|v| v.borrow().clone())
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn add(new: &u128) {
-		TWO.with(|v| {
-			let mut members = v.borrow_mut();
-			members.push(*new);
-			members.sort();
-		})
-	}
 }
 
 pub const ALICE: AccountId = 1;

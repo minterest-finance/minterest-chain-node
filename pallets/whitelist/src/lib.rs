@@ -20,12 +20,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
-use frame_support::{pallet_prelude::*, traits::Contains, transactional};
+use frame_support::{pallet_prelude::*, transactional, IterableStorageMap};
 use frame_system::pallet_prelude::OriginFor;
 pub use module::*;
 use pallet_traits::WhitelistManager;
-use sp_std::vec::Vec;
+use sp_std::collections::btree_set::BTreeSet;
 pub use weights::WeightInfo;
+
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -81,7 +82,11 @@ pub mod module {
 
 	#[pallet::storage]
 	#[pallet::getter(fn members)]
-	pub type Members<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+	pub type Members<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, (), OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn member_count)]
+	pub type MemberCount<T: Config> = StorageValue<_, u8, ValueQuery>;
 
 	/// Boolean variable. Protocol operation mode. In whitelist mode, only members
 	/// from whitelist can work with protocol.
@@ -120,9 +125,11 @@ pub mod module {
 				"Exceeded the number of whitelist members in genesis."
 			);
 
-			let mut members = self.members.clone();
-			members.sort();
-			Members::<T>::put(members);
+			self.members.iter().for_each(|who| {
+				Members::<T>::insert(who, ());
+			});
+
+			MemberCount::<T>::put(self.members.len() as u8);
 			WhitelistMode::<T>::put(self.whitelist_mode);
 		}
 	}
@@ -143,19 +150,13 @@ pub mod module {
 		#[pallet::weight(T::WhitelistWeightInfo::add_member((<T as Config>::MaxMembers::get() / 2) as u32))]
 		pub fn add_member(origin: OriginFor<T>, new_account: T::AccountId) -> DispatchResultWithPostInfo {
 			T::WhitelistOrigin::ensure_origin(origin)?;
-			ensure!(
-				Members::<T>::decode_len().unwrap_or(0) < T::MaxMembers::get() as usize,
-				Error::<T>::MembershipLimitReached
-			);
+			let member_count = MemberCount::<T>::get();
 
-			let mut members = Self::members();
-			let location = members
-				.binary_search(&new_account)
-				.err()
-				.ok_or(Error::<T>::MemberAlreadyAdded)?;
-			members.insert(location, new_account.clone());
-			Members::<T>::put(&members);
+			ensure!(member_count < T::MaxMembers::get(), Error::<T>::MembershipLimitReached);
+			ensure!(!Self::is_whitelist_member(&new_account), Error::<T>::MemberAlreadyAdded);
 
+			Members::<T>::insert(&new_account, ());
+			MemberCount::<T>::put(member_count + 1);
 			Self::deposit_event(Event::MemberAdded(new_account));
 			Ok(().into())
 		}
@@ -166,20 +167,19 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be 'WhitelistOrigin'.
 		#[pallet::weight(T::WhitelistWeightInfo::remove_member((<T as Config>::MaxMembers::get() / 2) as u32))]
-		pub fn remove_member(origin: OriginFor<T>, who: T::AccountId) -> DispatchResultWithPostInfo {
+		pub fn remove_member(origin: OriginFor<T>, account_to_remove: T::AccountId) -> DispatchResultWithPostInfo {
 			T::WhitelistOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				Members::<T>::decode_len().unwrap_or(0) > 1,
-				Error::<T>::MustBeAtLeastOneMember
+				Self::is_whitelist_member(&account_to_remove),
+				Error::<T>::MemberNotExist
 			);
 
-			let mut members = Self::members();
-			let location = members.binary_search(&who).ok().ok_or(Error::<T>::MemberNotExist)?;
-			members.remove(location);
-			Members::<T>::put(&members);
+			ensure!(MemberCount::<T>::get() > 1, Error::<T>::MustBeAtLeastOneMember);
 
-			Self::deposit_event(Event::MemberRemoved(who));
+			Members::<T>::remove(&account_to_remove);
+			MemberCount::<T>::mutate(|v| *v -= 1);
+			Self::deposit_event(Event::MemberRemoved(account_to_remove));
 			Ok(().into())
 		}
 
@@ -200,24 +200,22 @@ pub mod module {
 	}
 }
 
-impl<T: Config> WhitelistManager for Pallet<T> {
+impl<T: Config> WhitelistManager<T::AccountId> for Pallet<T> {
 	/// Protocol operation mode. In whitelist mode, only members from whitelist can work with
 	/// protocol.
 	fn is_whitelist_mode_enabled() -> bool {
 		WhitelistMode::<T>::get()
 	}
-}
 
-impl<T: Config> Contains<T::AccountId> for Module<T> {
-	fn contains(t: &T::AccountId) -> bool {
-		Self::members().binary_search(t).is_ok()
+	/// Checks if the account is a whitelist member.
+	fn is_whitelist_member(who: &T::AccountId) -> bool {
+		Members::<T>::contains_key(&who)
 	}
 
-	fn sorted_members() -> Vec<T::AccountId> {
-		Self::members()
-	}
-
-	fn count() -> usize {
-		Members::<T>::decode_len().unwrap_or(0)
+	/// Returns the set of all accounts in the whitelist.
+	fn whitelist_members() -> BTreeSet<T::AccountId> {
+		<Members<T> as IterableStorageMap<T::AccountId, ()>>::iter()
+			.map(|(acct, _)| acct)
+			.collect::<BTreeSet<_>>()
 	}
 }

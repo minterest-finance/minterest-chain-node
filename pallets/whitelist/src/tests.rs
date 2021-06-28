@@ -4,6 +4,7 @@ use super::*;
 use mock::{Event, *};
 
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
+use std::collections::BTreeSet;
 
 #[test]
 #[should_panic(expected = "Duplicate member account in whitelist in genesis.")]
@@ -28,7 +29,12 @@ fn query_membership_works() {
 		.build()
 		.execute_with(|| {
 			// Sorted list.
-			assert_eq!(Whitelist::members(), vec![ADMIN, ALICE, BOB, CHARLIE]);
+			assert_eq!(
+				Whitelist::whitelist_members(),
+				vec![ADMIN, ALICE, BOB, CHARLIE]
+					.into_iter()
+					.collect::<BTreeSet<AccountId>>()
+			);
 		});
 }
 
@@ -42,18 +48,21 @@ fn add_member_should_works() {
 		assert_ok!(Whitelist::add_member(admin(), ALICE));
 		let expected_event = Event::whitelist_module(crate::Event::MemberAdded(ALICE));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
-		assert!(Members::<Test>::get().contains(&ALICE));
+		assert!(Members::<Test>::contains_key(&ALICE));
 
 		// Add Bob to whitelist.
 		assert_ok!(Whitelist::add_member(admin(), BOB));
 		let expected_event = Event::whitelist_module(crate::Event::MemberAdded(BOB));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
-		assert!(Members::<Test>::get().contains(&BOB));
+		assert!(Members::<Test>::contains_key(&BOB));
 
 		// Alice cannot be added to the whitelist because she has already been added.
 		assert_noop!(Whitelist::add_member(admin(), ALICE), Error::<Test>::MemberAlreadyAdded);
 
-		assert_eq!(Whitelist::members(), vec![ALICE, BOB]);
+		assert_eq!(
+			Whitelist::whitelist_members(),
+			vec![ALICE, BOB].into_iter().collect::<BTreeSet<AccountId>>()
+		);
 	});
 }
 
@@ -72,7 +81,7 @@ fn cant_exceed_max_members() {
 		);
 
 		// Sorted whitelist.
-		assert_eq!(Whitelist::members(), (0..16).collect::<Vec<AccountId>>());
+		assert_eq!(Whitelist::whitelist_members(), (0..16).collect::<BTreeSet<AccountId>>());
 	})
 }
 
@@ -101,7 +110,10 @@ fn remove_member_should_works() {
 			);
 
 			// Check storage changes.
-			assert_eq!(Whitelist::members(), vec![ALICE]);
+			assert_eq!(
+				Whitelist::whitelist_members(),
+				vec![ALICE].into_iter().collect::<BTreeSet<AccountId>>()
+			);
 		})
 }
 

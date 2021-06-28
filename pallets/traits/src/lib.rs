@@ -3,6 +3,7 @@
 
 use minterest_primitives::{Balance, CurrencyId, Operation, Price, Rate};
 use sp_runtime::{DispatchError, DispatchResult};
+use sp_std::collections::btree_set::BTreeSet;
 use sp_std::result::Result;
 
 /// An abstraction of basic borrowing functions
@@ -205,8 +206,14 @@ pub trait MinterestModelAPI {
 }
 
 /// An abstraction of controller basic functionalities.
-pub trait WhitelistManager {
+pub trait WhitelistManager<AccountId> {
 	/// Protocol operation mode. In whitelist mode, only members from
 	/// whitelist can work with protocol.
 	fn is_whitelist_mode_enabled() -> bool;
+
+	/// Checks if the account is a whitelist member.
+	fn is_whitelist_member(who: &AccountId) -> bool;
+
+	/// Returns the set of all accounts in the whitelist.
+	fn whitelist_members() -> BTreeSet<AccountId>;
 }

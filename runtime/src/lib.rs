@@ -52,7 +52,7 @@ use sp_version::RuntimeVersion;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, debug, parameter_types,
-	traits::{Contains, KeyOwnerProofSystem, Randomness},
+	traits::{KeyOwnerProofSystem, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
@@ -71,7 +71,7 @@ pub use minterest_primitives::{
 	currency::*,
 	*,
 };
-use pallet_traits::PricesManager;
+use pallet_traits::{PricesManager, WhitelistManager};
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -332,7 +332,6 @@ impl minterest_protocol::Config for Runtime {
 	type ManagerLiquidationPools = LiquidationPools;
 	type ManagerLiquidityPools = LiquidityPools;
 	type MntManager = MntToken;
-	type WhitelistMembers = Whitelist;
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
 	type ControllerManager = Controller;
 	type RiskManagerAPI = RiskManager;
@@ -823,7 +822,7 @@ impl_runtime_apis! {
 
 	impl whitelist_rpc_runtime_api::WhitelistRuntimeApi<Block, AccountId> for Runtime {
 		fn is_whitelist_member(who: AccountId) -> Option<bool> {
-				Some(Whitelist::contains(&who))
+				Some(Whitelist::is_whitelist_member(&who))
 		}
 	}
 

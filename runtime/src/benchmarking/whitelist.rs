@@ -3,6 +3,7 @@ use frame_benchmarking::account;
 use frame_support::{assert_ok, traits::EnsureOrigin};
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
+use pallet_traits::WhitelistManager;
 use sp_std::prelude::*;
 
 runtime_benchmarks! {
@@ -13,28 +14,31 @@ runtime_benchmarks! {
 	add_member {
 		let m in 1 .. MaxMembersWhitelistMode::get() as u32 - 1_u32;
 
-		let mut members = (0..m).map(|i| account("member", i, SEED)).collect::<Vec<AccountId>>();
-		members.sort();
-		whitelist_module::Members::<Runtime>::set(members.clone());
+		(0..m).map(|i| account("member", i, SEED)).for_each(|who: AccountId| {
+			whitelist_module::Members::<Runtime>::insert(who, ());
+		});
+		whitelist_module::MemberCount::<Runtime>::put(m as u8);
 		let new_member = account::<AccountId>("add", m, SEED);
 	}: {
 		assert_ok!(Whitelist::add_member(<Runtime as whitelist_module::Config>::WhitelistOrigin::successful_origin(), new_member.clone()));
 	}
 	verify {
-		assert!(Whitelist::members().contains(&new_member));
+		assert!(Whitelist::is_whitelist_member(&new_member));
 	}
 
 	remove_member {
 		let m in 2 .. MaxMembersWhitelistMode::get() as u32 - 1_u32;
-		let mut members = (0..m).map(|i| account("member", i, SEED)).collect::<Vec<AccountId>>();
-		members.sort();
-		whitelist_module::Members::<Runtime>::set(members.clone());
-		let to_remove = members.first().cloned().unwrap();
+
+		(0..m).map(|i| account("member", i, SEED)).for_each(|who: AccountId| {
+			whitelist_module::Members::<Runtime>::insert(who, ());
+		});
+		whitelist_module::MemberCount::<Runtime>::put(m as u8);
+		let to_remove: AccountId = account("member", 0, SEED);
 	}: {
 		assert_ok!(Whitelist::remove_member(<Runtime as whitelist_module::Config>::WhitelistOrigin::successful_origin(), to_remove.clone()));
 	}
 	verify {
-		assert!(!Whitelist::members().contains(&to_remove));
+		assert!(!Whitelist::is_whitelist_member(&to_remove));
 	}
 
 
