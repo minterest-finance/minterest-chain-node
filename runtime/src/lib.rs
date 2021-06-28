@@ -796,9 +796,7 @@ impl_runtime_apis! {
 		}
 
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState> {
-			let exchange_rate = Controller::get_liquidity_pool_exchange_rate(pool_id)?;
-			let (borrow_rate, supply_rate) = Controller::get_liquidity_pool_borrow_and_supply_rates(pool_id)?;
-
+			let (exchange_rate, borrow_rate, supply_rate) = Controller::get_pool_exchange_borrow_and_supply_rates(pool_id)?;
 			Some(PoolState { exchange_rate, borrow_rate, supply_rate })
 		}
 

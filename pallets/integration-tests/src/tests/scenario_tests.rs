@@ -79,8 +79,7 @@ mod tests {
 				assert_eq!(TestPools::pools(DOT).total_borrowed, pool_dot_total_borrow_start);
 
 				// Checking controller params
-				let (borrow_rate, _) =
-					TestController::get_liquidity_pool_borrow_and_supply_rates(DOT).unwrap_or_default();
+				let (_, borrow_rate, _) = TestController::get_pool_exchange_borrow_and_supply_rates(DOT).unwrap();
 				assert_eq!(TestController::controller_dates(DOT).last_interest_accrued_block, 0);
 				assert_eq!(borrow_rate, RATE_ZERO);
 
@@ -155,8 +154,7 @@ mod tests {
 
 				// Checking controller Storage params
 				assert_eq!(TestController::controller_dates(DOT).last_interest_accrued_block, 1);
-				let (borrow_rate, _) =
-					TestController::get_liquidity_pool_borrow_and_supply_rates(DOT).unwrap_or_default();
+				let (_, borrow_rate, _) = TestController::get_pool_exchange_borrow_and_supply_rates(DOT).unwrap();
 				assert_eq!(borrow_rate, RATE_ZERO);
 
 				// Checking DOT pool User params
@@ -238,8 +236,7 @@ mod tests {
 				// Borrow_rate changed: 0 -> 16_875 * 10^(-13)
 				let expected_borrow_rate_block_number_2: Rate =
 					Rate::saturating_from_rational(16_875u128, 10_000_000_000_000u128);
-				let (borrow_rate, _) =
-					TestController::get_liquidity_pool_borrow_and_supply_rates(DOT).unwrap_or_default();
+				let (_, borrow_rate, _) = TestController::get_pool_exchange_borrow_and_supply_rates(DOT).unwrap();
 				assert_eq!(borrow_rate, expected_borrow_rate_block_number_2);
 
 				// Checking DOT pool User params
@@ -335,8 +332,7 @@ mod tests {
 				// Borrow_rate changed: 0,0000000016875 -> 0.000000000843750002
 				let expected_borrow_rate_block_number_3: Rate =
 					Rate::saturating_from_rational(843_750_002u128, 1_000_000_000_000_000_000u128);
-				let (borrow_rate, _) =
-					TestController::get_liquidity_pool_borrow_and_supply_rates(DOT).unwrap_or_default();
+				let (_, borrow_rate, _) = TestController::get_pool_exchange_borrow_and_supply_rates(DOT).unwrap();
 				assert_eq!(borrow_rate, expected_borrow_rate_block_number_3);
 
 				// Checking DOT pool User params
@@ -444,8 +440,7 @@ mod tests {
 				assert_eq!(TestController::controller_dates(DOT).last_interest_accrued_block, 4);
 				// Borrow_rate changed: 0,000000002250000015 -> 0,0
 				let expected_borrow_rate_block_number_4 = Rate::zero();
-				let (borrow_rate, _) =
-					TestController::get_liquidity_pool_borrow_and_supply_rates(DOT).unwrap_or_default();
+				let (_, borrow_rate, _) = TestController::get_pool_exchange_borrow_and_supply_rates(DOT).unwrap();
 				assert_eq!(borrow_rate, expected_borrow_rate_block_number_4);
 
 				// Checking user pool Storage params
@@ -519,8 +514,7 @@ mod tests {
 				// Checking controller Storage params
 				assert_eq!(TestController::controller_dates(DOT).last_interest_accrued_block, 5);
 				// borrow_rate changed: 0,000000002250000015 -> 0
-				let (borrow_rate, _) =
-					TestController::get_liquidity_pool_borrow_and_supply_rates(DOT).unwrap_or_default();
+				let (_, borrow_rate, _) = TestController::get_pool_exchange_borrow_and_supply_rates(DOT).unwrap();
 				assert_eq!(borrow_rate, Rate::from_inner(0));
 
 				// Checking user pool Storage params

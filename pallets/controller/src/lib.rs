@@ -471,38 +471,32 @@ pub mod module {
 
 // RPC methods
 impl<T: Config> Pallet<T> {
-	/// Gets the exchange rate between a mToken and the underlying asset.
-	pub fn get_liquidity_pool_exchange_rate(pool_id: CurrencyId) -> Option<Rate> {
-		<LiquidityPools<T>>::get_exchange_rate(pool_id).ok()
-	}
-
 	/// Gets borrow interest rate and supply interest rate.
-	pub fn get_liquidity_pool_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
+	pub fn get_pool_exchange_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate, Rate)> {
 		if !<LiquidityPools<T>>::pool_exists(&pool_id) {
 			return None;
 		}
-		let current_total_balance = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
-		let pool_data = <LiquidityPools<T>>::get_pool_data(pool_id);
-		let protocol_interest_factor = Self::controller_dates(pool_id).protocol_interest_factor;
-
-		let utilization_rate = Self::calculate_utilization_rate(
-			current_total_balance,
-			pool_data.total_borrowed,
+		let pool_data: Pool = Self::calculate_current_pool_data(pool_id).ok()?;
+		let exchange_rate: Rate = <LiquidityPools<T>>::get_exchange_rate_by_interest_params(
+			pool_id,
 			pool_data.total_protocol_interest,
+			pool_data.total_borrowed,
 		)
 		.ok()?;
 
-		let borrow_rate = <MinterestModel<T>>::calculate_borrow_interest_rate(pool_id, utilization_rate).ok()?;
+		let protocol_interest_factor: Rate = Self::controller_dates(pool_id).protocol_interest_factor;
+		let utilization_rate: Rate = Self::get_utilization_rate(pool_id)?;
 
+		let borrow_rate: Rate = <MinterestModel<T>>::calculate_borrow_interest_rate(pool_id, utilization_rate).ok()?;
 		// supply_interest_rate = utilization_rate * borrow_rate * (1 - protocol_interest_factor)
-		let supply_rate = Rate::one()
+		let supply_rate: Rate = Rate::one()
 			.checked_sub(&protocol_interest_factor)
 			.and_then(|v| v.checked_mul(&borrow_rate))
 			.and_then(|v| v.checked_mul(&utilization_rate))
 			.ok_or(Error::<T>::NumOverflow)
 			.ok()?;
 
-		Some((borrow_rate, supply_rate))
+		Some((exchange_rate, borrow_rate, supply_rate))
 	}
 
 	/// Gets current utilization rate of the pool.
