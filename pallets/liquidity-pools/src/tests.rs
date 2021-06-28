@@ -13,12 +13,12 @@ fn dollars<T: Into<u128>>(d: T) -> Balance {
 #[test]
 fn set_pool_data_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(TestPools::set_pool_data(
+		TestPools::set_pool_data(
 			DOT,
 			ONE_HUNDRED_DOLLARS,
 			Rate::saturating_from_rational(125, 100),
 			ONE_HUNDRED_DOLLARS,
-		));
+		);
 		assert_eq!(<Pools<Test>>::get(DOT).total_borrowed, ONE_HUNDRED_DOLLARS);
 		assert_eq!(
 			<Pools<Test>>::get(DOT).borrow_index,

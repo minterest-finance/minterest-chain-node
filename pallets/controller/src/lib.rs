@@ -1062,7 +1062,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			pool_data.total_borrowed,
 			pool_data.borrow_index,
 			pool_data.total_protocol_interest,
-		)?;
+		);
 
 		Ok(())
 	}

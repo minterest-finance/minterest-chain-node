@@ -305,13 +305,15 @@ impl<T: Config> Pallet<T> {
 		total_borrowed: Balance,
 		borrow_index: Rate,
 		total_protocol_interest: Balance,
-	) -> DispatchResult {
-		Pools::<T>::mutate(pool_id, |pool| {
-			pool.total_borrowed = total_borrowed;
-			pool.borrow_index = borrow_index;
-			pool.total_protocol_interest = total_protocol_interest;
-		});
-		Ok(())
+	) {
+		Pools::<T>::insert(
+			pool_id,
+			Pool {
+				total_borrowed,
+				borrow_index,
+				total_protocol_interest,
+			},
+		)
 	}
 
 	/// Sets the total borrowed value in the pool.
