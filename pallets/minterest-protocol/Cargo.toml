@@ -1,16 +1,16 @@
 [package]
 name = "minterest-protocol"
-description = 'Pallet for minteres protocol implementation'
+description = "Pallet for minteres protocol implementation"
 version = "0.5.0"
-authors = ['Minterest <https://github.com/minterest-defi>']
+authors = ["Minterest <https://github.com/minterest-defi>"]
 edition = "2018"
 
 [dependencies]
 serde = { version = "1.0.101", optional = true }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
-frame-support = { default-features = false, version = '3.0.0' }
-frame-system = { default-features = false, version = '3.0.0' }
+frame-support = { default-features = false, version = "3.0.0" }
+frame-system = { default-features = false, version = "3.0.0" }
 sp-std = { version = "3.0.0", default-features = false }
 
 orml-utilities = { version = "0.4.0", default-features = false }
@@ -39,13 +39,13 @@ mnt-token = { path = "../mnt-token" }
 test-helper = { path = "../../test-helper" }
 
 [features]
-default = ['std']
+default = ["std"]
 std = [
     "serde",
-    'codec/std',
+    "codec/std",
     "sp-runtime/std",
-    'frame-support/std',
-    'frame-system/std',
+    "frame-support/std",
+    "frame-system/std",
     "sp-std/std",
 
     "orml-utilities/std",

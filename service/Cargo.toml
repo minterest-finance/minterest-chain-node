@@ -57,11 +57,11 @@ risk-manager = { path = "../pallets/risk-manager" }
 module-vesting = { path = "../pallets/vesting" }
 minterest-primitives = { path = "../primitives" }
 
-node-minterest-runtime = { path = '../runtime' }
+node-minterest-runtime = { path = "../runtime" }
 
 [features]
 default = ["std"]
 std = []
 runtime-benchmarks = [
-    'node-minterest-runtime/runtime-benchmarks',
+    "node-minterest-runtime/runtime-benchmarks",
 ]

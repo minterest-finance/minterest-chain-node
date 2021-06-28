@@ -1,14 +1,14 @@
 [package]
-name = 'module-prices'
+name = "module-prices"
 authors = ["Alexandr Liutsko <alexandr.liutsko@gmail.com>"]
-version = '0.6.2'
-edition = '2018'
+version = "0.6.2"
+edition = "2018"
 
 [dependencies]
 serde = { version = "1.0.101", optional = true }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
-frame-support = { default-features = false, version = '3.0.0' }
-frame-system = { default-features = false, version = '3.0.0' }
+frame-support = { default-features = false, version = "3.0.0" }
+frame-system = { default-features = false, version = "3.0.0" }
 sp-runtime = { version = "3.0.0", default-features = false }
 sp-std = { version = "3.0.0", default-features = false }
 
@@ -18,20 +18,20 @@ minterest-primitives = { path = "../../primitives", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
 
 [dev-dependencies]
-sp-core = { version = '3.0.0' }
-sp-io = { version = '3.0.0' }
-pallet-balances = { version = '3.0.0' }
+sp-core = { version = "3.0.0" }
+sp-io = { version = "3.0.0" }
+pallet-balances = { version = "3.0.0" }
 
 minterest-primitives = { path = "../../primitives" }
 test-helper = { path = "../../test-helper" }
 
 [features]
-default = ['std']
+default = ["std"]
 std = [
     "serde",
-    'codec/std',
-    'frame-support/std',
-    'frame-system/std',
+    "codec/std",
+    "frame-support/std",
+    "frame-system/std",
     "sp-runtime/std",
     "sp-std/std",
 ]

@@ -1,6 +1,6 @@
 [package]
 name = "risk-manager"
-description = 'Pallet for risk manager implementation'
+description = "Pallet for risk manager implementation"
 version = "0.6.0"
 authors = ["Minterest developers"]
 edition = "2018"
@@ -10,14 +10,14 @@ edition = "2018"
 [dependencies]
 serde = { version = "1.0.101", optional = true }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
-frame-support = { default-features = false, version = '3.0.0' }
-frame-system = { default-features = false, version = '3.0.0' }
-sp-core = { version = '3.0.0', default-features = false }
-sp-io = { version = '3.0.0', default-features = false }
-sp-runtime = { version = '3.0.0', default-features = false }
-sp-std = { version = '3.0.0', default-features = false }
-orml-utilities = { version = '0.4.0', default-features = false }
-orml-traits = { version = '0.4.0', default-features = false }
+frame-support = { default-features = false, version = "3.0.0" }
+frame-system = { default-features = false, version = "3.0.0" }
+sp-core = { version = "3.0.0", default-features = false }
+sp-io = { version = "3.0.0", default-features = false }
+sp-runtime = { version = "3.0.0", default-features = false }
+sp-std = { version = "3.0.0", default-features = false }
+orml-utilities = { version = "0.4.0", default-features = false }
+orml-traits = { version = "0.4.0", default-features = false }
 sp-arithmetic = { version = "3.0.0", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
@@ -27,9 +27,9 @@ liquidation-pools = { path = "../liquidation-pools", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
 
 [dev-dependencies]
-sp-core = { version = '3.0.0' }
-sp-io = { version = '3.0.0' }
-pallet-balances = { version = '3.0.0' }
+sp-core = { version = "3.0.0" }
+sp-io = { version = "3.0.0" }
+pallet-balances = { version = "3.0.0" }
 
 orml-tokens = { version = "0.4.0" }
 orml-currencies = { version = "0.4.0" }
@@ -44,12 +44,12 @@ test-helper = { path = "../../test-helper" }
 module-prices = { path = "../prices" }
 
 [features]
-default = ['std']
+default = ["std"]
 std = [
-    'serde',
-    'codec/std',
-    'frame-support/std',
-    'frame-system/std',
+    "serde",
+    "codec/std",
+    "frame-support/std",
+    "frame-system/std",
     "sp-std/std",
     "sp-runtime/std",
     "sp-io/std",
