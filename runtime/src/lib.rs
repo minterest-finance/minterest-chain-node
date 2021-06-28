@@ -441,6 +441,7 @@ parameter_types! {
 impl controller::Config for Runtime {
 	type Event = Event;
 	type LiquidityPoolsManager = LiquidityPools;
+	type MinterestModelManager = MinterestModel;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type ControllerWeightInfo = weights::controller::WeightInfo<Runtime>;
@@ -804,8 +805,8 @@ impl_runtime_apis! {
 			Controller::get_utilization_rate(pool_id)
 		}
 
-		fn get_total_supply_and_borrowed_usd_balance(account_id: AccountId) -> Option<UserPoolBalanceData> {
-			let (total_supply, total_borrowed) = Controller::get_total_supply_and_borrowed_usd_balance(&account_id).ok()?;
+		fn get_user_total_supply_and_borrowed_balance_in_usd(account_id: AccountId) -> Option<UserPoolBalanceData> {
+			let (total_supply, total_borrowed) = Controller::get_user_total_supply_and_borrowed_balance_in_usd(&account_id).ok()?;
 
 			Some(UserPoolBalanceData {total_supply, total_borrowed})
 		}

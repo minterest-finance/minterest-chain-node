@@ -161,6 +161,7 @@ macro_rules! mock_impl_controller_config {
 		impl controller::Config for $target {
 			type Event = Event;
 			type LiquidityPoolsManager = liquidity_pools::Module<$target>;
+			type MinterestModelManager = minterest_model::Module<$target>;
 			type MaxBorrowCap = MaxBorrowCap;
 			type UpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type ControllerWeightInfo = ();

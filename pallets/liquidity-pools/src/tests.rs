@@ -163,7 +163,7 @@ fn get_user_total_borrowed_should_work() {
 		.pool_user_data_with_params(DOT, ALICE, ONE_HUNDRED_DOLLARS, Rate::default(), true, 0)
 		.build()
 		.execute_with(|| {
-			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, DOT), ONE_HUNDRED_DOLLARS);
+			assert_eq!(TestPools::get_user_borrow_balance(&ALICE, DOT), ONE_HUNDRED_DOLLARS);
 		});
 }
 
@@ -203,7 +203,7 @@ fn update_state_on_borrow_should_work() {
 			// Alice borrow 60 DOT
 			assert_ok!(TestPools::update_state_on_borrow(&ALICE, DOT, 60, 0));
 			assert_eq!(TestPools::get_pool_total_borrowed(DOT), 60);
-			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, DOT), 60);
+			assert_eq!(TestPools::get_user_borrow_balance(&ALICE, DOT), 60);
 			assert_eq!(TestPools::get_user_borrow_index(&ALICE, DOT), Rate::default());
 
 			Pools::<Test>::mutate(DOT, |pool| pool.borrow_index = Rate::saturating_from_rational(1, 5));
@@ -211,7 +211,7 @@ fn update_state_on_borrow_should_work() {
 			// ALice borrow 30 DOT
 			assert_ok!(TestPools::update_state_on_borrow(&ALICE, DOT, 30, 60));
 			assert_eq!(TestPools::get_pool_total_borrowed(DOT), 90);
-			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, DOT), 90);
+			assert_eq!(TestPools::get_user_borrow_balance(&ALICE, DOT), 90);
 			assert_eq!(
 				TestPools::get_user_borrow_index(&ALICE, DOT),
 				Rate::saturating_from_rational(1, 5)
@@ -234,16 +234,16 @@ fn update_state_on_repay_should_work() {
 			assert_eq!(TestPools::get_user_borrow_index(&ALICE, DOT), Rate::from_inner(0));
 			assert_ok!(TestPools::update_state_on_borrow(&ALICE, DOT, 60, 0));
 			assert_eq!(TestPools::get_pool_total_borrowed(DOT), 60);
-			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, DOT), 60);
+			assert_eq!(TestPools::get_user_borrow_balance(&ALICE, DOT), 60);
 			assert_eq!(TestPools::get_user_borrow_index(&ALICE, DOT), Rate::default());
 
 			assert_ok!(TestPools::update_state_on_repay(&ALICE, DOT, 30, 60));
 			assert_eq!(TestPools::get_pool_total_borrowed(DOT), 30);
-			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, DOT), 30);
+			assert_eq!(TestPools::get_user_borrow_balance(&ALICE, DOT), 30);
 
 			assert_ok!(TestPools::update_state_on_repay(&ALICE, DOT, 10, 30));
 			assert_eq!(TestPools::get_pool_total_borrowed(DOT), 20);
-			assert_eq!(TestPools::get_user_total_borrowed(&ALICE, DOT), 20);
+			assert_eq!(TestPools::get_user_borrow_balance(&ALICE, DOT), 20);
 
 			assert_noop!(
 				TestPools::update_state_on_repay(&ALICE, DOT, 100, 20),

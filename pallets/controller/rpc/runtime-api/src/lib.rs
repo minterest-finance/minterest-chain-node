@@ -76,7 +76,7 @@ sp_api::decl_runtime_apis! {
 
 		fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate>;
 
-		fn get_total_supply_and_borrowed_usd_balance(account_id: AccountId) -> Option<UserPoolBalanceData>;
+		fn get_user_total_supply_and_borrowed_balance_in_usd(account_id: AccountId) -> Option<UserPoolBalanceData>;
 
 		fn get_hypothetical_account_liquidity(account_id: AccountId) -> Option<HypotheticalLiquidityData>;
 

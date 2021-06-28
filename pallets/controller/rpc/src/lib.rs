@@ -225,7 +225,7 @@ where
 		let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume the best block.
             self.client.info().best_hash));
-		api.get_total_supply_and_borrowed_usd_balance(&at, account_id)
+		api.get_user_total_supply_and_borrowed_balance_in_usd(&at, account_id)
 			.map_err(|e| RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
 				message: "Unable to get balance info.".into(),

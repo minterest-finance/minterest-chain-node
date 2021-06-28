@@ -196,7 +196,7 @@ pub trait RiskManagerAPI {
 }
 
 /// An abstraction of minterest-model basic functionalities.
-pub trait MinterestModelAPI {
+pub trait MinterestModelManager {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for MinterestModelParams
 	fn create_pool(
@@ -206,4 +206,14 @@ pub trait MinterestModelAPI {
 		multiplier_per_block: Rate,
 		jump_multiplier_per_block: Rate,
 	) -> DispatchResult;
+
+	/// Calculates the current borrow rate per block.
+	/// - `underlying_asset`: Asset ID for which the borrow interest rate is calculated.
+	/// - `utilization_rate`: Current Utilization rate value.
+	///
+	/// returns `borrow_interest_rate`.
+	fn calculate_borrow_interest_rate(
+		underlying_asset: CurrencyId,
+		utilization_rate: Rate,
+	) -> Result<Rate, DispatchError>;
 }

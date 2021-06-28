@@ -363,7 +363,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Gets total user borrowing.
-	pub fn get_user_total_borrowed(who: &T::AccountId, pool_id: CurrencyId) -> Balance {
+	pub fn get_user_borrow_balance(who: &T::AccountId, pool_id: CurrencyId) -> Balance {
 		Self::pool_user_data(pool_id, who).total_borrowed
 	}
 

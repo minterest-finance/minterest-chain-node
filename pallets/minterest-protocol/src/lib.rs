@@ -23,7 +23,7 @@ use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	Borrowing, ControllerManager, LiquidationPoolsManager, LiquidityPoolsManager, MinterestModelAPI, MntManager,
+	Borrowing, ControllerManager, LiquidationPoolsManager, LiquidityPoolsManager, MinterestModelManager, MntManager,
 	PoolsManager, RiskManagerAPI,
 };
 #[cfg(feature = "std")]
@@ -105,7 +105,7 @@ pub mod module {
 		type RiskManagerAPI: RiskManagerAPI;
 
 		/// Public API of risk manager pallet
-		type MinterestModelAPI: MinterestModelAPI;
+		type MinterestModelAPI: MinterestModelManager;
 
 		/// The origin which may create pools. Root or
 		/// Half Minterest Council can always do this.
