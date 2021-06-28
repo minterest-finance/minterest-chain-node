@@ -25,7 +25,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, CheckedDiv, CheckedMul, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, ModuleId, RuntimeDebug,
 };
-use sp_std::{cmp::Ordering, result, vec::Vec};
+use sp_std::{result, vec::Vec};
 
 /// Pool metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -253,9 +253,9 @@ impl<T: Config> Pallet<T> {
 		total_protocol_interest: Balance,
 		total_borrowed: Balance,
 	) -> RateResult {
-		let rate = match total_supply.cmp(&Balance::zero()) {
+		let rate = match total_supply.is_zero() {
 			// If there are no tokens minted: exchange_rate = initial_exchange_rate.
-			Ordering::Equal => T::InitialExchangeRate::get(),
+			true => T::InitialExchangeRate::get(),
 
 			// Otherwise: exchange_rate = (total_cash + total_borrowed - total_protocol_interest) / total_supply
 			_ => Rate::saturating_from_rational(
@@ -269,10 +269,7 @@ impl<T: Config> Pallet<T> {
 
 		Ok(rate)
 	}
-}
 
-// RPC methods
-impl<T: Config> Pallet<T> {
 	/// Gets the exchange rate between a mToken and the underlying asset.
 	/// This function uses total_protocol_interest and total_borrowed values calculated beforehand
 	///
@@ -372,7 +369,6 @@ impl<T: Config> Pallet<T> {
 		Self::pool_user_data(pool_id, who).is_collateral
 	}
 
-	// TODO: Maybe implement using a binary tree?
 	/// Get list of users with active loan positions for a particular pool.
 	pub fn get_pool_members_with_loans(
 		underlying_asset: CurrencyId,
@@ -547,6 +543,7 @@ impl<T: Config> LiquidityPoolsManager<T::AccountId> for Pallet<T> {
 	fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate {
 		Self::pools(pool_id).borrow_index
 	}
+
 	/// Check if pool exists
 	fn pool_exists(underlying_asset: &CurrencyId) -> bool {
 		Pools::<T>::contains_key(underlying_asset)
