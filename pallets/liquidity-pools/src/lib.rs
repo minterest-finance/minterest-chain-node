@@ -425,13 +425,12 @@ impl<T: Config> Pallet<T> {
 	pub fn check_user_has_collateral(who: &T::AccountId) -> bool {
 		for &pool_id in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
-			.filter(|&underlying_id| Self::pool_exists(underlying_id))
-		{
-			if Self::check_user_available_collateral(&who, pool_id) {
-				if let Some(wrapped_id) = pool_id.wrapped_asset() {
-					if !T::MultiCurrency::free_balance(wrapped_id, &who).is_zero() {
-						return true;
-					}
+			.filter(|&underlying_id| {
+				Self::pool_exists(underlying_id) && Self::check_user_available_collateral(&who, *underlying_id)
+			}) {
+			if let Some(wrapped_id) = pool_id.wrapped_asset() {
+				if !T::MultiCurrency::free_balance(wrapped_id, &who).is_zero() {
+					return true;
 				}
 			}
 		}
