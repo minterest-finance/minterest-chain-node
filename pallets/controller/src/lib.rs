@@ -581,11 +581,11 @@ impl<T: Config> Pallet<T> {
 	/// protocol_interest, tvl (Total Value Locked) in USD
 	/// pool_total_supply is calculated as: sum(pool_supply)
 	/// where:
-	/// 	`pool_supply` - current available liquidity in the n pool;
+	///     `pool_supply` - current available liquidity in the n pool;
 	/// pool_total_borrow is calculated as: sum(fresh_pool_borrow - fresh_pool_protocol_interest)
 	/// where:
-	/// 	`fresh_pool_borrow` - freshest value of pool borrow in the n pool;
-	/// 	`fresh_pool_protocol_interest` - freshest value of protocol interest in the n pool;
+	///     `fresh_pool_borrow` - freshest value of pool borrow in the n pool;
+	///     `fresh_pool_protocol_interest` - freshest value of protocol interest in the n pool;
 	/// Freshest values based on current block (check description of fn
 	/// calculate_current_pool_data())
 	/// tvl is calculated as: sum(pool_supply_wrap * exchange_rate),
