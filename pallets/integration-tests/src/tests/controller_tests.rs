@@ -28,39 +28,39 @@ mod tests {
 			.build()
 			.execute_with(|| {
 				// ALICE deposit 60 DOT, 50 BTC, 40 ETH.
-				assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 60 * DOLLARS));
-				assert_ok!(MinterestProtocol::deposit_underlying(alice(), BTC, 50 * DOLLARS));
-				assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 40 * DOLLARS));
+				assert_ok!(MinterestProtocol::deposit_underlying(alice_origin(), DOT, 60 * DOLLARS));
+				assert_ok!(MinterestProtocol::deposit_underlying(alice_origin(), BTC, 50 * DOLLARS));
+				assert_ok!(MinterestProtocol::deposit_underlying(alice_origin(), ETH, 40 * DOLLARS));
 
 				System::set_block_number(11);
 
 				// Alice enable her assets in pools as collateral.
-				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
-				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), BTC));
-				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice_origin(), DOT));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice_origin(), BTC));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice_origin(), ETH));
 
 				System::set_block_number(21);
 
 				// Alice transfer her 50 MBTC to BOB.
-				assert_ok!(Currencies::transfer(alice(), BOB, MBTC, 50 * DOLLARS));
+				assert_ok!(Currencies::transfer(alice_origin(), BOB, MBTC, 50 * DOLLARS));
 
 				System::set_block_number(31);
 
 				// Alice borrow 50 BTC.
-				assert_ok!(MinterestProtocol::borrow(alice(), BTC, 50 * DOLLARS));
+				assert_ok!(MinterestProtocol::borrow(alice_origin(), BTC, 50 * DOLLARS));
 
 				System::set_block_number(41);
 
 				// Alice can't disable DOT as collateral (because ETH won't cover the borrowing).
 				assert_noop!(
-					MinterestProtocol::disable_is_collateral(alice(), DOT),
+					MinterestProtocol::disable_is_collateral(alice_origin(), DOT),
 					MinterestProtocolError::<Test>::IsCollateralCannotBeDisabled
 				);
 
 				System::set_block_number(51);
 
 				// Alice can disable ETH as collateral (because DOT will cover the borrowing);
-				assert_ok!(MinterestProtocol::disable_is_collateral(alice(), ETH));
+				assert_ok!(MinterestProtocol::disable_is_collateral(alice_origin(), ETH));
 			});
 	}
 
@@ -108,7 +108,7 @@ mod tests {
 
 				// Set interest factor equal 0.5.
 				assert_ok!(TestController::set_protocol_interest_factor(
-					admin(),
+					admin_origin(),
 					DOT,
 					Rate::saturating_from_rational(1, 2)
 				));
@@ -173,7 +173,11 @@ mod tests {
 				System::set_block_number(10);
 
 				// Set interest factor equal to zero.
-				assert_ok!(TestController::set_protocol_interest_factor(admin(), DOT, Rate::zero()));
+				assert_ok!(TestController::set_protocol_interest_factor(
+					admin_origin(),
+					DOT,
+					Rate::zero()
+				));
 
 				// Alice repay full loan in DOTs.
 				assert_ok!(MinterestProtocol::repay_all(Origin::signed(ALICE), DOT));

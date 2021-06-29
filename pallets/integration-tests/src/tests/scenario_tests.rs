@@ -536,7 +536,7 @@ mod tests {
 					user_interest_index_block_number_4
 				);
 
-				assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 20 * DOLLARS,));
+				assert_ok!(MinterestProtocol::deposit_underlying(alice_origin(), DOT, 20 * DOLLARS,));
 			});
 	}
 }

@@ -55,12 +55,12 @@ mod tests {
 				// Set initial state of pools for distribution MNT tokens.
 				vec![DOT, ETH, BTC].into_iter().for_each(|pool_id| {
 					assert_ok!(MinterestProtocol::deposit_underlying(
-						admin(),
+						admin_origin(),
 						pool_id,
 						ONE_HUNDRED_THOUSAND
 					));
-					assert_ok!(MinterestProtocol::enable_is_collateral(admin(), pool_id));
-					assert_ok!(MinterestProtocol::borrow(admin(), pool_id, 50_000 * DOLLARS));
+					assert_ok!(MinterestProtocol::enable_is_collateral(admin_origin(), pool_id));
+					assert_ok!(MinterestProtocol::borrow(admin_origin(), pool_id, 50_000 * DOLLARS));
 				});
 
 				System::set_block_number(10);
@@ -68,16 +68,16 @@ mod tests {
 				// ALice deposits DOT and enables her DOT pool as a collateral.
 				// At this moment Alice starts receiving (dot_speed / 2) MNT per block as a supplier
 				assert_ok!(MinterestProtocol::deposit_underlying(
-					alice(),
+					alice_origin(),
 					DOT,
 					ONE_HUNDRED_THOUSAND
 				));
-				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice_origin(), DOT));
 
 				System::set_block_number(20);
 
 				// At this moment Alice starts receiving (eth_speed / 2) MNT per block as a borrower
-				assert_ok!(MinterestProtocol::borrow(alice(), ETH, 50_000 * DOLLARS));
+				assert_ok!(MinterestProtocol::borrow(alice_origin(), ETH, 50_000 * DOLLARS));
 
 				// Accrued MNT tokens are equal to zero, since distribution occurs only at
 				// the moment of repeated user interaction with the protocol
@@ -87,7 +87,11 @@ mod tests {
 
 				// BOB deposits ETH.
 				// At this moment Alice and Bob start receiving (eth_speed / 3) MNT per block as a suppliers
-				assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, ONE_HUNDRED_THOUSAND));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					bob_origin(),
+					ETH,
+					ONE_HUNDRED_THOUSAND
+				));
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), 0);
 				assert_eq!(TestMntToken::mnt_accrued(BOB), 0);
 
@@ -95,28 +99,28 @@ mod tests {
 
 				// Alice started taking part in ETH pool distribution at block 20 as a borrower
 				// mnt_balance = 0.1(eth_speed) * 10(delta_blocks) * 50(borrowed) / 100(total_borrow) = 0.5 MNT
-				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![ETH]));
+				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![ETH]));
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), 499_999_978_624_951_827);
 
 				// Alice started taking part in DOT pool distribution at block 10 as a supplier
 				// mnt_balance = 0.5 MNT + 0.1(dot_speed) * 20(delta_blocks) * 100(supply) / 200(total_supply) = 1.5
 				// MNT
-				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![DOT]));
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), 1_499_999_969_512_351_993);
 
-				assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
+				assert_ok!(MinterestProtocol::enable_is_collateral(bob_origin(), ETH));
 
 				System::set_block_number(40);
 
 				// At this moment Bob starts receiving (dot_speed * 2/7) MNT per block as a borrower
-				assert_ok!(MinterestProtocol::borrow(bob(), DOT, 20_000 * DOLLARS));
+				assert_ok!(MinterestProtocol::borrow(bob_origin(), DOT, 20_000 * DOLLARS));
 				// At this moment Alice starts receiving (btc_speed * 3/8) MNT per block as a borrower
-				assert_ok!(MinterestProtocol::borrow(alice(), BTC, 30_000 * DOLLARS));
+				assert_ok!(MinterestProtocol::borrow(alice_origin(), BTC, 30_000 * DOLLARS));
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
 				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
-				assert_ok!(TestMntToken::set_speed(admin(), BTC, 2 * DOLLARS));
+				assert_ok!(TestMntToken::set_speed(admin_origin(), BTC, 2 * DOLLARS));
 				test_mnt_speeds(
 					100_000_000_000_000_000,
 					100_000_000_000_000_000,
@@ -128,14 +132,14 @@ mod tests {
 				// At this point Alice stops being a borrower, but still has unclaimed tokens for 10 blocks since
 				// the last ETH claim mnt_accrued = 0.1(eth_speed) * 10(delta_blocks) * 50(borrowed) /
 				// 100(total_borrow) = 0.5 MNT
-				assert_ok!(MinterestProtocol::repay_all(alice(), ETH));
+				assert_ok!(MinterestProtocol::repay_all(alice_origin(), ETH));
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), 499_999_978_624_951_827);
 				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
 				// At this point Alice and Bob start receiving rewards as a suppliers -
 				// (dot_speed * 0.25) per block each
 				assert_ok!(MinterestProtocol::transfer_wrapped(
-					alice(),
+					alice_origin(),
 					BOB,
 					MDOT,
 					50_000 * DOLLARS
@@ -151,20 +155,20 @@ mod tests {
 				//   (BORROW)  0.1(dot_speed) * 10(delta_blocks) * 20(borrowed) / 70(total_borrow) +
 				//   (SUPPLY)  0.1(dot_speed) * 10(delta_blocks) * 50(supply) / 200(total supply) =
 				// 0.285714286 + 0.25 = 0.535714286
-				assert_ok!(MinterestProtocol::claim_mnt(bob(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(bob_origin(), vec![DOT]));
 				assert_eq!(Currencies::free_balance(MNT, &BOB), 535_714_265_951_558_142);
 				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
 				// Alice started taking part in BTC pool distribution at block 40 as a borrower
 				// mnt_accrued = 1 MNT + 2(btc_speed) * 10(delta_blocks) * 30(borrowed) / 80(total_borrow) = 8.5 MNT
-				assert_ok!(MinterestProtocol::repay_all(alice(), BTC));
+				assert_ok!(MinterestProtocol::repay_all(alice_origin(), BTC));
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), 8_499_999_151_412_486_286);
 				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
 				// Alice stops being a supplier but still has unclaimed tokens for 10 blocks since the last action
 				// on DOT pool mnt_accrued = 8.5 MNT + 0.1(dot_speed) * 10(delta_blocks) * 50(supply) / 200(total
 				// supply) = 8.75 MNT
-				assert_ok!(MinterestProtocol::redeem(alice(), DOT));
+				assert_ok!(MinterestProtocol::redeem(alice_origin(), DOT));
 
 				System::set_block_number(100);
 
@@ -172,14 +176,14 @@ mod tests {
 				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
 
 				// mnt_balance = 1.5 (already claimed) + 8.75 (accrued) = 10.25 MNT
-				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![DOT]));
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), 10_249_999_114_090_438_362);
 
 				// mnt_balance = 0.535714286 (already claimed) +
 				//   (BORROW)  0.1(dot_speed) * 50(delta_blocks) * 20(borrowed) / 70(total_borrow) +
 				//   (SUPPLY)  0.1(dot_speed) * 50(delta_blocks) * 50(supply) / 150(total supply) =
 				// 0.535714286 + 1.666666667 + 1.428571429 = 3.630952382
-				assert_ok!(MinterestProtocol::claim_mnt(bob(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(bob_origin(), vec![DOT]));
 				assert_eq!(Currencies::free_balance(MNT, &BOB), 3_630_952_250_985_538_854);
 			})
 	}
@@ -265,27 +269,27 @@ mod tests {
 				// Set initial state of pools for distribution MNT tokens.
 				vec![DOT, ETH].into_iter().for_each(|pool_id| {
 					assert_ok!(MinterestProtocol::deposit_underlying(
-						bob(),
+						bob_origin(),
 						pool_id,
 						ONE_HUNDRED_THOUSAND
 					));
-					assert_ok!(MinterestProtocol::enable_is_collateral(bob(), pool_id));
-					assert_ok!(MinterestProtocol::borrow(bob(), pool_id, 50_000 * DOLLARS));
+					assert_ok!(MinterestProtocol::enable_is_collateral(bob_origin(), pool_id));
+					assert_ok!(MinterestProtocol::borrow(bob_origin(), pool_id, 50_000 * DOLLARS));
 				});
 
 				System::set_block_number(10);
 
 				// ALice deposits DOT and enables her DOT pool as a collateral.
 				assert_ok!(MinterestProtocol::deposit_underlying(
-					alice(),
+					alice_origin(),
 					DOT,
 					ONE_HUNDRED_THOUSAND
 				));
-				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice_origin(), DOT));
 
 				System::set_block_number(20);
 
-				assert_ok!(MinterestProtocol::borrow(alice(), ETH, 50_000 * DOLLARS));
+				assert_ok!(MinterestProtocol::borrow(alice_origin(), ETH, 50_000 * DOLLARS));
 
 				// Accrued MNT tokens are equal to zero, since distribution occurs only at
 				// the moment of repeated user interaction with the protocol
@@ -297,7 +301,7 @@ mod tests {
 
 				// Init BTC pool
 				assert_ok!(MinterestProtocol::create_pool(
-					admin(),
+					admin_origin(),
 					BTC,
 					PoolInitData {
 						kink: Rate::saturating_from_rational(8, 10),
@@ -317,19 +321,19 @@ mod tests {
 					},
 				));
 				assert_ok!(MinterestProtocol::deposit_underlying(
-					admin(),
+					admin_origin(),
 					BTC,
 					ONE_HUNDRED_THOUSAND
 				));
-				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), BTC));
-				assert_ok!(MinterestProtocol::borrow(admin(), BTC, 50_000 * DOLLARS));
+				assert_ok!(MinterestProtocol::enable_is_collateral(admin_origin(), BTC));
+				assert_ok!(MinterestProtocol::borrow(admin_origin(), BTC, 50_000 * DOLLARS));
 
-				assert_ok!(MinterestProtocol::borrow(alice(), BTC, 30_000 * DOLLARS));
+				assert_ok!(MinterestProtocol::borrow(alice_origin(), BTC, 30_000 * DOLLARS));
 
 				System::set_block_number(70);
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
 
-				assert_ok!(TestMntToken::set_speed(admin(), BTC, 2 * DOLLARS));
+				assert_ok!(TestMntToken::set_speed(admin_origin(), BTC, 2 * DOLLARS));
 				test_mnt_speeds(
 					100_000_000_000_000_000,
 					100_000_000_000_000_000,
@@ -337,15 +341,15 @@ mod tests {
 				);
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
 
-				assert_ok!(MinterestProtocol::repay_all(alice(), ETH));
+				assert_ok!(MinterestProtocol::repay_all(alice_origin(), ETH));
 
 				System::set_block_number(80);
 				assert_eq!(TestMntToken::mnt_accrued(ALICE), 2_499_999_893_124_959_137);
 
 				// Alice is able to claim rewards from all three pools
-				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT, ETH]));
+				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![DOT, ETH]));
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), 5_999_999_861_231_159_718);
-				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![BTC]));
+				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![BTC]));
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), 13_499_999_861_231_159_718);
 			})
 	}
@@ -406,12 +410,12 @@ mod tests {
 				System::set_block_number(10);
 				// Alice starts taking part in the distribution (ETH) from block 10
 				assert_ok!(MinterestProtocol::deposit_underlying(
-					alice(),
+					alice_origin(),
 					ETH,
 					ONE_HUNDRED_THOUSAND
 				));
-				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
-				assert_ok!(MinterestProtocol::borrow(alice(), ETH, 50_000 * DOLLARS));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice_origin(), ETH));
+				assert_ok!(MinterestProtocol::borrow(alice_origin(), ETH, 50_000 * DOLLARS));
 
 				// Accrued MNT tokens are equal to zero, since distribution occurs only at
 				// the moment of repeated user interaction with the protocol
@@ -424,7 +428,7 @@ mod tests {
 				test_mnt_speeds(0, 100_000_000_000_000_000, 0);
 
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), Balance::zero());
-				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![ETH]));
+				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![ETH]));
 
 				// ETH speed = 0.1
 				// block delta = 10
@@ -435,11 +439,11 @@ mod tests {
 					Currencies::free_balance(MNT, &TestMntToken::get_account_id()),
 					ONE_HUNDRED_THOUSAND - distributed_to_alice_for_eth_pool
 				);
-				assert_ok!(TestMntToken::set_speed(admin(), ETH, Balance::zero()));
+				assert_ok!(TestMntToken::set_speed(admin_origin(), ETH, Balance::zero()));
 
 				// Init BTC pool
 				assert_ok!(MinterestProtocol::create_pool(
-					admin(),
+					admin_origin(),
 					BTC,
 					PoolInitData {
 						kink: Rate::saturating_from_rational(8, 10),
@@ -459,20 +463,20 @@ mod tests {
 					},
 				));
 				assert_ok!(MinterestProtocol::deposit_underlying(
-					alice(),
+					alice_origin(),
 					BTC,
 					ONE_HUNDRED_THOUSAND
 				));
-				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), BTC));
-				assert_ok!(MinterestProtocol::borrow(alice(), BTC, 50_000 * DOLLARS));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice_origin(), BTC));
+				assert_ok!(MinterestProtocol::borrow(alice_origin(), BTC, 50_000 * DOLLARS));
 				// Set the same speed for BTC pool
-				assert_ok!(TestMntToken::set_speed(admin(), BTC, DOLLARS / 10));
+				assert_ok!(TestMntToken::set_speed(admin_origin(), BTC, DOLLARS / 10));
 				System::set_block_number(30);
 				// Only BTC pool is enabled
 				test_mnt_speeds(0, 0, 100_000_000_000_000_000);
 
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), distributed_to_alice_for_eth_pool);
-				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![BTC]));
+				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![BTC]));
 
 				// Alice got the same amount of tokens for BTC pool
 				let distributed_to_alice_for_btc_pool = 2_000_000_000_000_000_000;
@@ -513,23 +517,23 @@ mod tests {
 				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(KSM));
 				// Initialize distribution of MNT tokens.
 				assert_ok!(MinterestProtocol::deposit_underlying(
-					admin(),
+					admin_origin(),
 					DOT,
 					ONE_HUNDRED_THOUSAND
 				));
-				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), DOT));
-				assert_ok!(MinterestProtocol::borrow(admin(), DOT, 50_000 * DOLLARS));
+				assert_ok!(MinterestProtocol::enable_is_collateral(admin_origin(), DOT));
+				assert_ok!(MinterestProtocol::borrow(admin_origin(), DOT, 50_000 * DOLLARS));
 
 				System::set_block_number(10);
 
 				// ALice deposits DOT and enables her DOT pool as a collateral.
 				// At this moment Alice starts receiving (dot_speed / 2) MNT per block as a supplier
 				assert_ok!(MinterestProtocol::deposit_underlying(
-					alice(),
+					alice_origin(),
 					DOT,
 					ONE_HUNDRED_THOUSAND
 				));
-				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice_origin(), DOT));
 
 				System::set_block_number(20);
 
@@ -541,22 +545,22 @@ mod tests {
 
 				// Alice started taking part in DOT pool distribution at block 10 as a supplier
 				// mnt_balance = 10(dot_speed) * 10(delta_blocks) * 100(supply) / 200(total_supply) = 50 MNT
-				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![DOT]));
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), 49_999_999_544_374_908_303);
 
 				// Disable DOT pool distribution
-				assert_ok!(TestMntToken::set_speed(admin(), DOT, Balance::zero()));
+				assert_ok!(TestMntToken::set_speed(admin_origin(), DOT, Balance::zero()));
 
 				System::set_block_number(30);
 
-				assert_ok!(TestMntToken::set_speed(admin(), DOT, 10 * DOLLARS));
+				assert_ok!(TestMntToken::set_speed(admin_origin(), DOT, 10 * DOLLARS));
 
 				System::set_block_number(40);
 
 				// DOT pool distribution was resumed at block 30
 				// mnt_balance = 50 MNT (current) + 10(dot_speed) * 10(delta_blocks) * 100(supply) /
 				// 200(total_supply) = 100 MNT
-				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![DOT]));
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), 99_999_999_088_749_816_606);
 			})
 	}
@@ -576,24 +580,28 @@ mod tests {
 			.execute_with(|| {
 				// Set initial state of pools for distribution MNT tokens.
 				assert_ok!(MinterestProtocol::deposit_underlying(
-					admin(),
+					admin_origin(),
 					DOT,
 					ONE_HUNDRED_THOUSAND
 				));
-				assert_ok!(MinterestProtocol::enable_is_collateral(admin(), DOT));
-				assert_ok!(MinterestProtocol::borrow(admin(), DOT, 50_000 * DOLLARS));
+				assert_ok!(MinterestProtocol::enable_is_collateral(admin_origin(), DOT));
+				assert_ok!(MinterestProtocol::borrow(admin_origin(), DOT, 50_000 * DOLLARS));
 
 				System::set_block_number(10);
 
 				// Alice, Bob and Carol deposit DOT.
 				assert_ok!(MinterestProtocol::deposit_underlying(
-					alice(),
+					alice_origin(),
 					DOT,
 					ONE_HUNDRED_THOUSAND
 				));
-				assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, ONE_HUNDRED_THOUSAND));
 				assert_ok!(MinterestProtocol::deposit_underlying(
-					charlie(),
+					bob_origin(),
+					DOT,
+					ONE_HUNDRED_THOUSAND
+				));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					charlie_origin(),
 					DOT,
 					2 * ONE_HUNDRED_THOUSAND
 				));
@@ -603,15 +611,15 @@ mod tests {
 				// Check that both Alice and Bob receive the same amount of MNT token since they
 				// have equal DOT balance
 				let mnt_balance_after_deposit = 199_999_999_270_900_013;
-				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
-				assert_ok!(MinterestProtocol::claim_mnt(bob(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(bob_origin(), vec![DOT]));
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), mnt_balance_after_deposit);
 				assert_eq!(Currencies::free_balance(MNT, &BOB), mnt_balance_after_deposit);
 				assert_eq!(Currencies::free_balance(MNT, &CHARLIE), Balance::zero());
 
 				// Alice transfers all to Bob
 				assert_ok!(MinterestProtocol::transfer_wrapped(
-					alice(),
+					alice_origin(),
 					BOB,
 					MDOT,
 					Currencies::free_balance(MDOT, &ALICE)
@@ -622,14 +630,14 @@ mod tests {
 				// Check that Alice received 0 MNT and Bob received approximately x2 comparing to
 				// previous claim
 				let mnt_bob_balance_after_transfer = mnt_balance_after_deposit + 399_999_998_541_800_026;
-				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
-				assert_ok!(MinterestProtocol::claim_mnt(bob(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(bob_origin(), vec![DOT]));
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), mnt_balance_after_deposit);
 				assert_eq!(Currencies::free_balance(MNT, &BOB), mnt_bob_balance_after_transfer);
 
 				// Bob transfers one third of its balance to Alice
 				assert_ok!(MinterestProtocol::transfer_wrapped(
-					bob(),
+					bob_origin(),
 					ALICE,
 					MDOT,
 					Currencies::free_balance(MDOT, &BOB) / 3
@@ -645,8 +653,8 @@ mod tests {
 				let mnt_bob_balance_after_second_transfer = mnt_bob_balance_after_transfer +
 					mnt_alice_delta_after_second_transfer * 2 +
 					/*calculation error, it is okay for such algorithms*/ 1;
-				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
-				assert_ok!(MinterestProtocol::claim_mnt(bob(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(bob_origin(), vec![DOT]));
 				assert_eq!(
 					Currencies::free_balance(MNT, &ALICE),
 					mnt_alice_balance_after_second_transfer
@@ -658,26 +666,26 @@ mod tests {
 
 				// Make random transfers
 				assert_ok!(MinterestProtocol::transfer_wrapped(
-					alice(),
+					alice_origin(),
 					BOB,
 					MDOT,
 					Currencies::free_balance(MDOT, &ALICE) / 2
 				));
 				assert_ok!(MinterestProtocol::transfer_wrapped(
-					bob(),
+					bob_origin(),
 					ALICE,
 					MDOT,
 					Currencies::free_balance(MDOT, &BOB) / 2
 				));
 				assert_ok!(MinterestProtocol::transfer_wrapped(
-					alice(),
+					alice_origin(),
 					BOB,
 					MDOT,
 					Currencies::free_balance(MDOT, &ALICE)
 				));
 				// Return the same proportions (1:2) eventually
 				assert_ok!(MinterestProtocol::transfer_wrapped(
-					bob(),
+					bob_origin(),
 					ALICE,
 					MDOT,
 					Currencies::free_balance(MDOT, &BOB) / 3
@@ -692,8 +700,8 @@ mod tests {
 					mnt_alice_balance_after_second_transfer + mnt_alice_delta_after_third_transfer;
 				let mnt_bob_balance_after_third_transfer =
 					mnt_bob_balance_after_second_transfer + mnt_alice_delta_after_third_transfer * 2;
-				assert_ok!(MinterestProtocol::claim_mnt(alice(), vec![DOT]));
-				assert_ok!(MinterestProtocol::claim_mnt(bob(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(bob_origin(), vec![DOT]));
 				assert_eq!(
 					Currencies::free_balance(MNT, &ALICE),
 					mnt_alice_balance_after_third_transfer
@@ -703,7 +711,7 @@ mod tests {
 					mnt_bob_balance_after_third_transfer
 				);
 
-				assert_ok!(MinterestProtocol::claim_mnt(charlie(), vec![DOT]));
+				assert_ok!(MinterestProtocol::claim_mnt(charlie_origin(), vec![DOT]));
 				assert_eq!(
 					Currencies::free_balance(MNT, &CHARLIE),
 					mnt_alice_balance_after_third_transfer +

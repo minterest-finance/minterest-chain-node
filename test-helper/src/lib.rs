@@ -46,16 +46,16 @@ pub mod users_mock {
 	pub const BOB: AccountId = 2;
 	pub const CHARLIE: AccountId = 3;
 
-	pub fn admin<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
+	pub fn admin_origin<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
 		Origin::signed(ADMIN)
 	}
-	pub fn alice<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
+	pub fn alice_origin<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
 		Origin::signed(ALICE)
 	}
-	pub fn bob<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
+	pub fn bob_origin<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
 		Origin::signed(BOB)
 	}
-	pub fn charlie<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
+	pub fn charlie_origin<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
 		Origin::signed(CHARLIE)
 	}
 }
