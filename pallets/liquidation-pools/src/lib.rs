@@ -11,7 +11,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-use frame_support::{ensure, pallet_prelude::*, traits::Get, transactional};
+use frame_support::{ensure, log, pallet_prelude::*, traits::Get, transactional, PalletId};
 use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 	pallet_prelude::*,
@@ -22,9 +22,9 @@ use orml_traits::MultiCurrency;
 use pallet_traits::{DEXManager, LiquidationPoolsManager, LiquidityPoolsManager, PoolsManager, PricesManager};
 use sp_runtime::{
 	offchain::storage_lock::{StorageLock, Time},
-	traits::{AccountIdConversion, CheckedDiv, CheckedMul, Zero},
+	traits::{AccountIdConversion, CheckedDiv, CheckedMul, One, Zero},
 	transaction_validity::TransactionPriority,
-	DispatchResult, FixedPointNumber, ModuleId, RuntimeDebug,
+	DispatchResult, FixedPointNumber, RuntimeDebug,
 };
 
 pub use module::*;
@@ -81,7 +81,7 @@ pub mod module {
 
 		#[pallet::constant]
 		/// The Liquidation Pool's module id, keep all assets in Pools.
-		type LiquidationPoolsModuleId: Get<ModuleId>;
+		type LiquidationPoolsPalletId: Get<PalletId>;
 
 		#[pallet::constant]
 		/// The Liquidation Pool's account id, keep all assets in Pools.
@@ -183,14 +183,14 @@ pub mod module {
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn offchain_worker(now: T::BlockNumber) {
 			if let Err(error) = Self::_offchain_worker(now) {
-				debug::info!(
+				log::info!(
 					target: "LiquidationPool offchain worker",
 					"cannot run offchain worker at {:?}: {:?}",
 					now,
 					error,
 				);
 			} else {
-				debug::debug!(
+				log::debug!(
 					target: "LiquidationPool offchain worker",
 					" LiquidationPool offchain worker start at block: {:?} already done!",
 					now,
@@ -442,7 +442,7 @@ impl<T: Config> Pallet<T> {
 		let call =
 			Call::<T>::balance_liquidation_pools(supply_pool_id, target_pool_id, max_supply_amount, target_amount);
 		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
-			debug::info!(
+			log::info!(
 				target: "liquidation-pools offchain worker",
 				"submit unsigned balancing tx for \n CurrencyId {:?} and CurrencyId {:?} \nfailed!",
 				supply_pool_id, target_pool_id,
@@ -631,7 +631,7 @@ impl<T: Config> Pallet<T> {
 impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	/// Gets module account id.
 	fn pools_account_id() -> T::AccountId {
-		T::LiquidationPoolsModuleId::get().into_account()
+		T::LiquidationPoolsPalletId::get().into_account()
 	}
 	/// Gets current the total amount of cash the liquidation pool has.
 	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance {

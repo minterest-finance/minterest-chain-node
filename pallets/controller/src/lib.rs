@@ -20,9 +20,8 @@ use orml_traits::MultiCurrency;
 use pallet_traits::{ControllerManager, LiquidityPoolsManager, PoolsManager, PricesManager};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::traits::CheckedSub;
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedDiv, CheckedMul, Zero},
+	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, FixedU128, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};

@@ -15,9 +15,11 @@ sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = 
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5" }
 pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5" }
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5" }
+pallet-timestamp = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5" }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5" }
 sp-inherents = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5" }
+sp-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5" }
 sc-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5" }
 sc-chain-spec = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5" }
 sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5" }

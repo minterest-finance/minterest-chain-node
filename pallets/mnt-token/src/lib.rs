@@ -12,7 +12,7 @@ pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{ControllerManager, LiquidityPoolsManager, MntManager, PoolsManager, PricesManager};
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
+	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
 	DispatchResult, FixedPointNumber, FixedU128,
 };
 use sp_std::{convert::TryInto, result};

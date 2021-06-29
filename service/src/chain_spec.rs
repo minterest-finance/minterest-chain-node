@@ -8,8 +8,8 @@ use minterest_primitives::{VestingBucket, VestingScheduleJson};
 use node_minterest_runtime::{
 	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, ExistentialDeposit,
 	GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
-	MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, MntTokenModuleId, OperatorMembershipMinterestConfig,
-	PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, VestingConfig,
+	MinterestModelConfig, MntTokenConfig, MntTokenPalletId, OperatorMembershipMinterestConfig, PricesConfig,
+	RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, VestingConfig,
 	WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 	TOTAL_ALLOCATION, WASM_BINARY,
 };
@@ -21,7 +21,7 @@ use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::{
-	traits::{AccountIdConversion, IdentifyAccount, Verify, Zero},
+	traits::{AccountIdConversion, IdentifyAccount, One, Verify, Zero},
 	FixedPointNumber, FixedU128,
 };
 use sp_std::collections::btree_map::BTreeMap;
@@ -227,28 +227,26 @@ fn minterest_genesis(
 	let vesting_list = calculate_vesting_list(allocated_list_parsed);
 
 	GenesisConfig {
-		frame_system: Some(SystemConfig {
+		system: SystemConfig {
 			// Add Wasm runtime to storage.
 			code: wasm_binary.to_vec(),
 			changes_trie_config: Default::default(),
-		}),
-		pallet_balances: Some(BalancesConfig {
+		},
+		balances: BalancesConfig {
 			balances: initial_allocations,
-		}),
-		pallet_aura: Some(AuraConfig {
+		},
+		aura: AuraConfig {
 			authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
-		}),
-		pallet_grandpa: Some(GrandpaConfig {
+		},
+		grandpa: GrandpaConfig {
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
-		}),
-		pallet_sudo: Some(SudoConfig {
+		},
+		sudo: SudoConfig {
 			// Assign network admin rights.
 			key: root_key.clone(),
-		}),
-		orml_tokens: Some(TokensConfig {
-			endowed_accounts: vec![],
-		}),
-		liquidity_pools: Some(LiquidityPoolsConfig {
+		},
+		tokens: TokensConfig { balances: vec![] },
+		liquidity_pools: LiquidityPoolsConfig {
 			pools: vec![
 				(
 					ETH,
@@ -284,8 +282,8 @@ fn minterest_genesis(
 				),
 			],
 			pool_user_data: vec![],
-		}),
-		controller: Some(ControllerConfig {
+		},
+		controller: ControllerConfig {
 			controller_dates: vec![
 				(
 					ETH,
@@ -339,8 +337,8 @@ fn minterest_genesis(
 				(BTC, PauseKeeper::all_unpaused()),
 			],
 			whitelist_mode: false,
-		}),
-		minterest_model: Some(MinterestModelConfig {
+		},
+		minterest_model: MinterestModelConfig {
 			minterest_model_params: vec![
 				(
 					ETH,
@@ -379,8 +377,8 @@ fn minterest_genesis(
 					},
 				),
 			],
-		}),
-		risk_manager: Some(RiskManagerConfig {
+		},
+		risk_manager: RiskManagerConfig {
 			risk_manager_dates: vec![
 				(
 					ETH,
@@ -419,8 +417,8 @@ fn minterest_genesis(
 					},
 				),
 			],
-		}),
-		liquidation_pools: Some(LiquidationPoolsConfig {
+		},
+		liquidation_pools: LiquidationPoolsConfig {
 			phantom: Default::default(),
 			liquidation_pools: vec![
 				(
@@ -456,8 +454,8 @@ fn minterest_genesis(
 					},
 				),
 			],
-		}),
-		module_prices: Some(PricesConfig {
+		},
+		prices: PricesConfig {
 			locked_price: vec![
 				(DOT, FixedU128::saturating_from_integer(2)),
 				(KSM, FixedU128::saturating_from_integer(2)),
@@ -466,26 +464,22 @@ fn minterest_genesis(
 				(MNT, FixedU128::saturating_from_integer(2)),
 			],
 			_phantom: Default::default(),
-		}),
-		pallet_collective_Instance1: Some(Default::default()),
-		pallet_membership_Instance1: Some(MinterestCouncilMembershipConfig {
+		},
+		minterest_council: Default::default(),
+		minterest_council_membership: MinterestCouncilMembershipConfig {
 			members: vec![root_key.clone()],
 			phantom: Default::default(),
-		}),
-		pallet_collective_Instance2: Some(Default::default()),
-		pallet_membership_Instance2: Some(WhitelistCouncilMembershipConfig {
+		},
+		whitelist_council: Default::default(),
+		whitelist_council_membership: WhitelistCouncilMembershipConfig {
 			members: vec![root_key.clone()],
 			phantom: Default::default(),
-		}),
-		pallet_membership_Instance3: Some(OperatorMembershipMinterestConfig {
+		},
+		operator_membership_minterest: OperatorMembershipMinterestConfig {
 			members: vec![root_key],
 			phantom: Default::default(),
-		}),
-		orml_oracle_Instance1: Some(MinterestOracleConfig {
-			members: Default::default(), // initialized by OperatorMembership
-			phantom: Default::default(),
-		}),
-		mnt_token: Some(MntTokenConfig {
+		},
+		mnt_token: MntTokenConfig {
 			mnt_claim_threshold: 0, // disable by default
 			minted_pools: vec![
 				(DOT, (237977549 * DOLLARS) / 1_000_000_000),
@@ -494,8 +488,8 @@ fn minterest_genesis(
 				(BTC, (237977549 * DOLLARS) / 1_000_000_000),
 			],
 			_phantom: Default::default(),
-		}),
-		module_vesting: Some(VestingConfig { vesting: vesting_list }),
+		},
+		vesting: VestingConfig { vesting: vesting_list },
 	}
 }
 
@@ -508,12 +502,12 @@ fn testnet_genesis(
 	_enable_println: bool,
 ) -> GenesisConfig {
 	GenesisConfig {
-		frame_system: Some(SystemConfig {
+		system: SystemConfig {
 			// Add Wasm runtime to storage.
 			code: wasm_binary.to_vec(),
 			changes_trie_config: Default::default(),
-		}),
-		pallet_balances: Some(BalancesConfig {
+		},
+		balances: BalancesConfig {
 			// Configure endowed accounts with initial balance of INITIAL_BALANCE.
 			balances: endowed_accounts
 				.iter()
@@ -525,19 +519,19 @@ fn testnet_genesis(
 						.map(|x| (x.clone(), INITIAL_TREASURY)),
 				)
 				.collect(),
-		}),
-		pallet_aura: Some(AuraConfig {
+		},
+		aura: AuraConfig {
 			authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
-		}),
-		pallet_grandpa: Some(GrandpaConfig {
+		},
+		grandpa: GrandpaConfig {
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
-		}),
-		pallet_sudo: Some(SudoConfig {
+		},
+		sudo: SudoConfig {
 			// Assign network admin rights.
 			key: root_key.clone(),
-		}),
-		orml_tokens: Some(TokensConfig {
-			endowed_accounts: endowed_accounts
+		},
+		tokens: TokensConfig {
+			balances: endowed_accounts
 				.iter()
 				.chain(get_all_modules_accounts()[1..3].iter()) // liquidation_pools + DEXes
 				.flat_map(|x| {
@@ -549,8 +543,8 @@ fn testnet_genesis(
 					]
 				})
 				.collect(),
-		}),
-		liquidity_pools: Some(LiquidityPoolsConfig {
+		},
+		liquidity_pools: LiquidityPoolsConfig {
 			pools: vec![
 				(
 					ETH,
@@ -586,8 +580,8 @@ fn testnet_genesis(
 				),
 			],
 			pool_user_data: vec![],
-		}),
-		controller: Some(ControllerConfig {
+		},
+		controller: ControllerConfig {
 			controller_dates: vec![
 				(
 					ETH,
@@ -641,8 +635,8 @@ fn testnet_genesis(
 				(BTC, PauseKeeper::all_unpaused()),
 			],
 			whitelist_mode: false,
-		}),
-		minterest_model: Some(MinterestModelConfig {
+		},
+		minterest_model: MinterestModelConfig {
 			minterest_model_params: vec![
 				(
 					ETH,
@@ -681,8 +675,8 @@ fn testnet_genesis(
 					},
 				),
 			],
-		}),
-		risk_manager: Some(RiskManagerConfig {
+		},
+		risk_manager: RiskManagerConfig {
 			risk_manager_dates: vec![
 				(
 					ETH,
@@ -721,8 +715,8 @@ fn testnet_genesis(
 					},
 				),
 			],
-		}),
-		liquidation_pools: Some(LiquidationPoolsConfig {
+		},
+		liquidation_pools: LiquidationPoolsConfig {
 			phantom: Default::default(),
 			liquidation_pools: vec![
 				(
@@ -758,8 +752,8 @@ fn testnet_genesis(
 					},
 				),
 			],
-		}),
-		module_prices: Some(PricesConfig {
+		},
+		prices: PricesConfig {
 			locked_price: vec![
 				(DOT, FixedU128::saturating_from_integer(2)),
 				(KSM, FixedU128::saturating_from_integer(2)),
@@ -768,26 +762,22 @@ fn testnet_genesis(
 				(MNT, FixedU128::saturating_from_integer(2)),
 			],
 			_phantom: Default::default(),
-		}),
-		pallet_collective_Instance1: Some(Default::default()),
-		pallet_membership_Instance1: Some(MinterestCouncilMembershipConfig {
+		},
+		minterest_council: Default::default(),
+		minterest_council_membership: MinterestCouncilMembershipConfig {
 			members: vec![root_key.clone()],
 			phantom: Default::default(),
-		}),
-		pallet_collective_Instance2: Some(Default::default()),
-		pallet_membership_Instance2: Some(WhitelistCouncilMembershipConfig {
+		},
+		whitelist_council: Default::default(),
+		whitelist_council_membership: WhitelistCouncilMembershipConfig {
 			members: vec![root_key],
 			phantom: Default::default(),
-		}),
-		pallet_membership_Instance3: Some(OperatorMembershipMinterestConfig {
+		},
+		operator_membership_minterest: OperatorMembershipMinterestConfig {
 			members: endowed_accounts.clone(),
 			phantom: Default::default(),
-		}),
-		orml_oracle_Instance1: Some(MinterestOracleConfig {
-			members: Default::default(), // initialized by OperatorMembership
-			phantom: Default::default(),
-		}),
-		mnt_token: Some(MntTokenConfig {
+		},
+		mnt_token: MntTokenConfig {
 			mnt_claim_threshold: 0, // disable by default
 			minted_pools: vec![
 				(DOT, 2 * DOLLARS),
@@ -796,8 +786,8 @@ fn testnet_genesis(
 				(BTC, 2 * DOLLARS),
 			],
 			_phantom: Default::default(),
-		}),
-		module_vesting: Some(VestingConfig { vesting: vec![] }),
+		},
+		vesting: VestingConfig { vesting: vec![] },
 	}
 }
 
@@ -831,7 +821,7 @@ pub(crate) fn calculate_initial_allocations(
 
 	let initial_allocations = existential_balances
 		.into_iter()
-		.chain(vec![(MntTokenModuleId::get().into_account(), mnt_token_pallet_balance)])
+		.chain(vec![(MntTokenPalletId::get().into_account(), mnt_token_pallet_balance)])
 		.chain(allocated_list)
 		.fold(
 			BTreeMap::<AccountId, Balance>::new(),

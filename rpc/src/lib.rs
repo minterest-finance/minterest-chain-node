@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use node_minterest_runtime::{opaque::Block, AccountId, Balance, CurrencyId, DataProviderId, Index};
-pub use sc_rpc_api::DenyUnsafe;
+pub use sc_rpc::DenyUnsafe;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};

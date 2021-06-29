@@ -8,17 +8,15 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
-use frame_support::{pallet_prelude::*, transactional};
+use frame_support::{pallet_prelude::*, transactional, PalletId};
 use minterest_primitives::{Balance, CurrencyId};
+pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::DEXManager;
+use sp_runtime::traits::{AccountIdConversion, Zero};
 
 mod mock;
 mod tests;
-
-pub use module::*;
-use sp_runtime::traits::{AccountIdConversion, Zero};
-use sp_runtime::ModuleId;
 
 #[frame_support::pallet]
 pub mod module {
@@ -33,7 +31,7 @@ pub mod module {
 
 		#[pallet::constant]
 		/// The Dex module id.
-		type DexModuleId: Get<ModuleId>;
+		type DexPalletId: Get<PalletId>;
 
 		#[pallet::constant]
 		/// The Dex account id.
@@ -123,7 +121,7 @@ impl<T: Config> Pallet<T> {
 impl<T: Config> Pallet<T> {
 	/// Gets module account id.
 	pub fn dex_account_id() -> T::AccountId {
-		T::DexModuleId::get().into_account()
+		T::DexPalletId::get().into_account()
 	}
 
 	/// Gets current the total amount of cash the dex has.
