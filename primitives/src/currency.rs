@@ -68,7 +68,7 @@ create_currency_id! {
 	// Convention: the wrapped token follows immediately after the underlying token.
 	// Wrapped token ID = Underlying Asset ID + 1;
 	// Underlying Asset ID  = Wrapped token ID - 1;
-	# [derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+	# [derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, Hash)]
 	# [cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 	# [repr(u8)]
 	pub enum TokenSymbol {
@@ -84,7 +84,7 @@ create_currency_id! {
 	}
 }
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
 	Native(TokenSymbol),

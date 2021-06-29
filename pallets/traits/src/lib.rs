@@ -183,7 +183,7 @@ pub trait MntManager<AccountId> {
 }
 
 /// An abstraction of risk-manager basic functionalities.
-pub trait RiskManagerAPI {
+pub trait RiskManager {
 	/// This is a part of a pool creation flow
 	/// Creates storage records for RiskManagerParams
 	fn create_pool(
@@ -196,7 +196,7 @@ pub trait RiskManagerAPI {
 }
 
 /// An abstraction of minterest-model basic functionalities.
-pub trait MinterestModelAPI {
+pub trait MinterestModelManager {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for MinterestModelParams
 	fn create_pool(
@@ -206,4 +206,9 @@ pub trait MinterestModelAPI {
 		multiplier_per_block: Rate,
 		jump_multiplier_per_block: Rate,
 	) -> DispatchResult;
+
+	fn calculate_borrow_interest_rate(
+		underlying_asset: CurrencyId,
+		utilization_rate: Rate,
+	) -> Result<Rate, DispatchError>;
 }

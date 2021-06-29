@@ -22,15 +22,13 @@ use sp_runtime::{
 };
 pub use test_helper::*;
 
-pub type AccountId = u64;
-
 ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
 }
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
-	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"lqdy/min");
+	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"lqdn/min");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
@@ -77,11 +75,6 @@ construct_runtime!(
 	}
 );
 
-pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
-pub fn dollars<T: Into<u128>>(d: T) -> Balance {
-	DOLLARS.saturating_mul(d.into())
-}
-
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 }
@@ -95,7 +88,7 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn _liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+	pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((LiquidationPools::pools_account_id(), currency_id, balance));
 		self
