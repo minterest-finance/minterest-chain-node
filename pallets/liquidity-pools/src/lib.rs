@@ -394,28 +394,24 @@ impl<T: Config> Pallet<T> {
 	pub fn get_is_collateral_pools(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
 		let mut pools: Vec<(CurrencyId, Balance)> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
-			.filter(|&underlying_id| Self::pool_exists(underlying_id))
+			.filter(|&underlying_id| {
+				Self::pool_exists(underlying_id) && Self::check_user_available_collateral(&who, *underlying_id)
+			})
 			.filter_map(|&pool_id| {
 				let wrapped_id = pool_id.wrapped_asset()?;
 
-				// only collateral pools.
-				if !Self::check_user_available_collateral(&who, pool_id) {
-					return None;
-				};
-
 				// We calculate the value of the user's wrapped tokens in USD.
-				let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
-				if user_balance_wrapped_tokens.is_zero() {
+				let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id, &who);
+				if user_supply_wrap.is_zero() {
 					return None;
 				}
-				let user_balance_underlying_asset =
-					Self::convert_from_wrapped(wrapped_id, user_balance_wrapped_tokens).ok()?;
+				let user_supply_underlying = Self::convert_from_wrapped(wrapped_id, user_supply_wrap).ok()?;
 				let oracle_price = T::PriceSource::get_underlying_price(pool_id)?;
-				let total_deposit_in_usd = Rate::from_inner(user_balance_underlying_asset)
+				let user_supply_underlying_in_usd = Rate::from_inner(user_supply_underlying)
 					.checked_mul(&oracle_price)
 					.map(|x| x.into_inner())?;
 
-				Some((pool_id, total_deposit_in_usd))
+				Some((pool_id, user_supply_underlying_in_usd))
 			})
 			.collect();
 
