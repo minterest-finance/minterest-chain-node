@@ -5,8 +5,8 @@ use crate::{
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::{
-	runtime_decl_for_ControllerRuntimeApi::ControllerRuntimeApi, BalanceInfo, HypotheticalLiquidityData, PoolState,
-	UserPoolBalanceData,
+	runtime_decl_for_ControllerRuntimeApi::ControllerRuntimeApi, BalanceInfo, BalanceInfoExtended,
+	HypotheticalLiquidityData, PoolState, UserPoolBalanceData,
 };
 use frame_support::{
 	assert_err, assert_noop, assert_ok, error::BadOrigin, pallet_prelude::GenesisBuild, parameter_types,
@@ -415,8 +415,8 @@ fn dex_balance(pool_id: CurrencyId) -> Balance {
 	Currencies::free_balance(pool_id, &Dex::dex_account_id())
 }
 
-fn get_protocol_total_value_rpc() -> Option<BalanceInfo> {
-	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_protocol_total_value()
+fn get_protocol_total_values_rpc() -> Option<BalanceInfoExtended> {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_protocol_total_values()
 }
 
 fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {

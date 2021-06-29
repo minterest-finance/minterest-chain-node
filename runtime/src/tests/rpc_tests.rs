@@ -288,29 +288,42 @@ fn test_get_protocol_total_value_rpc() {
 			assert_ok!(lock_price(ETH));
 
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(100_000)));
-			// Total: 100 DOT * 2
+			// pool_total_supply: 100 DOT * 2
+			// pool_total_borrow: 0
+			// tvl: 100 DOT * 2
 			assert_eq!(
-				get_protocol_total_value_rpc(),
-				Some(BalanceInfo {
-					amount: dollars(200_000)
+				get_protocol_total_values_rpc(),
+				Some(BalanceInfoExtended {
+					pool_total_supply: dollars(200_000),
+					pool_total_borrow: Balance::zero(),
+					tvl: dollars(200_000)
 				})
 			);
 
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
-			// Total: 100 DOT * 2 + 100 ETH * 3
+			// pool_total_supply: 100 DOT * 2 + 100 ETH * 3
+			// pool_total_borrow: 0
+			// tvl: 100 DOT * 2 + 100 ETH * 3
 			assert_eq!(
-				get_protocol_total_value_rpc(),
-				Some(BalanceInfo {
-					amount: dollars(500_000)
+				get_protocol_total_values_rpc(),
+				Some(BalanceInfoExtended {
+					pool_total_supply: dollars(500_000),
+					pool_total_borrow: Balance::zero(),
+					tvl: dollars(500_000)
 				})
 			);
 
 			System::set_block_number(10);
-			// Total hasn`t changed due to no borrows
+			// Values haven`t changed due to no borrows
+			// pool_total_supply: 100 DOT * 2 + 100 ETH * 3
+			// pool_total_borrow: 0
+			// tvl: 100 DOT * 2 + 100 ETH * 3
 			assert_eq!(
-				get_protocol_total_value_rpc(),
-				Some(BalanceInfo {
-					amount: dollars(500_000)
+				get_protocol_total_values_rpc(),
+				Some(BalanceInfoExtended {
+					pool_total_supply: dollars(500_000),
+					pool_total_borrow: Balance::zero(),
+					tvl: dollars(500_000)
 				})
 			);
 
@@ -318,44 +331,131 @@ fn test_get_protocol_total_value_rpc() {
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
 			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
 			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
-			// Total: 100 DOT * 2 + 100 ETH * 3 + 50 DOT * 2 + 70 ETH * 3
+			// pool_total_supply: 150 DOT * 2 + 170 ETH * 3
+			// pool_total_borrow: 0
+			// tvl:  150 DOT * 2 + 170 ETH * 3
 			assert_eq!(
-				get_protocol_total_value_rpc(),
-				Some(BalanceInfo {
-					amount: dollars(810_000)
+				get_protocol_total_values_rpc(),
+				Some(BalanceInfoExtended {
+					pool_total_supply: dollars(810_000),
+					pool_total_borrow: Balance::zero(),
+					tvl: dollars(810_000)
 				})
 			);
 
 			System::set_block_number(20);
 
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(70_000)));
-			// Total is the same:
-			//   liquidity: 100 DOT * 2 + 100 ETH * 3 + 50 DOT * 2 + 70 ETH * 3 - (borrowed) 70 DOT * 2 +
-			//   borrowed: 70 DOT * 2
+			// Interest is 0 with regards to block delta is 0
+			// pool_total_supply: 80 DOT * 2 + 170 ETH * 3
+			// pool_total_borrow: 70 DOT * 2
+			// tvl:  150 DOT * 2 + 170 ETH * 3
 			assert_eq!(
-				get_protocol_total_value_rpc(),
-				Some(BalanceInfo {
-					amount: dollars(810_000)
+				get_protocol_total_values_rpc(),
+				Some(BalanceInfoExtended {
+					pool_total_supply: dollars(670_000),
+					pool_total_borrow: dollars(140_000),
+					tvl: dollars(810_000)
 				})
 			);
 
 			System::set_block_number(30);
-			// Total:
-			//   liquidity: 100 DOT * 2 + 100 ETH * 3 + 50 DOT * 2 + 70 ETH * 3 - (borrowed) 70 DOT * 2 +
-			//   borrowed: 70 DOT * 2 + interest
+			/*
+			Calculate interest_accumulated && pool_protocol_interest for DOT pool
+			utilization_rate =
+			 pool_borrow / (pool_supply - pool_protocol_interest + pool_borrow) = 70_000 / (80_000 - 0 + 70_000) = 0.4666
+			borrow_rate =
+			 utilization_rate * multiplier_per_block = 0.4666 * 0,000000009 = 0,0000000042
+			interest_accumulated =
+			 borrow_rate * block_delta * pool_borrow = 0,0000000042 * 10 * 70 000 = 0,00294
+			pool_protocol_interest = 0.1 * interest_accumulated = 0.000294
+
+			pool_total_supply: 80 DOT * 2 + 170 ETH * 3 = 80 * 2 + 170 * 3
+			pool_total_borrow: (70+ interest_accumulated - pool_protocol_interest) DOT * 2 = (70 + 0.00294 - 0.000294) * 2
+			tvl:  (150 + interest_accumulated - pool_protocol_interest) DOT * 2 + 170 ETH * 3 = (150 + 0.00294 - 0.000294) * 2 + 170 * 3
+			*/
 			assert_eq!(
-				get_protocol_total_value_rpc(),
-				Some(BalanceInfo {
-					amount: 810_000_005_292_000_000_000_000
+				get_protocol_total_values_rpc(),
+				Some(BalanceInfoExtended {
+					pool_total_supply: dollars(670_000),
+					pool_total_borrow: 140_000_005_292_000_000_000_000,
+					tvl: 810_000_005_292_000_000_000_000
 				})
 			);
 
 			assert_ok!(MinterestProtocol::repay_all(bob(), DOT));
-			// Total hasn`t changed because protocol interest isn`t counted
+			// In case when pool_borrow is zero, we subtract pool_protocol_interest from pool_supply.
+			// pool_total_supply: (150 + interest_accumulated - pool_protocol_interest) DOT * 2 + 170 ETH * 3 =
+			// (150 + 0.00294 - 0.000294) * 2 + 170 * 3 pool_total_borrow: 0
+			// tvl:  (150 + interest_accumulated - pool_protocol_interest) DOT * 2 + 170 ETH * 3 = (150 +
+			// 0.00294 - 0.000294) * 2 + 170 * 3
 			assert_eq!(
-				get_protocol_total_value_rpc(),
-				Some(BalanceInfo {
-					amount: 810_000_005_292_000_000_000_000
+				get_protocol_total_values_rpc(),
+				Some(BalanceInfoExtended {
+					pool_total_supply: 810_000_005_292_000_000_000_000,
+					pool_total_borrow: Balance::zero(),
+					tvl: 810_000_005_292_000_000_000_000
+				})
+			);
+
+			// Do redeem to show case when pool_supply_wrap is equal to zero && pool has protocol_interest
+			// In cases below pool_total_supply + pool_total_borrow != tvl with regards to pool_borrow less than
+			// or equal to pool_protocol_interest in DOT pool.
+			assert_ok!(MinterestProtocol::redeem(bob(), DOT));
+			assert_ok!(MinterestProtocol::redeem(alice(), DOT));
+
+			let dot_pool_protocol_interest = LiquidityPools::pools(DOT).total_protocol_interest;
+			assert_eq!(dot_pool_protocol_interest, 294_000_000_000_000);
+
+			// pool_total_supply: 170 ETH * 3 + dot_pool_protocol_interest * 2 = (170 * 3) + (0.000294 * 2)
+			// pool_total_borrow: 0
+			// tvl:  170 ETH * 3
+			assert_eq!(
+				get_protocol_total_values_rpc(),
+				Some(BalanceInfoExtended {
+					pool_total_supply: 510_000_000_588_000_000_000_000,
+					pool_total_borrow: Balance::zero(),
+					tvl: dollars(510_000)
+				})
+			);
+
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
+			assert_ok!(MinterestProtocol::borrow(alice(), DOT, dot_pool_protocol_interest / 2));
+			// pool_total_supply: 170 ETH * 3 + dot_pool_protocol_interest * 2 = (170 * 3) + 0.000147 * 2
+			// pool_total_borrow: dot_pool_protocol_interest * 2 = 0.000147 * 2
+			// tvl:  170 ETH * 3
+			assert_eq!(
+				get_protocol_total_values_rpc(),
+				Some(BalanceInfoExtended {
+					pool_total_supply: 510_000_000_294_000_000_000_000,
+					pool_total_borrow: 294_000_000_000_000,
+					tvl: dollars(510_000)
+				})
+			);
+
+			assert_ok!(MinterestProtocol::borrow(alice(), DOT, dot_pool_protocol_interest / 2));
+			// pool_total_supply: 170 ETH * 3 = 170 * 3
+			// pool_total_borrow: dot_pool_protocol_interest * 2 = 0.000294 * 2
+			// tvl:  170 ETH * 3
+			assert_eq!(
+				get_protocol_total_values_rpc(),
+				Some(BalanceInfoExtended {
+					pool_total_supply: 510_000_000_000_000_000_000_000,
+					pool_total_borrow: 588_000_000_000_000,
+					tvl: dollars(510_000)
+				})
+			);
+
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(1)));
+			// pool_total_supply: 170 ETH * 3 + 1 DOT * 2 = 170 * 3 + 1 * 2
+			// pool_total_borrow: dot_pool_protocol_interest * 2 = 0.000294 * 2
+			// tvl:  170 ETH * 3 + 1 DOT * 2
+			assert_eq!(
+				get_protocol_total_values_rpc(),
+				Some(BalanceInfoExtended {
+					pool_total_supply: 510_002_000_000_000_000_000_000,
+					pool_total_borrow: 588_000_000_000_000,
+					tvl: 510_002_000_000_000_000_000_000
 				})
 			);
 		});

@@ -15,13 +15,15 @@ use std::sync::Arc;
 #[rpc]
 /// Base trait for RPC interface of controller
 pub trait ControllerRpcApi<BlockHash, AccountId> {
-	/// Returns total amount of money currently held in the protocol in usd.
+	/// Returns total values of supply, borrow and locked.
 	///
 	///  - `&self` :  Self reference
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - amount: total amount of money currently held in the protocol in usd.
+	/// - pool_total_supply: total available liquidity in the protocol in usd.
+	/// - pool_total_borrow: total borrowed in the protocol in usd.
+	/// - tvl: total value of locked money in protocol in usd.
 	#[rpc(name = "controller_protocolTotalValues")]
 	fn get_protocol_total_values(&self, at: Option<BlockHash>) -> Result<Option<BalanceInfoExtended>>;
 

@@ -58,10 +58,10 @@ pub struct BalanceInfo {
 pub struct BalanceInfoExtended {
 	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
 	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
-	pub total_supply: Balance,
+	pub pool_total_supply: Balance,
 	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
 	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
-	pub total_borrow: Balance,
+	pub pool_total_borrow: Balance,
 	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
 	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
 	pub tvl: Balance,

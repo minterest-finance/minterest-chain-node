@@ -124,6 +124,11 @@
     "BalanceInfo": {
       "amount": "Balance"
     },
+    "BalanceInfoExtended": {
+      "pool_total_supply": "Balance",
+      "pool_total_borrow": "Balance",
+      "tvl": "Balance"
+    },
     "MntBalanceInfo": {
       "amount": "Balance"
     },
