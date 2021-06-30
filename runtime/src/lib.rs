@@ -11,7 +11,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod benchmarking;
 #[cfg(test)]
-mod tests;
+mod rpc_tests;
 mod weights;
 mod weights_test;
 
@@ -465,6 +465,7 @@ parameter_types! {
 impl controller::Config for Runtime {
 	type Event = Event;
 	type LiquidityPoolsManager = LiquidityPools;
+	type MinterestModelManager = MinterestModel;
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type ControllerWeightInfo = weights::controller::WeightInfo<Runtime>;
@@ -659,8 +660,8 @@ construct_runtime!(
 		MinterestProtocol: minterest_protocol::{Pallet, Call, Event<T>},
 		LiquidityPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
 		Controller: controller::{Pallet, Storage, Call, Event, Config<T>},
-		MinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config},
-		RiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config, ValidateUnsigned},
+		MinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
+		RiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		MntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Pallet, Storage, Call, Event<T>},

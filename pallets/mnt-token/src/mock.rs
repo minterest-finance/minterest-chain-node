@@ -30,7 +30,7 @@ construct_runtime!(
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
-		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
 	}
 );
@@ -45,8 +45,6 @@ parameter_types! {
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
-pub type AccountId = u64;
-
 mock_impl_system_config!(Runtime);
 mock_impl_orml_tokens_config!(Runtime);
 mock_impl_orml_currencies_config!(Runtime);
@@ -56,10 +54,6 @@ mock_impl_controller_config!(Runtime, ZeroAdmin);
 mock_impl_balances_config!(Runtime);
 mock_impl_mnt_token_config!(Runtime, ZeroAdmin);
 
-pub const ADMIN: AccountId = 0;
-pub fn admin() -> Origin {
-	Origin::signed(ADMIN)
-}
 ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
 	pub const BlockHashCount: u64 = 250;
@@ -91,12 +85,7 @@ pub struct ExtBuilder {
 	mnt_claim_threshold: Balance,
 }
 
-pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
-pub fn alice() -> Origin {
-	Origin::signed(ALICE)
-}
-pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 
 impl Default for ExtBuilder {
 	fn default() -> Self {

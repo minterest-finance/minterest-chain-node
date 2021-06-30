@@ -11,7 +11,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 	FixedPointNumber,
 };
-pub use test_helper::{mock_impl_balances_config, mock_impl_system_config, BTC, DOT, ETH, KSM, MDOT, MNT};
+pub use test_helper::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -61,16 +61,6 @@ impl module_prices::Config for Test {
 	type Source = MockDataProvider;
 	type LockOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
-}
-
-type AccountId = u64;
-pub const ALICE: AccountId = 1;
-pub fn alice() -> Origin {
-	Origin::signed(ALICE)
-}
-pub const BOB: AccountId = 2;
-pub fn bob() -> Origin {
-	Origin::signed(BOB)
 }
 
 pub struct ExtBuilder;

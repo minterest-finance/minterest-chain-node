@@ -3,8 +3,27 @@
 //! ## Overview
 //!
 //! Minterest Model pallet is responsible for storing and updating parameters related to economy.
-//! This pallet exposes `calculate_borrow_interest_rate` which is used to calculate borrow rate
-//! during interest calculations.
+//!
+//! In its storage, it contains all the parameters necessary for this:
+//! -`kink`: the utilization point at which the jump multiplier is applied;
+//! -`base_rate_per_block`: The base interest rate which is the y-intercept
+//! when utilization rate is 0;
+//! -`multiplier_per_block`: The multiplier of utilization rate that gives the slope
+//! of the interest rate;
+//! -`jump_multiplier_per_block`: the multiplier of utilization rate after hitting a specified
+//! utilization point - kink.
+//!
+//! ## Interface
+//!
+//! -`calculate_borrow_interest_rate`: calculates the current borrow rate per block;
+//! -`create_pool`: checks parameters validity and creates storage records for MinterestModelParams
+//!
+//! ### Dispatchable Functions (extrinsics)
+//!
+//! -`set_jump_multiplier`: set JumpMultiplierPerBlock from JumpMultiplierPerYear;
+//! -`set_base_rate`: set BaseRatePerBlock from BaseRatePerYear;
+//! -`set_multiplier`: set MultiplierPerBlock from MultiplierPerYear;
+//! -`set_kink`: set parameter kink.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
@@ -14,7 +33,7 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use minterest_primitives::{CurrencyId, Rate};
-use pallet_traits::MinterestModelAPI;
+use pallet_traits::MinterestModelManager;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -110,21 +129,23 @@ pub mod module {
 	pub type MinterestModelParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, MinterestModelData, ValueQuery>;
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig {
+	pub struct GenesisConfig<T: Config> {
 		pub minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
+		pub _phantom: sp_std::marker::PhantomData<T>,
 	}
 
 	#[cfg(feature = "std")]
-	impl Default for GenesisConfig {
+	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			GenesisConfig {
 				minterest_model_params: vec![],
+				_phantom: PhantomData,
 			}
 		}
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			self.minterest_model_params
 				.iter()
@@ -136,23 +157,6 @@ pub mod module {
 						},
 					)
 				});
-		}
-	}
-
-	#[cfg(feature = "std")]
-	impl GenesisConfig {
-		/// Direct implementation of `GenesisBuild::build_storage`.
-		///
-		/// Kept in order not to break dependency.
-		pub fn build_storage<T: Config>(&self) -> Result<sp_runtime::Storage, String> {
-			<Self as frame_support::traits::GenesisBuild<T>>::build_storage(self)
-		}
-
-		/// Direct implementation of `GenesisBuild::assimilate_storage`.
-		///
-		/// Kept in order not to break dependency.
-		pub fn assimilate_storage<T: Config>(&self, storage: &mut sp_runtime::Storage) -> Result<(), String> {
-			<Self as frame_support::traits::GenesisBuild<T>>::assimilate_storage(self, storage)
 		}
 	}
 
@@ -303,9 +307,19 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
+	fn is_valid_kink(kink: Rate) -> bool {
+		kink <= Rate::one()
+	}
+
+	fn is_valid_base_rate_and_multiplier(base_rate_per_block: Rate, multiplier_per_block: Rate) -> bool {
+		!(base_rate_per_block.is_zero() && multiplier_per_block.is_zero())
+	}
+}
+
+impl<T: Config> MinterestModelManager for Pallet<T> {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for MinterestModelParams
-	pub fn create_pool(
+	fn create_pool(
 		currency_id: CurrencyId,
 		kink: Rate,
 		base_rate_per_block: Rate,
@@ -337,12 +351,14 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	/// Calculates the current borrow rate per block.
-	/// - `underlying_asset`: Asset ID for which the borrow interest rate is calculated.
-	/// - `utilization_rate`: Current Utilization rate value.
+	/// Calculates the current borrow rate per block. To perform the calculation, this function
+	/// takes the main mathematical parameters from the storage. From outside, it only takes
+	/// the value of the parameter Utilization Rate.
+	/// - `underlying_asset`: asset ID for which the borrow interest rate is calculated.
+	/// - `utilization_rate`: current Utilization rate value.
 	///
 	/// returns `borrow_interest_rate`.
-	pub fn calculate_borrow_interest_rate(underlying_asset: CurrencyId, utilization_rate: Rate) -> RateResult {
+	fn calculate_borrow_interest_rate(underlying_asset: CurrencyId, utilization_rate: Rate) -> RateResult {
 		let MinterestModelData {
 			kink,
 			base_rate_per_block,
@@ -379,49 +395,5 @@ impl<T: Config> Pallet<T> {
 		};
 
 		Ok(borrow_interest_rate)
-	}
-
-	pub fn is_valid_kink(kink: Rate) -> bool {
-		kink <= Rate::one()
-	}
-
-	pub fn is_valid_base_rate_and_multiplier(base_rate_per_block: Rate, multiplier_per_block: Rate) -> bool {
-		!(base_rate_per_block.is_zero() && multiplier_per_block.is_zero())
-	}
-}
-
-impl<T: Config> MinterestModelAPI for Pallet<T> {
-	/// This is a part of a pool creation flow
-	/// Checks parameters validity and creates storage records for MinterestModelParams
-	fn create_pool(
-		currency_id: CurrencyId,
-		kink: Rate,
-		base_rate_per_block: Rate,
-		multiplier_per_block: Rate,
-		jump_multiplier_per_block: Rate,
-	) -> DispatchResult {
-		ensure!(
-			!MinterestModelParams::<T>::contains_key(currency_id),
-			Error::<T>::PoolAlreadyCreated
-		);
-		ensure!(Self::is_valid_kink(kink), Error::<T>::KinkCannotBeMoreThanOne);
-		ensure!(
-			Self::is_valid_base_rate_and_multiplier(
-				multiplier_per_block,
-				Self::minterest_model_params(currency_id).base_rate_per_block
-			),
-			Error::<T>::MultiplierPerBlockCannotBeZero
-		);
-
-		MinterestModelParams::<T>::insert(
-			currency_id,
-			MinterestModelData {
-				kink,
-				base_rate_per_block,
-				multiplier_per_block,
-				jump_multiplier_per_block,
-			},
-		);
-		Ok(())
 	}
 }

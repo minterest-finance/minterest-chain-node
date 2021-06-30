@@ -26,7 +26,7 @@ use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
 	ControllerManager, LiquidationPoolsManager, LiquidityPoolsManager, MntManager, PoolsManager, PricesManager,
-	RiskManagerAPI,
+	RiskManager,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -155,48 +155,33 @@ pub mod module {
 	/// Liquidation params for pools: `(max_attempts, min_partial_liquidation_sum, threshold,
 	/// liquidation_fee)`.
 	#[pallet::storage]
-	#[pallet::getter(fn risk_manager_dates)]
+	#[pallet::getter(fn risk_manager_params)]
 	pub type RiskManagerParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, RiskManagerData, ValueQuery>;
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig {
-		pub risk_manager_dates: Vec<(CurrencyId, RiskManagerData)>,
+	pub struct GenesisConfig<T: Config> {
+		pub risk_manager_params: Vec<(CurrencyId, RiskManagerData)>,
+		pub _phantom: sp_std::marker::PhantomData<T>,
 	}
 
 	#[cfg(feature = "std")]
-	impl Default for GenesisConfig {
+	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			GenesisConfig {
-				risk_manager_dates: vec![],
+				risk_manager_params: vec![],
+				_phantom: PhantomData,
 			}
 		}
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.risk_manager_dates
+			self.risk_manager_params
 				.iter()
 				.for_each(|(currency_id, risk_manager_data)| {
 					RiskManagerParams::<T>::insert(currency_id, RiskManagerData { ..*risk_manager_data })
 				});
-		}
-	}
-
-	#[cfg(feature = "std")]
-	impl GenesisConfig {
-		/// Direct implementation of `GenesisBuild::build_storage`.
-		///
-		/// Kept in order not to break dependency.
-		pub fn build_storage<T: Config>(&self) -> Result<sp_runtime::Storage, String> {
-			<Self as frame_support::traits::GenesisBuild<T>>::build_storage(self)
-		}
-
-		/// Direct implementation of `GenesisBuild::assimilate_storage`.
-		///
-		/// Kept in order not to break dependency.
-		pub fn assimilate_storage<T: Config>(&self, storage: &mut sp_runtime::Storage) -> Result<(), String> {
-			<Self as frame_support::traits::GenesisBuild<T>>::assimilate_storage(self, storage)
 		}
 	}
 
@@ -627,7 +612,7 @@ impl<T: Config> Pallet<T> {
 			}
 		}
 
-		let liquidation_fee = Self::risk_manager_dates(liquidated_pool_id).liquidation_fee;
+		let liquidation_fee = Self::risk_manager_params(liquidated_pool_id).liquidation_fee;
 
 		let repay_amount = Rate::from_inner(already_seized_amount)
 			.checked_div(&liquidation_fee)
@@ -673,7 +658,7 @@ impl<T: Config> Pallet<T> {
 		total_repay_amount: Balance,
 		is_partial_liquidation: bool,
 	) -> result::Result<(Balance, bool), DispatchError> {
-		let liquidation_fee = Self::risk_manager_dates(liquidated_pool_id).liquidation_fee;
+		let liquidation_fee = Self::risk_manager_params(liquidated_pool_id).liquidation_fee;
 		let price_borrowed =
 			T::PriceSource::get_underlying_price(liquidated_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
@@ -736,7 +721,7 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config> RiskManagerAPI for Pallet<T> {
+impl<T: Config> RiskManager for Pallet<T> {
 	/// This is a part of a pool creation flow
 	/// Creates storage records for RiskManagerParams
 	fn create_pool(

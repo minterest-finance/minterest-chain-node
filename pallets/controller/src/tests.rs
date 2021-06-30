@@ -1,9 +1,8 @@
 //! Tests for the controller pallet.
 
 use super::*;
-use mock::{Event, *};
-
 use frame_support::{assert_err, assert_noop, assert_ok};
+use mock::{Event, *};
 use sp_runtime::DispatchError::BadOrigin;
 
 #[test]
@@ -18,37 +17,37 @@ fn operations_are_paused_by_default() {
 fn protocol_operations_not_working_for_nonexisting_pool() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
-			Controller::pause_operation(alice(), ETH, Operation::Deposit),
+			Controller::pause_operation(alice_origin(), ETH, Operation::Deposit),
 			Error::<Runtime>::PoolNotFound
 		);
 
 		assert_noop!(
-			Controller::resume_operation(alice(), ETH, Operation::Deposit),
+			Controller::resume_operation(alice_origin(), ETH, Operation::Deposit),
 			Error::<Runtime>::PoolNotFound
 		);
 
 		assert_noop!(
-			Controller::set_protocol_interest_factor(alice(), ETH, Rate::one()),
+			Controller::set_protocol_interest_factor(alice_origin(), ETH, Rate::one()),
 			Error::<Runtime>::PoolNotFound
 		);
 
 		assert_noop!(
-			Controller::set_max_borrow_rate(alice(), ETH, Rate::one()),
+			Controller::set_max_borrow_rate(alice_origin(), ETH, Rate::one()),
 			Error::<Runtime>::PoolNotFound
 		);
 
 		assert_noop!(
-			Controller::set_collateral_factor(alice(), ETH, Rate::one()),
+			Controller::set_collateral_factor(alice_origin(), ETH, Rate::one()),
 			Error::<Runtime>::PoolNotFound
 		);
 
 		assert_noop!(
-			Controller::set_borrow_cap(alice(), ETH, Some(100u128)),
+			Controller::set_borrow_cap(alice_origin(), ETH, Some(100u128)),
 			Error::<Runtime>::PoolNotFound
 		);
 
 		assert_noop!(
-			Controller::set_protocol_interest_threshold(alice(), ETH, 100u128),
+			Controller::set_protocol_interest_threshold(alice_origin(), ETH, 100u128),
 			Error::<Runtime>::PoolNotFound
 		);
 	});
@@ -93,7 +92,7 @@ fn accrue_interest_should_not_work() {
 			assert_eq!(Controller::controller_dates(DOT).last_interest_accrued_block, 1);
 
 			assert_ok!(Controller::set_max_borrow_rate(
-				alice(),
+				alice_origin(),
 				DOT,
 				Rate::saturating_from_rational(1, 1_000_000_000)
 			));
@@ -106,7 +105,7 @@ fn accrue_interest_should_not_work() {
 			);
 
 			assert_ok!(Controller::set_max_borrow_rate(
-				alice(),
+				alice_origin(),
 				DOT,
 				Rate::saturating_from_integer(2)
 			));
@@ -442,8 +441,8 @@ fn is_operation_allowed_should_work() {
 		assert!(Controller::is_operation_allowed(DOT, Operation::Borrow));
 		assert!(Controller::is_operation_allowed(DOT, Operation::Repay));
 
-		assert_ok!(Controller::pause_operation(alice(), DOT, Operation::Deposit));
-		assert_ok!(Controller::pause_operation(alice(), DOT, Operation::Redeem));
+		assert_ok!(Controller::pause_operation(alice_origin(), DOT, Operation::Deposit));
+		assert_ok!(Controller::pause_operation(alice_origin(), DOT, Operation::Redeem));
 
 		assert!(!Controller::is_operation_allowed(DOT, Operation::Deposit));
 		assert!(!Controller::is_operation_allowed(DOT, Operation::Redeem));
@@ -461,7 +460,7 @@ fn set_protocol_interest_factor_should_work() {
 	ExtBuilder::default().pool_mock(DOT).build().execute_with(|| {
 		// ALICE set protocol interest factor equal 2.0
 		assert_ok!(Controller::set_protocol_interest_factor(
-			alice(),
+			alice_origin(),
 			DOT,
 			Rate::saturating_from_integer(2)
 		));
@@ -473,7 +472,11 @@ fn set_protocol_interest_factor_should_work() {
 		);
 
 		// ALICE set protocol interest factor equal 0.0
-		assert_ok!(Controller::set_protocol_interest_factor(alice(), DOT, Rate::zero()));
+		assert_ok!(Controller::set_protocol_interest_factor(
+			alice_origin(),
+			DOT,
+			Rate::zero()
+		));
 		let expected_event = Event::controller(crate::Event::InterestFactorChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(
@@ -483,12 +486,12 @@ fn set_protocol_interest_factor_should_work() {
 
 		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(
-			Controller::set_protocol_interest_factor(bob(), DOT, Rate::saturating_from_integer(2)),
+			Controller::set_protocol_interest_factor(bob_origin(), DOT, Rate::saturating_from_integer(2)),
 			BadOrigin
 		);
 
 		assert_noop!(
-			Controller::set_protocol_interest_factor(alice(), MDOT, Rate::saturating_from_integer(2)),
+			Controller::set_protocol_interest_factor(alice_origin(), MDOT, Rate::saturating_from_integer(2)),
 			Error::<Runtime>::PoolNotFound
 		);
 	});
@@ -499,7 +502,7 @@ fn set_max_borrow_rate_should_work() {
 	ExtBuilder::default().pool_mock(DOT).build().execute_with(|| {
 		// ALICE set max borrow rate equal 2.0
 		assert_ok!(Controller::set_max_borrow_rate(
-			alice(),
+			alice_origin(),
 			DOT,
 			Rate::saturating_from_integer(2)
 		));
@@ -512,18 +515,18 @@ fn set_max_borrow_rate_should_work() {
 
 		// ALICE can't set max borrow rate equal 0.0
 		assert_noop!(
-			Controller::set_max_borrow_rate(alice(), DOT, Rate::zero()),
+			Controller::set_max_borrow_rate(alice_origin(), DOT, Rate::zero()),
 			Error::<Runtime>::MaxBorrowRateCannotBeZero
 		);
 
 		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(
-			Controller::set_max_borrow_rate(bob(), DOT, Rate::saturating_from_integer(2)),
+			Controller::set_max_borrow_rate(bob_origin(), DOT, Rate::saturating_from_integer(2)),
 			BadOrigin
 		);
 
 		assert_noop!(
-			Controller::set_max_borrow_rate(alice(), MDOT, Rate::saturating_from_integer(2)),
+			Controller::set_max_borrow_rate(alice_origin(), MDOT, Rate::saturating_from_integer(2)),
 			Error::<Runtime>::PoolNotFound
 		);
 	});
@@ -534,7 +537,7 @@ fn set_collateral_factor_should_work() {
 	ExtBuilder::default().pool_mock(DOT).build().execute_with(|| {
 		// ALICE set collateral factor equal 0.5.
 		assert_ok!(Controller::set_collateral_factor(
-			alice(),
+			alice_origin(),
 			DOT,
 			Rate::saturating_from_rational(1, 2)
 		));
@@ -547,25 +550,25 @@ fn set_collateral_factor_should_work() {
 
 		// ALICE can't set collateral factor equal 0.0
 		assert_noop!(
-			Controller::set_collateral_factor(alice(), DOT, Rate::zero()),
+			Controller::set_collateral_factor(alice_origin(), DOT, Rate::zero()),
 			Error::<Runtime>::CollateralFactorIncorrectValue
 		);
 
 		// ALICE can't set collateral factor grater than one.
 		assert_noop!(
-			Controller::set_collateral_factor(alice(), DOT, Rate::saturating_from_rational(11, 10)),
+			Controller::set_collateral_factor(alice_origin(), DOT, Rate::saturating_from_rational(11, 10)),
 			Error::<Runtime>::CollateralFactorIncorrectValue
 		);
 
 		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(
-			Controller::set_collateral_factor(bob(), DOT, Rate::saturating_from_integer(2)),
+			Controller::set_collateral_factor(bob_origin(), DOT, Rate::saturating_from_integer(2)),
 			BadOrigin
 		);
 
 		// Unavailable currency id.
 		assert_noop!(
-			Controller::set_collateral_factor(alice(), MDOT, Rate::saturating_from_integer(2)),
+			Controller::set_collateral_factor(alice_origin(), MDOT, Rate::saturating_from_integer(2)),
 			Error::<Runtime>::PoolNotFound
 		);
 	});
@@ -580,23 +583,23 @@ fn pause_operation_should_work() {
 		assert!(!Controller::pause_keepers(&DOT).repay_paused);
 		assert!(!Controller::pause_keepers(&DOT).transfer_paused);
 
-		assert_ok!(Controller::pause_operation(alice(), DOT, Operation::Deposit));
+		assert_ok!(Controller::pause_operation(alice_origin(), DOT, Operation::Deposit));
 		let expected_event = Event::controller(crate::Event::OperationIsPaused(DOT, Operation::Deposit));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
-		assert_ok!(Controller::pause_operation(alice(), DOT, Operation::Redeem));
+		assert_ok!(Controller::pause_operation(alice_origin(), DOT, Operation::Redeem));
 		let expected_event = Event::controller(crate::Event::OperationIsPaused(DOT, Operation::Redeem));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
-		assert_ok!(Controller::pause_operation(alice(), DOT, Operation::Borrow));
+		assert_ok!(Controller::pause_operation(alice_origin(), DOT, Operation::Borrow));
 		let expected_event = Event::controller(crate::Event::OperationIsPaused(DOT, Operation::Borrow));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
-		assert_ok!(Controller::pause_operation(alice(), DOT, Operation::Repay));
+		assert_ok!(Controller::pause_operation(alice_origin(), DOT, Operation::Repay));
 		let expected_event = Event::controller(crate::Event::OperationIsPaused(DOT, Operation::Repay));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
-		assert_ok!(Controller::pause_operation(alice(), DOT, Operation::Transfer));
+		assert_ok!(Controller::pause_operation(alice_origin(), DOT, Operation::Transfer));
 		let expected_event = Event::controller(crate::Event::OperationIsPaused(DOT, Operation::Transfer));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
@@ -606,9 +609,12 @@ fn pause_operation_should_work() {
 		assert!(Controller::pause_keepers(&DOT).repay_paused);
 		assert!(Controller::pause_keepers(&DOT).transfer_paused);
 
-		assert_noop!(Controller::pause_operation(bob(), DOT, Operation::Deposit), BadOrigin);
 		assert_noop!(
-			Controller::pause_operation(alice(), MDOT, Operation::Redeem),
+			Controller::pause_operation(bob_origin(), DOT, Operation::Deposit),
+			BadOrigin
+		);
+		assert_noop!(
+			Controller::pause_operation(alice_origin(), MDOT, Operation::Redeem),
 			Error::<Runtime>::PoolNotFound
 		);
 	});
@@ -627,23 +633,23 @@ fn resume_operation_should_work() {
 			assert!(Controller::pause_keepers(&KSM).repay_paused);
 			assert!(Controller::pause_keepers(&KSM).transfer_paused);
 
-			assert_ok!(Controller::resume_operation(alice(), KSM, Operation::Deposit));
+			assert_ok!(Controller::resume_operation(alice_origin(), KSM, Operation::Deposit));
 			let expected_event = Event::controller(crate::Event::OperationIsUnPaused(KSM, Operation::Deposit));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::resume_operation(alice(), KSM, Operation::Redeem));
+			assert_ok!(Controller::resume_operation(alice_origin(), KSM, Operation::Redeem));
 			let expected_event = Event::controller(crate::Event::OperationIsUnPaused(KSM, Operation::Redeem));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::resume_operation(alice(), KSM, Operation::Borrow));
+			assert_ok!(Controller::resume_operation(alice_origin(), KSM, Operation::Borrow));
 			let expected_event = Event::controller(crate::Event::OperationIsUnPaused(KSM, Operation::Borrow));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::resume_operation(alice(), KSM, Operation::Repay));
+			assert_ok!(Controller::resume_operation(alice_origin(), KSM, Operation::Repay));
 			let expected_event = Event::controller(crate::Event::OperationIsUnPaused(KSM, Operation::Repay));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert_ok!(Controller::resume_operation(alice(), KSM, Operation::Transfer));
+			assert_ok!(Controller::resume_operation(alice_origin(), KSM, Operation::Transfer));
 			let expected_event = Event::controller(crate::Event::OperationIsUnPaused(KSM, Operation::Transfer));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
@@ -653,9 +659,12 @@ fn resume_operation_should_work() {
 			assert!(!Controller::pause_keepers(&KSM).repay_paused);
 			assert!(!Controller::pause_keepers(&KSM).transfer_paused);
 
-			assert_noop!(Controller::resume_operation(bob(), DOT, Operation::Deposit), BadOrigin);
 			assert_noop!(
-				Controller::resume_operation(alice(), MDOT, Operation::Redeem),
+				Controller::resume_operation(bob_origin(), DOT, Operation::Deposit),
+				BadOrigin
+			);
+			assert_noop!(
+				Controller::resume_operation(alice_origin(), MDOT, Operation::Redeem),
 				Error::<Runtime>::PoolNotFound
 			);
 		});
@@ -664,15 +673,15 @@ fn resume_operation_should_work() {
 #[test]
 fn switch_whitelist_mode_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::switch_whitelist_mode(alice()));
+		assert_ok!(Controller::switch_whitelist_mode(alice_origin()));
 		let expected_event = Event::controller(crate::Event::ProtocolOperationModeSwitched(true));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(Controller::whitelist_mode());
 
-		assert_ok!(Controller::switch_whitelist_mode(alice()));
+		assert_ok!(Controller::switch_whitelist_mode(alice_origin()));
 		assert!(!Controller::whitelist_mode());
 
-		assert_noop!(Controller::switch_whitelist_mode(bob()), BadOrigin);
+		assert_noop!(Controller::switch_whitelist_mode(bob_origin()), BadOrigin);
 		assert!(!Controller::whitelist_mode());
 	});
 }
@@ -685,26 +694,29 @@ fn set_borrow_cap_should_work() {
 		.build()
 		.execute_with(|| {
 			// The dispatch origin of this call must be Administrator.
-			assert_noop!(Controller::set_borrow_cap(bob(), DOT, Some(10_u128)), BadOrigin);
+			assert_noop!(
+				Controller::set_borrow_cap(bob_origin(), DOT, Some(dollars(10))),
+				BadOrigin
+			);
 
 			// ALICE set borrow cap to 10.
-			assert_ok!(Controller::set_borrow_cap(alice(), DOT, Some(10_u128)));
-			let expected_event = Event::controller(crate::Event::BorrowCapChanged(DOT, Some(10_u128)));
+			assert_ok!(Controller::set_borrow_cap(alice_origin(), DOT, Some(dollars(10))));
+			let expected_event = Event::controller(crate::Event::BorrowCapChanged(DOT, Some(dollars(10))));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// ALICE is able to change borrow cap to 9999
-			assert_ok!(Controller::set_borrow_cap(alice(), DOT, Some(9999_u128)));
+			assert_ok!(Controller::set_borrow_cap(alice_origin(), DOT, Some(9999_u128)));
 			let expected_event = Event::controller(crate::Event::BorrowCapChanged(DOT, Some(9999_u128)));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// Unable to set borrow cap greater than MAX_BORROW_CAP.
 			assert_noop!(
-				Controller::set_borrow_cap(alice(), DOT, Some(dollars(1_000_001_u128))),
+				Controller::set_borrow_cap(alice_origin(), DOT, Some(dollars(1_000_001_u128))),
 				Error::<Runtime>::InvalidBorrowCap
 			);
 
 			// Alice is able to set zero borrow cap.
-			assert_ok!(Controller::set_borrow_cap(alice(), DOT, Some(0_u128)));
+			assert_ok!(Controller::set_borrow_cap(alice_origin(), DOT, Some(0_u128)));
 			let expected_event = Event::controller(crate::Event::BorrowCapChanged(DOT, Some(0_u128)));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 		});
@@ -719,17 +731,21 @@ fn set_protocol_interest_threshold_should_work() {
 		.execute_with(|| {
 			// The dispatch origin of this call must be Administrator.
 			assert_noop!(
-				Controller::set_protocol_interest_threshold(bob(), DOT, 10_u128),
+				Controller::set_protocol_interest_threshold(bob_origin(), DOT, 10_u128),
 				BadOrigin
 			);
 
 			// ALICE set protocol interest threshold to 10.
-			assert_ok!(Controller::set_protocol_interest_threshold(alice(), DOT, 10_u128));
+			assert_ok!(Controller::set_protocol_interest_threshold(
+				alice_origin(),
+				DOT,
+				10_u128
+			));
 			let expected_event = Event::controller(crate::Event::ProtocolInterestThresholdChanged(DOT, 10_u128));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// Alice is able to set zero protocol interest threshold.
-			assert_ok!(Controller::set_protocol_interest_threshold(alice(), DOT, 0_u128));
+			assert_ok!(Controller::set_protocol_interest_threshold(alice_origin(), DOT, 0_u128));
 			let expected_event = Event::controller(crate::Event::ProtocolInterestThresholdChanged(DOT, 0_u128));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 		});

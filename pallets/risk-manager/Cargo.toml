@@ -41,7 +41,6 @@ minterest-model = { path = "../minterest-model" }
 dex = { path = "../dex" }
 mnt-token = { path = "../mnt-token" }
 test-helper = { path = "../../test-helper" }
-module-prices = { path = "../prices" }
 
 [features]
 default = ["std"]

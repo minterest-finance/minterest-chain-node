@@ -6282,7 +6282,6 @@ dependencies = [
  "minterest-primitives",
  "minterest-protocol",
  "mnt-token",
- "module-prices",
  "orml-currencies",
  "orml-tokens",
  "orml-traits 0.4.1-dev",
