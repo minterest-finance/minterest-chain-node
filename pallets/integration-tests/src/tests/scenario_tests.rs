@@ -155,7 +155,7 @@ mod tests {
 				// Checking controller Storage params
 				assert_eq!(TestController::controller_dates(DOT).last_interest_accrued_block, 1);
 				let (_, borrow_rate, _) = TestController::get_pool_exchange_borrow_and_supply_rates(DOT).unwrap();
-				assert_eq!(borrow_rate, RATE_ZERO);
+				assert_eq!(borrow_rate, Rate::zero());
 
 				// Checking DOT pool User params
 				// ADMIN:
