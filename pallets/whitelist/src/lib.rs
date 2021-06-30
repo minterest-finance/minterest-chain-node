@@ -63,8 +63,6 @@ pub mod module {
 		MemberNotExist,
 		/// Cannot add another member because the limit is already reached.
 		MembershipLimitReached,
-		/// Cannot remove a member because at least one member must remain.
-		MustBeAtLeastOneMember,
 		/// Error changing the protocol mode. The mode you want to set is already in effect.
 		ModeChangeError,
 	}
@@ -178,8 +176,6 @@ pub mod module {
 				Error::<T>::MemberNotExist
 			);
 
-			ensure!(MemberCount::<T>::get() > 1, Error::<T>::MustBeAtLeastOneMember);
-
 			Members::<T>::remove(&account_to_remove);
 			MemberCount::<T>::mutate(|v| *v -= 1);
 			Self::deposit_event(Event::MemberRemoved(account_to_remove));
@@ -216,7 +212,7 @@ impl<T: Config> WhitelistManager<T::AccountId> for Pallet<T> {
 	}
 
 	/// Returns the set of all accounts in the whitelist.
-	fn whitelist_members() -> BTreeSet<T::AccountId> {
+	fn get_whitelist_members() -> BTreeSet<T::AccountId> {
 		<Members<T> as IterableStorageMap<T::AccountId, ()>>::iter()
 			.map(|(acct, _)| acct)
 			.collect::<BTreeSet<_>>()

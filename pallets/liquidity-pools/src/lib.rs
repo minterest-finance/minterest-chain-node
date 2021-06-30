@@ -407,11 +407,11 @@ impl<T: Config> Pallet<T> {
 				}
 				let user_supply_underlying = Self::convert_from_wrapped(wrapped_id, user_supply_wrap).ok()?;
 				let oracle_price = T::PriceSource::get_underlying_price(pool_id)?;
-				let user_supply_underlying_in_usd = Rate::from_inner(user_supply_underlying)
+				let user_supply_in_usd = Rate::from_inner(user_supply_underlying)
 					.checked_mul(&oracle_price)
 					.map(|x| x.into_inner())?;
 
-				Some((pool_id, user_supply_underlying_in_usd))
+				Some((pool_id, user_supply_in_usd))
 			})
 			.collect();
 

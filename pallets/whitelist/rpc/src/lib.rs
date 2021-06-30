@@ -67,7 +67,7 @@ where
 			self.client.info().best_hash));
 		api.is_whitelist_member(&at, who).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
-			message: "Unable to check if is a whitelist member.".into(),
+			message: "Unable to check if it is a whitelist member.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})
 	}

@@ -219,5 +219,5 @@ pub trait WhitelistManager<AccountId> {
 	fn is_whitelist_member(who: &AccountId) -> bool;
 
 	/// Returns the set of all accounts in the whitelist.
-	fn whitelist_members() -> BTreeSet<AccountId>;
+	fn get_whitelist_members() -> BTreeSet<AccountId>;
 }

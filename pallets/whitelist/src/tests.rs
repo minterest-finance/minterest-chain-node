@@ -30,7 +30,7 @@ fn query_membership_works() {
 		.execute_with(|| {
 			// Sorted list.
 			assert_eq!(
-				Whitelist::whitelist_members(),
+				Whitelist::get_whitelist_members(),
 				vec![ADMIN, ALICE, BOB, CHARLIE]
 					.into_iter()
 					.collect::<BTreeSet<AccountId>>()
@@ -60,7 +60,7 @@ fn add_member_should_works() {
 		assert_noop!(Whitelist::add_member(admin(), ALICE), Error::<Test>::MemberAlreadyAdded);
 
 		assert_eq!(
-			Whitelist::whitelist_members(),
+			Whitelist::get_whitelist_members(),
 			vec![ALICE, BOB].into_iter().collect::<BTreeSet<AccountId>>()
 		);
 	});
@@ -81,7 +81,10 @@ fn cant_exceed_max_members() {
 		);
 
 		// Sorted whitelist.
-		assert_eq!(Whitelist::whitelist_members(), (0..16).collect::<BTreeSet<AccountId>>());
+		assert_eq!(
+			Whitelist::get_whitelist_members(),
+			(0..16).collect::<BTreeSet<AccountId>>()
+		);
 	})
 }
 
@@ -103,15 +106,9 @@ fn remove_member_should_works() {
 			let expected_event = Event::whitelist_module(crate::Event::MemberRemoved(2));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			// Cannot remove Alice, because at least one member must remain.
-			assert_noop!(
-				Whitelist::remove_member(admin(), ALICE),
-				Error::<Test>::MustBeAtLeastOneMember
-			);
-
 			// Check storage changes.
 			assert_eq!(
-				Whitelist::whitelist_members(),
+				Whitelist::get_whitelist_members(),
 				vec![ALICE].into_iter().collect::<BTreeSet<AccountId>>()
 			);
 		})
