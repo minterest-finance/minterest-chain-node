@@ -24,7 +24,7 @@ use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
 	Borrowing, ControllerManager, LiquidationPoolsManager, LiquidityPoolsManager, MinterestModelManager, MntManager,
-	PoolsManager, RiskManagerAPI,
+	PoolsManager, RiskManager,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -102,7 +102,7 @@ pub mod module {
 		type ControllerManager: ControllerManager<Self::AccountId>;
 
 		/// Public API of risk manager pallet
-		type RiskManagerAPI: RiskManagerAPI;
+		type RiskManagerAPI: RiskManager;
 
 		/// Public API of risk manager pallet
 		type MinterestModelAPI: MinterestModelManager;

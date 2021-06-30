@@ -44,7 +44,7 @@ fn lock_price_should_work() {
 fn lock_price_call_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		System::set_block_number(1);
-		assert_ok!(PricesModule::lock_price(alice(), BTC));
+		assert_ok!(PricesModule::lock_price(alice_origin(), BTC));
 
 		let lock_price_event =
 			Event::module_prices(crate::Event::LockPrice(BTC, Price::saturating_from_integer(48000)));
@@ -53,9 +53,9 @@ fn lock_price_call_should_work() {
 			PricesModule::locked_price(BTC),
 			Some(Price::saturating_from_integer(48000))
 		);
-		assert_noop!(PricesModule::lock_price(bob(), BTC), BadOrigin);
+		assert_noop!(PricesModule::lock_price(bob_origin(), BTC), BadOrigin);
 		assert_noop!(
-			PricesModule::lock_price(alice(), MDOT),
+			PricesModule::lock_price(alice_origin(), MDOT),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
@@ -66,16 +66,16 @@ fn unlock_price_call_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		System::set_block_number(1);
 		LockedPrice::<Test>::insert(BTC, Price::saturating_from_integer(80000));
-		assert_ok!(PricesModule::unlock_price(alice(), BTC));
+		assert_ok!(PricesModule::unlock_price(alice_origin(), BTC));
 
 		let unlock_price_event = Event::module_prices(crate::Event::UnlockPrice(BTC));
 		assert!(System::events().iter().any(|record| record.event == unlock_price_event));
 
 		assert_eq!(PricesModule::locked_price(BTC), None);
 
-		assert_noop!(PricesModule::unlock_price(bob(), BTC), BadOrigin);
+		assert_noop!(PricesModule::unlock_price(bob_origin(), BTC), BadOrigin);
 		assert_noop!(
-			PricesModule::lock_price(alice(), MDOT),
+			PricesModule::lock_price(alice_origin(), MDOT),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});

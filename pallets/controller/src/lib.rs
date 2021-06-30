@@ -15,7 +15,12 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use liquidity_pools::Pool;
+use minterest_primitives::{
+	arithmetic::sum_with_mult_result,
+	currency::CurrencyType::{UnderlyingAsset, WrappedToken},
+};
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
+pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{ControllerManager, LiquidityPoolsManager, MinterestModelManager, PoolsManager, PricesManager};
 #[cfg(feature = "std")]
@@ -26,18 +31,12 @@ use sp_runtime::{
 	DispatchError, DispatchResult, FixedPointNumber, FixedU128, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
-
-pub use module::*;
-
+pub use weights::WeightInfo;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
-
 pub mod weights;
-use minterest_primitives::arithmetic::sum_with_mult_result;
-use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
-pub use weights::WeightInfo;
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
@@ -52,7 +51,7 @@ pub struct ControllerData<BlockNumber> {
 	pub max_borrow_rate: Rate,
 
 	/// This multiplier represents which share of the supplied value can be used as a collateral for
-	/// loans. For instance, 0.9 allows 90% of total pool value to be used as a collaterae. Must be
+	/// loans. For instance, 0.9 allows 90% of total pool value to be used as a collateral. Must be
 	/// between 0 and 1.
 	pub collateral_factor: Rate,
 
@@ -69,16 +68,12 @@ pub struct ControllerData<BlockNumber> {
 pub struct PauseKeeper {
 	/// Pause mint operation in the pool.
 	pub deposit_paused: bool,
-
 	/// Pause redeem operation in the pool.
 	pub redeem_paused: bool,
-
 	/// Pause borrow operation in the pool.
 	pub borrow_paused: bool,
-
 	/// Pause repay operation in the pool.
 	pub repay_paused: bool,
-
 	/// Pause transfer operation in the pool.
 	pub transfer_paused: bool,
 }
@@ -119,7 +114,6 @@ type LiquidityResult = result::Result<(Balance, Balance), DispatchError>;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use pallet_traits::MinterestModelManager;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + liquidity_pools::Config {
@@ -129,7 +123,7 @@ pub mod module {
 		/// Provides the basic liquidity pools manager and liquidity pool functionality.
 		type LiquidityPoolsManager: LiquidityPoolsManager<Self::AccountId>;
 
-		/// Provides the basic minterest model manager and minterest model functionality.
+		/// Provides the basic minterest model functionality.
 		type MinterestModelManager: MinterestModelManager;
 
 		#[pallet::constant]

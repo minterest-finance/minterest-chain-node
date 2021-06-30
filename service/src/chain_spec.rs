@@ -379,9 +379,10 @@ fn minterest_genesis(
 					},
 				),
 			],
+			_phantom: Default::default(),
 		}),
 		risk_manager: Some(RiskManagerConfig {
-			risk_manager_dates: vec![
+			risk_manager_params: vec![
 				(
 					ETH,
 					RiskManagerData {
@@ -419,6 +420,7 @@ fn minterest_genesis(
 					},
 				),
 			],
+			_phantom: Default::default(),
 		}),
 		liquidation_pools: Some(LiquidationPoolsConfig {
 			phantom: Default::default(),
@@ -681,9 +683,10 @@ fn testnet_genesis(
 					},
 				),
 			],
+			_phantom: Default::default(),
 		}),
 		risk_manager: Some(RiskManagerConfig {
-			risk_manager_dates: vec![
+			risk_manager_params: vec![
 				(
 					ETH,
 					RiskManagerData {
@@ -721,6 +724,7 @@ fn testnet_genesis(
 					},
 				),
 			],
+			_phantom: Default::default(),
 		}),
 		liquidation_pools: Some(LiquidationPoolsConfig {
 			phantom: Default::default(),

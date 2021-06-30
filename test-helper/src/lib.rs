@@ -2,21 +2,63 @@
 //!
 //! ## Overview
 //!
-//! Contains macros with mocked implementations of several modules config traits
+//! Contains constants, functions and macros with mocked implementations
+//! of several modules config traits
 
 pub mod offchain_ext;
+pub use currency_mock::*;
+pub use users_mock::*;
 
-use minterest_primitives::{currency::TokenSymbol, CurrencyId};
+pub mod currency_mock {
+	use frame_support::sp_runtime::FixedPointNumber;
+	use minterest_primitives::{currency::TokenSymbol, Balance, CurrencyId, Price};
 
-pub const MNT: CurrencyId = CurrencyId::Native(TokenSymbol::MNT);
-pub const DOT: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::DOT);
-pub const MDOT: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MDOT);
-pub const KSM: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::KSM);
-pub const MKSM: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MKSM);
-pub const BTC: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::BTC);
-pub const MBTC: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MBTC);
-pub const ETH: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::ETH);
-pub const METH: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::METH);
+	pub const MNT: CurrencyId = CurrencyId::Native(TokenSymbol::MNT);
+	pub const DOT: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::DOT);
+	pub const MDOT: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MDOT);
+	pub const KSM: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::KSM);
+	pub const MKSM: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MKSM);
+	pub const BTC: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::BTC);
+	pub const MBTC: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MBTC);
+	pub const ETH: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::ETH);
+	pub const METH: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::METH);
+
+	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
+	pub fn dollars(amount: u128) -> u128 {
+		amount.saturating_mul(Price::accuracy())
+	}
+
+	pub const ONE_HUNDRED: Balance = 100 * DOLLARS;
+	pub const TEN_THOUSAND: Balance = 10_000 * DOLLARS;
+	pub const ONE_HUNDRED_THOUSAND: Balance = 100_000 * DOLLARS;
+	pub const ONE_MILL: Balance = 1_000_000 * DOLLARS;
+
+	pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
+}
+
+pub mod users_mock {
+	use frame_support::traits::OriginTrait;
+
+	pub type AccountId = u64;
+
+	pub const ADMIN: AccountId = 0;
+	pub const ALICE: AccountId = 1;
+	pub const BOB: AccountId = 2;
+	pub const CHARLIE: AccountId = 3;
+
+	pub fn admin_origin<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
+		Origin::signed(ADMIN)
+	}
+	pub fn alice_origin<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
+		Origin::signed(ALICE)
+	}
+	pub fn bob_origin<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
+		Origin::signed(BOB)
+	}
+	pub fn charlie_origin<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
+		Origin::signed(CHARLIE)
+	}
+}
 
 #[macro_export]
 macro_rules! mock_impl_system_config {
@@ -101,20 +143,16 @@ macro_rules! mock_impl_orml_currencies_config {
 
 #[macro_export]
 macro_rules! mock_impl_liquidity_pools_config {
-	($target:ty, $price_source:ty) => {
+	($target:ty) => {
 		impl liquidity_pools::Config for $target {
 			type MultiCurrency = orml_currencies::Module<$target>;
-			type PriceSource = $price_source;
+			type PriceSource = MockPriceSource;
 			type ModuleId = LiquidityPoolsModuleId;
 			type LiquidityPoolAccountId = LiquidityPoolAccountId;
 			type InitialExchangeRate = InitialExchangeRate;
 			type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
 			type EnabledWrappedTokensId = EnabledWrappedTokensId;
 		}
-	};
-
-	($target:ty) => {
-		mock_impl_liquidity_pools_config!($target, MockPriceSource);
 	};
 }
 

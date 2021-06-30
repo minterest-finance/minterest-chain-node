@@ -15,8 +15,6 @@ use sp_runtime::{
 };
 pub use test_helper::*;
 
-pub type AccountId = u64;
-
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -77,12 +75,6 @@ impl Default for ExtBuilder {
 	}
 }
 
-pub const ALICE: AccountId = 1;
-pub const BOB: AccountId = 2;
-pub const CHARLIE: AccountId = 3;
-pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
-pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
-pub const ONE_HUNDRED: Balance = 100;
 pub const TEN_THOUSAND: Balance = 10_000 * DOLLARS;
 
 impl ExtBuilder {

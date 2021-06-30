@@ -11,7 +11,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod benchmarking;
 #[cfg(test)]
-mod tests;
+mod rpc_tests;
 mod weights;
 mod weights_test;
 
@@ -623,8 +623,8 @@ construct_runtime!(
 		MinterestProtocol: minterest_protocol::{Module, Call, Event<T>},
 		LiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
-		RiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
+		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
+		RiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Module, Storage, Call, Event<T>},
