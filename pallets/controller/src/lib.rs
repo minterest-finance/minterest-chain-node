@@ -577,29 +577,30 @@ impl<T: Config> Pallet<T> {
 		Ok((total_supply_balance, total_borrowed_balance))
 	}
 
-	/// Calculates pool_total_supply, pool_total_borrow including interest and excluding
-	/// protocol_interest, tvl (Total Value Locked) in USD
+	/// Calculates pool_total_supply, pool_total_borrow including interest, tvl (Total Value
+	/// Locked), pool_total_interest in USD
 	/// pool_total_supply is calculated as: sum(pool_supply)
 	/// where:
 	///     `pool_supply` - current available liquidity in the n pool;
-	/// pool_total_borrow is calculated as: sum(fresh_pool_borrow - fresh_pool_protocol_interest)
+	/// pool_total_borrow is calculated as: sum(fresh_pool_borrow)
 	/// where:
 	///     `fresh_pool_borrow` - freshest value of pool borrow in the n pool;
-	///     `fresh_pool_protocol_interest` - freshest value of protocol interest in the n pool;
-	/// Freshest values based on current block (check description of fn
-	/// calculate_current_pool_data())
 	/// tvl is calculated as: sum(pool_supply_wrap * exchange_rate),
 	/// where:
 	///     `pool_supply_wrap` - total number of wrapped tokens in the n pool;
 	///     `exchange_rate` - exchange rate in the n pool;
-	pub fn get_protocol_total_values() -> result::Result<(Balance, Balance, Balance), DispatchError> {
+	/// pool_total_interest is calculated as: sum(fresh_pool_protocol_interest)
+	/// where:
+	///     `fresh_pool_protocol_interest` - freshest value of protocol interest in the n pool;
+	pub fn get_protocol_total_values() -> result::Result<(Balance, Balance, Balance, Balance), DispatchError> {
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
 			.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
 			.try_fold(
-				(Balance::zero(), Balance::zero(), Balance::zero()),
-				|current_value, &pool_id| -> result::Result<(Balance, Balance, Balance), DispatchError> {
-					let (protocol_available_liquidity, protocol_borrow, tvl) = current_value;
+				(Balance::zero(), Balance::zero(), Balance::zero(), Balance::zero()),
+				|(protocol_available_liquidity, protocol_borrow, tvl, protocol_interest),
+				 &pool_id|
+				 -> result::Result<(Balance, Balance, Balance, Balance), DispatchError> {
 					let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 					let pool_supply_wrap = T::MultiCurrency::total_issuance(wrapped_id);
 					let pool_data = Self::calculate_current_pool_data(pool_id)?;
@@ -614,7 +615,7 @@ impl<T: Config> Pallet<T> {
 						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
 					// Calculate pool_supply in USD
-					let mut pool_supply_in_usd = Rate::from_inner(pool_supply_underlying)
+					let pool_supply_in_usd = Rate::from_inner(pool_supply_underlying)
 						.checked_mul(&oracle_price)
 						.map(|x| x.into_inner())
 						.ok_or(Error::<T>::NumOverflow)?;
@@ -624,30 +625,19 @@ impl<T: Config> Pallet<T> {
 						.checked_mul(&current_exchange_rate)
 						.and_then(|v| v.checked_mul(&oracle_price))
 						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::BalanceOverflow)?;
+						.ok_or(Error::<T>::NumOverflow)?;
 
 					// Calculate pool_borrow in USD
-					let pool_borrow_in_usd = match pool_data.total_borrowed.cmp(&pool_data.total_protocol_interest) {
-						Ordering::Greater => Rate::from_inner(
-							pool_data
-								.total_borrowed
-								.checked_sub(pool_data.total_protocol_interest)
-								.ok_or(Error::<T>::BalanceOverflow)?,
-						)
+					let pool_borrow_in_usd = Rate::from_inner(pool_data.total_borrowed)
 						.checked_mul(&oracle_price)
 						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?,
-						_ => {
-							if !pool_supply_wrap.is_zero() {
-								pool_supply_in_usd = pool_tvl_in_usd;
-							}
+						.ok_or(Error::<T>::NumOverflow)?;
 
-							Rate::from_inner(pool_data.total_borrowed)
-								.checked_mul(&oracle_price)
-								.map(|x| x.into_inner())
-								.ok_or(Error::<T>::NumOverflow)?
-						}
-					};
+					// Calculate pool_protocol_interest in USD
+					let pool_protocol_interest_in_usd = Rate::from_inner(pool_data.total_protocol_interest)
+						.checked_mul(&oracle_price)
+						.map(|x| x.into_inner())
+						.ok_or(Error::<T>::NumOverflow)?;
 
 					Ok((
 						protocol_available_liquidity
@@ -657,6 +647,9 @@ impl<T: Config> Pallet<T> {
 							.checked_add(pool_borrow_in_usd)
 							.ok_or(Error::<T>::BalanceOverflow)?,
 						tvl.checked_add(pool_tvl_in_usd).ok_or(Error::<T>::BalanceOverflow)?,
+						protocol_interest
+							.checked_add(pool_protocol_interest_in_usd)
+							.ok_or(Error::<T>::BalanceOverflow)?,
 					))
 				},
 			)

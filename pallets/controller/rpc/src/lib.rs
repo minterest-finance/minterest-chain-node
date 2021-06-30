@@ -2,7 +2,7 @@
 
 use codec::Codec;
 pub use controller_rpc_runtime_api::{
-	BalanceInfo, BalanceInfoExtended, ControllerRuntimeApi, HypotheticalLiquidityData, PoolState, UserPoolBalanceData,
+	BalanceInfo, ControllerRuntimeApi, HypotheticalLiquidityData, PoolState, ProtocolTotalValue, UserPoolBalanceData,
 };
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
@@ -25,7 +25,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// - pool_total_borrow: total borrowed in the protocol in usd.
 	/// - tvl: total value of locked money in protocol in usd.
 	#[rpc(name = "controller_protocolTotalValues")]
-	fn get_protocol_total_values(&self, at: Option<BlockHash>) -> Result<Option<BalanceInfoExtended>>;
+	fn get_protocol_total_values(&self, at: Option<BlockHash>) -> Result<Option<ProtocolTotalValue>>;
 
 	/// Returns current Liquidity Pool State.
 	///
@@ -178,7 +178,7 @@ where
 	C::Api: ControllerRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
 {
-	fn get_protocol_total_values(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Option<BalanceInfoExtended>> {
+	fn get_protocol_total_values(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Option<ProtocolTotalValue>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
