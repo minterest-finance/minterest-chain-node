@@ -15,9 +15,14 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use liquidity_pools::Pool;
+use minterest_primitives::{
+	arithmetic::sum_with_mult_result,
+	currency::CurrencyType::{UnderlyingAsset, WrappedToken},
+};
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
+pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerManager, LiquidityPoolsManager, PoolsManager, PricesManager};
+use pallet_traits::{ControllerManager, LiquidityPoolsManager, MinterestModelManager, PoolsManager, PricesManager};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::CheckedSub;
@@ -26,18 +31,12 @@ use sp_runtime::{
 	DispatchError, DispatchResult, FixedPointNumber, FixedU128, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
-
-pub use module::*;
-
+pub use weights::WeightInfo;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
-
 pub mod weights;
-use minterest_primitives::arithmetic::sum_with_mult_result;
-use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
-pub use weights::WeightInfo;
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
@@ -52,7 +51,7 @@ pub struct ControllerData<BlockNumber> {
 	pub max_borrow_rate: Rate,
 
 	/// This multiplier represents which share of the supplied value can be used as a collateral for
-	/// loans. For instance, 0.9 allows 90% of total pool value to be used as a collaterae. Must be
+	/// loans. For instance, 0.9 allows 90% of total pool value to be used as a collateral. Must be
 	/// between 0 and 1.
 	pub collateral_factor: Rate,
 
@@ -69,16 +68,12 @@ pub struct ControllerData<BlockNumber> {
 pub struct PauseKeeper {
 	/// Pause mint operation in the pool.
 	pub deposit_paused: bool,
-
 	/// Pause redeem operation in the pool.
 	pub redeem_paused: bool,
-
 	/// Pause borrow operation in the pool.
 	pub borrow_paused: bool,
-
 	/// Pause repay operation in the pool.
 	pub repay_paused: bool,
-
 	/// Pause transfer operation in the pool.
 	pub transfer_paused: bool,
 }
@@ -112,7 +107,6 @@ impl frame_support::traits::Get<PauseKeeper> for GetAllPaused {
 }
 
 type LiquidityPools<T> = liquidity_pools::Module<T>;
-type MinterestModel<T> = minterest_model::Module<T>;
 type RateResult = result::Result<Rate, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 type LiquidityResult = result::Result<(Balance, Balance), DispatchError>;
@@ -122,12 +116,15 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + liquidity_pools::Config + minterest_model::Config {
+	pub trait Config: frame_system::Config + liquidity_pools::Config {
 		/// The overarching event type.
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Provides the basic liquidity pools manager and liquidity pool functionality.
 		type LiquidityPoolsManager: LiquidityPoolsManager<Self::AccountId>;
+
+		/// Provides the basic minterest model functionality.
+		type MinterestModelManager: MinterestModelManager;
 
 		#[pallet::constant]
 		/// Maximum total borrow amount per pool in usd.
@@ -492,7 +489,7 @@ impl<T: Config> Pallet<T> {
 		)
 		.ok()?;
 
-		let borrow_rate = <MinterestModel<T>>::calculate_borrow_interest_rate(pool_id, utilization_rate).ok()?;
+		let borrow_rate = T::MinterestModelManager::calculate_borrow_interest_rate(pool_id, utilization_rate).ok()?;
 
 		// supply_interest_rate = utilization_rate * borrow_rate * (1 - protocol_interest_factor)
 		let supply_rate = Rate::one()
@@ -817,7 +814,7 @@ impl<T: Config> Pallet<T> {
 
 		// Calculate the current borrow interest rate
 		let current_borrow_interest_rate =
-			<MinterestModel<T>>::calculate_borrow_interest_rate(underlying_asset, utilization_rate)?;
+			T::MinterestModelManager::calculate_borrow_interest_rate(underlying_asset, utilization_rate)?;
 
 		let ControllerData {
 			max_borrow_rate,
@@ -922,7 +919,7 @@ impl<T: Config> Pallet<T> {
 	/// - `pool_id`: CurrencyId to calculate parameters for.
 	///
 	/// returns pool parameters calculated for a current block
-	pub fn calculate_current_pool_data(pool_id: CurrencyId) -> result::Result<Pool, DispatchError> {
+	fn calculate_current_pool_data(pool_id: CurrencyId) -> result::Result<Pool, DispatchError> {
 		let current_block_number = <frame_system::Module<T>>::block_number();
 		let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
 		if current_block_number == accrual_block_number_previous {
