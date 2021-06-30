@@ -2,7 +2,7 @@
 use super::*;
 use crate as risk_manager;
 use controller::{ControllerData, PauseKeeper};
-use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, traits::Contains};
+use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, traits::Contains, PalletId};
 use frame_system::EnsureSignedBy;
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::{Pool, PoolUserData};
@@ -13,7 +13,7 @@ use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-	FixedPointNumber, ModuleId,
+	FixedPointNumber,
 };
 use sp_std::cell::RefCell;
 use std::collections::HashMap;
@@ -31,18 +31,18 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		Currencies: orml_currencies::{Module, Call, Event<T>},
-		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
-		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
-		TestMinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
-		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
-		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
-		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
-		TestDex: dex::{Module, Storage, Call, Event<T>},
-		TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Currencies: orml_currencies::{Pallet, Call, Event<T>},
+		Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>},
+		Controller: controller::{Pallet, Storage, Call, Event, Config<T>},
+		TestMinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
+		TestMinterestProtocol: minterest_protocol::{Pallet, Storage, Call, Event<T>},
+		TestPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
+		TestRiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
+		LiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
+		TestDex: dex::{Pallet, Storage, Call, Event<T>},
+		TestMntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -51,12 +51,12 @@ ord_parameter_types! {
 }
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"lqdi/min");
-	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"lqdn/min");
-	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
-	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
-	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
-	pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
+	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"lqdi/min");
+	pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"lqdn/min");
+	pub const MntTokenPalletId: PalletId = PalletId(*b"min/mntt");
+	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
+	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
+	pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
@@ -122,10 +122,6 @@ thread_local! {
 impl Contains<u64> for WhitelistMembers {
 	fn contains(who: &AccountId) -> bool {
 		TWO.with(|v| v.borrow().contains(who))
-	}
-
-	fn sorted_members() -> Vec<u64> {
-		TWO.with(|v| v.borrow().clone())
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
@@ -255,7 +251,7 @@ impl ExtBuilder {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 		orml_tokens::GenesisConfig::<Test> {
-			endowed_accounts: self.endowed_accounts,
+			balances: self.endowed_accounts,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

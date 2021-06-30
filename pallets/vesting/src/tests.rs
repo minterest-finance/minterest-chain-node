@@ -34,7 +34,7 @@ fn vesting_from_chain_spec_works() {
 
 		// // Should be usable 10 MNT from Private Sale bucket.
 		// (-1 written due to math problems)
-		let expected_event = Event::vesting(crate::Event::Claimed(CHARLIE::get(), 10 * DOLLARS - 1));
+		let expected_event = Event::Vesting(crate::Event::Claimed(CHARLIE::get(), 10 * DOLLARS - 1));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		assert_ok!(PalletBalances::ensure_can_withdraw(
@@ -86,7 +86,7 @@ fn vested_transfer_works() {
 		// There are 1 active vesting schedule.
 		assert_eq!(Vesting::vesting_schedules(&BOB::get()), vec![team_schedule.clone()]);
 
-		let vested_event = Event::vesting(crate::Event::VestingScheduleAdded(BOB::get(), team_schedule));
+		let vested_event = Event::Vesting(crate::Event::VestingScheduleAdded(BOB::get(), team_schedule));
 		assert!(System::events().iter().any(|record| record.event == vested_event));
 
 		// Team vesting bucket balance equal 989.8 MNT.
@@ -147,15 +147,16 @@ fn add_new_vesting_schedule_merges_with_current_locked_balance_and_until() {
 			vec![team_schedule.clone(), team_schedule_2.clone()]
 		);
 
+		// PalletBalances::locks(&BOB::get())
 		// Should be locked 10 MNT from first team schedule and 7 MNT from second team schedule.
 		// (-2 written due to math problems)
 		assert_eq!(
-			PalletBalances::locks(&BOB::get()).pop(),
-			Some(BalanceLock {
+			PalletBalances::locks(&BOB::get())[0],
+			BalanceLock {
 				id: VESTING_LOCK_ID,
 				amount: 17 * DOLLARS - 2,
 				reasons: Reasons::All,
-			})
+			}
 		);
 	});
 }
@@ -263,12 +264,12 @@ fn vested_transfer_and_remove_fails_if_incorrect_bucket_type() {
 		// After a failed deletion, the schedule should remain on the account.
 		assert_eq!(Vesting::vesting_schedules(&CHARLIE::get()), vec![private_sale_schedule]);
 		assert_eq!(
-			PalletBalances::locks(&CHARLIE::get()).pop(),
-			Some(BalanceLock {
+			PalletBalances::locks(&CHARLIE::get())[0],
+			BalanceLock {
 				id: VESTING_LOCK_ID,
 				amount: 20 * DOLLARS,
 				reasons: Reasons::All,
-			})
+			}
 		);
 	});
 }

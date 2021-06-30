@@ -1,4 +1,4 @@
-//! # Risk Manager Module
+//! # Risk Manager Pallet
 //!
 //! ## Overview
 //!
@@ -76,8 +76,8 @@ pub struct RiskManagerData {
 	pub liquidation_fee: Rate,
 }
 
-type LiquidityPools<T> = liquidity_pools::Module<T>;
-type MinterestProtocol<T> = minterest_protocol::Module<T>;
+type LiquidityPools<T> = liquidity_pools::Pallet<T>;
+type MinterestProtocol<T> = minterest_protocol::Pallet<T>;
 
 #[frame_support::pallet]
 pub mod module {
@@ -761,7 +761,7 @@ impl<T: Config> ValidateUnsigned for Pallet<T> {
 		match call {
 			Call::liquidate(who, pool_id) => ValidTransaction::with_tag_prefix("RiskManagerOffchainWorker")
 				.priority(T::UnsignedPriority::get())
-				.and_provides((<frame_system::Module<T>>::block_number(), pool_id, who))
+				.and_provides((<frame_system::Pallet<T>>::block_number(), pool_id, who))
 				.longevity(64_u64)
 				.propagate(true)
 				.build(),

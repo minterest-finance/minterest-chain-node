@@ -1,4 +1,4 @@
-//! # Minterest Model Module
+//! # Minterest Model Pallet
 //!
 //! ## Overview
 //!

@@ -1,4 +1,4 @@
-//! # Liquidity Pools Module
+//! # Liquidity Pools Pallet
 //!
 //! ## Overview
 //!

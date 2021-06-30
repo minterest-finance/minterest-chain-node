@@ -18,8 +18,8 @@ frame-system = { git = "https://github.com/paritytech/substrate", branch = "polk
 minterest-primitives = { path = "../../primitives", default-features = false }
 
 [dev-dependencies]
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5", default-features = false }
-pallet-balances = "3.0.0"
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5"}
 test-helper = { path = "../../test-helper" }
 
 [features]

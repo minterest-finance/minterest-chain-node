@@ -17,8 +17,7 @@ pub(crate) use pallet_traits::{PoolsManager, PricesManager};
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-	FixedPointNumber,
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One}
 };
 pub use test_helper::*;
 
@@ -27,10 +26,10 @@ ord_parameter_types! {
 }
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"lqdy/min");
-	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"lqdn/min");
-	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
-	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
+	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"lqdy/min");
+	pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"lqdn/min");
+	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
+	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
@@ -65,13 +64,13 @@ construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		System: frame_system::{Module, Call, Event<T>},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		Currencies: orml_currencies::{Module, Call, Event<T>},
-		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
-		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
-		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
-		TestDex: dex::{Module, Storage, Call, Event<T>},
+		System: frame_system::{Pallet, Call, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
+		Currencies: orml_currencies::{Pallet, Call, Event<T>},
+		Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>},
+		TestPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
+		LiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
+		TestDex: dex::{Pallet, Storage, Call, Event<T>},
 	}
 );
 
@@ -106,7 +105,7 @@ impl ExtBuilder {
 			.unwrap();
 
 		orml_tokens::GenesisConfig::<Runtime> {
-			endowed_accounts: self.endowed_accounts,
+			balances: self.endowed_accounts,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

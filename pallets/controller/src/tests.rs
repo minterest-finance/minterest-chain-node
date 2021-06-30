@@ -464,7 +464,7 @@ fn set_protocol_interest_factor_should_work() {
 			DOT,
 			Rate::saturating_from_integer(2)
 		));
-		let expected_event = Event::controller(crate::Event::InterestFactorChanged);
+		let expected_event = Event::Controller(crate::Event::InterestFactorChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(
 			Controller::controller_dates(DOT).protocol_interest_factor,
@@ -477,7 +477,7 @@ fn set_protocol_interest_factor_should_work() {
 			DOT,
 			Rate::zero()
 		));
-		let expected_event = Event::controller(crate::Event::InterestFactorChanged);
+		let expected_event = Event::Controller(crate::Event::InterestFactorChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(
 			Controller::controller_dates(DOT).protocol_interest_factor,
@@ -506,7 +506,7 @@ fn set_max_borrow_rate_should_work() {
 			DOT,
 			Rate::saturating_from_integer(2)
 		));
-		let expected_event = Event::controller(crate::Event::MaxBorrowRateChanged);
+		let expected_event = Event::Controller(crate::Event::MaxBorrowRateChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(
 			Controller::controller_dates(DOT).max_borrow_rate,
@@ -541,7 +541,7 @@ fn set_collateral_factor_should_work() {
 			DOT,
 			Rate::saturating_from_rational(1, 2)
 		));
-		let expected_event = Event::controller(crate::Event::CollateralFactorChanged);
+		let expected_event = Event::Controller(crate::Event::CollateralFactorChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(
 			Controller::controller_dates(DOT).collateral_factor,
@@ -584,23 +584,23 @@ fn pause_operation_should_work() {
 		assert!(!Controller::pause_keepers(&DOT).transfer_paused);
 
 		assert_ok!(Controller::pause_operation(alice_origin(), DOT, Operation::Deposit));
-		let expected_event = Event::controller(crate::Event::OperationIsPaused(DOT, Operation::Deposit));
+		let expected_event = Event::Controller(crate::Event::OperationIsPaused(DOT, Operation::Deposit));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		assert_ok!(Controller::pause_operation(alice_origin(), DOT, Operation::Redeem));
-		let expected_event = Event::controller(crate::Event::OperationIsPaused(DOT, Operation::Redeem));
+		let expected_event = Event::Controller(crate::Event::OperationIsPaused(DOT, Operation::Redeem));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		assert_ok!(Controller::pause_operation(alice_origin(), DOT, Operation::Borrow));
-		let expected_event = Event::controller(crate::Event::OperationIsPaused(DOT, Operation::Borrow));
+		let expected_event = Event::Controller(crate::Event::OperationIsPaused(DOT, Operation::Borrow));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		assert_ok!(Controller::pause_operation(alice_origin(), DOT, Operation::Repay));
-		let expected_event = Event::controller(crate::Event::OperationIsPaused(DOT, Operation::Repay));
+		let expected_event = Event::Controller(crate::Event::OperationIsPaused(DOT, Operation::Repay));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		assert_ok!(Controller::pause_operation(alice_origin(), DOT, Operation::Transfer));
-		let expected_event = Event::controller(crate::Event::OperationIsPaused(DOT, Operation::Transfer));
+		let expected_event = Event::Controller(crate::Event::OperationIsPaused(DOT, Operation::Transfer));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		assert!(Controller::pause_keepers(&DOT).deposit_paused);
@@ -634,23 +634,23 @@ fn resume_operation_should_work() {
 			assert!(Controller::pause_keepers(&KSM).transfer_paused);
 
 			assert_ok!(Controller::resume_operation(alice_origin(), KSM, Operation::Deposit));
-			let expected_event = Event::controller(crate::Event::OperationIsUnPaused(KSM, Operation::Deposit));
+			let expected_event = Event::Controller(crate::Event::OperationIsUnPaused(KSM, Operation::Deposit));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(Controller::resume_operation(alice_origin(), KSM, Operation::Redeem));
-			let expected_event = Event::controller(crate::Event::OperationIsUnPaused(KSM, Operation::Redeem));
+			let expected_event = Event::Controller(crate::Event::OperationIsUnPaused(KSM, Operation::Redeem));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(Controller::resume_operation(alice_origin(), KSM, Operation::Borrow));
-			let expected_event = Event::controller(crate::Event::OperationIsUnPaused(KSM, Operation::Borrow));
+			let expected_event = Event::Controller(crate::Event::OperationIsUnPaused(KSM, Operation::Borrow));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(Controller::resume_operation(alice_origin(), KSM, Operation::Repay));
-			let expected_event = Event::controller(crate::Event::OperationIsUnPaused(KSM, Operation::Repay));
+			let expected_event = Event::Controller(crate::Event::OperationIsUnPaused(KSM, Operation::Repay));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(Controller::resume_operation(alice_origin(), KSM, Operation::Transfer));
-			let expected_event = Event::controller(crate::Event::OperationIsUnPaused(KSM, Operation::Transfer));
+			let expected_event = Event::Controller(crate::Event::OperationIsUnPaused(KSM, Operation::Transfer));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert!(!Controller::pause_keepers(&KSM).deposit_paused);
@@ -674,7 +674,7 @@ fn resume_operation_should_work() {
 fn switch_whitelist_mode_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(Controller::switch_whitelist_mode(alice_origin()));
-		let expected_event = Event::controller(crate::Event::ProtocolOperationModeSwitched(true));
+		let expected_event = Event::Controller(crate::Event::ProtocolOperationModeSwitched(true));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(Controller::whitelist_mode());
 
@@ -701,12 +701,12 @@ fn set_borrow_cap_should_work() {
 
 			// ALICE set borrow cap to 10.
 			assert_ok!(Controller::set_borrow_cap(alice_origin(), DOT, Some(dollars(10))));
-			let expected_event = Event::controller(crate::Event::BorrowCapChanged(DOT, Some(dollars(10))));
+			let expected_event = Event::Controller(crate::Event::BorrowCapChanged(DOT, Some(dollars(10))));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// ALICE is able to change borrow cap to 9999
 			assert_ok!(Controller::set_borrow_cap(alice_origin(), DOT, Some(9999_u128)));
-			let expected_event = Event::controller(crate::Event::BorrowCapChanged(DOT, Some(9999_u128)));
+			let expected_event = Event::Controller(crate::Event::BorrowCapChanged(DOT, Some(9999_u128)));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// Unable to set borrow cap greater than MAX_BORROW_CAP.
@@ -717,7 +717,7 @@ fn set_borrow_cap_should_work() {
 
 			// Alice is able to set zero borrow cap.
 			assert_ok!(Controller::set_borrow_cap(alice_origin(), DOT, Some(0_u128)));
-			let expected_event = Event::controller(crate::Event::BorrowCapChanged(DOT, Some(0_u128)));
+			let expected_event = Event::Controller(crate::Event::BorrowCapChanged(DOT, Some(0_u128)));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 		});
 }
@@ -741,12 +741,12 @@ fn set_protocol_interest_threshold_should_work() {
 				DOT,
 				10_u128
 			));
-			let expected_event = Event::controller(crate::Event::ProtocolInterestThresholdChanged(DOT, 10_u128));
+			let expected_event = Event::Controller(crate::Event::ProtocolInterestThresholdChanged(DOT, 10_u128));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// Alice is able to set zero protocol interest threshold.
 			assert_ok!(Controller::set_protocol_interest_threshold(alice_origin(), DOT, 0_u128));
-			let expected_event = Event::controller(crate::Event::ProtocolInterestThresholdChanged(DOT, 0_u128));
+			let expected_event = Event::Controller(crate::Event::ProtocolInterestThresholdChanged(DOT, 0_u128));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 		});
 }

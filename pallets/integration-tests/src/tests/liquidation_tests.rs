@@ -108,7 +108,7 @@ mod tests {
 				current sum_borrow = $175_000_000 - $52_500_000 = $122_500_000 < sum_collateral = $138_375_000 * 0.9 = $124_537_500;
 				NOTE: 0.3 - temporary factor for partial liquidation;
 				 */
-				let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
+				let expected_event = Event::TestRiskManager(risk_manager::Event::LiquidateUnsafeLoan(
 					BOB,
 					52_500_003_307_499_999_999_999_924, // repay_amount = $52_500_000;
 					BTC,                                // liquidated_pool_id;
@@ -177,7 +177,7 @@ mod tests {
 				// Call complete liquidation:
 				assert_ok!(TestRiskManager::liquidate_unsafe_loan(BOB, BTC));
 
-				let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
+				let expected_event = Event::TestRiskManager(risk_manager::Event::LiquidateUnsafeLoan(
 					BOB,
 					52_010_835_370_810_769_596_505, // repay_amount = $52_010;
 					BTC,                            // liquidated_pool_id;
@@ -277,7 +277,7 @@ mod tests {
 				set_prices_for_assets(vec![(BTC, Rate::saturating_from_integer(100))]);
 				System::set_block_number(40);
 				assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, BTC));
-				let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
+				let expected_event = Event::TestRiskManager(risk_manager::Event::LiquidateUnsafeLoan(
 					ALICE,
 					190_476_190_476_190_476_190_476, // repay_amount = $190_476;
 					BTC,                             // liquidated_pool_id;

@@ -949,7 +949,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits 0.4.1-dev",
  "orml-utilities 0.4.1-dev",
- "pallet-balances 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
  "serde",
@@ -1436,12 +1436,12 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits 0.4.1-dev",
- "pallet-balances 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
  "serde",
- "sp-core 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-io 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-core 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "test-helper",
@@ -1789,25 +1789,6 @@ dependencies = [
 [[package]]
 name = "frame-benchmarking"
 version = "3.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70fe99487f84579a3f2c4ba52650fec875492eea41be0e4eea8019187f105052"
-dependencies = [
- "frame-support 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-system 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "linregress",
- "parity-scale-codec",
- "paste",
- "sp-api 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-io 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime-interface 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-std 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-storage 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "frame-benchmarking"
-version = "3.1.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
@@ -1831,7 +1812,7 @@ source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c5
 dependencies = [
  "Inflector",
  "chrono",
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "frame-benchmarking",
  "handlebars",
  "parity-scale-codec",
  "sc-cli",
@@ -2049,7 +2030,7 @@ name = "frame-system-benchmarking"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "frame-benchmarking",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "parity-scale-codec",
@@ -2904,7 +2885,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits 0.4.1-dev",
  "orml-utilities 0.4.1-dev",
- "pallet-balances 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
  "risk-manager",
@@ -3921,7 +3902,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits 0.4.1-dev",
  "orml-utilities 0.4.1-dev",
- "pallet-balances 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
  "serde",
@@ -3943,7 +3924,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits 0.4.1-dev",
  "orml-utilities 0.4.1-dev",
- "pallet-balances 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
  "serde",
@@ -4200,7 +4181,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits 0.4.1-dev",
  "orml-utilities 0.4.1-dev",
- "pallet-balances 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
  "serde",
@@ -4243,7 +4224,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits 0.4.1-dev",
  "orml-utilities 0.4.1-dev",
- "pallet-balances 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
  "serde",
@@ -4279,7 +4260,7 @@ name = "minterest-service"
 version = "0.5.0"
 dependencies = [
  "controller",
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "frame-benchmarking",
  "frame-system-rpc-runtime-api",
  "hex-literal",
  "liquidation-pools",
@@ -4420,13 +4401,13 @@ dependencies = [
  "orml-tokens",
  "orml-traits 0.4.1-dev",
  "orml-utilities 0.4.1-dev",
- "pallet-balances 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
  "serde",
  "sp-arithmetic 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
- "sp-core 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-io 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-core 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "test-helper",
@@ -4469,7 +4450,7 @@ dependencies = [
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "minterest-primitives",
  "orml-traits 0.4.1-dev",
- "pallet-balances 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
  "serde",
@@ -4487,7 +4468,7 @@ dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "minterest-primitives",
- "pallet-balances 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-balances",
  "parity-scale-codec",
  "serde",
  "sp-core 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
@@ -4636,7 +4617,7 @@ dependencies = [
  "controller",
  "controller-rpc-runtime-api",
  "dex",
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "frame-benchmarking",
  "frame-executive",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
@@ -4660,7 +4641,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits 0.4.1-dev",
  "pallet-aura",
- "pallet-balances 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "pallet-balances",
  "pallet-collective",
  "pallet-grandpa",
  "pallet-membership",
@@ -4871,7 +4852,7 @@ name = "orml-benchmarking"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library#f718008a3ea88c9ece63f89fb1208f2e80522095"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "frame-benchmarking",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "parity-scale-codec",
  "paste",
@@ -5081,24 +5062,9 @@ dependencies = [
 [[package]]
 name = "pallet-balances"
 version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41aaeaf084e594273f82bcbf96416ef1fcab602e15dd1df04b9930eceb2eb518"
-dependencies = [
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-support 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-system 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-scale-codec",
- "serde",
- "sp-runtime 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-std 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "pallet-balances"
-version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "frame-benchmarking",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "log",
@@ -5113,7 +5079,7 @@ name = "pallet-collective"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "frame-benchmarking",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "log",
@@ -5129,7 +5095,7 @@ name = "pallet-grandpa"
 version = "3.1.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "frame-benchmarking",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "log",
@@ -5151,7 +5117,7 @@ name = "pallet-membership"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "frame-benchmarking",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "log",
@@ -5212,7 +5178,7 @@ name = "pallet-timestamp"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "frame-benchmarking",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "impl-trait-for-tuples 0.2.1",
@@ -6286,7 +6252,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits 0.4.1-dev",
  "orml-utilities 0.4.1-dev",
- "pallet-balances 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
  "serde",

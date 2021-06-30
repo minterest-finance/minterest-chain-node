@@ -5,12 +5,11 @@ use frame_support::{assert_noop, assert_ok};
 use mock::{Event, *};
 use sp_core::offchain::{
 	testing::{TestOffchainExt, TestTransactionPoolExt},
-	OffchainExt, TransactionPoolExt,
+	OffchainDbExt, OffchainWorkerExt, TransactionPoolExt,
 };
 use sp_runtime::traits::{BadOrigin, Zero};
 
 use minterest_primitives::Price;
-use test_helper::offchain_ext::OffChainExtWithHooks;
 
 #[test]
 fn offchain_worker_balancing_test() {
@@ -24,10 +23,10 @@ fn offchain_worker_balancing_test() {
 		.liquidity_pool_balance(ETH, 100_000 * DOLLARS)
 		.build();
 	let (offchain, _) = TestOffchainExt::new();
-	let offchain_ext = OffChainExtWithHooks::new(offchain, None);
 
 	let (pool, trans_pool_state) = TestTransactionPoolExt::new();
-	ext.register_extension(OffchainExt::new(offchain_ext));
+	ext.register_extension(OffchainDbExt::new(offchain.clone()));
+	ext.register_extension(OffchainWorkerExt::new(offchain));
 	ext.register_extension(TransactionPoolExt::new(pool));
 
 	ext.execute_with(|| {
@@ -93,7 +92,7 @@ fn set_deviation_threshold_should_work() {
 			TestLiquidationPools::liquidation_pools_data(DOT).deviation_threshold,
 			Rate::zero()
 		);
-		let expected_event = Event::liquidation_pools(crate::Event::DeviationThresholdChanged(DOT, Rate::zero()));
+		let expected_event = Event::TestLiquidationPools(crate::Event::DeviationThresholdChanged(DOT, Rate::zero()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 1.0
@@ -106,7 +105,7 @@ fn set_deviation_threshold_should_work() {
 			TestLiquidationPools::liquidation_pools_data(DOT).deviation_threshold,
 			Rate::one()
 		);
-		let expected_event = Event::liquidation_pools(crate::Event::DeviationThresholdChanged(DOT, Rate::one()));
+		let expected_event = Event::TestLiquidationPools(crate::Event::DeviationThresholdChanged(DOT, Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can not be set grater than 1.0
@@ -138,7 +137,7 @@ fn set_balance_ratio_should_work() {
 			TestLiquidationPools::liquidation_pools_data(DOT).balance_ratio,
 			Rate::zero()
 		);
-		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(DOT, Rate::zero()));
+		let expected_event = Event::TestLiquidationPools(crate::Event::BalanceRatioChanged(DOT, Rate::zero()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 1.0
@@ -151,7 +150,7 @@ fn set_balance_ratio_should_work() {
 			TestLiquidationPools::liquidation_pools_data(DOT).balance_ratio,
 			Rate::one()
 		);
-		let expected_event = Event::liquidation_pools(crate::Event::BalanceRatioChanged(DOT, Rate::one()));
+		let expected_event = Event::TestLiquidationPools(crate::Event::BalanceRatioChanged(DOT, Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can not be set grater than 1.0
@@ -187,7 +186,8 @@ fn set_max_ideal_balance_should_work() {
 			TestLiquidationPools::liquidation_pools_data(DOT).max_ideal_balance,
 			Some(Balance::zero())
 		);
-		let expected_event = Event::liquidation_pools(crate::Event::MaxIdealBalanceChanged(DOT, Some(Balance::zero())));
+		let expected_event =
+			Event::TestLiquidationPools(crate::Event::MaxIdealBalanceChanged(DOT, Some(Balance::zero())));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to None
@@ -196,7 +196,7 @@ fn set_max_ideal_balance_should_work() {
 			TestLiquidationPools::liquidation_pools_data(DOT).max_ideal_balance,
 			None
 		);
-		let expected_event = Event::liquidation_pools(crate::Event::MaxIdealBalanceChanged(DOT, None));
+		let expected_event = Event::TestLiquidationPools(crate::Event::MaxIdealBalanceChanged(DOT, None));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Root or half MinterestCouncil.
@@ -271,7 +271,7 @@ fn transfer_to_liquidation_pool_should_work() {
 			assert_ok!(TestLiquidationPools::transfer_to_liquidation_pool(admin(), DOT, 20_000));
 
 			let expected_event =
-				Event::liquidation_pools(crate::Event::TransferToLiquidationPool(DOT, 20_000, who.unwrap()));
+				Event::TestLiquidationPools(crate::Event::TransferToLiquidationPool(DOT, 20_000, who.unwrap()));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_eq!(TestLiquidationPools::get_pool_available_liquidity(DOT), 520_000);
@@ -432,7 +432,13 @@ fn balance_liquidation_pools_should_work() {
 			let our_events = System::events()
 				.into_iter()
 				.map(|r| r.event)
-				.filter_map(|e| if let Event::dex(inner) = e { Some(inner) } else { None })
+				.filter_map(|e| {
+					if let Event::TestDex(inner) = e {
+						Some(inner)
+					} else {
+						None
+					}
+				})
 				.collect::<Vec<_>>();
 			let expected_events = vec![
 				dex::Event::Swap(
@@ -515,7 +521,13 @@ fn balance_liquidation_pools_two_pools_should_work_test() {
 			let our_events = System::events()
 				.into_iter()
 				.map(|r| r.event)
-				.filter_map(|e| if let Event::dex(inner) = e { Some(inner) } else { None })
+				.filter_map(|e| {
+					if let Event::TestDex(inner) = e {
+						Some(inner)
+					} else {
+						None
+					}
+				})
 				.collect::<Vec<_>>();
 			let expected_events = vec![dex::Event::Swap(
 				TestLiquidationPools::pools_account_id(),
