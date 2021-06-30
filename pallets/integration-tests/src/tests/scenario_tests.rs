@@ -13,23 +13,23 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, DOT, ONE_HUNDRED)
-			.user_balance(ALICE, DOT, ONE_HUNDRED)
-			.pool_user_data(DOT, ALICE, BALANCE_ZERO, RATE_ZERO, true, 0)
+			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
 			.build()
 			.execute_with(|| {
 				// INITIAL PARAMS
 				/* ------------------------------------------------------------------------------ */
 				System::set_block_number(0);
 
-				let alice_dot_free_balance_start: Balance = ONE_HUNDRED;
-				let alice_m_dot_free_balance_start: Balance = BALANCE_ZERO;
-				let alice_dot_total_borrow_start: Balance = BALANCE_ZERO;
+				let alice_dot_free_balance_start: Balance = ONE_HUNDRED_THOUSAND;
+				let alice_m_dot_free_balance_start: Balance = Balance::zero();
+				let alice_dot_total_borrow_start: Balance = Balance::zero();
 
-				let pool_available_liquidity_start: Balance = BALANCE_ZERO;
-				let pool_m_dot_total_issuance_start: Balance = BALANCE_ZERO;
-				let pool_total_protocol_interest_start: Balance = BALANCE_ZERO;
-				let pool_dot_total_borrow_start: Balance = BALANCE_ZERO;
+				let pool_available_liquidity_start: Balance = Balance::zero();
+				let pool_m_dot_total_issuance_start: Balance = Balance::zero();
+				let pool_total_protocol_interest_start: Balance = Balance::zero();
+				let pool_dot_total_borrow_start: Balance = Balance::zero();
 
 				// ACTION: DEPOSIT UNDERLYING
 				/* ------------------------------------------------------------------------------ */
@@ -63,7 +63,7 @@ mod tests {
 				// Checking free balance DOT && MDOT
 				// Admin gets 100_000 wrapped token after adding liquidity by exchange rate 1:1
 				// ADMIN:
-				assert_eq!(Currencies::free_balance(DOT, &ADMIN), BALANCE_ZERO);
+				assert_eq!(Currencies::free_balance(DOT, &ADMIN), Balance::zero());
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ADMIN),
 					admin_deposit_amount_block_number_0
@@ -82,12 +82,12 @@ mod tests {
 				let (borrow_rate, _) =
 					TestController::get_liquidity_pool_borrow_and_supply_rates(DOT).unwrap_or_default();
 				assert_eq!(TestController::controller_dates(DOT).last_interest_accrued_block, 0);
-				assert_eq!(borrow_rate, RATE_ZERO);
+				assert_eq!(borrow_rate, Rate::zero());
 
 				// Checking DOT pool User params
 				// ADMIN:
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, BALANCE_ZERO);
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, RATE_ZERO);
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, Rate::zero());
 
 				System::set_block_number(1);
 
@@ -124,7 +124,7 @@ mod tests {
 
 				// Checking free balance DOT && MDOT
 				// ADMIN:
-				assert_eq!(Currencies::free_balance(DOT, &ADMIN), BALANCE_ZERO);
+				assert_eq!(Currencies::free_balance(DOT, &ADMIN), Balance::zero());
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ADMIN),
 					admin_deposit_amount_block_number_0
@@ -151,21 +151,21 @@ mod tests {
 					TestPools::pools(DOT).total_protocol_interest,
 					pool_total_protocol_interest_start
 				);
-				assert_eq!(TestPools::pools(DOT).total_borrowed, BALANCE_ZERO);
+				assert_eq!(TestPools::pools(DOT).total_borrowed, Balance::zero());
 
 				// Checking controller Storage params
 				assert_eq!(TestController::controller_dates(DOT).last_interest_accrued_block, 1);
 				let (borrow_rate, _) =
 					TestController::get_liquidity_pool_borrow_and_supply_rates(DOT).unwrap_or_default();
-				assert_eq!(borrow_rate, RATE_ZERO);
+				assert_eq!(borrow_rate, Rate::zero());
 
 				// Checking DOT pool User params
 				// ADMIN:
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, BALANCE_ZERO);
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, RATE_ZERO);
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, Rate::zero());
 				// ALICE:
-				assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, BALANCE_ZERO);
-				assert_eq!(TestPools::pool_user_data(DOT, ALICE).interest_index, RATE_ZERO);
+				assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ALICE).interest_index, Rate::zero());
 
 				System::set_block_number(2);
 
@@ -198,7 +198,7 @@ mod tests {
 
 				// Checking free balance DOT && MDOT
 				// ADMIN:
-				assert_eq!(Currencies::free_balance(DOT, &ADMIN), BALANCE_ZERO);
+				assert_eq!(Currencies::free_balance(DOT, &ADMIN), Balance::zero());
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ADMIN),
 					admin_deposit_amount_block_number_0
@@ -244,8 +244,8 @@ mod tests {
 
 				// Checking DOT pool User params
 				// ADMIN:
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, BALANCE_ZERO);
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, RATE_ZERO);
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, Rate::zero());
 				// ALICE:
 				// User total borrowed changed: 0 -> 30 000
 				let alice_dot_total_borrow_block_number_2: Balance =
@@ -288,7 +288,7 @@ mod tests {
 
 				// Checking free balance DOT && MDOT
 				// ADMIN:
-				assert_eq!(Currencies::free_balance(DOT, &ADMIN), BALANCE_ZERO);
+				assert_eq!(Currencies::free_balance(DOT, &ADMIN), Balance::zero());
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ADMIN),
 					admin_deposit_amount_block_number_0
@@ -341,8 +341,8 @@ mod tests {
 
 				// Checking DOT pool User params
 				// ADMIN:
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, BALANCE_ZERO);
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, RATE_ZERO);
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, Rate::zero());
 				// ALICE:
 				let alice_dot_total_borrow_block_number_3: Balance = alice_dot_total_borrow_block_number_2
 					+ borrow_accumulated_block_number_3
@@ -391,7 +391,7 @@ mod tests {
 				assert_eq!(Currencies::total_issuance(MDOT), pool_m_dot_free_balance_block_number_1);
 				// Checking free balance DOT && MDOT for ADMIN
 				// ADMIN:
-				assert_eq!(Currencies::free_balance(DOT, &ADMIN), BALANCE_ZERO);
+				assert_eq!(Currencies::free_balance(DOT, &ADMIN), Balance::zero());
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ADMIN),
 					admin_deposit_amount_block_number_0
@@ -450,10 +450,10 @@ mod tests {
 
 				// Checking user pool Storage params
 				// ADMIN:
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, BALANCE_ZERO);
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, RATE_ZERO);
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, Rate::zero());
 				// ALICE:
-				assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, BALANCE_ZERO);
+				assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, Balance::zero());
 				let user_interest_index_block_number_4: Rate = pool_borrow_index_block_number_4;
 				assert_eq!(
 					TestPools::pool_user_data(DOT, ALICE).interest_index,
@@ -486,11 +486,11 @@ mod tests {
 
 				// Checking free balance MDOT in pool.
 				// Expected: 100_00
-				assert_eq!(Currencies::total_issuance(MDOT), ONE_HUNDRED);
+				assert_eq!(Currencies::total_issuance(MDOT), ONE_HUNDRED_THOUSAND);
 
 				// Checking free balance DOT && MDOT
 				// ADMIN:
-				assert_eq!(Currencies::free_balance(DOT, &ADMIN), BALANCE_ZERO);
+				assert_eq!(Currencies::free_balance(DOT, &ADMIN), Balance::zero());
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ADMIN),
 					admin_deposit_amount_block_number_0
@@ -502,7 +502,7 @@ mod tests {
 					alice_dot_free_balance_block_number_4 + alice_underlining_amount
 				);
 				// Expected: 0
-				assert_eq!(Currencies::free_balance(MDOT, &ALICE), BALANCE_ZERO);
+				assert_eq!(Currencies::free_balance(MDOT, &ALICE), Balance::zero());
 
 				// Checking pool Storage params
 				// Expected: 1,000000002531250003
@@ -525,18 +525,18 @@ mod tests {
 
 				// Checking user pool Storage params
 				// ADMIN:
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, BALANCE_ZERO);
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, RATE_ZERO);
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, Rate::zero());
 				// ALICE:
 				// Expected: 0
-				assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, BALANCE_ZERO);
+				assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, Balance::zero());
 				// Expected: 1,000000002531250003
 				assert_eq!(
 					TestPools::pool_user_data(DOT, ALICE).interest_index,
 					user_interest_index_block_number_4
 				);
 
-				assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 20 * DOLLARS,));
+				assert_ok!(MinterestProtocol::deposit_underlying(alice_origin(), DOT, 20 * DOLLARS,));
 			});
 	}
 }

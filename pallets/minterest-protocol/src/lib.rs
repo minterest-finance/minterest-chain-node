@@ -23,7 +23,7 @@ use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
 	Borrowing, ControllerManager, LiquidationPoolsManager, LiquidityPoolsManager, MinterestModelAPI, MntManager,
-	PoolsManager, RiskManagerAPI, WhitelistManager,
+	PoolsManager, RiskManager, WhitelistManager,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -98,10 +98,10 @@ pub mod module {
 		type ControllerManager: ControllerManager<Self::AccountId>;
 
 		/// Public API of risk manager pallet.
-		type RiskManagerAPI: RiskManagerAPI;
+		type RiskManagerAPI: RiskManager;
 
 		/// Public API of risk manager pallet.
-		type MinterestModelAPI: MinterestModelAPI;
+		type MinterestModelAPI: MinterestModelManager;
 
 		/// The origin which may create pools. Root or
 		/// Half Minterest Council can always do this.

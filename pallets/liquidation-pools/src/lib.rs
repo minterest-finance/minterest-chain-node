@@ -451,7 +451,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Collects information about required transactions on DEX.
-	pub fn collects_sales_list() -> sp_std::result::Result<Vec<Sales>, DispatchError> {
+	fn collects_sales_list() -> sp_std::result::Result<Vec<Sales>, DispatchError> {
 		// Collecting information about the current state of liquidation pools.
 		let (mut information_vec, mut sum_oversupply, mut sum_shortfall) =
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
@@ -577,7 +577,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Temporary function
-	pub fn get_amounts(
+	fn get_amounts(
 		supply_pool_id: CurrencyId,
 		target_pool_id: CurrencyId,
 		amount: Balance,
@@ -602,7 +602,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// Returns minimum of (liquidity_pool_balance * balance_ratio * oracle_price) and
 	/// max_ideal_balance
-	pub fn calculate_ideal_balance(pool_id: CurrencyId) -> BalanceResult {
+	fn calculate_ideal_balance(pool_id: CurrencyId) -> BalanceResult {
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 		let balance_ratio = Self::liquidation_pools_data(pool_id).balance_ratio;
 
@@ -619,11 +619,11 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	pub fn is_valid_deviation_threshold(deviation_threshold: Rate) -> bool {
+	fn is_valid_deviation_threshold(deviation_threshold: Rate) -> bool {
 		Rate::zero() <= deviation_threshold && deviation_threshold <= Rate::one()
 	}
 
-	pub fn is_valid_balance_ratio(balance_ratio: Rate) -> bool {
+	fn is_valid_balance_ratio(balance_ratio: Rate) -> bool {
 		Rate::zero() <= balance_ratio && balance_ratio <= Rate::one()
 	}
 }

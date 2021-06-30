@@ -10,7 +10,7 @@ use minterest_model::MinterestModelData;
 pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
-use pallet_traits::{PricesManager, RiskManagerAPI};
+use pallet_traits::{PricesManager, RiskManager};
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
@@ -18,8 +18,6 @@ use sp_runtime::{
 	FixedPointNumber, ModuleId,
 };
 pub use test_helper::*;
-
-pub type AccountId = u64;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -36,7 +34,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
 		TestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
@@ -63,6 +61,7 @@ parameter_types! {
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
+
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
 mock_impl_orml_currencies_config!(Test);
@@ -78,7 +77,7 @@ mock_impl_whitelist_module_config!(Test, OneAlice);
 
 pub struct TestRiskManager;
 
-impl RiskManagerAPI for TestRiskManager {
+impl RiskManager for TestRiskManager {
 	fn create_pool(
 		_currency_id: CurrencyId,
 		_max_attempts: u8,
@@ -102,19 +101,29 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
-pub const ALICE: AccountId = 1;
-pub fn alice() -> Origin {
-	Origin::signed(ALICE)
+thread_local! {
+	static TWO: RefCell<Vec<u64>> = RefCell::new(vec![2]);
 }
-pub const BOB: AccountId = 2;
-pub fn bob() -> Origin {
-	Origin::signed(BOB)
+
+pub struct WhitelistMembers;
+impl Contains<u64> for WhitelistMembers {
+	fn contains(who: &AccountId) -> bool {
+		TWO.with(|v| v.borrow().contains(who))
+	}
+
+	fn sorted_members() -> Vec<u64> {
+		TWO.with(|v| v.borrow().clone())
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add(new: &u128) {
+		TWO.with(|v| {
+			let mut members = v.borrow_mut();
+			members.push(*new);
+			members.sort();
+		})
+	}
 }
-pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
-pub const ONE_MILL_DOLLARS: Balance = 1_000_000 * DOLLARS;
-pub const ONE_HUNDRED_DOLLARS: Balance = 100 * DOLLARS;
-pub const TEN_THOUSAND_DOLLARS: Balance = 10_000 * DOLLARS;
-pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -128,17 +137,17 @@ impl Default for ExtBuilder {
 		Self {
 			endowed_accounts: vec![
 				// seed: initial DOTs
-				(ALICE, DOT, ONE_HUNDRED_DOLLARS),
-				(ALICE, ETH, ONE_HUNDRED_DOLLARS),
-				(ALICE, KSM, ONE_HUNDRED_DOLLARS),
-				(BOB, DOT, ONE_HUNDRED_DOLLARS),
+				(ALICE, DOT, ONE_HUNDRED),
+				(ALICE, ETH, ONE_HUNDRED),
+				(ALICE, KSM, ONE_HUNDRED),
+				(BOB, DOT, ONE_HUNDRED),
 				// seed: initial interest, equal 10_000$
-				(TestPools::pools_account_id(), ETH, TEN_THOUSAND_DOLLARS),
-				(TestPools::pools_account_id(), DOT, TEN_THOUSAND_DOLLARS),
+				(TestPools::pools_account_id(), ETH, TEN_THOUSAND),
+				(TestPools::pools_account_id(), DOT, TEN_THOUSAND),
 				// seed: initial interest = 10_000$, initial pool balance = 1_000_000$
-				(TestPools::pools_account_id(), KSM, ONE_MILL_DOLLARS),
+				(TestPools::pools_account_id(), KSM, ONE_MILL),
 				// seed: initial MNT treasury = 1_000_000$
-				(TestMntToken::get_account_id(), MNT, ONE_MILL_DOLLARS),
+				(TestMntToken::get_account_id(), MNT, ONE_MILL),
 			],
 			pools: vec![],
 			controller_data: vec![
@@ -330,10 +339,11 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		minterest_model::GenesisConfig {
+		minterest_model::GenesisConfig::<Test> {
 			minterest_model_params: self.minterest_model_params,
+			_phantom: Default::default(),
 		}
-		.assimilate_storage::<Test>(&mut t)
+		.assimilate_storage(&mut t)
 		.unwrap();
 
 		mnt_token::GenesisConfig::<Test> {
