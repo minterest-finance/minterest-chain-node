@@ -466,7 +466,10 @@ fn redeem_wrapped_should_work() {
 			// Whitelist Mode is enabled. In whitelist mode, only members
 			// from whitelist can work with protocol.
 			assert_ok!(TestWhitelist::switch_whitelist_mode(alice_origin(), true));
-			assert_noop!(TestProtocol::redeem_wrapped(alice_origin(), MDOT, dollars(35_u128)), BadOrigin);
+			assert_noop!(
+				TestProtocol::redeem_wrapped(alice_origin(), MDOT, dollars(35_u128)),
+				BadOrigin
+			);
 
 			assert_ok!(TestWhitelist::switch_whitelist_mode(alice_origin(), false));
 

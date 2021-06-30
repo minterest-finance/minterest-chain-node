@@ -1,7 +1,7 @@
 use crate::{
 	AccountId, Balance, Block, Controller, Currencies, EnabledUnderlyingAssetsIds, LiquidationPools, LiquidityPools,
-	MinterestCouncilMembership, MinterestOracle, MinterestProtocol, MntToken, Prices, Rate, Runtime, System,
-	WhitelistCouncilMembership, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+	MinterestCouncilMembership, MinterestOracle, MinterestProtocol, MntToken, Prices, Rate, Runtime, System, Whitelist,
+	DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::{
@@ -9,9 +9,7 @@ use controller_rpc_runtime_api::{
 	UserPoolBalanceData,
 };
 use frame_support::pallet_prelude::{DispatchResultWithPostInfo, PhantomData};
-use frame_support::{
-	assert_noop, assert_ok, error::BadOrigin, pallet_prelude::GenesisBuild, parameter_types, traits::OnFinalize,
-};
+use frame_support::{assert_noop, assert_ok, pallet_prelude::GenesisBuild, parameter_types, traits::OnFinalize};
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
@@ -23,6 +21,7 @@ use prices_rpc_runtime_api::runtime_decl_for_PricesRuntimeApi::PricesRuntimeApi;
 use risk_manager::RiskManagerData;
 use sp_runtime::{traits::Zero, DispatchResult, FixedPointNumber};
 use test_helper::{BTC, DOT, ETH, KSM, MDOT, MNT};
+use whitelist_rpc_runtime_api::runtime_decl_for_WhitelistRuntimeApi::WhitelistRuntimeApi;
 
 parameter_types! {
 	pub ALICE: AccountId = AccountId::from([1u8; 32]);
@@ -193,7 +192,6 @@ impl ExtBuilder {
 				(BTC, PauseKeeper::all_unpaused()),
 				(KSM, PauseKeeper::all_unpaused()),
 			],
-			whitelist_mode: false,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -268,7 +266,7 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		pallet_membership::GenesisConfig::<Runtime, pallet_membership::Instance3> {
+		pallet_membership::GenesisConfig::<Runtime, pallet_membership::Instance2> {
 			members: vec![ORACLE1::get().clone(), ORACLE2::get().clone(), ORACLE3::get().clone()],
 			phantom: Default::default(),
 		}
@@ -361,6 +359,10 @@ fn get_hypothetical_account_liquidity_rpc(account_id: AccountId) -> Option<Hypot
 
 fn is_admin_rpc(caller: AccountId) -> Option<bool> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::is_admin(caller)
+}
+
+fn is_whitelist_member_rpc(who: AccountId) -> bool {
+	<Runtime as WhitelistRuntimeApi<Block, AccountId>>::is_whitelist_member(who)
 }
 
 fn get_user_total_collateral_rpc(account_id: AccountId) -> Balance {
@@ -1512,33 +1514,12 @@ fn pool_exists_should_work() {
 }
 
 #[test]
-fn whitelist_mode_should_work() {
-	ExtBuilder::default().pool_initial(DOT).build().execute_with(|| {
-		// Set price = 2.00 USD for all pools.
-		assert_ok!(set_oracle_price_for_all_pools(2));
-		System::set_block_number(1);
-		assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(10_000)));
-		System::set_block_number(2);
-
-		assert_ok!(Controller::switch_whitelist_mode(
-			<Runtime as frame_system::Config>::Origin::root()
-		));
-		System::set_block_number(3);
-
-		// In whitelist mode only members of 'WhitelistCouncil' can work with protocols.
-		assert_noop!(
-			MinterestProtocol::deposit_underlying(bob(), DOT, dollars(5_000)),
-			BadOrigin
-		);
-		System::set_block_number(4);
-
-		assert_ok!(WhitelistCouncilMembership::add_member(
-			<Runtime as frame_system::Config>::Origin::root(),
-			BOB::get()
-		));
-		System::set_block_number(5);
-
-		assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(10_000)));
+fn is_whitelist_member_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_eq!(is_whitelist_member_rpc(ALICE::get()), false);
+		assert_ok!(Whitelist::add_member(origin_root(), ALICE::get()));
+		assert_eq!(is_whitelist_member_rpc(ALICE::get()), true);
+		assert_eq!(is_whitelist_member_rpc(BOB::get()), false);
 	})
 }
 
@@ -1624,14 +1605,4 @@ fn protocol_interest_transfer_should_work() {
 				liquidation_pool_dot_balance + transferred_to_liquidation_pool
 			);
 		});
-}
-
-#[test]
-fn is_whitelist_member_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(is_whitelist_member_rpc(ALICE::get()), false);
-		assert_ok!(Whitelist::add_member(origin_root(), ALICE::get()));
-		assert_eq!(is_whitelist_member_rpc(ALICE::get()), true);
-		assert_eq!(is_whitelist_member_rpc(BOB::get()), false);
-	})
 }

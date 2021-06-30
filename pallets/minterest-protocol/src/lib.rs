@@ -22,7 +22,7 @@ use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	Borrowing, ControllerManager, LiquidationPoolsManager, LiquidityPoolsManager, MinterestModelAPI, MntManager,
+	Borrowing, ControllerManager, LiquidationPoolsManager, LiquidityPoolsManager, MinterestModelManager, MntManager,
 	PoolsManager, RiskManager, WhitelistManager,
 };
 #[cfg(feature = "std")]

@@ -9,12 +9,7 @@ use sp_arithmetic::FixedPointNumber;
 #[test]
 fn set_pool_data_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		TestPools::set_pool_data(
-			DOT,
-			ONE_HUNDRED,
-			Rate::saturating_from_rational(125, 100),
-			ONE_HUNDRED,
-		);
+		TestPools::set_pool_data(DOT, ONE_HUNDRED, Rate::saturating_from_rational(125, 100), ONE_HUNDRED);
 		assert_eq!(<Pools<Test>>::get(DOT).total_borrowed, ONE_HUNDRED);
 		assert_eq!(
 			<Pools<Test>>::get(DOT).borrow_index,
