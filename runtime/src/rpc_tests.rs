@@ -6,7 +6,7 @@ use crate::{
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::{
 	runtime_decl_for_ControllerRuntimeApi::ControllerRuntimeApi, BalanceInfo, HypotheticalLiquidityData, PoolState,
-	UserPoolBalanceData,
+	ProtocolTotalValue, UserPoolBalanceData,
 };
 use frame_support::pallet_prelude::{DispatchResultWithPostInfo, PhantomData};
 use frame_support::{
@@ -339,8 +339,8 @@ impl ExtBuilder {
 fn pool_balance(pool_id: CurrencyId) -> Balance {
 	Currencies::free_balance(pool_id, &LiquidityPools::pools_account_id())
 }
-fn get_protocol_total_value_rpc() -> Option<BalanceInfo> {
-	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_protocol_total_value()
+fn get_protocol_total_values_rpc() -> Option<ProtocolTotalValue> {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_protocol_total_values()
 }
 
 fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
