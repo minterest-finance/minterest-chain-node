@@ -8303,6 +8303,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-engine"
+version = "0.0.1"
+dependencies = [
+ "controller",
+ "dex",
+ "frame-support",
+ "frame-system",
+ "liquidation-pools",
+ "liquidity-pools",
+ "minterest-model",
+ "minterest-primitives",
+ "minterest-protocol",
+ "mnt-token",
+ "module-prices",
+ "module-vesting",
+ "orml-currencies",
+ "orml-oracle",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-traits",
+ "parity-scale-codec",
+ "prices-rpc-runtime-api",
+ "risk-manager",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "test-helper",
+]
+
+[[package]]
 name = "test-helper"
 version = "0.6.2"
 dependencies = [

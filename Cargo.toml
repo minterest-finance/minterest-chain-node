@@ -37,6 +37,7 @@ members = [
     'service',
     'runtime',
     'test-helper',
+    'test-engine',
     'pallets/liquidity-pools',
     'pallets/minterest-model',
     'pallets/minterest-protocol',
