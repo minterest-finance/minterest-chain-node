@@ -634,7 +634,7 @@ impl<T: Config> Pallet<T> {
 
 				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
-				let collateral_in_usd = Rate::from_inner(user_supply_balance)
+				let user_collateral_in_usd = Rate::from_inner(user_supply_balance)
 					.checked_mul(&oracle_price)
 					.and_then(|x| x.checked_mul(&collateral_factor))
 					.map(|x| x.into_inner())

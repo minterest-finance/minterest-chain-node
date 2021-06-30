@@ -80,6 +80,7 @@
     "AmountOf": "Amount",
     "Rate": "FixedU128",
     "Price": "FixedU128",
+    "Interest": "FixedI128",
     "ControllerData": {
       "last_interest_accrued_block": "BlockNumber",
       "protocol_interest_factor": "Rate",
