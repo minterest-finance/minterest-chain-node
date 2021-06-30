@@ -1,5 +1,4 @@
 use crate::{Balance, Operation, Rate, Runtime, DOT};
-
 use frame_system::RawOrigin;
 use orml_benchmarking::{runtime_benchmarks, Zero};
 use sp_runtime::FixedPointNumber;
@@ -56,9 +55,6 @@ runtime_benchmarks! {
 		Balance::zero()
 	)
 
-	switch_whitelist_mode {}: _(
-		RawOrigin::Root
-	)
 }
 
 #[cfg(test)]
@@ -113,13 +109,6 @@ mod tests {
 	fn test_set_protocol_interest_threshold() {
 		test_externalities().execute_with(|| {
 			assert_ok!(test_benchmark_set_protocol_interest_threshold());
-		})
-	}
-
-	#[test]
-	fn test_switch_whitelist_mode() {
-		test_externalities().execute_with(|| {
-			assert_ok!(test_benchmark_switch_whitelist_mode());
 		})
 	}
 }

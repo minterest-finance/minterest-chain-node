@@ -218,7 +218,6 @@ impl ExtBuilder {
 				(DOT, PauseKeeper::all_unpaused()),
 				(BTC, PauseKeeper::all_unpaused()),
 			],
-			whitelist_mode: false,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

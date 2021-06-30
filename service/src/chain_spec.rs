@@ -9,9 +9,8 @@ use node_minterest_runtime::{
 	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, ExistentialDeposit,
 	GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
 	MinterestModelConfig, MinterestOracleConfig, MntTokenConfig, MntTokenModuleId, OperatorMembershipMinterestConfig,
-	PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, VestingConfig,
-	WhitelistCouncilMembershipConfig, BTC, DOLLARS, DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
-	TOTAL_ALLOCATION, WASM_BINARY,
+	PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, VestingConfig, WhitelistConfig,
+	BTC, DOLLARS, DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
 use sc_service::ChainType;
@@ -200,6 +199,9 @@ pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
 	))
 }
 
+/// Configure initial storage state for FRAME pallets.
+/// This initial storage state is used in `local_testnet_config` and
+/// `minterest_turbo_testnet_config`.
 fn minterest_genesis(
 	wasm_binary: &[u8],
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
@@ -225,6 +227,10 @@ fn minterest_genesis(
 	let initial_allocations = calculate_initial_allocations(endowed_accounts, allocated_list);
 	// Vesting calculation
 	let vesting_list = calculate_vesting_list(allocated_list_parsed);
+
+	// Reading whitelist members from the file.
+	let white_list_members_json = &include_bytes!("../../resources/whitelist-members.json")[..];
+	let whitelist_members: Vec<AccountId> = serde_json::from_slice(white_list_members_json).unwrap();
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -338,7 +344,6 @@ fn minterest_genesis(
 				(KSM, PauseKeeper::all_unpaused()),
 				(BTC, PauseKeeper::all_unpaused()),
 			],
-			whitelist_mode: false,
 		}),
 		minterest_model: Some(MinterestModelConfig {
 			minterest_model_params: vec![
@@ -474,12 +479,7 @@ fn minterest_genesis(
 			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		}),
-		pallet_collective_Instance2: Some(Default::default()),
-		pallet_membership_Instance2: Some(WhitelistCouncilMembershipConfig {
-			members: vec![root_key.clone()],
-			phantom: Default::default(),
-		}),
-		pallet_membership_Instance3: Some(OperatorMembershipMinterestConfig {
+		pallet_membership_Instance2: Some(OperatorMembershipMinterestConfig {
 			members: vec![root_key],
 			phantom: Default::default(),
 		}),
@@ -498,10 +498,15 @@ fn minterest_genesis(
 			_phantom: Default::default(),
 		}),
 		module_vesting: Some(VestingConfig { vesting: vesting_list }),
+		whitelist_module: Some(WhitelistConfig {
+			members: whitelist_members,
+			whitelist_mode: false,
+		}),
 	}
 }
 
 /// Configure initial storage state for FRAME pallets.
+/// This initial storage state is used in `development_config`.
 fn testnet_genesis(
 	wasm_binary: &[u8],
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
@@ -642,7 +647,6 @@ fn testnet_genesis(
 				(KSM, PauseKeeper::all_unpaused()),
 				(BTC, PauseKeeper::all_unpaused()),
 			],
-			whitelist_mode: false,
 		}),
 		minterest_model: Some(MinterestModelConfig {
 			minterest_model_params: vec![
@@ -775,15 +779,10 @@ fn testnet_genesis(
 		}),
 		pallet_collective_Instance1: Some(Default::default()),
 		pallet_membership_Instance1: Some(MinterestCouncilMembershipConfig {
-			members: vec![root_key.clone()],
-			phantom: Default::default(),
-		}),
-		pallet_collective_Instance2: Some(Default::default()),
-		pallet_membership_Instance2: Some(WhitelistCouncilMembershipConfig {
 			members: vec![root_key],
 			phantom: Default::default(),
 		}),
-		pallet_membership_Instance3: Some(OperatorMembershipMinterestConfig {
+		pallet_membership_Instance2: Some(OperatorMembershipMinterestConfig {
 			members: endowed_accounts.clone(),
 			phantom: Default::default(),
 		}),
@@ -802,6 +801,10 @@ fn testnet_genesis(
 			_phantom: Default::default(),
 		}),
 		module_vesting: Some(VestingConfig { vesting: vec![] }),
+		whitelist_module: Some(WhitelistConfig {
+			members: endowed_accounts,
+			whitelist_mode: false,
+		}),
 	}
 }
 
