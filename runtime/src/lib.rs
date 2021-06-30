@@ -821,8 +821,8 @@ impl_runtime_apis! {
 	}
 
 	impl whitelist_rpc_runtime_api::WhitelistRuntimeApi<Block, AccountId> for Runtime {
-		fn is_whitelist_member(who: AccountId) -> Option<bool> {
-				Some(Whitelist::is_whitelist_member(&who))
+		fn is_whitelist_member(who: AccountId) -> bool {
+				Whitelist::is_whitelist_member(&who)
 		}
 	}
 

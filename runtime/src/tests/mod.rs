@@ -438,7 +438,7 @@ fn is_admin_rpc(caller: AccountId) -> Option<bool> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::is_admin(caller)
 }
 
-fn is_whitelist_member_rpc(who: AccountId) -> Option<bool> {
+fn is_whitelist_member_rpc(who: AccountId) -> bool {
 	<Runtime as WhitelistRuntimeApi<Block, AccountId>>::is_whitelist_member(who)
 }
 

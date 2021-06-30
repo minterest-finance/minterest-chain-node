@@ -17,6 +17,6 @@ sp_api::decl_runtime_apis! {
 	where
 		AccountId: Codec,
 	{
-		fn is_whitelist_member(who: AccountId) -> Option<bool>;
+		fn is_whitelist_member(who: AccountId) -> bool;
 	}
 }

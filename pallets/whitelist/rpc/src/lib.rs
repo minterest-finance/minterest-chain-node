@@ -21,7 +21,7 @@ pub trait WhitelistRpcApi<BlockHash, AccountId> {
 	/// Return
 	/// - is_admin: true / false
 	#[rpc(name = "whitelist_isWhitelistMember")]
-	fn is_whitelist_member(&self, who: AccountId, at: Option<BlockHash>) -> Result<Option<bool>>;
+	fn is_whitelist_member(&self, who: AccountId, at: Option<BlockHash>) -> Result<bool>;
 }
 
 /// A struct that implements the [`WhitelistApi`].
@@ -60,7 +60,7 @@ where
 	C::Api: WhitelistRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
 {
-	fn is_whitelist_member(&self, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> Result<Option<bool>> {
+	fn is_whitelist_member(&self, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> Result<bool> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
