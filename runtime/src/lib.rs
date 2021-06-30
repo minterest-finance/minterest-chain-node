@@ -551,8 +551,9 @@ parameter_types! {
 	pub const MinimumCount: u32 = 1;
 	pub const ExpiresIn: Moment = 1000 * 60 * 60; // 60 mins
 	pub ZeroAccountId: AccountId = AccountId::from([0u8; 32]);
-	// TODO Temprorary
-	pub const OracleMembers: Vec<AccountId> = vec![];
+	// TODO Temporary
+	pub ORACLE1: AccountId = AccountId::from([4u8; 32]);
+	pub OracleMembers: Vec<AccountId> = vec![ORACLE1::get()];
 	pub const MaxHasDispatchedSize: u32 = 100;
 }
 
