@@ -524,12 +524,12 @@ impl<T: Config> Pallet<T> {
 					let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::PoolNotFound)?;
 
 					// Check if user has / had borrowed wrapped tokens in the pool
-					let user_wrap_balance = T::MultiCurrency::free_balance(wrapped_id, &who);
-					let has_user_wrap_balance = !user_wrap_balance.is_zero();
-					let has_user_borrow_balance =
+					let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id, &who);
+					let has_user_supply_wrap_balance = !user_supply_wrap.is_zero();
+					let has_user_borrow_underlying_balance =
 						!<LiquidityPools<T>>::get_user_borrow_balance(&who, pool_id).is_zero();
 					// Skip this pool if there is nothing to calculate
-					if !has_user_wrap_balance && !has_user_borrow_balance {
+					if !has_user_supply_wrap_balance && !has_user_borrow_underlying_balance {
 						return Ok((acc_user_supply_in_usd, acc_user_borrowed_in_usd));
 					}
 
@@ -537,19 +537,19 @@ impl<T: Config> Pallet<T> {
 					let oracle_price =
 						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
-					if has_user_wrap_balance {
+					if has_user_supply_wrap_balance {
 						let current_exchange_rate = <LiquidityPools<T>>::get_exchange_rate_by_interest_params(
 							pool_id,
 							pool_data.total_protocol_interest,
 							pool_data.total_borrowed,
 						)?;
-						acc_user_supply_in_usd += Rate::from_inner(user_wrap_balance)
+						acc_user_supply_in_usd += Rate::from_inner(user_supply_wrap)
 							.checked_mul(&current_exchange_rate)
 							.and_then(|v| v.checked_mul(&oracle_price))
 							.map(|x| x.into_inner())
 							.ok_or(Error::<T>::BalanceOverflow)?;
 					}
-					if has_user_borrow_balance {
+					if has_user_borrow_underlying_balance {
 						let user_borrow_balance =
 							Self::calculate_user_borrow_balance(&who, pool_id, pool_data.borrow_index)?;
 						let user_borrow_balance_in_usd = Rate::from_inner(user_borrow_balance)
@@ -584,13 +584,13 @@ impl<T: Config> Pallet<T> {
 				let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 				let pool_supply_wrapped_balance = T::MultiCurrency::total_issuance(wrapped_id);
 				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-				let pool_supply_underlying_balance_usd = Rate::from_inner(pool_supply_wrapped_balance)
+				let pool_supply_balance_in_usd = Rate::from_inner(pool_supply_wrapped_balance)
 					.checked_mul(&current_exchange_rate)
 					.and_then(|v| v.checked_mul(&oracle_price))
 					.map(|x| x.into_inner())
 					.ok_or(Error::<T>::BalanceOverflow)?;
 				Ok(current_value
-					.checked_add(pool_supply_underlying_balance_usd)
+					.checked_add(pool_supply_balance_in_usd)
 					.ok_or(Error::<T>::BalanceOverflow)?)
 			})
 	}
@@ -688,21 +688,23 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	/// Return the borrow balance of account based on pool_borrow_index calculated beforehand.
+	/// Calculate the borrow balance of account based on pool_borrow_index calculated beforehand.
 	///
 	/// - `who`: The address whose balance should be calculated.
 	/// - `underlying_asset`: ID of the currency, the balance of borrowing of which we calculate.
 	/// - `pool_borrow_index`: borrow index for the pool
+	///
+	/// Returns the borrow balance of account in underlying assets.
 	fn calculate_user_borrow_balance(
 		who: &T::AccountId,
 		underlying_asset: CurrencyId,
 		pool_borrow_index: Rate,
 	) -> BalanceResult {
-		let user_borrow_balance = <LiquidityPools<T>>::get_user_borrow_balance(&who, underlying_asset);
+		let user_borrow_underlying = <LiquidityPools<T>>::get_user_borrow_balance(&who, underlying_asset);
 
 		// If user_borrow_balance = 0 then borrow_index is likely also 0.
 		// Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
-		if user_borrow_balance.is_zero() {
+		if user_borrow_underlying.is_zero() {
 			return Ok(Balance::zero());
 		};
 
@@ -710,38 +712,37 @@ impl<T: Config> Pallet<T> {
 
 		// Calculate new user borrow balance using the borrow index:
 		// recent_user_borrow_balance = user_borrow_balance * pool_borrow_index / user_borrow_index
-		let recent_user_borrow_balance = Rate::from_inner(user_borrow_balance)
+		let recent_user_borrow_underlying = Rate::from_inner(user_borrow_underlying)
 			.checked_mul(&pool_borrow_index)
 			.and_then(|v| v.checked_div(&user_borrow_index))
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::BorrowBalanceOverflow)?;
-		Ok(recent_user_borrow_balance)
+		Ok(recent_user_borrow_underlying)
 	}
 
 	/// Calculates the utilization rate of the pool.
-	/// - `current_total_balance`: The amount of cash in the pool.
-	/// - `current_total_borrowed_balance`: The amount of borrows in the pool.
-	/// - `current_total_protocol_interest`: The amount of interest in the pool (currently unused).
+	/// - `pool_supply_underlying_balance`: The amount of cash in the pool.
+	/// - `pool_borrowed_balance`: The amount of borrows in the pool.
+	/// - `pool_protocol_interest`: The amount of interest in the pool (currently unused).
 	///
 	/// returns `utilization_rate =
-	///  total_borrows / (total_cash + total_borrows - total_protocol_interest)`
+	///  pool_borrows / (pool_cash + pool_borrows - pool_protocol_interest)`
 	fn calculate_utilization_rate(
-		current_total_balance: Balance,
-		current_total_borrowed_balance: Balance,
-		current_total_protocol_interest: Balance,
+		pool_supply_underlying_balance: Balance,
+		pool_borrowed_balance: Balance,
+		pool_protocol_interest: Balance,
 	) -> RateResult {
 		// Utilization rate is 0 when there are no borrows
-		if current_total_borrowed_balance.is_zero() {
+		if pool_borrowed_balance.is_zero() {
 			return Ok(Rate::zero());
 		}
 
-		// utilization_rate = current_total_borrowed_balance / (current_total_balance +
-		// + current_total_borrowed_balance - current_total_protocol_interest)
+		// utilization_rate = pool_borrows / (pool_cash + pool_borrows - pool_protocol_interest)
 		let utilization_rate = Rate::checked_from_rational(
-			current_total_borrowed_balance,
-			current_total_balance
-				.checked_add(current_total_borrowed_balance)
-				.and_then(|v| v.checked_sub(current_total_protocol_interest))
+			pool_borrowed_balance,
+			pool_supply_underlying_balance
+				.checked_add(pool_borrowed_balance)
+				.and_then(|v| v.checked_sub(pool_protocol_interest))
 				.ok_or(Error::<T>::UtilizationRateCalculationError)?,
 		)
 		.ok_or(Error::<T>::UtilizationRateCalculationError)?;
