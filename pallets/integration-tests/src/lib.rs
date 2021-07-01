@@ -11,13 +11,18 @@
 
 #[cfg(test)]
 mod tests {
+	use controller::{ControllerData, PauseKeeper};
+	use frame_support::traits::Contains;
 	use frame_support::{assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
 	use frame_system::{offchain::SendTransactionTypes, EnsureSignedBy};
 	use liquidity_pools::{Pool, PoolUserData};
+	use minterest_model::MinterestModelData;
 	pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 	use minterest_primitives::{Balance, CurrencyId, Price, Rate};
-	use minterest_protocol::PoolInitData;
+	use minterest_protocol::{Error as MinterestProtocolError, PoolInitData};
 	use orml_traits::{parameter_type_with_key, MultiCurrency};
+	use pallet_traits::{PoolsManager, PricesManager};
+	use risk_manager::RiskManagerData;
 	use sp_core::H256;
 	use sp_runtime::{
 		testing::{Header, TestXt},
@@ -25,23 +30,17 @@ mod tests {
 		transaction_validity::TransactionPriority,
 		FixedPointNumber, ModuleId,
 	};
-
-	use controller::{ControllerData, PauseKeeper};
-	use frame_support::traits::Contains;
-	use minterest_model::MinterestModelData;
-	use minterest_protocol::Error as MinterestProtocolError;
-	use pallet_traits::{PoolsManager, PricesManager};
 	use sp_std::cell::RefCell;
+	use std::collections::HashMap;
 	use test_helper::*;
 
 	mod controller_tests;
+	mod liquidation_tests;
 	mod liquidity_pools_tests;
 	mod minterest_model_tests;
 	mod minterest_protocol_tests;
 	mod mnt_token_tests;
 	mod scenario_tests;
-
-	pub type AccountId = u64;
 
 	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 	type Block = frame_system::mocking::MockBlock<Test>;
@@ -61,10 +60,11 @@ mod tests {
 			TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 			TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
 			TestController: controller::{Module, Storage, Call, Event, Config<T>},
-			TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+			TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
 			TestDex: dex::{Module, Storage, Call, Event<T>},
 			TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
-			TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config},
+			TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config<T>},
+			TestWhitelist: whitelist_module::{Module, Storage, Call, Event<T>, Config<T>},
 		}
 	);
 
@@ -73,8 +73,8 @@ mod tests {
 	}
 
 	parameter_types! {
-		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
-		pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
+		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"lqdy/min");
+		pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"lqdn/min");
 		pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
 		pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
 		pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
@@ -84,7 +84,6 @@ mod tests {
 		pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 	}
 
-	pub struct WhitelistMembers;
 	mock_impl_system_config!(Test);
 	mock_impl_balances_config!(Test);
 	mock_impl_orml_tokens_config!(Test);
@@ -97,12 +96,31 @@ mod tests {
 	mock_impl_minterest_protocol_config!(Test, ZeroAdmin);
 	mock_impl_mnt_token_config!(Test, ZeroAdmin);
 	mock_impl_risk_manager_config!(Test, ZeroAdmin);
+	mock_impl_whitelist_module_config!(Test, ZeroAdmin);
+
+	thread_local! {
+		static UNDERLYING_PRICE: RefCell<HashMap<CurrencyId, Price>> = RefCell::new(
+			[
+				(DOT, Price::one()),
+				(ETH, Price::one()),
+				(BTC, Price::one()),
+				(KSM, Price::one()),
+			]
+			.iter()
+			.cloned()
+			.collect());
+	}
 
 	pub struct MockPriceSource;
+	impl MockPriceSource {
+		pub fn set_underlying_price(currency_id: CurrencyId, price: Price) {
+			UNDERLYING_PRICE.with(|v| v.borrow_mut().insert(currency_id, price));
+		}
+	}
 
 	impl PricesManager<CurrencyId> for MockPriceSource {
-		fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
-			Some(Price::one())
+		fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
+			UNDERLYING_PRICE.with(|v| v.borrow().get(&currency_id).copied())
 		}
 
 		fn lock_price(_currency_id: CurrencyId) {}
@@ -114,9 +132,10 @@ mod tests {
 		static FOUR: RefCell<Vec<u64>> = RefCell::new(vec![4]);
 	}
 
+	pub struct WhitelistMembers;
 	impl Contains<u64> for WhitelistMembers {
 		fn sorted_members() -> Vec<u64> {
-			FOUR.with(|v| v.borrow().clone())
+			vec![4]
 		}
 		#[cfg(feature = "runtime-benchmarks")]
 		fn add(new: &u128) {
@@ -128,29 +147,6 @@ mod tests {
 		}
 	}
 
-	pub const ADMIN: AccountId = 0;
-	pub const ALICE: AccountId = 1;
-	pub const BOB: AccountId = 2;
-	pub const CAROL: AccountId = 3;
-	pub const ONE_HUNDRED: Balance = 100_000 * DOLLARS;
-	pub const BALANCE_ZERO: Balance = 0;
-	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
-	pub const RATE_ZERO: Rate = Rate::from_inner(0);
-	pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
-
-	pub fn admin() -> Origin {
-		Origin::signed(ADMIN)
-	}
-	pub fn alice() -> Origin {
-		Origin::signed(ALICE)
-	}
-	pub fn bob() -> Origin {
-		Origin::signed(BOB)
-	}
-	pub fn carol() -> Origin {
-		Origin::signed(CAROL)
-	}
-
 	pub struct ExtBuilder {
 		endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 		pools: Vec<(CurrencyId, Pool)>,
@@ -158,6 +154,8 @@ mod tests {
 		minted_pools: Vec<(CurrencyId, Balance)>,
 		controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
 		minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
+		mnt_claim_threshold: Balance,
+		risk_manager_params: Vec<(CurrencyId, RiskManagerData)>,
 	}
 
 	impl Default for ExtBuilder {
@@ -231,6 +229,8 @@ mod tests {
 						},
 					),
 				],
+				mnt_claim_threshold: 0, // disable by default
+				risk_manager_params: vec![],
 			}
 		}
 	}
@@ -259,6 +259,12 @@ mod tests {
 		pub fn pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 			self.endowed_accounts
 				.push((TestPools::pools_account_id(), currency_id, balance));
+			self
+		}
+
+		pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+			self.endowed_accounts
+				.push((TestLiquidationPools::pools_account_id(), currency_id, balance));
 			self
 		}
 
@@ -314,6 +320,24 @@ mod tests {
 			self
 		}
 
+		pub fn mnt_claim_threshold(mut self, threshold: Balance) -> Self {
+			self.mnt_claim_threshold = threshold;
+			self
+		}
+
+		pub fn risk_manager_params_default(mut self, pool_id: CurrencyId) -> Self {
+			self.risk_manager_params.push((
+				pool_id,
+				RiskManagerData {
+					max_attempts: 3,
+					min_partial_liquidation_sum: 100_000 * DOLLARS,
+					threshold: Rate::saturating_from_rational(103, 100),
+					liquidation_fee: Rate::saturating_from_rational(105, 100),
+				},
+			));
+			self
+		}
+
 		pub fn build(self) -> sp_io::TestExternalities {
 			let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
@@ -347,7 +371,6 @@ mod tests {
 					(KSM, PauseKeeper::all_paused()),
 					(BTC, PauseKeeper::all_unpaused()),
 				],
-				whitelist_mode: false,
 			}
 			.assimilate_storage(&mut t)
 			.unwrap();
@@ -359,14 +382,22 @@ mod tests {
 			.assimilate_storage(&mut t)
 			.unwrap();
 
-			minterest_model::GenesisConfig {
+			minterest_model::GenesisConfig::<Test> {
 				minterest_model_params: self.minterest_model_params,
+				_phantom: Default::default(),
 			}
-			.assimilate_storage::<Test>(&mut t)
+			.assimilate_storage(&mut t)
+			.unwrap();
+
+			risk_manager::GenesisConfig::<Test> {
+				risk_manager_params: self.risk_manager_params,
+				_phantom: Default::default(),
+			}
+			.assimilate_storage(&mut t)
 			.unwrap();
 
 			mnt_token::GenesisConfig::<Test> {
-				mnt_claim_threshold: 100 * DOLLARS,
+				mnt_claim_threshold: self.mnt_claim_threshold,
 				minted_pools: self.minted_pools,
 				_phantom: Default::default(),
 			}
@@ -377,5 +408,11 @@ mod tests {
 			ext.execute_with(|| System::set_block_number(1));
 			ext
 		}
+	}
+
+	pub(crate) fn set_prices_for_assets(prices: Vec<(CurrencyId, Price)>) {
+		prices.into_iter().for_each(|(currency_id, price)| {
+			MockPriceSource::set_underlying_price(currency_id, price);
+		});
 	}
 }

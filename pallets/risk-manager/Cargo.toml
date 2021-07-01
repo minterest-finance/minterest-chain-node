@@ -42,6 +42,7 @@ dex = { path = "../dex" }
 mnt-token = { path = "../mnt-token" }
 test-helper = { path = "../../test-helper" }
 module-prices = { path = "../prices" }
+whitelist-module = { path = "../whitelist" }
 
 [features]
 default = ['std']

@@ -2788,6 +2788,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "test-helper",
+ "whitelist-module",
 ]
 
 [[package]]
@@ -3906,6 +3907,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "test-helper",
+ "whitelist-module",
 ]
 
 [[package]]
@@ -3926,6 +3928,7 @@ dependencies = [
  "sp-blockchain",
  "sp-transaction-pool",
  "substrate-frame-rpc-system",
+ "whitelist-rpc",
 ]
 
 [[package]]
@@ -4333,6 +4336,8 @@ dependencies = [
  "static_assertions",
  "substrate-wasm-builder",
  "test-helper",
+ "whitelist-module",
+ "whitelist-rpc-runtime-api",
 ]
 
 [[package]]
@@ -5901,6 +5906,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "test-helper",
+ "whitelist-module",
 ]
 
 [[package]]
@@ -9439,6 +9445,51 @@ checksum = "b55551e42cbdf2ce2bedd2203d0cc08dba002c27510f86dab6d0ce304cba3dfe"
 dependencies = [
  "either",
  "libc",
+]
+
+[[package]]
+name = "whitelist-module"
+version = "0.6.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "minterest-primitives",
+ "pallet-balances",
+ "pallet-traits",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "test-helper",
+]
+
+[[package]]
+name = "whitelist-rpc"
+version = "0.6.0"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "whitelist-rpc-runtime-api",
+]
+
+[[package]]
+name = "whitelist-rpc-runtime-api"
+version = "0.6.1"
+dependencies = [
+ "parity-scale-codec",
+ "serde",
+ "serde_json",
+ "sp-api",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-std",
 ]
 
 [[package]]

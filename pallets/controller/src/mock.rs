@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use super::*;
 use crate as controller;
 use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
@@ -18,8 +16,6 @@ use sp_runtime::{
 use sp_std::cell::RefCell;
 pub use test_helper::*;
 
-pub type AccountId = u64;
-
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
 
@@ -35,7 +31,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
 		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
 		TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 	}
@@ -84,8 +80,6 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
-pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
-
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
@@ -100,20 +94,6 @@ impl Default for ExtBuilder {
 			pool_user_data: vec![],
 		}
 	}
-}
-
-pub const ALICE: AccountId = 1;
-pub fn alice() -> Origin {
-	Origin::signed(ALICE)
-}
-pub const BOB: AccountId = 2;
-pub fn bob() -> Origin {
-	Origin::signed(BOB)
-}
-pub const ONE_HUNDRED: Balance = 100;
-pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
-pub fn dollars<T: Into<u128>>(d: T) -> Balance {
-	DOLLARS.saturating_mul(d.into())
 }
 
 impl ExtBuilder {
@@ -242,7 +222,6 @@ impl ExtBuilder {
 				(DOT, PauseKeeper::all_unpaused()),
 				(BTC, PauseKeeper::all_unpaused()),
 			],
-			whitelist_mode: false,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -254,7 +233,7 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		minterest_model::GenesisConfig {
+		minterest_model::GenesisConfig::<Runtime> {
 			minterest_model_params: vec![
 				(
 					DOT,
@@ -284,8 +263,9 @@ impl ExtBuilder {
 					},
 				),
 			],
+			_phantom: Default::default(),
 		}
-		.assimilate_storage::<Runtime>(&mut t)
+		.assimilate_storage(&mut t)
 		.unwrap();
 
 		let mut ext = sp_io::TestExternalities::new(t);

@@ -22,3 +22,4 @@ node-minterest-runtime = { path = '../runtime', version = '0.6.0' }
 controller-rpc = { path = "../pallets/controller/rpc" }
 mnt-token-rpc = { path = "../pallets/mnt-token/rpc" }
 prices-rpc = { path = "../pallets/prices/rpc" }
+whitelist-rpc = { path = "../pallets/whitelist/rpc" }

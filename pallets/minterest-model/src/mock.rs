@@ -16,8 +16,6 @@ use sp_runtime::{
 };
 pub use test_helper::*;
 
-pub type AccountId = u64;
-
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -31,7 +29,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
-		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config},
+		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
 	}
 );
 
@@ -64,19 +62,10 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
-pub const ALICE: AccountId = 1;
-pub fn alice() -> Origin {
-	Origin::signed(ALICE)
-}
-pub const BOB: AccountId = 2;
-pub fn bob() -> Origin {
-	Origin::signed(BOB)
-}
-
 pub fn test_externalities() -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	minterest_model::GenesisConfig {
+	minterest_model::GenesisConfig::<Test> {
 		minterest_model_params: vec![
 			(
 				DOT,
@@ -106,8 +95,9 @@ pub fn test_externalities() -> sp_io::TestExternalities {
 				},
 			),
 		],
+		_phantom: Default::default(),
 	}
-	.assimilate_storage::<Test>(&mut storage)
+	.assimilate_storage(&mut storage)
 	.unwrap();
 
 	let mut test_externalities: sp_io::TestExternalities = storage.into();

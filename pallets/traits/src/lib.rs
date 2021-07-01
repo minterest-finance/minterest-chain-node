@@ -3,7 +3,7 @@
 
 use minterest_primitives::{Balance, CurrencyId, Operation, Price, Rate};
 use sp_runtime::{DispatchError, DispatchResult};
-use sp_std::result::Result;
+use sp_std::{collections::btree_set::BTreeSet, result::Result};
 
 /// An abstraction of basic borrowing functions
 pub trait Borrowing<AccountId> {
@@ -133,10 +133,6 @@ pub trait ControllerManager<AccountId> {
 
 	/// Return minimum protocol interest needed to transfer it to liquidation pool
 	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance;
-
-	/// Protocol operation mode. In whitelist mode, only members 'WhitelistCouncil' can work with
-	/// protocols.
-	fn is_whitelist_mode_enabled() -> bool;
 }
 
 pub trait MntManager<AccountId> {
@@ -183,7 +179,7 @@ pub trait MntManager<AccountId> {
 }
 
 /// An abstraction of risk-manager basic functionalities.
-pub trait RiskManagerAPI {
+pub trait RiskManager {
 	/// This is a part of a pool creation flow
 	/// Creates storage records for RiskManagerParams
 	fn create_pool(
@@ -196,7 +192,7 @@ pub trait RiskManagerAPI {
 }
 
 /// An abstraction of minterest-model basic functionalities.
-pub trait MinterestModelAPI {
+pub trait MinterestModelManager {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for MinterestModelParams
 	fn create_pool(
@@ -206,4 +202,30 @@ pub trait MinterestModelAPI {
 		multiplier_per_block: Rate,
 		jump_multiplier_per_block: Rate,
 	) -> DispatchResult;
+
+	/// Calculates the current borrow rate per block.
+	/// - `underlying_asset`: Asset ID for which the borrow interest rate is calculated.
+	/// - `utilization_rate`: Current Utilization rate value.
+	///
+	/// returns `borrow_interest_rate`.
+	fn calculate_borrow_interest_rate(
+		underlying_asset: CurrencyId,
+		utilization_rate: Rate,
+	) -> Result<Rate, DispatchError>;
+
+	/// Returns BlocksPerYear value
+	fn get_blocks_per_year() -> u128;
+}
+
+/// An abstraction of controller basic functionalities.
+pub trait WhitelistManager<AccountId> {
+	/// Protocol operation mode. In whitelist mode, only members from
+	/// whitelist can work with protocol.
+	fn is_whitelist_mode_enabled() -> bool;
+
+	/// Checks if the account is a whitelist member.
+	fn is_whitelist_member(who: &AccountId) -> bool;
+
+	/// Returns the set of all accounts in the whitelist.
+	fn get_whitelist_members() -> BTreeSet<AccountId>;
 }
