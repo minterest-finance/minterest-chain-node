@@ -203,6 +203,11 @@ pub trait MinterestModelManager {
 		jump_multiplier_per_block: Rate,
 	) -> DispatchResult;
 
+	/// Calculates the current borrow rate per block.
+	/// - `underlying_asset`: Asset ID for which the borrow interest rate is calculated.
+	/// - `utilization_rate`: Current Utilization rate value.
+	///
+	/// returns `borrow_interest_rate`.
 	fn calculate_borrow_interest_rate(
 		underlying_asset: CurrencyId,
 		utilization_rate: Rate,

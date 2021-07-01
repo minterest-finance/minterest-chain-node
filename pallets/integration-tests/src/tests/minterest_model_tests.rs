@@ -24,8 +24,8 @@ mod tests {
 
 				// utilization_rate = 0 / (40_000 - 0 + 0) = 0 < 0.8
 				// borrow_rate = 0 * 0.000_000_009 + 0 = 0
-				let (borrow_rate, _) =
-					TestController::get_liquidity_pool_borrow_and_supply_rates(DOT).unwrap_or_default();
+				let (_, borrow_rate, _) =
+					TestController::get_pool_exchange_borrow_and_supply_rates(DOT).unwrap_or_default();
 
 				// Checking if real borrow interest rate is equal to the expected
 				assert_eq!(Rate::zero(), borrow_rate);
@@ -63,8 +63,8 @@ mod tests {
 				// borrow_rate = 0.5 * 0.000_000_009 + 0 = 45 * 10^(-10)
 				let expected_borrow_rate_mock = Rate::saturating_from_rational(45_u128, 10_000_000_000_u128);
 
-				let (borrow_rate, _) =
-					TestController::get_liquidity_pool_borrow_and_supply_rates(DOT).unwrap_or_default();
+				let (_, borrow_rate, _) =
+					TestController::get_pool_exchange_borrow_and_supply_rates(DOT).unwrap_or_default();
 
 				// Checking if real borrow interest rate is equal to the expected
 				assert_eq!(expected_borrow_rate_mock, borrow_rate);
@@ -125,8 +125,8 @@ mod tests {
 				let expected_borrow_rate_mock = Rate::from_inner(6_300_000_004);
 
 				// Checking if real borrow interest rate is equal to the expected
-				let (borrow_rate, _) =
-					TestController::get_liquidity_pool_borrow_and_supply_rates(DOT).unwrap_or_default();
+				let (_, borrow_rate, _) =
+					TestController::get_pool_exchange_borrow_and_supply_rates(DOT).unwrap_or_default();
 
 				// Checking if real borrow interest rate is equal to the expected
 				assert_eq!(expected_borrow_rate_mock, borrow_rate);
