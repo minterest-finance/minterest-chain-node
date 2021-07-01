@@ -5,8 +5,8 @@ authors = ["Minterest developers"]
 edition = "2018"
 
 [dependencies]
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.5", default-features = false }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
 orml-oracle = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
 
 minterest-primitives = { path = "../../../../primitives", default-features = false }
