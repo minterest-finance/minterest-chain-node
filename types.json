@@ -128,7 +128,7 @@
       "pool_total_supply_in_usd": "Balance",
       "pool_total_borrow_in_usd": "Balance",
       "tvl_in_usd": "Balance",
-      "pool_total_interest_in_usd": "Balance"
+      "pool_total_protocol_interest_in_usd": "Balance"
     },
     "MntBalanceInfo": {
       "amount": "Balance"

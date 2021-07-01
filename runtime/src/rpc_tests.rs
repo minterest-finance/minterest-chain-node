@@ -754,7 +754,7 @@ fn test_get_protocol_total_value_rpc() {
 					pool_total_supply_in_usd: dollars(200_000),
 					pool_total_borrow_in_usd: Balance::zero(),
 					tvl_in_usd: dollars(200_000),
-					pool_total_interest_in_usd: Balance::zero(),
+					pool_total_protocol_interest_in_usd: Balance::zero(),
 				})
 			);
 
@@ -769,7 +769,7 @@ fn test_get_protocol_total_value_rpc() {
 					pool_total_supply_in_usd: dollars(500_000),
 					pool_total_borrow_in_usd: Balance::zero(),
 					tvl_in_usd: dollars(500_000),
-					pool_total_interest_in_usd: Balance::zero(),
+					pool_total_protocol_interest_in_usd: Balance::zero(),
 				})
 			);
 
@@ -785,7 +785,7 @@ fn test_get_protocol_total_value_rpc() {
 					pool_total_supply_in_usd: dollars(500_000),
 					pool_total_borrow_in_usd: Balance::zero(),
 					tvl_in_usd: dollars(500_000),
-					pool_total_interest_in_usd: Balance::zero(),
+					pool_total_protocol_interest_in_usd: Balance::zero(),
 				})
 			);
 
@@ -803,7 +803,7 @@ fn test_get_protocol_total_value_rpc() {
 					pool_total_supply_in_usd: dollars(810_000),
 					pool_total_borrow_in_usd: Balance::zero(),
 					tvl_in_usd: dollars(810_000),
-					pool_total_interest_in_usd: Balance::zero(),
+					pool_total_protocol_interest_in_usd: Balance::zero(),
 				})
 			);
 
@@ -821,7 +821,7 @@ fn test_get_protocol_total_value_rpc() {
 					pool_total_supply_in_usd: dollars(670_000),
 					pool_total_borrow_in_usd: dollars(140_000),
 					tvl_in_usd: dollars(810_000),
-					pool_total_interest_in_usd: Balance::zero(),
+					pool_total_protocol_interest_in_usd: Balance::zero(),
 				})
 			);
 
@@ -847,7 +847,7 @@ fn test_get_protocol_total_value_rpc() {
 					pool_total_supply_in_usd: dollars(670_000),
 					pool_total_borrow_in_usd: 140_000_005_880_000_000_000_000,
 					tvl_in_usd: 810_000_005_292_000_000_000_000,
-					pool_total_interest_in_usd: 588_000_000_000_000
+					pool_total_protocol_interest_in_usd: 588_000_000_000_000
 				})
 			);
 
@@ -865,7 +865,7 @@ fn test_get_protocol_total_value_rpc() {
 					pool_total_supply_in_usd: 810_000_005_880_000_000_000_000,
 					pool_total_borrow_in_usd: Balance::zero(),
 					tvl_in_usd: 810_000_005_292_000_000_000_000,
-					pool_total_interest_in_usd: 588_000_000_000_000
+					pool_total_protocol_interest_in_usd: 588_000_000_000_000
 				})
 			);
 
@@ -886,7 +886,7 @@ fn test_get_protocol_total_value_rpc() {
 					pool_total_supply_in_usd: 510_000_000_588_000_000_000_000,
 					pool_total_borrow_in_usd: Balance::zero(),
 					tvl_in_usd: dollars(510_000),
-					pool_total_interest_in_usd: 588_000_000_000_000
+					pool_total_protocol_interest_in_usd: 588_000_000_000_000
 				})
 			);
 
@@ -902,7 +902,7 @@ fn test_get_protocol_total_value_rpc() {
 					pool_total_supply_in_usd: 510_000_000_294_000_000_000_000,
 					pool_total_borrow_in_usd: 294_000_000_000_000,
 					tvl_in_usd: dollars(510_000),
-					pool_total_interest_in_usd: 588_000_000_000_000
+					pool_total_protocol_interest_in_usd: 588_000_000_000_000
 				})
 			);
 
@@ -917,7 +917,7 @@ fn test_get_protocol_total_value_rpc() {
 					pool_total_supply_in_usd: 510_000_000_000_000_000_000_000,
 					pool_total_borrow_in_usd: 588_000_000_000_000,
 					tvl_in_usd: dollars(510_000),
-					pool_total_interest_in_usd: 588_000_000_000_000
+					pool_total_protocol_interest_in_usd: 588_000_000_000_000
 				})
 			);
 
@@ -932,7 +932,7 @@ fn test_get_protocol_total_value_rpc() {
 					pool_total_supply_in_usd: 510_002_000_000_000_000_000_000,
 					pool_total_borrow_in_usd: 588_000_000_000_000,
 					tvl_in_usd: 510_002_000_000_000_000_000_000,
-					pool_total_interest_in_usd: 588_000_000_000_000
+					pool_total_protocol_interest_in_usd: 588_000_000_000_000
 				})
 			);
 		});

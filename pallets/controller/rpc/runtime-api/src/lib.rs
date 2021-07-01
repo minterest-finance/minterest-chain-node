@@ -67,7 +67,7 @@ pub struct ProtocolTotalValue {
 	pub tvl_in_usd: Balance,
 	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
 	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
-	pub pool_total_interest_in_usd: Balance,
+	pub pool_total_protocol_interest_in_usd: Balance,
 }
 
 #[cfg(feature = "std")]

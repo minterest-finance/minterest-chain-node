@@ -575,7 +575,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Calculates pool_total_supply, pool_total_borrow including interest, tvl (Total Value
-	/// Locked), pool_total_interest in USD
+	/// Locked), pool_protocol_interest. All values are converted to USD.
 	/// pool_total_supply is calculated as: sum(pool_supply)
 	/// where:
 	///     `pool_supply` - current available liquidity in the n pool;

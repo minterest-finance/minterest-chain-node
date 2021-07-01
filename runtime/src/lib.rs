@@ -795,8 +795,8 @@ impl_runtime_apis! {
 
 	impl controller_rpc_runtime_api::ControllerRuntimeApi<Block, AccountId> for Runtime {
 		fn get_protocol_total_values() -> Option<ProtocolTotalValue> {
-		let (pool_total_supply_in_usd, pool_total_borrow_in_usd, tvl_in_usd, pool_total_interest_in_usd) = Controller::get_protocol_total_values().ok()?;
-				Some(ProtocolTotalValue{pool_total_supply_in_usd, pool_total_borrow_in_usd, tvl_in_usd, pool_total_interest_in_usd })
+		let (pool_total_supply_in_usd, pool_total_borrow_in_usd, tvl_in_usd, pool_total_protocol_interest_in_usd) = Controller::get_protocol_total_values().ok()?;
+				Some(ProtocolTotalValue{pool_total_supply_in_usd, pool_total_borrow_in_usd, tvl_in_usd, pool_total_protocol_interest_in_usd })
 		}
 
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState> {
