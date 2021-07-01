@@ -2,13 +2,11 @@ use crate::{Balance, Operation, Rate, Runtime, DOT};
 
 use frame_system::RawOrigin;
 use orml_benchmarking::{runtime_benchmarks, Zero};
-use sp_runtime::FixedPointNumber;
+use sp_runtime::{traits::One, FixedPointNumber};
 use sp_std::prelude::*;
 
 runtime_benchmarks! {
 	{ Runtime, controller }
-
-	_ {}
 
 	pause_operation {
 	}: _(

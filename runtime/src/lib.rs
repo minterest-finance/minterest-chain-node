@@ -393,15 +393,6 @@ impl Contains<AccountId> for WhitelistCouncilProvider {
 	fn contains(who: &AccountId) -> bool {
 		WhitelistCouncil::is_member(who)
 	}
-
-	// fn sorted_members() -> Vec<AccountId> {
-	// 	WhitelistCouncil::members()
-	// }
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn add(_: &AccountId) {
-		todo!()
-	}
 }
 
 parameter_type_with_key! {

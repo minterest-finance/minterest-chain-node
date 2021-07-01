@@ -15,8 +15,6 @@ const SEED: u32 = 0;
 runtime_benchmarks! {
 	{ Runtime, module_vesting }
 
-	_ {}
-
 	claim {
 		let i in 1 .. MaxVestingSchedules::get();
 

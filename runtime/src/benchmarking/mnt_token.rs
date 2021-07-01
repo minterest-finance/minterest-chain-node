@@ -7,8 +7,6 @@ use sp_std::prelude::*;
 runtime_benchmarks! {
 	{ Runtime, mnt_token }
 
-	_ {}
-
 	set_speed {
 		let pools = EnabledUnderlyingAssetsIds::get();
 		create_pools(&pools);
