@@ -37,6 +37,7 @@ minterest-model = { path = "../minterest-model" }
 dex = { path = "../dex" }
 mnt-token = { path = "../mnt-token" }
 test-helper = { path = "../../test-helper" }
+whitelist-module = { path = "../whitelist" }
 
 [features]
 default = ['std']
