@@ -396,9 +396,4 @@ impl<T: Config> MinterestModelManager for Pallet<T> {
 
 		Ok(borrow_interest_rate)
 	}
-
-	/// Returns BlocksPerYear value
-	fn get_blocks_per_year() -> u128 {
-		T::BlocksPerYear::get()
-	}
 }

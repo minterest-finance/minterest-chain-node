@@ -212,9 +212,6 @@ pub trait MinterestModelManager {
 		underlying_asset: CurrencyId,
 		utilization_rate: Rate,
 	) -> Result<Rate, DispatchError>;
-
-	/// Returns BlocksPerYear value
-	fn get_blocks_per_year() -> u128;
 }
 
 /// An abstraction of controller basic functionalities.

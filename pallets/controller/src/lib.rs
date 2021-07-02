@@ -17,6 +17,7 @@ use frame_system::pallet_prelude::*;
 use liquidity_pools::Pool;
 use minterest_primitives::{
 	arithmetic::sum_with_mult_result,
+	constants::time::BLOCKS_PER_YEAR,
 	currency::CurrencyType::{UnderlyingAsset, WrappedToken},
 };
 use minterest_primitives::{Balance, CurrencyId, Interest, Operation, Rate};
@@ -748,11 +749,7 @@ impl<T: Config> Pallet<T> {
 		let calculate_apy = |interest: Interest, amount: Balance| {
 			interest
 				.checked_div(&Interest::from_inner(amount as i128))
-				.and_then(|v| {
-					v.checked_mul(&Interest::saturating_from_integer(
-						T::MinterestModelManager::get_blocks_per_year(),
-					))
-				})
+				.and_then(|v| v.checked_mul(&Interest::saturating_from_integer(BLOCKS_PER_YEAR)))
 				.ok_or(Error::<T>::NumOverflow)
 		};
 
