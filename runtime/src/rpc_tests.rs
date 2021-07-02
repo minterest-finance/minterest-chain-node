@@ -1623,6 +1623,7 @@ fn get_user_total_supply_borrow_and_net_apy_should_work() {
 		.enable_minting_for_all_pools(5 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			assert_ok!(set_oracle_price_for_all_pools(2));
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 100_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 100_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
