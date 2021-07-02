@@ -1688,7 +1688,7 @@ fn get_user_total_supply_borrow_and_net_apy_should_work() {
 				(Rate::from_inner(125000000000000), Rate::from_inner(100000000000000))
 			);
 
-			// MNT interest for 1 block
+			// MNT interest for 1 year
 			// mnt_borrow_interest = user_borrow_in_usd * mnt_borrow_rate * BlocksPerYear
 			// mnt_supply_interest = user_supply_in_usd * mnt_supply_rate * mnt_price * BlocksPerYear
 			// DOT mnt borrow interest: 50_000 * 2 * 0.0002 × 5_256_000 = 105120000

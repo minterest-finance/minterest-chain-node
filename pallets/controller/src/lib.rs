@@ -672,19 +672,30 @@ impl<T: Config> Pallet<T> {
 			user_total_borrow_interest,
 			user_total_mnt_supply_interest,
 			user_total_mnt_borrow_interest,
+			user_total_supply_usd,
+			user_total_borrow_usd,
 		) = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.into_iter()
 			.filter(|pool_id| T::LiquidityPoolsManager::pool_exists(pool_id))
 			.try_fold(
-				(Interest::zero(), Interest::zero(), Interest::zero(), Interest::zero()),
+				(
+					Interest::zero(),
+					Interest::zero(),
+					Interest::zero(),
+					Interest::zero(),
+					Balance::zero(),
+					Balance::zero(),
+				),
 				|(
 					acc_user_supply_interest,
 					acc_user_borrow_interest,
 					acc_user_mnt_supply_interest,
 					acc_user_mnt_borrow_interest,
+					user_total_supply_usd,
+					user_total_borrow_usd,
 				),
 				 pool_id|
-				 -> result::Result<(Interest, Interest, Interest, Interest), DispatchError> {
+				 -> result::Result<(Interest, Interest, Interest, Interest, Balance, Balance), DispatchError> {
 					let user_supply_underlying = Self::get_user_underlying_balance_per_asset(&who, pool_id)?;
 					let user_borrow_underlying = Self::get_user_borrow_per_asset(&who, pool_id)?;
 
@@ -732,6 +743,8 @@ impl<T: Config> Pallet<T> {
 						acc_user_mnt_borrow_interest
 							.checked_add(&user_mnt_borrow_interest)
 							.ok_or(Error::<T>::BalanceOverflow)?,
+						user_total_supply_usd + user_supply_in_usd,
+						user_total_borrow_usd + user_borrow_in_usd,
 					))
 				},
 			)?;
@@ -741,9 +754,6 @@ impl<T: Config> Pallet<T> {
 			.and_then(|v| v.checked_add(&user_total_mnt_supply_interest))
 			.and_then(|v| v.checked_add(&user_total_mnt_borrow_interest))
 			.ok_or(Error::<T>::BalanceOverflow)?;
-
-		let (user_total_supply_usd, user_total_borrow_usd) =
-			Self::get_user_total_supply_and_borrowed_balance_in_usd(&who)?;
 
 		// Calculate APY given the amount of BlocksPerYear.
 		let calculate_apy = |interest: Interest, amount: Balance| {
