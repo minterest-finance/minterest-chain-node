@@ -2,7 +2,7 @@
 
 use codec::Codec;
 pub use controller_rpc_runtime_api::{
-	BalanceInfo, ControllerRuntimeApi, HypotheticalLiquidityData, PoolState, UserPoolBalanceData,
+	BalanceInfo, ControllerRuntimeApi, HypotheticalLiquidityData, PoolState, ProtocolTotalValue, UserPoolBalanceData,
 };
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
@@ -15,15 +15,18 @@ use std::sync::Arc;
 #[rpc]
 /// Base trait for RPC interface of controller
 pub trait ControllerRpcApi<BlockHash, AccountId> {
-	/// Returns total amount of money currently held in the protocol in usd.
+	/// Returns total values of supply, borrow, locked and protocol_interest.
 	///
 	///  - `&self` :  Self reference
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - amount: total amount of money currently held in the protocol in usd.
-	#[rpc(name = "controller_protocolTotalValue")]
-	fn get_protocol_total_value(&self, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
+	/// - pool_total_supply_in_usd: total available liquidity in the protocol in usd.
+	/// - pool_total_borrow_in_usd: total borrowed including interest in the protocol in usd.
+	/// - tvl_in_usd: total value of locked money in protocol in usd.
+	/// - pool_total_protocol_interest_in_usd: total protocol interest for all pools in usd.
+	#[rpc(name = "controller_protocolTotalValues")]
+	fn get_protocol_total_values(&self, at: Option<BlockHash>) -> Result<Option<ProtocolTotalValue>>;
 
 	/// Returns current Liquidity Pool State.
 	///
@@ -176,14 +179,14 @@ where
 	C::Api: ControllerRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
 {
-	fn get_protocol_total_value(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Option<BalanceInfo>> {
+	fn get_protocol_total_values(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Option<ProtocolTotalValue>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
-		api.get_protocol_total_value(&at).map_err(|e| RpcError {
+		api.get_protocol_total_values(&at).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
-			message: "Unable to get protocol total value.".into(),
+			message: "Unable to get protocol total values.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})
 	}
