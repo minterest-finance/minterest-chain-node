@@ -1,10 +1,7 @@
-use super::utils::{
-	create_pools, enable_whitelist_mode_and_add_member, lookup_of_account, prepare_for_mnt_distribution, set_balance,
-	SEED,
-};
+use super::utils::{create_pools, lookup_of_account, prepare_for_mnt_distribution, set_balance, SEED};
 use crate::{
 	AccountId, Currencies, EnabledUnderlyingAssetsIds, LiquidationPoolsPalletId, LiquidityPools, MinterestProtocol,
-	Origin, Rate, Runtime, System, BTC, DOLLARS, DOT, ETH, KSM, MNT,
+	Origin, Rate, Runtime, System, Whitelist, BTC, DOLLARS, DOT, ETH, KSM, MNT,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
@@ -57,7 +54,7 @@ runtime_benchmarks! {
 
 		System::set_block_number(10);
 
-		enable_whitelist_mode_and_add_member(&borrower)?;
+		Whitelist::add_member(RawOrigin::Root.into(), borrower.clone())?;
 
 		pools.into_iter().try_for_each(|pool_id| -> Result<(), &'static str> {
 			set_balance(pool_id, &borrower, 100_000 * DOLLARS)?;

@@ -65,14 +65,13 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill, Perquintill};
 
-use frame_support::traits::Contains;
 use frame_system::{EnsureOneOf, EnsureRoot};
 pub use minterest_primitives::{
 	constants::{currency::*, time::*, *},
 	currency::*,
 	*,
 };
-use pallet_traits::PricesManager;
+use pallet_traits::{PricesManager, WhitelistManager};
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -326,39 +325,7 @@ impl pallet_membership::Config<MinterestCouncilMembershipInstance> for Runtime {
 	type WeightInfo = ();
 }
 
-parameter_types! {
-	pub const WhitelistCouncilMotionDuration: BlockNumber = 7 * DAYS;
-	pub const WhitelistCouncilMaxProposals: u32 = 100;
-	pub const WhitelistCouncilMaxMembers: u32 = 100;
-}
-
-type WhitelistCouncilInstance = pallet_collective::Instance2;
-impl pallet_collective::Config<WhitelistCouncilInstance> for Runtime {
-	type Origin = Origin;
-	type Proposal = Call;
-	type Event = Event;
-	type MotionDuration = WhitelistCouncilMotionDuration;
-	type MaxProposals = WhitelistCouncilMaxProposals;
-	type MaxMembers = WhitelistCouncilMaxMembers;
-	type DefaultVote = pallet_collective::PrimeDefaultVote;
-	type WeightInfo = ();
-}
-
-type WhitelistCouncilMembershipInstance = pallet_membership::Instance2;
-impl pallet_membership::Config<WhitelistCouncilMembershipInstance> for Runtime {
-	type Event = Event;
-	type AddOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
-	type RemoveOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
-	type SwapOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
-	type ResetOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
-	type PrimeOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
-	type MembershipInitialized = WhitelistCouncil;
-	type MembershipChanged = WhitelistCouncil;
-	type MaxMembers = MinterestCouncilMaxMembers;
-	type WeightInfo = ();
-}
-
-type OperatorMembershipInstanceMinterest = pallet_membership::Instance3;
+type OperatorMembershipInstanceMinterest = pallet_membership::Instance2;
 impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime {
 	type Event = Event;
 	type AddOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
@@ -380,19 +347,12 @@ impl minterest_protocol::Config for Runtime {
 	type ManagerLiquidationPools = LiquidationPools;
 	type ManagerLiquidityPools = LiquidityPools;
 	type MntManager = MntToken;
-	type WhitelistMembers = WhitelistCouncilProvider;
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
 	type ControllerManager = Controller;
 	type RiskManagerAPI = RiskManager;
 	type MinterestModelAPI = MinterestModel;
 	type CreatePoolOrigin = EnsureRootOrHalfMinterestCouncil;
-}
-
-pub struct WhitelistCouncilProvider;
-impl Contains<AccountId> for WhitelistCouncilProvider {
-	fn contains(who: &AccountId) -> bool {
-		WhitelistCouncil::is_member(who)
-	}
+	type WhitelistManager = Whitelist;
 }
 
 parameter_type_with_key! {
@@ -613,6 +573,17 @@ impl module_vesting::Config for Runtime {
 	type VestingBucketsInfo = VestingBucketsInfo;
 }
 
+parameter_types! {
+	pub const MaxMembersWhitelistMode: u8 = 100;
+}
+
+impl whitelist_module::Config for Runtime {
+	type Event = Event;
+	type MaxMembers = MaxMembersWhitelistMode;
+	type WhitelistOrigin = EnsureRootOrHalfMinterestCouncil;
+	type WhitelistWeightInfo = weights::whitelist::WeightInfo<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -638,15 +609,13 @@ construct_runtime!(
 		// Governance
 		MinterestCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		MinterestCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
-		WhitelistCouncil: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		WhitelistCouncilMembership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
 
 		// Oracle and Prices
 		MinterestOracle: orml_oracle::<Instance1>::{Pallet, Storage, Call, Event<T>},
 		Prices: module_prices::{Pallet, Storage, Call, Event<T>, Config<T>},
 
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
-		OperatorMembershipMinterest: pallet_membership::<Instance3>::{Pallet, Call, Storage, Event<T>, Config<T>},
+		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
 
 		// Minterest pallets
 		MinterestProtocol: minterest_protocol::{Pallet, Call, Event<T>},
@@ -657,6 +626,7 @@ construct_runtime!(
 		LiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		MntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Pallet, Storage, Call, Event<T>},
+		Whitelist: whitelist_module::{Pallet, Storage, Call, Event<T>, Config<T>},
 		// Dev
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
 	}
@@ -886,6 +856,12 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl whitelist_rpc_runtime_api::WhitelistRuntimeApi<Block, AccountId> for Runtime {
+		fn is_whitelist_member(who: AccountId) -> bool {
+				Whitelist::is_whitelist_member(&who)
+		}
+	}
+
 	impl orml_oracle_rpc_runtime_api::OracleApi<
 		Block,
 		DataProviderId,
@@ -956,6 +932,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, minterest_protocol, benchmarking::minterest_protocol);
 			add_benchmark!(params, batches, mnt_token, benchmarking::mnt_token);
 			add_benchmark!(params, batches, module_vesting, benchmarking::vesting);
+			add_benchmark!(params, batches, whitelist_module, benchmarking::whitelist);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

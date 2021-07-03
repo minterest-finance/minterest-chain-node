@@ -1,0 +1,35 @@
+[package]
+name = "whitelist-module"
+description = "Pallet for managing whitelist mode."
+version = "0.6.0"
+authors = ["Minterest Developers"]
+edition = "2018"
+
+[dependencies]
+serde = { version = "1.0.101", optional = true }
+sp-std = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
+sp-runtime = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
+frame-support = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
+frame-system = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
+
+pallet-traits = { path = "../traits", default-features = false }
+
+[dev-dependencies]
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7"}
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7"}
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7"}
+
+minterest-primitives = { path = "../../primitives" }
+test-helper = { path = "../../test-helper" }
+
+[features]
+default = ["std"]
+std = [
+    "serde",
+    "codec/std",
+    "sp-std/std",
+    "sp-runtime/std",
+    "frame-support/std",
+    "frame-system/std",
+]

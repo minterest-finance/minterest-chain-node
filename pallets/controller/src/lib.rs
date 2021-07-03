@@ -193,8 +193,6 @@ pub mod module {
 		OperationIsUnPaused(CurrencyId, Operation),
 		/// Borrow cap changed: \[pool_id, new_cap\]
 		BorrowCapChanged(CurrencyId, Option<Balance>),
-		/// Protocol operation mode switched: \[is_whitelist_mode\]
-		ProtocolOperationModeSwitched(bool),
 		/// Protocol interest threshold changed: \[pool_id, new_value\]
 		ProtocolInterestThresholdChanged(CurrencyId, Balance),
 	}
@@ -212,18 +210,11 @@ pub mod module {
 	pub(crate) type PauseKeepers<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, PauseKeeper, ValueQuery, GetAllPaused>;
 
-	/// Boolean variable. Protocol operation mode. In whitelist mode, only members
-	/// 'WhitelistCouncil' can work with protocols.
-	#[pallet::storage]
-	#[pallet::getter(fn whitelist_mode)]
-	pub type WhitelistMode<T: Config> = StorageValue<_, bool, ValueQuery>;
-
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		#[allow(clippy::type_complexity)]
 		pub controller_dates: Vec<(CurrencyId, ControllerData<T::BlockNumber>)>,
 		pub pause_keepers: Vec<(CurrencyId, PauseKeeper)>,
-		pub whitelist_mode: bool,
 	}
 
 	#[cfg(feature = "std")]
@@ -232,7 +223,6 @@ pub mod module {
 			GenesisConfig {
 				controller_dates: vec![],
 				pause_keepers: vec![],
-				whitelist_mode: false,
 			}
 		}
 	}
@@ -246,7 +236,6 @@ pub mod module {
 			self.pause_keepers.iter().for_each(|(currency_id, pause_keeper)| {
 				PauseKeepers::<T>::insert(currency_id, PauseKeeper { ..*pause_keeper })
 			});
-			WhitelistMode::<T>::put(self.whitelist_mode);
 		}
 	}
 
@@ -445,21 +434,6 @@ pub mod module {
 				pool_id,
 				protocol_interest_threshold,
 			));
-			Ok(().into())
-		}
-
-		/// Enable / disable whitelist mode.
-		///
-		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[pallet::weight(T::ControllerWeightInfo::switch_whitelist_mode())]
-		#[transactional]
-		pub fn switch_whitelist_mode(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-			T::UpdateOrigin::ensure_origin(origin)?;
-			let mode = WhitelistMode::<T>::mutate(|mode| {
-				*mode = !*mode;
-				*mode
-			});
-			Self::deposit_event(Event::ProtocolOperationModeSwitched(mode));
 			Ok(().into())
 		}
 	}
@@ -1084,7 +1058,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			pool_data.total_borrowed,
 			pool_data.borrow_index,
 			pool_data.total_protocol_interest,
-		)?;
+		);
 
 		Ok(())
 	}
@@ -1143,11 +1117,5 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	/// Return minimum protocol interest needed to transfer it to liquidation pool
 	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance {
 		Self::controller_dates(pool_id).protocol_interest_threshold
-	}
-
-	/// Protocol operation mode. In whitelist mode, only members 'WhitelistCouncil' can work with
-	/// protocols.
-	fn is_whitelist_mode_enabled() -> bool {
-		WhitelistMode::<T>::get()
 	}
 }

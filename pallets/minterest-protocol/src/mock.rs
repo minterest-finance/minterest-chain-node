@@ -17,7 +17,6 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One},
 	FixedPointNumber,
 };
-use sp_std::cell::RefCell;
 pub use test_helper::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -41,6 +40,7 @@ frame_support::construct_runtime!(
 		TestLiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, Config<T>},
 		TestDex: dex::{Pallet, Storage, Call, Event<T>},
 		TestMntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
+		TestWhitelist: whitelist_module::{Pallet, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -61,7 +61,6 @@ parameter_types! {
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
-pub struct WhitelistMembers;
 mock_impl_system_config!(Test);
 mock_impl_orml_tokens_config!(Test);
 mock_impl_orml_currencies_config!(Test);
@@ -73,6 +72,7 @@ mock_impl_dex_config!(Test);
 mock_impl_minterest_protocol_config!(Test, OneAlice);
 mock_impl_mnt_token_config!(Test, OneAlice);
 mock_impl_balances_config!(Test);
+mock_impl_whitelist_module_config!(Test, OneAlice);
 
 pub struct TestRiskManager;
 
@@ -98,25 +98,6 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 	fn lock_price(_currency_id: CurrencyId) {}
 
 	fn unlock_price(_currency_id: CurrencyId) {}
-}
-
-thread_local! {
-	static TWO: RefCell<Vec<u64>> = RefCell::new(vec![2]);
-}
-
-impl Contains<u64> for WhitelistMembers {
-	fn contains(who: &AccountId) -> bool {
-		TWO.with(|v| v.borrow().contains(who))
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn add(new: &u128) {
-		TWO.with(|v| {
-			let mut members = v.borrow_mut();
-			members.push(*new);
-			members.sort();
-		})
-	}
 }
 
 pub struct ExtBuilder {
@@ -329,7 +310,6 @@ impl ExtBuilder {
 				(KSM, PauseKeeper::all_paused()),
 				(BTC, PauseKeeper::all_unpaused()),
 			],
-			whitelist_mode: false,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

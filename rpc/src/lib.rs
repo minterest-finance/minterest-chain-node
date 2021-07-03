@@ -30,6 +30,7 @@ where
 	C::Api: controller_rpc::ControllerRuntimeApi<Block, AccountId>,
 	C::Api: prices_rpc::PricesRuntimeApi<Block>,
 	C::Api: mnt_token_rpc::MntTokenRuntimeApi<Block, AccountId>,
+	C::Api: whitelist_rpc::WhitelistRuntimeApi<Block, AccountId>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + 'static,
 {
@@ -39,6 +40,7 @@ where
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
 	use prices_rpc::{PricesRpcApi, PricesRpcImpl};
 	use substrate_frame_rpc_system::{FullSystem, SystemApi};
+	use whitelist_rpc::{WhitelistRpcApi, WhitelistRpcImpl};
 
 	let mut io = jsonrpc_core::IoHandler::default();
 	let FullDeps {
@@ -63,7 +65,10 @@ where
 
 	io.extend_with(MntTokenRpcApi::to_delegate(MntTokenRpcImpl::new(client.clone())));
 
-	io.extend_with(PricesRpcApi::to_delegate(PricesRpcImpl::new(client)));
+	io.extend_with(PricesRpcApi::to_delegate(PricesRpcImpl::new(client.clone())));
+
+	io.extend_with(WhitelistRpcApi::to_delegate(WhitelistRpcImpl::new(client)));
+
 	// Extend this RPC with a custom API by using the following syntax.
 	// `YourRpcStruct` should have a reference to a client, which is needed
 	// to call into the runtime.

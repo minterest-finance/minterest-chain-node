@@ -41,6 +41,7 @@ minterest-model = { path = "../minterest-model" }
 minterest-protocol = { path = "../minterest-protocol" }
 dex = { path = "../dex" }
 mnt-token = { path = "../mnt-token" }
+whitelist-module = { path = "../whitelist" }
 test-helper = { path = "../../test-helper" }
 
 [features]

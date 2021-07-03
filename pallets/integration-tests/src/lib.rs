@@ -66,6 +66,7 @@ mod tests {
 			TestDex: dex::{Pallet, Storage, Call, Event<T>},
 			TestMntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 			TestRiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>},
+			TestWhitelist: whitelist_module::{Pallet, Storage, Call, Event<T>, Config<T>},
 		}
 	);
 
@@ -85,7 +86,6 @@ mod tests {
 		pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 	}
 
-	pub struct WhitelistMembers;
 	mock_impl_system_config!(Test);
 	mock_impl_balances_config!(Test);
 	mock_impl_orml_tokens_config!(Test);
@@ -98,6 +98,7 @@ mod tests {
 	mock_impl_minterest_protocol_config!(Test, ZeroAdmin);
 	mock_impl_mnt_token_config!(Test, ZeroAdmin);
 	mock_impl_risk_manager_config!(Test, ZeroAdmin);
+	mock_impl_whitelist_module_config!(Test, ZeroAdmin);
 
 	thread_local! {
 		static UNDERLYING_PRICE: RefCell<HashMap<CurrencyId, Price>> = RefCell::new(
@@ -129,6 +130,11 @@ mod tests {
 		fn unlock_price(_currency_id: CurrencyId) {}
 	}
 
+	thread_local! {
+		static FOUR: RefCell<Vec<u64>> = RefCell::new(vec![4]);
+	}
+
+	pub struct WhitelistMembers;
 	impl Contains<u64> for WhitelistMembers {
 		fn contains(_: &u64) -> bool {
 			true
@@ -367,7 +373,6 @@ mod tests {
 					(KSM, PauseKeeper::all_paused()),
 					(BTC, PauseKeeper::all_unpaused()),
 				],
-				whitelist_mode: false,
 			}
 			.assimilate_storage(&mut t)
 			.unwrap();

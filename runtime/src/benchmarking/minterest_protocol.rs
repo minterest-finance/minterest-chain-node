@@ -3,8 +3,8 @@ use super::utils::{
 };
 use crate::{
 	AccountId, Balance, Currencies, EnabledUnderlyingAssetsIds, EnabledWrappedTokensId, LiquidityPools,
-	LiquidityPoolsPalletId, MinterestProtocol, MntTokenPalletId, Origin, Rate, Runtime, System, BTC, DOLLARS, DOT, ETH,
-	KSM, MBTC, MDOT, MNT,
+	LiquidityPoolsPalletId, MinterestProtocol, MntTokenPalletId, Origin, Rate, Runtime, System, Whitelist, BTC,
+	DOLLARS, DOT, ETH, KSM, MBTC, MDOT, MNT,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
@@ -89,7 +89,7 @@ runtime_benchmarks! {
 	deposit_underlying {
 		prepare_for_mnt_distribution(vec![DOT])?;
 		let lender: AccountId = account("lender", 0, SEED);
-		enable_whitelist_mode_and_add_member(&lender)?;
+		Whitelist::add_member(RawOrigin::Root.into(), lender.clone())?;
 
 		// set balance for lender
 		set_balance(DOT, &lender, 50_000 * DOLLARS)?;
@@ -115,7 +115,7 @@ runtime_benchmarks! {
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
-		enable_whitelist_mode_and_add_member(&borrower)?;
+		Whitelist::add_member(RawOrigin::Root.into(), borrower.clone())?;
 		hypothetical_liquidity_setup(&borrower, &lender)?;
 
 		System::set_block_number(10);
@@ -132,7 +132,7 @@ runtime_benchmarks! {
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
-		enable_whitelist_mode_and_add_member(&borrower)?;
+		Whitelist::add_member(RawOrigin::Root.into(), borrower.clone())?;
 		hypothetical_liquidity_setup(&borrower, &lender)?;
 
 		System::set_block_number(10);
@@ -149,7 +149,7 @@ runtime_benchmarks! {
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
-		enable_whitelist_mode_and_add_member(&borrower)?;
+		Whitelist::add_member(RawOrigin::Root.into(), borrower.clone())?;
 		hypothetical_liquidity_setup(&borrower, &lender)?;
 
 		System::set_block_number(10);
@@ -166,7 +166,7 @@ runtime_benchmarks! {
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
-		enable_whitelist_mode_and_add_member(&borrower)?;
+		Whitelist::add_member(RawOrigin::Root.into(), borrower.clone())?;
 		hypothetical_liquidity_setup(&borrower, &lender)?;
 
 		MinterestProtocol::borrow(RawOrigin::Signed(borrower.clone()).into(), DOT, 5_000 * DOLLARS)?;
@@ -182,7 +182,7 @@ runtime_benchmarks! {
 	repay {
 		prepare_for_mnt_distribution(vec![DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
-		enable_whitelist_mode_and_add_member(&borrower)?;
+		Whitelist::add_member(RawOrigin::Root.into(), borrower.clone())?;
 		set_balance(DOT, &borrower, 100_000 * DOLLARS)?;
 		MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), DOT, 50_000 * DOLLARS)?;
 
@@ -202,7 +202,7 @@ runtime_benchmarks! {
 	repay_all {
 		prepare_for_mnt_distribution(vec![DOT])?;
 		let borrower:AccountId = account("borrower", 0, SEED);
-		enable_whitelist_mode_and_add_member(&borrower)?;
+		Whitelist::add_member(RawOrigin::Root.into(), borrower.clone())?;
 		set_balance(DOT, &borrower, 100_000 * DOLLARS)?;
 		MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), DOT, 50_000 * DOLLARS)?;
 
@@ -223,8 +223,8 @@ runtime_benchmarks! {
 		prepare_for_mnt_distribution(vec![DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
-		enable_whitelist_mode_and_add_member(&lender)?;
-		enable_whitelist_mode_and_add_member(&borrower)?;
+		Whitelist::add_member(RawOrigin::Root.into(), lender.clone())?;
+		Whitelist::add_member(RawOrigin::Root.into(), borrower.clone())?;
 		set_balance(DOT, &lender, 100_000 * DOLLARS)?;
 		set_balance(DOT, &borrower, 100_000 * DOLLARS)?;
 		MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), DOT, 50_000 * DOLLARS)?;
@@ -250,7 +250,7 @@ runtime_benchmarks! {
 
 		System::set_block_number(10);
 
-		enable_whitelist_mode_and_add_member(&borrower)?;
+		Whitelist::add_member(RawOrigin::Root.into(), borrower.clone())?;
 		hypothetical_liquidity_setup(&borrower, &lender)?;
 
 		System::set_block_number(20);
@@ -285,7 +285,7 @@ runtime_benchmarks! {
 		let lender: AccountId = account("lender", 0, SEED);
 		let borrower: AccountId = account("borrower", 0, SEED);
 		enable_whitelist_mode_and_add_member(&lender)?;
-		enable_whitelist_mode_and_add_member(&borrower)?;
+		Whitelist::add_member(RawOrigin::Root.into(), borrower.clone())?;
 
 		set_balance(
 			MNT,

@@ -670,23 +670,6 @@ fn resume_operation_should_work() {
 		});
 }
 
-#[test]
-fn switch_whitelist_mode_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(Controller::switch_whitelist_mode(alice_origin()));
-		let expected_event = Event::Controller(crate::Event::ProtocolOperationModeSwitched(true));
-		assert!(System::events().iter().any(|record| record.event == expected_event));
-		assert!(Controller::whitelist_mode());
-
-		assert_ok!(Controller::switch_whitelist_mode(alice_origin()));
-		assert!(!Controller::whitelist_mode());
-
-		assert_noop!(Controller::switch_whitelist_mode(bob_origin()), BadOrigin);
-		assert!(!Controller::whitelist_mode());
-	});
-}
-
-#[test]
 fn set_borrow_cap_should_work() {
 	ExtBuilder::default()
 		.pool_mock(DOT)

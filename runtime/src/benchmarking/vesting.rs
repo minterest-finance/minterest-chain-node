@@ -1,6 +1,7 @@
 use super::utils::{lookup_of_account, set_balance};
 use crate::{
-	AccountId, BlockNumber, Currencies, MaxVestingSchedules, Runtime, System, Vesting, BLOCKS_PER_YEAR, DOLLARS, MNT,
+	benchmarking::utils::SEED, AccountId, BlockNumber, Currencies, MaxVestingSchedules, Runtime, System, Vesting,
+	BLOCKS_PER_YEAR, DOLLARS, MNT,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
@@ -9,8 +10,6 @@ use module_vesting::VestingSchedule;
 use orml_benchmarking::runtime_benchmarks;
 use orml_traits::MultiCurrency;
 use sp_std::prelude::*;
-
-const SEED: u32 = 0;
 
 runtime_benchmarks! {
 	{ Runtime, module_vesting }

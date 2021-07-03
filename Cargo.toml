@@ -46,5 +46,6 @@ members = [
     "pallets/liquidation-pools",
     "pallets/mnt-token",
     "pallets/dex",
+    "pallets/whitelist"
 ]
 
