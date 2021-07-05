@@ -16,7 +16,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-use frame_support::{debug, ensure, log, pallet_prelude::*, traits::Get, transactional};
+use frame_support::{ensure, log, pallet_prelude::*, traits::Get, transactional};
 use frame_system::{
 	ensure_none,
 	offchain::{SendTransactionTypes, SubmitTransaction},

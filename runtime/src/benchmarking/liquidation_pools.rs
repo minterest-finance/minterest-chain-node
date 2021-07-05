@@ -3,8 +3,10 @@ use crate::{AccountId, DexPalletId, LiquidationPools, LiquidationPoolsPalletId, 
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
-use sp_runtime::traits::{AccountIdConversion, One};
-use sp_runtime::FixedPointNumber;
+use sp_runtime::{
+	traits::{AccountIdConversion, One},
+	FixedPointNumber,
+};
 use sp_std::prelude::*;
 
 runtime_benchmarks! {

@@ -773,7 +773,7 @@ fn testnet_genesis(
 		},
 		minterest_council: Default::default(),
 		minterest_council_membership: MinterestCouncilMembershipConfig {
-			members: vec![root_key.clone()],
+			members: vec![root_key],
 			phantom: Default::default(),
 		},
 		operator_membership_minterest: OperatorMembershipMinterestConfig {
@@ -792,9 +792,9 @@ fn testnet_genesis(
 		},
 		vesting: VestingConfig { vesting: vec![] },
 		whitelist: WhitelistConfig {
-		  	members: endowed_accounts,
-		  	whitelist_mode: false,
-		  }, 
+			members: endowed_accounts,
+			whitelist_mode: false,
+		},
 	}
 }
 

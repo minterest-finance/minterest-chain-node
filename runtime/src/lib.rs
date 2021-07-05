@@ -327,6 +327,9 @@ impl pallet_membership::Config<MinterestCouncilMembershipInstance> for Runtime {
 	type WeightInfo = ();
 }
 
+// It is possible to remove MinterestOracle and this pallets after implementing chainlink.
+// If we decided to save it. Need to fix MembershipInitialized and MembershipChanged types.
+// TODO MIN-446
 type OperatorMembershipInstanceMinterest = pallet_membership::Instance2;
 impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime {
 	type Event = Event;
@@ -336,9 +339,8 @@ impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime 
 	type ResetOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type PrimeOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	// TODO These two values was equal to MinterestOracle before updating
-	type MembershipInitialized = ();
-	type MembershipChanged = ();
-	// TODO review this. It was added to fix compile issue.
+	type MembershipInitialized = (); // MinterestOracle
+	type MembershipChanged = (); // MinterestOracle
 	type MaxMembers = MinterestCouncilMaxMembers;
 	type WeightInfo = ();
 }
@@ -364,8 +366,10 @@ parameter_type_with_key! {
 }
 
 parameter_types! {
-	// TODO REVIEW
-	pub const MaxTokenLocks: u32 = 5000;
+	// This is not negotiated value. Usually it may be 1-2 locks in user.
+	// This value need just to set max bound locks for internal vector.
+	// Should be reviewed before release preparation.
+	pub const MaxTokenLocks: u32 = 1024;
 }
 
 impl orml_tokens::Config for Runtime {
@@ -376,7 +380,6 @@ impl orml_tokens::Config for Runtime {
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
-	// TODO discuss
 	type MaxLocks = MaxTokenLocks;
 }
 
@@ -505,13 +508,11 @@ parameter_types! {
 	pub const MinimumCount: u32 = 1;
 	pub const ExpiresIn: Moment = 1000 * 60 * 60; // 60 mins
 	pub ZeroAccountId: AccountId = AccountId::from([0u8; 32]);
-	// TODO Temporary
+	// TODO MIN-446. Temporary. This is need to pass integration test
 	pub ORACLE1: AccountId = AccountId::from([4u8; 32]);
 	pub OracleMembers: Vec<AccountId> = vec![ORACLE1::get()];
 	pub const MaxHasDispatchedSize: u32 = 100;
 }
-
-// TODO Temporary
 pub struct Members;
 impl SortedMembers<AccountId> for Members {
 	fn sorted_members() -> Vec<AccountId> {
@@ -520,7 +521,6 @@ impl SortedMembers<AccountId> for Members {
 }
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, minterest_primitives::Moment>;
-
 type MinterestDataProvider = orml_oracle::Instance1;
 impl orml_oracle::Config<MinterestDataProvider> for Runtime {
 	type Event = Event;
@@ -534,7 +534,10 @@ impl orml_oracle::Config<MinterestDataProvider> for Runtime {
 	type Members = Members;
 	type MaxHasDispatchedSize = MaxHasDispatchedSize;
 }
+
+// This was added after updating to polkadot-v0.9.7 to fix compile error.
 impl pallet_randomness_collective_flip::Config for Runtime {}
+
 create_median_value_data_provider!(
 	AggregatedDataProvider,
 	CurrencyId,
@@ -703,10 +706,6 @@ impl_runtime_apis! {
 		) -> sp_inherents::CheckInherentsResult {
 			data.check_extrinsics(&block)
 		}
-
-		// fn random_seed() -> <Block as BlockT>::Hash {
-		// 	RandomnessCollectiveFlip::random_seed()
-		// }
 	}
 
 	impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {

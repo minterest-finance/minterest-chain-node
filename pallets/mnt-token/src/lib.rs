@@ -42,7 +42,7 @@ impl<T: Config> MntState<T> {
 	fn new() -> MntState<T> {
 		MntState {
 			mnt_distribution_index: Rate::one(), // initial index
-			index_updated_at_block: frame_system::Module::<T>::block_number(),
+			index_updated_at_block: frame_system::Pallet::<T>::block_number(),
 		}
 	}
 }
@@ -238,7 +238,7 @@ pub mod module {
 				// Distribution is currently off.
 				// Update 'index_updated_at_block' and leave indices unchanged.
 				if !MntSpeeds::<T>::contains_key(currency_id) {
-					let current_block = frame_system::Module::<T>::block_number();
+					let current_block = frame_system::Pallet::<T>::block_number();
 					MntPoolsState::<T>::mutate(currency_id, |pool_state| {
 						pool_state.borrow_state.index_updated_at_block = current_block;
 						pool_state.supply_state.index_updated_at_block = current_block;
@@ -318,7 +318,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			return Ok(());
 		}
 
-		let current_block = frame_system::Module::<T>::block_number();
+		let current_block = frame_system::Pallet::<T>::block_number();
 		let mut pool_state = MntPoolsState::<T>::get(underlying_id);
 		let block_delta = current_block
 			.checked_sub(&pool_state.supply_state.index_updated_at_block)
@@ -374,7 +374,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			return Ok(());
 		}
 
-		let current_block = frame_system::Module::<T>::block_number();
+		let current_block = frame_system::Pallet::<T>::block_number();
 		let mut pool_state = MntPoolsState::<T>::get(underlying_id);
 		let block_delta = current_block
 			.checked_sub(&pool_state.borrow_state.index_updated_at_block)

@@ -17,7 +17,7 @@ pub(crate) use pallet_traits::{PoolsManager, PricesManager};
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One}
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One},
 };
 pub use test_helper::*;
 

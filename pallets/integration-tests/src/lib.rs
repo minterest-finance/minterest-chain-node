@@ -12,9 +12,9 @@
 #[cfg(test)]
 mod tests {
 	use controller::{ControllerData, PauseKeeper};
-	use frame_support::traits::Contains;
 	use frame_support::{
-		assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId,
+		assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, traits::Contains,
+		PalletId,
 	};
 	use frame_system::{offchain::SendTransactionTypes, EnsureSignedBy};
 	use liquidity_pools::{Pool, PoolUserData};
