@@ -13,7 +13,7 @@ use frame_support::{assert_noop, assert_ok, pallet_prelude::GenesisBuild, parame
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
-use minterest_primitives::{CurrencyId, Operation, Price};
+use minterest_primitives::{CurrencyId, Interest, Operation, Price};
 use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
 use orml_traits::MultiCurrency;
 use pallet_traits::{PoolsManager, PricesManager};
@@ -447,6 +447,10 @@ fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 
 fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> (Rate, Rate) {
 	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_mnt_borrow_and_supply_rates(pool_id).unwrap()
+}
+
+fn get_user_total_supply_borrow_and_net_apy_rpc(account_id: AccountId) -> Option<(Interest, Interest, Interest)> {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_total_supply_borrow_and_net_apy(account_id)
 }
 
 fn run_to_block(n: u32) {
@@ -1726,4 +1730,134 @@ fn protocol_interest_transfer_should_work() {
 				liquidation_pool_dot_balance + transferred_to_liquidation_pool
 			);
 		});
+}
+
+/// Check that get_user_total_supply_borrow_and_net_apy RPC call works as expected
+#[test]
+fn get_user_total_supply_borrow_and_net_apy_should_work() {
+	ExtBuilder::default()
+		.mnt_account_balance(1_000_000 * DOLLARS)
+		.pool_initial(DOT)
+		.pool_initial(KSM)
+		.pool_initial(ETH)
+		.pool_initial(BTC)
+		.enable_minting_for_all_pools(5 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			assert_ok!(set_oracle_price_for_all_pools(2));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 100_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 100_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
+			assert_ok!(MinterestProtocol::borrow(alice(), ETH, 80_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 50_000 * DOLLARS));
+
+			// BlocksPerYear = 5_256_000
+			// borrow_rate_per_year = borrow_rate * blocks_per_year
+			// supply_rate_per_year = supply_rate * blocks_per_year
+
+			// borrow_rate_per_year = 0,0000000045 × 5256000 = 2.36 %
+			// supply_rate_per_year = 0,000000002025 × 5256000 = 1.06 %
+			assert_eq!(
+				Controller::get_pool_exchange_borrow_and_supply_rates(DOT),
+				Some((Rate::one(), Rate::from_inner(4500000000), Rate::from_inner(2025000000)))
+			);
+			// borrow_rate_per_year = 0,0000000072 × 5256000 = 3.78 %
+			// supply_rate_per_year = 0,000000005184 × 5256000 = 2.72 %
+			assert_eq!(
+				Controller::get_pool_exchange_borrow_and_supply_rates(ETH),
+				Some((Rate::one(), Rate::from_inner(7200000000), Rate::from_inner(5184000000)))
+			);
+
+			// Hypothetical year supply interest(for the pool):
+			// supply_interest = user_supply_in_usd * supply_apy_as_decimal
+			// DOT: 200_000 * 0.0106 = 2120 $
+			// ETH: 200_000 * 0.0272 = 5440 $
+			// Sum = 2120 + 5440  = 7560 $
+			// sum_supply_apy = 7560/400_000 = 1.89 %
+
+			// Hypothetical year borrow interest(for the pool):
+			// borrow_interest = user_borrow_in_usd * borrow_apy_as_decimal
+			// DOT: 100_000 * 0.0236 = 2360 $
+			// ETH: 160_000 * 0.0378 = 6048 $
+			// Sum = 2360 + 6048 = 8408 $
+			// sum_borrow_apy = 8408/260_000 = 3.23 %
+
+			assert_eq!(MntToken::mnt_speeds(DOT), 5 * DOLLARS);
+			assert_eq!(MntToken::mnt_speeds(ETH), 5 * DOLLARS);
+
+			// MNT rates for the pool:
+			// mnt_borrow_rate = mnt_speed * mnt_price / (pool_borrow * currency_price)
+			// mnt_supply_rate = mnt_speed * mnt_price / (pool_supply * currency_price)
+			//
+			// MNT price: 4 USD
+			// MNT speed: 5 * DOLLARS
+			// DOT mnt borrow:  5 * 4 / (50_000 * 2)  = 0.0002
+			// DOT mnt supply:  5 * 4 / (100_000 * 2) = 0.0001
+			assert_eq!(
+				get_mnt_borrow_and_supply_rates(DOT),
+				(
+					Rate::from_inner(200_000_000_000_000),
+					Rate::from_inner(100_000_000_000_000)
+				)
+			);
+
+			// ETH mnt borrow:  5 * 4 / (80_000 * 2) = 0.000125
+			// ETH mnt supply:  5 * 4 / (100_000 * 2) = 0.0001
+			assert_eq!(
+				get_mnt_borrow_and_supply_rates(ETH),
+				(Rate::from_inner(125000000000000), Rate::from_inner(100000000000000))
+			);
+
+			// MNT interest for 1 year
+			// mnt_borrow_interest = user_borrow_in_usd * mnt_borrow_rate * BlocksPerYear
+			// mnt_supply_interest = user_supply_in_usd * mnt_supply_rate * mnt_price * BlocksPerYear
+			// DOT mnt borrow interest: 50_000 * 2 * 0.0002 × 5_256_000 = 105120000
+			// DOT mnt supply interest: 100_000 * 2 * 0.0001 × 5_256_000 = 105120000
+			// ETH mnt borrow interest: 80_000 * 2 * 0.000125 × 5_256_000 = 105120000
+			// ETH mnt supply interest: 100_000 * 2 * 0.0001  × 5_256_000 = 105120000
+			//
+			// net_apy_indicator =
+			// (SUM(user_supply_in_usd * supply_rate) - SUM(user_borrow_in_usd * borrow_rate)
+			// + SUM(mnt_borrow_interest) - SUM(mnt_supply_interest)) * BlocksPerYear
+			// were SUM - sum over all pools where user have borrows/supplies
+			//
+			// net_apy_indicator = (2120 + 5440) - (2360 + 6048) + (105120000 + 105120000)
+			// + (105120000 + 105120000) = 420479152
+			//
+			// if net_apy_indicator > 0: net_apy = net_apy_indicator / user_total_supply_in_usd
+			// if net_apy_indicator < 0: net_apy = net_apy_indicator / user_total_borrow_in_usd
+			//
+			// net_apy = 420479152 / 400_000 = 1051.197894972000000000
+
+			assert_eq!(
+				get_user_total_supply_borrow_and_net_apy_rpc(ALICE::get()),
+				Some((
+					Interest::from_inner(18_945_252_000_000_000),
+					Interest::from_inner(32_385_046_151_016_000),
+					Interest::from_inner(1_051_197_894_972_000_000_000)
+				))
+			);
+
+			// Add liquidity to pool whose supply interest rate is zero.
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), BTC, 50_000 * DOLLARS));
+
+			// borrow_interest_rate = 0 %
+			// supply_interest_rate = 0 %
+			assert_eq!(
+				Controller::get_pool_exchange_borrow_and_supply_rates(BTC),
+				Some((Rate::one(), Rate::zero(), Rate::zero()))
+			);
+
+			// sum_supply_apy = 7560/(400_000 + 100_000) = 1.51 %
+			// net_apy = 420479152 / (400_000 + 100_000) = 840.9583
+			assert_eq!(
+				get_user_total_supply_borrow_and_net_apy_rpc(ALICE::get()),
+				Some((
+					Interest::from_inner(15_156_201_600_000_000),
+					Interest::from_inner(32_385_046_151_016_000),
+					Interest::from_inner(840_958_315_977_600_000_000)
+				))
+			);
+		})
 }

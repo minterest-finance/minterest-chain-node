@@ -24,8 +24,8 @@ pub use minterest_primitives::{
 		CurrencyType::{UnderlyingAsset, WrappedToken},
 		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
 	},
-	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index, Moment,
-	Operation, Price, Rate, Signature,
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index,
+	Interest, Moment, Operation, Price, Rate, Signature,
 };
 pub use mnt_token_rpc_runtime_api::MntBalanceInfo;
 use orml_currencies::BasicCurrencyAdapter;
@@ -400,6 +400,7 @@ impl controller::Config for Runtime {
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type ControllerWeightInfo = weights::controller::WeightInfo<Runtime>;
+	type MntManager = MntToken;
 }
 
 impl module_prices::Config for Runtime {
@@ -809,6 +810,10 @@ impl_runtime_apis! {
 
 		fn pool_exists(underlying_asset_id: CurrencyId) -> bool {
 			LiquidityPools::pool_exists(&underlying_asset_id)
+		}
+
+		fn get_user_total_supply_borrow_and_net_apy(account_id: AccountId) -> Option<(Interest, Interest, Interest)> {
+			Controller::get_user_total_supply_borrow_and_net_apy(account_id).ok()
 		}
 	}
 
