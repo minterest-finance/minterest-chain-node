@@ -68,8 +68,12 @@ fn accrue_interest_should_work() {
 			assert_eq!(Controller::controller_dates(DOT).last_interest_accrued_block, 1);
 			assert_eq!(TestPools::pools(DOT).total_protocol_interest, 57_600_000_000);
 			assert_eq!(
-				Controller::get_liquidity_pool_borrow_and_supply_rates(DOT),
-				Some((Rate::from_inner(139_680_000_267), Rate::from_inner(100_569_600_394)))
+				Controller::get_pool_exchange_borrow_and_supply_rates(DOT),
+				Some((
+					Rate::one(),
+					Rate::from_inner(139_680_000_267),
+					Rate::from_inner(100_569_600_394)
+				))
 			);
 			assert_eq!(TestPools::pools(DOT).total_borrowed, 80_000_000_576_000_000_000);
 			assert_eq!(
@@ -353,16 +357,22 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 		.execute_with(|| {
 			// exchange_rate = (100 - 0 + 300) / 125 = 3.2
 			assert_eq!(
-				Controller::get_liquidity_pool_exchange_rate(DOT),
-				Some(Rate::saturating_from_rational(32, 10))
+				Controller::get_pool_exchange_borrow_and_supply_rates(DOT).unwrap().0,
+				Rate::from_inner(3200000014580000000)
 			);
+			assert_eq!(Controller::get_pool_exchange_borrow_and_supply_rates(ETH), None);
 
-			assert_eq!(Controller::get_liquidity_pool_exchange_rate(ETH), None);
+			// Check that the exchange rate has changed. That is, the current value is returned.
+			System::set_block_number(100);
+			assert_eq!(
+				Controller::get_pool_exchange_borrow_and_supply_rates(DOT).unwrap().0,
+				Rate::from_inner(3200001458000000000)
+			);
 		});
 }
 
 #[test]
-fn get_liquidity_pool_borrow_and_supply_rates_less_than_kink() {
+fn get_pool_exchange_borrow_and_supply_rates_less_than_kink() {
 	ExtBuilder::default()
 		.pool_balance(DOT, dollars(100_u128))
 		.pool_total_borrowed(DOT, dollars(300_u128))
@@ -372,27 +382,31 @@ fn get_liquidity_pool_borrow_and_supply_rates_less_than_kink() {
 			// borrow_rate = 0.75 * 0.000_000_009 + 0 = 0.00000000675
 			// supply_rate = 0.75 * 0.00_000_000_675 * (1 - 0.1) = 0.00000000455625
 			assert_eq!(
-				Controller::get_liquidity_pool_borrow_and_supply_rates(DOT),
-				Some((Rate::from_inner(6750000000), Rate::from_inner(4556250000)))
+				Controller::get_pool_exchange_borrow_and_supply_rates(DOT),
+				Some((Rate::one(), Rate::from_inner(6750000014), Rate::from_inner(4556250018)))
 			);
 
-			assert_eq!(Controller::get_liquidity_pool_borrow_and_supply_rates(ETH), None);
+			assert_eq!(Controller::get_pool_exchange_borrow_and_supply_rates(ETH), None);
 		});
 }
 
 #[test]
-fn get_liquidity_pool_borrow_and_supply_rates_above_kink() {
+fn get_pool_exchange_borrow_and_supply_rates_above_kink() {
 	ExtBuilder::default()
 		.pool_balance(DOT, dollars(100_u128))
 		.pool_total_borrowed(DOT, dollars(500_u128))
 		.build()
 		.execute_with(|| {
-			// utilization_rate = 500 / (100 - 0 + 500) = 0.83 > kink = 0.8
-			// borrow_rate = 0.83 * 0.8 * 0.000_000_207  + (0.8 * 0.000_000_009) + 0 = 0.0000001452
-			// supply_rate = 0.83 * 0.0000001452 * (1 - 0.1) = 0.00000000455625
+			// utilization_rate = 500 / (100 - 0 + 500) = 0.833 > kink = 0.8
+			// borrow_rate = 0.833 * 0.8 * 0.000_000_207  + (0.8 * 0.000_000_009) + 0 = 0.0000001452
+			// supply_rate = 0.833 * 0.0000001452 * (1 - 0.1) = 0,0000001089
 			assert_eq!(
-				Controller::get_liquidity_pool_borrow_and_supply_rates(DOT),
-				Some((Rate::from_inner(145199999999), Rate::from_inner(108899999999)))
+				Controller::get_pool_exchange_borrow_and_supply_rates(DOT),
+				Some((
+					Rate::one(),
+					Rate::from_inner(145200005009),
+					Rate::from_inner(108900007709)
+				))
 			);
 		});
 }
@@ -670,6 +684,7 @@ fn resume_operation_should_work() {
 		});
 }
 
+#[test]
 fn set_borrow_cap_should_work() {
 	ExtBuilder::default()
 		.pool_mock(DOT)

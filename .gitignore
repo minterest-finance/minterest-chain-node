@@ -31,3 +31,6 @@ venv.bak/
 
 # Debug settings
 .vimspector.json
+
+# Merge artifacts
+*.orig

@@ -5,7 +5,7 @@ use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 pub(crate) use minterest_primitives::Price;
-pub use minterest_primitives::{Balance, CurrencyId, Rate};
+pub use minterest_primitives::{Balance, CurrencyId, Interest, Rate};
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
@@ -33,6 +33,7 @@ frame_support::construct_runtime!(
 		Controller: controller::{Pallet, Storage, Call, Event, Config<T>},
 		MinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
 		TestPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
+		TestMntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -46,11 +47,14 @@ mock_impl_orml_currencies_config!(Runtime);
 mock_impl_liquidity_pools_config!(Runtime);
 mock_impl_minterest_model_config!(Runtime, OneAlice);
 mock_impl_controller_config!(Runtime, OneAlice);
+mock_impl_mnt_token_config!(Runtime, OneAlice);
 mock_impl_balances_config!(Runtime);
 
 parameter_types! {
 	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
+	pub const MntTokenPalletId: PalletId = PalletId(*b"min/mntt");
+	pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);

@@ -15,15 +15,17 @@ mod rpc_tests;
 mod weights;
 mod weights_test;
 
-pub use controller_rpc_runtime_api::{BalanceInfo, HypotheticalLiquidityData, PoolState, UserPoolBalanceData};
+pub use controller_rpc_runtime_api::{
+	BalanceInfo, HypotheticalLiquidityData, PoolState, ProtocolTotalValue, UserPoolBalanceData,
+};
 use minterest_primitives::constants::fee::WeightToFee;
 pub use minterest_primitives::{
 	currency::{
 		CurrencyType::{UnderlyingAsset, WrappedToken},
 		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
 	},
-	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index, Moment,
-	Operation, Price, Rate, Signature,
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index,
+	Interest, Moment, Operation, Price, Rate, Signature,
 };
 pub use mnt_token_rpc_runtime_api::MntBalanceInfo;
 use orml_currencies::BasicCurrencyAdapter;
@@ -420,6 +422,7 @@ impl controller::Config for Runtime {
 	type MaxBorrowCap = MaxBorrowCap;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type ControllerWeightInfo = weights::controller::WeightInfo<Runtime>;
+	type MntManager = MntToken;
 }
 
 impl module_prices::Config for Runtime {
@@ -791,14 +794,13 @@ impl_runtime_apis! {
 	}
 
 	impl controller_rpc_runtime_api::ControllerRuntimeApi<Block, AccountId> for Runtime {
-		fn get_protocol_total_value() -> Option<BalanceInfo> {
-				Some(BalanceInfo{amount: Controller::get_protocol_total_value().ok()?})
+		fn get_protocol_total_values() -> Option<ProtocolTotalValue> {
+		let (pool_total_supply_in_usd, pool_total_borrow_in_usd, tvl_in_usd, pool_total_protocol_interest_in_usd) = Controller::get_protocol_total_values().ok()?;
+				Some(ProtocolTotalValue{pool_total_supply_in_usd, pool_total_borrow_in_usd, tvl_in_usd, pool_total_protocol_interest_in_usd })
 		}
 
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState> {
-			let exchange_rate = Controller::get_liquidity_pool_exchange_rate(pool_id)?;
-			let (borrow_rate, supply_rate) = Controller::get_liquidity_pool_borrow_and_supply_rates(pool_id)?;
-
+			let (exchange_rate, borrow_rate, supply_rate) = Controller::get_pool_exchange_borrow_and_supply_rates(pool_id)?;
 			Some(PoolState { exchange_rate, borrow_rate, supply_rate })
 		}
 
@@ -806,8 +808,8 @@ impl_runtime_apis! {
 			Controller::get_utilization_rate(pool_id)
 		}
 
-		fn get_total_supply_and_borrowed_usd_balance(account_id: AccountId) -> Option<UserPoolBalanceData> {
-			let (total_supply, total_borrowed) = Controller::get_total_supply_and_borrowed_usd_balance(&account_id).ok()?;
+		fn get_user_total_supply_and_borrowed_balance_in_usd(account_id: AccountId) -> Option<UserPoolBalanceData> {
+			let (total_supply, total_borrowed) = Controller::get_user_total_supply_and_borrowed_balance_in_usd(&account_id).ok()?;
 
 			Some(UserPoolBalanceData {total_supply, total_borrowed})
 		}
@@ -843,6 +845,10 @@ impl_runtime_apis! {
 
 		fn pool_exists(underlying_asset_id: CurrencyId) -> bool {
 			LiquidityPools::pool_exists(&underlying_asset_id)
+		}
+
+		fn get_user_total_supply_borrow_and_net_apy(account_id: AccountId) -> Option<(Interest, Interest, Interest)> {
+			Controller::get_user_total_supply_borrow_and_net_apy(account_id).ok()
 		}
 	}
 
