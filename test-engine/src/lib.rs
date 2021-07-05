@@ -47,6 +47,7 @@ frame_support::construct_runtime!(
 		TestDex: dex::{Module, Storage, Call, Event<T>},
 		TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
 		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config<T>},
+		TestWhitelist: whitelist_module::{Module, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -101,9 +102,11 @@ mock_impl_liquidation_pools_config!(TestRuntime);
 mock_impl_controller_config!(TestRuntime, ZeroAdmin);
 mock_impl_minterest_model_config!(TestRuntime, ZeroAdmin);
 mock_impl_dex_config!(TestRuntime);
-mock_impl_minterest_protocol_config!(TestRuntime, ZeroAdmin);
+
 mock_impl_mnt_token_config!(TestRuntime, ZeroAdmin);
 mock_impl_risk_manager_config!(TestRuntime, ZeroAdmin);
+mock_impl_whitelist_module_config!(TestRuntime, ZeroAdmin);
+mock_impl_minterest_protocol_config!(TestRuntime, ZeroAdmin);
 
 pub struct MockPriceSource;
 
@@ -133,7 +136,6 @@ pub struct ExtBuilderNew {
 	pub mnt_claim_threshold: Balance,
 	pub controller_dates: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
 	pub pause_keepers: Vec<(CurrencyId, PauseKeeper)>,
-	pub whitelist_mode: bool,
 	//pub minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
 }
 
@@ -148,7 +150,6 @@ impl Default for ExtBuilderNew {
 			mnt_claim_threshold: Balance::zero(),
 			controller_dates: Vec::new(),
 			pause_keepers: vec![],
-			whitelist_mode: false,
 			//minterest_model_params: vec![],
 		}
 	}
@@ -211,7 +212,6 @@ impl BuildExternalities for ExtBuilderNew {
 		controller::GenesisConfig::<TestRuntime> {
 			controller_dates: self.controller_dates,
 			pause_keepers: self.pause_keepers,
-			whitelist_mode: self.whitelist_mode,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -297,8 +297,6 @@ pub trait ControllerTestConfigurator {
 	) -> Self;
 	// TODO: Add description for
 	fn pause_keeper(self, currency_id: CurrencyId, is_paused: bool) -> Self;
-	// TODO: Add description for
-	fn white_list(self, is_activated: bool) -> Self;
 }
 
 // ######################
@@ -460,11 +458,6 @@ impl ControllerTestConfigurator for ExtBuilderNew {
 				PauseKeeper::all_unpaused()
 			},
 		));
-		self
-	}
-
-	fn white_list(mut self, is_activated: bool) -> Self {
-		self.whitelist_mode = is_activated;
 		self
 	}
 }

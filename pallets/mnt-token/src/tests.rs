@@ -535,7 +535,7 @@ fn test_update_mnt_supply_index_simple() {
 
 			// set total_issuance to 20
 			Currencies::deposit(METH, &ALICE, 20 * DOLLARS).unwrap();
-			assert_ok!(MntToken::set_speed(admin(), ETH, 10 * DOLLARS));
+			assert_ok!(MntToken::set_speed(admin_origin(), ETH, 10 * DOLLARS));
 
 			System::set_block_number(2);
 			MntToken::update_mnt_supply_index(ETH).unwrap();
@@ -580,22 +580,22 @@ fn test_minting_enable_disable() {
 		.execute_with(|| {
 			// Try to disable minting for invalid underlying asset id
 			assert_noop!(
-				MntToken::set_speed(admin(), MNT, Balance::zero()),
+				MntToken::set_speed(admin_origin(), MNT, Balance::zero()),
 				Error::<Runtime>::NotValidUnderlyingAssetId
 			);
 
 			// The dispatch origin of this call must be Root or 2/3 MinterestCouncil.
-			assert_noop!(MntToken::set_speed(alice(), DOT, 1 * DOLLARS), BadOrigin);
+			assert_noop!(MntToken::set_speed(alice_origin(), DOT, 1 * DOLLARS), BadOrigin);
 
 			// Unable to enable minting for non existing pool
 			assert_noop!(
-				MntToken::set_speed(admin(), ETH, 2 * DOLLARS),
+				MntToken::set_speed(admin_origin(), ETH, 2 * DOLLARS),
 				Error::<Runtime>::PoolNotFound
 			);
 
 			// Enable the distribution of MNT tokens in the DOT liquidity pool
 			let dot_speed = 2 * DOLLARS;
-			assert_ok!(MntToken::set_speed(admin(), DOT, dot_speed));
+			assert_ok!(MntToken::set_speed(admin_origin(), DOT, dot_speed));
 			let speed_changed_event = Event::mnt_token(crate::Event::MntSpeedChanged(DOT, dot_speed));
 			assert!(System::events()
 				.iter()
@@ -606,13 +606,13 @@ fn test_minting_enable_disable() {
 
 			// Unable to disable an already disabled pool
 			assert_noop!(
-				MntToken::set_speed(admin(), KSM, Balance::zero()),
+				MntToken::set_speed(admin_origin(), KSM, Balance::zero()),
 				Error::<Runtime>::MntMintingNotEnabled
 			);
 
 			// Enable the distribution of MNT tokens in the KSM liquidity pool
 			let ksm_speed = 2 * DOLLARS;
-			assert_ok!(MntToken::set_speed(admin(), KSM, ksm_speed));
+			assert_ok!(MntToken::set_speed(admin_origin(), KSM, ksm_speed));
 			let speed_changed_event = Event::mnt_token(crate::Event::MntSpeedChanged(KSM, ksm_speed));
 			assert!(System::events()
 				.iter()
@@ -622,7 +622,7 @@ fn test_minting_enable_disable() {
 			System::set_block_number(10);
 
 			// Disable the distribution of MNT tokens in the DOT liquidity pool
-			assert_ok!(MntToken::set_speed(admin(), DOT, Balance::zero()));
+			assert_ok!(MntToken::set_speed(admin_origin(), DOT, Balance::zero()));
 			let speed_changed_event = Event::mnt_token(crate::Event::MntSpeedChanged(DOT, Balance::zero()));
 			assert!(System::events()
 				.iter()
@@ -653,7 +653,7 @@ fn test_minting_enable_disable() {
 
 			// Enable the distribution of MNT tokens in the DOT liquidity pool
 			// Check that the indexes have been saved and the block number has changed.
-			assert_ok!(MntToken::set_speed(admin(), DOT, dot_speed));
+			assert_ok!(MntToken::set_speed(admin_origin(), DOT, dot_speed));
 			check_mnt_storage(
 				DOT,
 				dot_speed,
@@ -664,7 +664,7 @@ fn test_minting_enable_disable() {
 
 			// Change the mnt_speed parameter for KSM liquidity pool.
 			// Check  that the indexes have been updated and block number has changed.
-			assert_ok!(MntToken::set_speed(admin(), KSM, ksm_speed + 1_u128));
+			assert_ok!(MntToken::set_speed(admin_origin(), KSM, ksm_speed + 1_u128));
 			check_mnt_storage(
 				KSM,
 				ksm_speed + 1_u128,

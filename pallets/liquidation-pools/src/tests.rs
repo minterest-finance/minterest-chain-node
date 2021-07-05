@@ -117,7 +117,7 @@ fn set_deviation_threshold_should_work() {
 
 		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(
-			TestLiquidationPools::set_deviation_threshold(alice(), DOT, 10),
+			TestLiquidationPools::set_deviation_threshold(alice_origin(), DOT, 10),
 			BadOrigin
 		);
 
@@ -161,7 +161,10 @@ fn set_balance_ratio_should_work() {
 		);
 
 		// The dispatch origin of this call must be Root or half MinterestCouncil.
-		assert_noop!(TestLiquidationPools::set_balance_ratio(alice(), DOT, 10), BadOrigin);
+		assert_noop!(
+			TestLiquidationPools::set_balance_ratio(alice_origin(), DOT, 10),
+			BadOrigin
+		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
@@ -198,7 +201,7 @@ fn set_max_ideal_balance_should_work() {
 
 		// The dispatch origin of this call must be Root or half MinterestCouncil.
 		assert_noop!(
-			TestLiquidationPools::set_max_ideal_balance(alice(), DOT, Some(10u128)),
+			TestLiquidationPools::set_max_ideal_balance(alice_origin(), DOT, Some(10u128)),
 			BadOrigin
 		);
 

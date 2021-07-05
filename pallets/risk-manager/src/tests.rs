@@ -32,14 +32,14 @@ fn test_offchain_worker_lock_expired() {
 
 		System::set_block_number(2);
 		assert_ok!(TestMinterestProtocol::deposit_underlying(
-			alice(),
+			alice_origin(),
 			BTC,
 			11_000 * DOLLARS
 		));
-		assert_ok!(TestMinterestProtocol::enable_is_collateral(alice(), BTC));
+		assert_ok!(TestMinterestProtocol::enable_is_collateral(alice_origin(), BTC));
 
 		System::set_block_number(3);
-		assert_ok!(TestMinterestProtocol::borrow(alice(), ETH, 10_500 * DOLLARS));
+		assert_ok!(TestMinterestProtocol::borrow(alice_origin(), ETH, 10_500 * DOLLARS));
 
 		System::set_block_number(4);
 		// Decrease DOT price. Now alice collateral isn't enough
@@ -98,14 +98,14 @@ fn test_offchain_worker_simple_liquidation() {
 
 		System::set_block_number(2);
 		assert_ok!(TestMinterestProtocol::deposit_underlying(
-			alice(),
+			alice_origin(),
 			DOT,
 			11_000 * DOLLARS
 		));
-		assert_ok!(TestMinterestProtocol::enable_is_collateral(alice(), DOT));
+		assert_ok!(TestMinterestProtocol::enable_is_collateral(alice_origin(), DOT));
 
 		System::set_block_number(3);
-		assert_ok!(TestMinterestProtocol::borrow(alice(), KSM, 10_500 * DOLLARS));
+		assert_ok!(TestMinterestProtocol::borrow(alice_origin(), KSM, 10_500 * DOLLARS));
 
 		System::set_block_number(4);
 		// Decrease DOT price. Now alice collateral isn't enough
@@ -138,23 +138,23 @@ fn test_offchain_worker_simple_liquidation() {
 fn set_max_attempts_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Can be set to 0.0
-		assert_ok!(TestRiskManager::set_max_attempts(admin(), DOT, 0));
+		assert_ok!(TestRiskManager::set_max_attempts(admin_origin(), DOT, 0));
 		assert_eq!(TestRiskManager::risk_manager_params(DOT).max_attempts, 0);
 		let expected_event = Event::risk_manager(crate::Event::MaxValueOFLiquidationAttempsHasChanged(0));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// ALICE set max_attempts equal 2.0
-		assert_ok!(TestRiskManager::set_max_attempts(admin(), DOT, 2));
+		assert_ok!(TestRiskManager::set_max_attempts(admin_origin(), DOT, 2));
 		assert_eq!(TestRiskManager::risk_manager_params(DOT).max_attempts, 2);
 		let expected_event = Event::risk_manager(crate::Event::MaxValueOFLiquidationAttempsHasChanged(2));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Administrator.
-		assert_noop!(TestRiskManager::set_max_attempts(alice(), DOT, 10), BadOrigin);
+		assert_noop!(TestRiskManager::set_max_attempts(alice_origin(), DOT, 10), BadOrigin);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestRiskManager::set_max_attempts(admin(), MDOT, 10),
+			TestRiskManager::set_max_attempts(admin_origin(), MDOT, 10),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
@@ -165,7 +165,7 @@ fn set_min_partial_liquidation_sum_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Can be set to 0.0
 		assert_ok!(TestRiskManager::set_min_partial_liquidation_sum(
-			admin(),
+			admin_origin(),
 			DOT,
 			Balance::zero()
 		));
@@ -178,7 +178,7 @@ fn set_min_partial_liquidation_sum_should_work() {
 
 		// ALICE set min_partial_liquidation_sum equal to one hundred.
 		assert_ok!(TestRiskManager::set_min_partial_liquidation_sum(
-			admin(),
+			admin_origin(),
 			DOT,
 			ONE_HUNDRED
 		));
@@ -191,13 +191,13 @@ fn set_min_partial_liquidation_sum_should_work() {
 
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
-			TestRiskManager::set_min_partial_liquidation_sum(alice(), DOT, 10),
+			TestRiskManager::set_min_partial_liquidation_sum(alice_origin(), DOT, 10),
 			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestRiskManager::set_min_partial_liquidation_sum(admin(), MDOT, 10),
+			TestRiskManager::set_min_partial_liquidation_sum(admin_origin(), MDOT, 10),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
@@ -207,23 +207,26 @@ fn set_min_partial_liquidation_sum_should_work() {
 fn set_threshold_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Can be set to 0.0
-		assert_ok!(TestRiskManager::set_threshold(admin(), DOT, Rate::zero()));
+		assert_ok!(TestRiskManager::set_threshold(admin_origin(), DOT, Rate::zero()));
 		assert_eq!(TestRiskManager::risk_manager_params(DOT).threshold, Rate::zero());
 		let expected_event = Event::risk_manager(crate::Event::ValueOfThresholdHasChanged(Rate::zero()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// ALICE set min_partial_liquidation_sum equal one hundred.
-		assert_ok!(TestRiskManager::set_threshold(admin(), DOT, Rate::one()));
+		assert_ok!(TestRiskManager::set_threshold(admin_origin(), DOT, Rate::one()));
 		assert_eq!(TestRiskManager::risk_manager_params(DOT).threshold, Rate::one());
 		let expected_event = Event::risk_manager(crate::Event::ValueOfThresholdHasChanged(Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Administrator.
-		assert_noop!(TestRiskManager::set_threshold(alice(), DOT, Rate::one()), BadOrigin);
+		assert_noop!(
+			TestRiskManager::set_threshold(alice_origin(), DOT, Rate::one()),
+			BadOrigin
+		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestRiskManager::set_threshold(admin(), MDOT, Rate::one()),
+			TestRiskManager::set_threshold(admin_origin(), MDOT, Rate::one()),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
@@ -233,32 +236,32 @@ fn set_threshold_should_work() {
 fn set_liquidation_fee_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Can be set to 1.0
-		assert_ok!(TestRiskManager::set_liquidation_fee(admin(), DOT, Rate::one()));
+		assert_ok!(TestRiskManager::set_liquidation_fee(admin_origin(), DOT, Rate::one()));
 		assert_eq!(TestRiskManager::risk_manager_params(DOT).liquidation_fee, Rate::one());
 		let expected_event = Event::risk_manager(crate::Event::ValueOfLiquidationFeeHasChanged(Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can not be set to 0.0
 		assert_noop!(
-			TestRiskManager::set_liquidation_fee(admin(), DOT, Rate::zero()),
+			TestRiskManager::set_liquidation_fee(admin_origin(), DOT, Rate::zero()),
 			Error::<Test>::InvalidLiquidationIncentiveValue
 		);
 
 		// Can not be set to 2.0
 		assert_noop!(
-			TestRiskManager::set_liquidation_fee(admin(), DOT, Rate::saturating_from_integer(2)),
+			TestRiskManager::set_liquidation_fee(admin_origin(), DOT, Rate::saturating_from_integer(2)),
 			Error::<Test>::InvalidLiquidationIncentiveValue
 		);
 
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
-			TestRiskManager::set_liquidation_fee(alice(), DOT, Rate::one()),
+			TestRiskManager::set_liquidation_fee(alice_origin(), DOT, Rate::one()),
 			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestRiskManager::set_liquidation_fee(admin(), MDOT, Rate::one()),
+			TestRiskManager::set_liquidation_fee(admin_origin(), MDOT, Rate::one()),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});

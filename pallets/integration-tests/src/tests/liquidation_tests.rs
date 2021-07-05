@@ -49,24 +49,44 @@ mod tests {
 				]);
 				System::set_block_number(1);
 
-				assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(100_000)));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					alice_origin(),
+					DOT,
+					dollars(100_000)
+				));
 				System::set_block_number(100);
-				assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(100_000)));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					alice_origin(),
+					ETH,
+					dollars(100_000)
+				));
 				System::set_block_number(200);
-				assert_ok!(MinterestProtocol::deposit_underlying(alice(), BTC, dollars(100_000)));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					alice_origin(),
+					BTC,
+					dollars(100_000)
+				));
 				System::set_block_number(300);
 
-				assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(50_000)));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					bob_origin(),
+					DOT,
+					dollars(50_000)
+				));
 				System::set_block_number(400);
-				assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(100_000)));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					bob_origin(),
+					ETH,
+					dollars(100_000)
+				));
 				System::set_block_number(500);
 
-				assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
+				assert_ok!(MinterestProtocol::enable_is_collateral(bob_origin(), DOT));
 				System::set_block_number(550);
-				assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
+				assert_ok!(MinterestProtocol::enable_is_collateral(bob_origin(), ETH));
 				System::set_block_number(600);
 
-				assert_ok!(MinterestProtocol::borrow(bob(), BTC, dollars(3500)));
+				assert_ok!(MinterestProtocol::borrow(bob_origin(), BTC, dollars(3500)));
 				System::set_block_number(700);
 
 				set_prices_for_assets(vec![(ETH, Price::saturating_from_integer(1910))]);
@@ -139,10 +159,10 @@ mod tests {
 				// Here we want to get a complete liquidation. To do this, the user's
 				// debt must be less than $100_000
 				System::set_block_number(900);
-				assert_ok!(MinterestProtocol::repay(bob(), BTC, dollars(2449)));
+				assert_ok!(MinterestProtocol::repay(bob_origin(), BTC, dollars(2449)));
 				System::set_block_number(950);
-				assert_ok!(MinterestProtocol::redeem(bob(), DOT));
-				assert_ok!(MinterestProtocol::redeem_underlying(bob(), ETH, dollars(71_109)));
+				assert_ok!(MinterestProtocol::redeem(bob_origin(), DOT));
+				assert_ok!(MinterestProtocol::redeem_underlying(bob_origin(), ETH, dollars(71_109)));
 				// current borrower account oversupply = $1_115;
 				assert_eq!(
 					TestController::get_hypothetical_account_liquidity(&BOB, BTC, 0, 0),
@@ -232,15 +252,27 @@ mod tests {
 					(KSM, Rate::saturating_from_integer(2)),
 				]);
 
-				assert_ok!(MinterestProtocol::deposit_underlying(bob(), BTC, dollars(100_000)));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					bob_origin(),
+					BTC,
+					dollars(100_000)
+				));
 				System::set_block_number(1);
-				assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, dollars(50_000)));
-				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					alice_origin(),
+					DOT,
+					dollars(50_000)
+				));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice_origin(), DOT));
 				System::set_block_number(10);
-				assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, dollars(50_000)));
-				assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
+				assert_ok!(MinterestProtocol::deposit_underlying(
+					alice_origin(),
+					ETH,
+					dollars(50_000)
+				));
+				assert_ok!(MinterestProtocol::enable_is_collateral(alice_origin(), ETH));
 				System::set_block_number(20);
-				assert_ok!(MinterestProtocol::borrow(alice(), BTC, dollars(50_000)));
+				assert_ok!(MinterestProtocol::borrow(alice_origin(), BTC, dollars(50_000)));
 				System::set_block_number(30);
 				set_prices_for_assets(vec![(BTC, Rate::saturating_from_integer(100))]);
 				System::set_block_number(40);

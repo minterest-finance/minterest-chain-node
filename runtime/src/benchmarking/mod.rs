@@ -8,5 +8,6 @@ pub mod mnt_token;
 pub mod prices;
 pub mod risk_manager;
 pub mod vesting;
+pub mod whitelist;
 
 pub mod utils;

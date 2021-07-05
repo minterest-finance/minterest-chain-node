@@ -46,16 +46,16 @@ pub mod users_mock {
 	pub const BOB: AccountId = 2;
 	pub const CHARLIE: AccountId = 3;
 
-	pub fn admin<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
+	pub fn admin_origin<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
 		Origin::signed(ADMIN)
 	}
-	pub fn alice<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
+	pub fn alice_origin<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
 		Origin::signed(ALICE)
 	}
-	pub fn bob<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
+	pub fn bob_origin<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
 		Origin::signed(BOB)
 	}
-	pub fn charlie<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
+	pub fn charlie_origin<Origin: OriginTrait<AccountId = AccountId>>() -> Origin {
 		Origin::signed(CHARLIE)
 	}
 }
@@ -203,6 +203,7 @@ macro_rules! mock_impl_controller_config {
 			type MaxBorrowCap = MaxBorrowCap;
 			type UpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type ControllerWeightInfo = ();
+			type MntManager = mnt_token::Module<$target>;
 		}
 	};
 }
@@ -249,12 +250,12 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type ManagerLiquidationPools = liquidation_pools::Module<$target>;
 			type ManagerLiquidityPools = liquidity_pools::Module<$target>;
 			type MntManager = mnt_token::Module<$target>;
-			type WhitelistMembers = WhitelistMembers;
 			type ProtocolWeightInfo = ();
 			type ControllerManager = controller::Module<$target>;
 			type RiskManagerAPI = TestRiskManager;
 			type MinterestModelAPI = TestMinterestModel;
 			type CreatePoolOrigin = EnsureSignedBy<$acc, AccountId>;
+			type WhitelistManager = whitelist_module::Module<$target>;
 		}
 	};
 }
@@ -313,6 +314,22 @@ macro_rules! mock_impl_balances_config {
 			type ExistentialDeposit = ExistentialDeposit;
 			type AccountStore = frame_system::Pallet<$target>;
 			type WeightInfo = pallet_balances::weights::SubstrateWeight<$target>;
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! mock_impl_whitelist_module_config {
+	($target:ty, $acc:ident) => {
+		parameter_types! {
+			pub const MaxMembersWhitelistMode: u8 = 16;
+		}
+
+		impl whitelist_module::Config for $target {
+			type Event = Event;
+			type MaxMembers = MaxMembersWhitelistMode;
+			type WhitelistOrigin = EnsureSignedBy<$acc, AccountId>;
+			type WhitelistWeightInfo = ();
 		}
 	};
 }

@@ -80,6 +80,7 @@
     "AmountOf": "Amount",
     "Rate": "FixedU128",
     "Price": "FixedU128",
+    "Interest": "FixedI128",
     "ControllerData": {
       "last_interest_accrued_block": "BlockNumber",
       "protocol_interest_factor": "Rate",
@@ -123,6 +124,12 @@
     },
     "BalanceInfo": {
       "amount": "Balance"
+    },
+    "ProtocolTotalValue": {
+      "pool_total_supply_in_usd": "Balance",
+      "pool_total_borrow_in_usd": "Balance",
+      "tvl_in_usd": "Balance",
+      "pool_total_protocol_interest_in_usd": "Balance"
     },
     "MntBalanceInfo": {
       "amount": "Balance"
