@@ -42,13 +42,8 @@ fn hypothetical_liquidity_setup(borrower: &AccountId, lender: &AccountId) -> Res
 		.try_for_each(|asset_id| -> Result<(), &'static str> {
 			enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), asset_id)?;
 			// set borrow params
-			LiquidityPools::set_pool_total_borrowed(asset_id, 10_000 * DOLLARS);
-			LiquidityPools::set_user_total_borrowed_and_interest_index(
-				borrower,
-				asset_id,
-				10_000 * DOLLARS,
-				Rate::one(),
-			);
+			LiquidityPools::set_pool_borrow_underlying(asset_id, 10_000 * DOLLARS);
+			LiquidityPools::set_user_borrow_and_interest_index(borrower, asset_id, 10_000 * DOLLARS, Rate::one());
 			Ok(())
 		})?;
 	Ok(())
@@ -193,7 +188,7 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(borrower.clone()), DOT, 10_000 * DOLLARS)
 	verify {
-		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).total_borrowed, 180_000_000_600_000);
+		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).borrowed, 180_000_000_600_000);
 		assert_eq!(Currencies::free_balance(MNT, &borrower), 9_999_999_954_999_990_405)
 	}
 
@@ -213,7 +208,7 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
 	verify {
-		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).total_borrowed, Balance::zero());
+		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).borrowed, Balance::zero());
 		assert_eq!(Currencies::free_balance(MNT, &borrower), 9_999_999_954_999_990_405)
 	}
 
@@ -236,7 +231,7 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(lender.clone()), DOT, borrower.clone(), 10_000 * DOLLARS)
 	verify {
-		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).total_borrowed, 180_000_000_600_000);
+		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).borrowed, 180_000_000_600_000);
 		assert_eq!(Currencies::free_balance(MNT, &borrower), 9_999_999_954_999_990_405);
 		assert_eq!(Currencies::free_balance(MNT, &lender), Balance::zero());
 	}
@@ -295,9 +290,9 @@ runtime_benchmarks! {
 			.into_iter()
 			.try_for_each(|pool_id| -> Result<(), &'static str> {
 				liquidity_pools::Pools::<Runtime>::insert(pool_id, Pool {
-					total_borrowed: Balance::zero(),
+					borrowed: Balance::zero(),
 					borrow_index: Rate::one(),
-					total_protocol_interest: Balance::zero(),
+					protocol_interest: Balance::zero(),
 				});
 				set_balance(pool_id, &lender, 100_000 * DOLLARS)?;
 				MinterestProtocol::deposit_underlying(RawOrigin::Signed(lender.clone()).into(), pool_id, 100_000 * DOLLARS)?;

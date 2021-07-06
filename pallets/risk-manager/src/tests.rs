@@ -313,7 +313,7 @@ fn complete_liquidation_one_collateral_should_work() {
 		.user_balance(ALICE, MDOT, dollars(100_000))
 		.user_balance(BOB, MDOT, dollars(100_000))
 		.pool_user_data(DOT, ALICE, dollars(90_000), Rate::one(), true, 3)
-		.pool_total_borrowed(DOT, dollars(90_000))
+		.pool_borrow_underlying(DOT, dollars(90_000))
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all pools.
@@ -335,8 +335,8 @@ fn complete_liquidation_one_collateral_should_work() {
 			assert_eq!(TestPools::get_pool_available_liquidity(DOT), dollars(105_500));
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), dollars(104_500));
 
-			assert_eq!(TestPools::pools(DOT).total_borrowed, Balance::zero());
-			assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, Balance::zero());
+			assert_eq!(TestPools::pools(DOT).borrowed, Balance::zero());
+			assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, Balance::zero());
 
 			assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, 0);
 		})
@@ -357,7 +357,7 @@ fn complete_liquidation_multi_collateral_should_work() {
 		.user_balance(CHARLIE, MDOT, 100_000 * DOLLARS)
 		.pool_user_data(DOT, ALICE, 90_000 * DOLLARS, Rate::one(), true, 3)
 		.pool_user_data(ETH, ALICE, 0, Rate::one(), true, 0)
-		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all pools.
@@ -383,8 +383,8 @@ fn complete_liquidation_multi_collateral_should_work() {
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), 60_000 * DOLLARS);
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(ETH), 144_500 * DOLLARS);
 
-			assert_eq!(TestPools::pools(DOT).total_borrowed, Balance::zero());
-			assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, Balance::zero());
+			assert_eq!(TestPools::pools(DOT).borrowed, Balance::zero());
+			assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, Balance::zero());
 
 			assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, 0);
 		})
@@ -398,7 +398,7 @@ fn partial_liquidation_one_collateral_should_work() {
 		.user_balance(ALICE, MDOT, 100_000 * DOLLARS)
 		.user_balance(BOB, MDOT, 100_000 * DOLLARS)
 		.pool_user_data(DOT, ALICE, 90_000 * DOLLARS, Rate::one(), true, 0)
-		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all pools.
@@ -420,8 +420,8 @@ fn partial_liquidation_one_collateral_should_work() {
 			assert_eq!(TestPools::get_pool_available_liquidity(DOT), 108_650 * DOLLARS);
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), 101_350 * DOLLARS);
 
-			assert_eq!(TestPools::pools(DOT).total_borrowed, 63_000 * DOLLARS);
-			assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, 63_000 * DOLLARS);
+			assert_eq!(TestPools::pools(DOT).borrowed, 63_000 * DOLLARS);
+			assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, 63_000 * DOLLARS);
 
 			assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, 1);
 		})
@@ -442,7 +442,7 @@ fn partial_liquidation_multi_collateral_should_work() {
 		.user_balance(CHARLIE, MDOT, 100_000 * DOLLARS)
 		.pool_user_data(DOT, ALICE, 90_000 * DOLLARS, Rate::one(), true, 0)
 		.pool_user_data(ETH, ALICE, 0, Rate::one(), true, 0)
-		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all pools.
@@ -468,8 +468,8 @@ fn partial_liquidation_multi_collateral_should_work() {
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), 73_000 * DOLLARS);
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(ETH), 128_350 * DOLLARS);
 
-			assert_eq!(TestPools::pools(DOT).total_borrowed, 63_000 * DOLLARS);
-			assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, 63_000 * DOLLARS);
+			assert_eq!(TestPools::pools(DOT).borrowed, 63_000 * DOLLARS);
+			assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, 63_000 * DOLLARS);
 
 			assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, 1);
 		})
@@ -486,7 +486,7 @@ fn complete_liquidation_should_not_work() {
 		.user_balance(CHARLIE, MDOT, 100_000 * DOLLARS)
 		.pool_user_data(DOT, ALICE, 90_000 * DOLLARS, Rate::one(), true, 3)
 		.pool_user_data(ETH, ALICE, 0, Rate::one(), false, 0)
-		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			assert_err!(
@@ -507,7 +507,7 @@ fn partial_liquidation_should_not_work() {
 		.user_balance(CHARLIE, MDOT, 100_000 * DOLLARS)
 		.pool_user_data(DOT, ALICE, 90_000 * DOLLARS, Rate::one(), true, 2)
 		.pool_user_data(BTC, ALICE, 0, Rate::one(), true, 0)
-		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			assert_err!(
@@ -527,7 +527,7 @@ fn complete_liquidation_one_collateral_not_enough_balance_should_work() {
 		.user_balance(ALICE, MDOT, dollars(100_000))
 		.user_balance(BOB, MDOT, dollars(100_000))
 		.pool_user_data(DOT, ALICE, dollars(90_000), Rate::one(), true, 3)
-		.pool_total_borrowed(DOT, dollars(90_000))
+		.pool_borrow_underlying(DOT, dollars(90_000))
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all pools.
@@ -549,8 +549,8 @@ fn complete_liquidation_one_collateral_not_enough_balance_should_work() {
 			assert_eq!(TestPools::get_pool_available_liquidity(DOT), dollars(107_500));
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), dollars(52_500));
 
-			assert_eq!(TestPools::pools(DOT).total_borrowed, dollars(40_000));
-			assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, dollars(40_000));
+			assert_eq!(TestPools::pools(DOT).borrowed, dollars(40_000));
+			assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, dollars(40_000));
 
 			assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, 3);
 		})
@@ -571,7 +571,7 @@ fn complete_liquidation_multi_collateral_not_enough_balance_should_work() {
 		.user_balance(CHARLIE, MDOT, 100_000 * DOLLARS)
 		.pool_user_data(DOT, ALICE, 90_000 * DOLLARS, Rate::one(), true, 3)
 		.pool_user_data(ETH, ALICE, 0, Rate::one(), true, 0)
-		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all pools.
@@ -597,8 +597,8 @@ fn complete_liquidation_multi_collateral_not_enough_balance_should_work() {
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), 50_000 * DOLLARS);
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(ETH), 113_000 * DOLLARS);
 
-			assert_eq!(TestPools::pools(DOT).total_borrowed, dollars(30_000));
-			assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, dollars(30_000));
+			assert_eq!(TestPools::pools(DOT).borrowed, dollars(30_000));
+			assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, dollars(30_000));
 
 			assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, 3);
 		})
@@ -619,7 +619,7 @@ fn partial_liquidation_multi_collateral_not_enough_balance_should_work() {
 		.user_balance(CHARLIE, MDOT, 100_000 * DOLLARS)
 		.pool_user_data(DOT, ALICE, 90_000 * DOLLARS, Rate::one(), true, 0)
 		.pool_user_data(ETH, ALICE, 0, Rate::one(), true, 0)
-		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all pools.
@@ -645,8 +645,8 @@ fn partial_liquidation_multi_collateral_not_enough_balance_should_work() {
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), Balance::zero());
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(ETH), dollars(110_500));
 
-			assert_eq!(TestPools::pools(DOT).total_borrowed, dollars(80_000));
-			assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, dollars(80_000));
+			assert_eq!(TestPools::pools(DOT).borrowed, dollars(80_000));
+			assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, dollars(80_000));
 
 			assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, 0);
 		})

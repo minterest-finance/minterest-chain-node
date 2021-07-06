@@ -391,15 +391,14 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			.checked_mul(block_delta_as_u128)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let total_borrowed_as_rate = Rate::from_inner(T::LiquidityPoolsManager::get_pool_total_borrowed(underlying_id));
+		let net_pool_borrow_underlying =
+			Rate::from_inner(T::LiquidityPoolsManager::get_pool_borrow_underlying(underlying_id))
+				.checked_div(&T::LiquidityPoolsManager::get_pool_borrow_index(underlying_id))
+				.ok_or(Error::<T>::NumOverflow)?;
 
-		let borrow_amount = total_borrowed_as_rate
-			.checked_div(&T::LiquidityPoolsManager::get_pool_borrow_index(underlying_id))
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		let ratio = match borrow_amount.cmp(&Rate::zero()) {
+		let ratio = match net_pool_borrow_underlying.cmp(&Rate::zero()) {
 			Ordering::Greater => Rate::from_inner(mnt_accrued)
-				.checked_div(&borrow_amount)
+				.checked_div(&net_pool_borrow_underlying)
 				.ok_or(Error::<T>::NumOverflow)?,
 			_ => Rate::zero(),
 		};
@@ -529,14 +528,15 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 	/// Return MNT Borrow Rate and MNT Supply Rate values per block for current pool.
 	/// - `pool_id` - the pool to calculate rates
 	fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Rate, Rate), DispatchError> {
-		// borrow_rate = mnt_speed * mnt_price / (total_borrow * currency_price)
-		// supply_rate = mnt_speed * mnt_price / (total_supply * currency_price)
-		// where:
-		//	total_supply = total_cash - total_protocol_interest + total_borrow
+		/*
+		borrow_rate = mnt_speed * mnt_price / (pool_borrow_underlying * currency_price)
+		supply_rate = mnt_speed * mnt_price / (pool_supply_underlying * currency_price)
+		where:
+		 pool_supply_wrap = pool_supply_underlying - pool_protocol_interest + pool_borrow_underlying
+		*/
+		let pool_borrow_underlying = T::LiquidityPoolsManager::get_pool_borrow_underlying(pool_id);
 
-		let total_borrow = T::LiquidityPoolsManager::get_pool_total_borrowed(pool_id);
-
-		if total_borrow.is_zero() {
+		if pool_borrow_underlying.is_zero() {
 			return Ok((Rate::zero(), Rate::zero()));
 		}
 
@@ -545,12 +545,12 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		let mnt_price = T::PriceSource::get_underlying_price(MNT).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
 
-		let total_cash = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
-		let total_protocol_interest = T::LiquidityPoolsManager::get_pool_total_protocol_interest(pool_id);
+		let pool_supply_underlying = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
+		let pool_protocol_interest = T::LiquidityPoolsManager::get_pool_protocol_interest(pool_id);
 
-		let total_supply = total_cash
-			.checked_sub(total_protocol_interest)
-			.and_then(|v| v.checked_add(total_borrow))
+		let pool_supply_wrap = pool_supply_underlying
+			.checked_sub(pool_protocol_interest)
+			.and_then(|v| v.checked_add(pool_borrow_underlying))
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		let rate_calculation = |x: Balance| {
@@ -561,8 +561,8 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 				.ok_or(Error::<T>::NumOverflow)
 		};
 
-		let borrow_rate: Rate = rate_calculation(total_borrow)?;
-		let supply_rate: Rate = rate_calculation(total_supply)?;
+		let borrow_rate: Rate = rate_calculation(pool_borrow_underlying)?;
+		let supply_rate: Rate = rate_calculation(pool_supply_wrap)?;
 
 		Ok((borrow_rate, supply_rate))
 	}

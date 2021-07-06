@@ -37,7 +37,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// Return:
 	/// - exchange_rate: the Exchange Rate between an mToken and the underlying asset.
 	///	is equal to:
-	/// 	exchange_rate = (total_cash + total_borrowed - total_protocol_interest) / total_supply;
+	/// 	exchange_rate = (pool_cash + pool_borrowed - pool_protocol_interest) / pool_supply;
 	/// 	- borrow_rate: Borrow Interest Rate
 	/// - supply_rate: current Supply Interest Rate.
 	/// 	The supply rate is derived from the borrow_rate and the amount of Total Borrowed.

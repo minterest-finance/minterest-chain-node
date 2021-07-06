@@ -36,14 +36,14 @@ pub trait PoolsManager<AccountId> {
 /// Provides liquidity pool functionality
 pub trait LiquidityPoolsManager<AccountId>: PoolsManager<AccountId> {
 	/// Gets total amount borrowed from the pool.
-	fn get_pool_total_borrowed(pool_id: CurrencyId) -> Balance;
+	fn get_pool_borrow_underlying(pool_id: CurrencyId) -> Balance;
 
 	/// Gets pool borrow index
 	/// Accumulator of the total earned interest rate since the opening of the pool
 	fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate;
 
 	/// Gets current total amount of protocol interest of the underlying held in this pool.
-	fn get_pool_total_protocol_interest(pool_id: CurrencyId) -> Balance;
+	fn get_pool_protocol_interest(pool_id: CurrencyId) -> Balance;
 
 	/// Check if pool exists
 	fn pool_exists(underlying_asset: &CurrencyId) -> bool;

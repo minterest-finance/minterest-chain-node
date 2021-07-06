@@ -194,16 +194,16 @@ impl ExtBuilder {
 	pub fn pool_with_params(
 		mut self,
 		pool_id: CurrencyId,
-		total_borrowed: Balance,
+		borrowed: Balance,
 		borrow_index: Rate,
-		total_protocol_interest: Balance,
+		protocol_interest: Balance,
 	) -> Self {
 		self.pools.push((
 			pool_id,
 			Pool {
-				total_borrowed,
+				borrowed,
 				borrow_index,
-				total_protocol_interest,
+				protocol_interest,
 			},
 		));
 		self
@@ -241,7 +241,7 @@ impl ExtBuilder {
 					DOT,
 					ALICE,
 					PoolUserData {
-						total_borrowed: 0,
+						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
 						liquidation_attempts: 3,
@@ -251,7 +251,7 @@ impl ExtBuilder {
 					ETH,
 					ALICE,
 					PoolUserData {
-						total_borrowed: 0,
+						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: false,
 						liquidation_attempts: 0,
@@ -261,7 +261,7 @@ impl ExtBuilder {
 					KSM,
 					ALICE,
 					PoolUserData {
-						total_borrowed: 0,
+						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
 						liquidation_attempts: 0,
@@ -271,7 +271,7 @@ impl ExtBuilder {
 					BTC,
 					ALICE,
 					PoolUserData {
-						total_borrowed: 0,
+						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
 						liquidation_attempts: 0,
@@ -281,7 +281,7 @@ impl ExtBuilder {
 					DOT,
 					BOB,
 					PoolUserData {
-						total_borrowed: 0,
+						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
 						liquidation_attempts: 0,
@@ -291,7 +291,7 @@ impl ExtBuilder {
 					BTC,
 					BOB,
 					PoolUserData {
-						total_borrowed: 0,
+						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
 						liquidation_attempts: 0,

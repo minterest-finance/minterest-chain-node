@@ -102,7 +102,7 @@ mod tests {
 					alice_deposited_amount - alice_borrowed_amount_in_dot
 				);
 				// Checking total interest for DOT pool.
-				assert_eq!(TestPools::pools(DOT).total_protocol_interest, Balance::zero());
+				assert_eq!(TestPools::pools(DOT).protocol_interest, Balance::zero());
 
 				System::set_block_number(10);
 
@@ -124,7 +124,7 @@ mod tests {
 					alice_deposited_amount + expected_interest_accumulated
 				);
 				assert_eq!(
-					TestPools::pools(DOT).total_protocol_interest,
+					TestPools::pools(DOT).protocol_interest,
 					Balance::zero() + (expected_interest_accumulated / 2)
 				);
 			});
@@ -135,7 +135,7 @@ mod tests {
 	// 1. Alice deposit 40 DOT;
 	// 2. Alice borrow 20 DOT;
 	// 3. Set interest factor equal to zero.
-	// 4. Alice repay full loan in DOTs, pool total_protocol_interest = 0.
+	// 4. Alice repay full loan in DOTs, pool_protocol_interest = 0.
 	#[test]
 	fn set_protocol_interest_factor_equal_zero() {
 		ExtBuilder::default()
@@ -168,7 +168,7 @@ mod tests {
 					alice_deposited_amount - alice_borrowed_amount_in_dot
 				);
 				// Checking total interest for DOT pool.
-				assert_eq!(TestPools::pools(DOT).total_protocol_interest, Balance::zero());
+				assert_eq!(TestPools::pools(DOT).protocol_interest, Balance::zero());
 
 				System::set_block_number(10);
 
@@ -183,7 +183,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::repay_all(Origin::signed(ALICE), DOT));
 
 				// Checking pool total interest.
-				assert_eq!(TestPools::pools(DOT).total_protocol_interest, Balance::zero());
+				assert_eq!(TestPools::pools(DOT).protocol_interest, Balance::zero());
 			});
 	}
 }

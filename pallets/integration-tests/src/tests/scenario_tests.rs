@@ -28,7 +28,7 @@ mod tests {
 
 				let pool_available_liquidity_start: Balance = Balance::zero();
 				let pool_m_dot_total_issuance_start: Balance = Balance::zero();
-				let pool_total_protocol_interest_start: Balance = Balance::zero();
+				let pool_protocol_interest_start: Balance = Balance::zero();
 				let pool_dot_total_borrow_start: Balance = Balance::zero();
 
 				// ACTION: DEPOSIT UNDERLYING
@@ -72,11 +72,8 @@ mod tests {
 				// Checking DOT pool Storage params
 				assert_eq!(TestPools::pools(DOT).borrow_index, Rate::one());
 				// Total interest didn't changed.
-				assert_eq!(
-					TestPools::pools(DOT).total_protocol_interest,
-					pool_total_protocol_interest_start
-				);
-				assert_eq!(TestPools::pools(DOT).total_borrowed, pool_dot_total_borrow_start);
+				assert_eq!(TestPools::pools(DOT).protocol_interest, pool_protocol_interest_start);
+				assert_eq!(TestPools::pools(DOT).borrowed, pool_dot_total_borrow_start);
 
 				// Checking controller params
 				let (_, borrow_rate, _) = TestController::get_pool_exchange_borrow_and_supply_rates(DOT).unwrap();
@@ -85,7 +82,7 @@ mod tests {
 
 				// Checking DOT pool User params
 				// ADMIN:
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).borrowed, Balance::zero());
 				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, Rate::zero());
 
 				System::set_block_number(1);
@@ -146,11 +143,8 @@ mod tests {
 				// Checking DOT pool Storage params
 				assert_eq!(TestPools::pools(DOT).borrow_index, Rate::one());
 				// Expected start value: 0.0
-				assert_eq!(
-					TestPools::pools(DOT).total_protocol_interest,
-					pool_total_protocol_interest_start
-				);
-				assert_eq!(TestPools::pools(DOT).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pools(DOT).protocol_interest, pool_protocol_interest_start);
+				assert_eq!(TestPools::pools(DOT).borrowed, Balance::zero());
 
 				// Checking controller Storage params
 				assert_eq!(TestController::controller_params(DOT).last_interest_accrued_block, 1);
@@ -159,10 +153,10 @@ mod tests {
 
 				// Checking DOT pool User params
 				// ADMIN:
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).borrowed, Balance::zero());
 				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, Rate::zero());
 				// ALICE:
-				assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, Balance::zero());
 				assert_eq!(TestPools::pool_user_data(DOT, ALICE).interest_index, Rate::zero());
 
 				System::set_block_number(2);
@@ -219,17 +213,11 @@ mod tests {
 				// Checking pool Storage params
 				assert_eq!(TestPools::pools(DOT).borrow_index, Rate::one());
 				// Expected: 0
-				assert_eq!(
-					TestPools::pools(DOT).total_protocol_interest,
-					pool_total_protocol_interest_start
-				);
+				assert_eq!(TestPools::pools(DOT).protocol_interest, pool_protocol_interest_start);
 				// Total borrowed amount changed 0 -> 30 000
 				let pool_dot_total_borrow_block_number_2: Balance =
 					pool_dot_total_borrow_start + alice_borrow_amount_block_number_2;
-				assert_eq!(
-					TestPools::pools(DOT).total_borrowed,
-					pool_dot_total_borrow_block_number_2
-				);
+				assert_eq!(TestPools::pools(DOT).borrowed, pool_dot_total_borrow_block_number_2);
 
 				// Checking controller Storage params
 				assert_eq!(TestController::controller_params(DOT).last_interest_accrued_block, 2);
@@ -241,14 +229,14 @@ mod tests {
 
 				// Checking DOT pool User params
 				// ADMIN:
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).borrowed, Balance::zero());
 				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, Rate::zero());
 				// ALICE:
 				// User total borrowed changed: 0 -> 30 000
 				let alice_dot_total_borrow_block_number_2: Balance =
 					alice_dot_total_borrow_start + alice_borrow_amount_block_number_2;
 				assert_eq!(
-					TestPools::pool_user_data(DOT, ALICE).total_borrowed,
+					TestPools::pool_user_data(DOT, ALICE).borrowed,
 					alice_dot_total_borrow_block_number_2
 				);
 				// User interest index changed: 0 -> 1
@@ -311,21 +299,18 @@ mod tests {
 				assert_eq!(TestPools::pools(DOT).borrow_index, pool_borrow_index_block_number_3);
 				// Expected: 0,0000050625
 				let interest_accumulated_block_number_3: Balance = 5_062_500_000_000;
-				let pool_total_protocol_interest_block_number_3: Balance =
-					pool_total_protocol_interest_start + interest_accumulated_block_number_3;
+				let pool_protocol_interest_block_number_3: Balance =
+					pool_protocol_interest_start + interest_accumulated_block_number_3;
 				assert_eq!(
-					TestPools::pools(DOT).total_protocol_interest,
-					pool_total_protocol_interest_block_number_3
+					TestPools::pools(DOT).protocol_interest,
+					pool_protocol_interest_block_number_3
 				);
 				// Expected: 15_000,000050625
 				let borrow_accumulated_block_number_3: Balance = 50_625_000_000_000;
 				let pool_dot_total_borrow_block_number_3: Balance = pool_dot_total_borrow_block_number_2
 					+ borrow_accumulated_block_number_3
 					- alice_repay_amount_block_number_3;
-				assert_eq!(
-					TestPools::pools(DOT).total_borrowed,
-					pool_dot_total_borrow_block_number_3
-				);
+				assert_eq!(TestPools::pools(DOT).borrowed, pool_dot_total_borrow_block_number_3);
 
 				// Checking controller Storage params
 				assert_eq!(TestController::controller_params(DOT).last_interest_accrued_block, 3);
@@ -337,14 +322,14 @@ mod tests {
 
 				// Checking DOT pool User params
 				// ADMIN:
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).borrowed, Balance::zero());
 				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, Rate::zero());
 				// ALICE:
 				let alice_dot_total_borrow_block_number_3: Balance = alice_dot_total_borrow_block_number_2
 					+ borrow_accumulated_block_number_3
 					- alice_repay_amount_block_number_3;
 				assert_eq!(
-					TestPools::pool_user_data(DOT, ALICE).total_borrowed,
+					TestPools::pool_user_data(DOT, ALICE).borrowed,
 					alice_dot_total_borrow_block_number_3
 				);
 				// Interest_index changed: 0 -> 1.000000001687500000
@@ -412,11 +397,11 @@ mod tests {
 					Rate::saturating_from_rational(1_000_000_002_531_250_003u128, 1_000_000_000_000_000_000u128);
 				assert_eq!(TestPools::pools(DOT).borrow_index, pool_borrow_index_block_number_4);
 				let interest_accumulated_block_number_4: Balance = 1_265_625_007_271;
-				let pool_total_protocol_interest_block_number_4: Balance =
-					pool_total_protocol_interest_block_number_3 + interest_accumulated_block_number_4;
+				let pool_protocol_interest_block_number_4: Balance =
+					pool_protocol_interest_block_number_3 + interest_accumulated_block_number_4;
 				assert_eq!(
-					TestPools::pools(DOT).total_protocol_interest,
-					pool_total_protocol_interest_block_number_4
+					TestPools::pools(DOT).protocol_interest,
+					pool_protocol_interest_block_number_4
 				);
 
 				// FIXME: unavailable behavior.
@@ -431,10 +416,7 @@ mod tests {
 					+ borrow_accumulated_block_number_4
 					- alice_dot_total_borrow_block_number_3
 					- alice_borrow_accumulated_block_number_4;
-				assert_eq!(
-					TestPools::pools(DOT).total_borrowed,
-					pool_dot_total_borrow_block_number_4
-				);
+				assert_eq!(TestPools::pools(DOT).borrowed, pool_dot_total_borrow_block_number_4);
 
 				// Checking controller Storage params
 				assert_eq!(TestController::controller_params(DOT).last_interest_accrued_block, 4);
@@ -445,10 +427,10 @@ mod tests {
 
 				// Checking user pool Storage params
 				// ADMIN:
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).borrowed, Balance::zero());
 				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, Rate::zero());
 				// ALICE:
-				assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, Balance::zero());
 				let user_interest_index_block_number_4: Rate = pool_borrow_index_block_number_4;
 				assert_eq!(
 					TestPools::pool_user_data(DOT, ALICE).interest_index,
@@ -504,12 +486,12 @@ mod tests {
 				assert_eq!(TestPools::pools(DOT).borrow_index, pool_borrow_index_block_number_4);
 				// Expected: 0,000006328125007271
 				assert_eq!(
-					TestPools::pools(DOT).total_protocol_interest,
-					pool_total_protocol_interest_block_number_4
+					TestPools::pools(DOT).protocol_interest,
+					pool_protocol_interest_block_number_4
 				);
 				//FIXME: something went wrong.....
 				//TODO: should be fixed
-				assert_eq!(TestPools::pools(DOT).total_borrowed, 6356);
+				assert_eq!(TestPools::pools(DOT).borrowed, 6356);
 
 				// Checking controller Storage params
 				assert_eq!(TestController::controller_params(DOT).last_interest_accrued_block, 5);
@@ -519,11 +501,11 @@ mod tests {
 
 				// Checking user pool Storage params
 				// ADMIN:
-				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).borrowed, Balance::zero());
 				assert_eq!(TestPools::pool_user_data(DOT, ADMIN).interest_index, Rate::zero());
 				// ALICE:
 				// Expected: 0
-				assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, Balance::zero());
+				assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, Balance::zero());
 				// Expected: 1,000000002531250003
 				assert_eq!(
 					TestPools::pool_user_data(DOT, ALICE).interest_index,

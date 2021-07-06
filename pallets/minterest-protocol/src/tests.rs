@@ -38,9 +38,9 @@ fn create_pool_should_work() {
 			assert_eq!(
 				TestPools::get_pool_data(DOT),
 				Pool {
-					total_borrowed: Balance::zero(),
+					borrowed: Balance::zero(),
 					borrow_index: Rate::one(),
-					total_protocol_interest: Balance::zero(),
+					protocol_interest: Balance::zero(),
 				},
 			);
 			assert_eq!(
@@ -1160,12 +1160,12 @@ fn partial_protocol_interest_transfer_should_work() {
 		)
 		.build()
 		.execute_with(|| {
-			assert_eq!(TestPools::pools(DOT).total_protocol_interest, dollars(11_000u128));
+			assert_eq!(TestPools::pools(DOT).protocol_interest, dollars(11_000u128));
 			assert_eq!(TestPools::get_pool_available_liquidity(DOT), dollars(10_000u128));
 
 			TestMinterestProtocol::on_finalize(1);
 
 			// Not all protocol interest transferred because of insufficient liquidity
-			assert_eq!(TestPools::pools(DOT).total_protocol_interest, dollars(1_000u128));
+			assert_eq!(TestPools::pools(DOT).protocol_interest, dollars(1_000u128));
 		});
 }

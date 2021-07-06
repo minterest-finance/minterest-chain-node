@@ -120,7 +120,7 @@ mod tests {
 				assert_eq!(
 					TestPools::pool_user_data(BTC, BOB),
 					PoolUserData {
-						total_borrowed: 2_450_000_154_350_000_000_000, // 3500 BTC - 1_050 BTC = 2_450 BTC
+						borrowed: 2_450_000_154_350_000_000_000, // 3500 BTC - 1_050 BTC = 2_450 BTC
 						interest_index: Rate::from_inner(1_000_000_063_000_000_000),
 						is_collateral: false,
 						liquidation_attempts: 1,
@@ -210,7 +210,7 @@ mod tests {
 				assert_eq!(
 					TestPools::pool_user_data(BTC, BOB),
 					PoolUserData {
-						total_borrowed: 0,
+						borrowed: 0,
 						interest_index: Rate::from_inner(1_000_000_085_059_004_489),
 						is_collateral: false,
 						liquidation_attempts: 0,
@@ -289,7 +289,7 @@ mod tests {
 				assert_eq!(
 					TestPools::pool_user_data(BTC, ALICE),
 					PoolUserData {
-						total_borrowed: 48_095_242_595_238_095_238_095, // 50_000 BTC - 1904.76 BTC = 48_095.24 BTC
+						borrowed: 48_095_242_595_238_095_238_095, // 50_000 BTC - 1904.76 BTC = 48_095.24 BTC
 						interest_index: Rate::from_inner(1_000_000_090_000_000_000),
 						is_collateral: false,
 						liquidation_attempts: 0,

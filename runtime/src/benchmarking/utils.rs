@@ -44,9 +44,9 @@ pub(crate) fn create_pools(pools: &Vec<CurrencyId>) {
 		liquidity_pools::Pools::<Runtime>::insert(
 			pool_id,
 			Pool {
-				total_borrowed: 0,
+				borrowed: 0,
 				borrow_index: Rate::one(),
-				total_protocol_interest: 0,
+				protocol_interest: 0,
 			},
 		);
 	});
@@ -89,33 +89,33 @@ pub mod tests {
 				(
 					ETH,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					DOT,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					KSM,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					BTC,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 			],

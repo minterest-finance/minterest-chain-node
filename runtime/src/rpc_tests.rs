@@ -16,7 +16,7 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Interest, Operation, Price};
 use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
 use orml_traits::MultiCurrency;
-use pallet_traits::{PoolsManager, PricesManager};
+use pallet_traits::{LiquidityPoolsManager, PoolsManager, PricesManager};
 use prices_rpc_runtime_api::runtime_decl_for_PricesRuntimeApi::PricesRuntimeApi;
 use risk_manager::RiskManagerData;
 use sp_runtime::{
@@ -91,9 +91,9 @@ impl ExtBuilder {
 		self.pools.push((
 			pool_id,
 			Pool {
-				total_borrowed: Balance::zero(),
+				borrowed: Balance::zero(),
 				borrow_index: Rate::one(),
-				total_protocol_interest: Balance::zero(),
+				protocol_interest: Balance::zero(),
 			},
 		));
 		self
@@ -882,7 +882,7 @@ fn test_get_protocol_total_value_rpc() {
 			assert_ok!(MinterestProtocol::redeem(bob(), DOT));
 			assert_ok!(MinterestProtocol::redeem(alice(), DOT));
 
-			let dot_pool_protocol_interest = LiquidityPools::pools(DOT).total_protocol_interest;
+			let dot_pool_protocol_interest = LiquidityPools::get_pool_protocol_interest(DOT);
 			assert_eq!(dot_pool_protocol_interest, 294_000_000_000_000);
 
 			// pool_total_supply: 170 ETH * 3 + dot_pool_protocol_interest * 2 = (170 * 3) + (0.000294 * 2)
@@ -1132,7 +1132,7 @@ fn test_get_hypothetical_account_liquidity_rpc() {
 		});
 }
 
-/// Test that free balance has increased by a (total_supply - total_borrowed) after repay all and
+/// Test that free balance has increased by a (user_total_supply - user_total_borrowed) after repay all and
 /// redeem
 #[test]
 fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
@@ -1173,10 +1173,10 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 		})
 }
 
-/// Test that difference between total_borrowed returned by RPC before and after repay is equal to
+/// Test that difference between user_total_borrowed returned by RPC before and after repay is equal to
 /// repay amount
 #[test]
-fn test_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc() {
+fn test_user_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc() {
 	ExtBuilder::default()
 		.pool_initial(DOT)
 		.pool_initial(ETH)
@@ -1202,7 +1202,7 @@ fn test_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc
 				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
-				LiquidityPools::pool_user_data(DOT, BOB::get()).total_borrowed,
+				LiquidityPools::pool_user_data(DOT, BOB::get()).borrowed,
 				(Rate::from_inner(account_data_after_repay.total_borrowed) / oracle_price).into_inner()
 			);
 			assert_eq!(
@@ -1214,10 +1214,10 @@ fn test_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc
 		})
 }
 
-/// Test that difference between total_borrowed returned by RPC before and after borrow is equal to
+/// Test that difference between user_total_borrowed returned by RPC before and after borrow is equal to
 /// borrow amount
 #[test]
-fn test_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rpc() {
+fn test_user_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rpc() {
 	ExtBuilder::default()
 		.pool_initial(DOT)
 		.pool_initial(ETH)
@@ -1241,7 +1241,7 @@ fn test_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rp
 				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
-				LiquidityPools::pool_user_data(DOT, BOB::get()).total_borrowed,
+				LiquidityPools::pool_user_data(DOT, BOB::get()).borrowed,
 				(Rate::from_inner(account_data_after_borrow.total_borrowed) / oracle_price).into_inner()
 			);
 			assert_eq!(
@@ -1257,7 +1257,7 @@ fn test_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rp
 /// Test that difference between total_supply returned by RPC before and after deposit_underlying is
 /// equal to deposit amount
 #[test]
-fn test_total_borrowed_difference_is_ok_before_and_after_deposit_using_balance_rpc() {
+fn test_user_total_borrowed_difference_is_ok_before_and_after_deposit_using_balance_rpc() {
 	ExtBuilder::default()
 		.pool_initial(DOT)
 		.pool_initial(ETH)
@@ -1693,7 +1693,7 @@ fn protocol_interest_transfer_should_work() {
 			System::set_block_number(20);
 
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(100_000)));
-			assert_eq!(LiquidityPools::pools(DOT).total_protocol_interest, Balance::zero());
+			assert_eq!(LiquidityPools::get_pool_protocol_interest(DOT), Balance::zero());
 
 			System::set_block_number(1000);
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(10_000)));
@@ -1701,7 +1701,7 @@ fn protocol_interest_transfer_should_work() {
 			MinterestProtocol::on_finalize(1000);
 			// Not reached threshold, pool balances should stay the same
 			assert_eq!(
-				LiquidityPools::pools(DOT).total_protocol_interest,
+				LiquidityPools::get_pool_protocol_interest(DOT),
 				441_000_000_000_000_000u128
 			);
 
@@ -1710,20 +1710,17 @@ fn protocol_interest_transfer_should_work() {
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(20_000)));
 			assert_eq!(pool_balance(DOT), dollars(80_000));
 
-			let total_protocol_interest: Balance = 3_645_120_550_951_706_945_733;
-			assert_eq!(
-				LiquidityPools::pools(DOT).total_protocol_interest,
-				total_protocol_interest
-			);
+			let pool_protocol_interest: Balance = 3_645_120_550_951_706_945_733;
+			assert_eq!(LiquidityPools::get_pool_protocol_interest(DOT), pool_protocol_interest);
 
 			let liquidity_pool_dot_balance = LiquidityPools::get_pool_available_liquidity(DOT);
 			let liquidation_pool_dot_balance = LiquidationPools::get_pool_available_liquidity(DOT);
 
-			// Threshold is reached. Transfer total_protocol_interest to liquidation pool
+			// Threshold is reached. Transfer pool_protocol_interest to liquidation pool
 			MinterestProtocol::on_finalize(10000000);
 
-			let transferred_to_liquidation_pool = total_protocol_interest;
-			assert_eq!(LiquidityPools::pools(DOT).total_protocol_interest, Balance::zero());
+			let transferred_to_liquidation_pool = pool_protocol_interest;
+			assert_eq!(LiquidityPools::get_pool_protocol_interest(DOT), Balance::zero());
 			assert_eq!(
 				LiquidityPools::get_pool_available_liquidity(DOT),
 				liquidity_pool_dot_balance - transferred_to_liquidation_pool

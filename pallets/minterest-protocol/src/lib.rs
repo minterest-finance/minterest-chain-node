@@ -891,16 +891,16 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn transfer_protocol_interest(pool_id: CurrencyId) {
-		let total_protocol_interest = T::ManagerLiquidityPools::get_pool_total_protocol_interest(pool_id);
-		if total_protocol_interest < T::ControllerManager::get_protocol_interest_threshold(pool_id) {
+		let pool_protocol_interest = T::ManagerLiquidityPools::get_pool_protocol_interest(pool_id);
+		if pool_protocol_interest < T::ControllerManager::get_protocol_interest_threshold(pool_id) {
 			return;
 		}
 
-		let total_balance = T::ManagerLiquidityPools::get_pool_available_liquidity(pool_id);
-		let to_liquidation_pool = total_balance.min(total_protocol_interest);
+		let pool_supply_underlying = T::ManagerLiquidityPools::get_pool_available_liquidity(pool_id);
+		let to_liquidation_pool = pool_supply_underlying.min(pool_protocol_interest);
 
 		// If no overflow and transfer is successful update pool state
-		if let Some(new_protocol_interest) = total_protocol_interest.checked_sub(to_liquidation_pool) {
+		if let Some(new_protocol_interest) = pool_protocol_interest.checked_sub(to_liquidation_pool) {
 			if T::MultiCurrency::transfer(
 				pool_id,
 				&T::ManagerLiquidityPools::pools_account_id(),
@@ -909,7 +909,7 @@ impl<T: Config> Pallet<T> {
 			)
 			.is_ok()
 			{
-				<LiquidityPools<T>>::set_pool_total_protocol_interest(pool_id, new_protocol_interest);
+				<LiquidityPools<T>>::set_pool_protocol_interest(pool_id, new_protocol_interest);
 			} else {
 				Self::deposit_event(Event::ProtocolInterestTransferFailed(pool_id));
 			}
