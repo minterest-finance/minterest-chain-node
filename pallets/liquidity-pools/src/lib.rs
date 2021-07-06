@@ -241,33 +241,33 @@ impl<T: Config> Pallet<T> {
 
 	/// Calculates the exchange rate from the underlying to the mToken.
 	/// - `pool_cash`: The total amount of underlying tokens the pool has.
-	/// - `pool_supply`: Total number of wrapped tokens in circulation.
+	/// - `pool_supply_wrap`: Total number of wrapped tokens in circulation.
 	/// - `pool_protocol_interest`: Total amount of interest of the underlying held in the pool.
 	/// - `pool_borrowed`: Total amount of outstanding borrows of the underlying in this pool.
 	///
 	/// returns `exchange_rate = (pool_cash + pool_borrowed - pool_protocol_interest) /
-	/// pool_supply`.
+	/// pool_supply_wrap`.
 	fn calculate_exchange_rate(
 		pool_cash: Balance,
-		pool_supply: Balance,
+		pool_supply_wrap: Balance,
 		pool_protocol_interest: Balance,
 		pool_borrowed: Balance,
 	) -> RateResult {
-		let rate = match pool_supply.is_zero() {
+		let exchange_rate = match pool_supply_wrap.is_zero() {
 			// If there are no tokens minted: exchange_rate = initial_exchange_rate.
 			true => T::InitialExchangeRate::get(),
 
-			// Otherwise: exchange_rate = (pool_cash + pool_borrowed - pool_protocol_interest) / pool_supply
+			// Otherwise: exchange_rate = (pool_cash + pool_borrowed - pool_protocol_interest) / pool_supply_wrap
 			_ => Rate::saturating_from_rational(
 				pool_cash
 					.checked_add(pool_borrowed)
 					.and_then(|v| v.checked_sub(pool_protocol_interest))
 					.ok_or(Error::<T>::ExchangeRateCalculationError)?,
-				pool_supply,
+				pool_supply_wrap,
 			),
 		};
 
-		Ok(rate)
+		Ok(exchange_rate)
 	}
 }
 

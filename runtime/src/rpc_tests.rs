@@ -1132,8 +1132,8 @@ fn test_get_hypothetical_account_liquidity_rpc() {
 		});
 }
 
-/// Test that free balance has increased by a (user_total_supply - user_total_borrowed) after repay all and
-/// redeem
+/// Test that free balance has increased by a (user_total_supply - user_total_borrowed) after repay
+/// all and redeem.
 #[test]
 fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 	ExtBuilder::default()
@@ -1173,8 +1173,8 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 		})
 }
 
-/// Test that difference between user_total_borrowed returned by RPC before and after repay is equal to
-/// repay amount
+/// Test that difference between user_total_borrowed returned by RPC before and after repay is equal
+/// to repay amount.
 #[test]
 fn test_user_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc() {
 	ExtBuilder::default()
@@ -1214,8 +1214,8 @@ fn test_user_total_borrowed_difference_is_ok_before_and_after_repay_using_balanc
 		})
 }
 
-/// Test that difference between user_total_borrowed returned by RPC before and after borrow is equal to
-/// borrow amount
+/// Test that difference between user_total_borrowed returned by RPC before and after borrow is equal
+/// to borrow amount.
 #[test]
 fn test_user_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rpc() {
 	ExtBuilder::default()
