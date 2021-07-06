@@ -1268,6 +1268,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			T::LiquidityPoolsManager::pool_exists(&underlying_asset),
 			Error::<T>::PoolNotFound
 		);
+
 		let wrapped_asset_id = underlying_asset
 			.wrapped_asset()
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;

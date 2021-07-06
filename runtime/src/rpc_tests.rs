@@ -1214,8 +1214,8 @@ fn test_user_total_borrowed_difference_is_ok_before_and_after_repay_using_balanc
 		})
 }
 
-/// Test that difference between user_total_borrowed returned by RPC before and after borrow is equal
-/// to borrow amount.
+/// Test that difference between user_total_borrowed returned by RPC before and after borrow is
+/// equal to borrow amount.
 #[test]
 fn test_user_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rpc() {
 	ExtBuilder::default()

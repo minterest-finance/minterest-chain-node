@@ -37,7 +37,6 @@ mod tests {
 
 	mod controller_tests;
 	mod liquidation_tests;
-	mod liquidity_pools_tests;
 	mod minterest_model_tests;
 	mod minterest_protocol_tests;
 	mod mnt_token_tests;

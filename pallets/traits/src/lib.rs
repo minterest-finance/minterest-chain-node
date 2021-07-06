@@ -3,7 +3,7 @@
 
 use minterest_primitives::{Balance, CurrencyId, Operation, Price, Rate};
 use sp_runtime::{DispatchError, DispatchResult};
-use sp_std::{collections::btree_set::BTreeSet, result::Result};
+use sp_std::{collections::btree_set::BTreeSet, result::Result, vec::Vec};
 
 /// An abstraction of basic borrowing functions
 pub trait Borrowing<AccountId> {
