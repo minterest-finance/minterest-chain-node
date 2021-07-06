@@ -14,8 +14,6 @@ use sp_std::prelude::*;
 runtime_benchmarks! {
 	{ Runtime, module_vesting }
 
-	_ {}
-
 	claim {
 		let i in 1 .. MaxVestingSchedules::get();
 

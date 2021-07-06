@@ -37,7 +37,7 @@ fn set_base_rate_should_work() {
 			TestMinterestModel::minterest_model_params(DOT).base_rate_per_block,
 			Rate::saturating_from_rational(2, 1)
 		);
-		let expected_event = Event::minterest_model(crate::Event::BaseRatePerBlockChanged);
+		let expected_event = Event::TestMinterestModel(crate::Event::BaseRatePerBlockChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 0.0: (0 / 10) / 5_256_000
@@ -92,7 +92,7 @@ fn set_multiplier_should_work() {
 			TestMinterestModel::minterest_model_params(DOT).multiplier_per_block,
 			Rate::saturating_from_rational(2, 1)
 		);
-		let expected_event = Event::minterest_model(crate::Event::MultiplierPerBlockChanged);
+		let expected_event = Event::TestMinterestModel(crate::Event::MultiplierPerBlockChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 0.0 if Base rate per block grater than zero: (0 / 10) / 5_256_000
@@ -148,7 +148,7 @@ fn set_jump_multiplier_should_work() {
 			TestMinterestModel::minterest_model_params(DOT).jump_multiplier_per_block,
 			Rate::saturating_from_rational(2, 1)
 		);
-		let expected_event = Event::minterest_model(crate::Event::JumpMultiplierPerBlockChanged);
+		let expected_event = Event::TestMinterestModel(crate::Event::JumpMultiplierPerBlockChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can be set to 0.0: (0 / 10) / 5_256_000
@@ -199,7 +199,7 @@ fn set_kink_should_work() {
 			TestMinterestModel::minterest_model_params(DOT).kink,
 			Rate::saturating_from_rational(8, 10)
 		);
-		let expected_event = Event::minterest_model(crate::Event::KinkChanged);
+		let expected_event = Event::TestMinterestModel(crate::Event::KinkChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Root or half MinterestCouncil.

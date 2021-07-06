@@ -1,4 +1,4 @@
-//! # Liquidity Pools Module
+//! # Liquidity Pools Pallet
 //!
 //! ## Overview
 //!
@@ -13,7 +13,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-use frame_support::{pallet_prelude::*, traits::Get};
+use frame_support::{pallet_prelude::*, traits::Get, PalletId};
 use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 use minterest_primitives::{Balance, CurrencyId, Rate};
 pub use module::*;
@@ -22,8 +22,8 @@ use pallet_traits::{Borrowing, LiquidityPoolsManager, PoolsManager, PricesManage
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
-	traits::{AccountIdConversion, CheckedDiv, CheckedMul, Zero},
-	DispatchError, DispatchResult, FixedPointNumber, ModuleId, RuntimeDebug,
+	traits::{AccountIdConversion, CheckedDiv, CheckedMul, One, Zero},
+	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
 };
 use sp_std::{result, vec::Vec};
 
@@ -84,7 +84,7 @@ pub mod module {
 
 		#[pallet::constant]
 		/// The Liquidity Pool's module id, keep all assets in Pools.
-		type ModuleId: Get<ModuleId>;
+		type PalletId: Get<PalletId>;
 
 		#[pallet::constant]
 		/// The Liquidity Pool's account id, keep all assets in Pools.
@@ -515,7 +515,7 @@ impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	/// Gets module account id.
 	fn pools_account_id() -> T::AccountId {
-		T::ModuleId::get().into_account()
+		T::PalletId::get().into_account()
 	}
 
 	/// Gets current the total amount of cash the pool has.

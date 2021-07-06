@@ -1,6 +1,6 @@
 use super::*;
 use crate as controller;
-use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
+use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
@@ -11,7 +11,7 @@ use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
-	FixedPointNumber, ModuleId,
+	FixedPointNumber,
 };
 use sp_std::cell::RefCell;
 pub use test_helper::*;
@@ -26,14 +26,14 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
-		Currencies: orml_currencies::{Module, Call, Event<T>},
-		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
-		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
-		TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Pallet, Call, Event<T>},
+		Controller: controller::{Pallet, Storage, Call, Event, Config<T>},
+		MinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
+		TestPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
+		TestMntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -51,10 +51,10 @@ mock_impl_mnt_token_config!(Runtime, OneAlice);
 mock_impl_balances_config!(Runtime);
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
-	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
-	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
-	pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
+	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"min/lqdy");
+	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
+	pub const MntTokenPalletId: PalletId = PalletId(*b"min/mntt");
+	pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
@@ -176,7 +176,7 @@ impl ExtBuilder {
 			.unwrap();
 
 		orml_tokens::GenesisConfig::<Runtime> {
-			endowed_accounts: self.endowed_accounts,
+			balances: self.endowed_accounts,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

@@ -1,6 +1,6 @@
 [package]
 name = "risk-manager"
-description = 'Pallet for risk manager implementation'
+description = "Pallet for risk manager implementation"
 version = "0.6.0"
 authors = ["Minterest developers"]
 edition = "2018"
@@ -10,15 +10,15 @@ edition = "2018"
 [dependencies]
 serde = { version = "1.0.101", optional = true }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
-frame-support = { default-features = false, version = '3.0.0' }
-frame-system = { default-features = false, version = '3.0.0' }
-sp-core = { version = '3.0.0', default-features = false }
-sp-io = { version = '3.0.0', default-features = false }
-sp-runtime = { version = '3.0.0', default-features = false }
-sp-std = { version = '3.0.0', default-features = false }
-orml-utilities = { version = '0.4.0', default-features = false }
-orml-traits = { version = '0.4.0', default-features = false }
-sp-arithmetic = { version = "3.0.0", default-features = false }
+frame-support = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
+frame-system = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
+orml-utilities = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
@@ -27,12 +27,12 @@ liquidation-pools = { path = "../liquidation-pools", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
 
 [dev-dependencies]
-sp-core = { version = '3.0.0' }
-sp-io = { version = '3.0.0' }
-pallet-balances = { version = '3.0.0' }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
 
-orml-tokens = { version = "0.4.0" }
-orml-currencies = { version = "0.4.0" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 
 liquidity-pools = { path = "../liquidity-pools" }
 liquidation-pools = { path = "../liquidation-pools" }
@@ -45,12 +45,12 @@ module-prices = { path = "../prices" }
 whitelist-module = { path = "../whitelist" }
 
 [features]
-default = ['std']
+default = ["std"]
 std = [
-    'serde',
-    'codec/std',
-    'frame-support/std',
-    'frame-system/std',
+    "serde",
+    "codec/std",
+    "frame-support/std",
+    "frame-system/std",
     "sp-std/std",
     "sp-runtime/std",
     "sp-io/std",

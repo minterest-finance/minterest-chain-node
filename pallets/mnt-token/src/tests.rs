@@ -8,8 +8,10 @@ use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::MntManager;
 use sp_arithmetic::FixedPointNumber;
-use sp_runtime::traits::Zero;
-use sp_runtime::DispatchError::BadOrigin;
+use sp_runtime::{
+	traits::{One, Zero},
+	DispatchError::BadOrigin,
+};
 
 const MNT_PALLET_START_BALANCE: Balance = 1_000_000 * DOLLARS;
 
@@ -212,7 +214,7 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 			let dot_mnt_speed = 5 * DOLLARS;
 			// Check event about distributing mnt tokens by DOT pool
 			let borrower_index = MntToken::mnt_borrower_index(DOT, ALICE);
-			let event = Event::mnt_token(crate::Event::MntDistributedToBorrower(
+			let event = Event::MntToken(crate::Event::MntDistributedToBorrower(
 				DOT,
 				ALICE,
 				dot_mnt_speed,
@@ -444,7 +446,7 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 					assert_eq!(MntToken::mnt_accrued(supplier_id), 0);
 
 					let supplier_index = MntToken::mnt_supplier_index(DOT, supplier_id).unwrap();
-					let event = Event::mnt_token(crate::Event::MntDistributedToSupplier(
+					let event = Event::MntToken(crate::Event::MntDistributedToSupplier(
 						DOT,
 						supplier_id,
 						distributed_amount,
@@ -596,7 +598,7 @@ fn test_minting_enable_disable() {
 			// Enable the distribution of MNT tokens in the DOT liquidity pool
 			let dot_speed = 2 * DOLLARS;
 			assert_ok!(MntToken::set_speed(admin_origin(), DOT, dot_speed));
-			let speed_changed_event = Event::mnt_token(crate::Event::MntSpeedChanged(DOT, dot_speed));
+			let speed_changed_event = Event::MntToken(crate::Event::MntSpeedChanged(DOT, dot_speed));
 			assert!(System::events()
 				.iter()
 				.any(|record| record.event == speed_changed_event));
@@ -613,7 +615,7 @@ fn test_minting_enable_disable() {
 			// Enable the distribution of MNT tokens in the KSM liquidity pool
 			let ksm_speed = 2 * DOLLARS;
 			assert_ok!(MntToken::set_speed(admin_origin(), KSM, ksm_speed));
-			let speed_changed_event = Event::mnt_token(crate::Event::MntSpeedChanged(KSM, ksm_speed));
+			let speed_changed_event = Event::MntToken(crate::Event::MntSpeedChanged(KSM, ksm_speed));
 			assert!(System::events()
 				.iter()
 				.any(|record| record.event == speed_changed_event));
@@ -623,7 +625,7 @@ fn test_minting_enable_disable() {
 
 			// Disable the distribution of MNT tokens in the DOT liquidity pool
 			assert_ok!(MntToken::set_speed(admin_origin(), DOT, Balance::zero()));
-			let speed_changed_event = Event::mnt_token(crate::Event::MntSpeedChanged(DOT, Balance::zero()));
+			let speed_changed_event = Event::MntToken(crate::Event::MntSpeedChanged(DOT, Balance::zero()));
 			assert!(System::events()
 				.iter()
 				.any(|record| record.event == speed_changed_event));

@@ -43,7 +43,7 @@ mod tests;
 pub mod weights;
 pub use weights::WeightInfo;
 
-type LiquidityPools<T> = liquidity_pools::Module<T>;
+type LiquidityPools<T> = liquidity_pools::Pallet<T>;
 type TokensResult = result::Result<(Balance, CurrencyId, Balance), DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 

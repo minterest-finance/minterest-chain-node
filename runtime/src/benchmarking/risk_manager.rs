@@ -1,6 +1,6 @@
 use super::utils::{create_pools, lookup_of_account, prepare_for_mnt_distribution, set_balance, SEED};
 use crate::{
-	AccountId, Currencies, EnabledUnderlyingAssetsIds, LiquidationPoolsModuleId, LiquidityPools, MinterestProtocol,
+	AccountId, Currencies, EnabledUnderlyingAssetsIds, LiquidationPoolsPalletId, LiquidityPools, MinterestProtocol,
 	Origin, Rate, Runtime, System, Whitelist, BTC, DOLLARS, DOT, ETH, KSM, MNT,
 };
 use frame_benchmarking::account;
@@ -8,14 +8,11 @@ use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
 use orml_traits::MultiCurrency;
 use pallet_traits::PoolsManager;
-use sp_runtime::traits::AccountIdConversion;
-use sp_runtime::FixedPointNumber;
+use sp_runtime::traits::{AccountIdConversion, One};
 use sp_std::prelude::*;
 
 runtime_benchmarks! {
 	{ Runtime, risk_manager }
-
-	_ {}
 
 	set_max_attempts {
 	}: _(
@@ -67,7 +64,7 @@ runtime_benchmarks! {
 
 		MinterestProtocol::borrow(RawOrigin::Signed(borrower.clone()).into(), DOT, 35_000 * DOLLARS)?;
 
-		let liquidation_pool_account_id: AccountId = LiquidationPoolsModuleId::get().into_account();
+		let liquidation_pool_account_id: AccountId = LiquidationPoolsPalletId::get().into_account();
 
 		// set balance for Liquidation Pool
 		set_balance(DOT, &liquidation_pool_account_id, 40_000 * DOLLARS)?;

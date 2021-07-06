@@ -1,16 +1,12 @@
 use super::utils::set_balance;
-use crate::{AccountId, DexModuleId, LiquidationPools, LiquidationPoolsModuleId, Rate, Runtime, DOLLARS, DOT, ETH};
+use crate::{AccountId, DexPalletId, LiquidationPools, LiquidationPoolsPalletId, Rate, Runtime, DOLLARS, DOT, ETH};
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
-use sp_runtime::traits::AccountIdConversion;
-use sp_runtime::FixedPointNumber;
-use sp_std::prelude::*;
+use sp_runtime::traits::{AccountIdConversion, One};
 
 runtime_benchmarks! {
 	{ Runtime, liquidation_pools }
-
-	_ {}
 
 	set_deviation_threshold {}: _(RawOrigin::Root, DOT, 10u128.pow(18))
 	verify { assert_eq!(LiquidationPools::liquidation_pools_data(DOT).deviation_threshold, Rate::one()) }
@@ -29,12 +25,12 @@ runtime_benchmarks! {
 	balance_liquidation_pools {
 		set_balance(
 			ETH,
-			&DexModuleId::get().into_account(),
+			&DexPalletId::get().into_account(),
 			20_000 * DOLLARS,
 		)?;
 		set_balance(
 			DOT,
-			&LiquidationPoolsModuleId::get().into_account(),
+			&LiquidationPoolsPalletId::get().into_account(),
 			20_000 * DOLLARS,
 		)?;
 	}: _(RawOrigin::None, DOT, ETH, 10_000 * DOLLARS, 10_000 * DOLLARS)

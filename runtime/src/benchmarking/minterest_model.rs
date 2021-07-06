@@ -2,13 +2,10 @@ use crate::{Rate, Runtime, DOT};
 
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
-use sp_runtime::FixedPointNumber;
-use sp_std::prelude::*;
+use sp_runtime::traits::One;
 
 runtime_benchmarks! {
 	{ Runtime, minterest_model }
-
-	_ {}
 
 	set_jump_multiplier {
 	}: _(

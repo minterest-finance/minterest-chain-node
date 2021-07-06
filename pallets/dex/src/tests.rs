@@ -61,7 +61,7 @@ fn do_swap_with_exact_target_should_work() {
 				),
 				Ok(10_000 * DOLLARS)
 			);
-			let expected_event = Event::dex(crate::Event::Swap(
+			let expected_event = Event::TestDex(crate::Event::Swap(
 				LiquidationPools::pools_account_id(),
 				DOT,
 				ETH,

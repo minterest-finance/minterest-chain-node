@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 
 use crate::{
-	AccountId, Balance, Currencies, CurrencyId, MinterestProtocol, MntTokenModuleId, Origin, Rate, Runtime, Vec,
+	AccountId, Balance, Currencies, CurrencyId, MinterestProtocol, MntTokenPalletId, Origin, Rate, Runtime, Vec,
 	Whitelist, BTC, DOLLARS, DOT, ETH, KSM, MNT,
 };
 
@@ -11,7 +11,7 @@ use frame_system::pallet_prelude::OriginFor;
 use frame_system::RawOrigin;
 use liquidity_pools::Pool;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::{AccountIdConversion, StaticLookup};
+use sp_runtime::traits::{AccountIdConversion, One, StaticLookup};
 use sp_runtime::FixedPointNumber;
 
 pub const SEED: u32 = 0;
@@ -55,7 +55,7 @@ pub(crate) fn create_pools(pools: &Vec<CurrencyId>) {
 pub(crate) fn prepare_for_mnt_distribution(pools: Vec<CurrencyId>) -> Result<(), &'static str> {
 	let helper: AccountId = account("helper", 0, SEED);
 	enable_whitelist_mode_and_add_member(&helper)?;
-	set_balance(MNT, &MntTokenModuleId::get().into_account(), 1_000_000 * DOLLARS)?;
+	set_balance(MNT, &MntTokenPalletId::get().into_account(), 1_000_000 * DOLLARS)?;
 	pools.into_iter().try_for_each(|pool_id| -> Result<(), &'static str> {
 		set_balance(pool_id, &helper, 50_000 * DOLLARS)?;
 		MinterestProtocol::deposit_underlying(RawOrigin::Signed(helper.clone()).into(), pool_id, 50_000 * DOLLARS)?;

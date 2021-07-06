@@ -1,4 +1,4 @@
-//! # Risk Manager Module
+//! # Risk Manager Pallet
 //!
 //! ## Overview
 //!
@@ -16,7 +16,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-use frame_support::{debug, ensure, pallet_prelude::*, traits::Get, transactional};
+use frame_support::{ensure, log, pallet_prelude::*, traits::Get, transactional};
 use frame_system::{
 	ensure_none,
 	offchain::{SendTransactionTypes, SubmitTransaction},
@@ -76,8 +76,8 @@ pub struct RiskManagerData {
 	pub liquidation_fee: Rate,
 }
 
-type LiquidityPools<T> = liquidity_pools::Module<T>;
-type MinterestProtocol<T> = minterest_protocol::Module<T>;
+type LiquidityPools<T> = liquidity_pools::Pallet<T>;
+type MinterestProtocol<T> = minterest_protocol::Pallet<T>;
 
 #[frame_support::pallet]
 pub mod module {
@@ -193,23 +193,23 @@ pub mod module {
 		/// Runs after every block. Start offchain worker to check unsafe loan and
 		/// submit unsigned tx to trigger liquidation.
 		fn offchain_worker(now: T::BlockNumber) {
-			debug::info!("Entering in RiskManager off-chain worker");
+			log::info!("Entering in RiskManager off-chain worker");
 
 			if let Err(e) = Self::_offchain_worker() {
-				debug::info!(
+				log::info!(
 					target: "RiskManager offchain worker",
 					"cannot run offchain worker at {:?}: {:?}",
 					now,
 					e,
 				);
 			} else {
-				debug::debug!(
+				log::debug!(
 					target: "RiskManager offchain worker",
 					" RiskManager offchain worker start at block: {:?} already done!",
 					now,
 				);
 			}
-			debug::info!("Exited from RiskManager off-chain worker");
+			log::info!("Exited from RiskManager off-chain worker");
 		}
 	}
 
@@ -387,7 +387,7 @@ impl<T: Config> Pallet<T> {
 		let working_start_time = sp_io::offchain::timestamp();
 
 		for (pos, currency_id) in underlying_assets.iter().enumerate() {
-			debug::info!("RiskManager starts processing loans for {:?}", currency_id);
+			log::info!("RiskManager starts processing loans for {:?}", currency_id);
 			<T as module::Config>::ControllerManager::accrue_interest_rate(*currency_id)
 				.map_err(|_| OffchainErr::CheckFail)?;
 			let pool_members =
@@ -419,7 +419,7 @@ impl<T: Config> Pallet<T> {
 
 				if guard.extend_lock().is_err() {
 					// The lock's deadline is happened
-					debug::warn!(
+					log::warn!(
 						"Risk Manager offchain worker hasn't(!) processed all pools. \
 						MAX duration time is expired. Loans checked count: {:?}, \
 						loans liquidated count: {:?}",
@@ -430,11 +430,11 @@ impl<T: Config> Pallet<T> {
 					return Ok(());
 				}
 			}
-			debug::info!("RiskManager finished processing loans for {:?}", currency_id);
+			log::info!("RiskManager finished processing loans for {:?}", currency_id);
 		}
 
 		let working_time = sp_io::offchain::timestamp().diff(&working_start_time);
-		debug::info!(
+		log::info!(
 			"Risk Manager offchain worker has processed all pools. Loans checked count {:?}, \
 			loans liquidated count: {:?}, execution time(ms): {:?}",
 			loans_checked_count,
@@ -464,7 +464,7 @@ impl<T: Config> Pallet<T> {
 		let who = T::Lookup::unlookup(borrower);
 		let call = Call::<T>::liquidate(who.clone(), pool_id);
 		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
-			debug::info!(
+			log::info!(
 				target: "RiskManager offchain worker",
 				"submit unsigned liquidation for \n AccountId {:?} CurrencyId {:?} \nfailed!",
 				who, pool_id,
@@ -761,7 +761,7 @@ impl<T: Config> ValidateUnsigned for Pallet<T> {
 		match call {
 			Call::liquidate(who, pool_id) => ValidTransaction::with_tag_prefix("RiskManagerOffchainWorker")
 				.priority(T::UnsignedPriority::get())
-				.and_provides((<frame_system::Module<T>>::block_number(), pool_id, who))
+				.and_provides((<frame_system::Pallet<T>>::block_number(), pool_id, who))
 				.longevity(64_u64)
 				.propagate(true)
 				.build(),

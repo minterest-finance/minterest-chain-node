@@ -28,9 +28,8 @@ use pallet_traits::{
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::traits::CheckedSub;
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedDiv, CheckedMul, Zero},
+	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, FixedU128, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
@@ -109,7 +108,7 @@ impl frame_support::traits::Get<PauseKeeper> for GetAllPaused {
 	}
 }
 
-type LiquidityPools<T> = liquidity_pools::Module<T>;
+type LiquidityPools<T> = liquidity_pools::Pallet<T>;
 type RateResult = result::Result<Rate, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 type LiquidityResult = result::Result<(Balance, Balance), DispatchError>;
@@ -934,7 +933,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// Returns pool parameters calculated for a current block.
 	pub fn calculate_current_pool_data(pool_id: CurrencyId) -> result::Result<Pool, DispatchError> {
-		let current_block_number = <frame_system::Module<T>>::block_number();
+		let current_block_number = <frame_system::Pallet<T>>::block_number();
 		let accrual_block_number_previous = Self::controller_dates(pool_id).last_interest_accrued_block;
 		if current_block_number == accrual_block_number_previous {
 			return Ok(<LiquidityPools<T>>::get_pool_data(pool_id));
@@ -1064,7 +1063,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		ControllerParams::<T>::insert(
 			currency_id,
 			ControllerData {
-				last_interest_accrued_block: <frame_system::Module<T>>::block_number(),
+				last_interest_accrued_block: <frame_system::Pallet<T>>::block_number(),
 				protocol_interest_factor,
 				max_borrow_rate,
 				collateral_factor,
@@ -1188,7 +1187,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	/// This calculates interest accrued from the last checkpointed block
 	/// up to the current block and writes new checkpoint to storage.
 	fn accrue_interest_rate(underlying_asset: CurrencyId) -> DispatchResult {
-		let current_block_number = <frame_system::Module<T>>::block_number();
+		let current_block_number = <frame_system::Pallet<T>>::block_number();
 		if Self::controller_dates(underlying_asset).last_interest_accrued_block == current_block_number {
 			return Ok(());
 		}

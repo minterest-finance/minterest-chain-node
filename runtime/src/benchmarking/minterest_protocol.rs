@@ -3,7 +3,7 @@ use super::utils::{
 };
 use crate::{
 	AccountId, Balance, Currencies, EnabledUnderlyingAssetsIds, EnabledWrappedTokensId, LiquidityPools,
-	LiquidityPoolsModuleId, MinterestProtocol, MntTokenModuleId, Origin, Rate, Runtime, System, Whitelist, BTC,
+	LiquidityPoolsPalletId, MinterestProtocol, MntTokenPalletId, Origin, Rate, Runtime, System, Whitelist, BTC,
 	DOLLARS, DOT, ETH, KSM, MBTC, MDOT, MNT,
 };
 use frame_benchmarking::account;
@@ -33,8 +33,8 @@ fn hypothetical_liquidity_setup(borrower: &AccountId, lender: &AccountId) -> Res
 	set_balance(MDOT, lender, 20_000 * DOLLARS)?;
 
 	// set balance for Pools
-	set_balance(DOT, &LiquidityPoolsModuleId::get().into_account(), 20_000 * DOLLARS)?;
-	set_balance(BTC, &LiquidityPoolsModuleId::get().into_account(), 20_000 * DOLLARS)?;
+	set_balance(DOT, &LiquidityPoolsPalletId::get().into_account(), 20_000 * DOLLARS)?;
+	set_balance(BTC, &LiquidityPoolsPalletId::get().into_account(), 20_000 * DOLLARS)?;
 
 	// enable pools as collateral
 	EnabledUnderlyingAssetsIds::get()
@@ -56,8 +56,6 @@ fn hypothetical_liquidity_setup(borrower: &AccountId, lender: &AccountId) -> Res
 
 runtime_benchmarks! {
 	{ Runtime, minterest_protocol }
-
-	_ {}
 
 	create_pool {
 		liquidity_pools::Pools::<Runtime>::remove(DOT);
@@ -105,7 +103,7 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(lender.clone()), DOT, 10_000 * DOLLARS)
 	verify {
-		assert_eq!(Currencies::free_balance(DOT, &LiquidityPoolsModuleId::get().into_account() ), 60_000 * DOLLARS);
+		assert_eq!(Currencies::free_balance(DOT, &LiquidityPoolsPalletId::get().into_account() ), 60_000 * DOLLARS);
 		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(lender_supply) / 60(total_supply) = 3.33 MNT
 		assert_eq!(Currencies::free_balance(MNT, &lender), 3_333_333_324_333_330_029)
 	}
@@ -289,7 +287,7 @@ runtime_benchmarks! {
 
 		set_balance(
 			MNT,
-			&MntTokenModuleId::get().into_account(),
+			&MntTokenPalletId::get().into_account(),
 			1_000_000 * DOLLARS,
 		)?;
 
