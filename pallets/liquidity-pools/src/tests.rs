@@ -330,42 +330,6 @@ fn get_exchange_rate_should_work() {
 }
 
 #[test]
-fn get_exchange_rate_by_interest_params_should_work() {
-	ExtBuilder::default()
-		.pool_with_params(DOT, Balance::zero(), Rate::zero(), Balance::zero())
-		.pool_balance(DOT, dollars(100_u128))
-		.user_balance(ALICE, MDOT, dollars(125_u128))
-		.build()
-		.execute_with(|| {
-			// Pool needs to be created first
-			assert_noop!(
-				TestPools::get_exchange_rate_by_interest_params(ETH, Balance::zero(), dollars(300_u128)),
-				Error::<Test>::PoolNotFound
-			);
-			// Invalid protocol interest (more than pool balance) causes an error
-			assert_noop!(
-				TestPools::get_exchange_rate_by_interest_params(DOT, dollars(200_u128), Balance::zero()),
-				Error::<Test>::ExchangeRateCalculationError
-			);
-			// exchange_rate = (100 - 0 + 300) / 125 = 3.2
-			assert_eq!(
-				TestPools::get_exchange_rate_by_interest_params(DOT, Balance::zero(), dollars(300_u128)),
-				Ok(Rate::saturating_from_rational(32, 10))
-			);
-			// exchange_rate = (100 - 0 + 0) / 125 = 0.8
-			assert_eq!(
-				TestPools::get_exchange_rate_by_interest_params(DOT, Balance::zero(), Balance::zero()),
-				Ok(Rate::saturating_from_rational(8, 10))
-			);
-			// exchange_rate = (100 - 100 + 0) / 125 = 0
-			assert_eq!(
-				TestPools::get_exchange_rate_by_interest_params(DOT, dollars(100_u128), Balance::zero()),
-				Ok(Rate::zero())
-			);
-		});
-}
-
-#[test]
 fn get_user_liquidation_attempts_should_work() {
 	ExtBuilder::default()
 		.pool_user_data_with_params(DOT, ALICE, ONE_HUNDRED, Rate::default(), true, 12)

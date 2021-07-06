@@ -1355,11 +1355,11 @@ fn get_user_total_collateral_rpc_should_work() {
 
 			assert_eq!(
 				get_user_total_collateral_rpc(ALICE::get()),
-				90_000_047_628_000_000_000_000
+				90_000_047_628_021_069_720_000
 			);
 			assert_eq!(
 				get_user_total_collateral_rpc(BOB::get()),
-				180_000_095_256_000_000_000_000
+				180_000_095_256_042_139_440_000
 			);
 
 			run_to_block(500);
@@ -1373,7 +1373,7 @@ fn get_user_total_collateral_rpc_should_work() {
 
 			run_to_block(600);
 
-			let expected_bob_collateral = 180_000_238_140_000_000_000_000 + dollars(90_000);
+			let expected_bob_collateral = 180_000_238_140_252_836_910_000 + dollars(90_000);
 
 			assert_eq!(get_user_total_collateral_rpc(ALICE::get()), Balance::zero());
 			assert_eq!(get_user_total_collateral_rpc(BOB::get()), expected_bob_collateral);

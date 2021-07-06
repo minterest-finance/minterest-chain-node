@@ -366,7 +366,7 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 			System::set_block_number(100);
 			assert_eq!(
 				Controller::get_pool_exchange_borrow_and_supply_rates(DOT).unwrap().0,
-				Rate::from_inner(3200001458000000000)
+				Rate::from_inner(3200001458000012737)
 			);
 		});
 }

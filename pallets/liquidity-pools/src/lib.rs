@@ -247,7 +247,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// returns `exchange_rate = (total_cash + total_borrowed - total_protocol_interest) /
 	/// total_supply`.
-	pub fn calculate_exchange_rate(
+	fn calculate_exchange_rate(
 		total_cash: Balance,
 		total_supply: Balance,
 		total_protocol_interest: Balance,
