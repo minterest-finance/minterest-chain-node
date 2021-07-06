@@ -350,7 +350,7 @@ mod tests {
 			.unwrap();
 
 			controller::GenesisConfig::<Test> {
-				controller_dates: self.controller_data,
+				controller_params: self.controller_data,
 				pause_keepers: vec![
 					(ETH, PauseKeeper::all_unpaused()),
 					(DOT, PauseKeeper::all_unpaused()),

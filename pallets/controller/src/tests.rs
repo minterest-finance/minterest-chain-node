@@ -65,7 +65,7 @@ fn accrue_interest_should_work() {
 
 			assert_ok!(Controller::accrue_interest_rate(DOT));
 
-			assert_eq!(Controller::controller_dates(DOT).last_interest_accrued_block, 1);
+			assert_eq!(Controller::controller_params(DOT).last_interest_accrued_block, 1);
 			assert_eq!(TestPools::pools(DOT).total_protocol_interest, 57_600_000_000);
 			assert_eq!(
 				Controller::get_pool_exchange_borrow_and_supply_rates(DOT),
@@ -93,7 +93,7 @@ fn accrue_interest_should_not_work() {
 			System::set_block_number(1);
 
 			assert_ok!(Controller::accrue_interest_rate(DOT));
-			assert_eq!(Controller::controller_dates(DOT).last_interest_accrued_block, 1);
+			assert_eq!(Controller::controller_params(DOT).last_interest_accrued_block, 1);
 
 			assert_ok!(Controller::set_max_borrow_rate(
 				alice_origin(),
@@ -481,7 +481,7 @@ fn set_protocol_interest_factor_should_work() {
 		let expected_event = Event::Controller(crate::Event::InterestFactorChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(
-			Controller::controller_dates(DOT).protocol_interest_factor,
+			Controller::controller_params(DOT).protocol_interest_factor,
 			Rate::saturating_from_rational(20, 10)
 		);
 
@@ -494,7 +494,7 @@ fn set_protocol_interest_factor_should_work() {
 		let expected_event = Event::Controller(crate::Event::InterestFactorChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(
-			Controller::controller_dates(DOT).protocol_interest_factor,
+			Controller::controller_params(DOT).protocol_interest_factor,
 			Rate::from_inner(0)
 		);
 
@@ -523,7 +523,7 @@ fn set_max_borrow_rate_should_work() {
 		let expected_event = Event::Controller(crate::Event::MaxBorrowRateChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(
-			Controller::controller_dates(DOT).max_borrow_rate,
+			Controller::controller_params(DOT).max_borrow_rate,
 			Rate::saturating_from_rational(20, 10)
 		);
 
@@ -558,7 +558,7 @@ fn set_collateral_factor_should_work() {
 		let expected_event = Event::Controller(crate::Event::CollateralFactorChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(
-			Controller::controller_dates(DOT).collateral_factor,
+			Controller::controller_params(DOT).collateral_factor,
 			Rate::saturating_from_rational(1, 2)
 		);
 

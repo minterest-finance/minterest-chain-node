@@ -316,7 +316,7 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 		controller::GenesisConfig::<Test> {
-			controller_dates: vec![
+			controller_params: vec![
 				(
 					DOT,
 					ControllerData {

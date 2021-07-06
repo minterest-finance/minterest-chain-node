@@ -290,7 +290,7 @@ fn minterest_genesis(
 			pool_user_data: vec![],
 		},
 		controller: ControllerConfig {
-			controller_dates: vec![
+			controller_params: vec![
 				(
 					ETH,
 					ControllerData {
@@ -589,7 +589,7 @@ fn testnet_genesis(
 			pool_user_data: vec![],
 		},
 		controller: ControllerConfig {
-			controller_dates: vec![
+			controller_params: vec![
 				(
 					ETH,
 					ControllerData {

@@ -269,32 +269,6 @@ impl<T: Config> Pallet<T> {
 
 		Ok(rate)
 	}
-
-	/// Gets the exchange rate between a mToken and the underlying asset.
-	/// This function uses total_protocol_interest and total_borrowed values calculated beforehand
-	///
-	/// - `underlying_asset`: CurrencyId of underlying assets for which the exchange rate
-	/// is calculated.
-	pub fn get_exchange_rate_by_interest_params(
-		underlying_asset: CurrencyId,
-		total_protocol_interest: Balance,
-		total_borrowed: Balance,
-	) -> RateResult {
-		ensure!(Self::pool_exists(&underlying_asset), Error::<T>::PoolNotFound);
-		let wrapped_asset_id = underlying_asset
-			.wrapped_asset()
-			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
-		// Current the total amount of cash the pool has.
-		let total_cash = Self::get_pool_available_liquidity(underlying_asset);
-
-		// Current total number of tokens in circulation.
-		let total_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
-
-		let current_exchange_rate =
-			Self::calculate_exchange_rate(total_cash, total_supply, total_protocol_interest, total_borrowed)?;
-
-		Ok(current_exchange_rate)
-	}
 }
 
 // Storage setters for LiquidityPools

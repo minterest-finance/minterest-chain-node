@@ -182,7 +182,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		controller::GenesisConfig::<Runtime> {
-			controller_dates: vec![
+			controller_params: vec![
 				(
 					DOT,
 					ControllerData {

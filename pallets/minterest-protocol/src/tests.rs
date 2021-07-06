@@ -53,7 +53,7 @@ fn create_pool_should_work() {
 				},
 			);
 			assert_eq!(
-				Controller::controller_dates(DOT),
+				Controller::controller_params(DOT),
 				ControllerData {
 					last_interest_accrued_block: 1,
 					protocol_interest_factor: Rate::saturating_from_rational(1, 10),

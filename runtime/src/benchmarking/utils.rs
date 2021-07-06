@@ -125,7 +125,7 @@ pub mod tests {
 		.unwrap();
 
 		controller::GenesisConfig::<Runtime> {
-			controller_dates: vec![
+			controller_params: vec![
 				(
 					ETH,
 					ControllerData {
