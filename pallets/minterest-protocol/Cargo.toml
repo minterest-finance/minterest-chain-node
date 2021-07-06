@@ -29,6 +29,7 @@ orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-modul
 
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
 liquidity-pools = { path = "../liquidity-pools" }
+liquidation-pools = { path = "../liquidation-pools" }
 controller = { path = "../controller" }
 minterest-model = { path = "../minterest-model" }
 dex = { path = "../dex" }
