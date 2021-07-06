@@ -28,7 +28,7 @@ mod tests {
 
 				// Checking if real exchange rate && wrapped amount is equal to the expected
 				assert_eq!(Currencies::free_balance(MDOT, &ALICE), expected_amount_wrapped_tokens);
-				assert_eq!(TestPools::get_exchange_rate(DOT), Ok(expected_exchange_rate_mock));
+				assert_eq!(TestController::get_exchange_rate(DOT), Ok(expected_exchange_rate_mock));
 			});
 	}
 
@@ -65,7 +65,7 @@ mod tests {
 
 				// Checking if real borrow interest rate && wrapped amount is equal to the expected
 				assert_eq!(Currencies::free_balance(MDOT, &ALICE), expected_amount_wrapped_tokens);
-				assert_eq!(TestPools::get_exchange_rate(DOT), Ok(expected_exchange_rate_mock));
+				assert_eq!(TestController::get_exchange_rate(DOT), Ok(expected_exchange_rate_mock));
 			});
 	}
 
@@ -114,7 +114,7 @@ mod tests {
 				let expected_exchange_rate_mock_block_number_3 = Rate::from_inner(1000000002025000000);
 
 				assert_eq!(
-					TestPools::get_exchange_rate(DOT),
+					TestController::get_exchange_rate(DOT),
 					Ok(expected_exchange_rate_mock_block_number_3)
 				);
 
@@ -140,7 +140,7 @@ mod tests {
 				);
 				assert_eq!(Currencies::free_balance(MDOT, &BOB), expected_amount_wrapped_tokens_bob);
 				assert_eq!(
-					TestPools::get_exchange_rate(DOT),
+					TestController::get_exchange_rate(DOT),
 					Ok(expected_exchange_rate_mock_block_number_4)
 				);
 			});

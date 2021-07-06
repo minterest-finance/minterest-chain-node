@@ -522,7 +522,7 @@ pub mod module {
 			let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 			let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &sender);
 			let user_balance_disabled_asset =
-				<LiquidityPools<T>>::convert_from_wrapped(wrapped_id, user_balance_wrapped_tokens)?;
+				T::ControllerManager::convert_from_wrapped(wrapped_id, user_balance_wrapped_tokens)?;
 
 			// Check if the user will have enough collateral if he removes one of the collaterals.
 			let (_, shortfall) = T::ControllerManager::get_hypothetical_account_liquidity(
@@ -614,7 +614,7 @@ impl<T: Config> Pallet<T> {
 			.wrapped_asset()
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
-		let wrapped_amount = <LiquidityPools<T>>::convert_to_wrapped(underlying_asset, underlying_amount)?;
+		let wrapped_amount = T::ControllerManager::convert_to_wrapped(underlying_asset, underlying_amount)?;
 
 		T::MultiCurrency::transfer(
 			underlying_asset,
@@ -664,16 +664,16 @@ impl<T: Config> Pallet<T> {
 					total_wrapped_amount > Balance::zero(),
 					Error::<T>::NotEnoughWrappedTokens
 				);
-				underlying_amount = <LiquidityPools<T>>::convert_from_wrapped(wrapped_id, total_wrapped_amount)?;
+				underlying_amount = T::ControllerManager::convert_from_wrapped(wrapped_id, total_wrapped_amount)?;
 				total_wrapped_amount
 			}
 			(_, 0, false) => {
 				ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
-				<LiquidityPools<T>>::convert_to_wrapped(underlying_asset, underlying_amount)?
+				T::ControllerManager::convert_to_wrapped(underlying_asset, underlying_amount)?
 			}
 			_ => {
 				ensure!(wrapped_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
-				underlying_amount = <LiquidityPools<T>>::convert_from_wrapped(wrapped_id, wrapped_amount)?;
+				underlying_amount = T::ControllerManager::convert_from_wrapped(wrapped_id, wrapped_amount)?;
 				wrapped_amount
 			}
 		};

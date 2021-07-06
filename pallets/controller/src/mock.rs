@@ -97,6 +97,24 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
+	pub fn pool_with_params(
+		mut self,
+		pool_id: CurrencyId,
+		borrowed: Balance,
+		borrow_index: Rate,
+		protocol_interest: Balance,
+	) -> Self {
+		self.pools.push((
+			pool_id,
+			Pool {
+				borrowed,
+				borrow_index,
+				protocol_interest,
+			},
+		));
+		self
+	}
+
 	pub fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts.push((user, currency_id, balance));
 		self

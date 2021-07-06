@@ -439,7 +439,7 @@ mod tests {
 
 				// Check the underline amount before fn accrue_interest called
 				let alice_underlining_amount: Balance =
-					TestPools::convert_from_wrapped(MDOT, alice_m_dot_free_balance_block_number_1).unwrap();
+					TestController::convert_from_wrapped(MDOT, alice_m_dot_free_balance_block_number_1).unwrap();
 
 				System::set_block_number(5);
 

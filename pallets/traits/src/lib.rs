@@ -133,6 +133,37 @@ pub trait ControllerManager<AccountId> {
 
 	/// Return minimum protocol interest needed to transfer it to liquidation pool
 	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance;
+
+	/// Gets the exchange rate between a mToken and the underlying asset.
+	/// This function does not accrue interest before calculating the exchange rate.
+	/// - `underlying_asset`: CurrencyId of underlying assets for which the exchange rate
+	/// is calculated.
+	///
+	/// returns `exchange_rate` between a mToken and the underlying asset.
+	fn get_exchange_rate(pool_id: CurrencyId) -> Result<Rate, DispatchError>;
+
+	/// Converts a specified number of underlying assets into wrapped tokens.
+	/// The calculation is based on the exchange rate.
+	///
+	/// - `underlying_asset`: CurrencyId of underlying assets to be converted to wrapped tokens.
+	/// - `underlying_amount`: The amount of underlying assets to be converted to wrapped tokens.
+	/// Returns `wrapped_amount = underlying_amount / exchange_rate`
+	fn convert_to_wrapped(underlying_asset: CurrencyId, underlying_amount: Balance) -> Result<Balance, DispatchError>;
+
+	/// Converts a specified number of wrapped tokens into underlying assets.
+	/// The calculation is based on the exchange rate.
+	///
+	/// - `wrapped_id`: CurrencyId of the wrapped tokens to be converted to underlying assets.
+	/// - `wrapped_amount`: The amount of wrapped tokens to be converted to underlying assets.
+	///
+	/// Returns `underlying_amount = wrapped_amount * exchange_rate`
+	fn convert_from_wrapped(wrapped_id: CurrencyId, wrapped_amount: Balance) -> Result<Balance, DispatchError>;
+
+	/// Returns an array of collateral pools for the user.
+	/// The array is sorted in descending order by the number of wrapped tokens in USD.
+	///
+	/// - `who`: AccountId for which the pool array is returned.
+	fn get_is_collateral_pools(who: &AccountId) -> Result<Vec<CurrencyId>, DispatchError>;
 }
 
 pub trait MntManager<AccountId> {

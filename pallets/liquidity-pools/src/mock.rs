@@ -141,18 +141,6 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn pool_borrow_underlying(mut self, pool_id: CurrencyId, borrowed: Balance) -> Self {
-		self.pools.push((
-			pool_id,
-			Pool {
-				borrowed,
-				borrow_index: Rate::one(),
-				protocol_interest: Balance::zero(),
-			},
-		));
-		self
-	}
-
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
