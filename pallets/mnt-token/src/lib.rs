@@ -534,6 +534,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		where:
 		 pool_supply_wrap = pool_supply_underlying - pool_protocol_interest + pool_borrow_underlying
 		*/
+		T::ControllerManager::accrue_interest_rate(pool_id)?;
 		let pool_borrow_underlying = T::LiquidityPoolsManager::get_pool_borrow_underlying(pool_id);
 
 		if pool_borrow_underlying.is_zero() {

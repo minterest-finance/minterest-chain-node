@@ -1587,7 +1587,6 @@ fn get_mnt_borrow_and_supply_rates_should_work() {
 			assert_ok!(MinterestProtocol::borrow(bob(), ETH, 10_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::borrow(alice(), BTC, 5_000 * DOLLARS));
 
-			run_to_block(5);
 			assert_eq!(MntToken::mnt_speeds(DOT), 2_500_000_000_000_000_000);
 			assert_eq!(MntToken::mnt_speeds(ETH), 5_000_000_000_000_000_000);
 			assert_eq!(MntToken::mnt_speeds(BTC), 2_500_000_000_000_000_000);
