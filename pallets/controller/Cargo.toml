@@ -17,7 +17,6 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
 
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
-orml-utilities = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
@@ -49,7 +48,6 @@ std = [
     "frame-system/std",
 
     "orml-traits/std",
-    "orml-utilities/std",
 
     "minterest-primitives/std",
     "liquidity-pools/std",

@@ -16,14 +16,12 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
-orml-utilities = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }
 minterest-protocol = { path = "../minterest-protocol", default-features = false }
-liquidation-pools = { path = "../liquidation-pools", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
 
 [dev-dependencies]
@@ -56,11 +54,9 @@ std = [
     "sp-io/std",
     "sp-core/std",
 
-    "orml-utilities/std",
     "orml-traits/std",
 
     "minterest-primitives/std",
     "liquidity-pools/std",
     "minterest-protocol/std",
-    "liquidation-pools/std",
 ]

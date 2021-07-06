@@ -15,14 +15,10 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
 
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
-orml-utilities = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
-minterest-model = { path = "../minterest-model", default-features = false }
-controller = { path = "../controller", default-features = false }
 
 [dev-dependencies]
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7"}
@@ -36,10 +32,9 @@ orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-modul
 
 liquidity-pools = { path = "../liquidity-pools" }
 minterest-primitives = { path = "../../primitives" }
-minterest-model = { path = "../minterest-model" }
 controller = { path = "../controller" }
+minterest-model = { path = "../minterest-model" }
 test-helper = { path = "../../test-helper" }
-
 
 [features]
 default = ["std"]
@@ -56,9 +51,6 @@ std = [
 
     "pallet-traits/std",
     "minterest-primitives/std",
-    "controller/std",
-    "minterest-model/std",
 
-    "orml-tokens/std",
     "orml-traits/std",
 ]
