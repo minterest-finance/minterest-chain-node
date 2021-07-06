@@ -13,8 +13,7 @@
 mod tests {
 	use controller::{ControllerData, PauseKeeper};
 	use frame_support::{
-		assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, traits::Contains,
-		PalletId,
+		assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId,
 	};
 	use frame_system::{offchain::SendTransactionTypes, EnsureSignedBy};
 	use liquidity_pools::{Pool, PoolUserData};
@@ -132,21 +131,6 @@ mod tests {
 
 	thread_local! {
 		static FOUR: RefCell<Vec<u64>> = RefCell::new(vec![4]);
-	}
-
-	pub struct WhitelistMembers;
-	impl Contains<u64> for WhitelistMembers {
-		fn contains(_: &u64) -> bool {
-			true
-		}
-		#[cfg(feature = "runtime-benchmarks")]
-		fn add(new: &u128) {
-			TEN_TO_FOURTEEN.with(|v| {
-				let mut members = v.borrow_mut();
-				members.push(*new);
-				members.sort();
-			})
-		}
 	}
 
 	pub struct ExtBuilder {

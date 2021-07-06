@@ -338,9 +338,8 @@ impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime 
 	type SwapOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type ResetOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type PrimeOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
-	// TODO These two values was equal to MinterestOracle before updating
-	type MembershipInitialized = (); // MinterestOracle
-	type MembershipChanged = (); // MinterestOracle
+	type MembershipInitialized = ();
+	type MembershipChanged = MinterestOracle;
 	type MaxMembers = MinterestCouncilMaxMembers;
 	type WeightInfo = ();
 }
@@ -365,13 +364,6 @@ parameter_type_with_key! {
 	};
 }
 
-parameter_types! {
-	// This is not negotiated value. Usually it may be 1-2 locks in user.
-	// This value need just to set max bound locks for internal vector.
-	// Should be reviewed before release preparation.
-	pub const MaxTokenLocks: u32 = 1024;
-}
-
 impl orml_tokens::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
@@ -380,7 +372,7 @@ impl orml_tokens::Config for Runtime {
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
-	type MaxLocks = MaxTokenLocks;
+	type MaxLocks = MaxLocks;
 }
 
 parameter_types! {
@@ -508,16 +500,7 @@ parameter_types! {
 	pub const MinimumCount: u32 = 1;
 	pub const ExpiresIn: Moment = 1000 * 60 * 60; // 60 mins
 	pub ZeroAccountId: AccountId = AccountId::from([0u8; 32]);
-	// TODO MIN-446. Temporary. This is need to pass integration test
-	pub ORACLE1: AccountId = AccountId::from([4u8; 32]);
-	pub OracleMembers: Vec<AccountId> = vec![ORACLE1::get()];
 	pub const MaxHasDispatchedSize: u32 = 100;
-}
-pub struct Members;
-impl SortedMembers<AccountId> for Members {
-	fn sorted_members() -> Vec<AccountId> {
-		OracleMembers::get()
-	}
 }
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, minterest_primitives::Moment>;
@@ -531,12 +514,9 @@ impl orml_oracle::Config<MinterestDataProvider> for Runtime {
 	type OracleValue = Price;
 	type RootOperatorAccountId = ZeroAccountId;
 	type WeightInfo = ();
-	type Members = Members;
+	type Members = OperatorMembershipMinterest;
 	type MaxHasDispatchedSize = MaxHasDispatchedSize;
 }
-
-// This was added after updating to polkadot-v0.9.7 to fix compile error.
-impl pallet_randomness_collective_flip::Config for Runtime {}
 
 create_median_value_data_provider!(
 	AggregatedDataProvider,
@@ -598,7 +578,6 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage},
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 
 		// Tokens & Related

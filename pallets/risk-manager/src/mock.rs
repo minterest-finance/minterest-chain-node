@@ -2,7 +2,7 @@
 use super::*;
 use crate as risk_manager;
 use controller::{ControllerData, PauseKeeper};
-use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, traits::Contains, PalletId};
+use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::{Pool, PoolUserData};
@@ -110,30 +110,6 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 	fn lock_price(_currency_id: CurrencyId) {}
 
 	fn unlock_price(_currency_id: CurrencyId) {}
-}
-
-ord_parameter_types! {
-		pub const Four: AccountId = 4;
-}
-
-thread_local! {
-	static TWO: RefCell<Vec<u64>> = RefCell::new(vec![2]);
-}
-
-pub struct WhitelistMembers;
-impl Contains<u64> for WhitelistMembers {
-	fn contains(who: &AccountId) -> bool {
-		TWO.with(|v| v.borrow().contains(who))
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn add(new: &u128) {
-		TWO.with(|v| {
-			let mut members = v.borrow_mut();
-			members.push(*new);
-			members.sort();
-		})
-	}
 }
 
 pub struct ExtBuilder {

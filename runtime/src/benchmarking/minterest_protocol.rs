@@ -57,8 +57,6 @@ fn hypothetical_liquidity_setup(borrower: &AccountId, lender: &AccountId) -> Res
 runtime_benchmarks! {
 	{ Runtime, minterest_protocol }
 
-	// _ {}
-
 	create_pool {
 		liquidity_pools::Pools::<Runtime>::remove(DOT);
 		liquidation_pools::LiquidationPoolsData::<Runtime>::remove(DOT);
