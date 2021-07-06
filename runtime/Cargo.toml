@@ -141,7 +141,6 @@ std = [
     "minterest-primitives/std",
     "liquidity-pools/std",
     "pallet-traits/std",
-    "integration-tests/std",
     "controller/std",
     "controller-rpc-runtime-api/std",
     "module-prices/std",

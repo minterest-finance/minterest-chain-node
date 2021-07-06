@@ -5,60 +5,21 @@ version = "0.5.0"
 authors = ["Minterest <https://github.com/minterest-defi>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
-frame-support = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
-frame-system = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
-
-orml-utilities = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
-
-minterest-primitives = { path = "../../primitives", default-features = false }
-liquidity-pools = { path = "../liquidity-pools", default-features = false }
-liquidation-pools = { path = "../liquidation-pools", default-features = false }
-minterest-protocol = { path = "../minterest-protocol", default-features = false }
-risk-manager = { path = "../risk-manager", default-features = false }
-
 [dev-dependencies]
 serde = { version = "1.0.101" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
 
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 
-liquidity-pools = { path = "../liquidity-pools" }
-liquidation-pools = { path = "../liquidation-pools" }
 controller = { path = "../controller" }
 pallet-traits = { path = "../traits" }
 minterest-model = { path = "../minterest-model" }
-minterest-protocol = { path = "../minterest-protocol" }
 dex = { path = "../dex" }
 mnt-token = { path = "../mnt-token" }
 whitelist-module = { path = "../whitelist" }
 test-helper = { path = "../../test-helper" }
-
-[features]
-default = ["std"]
-std = [
-    "codec/std",
-    "sp-runtime/std",
-    "frame-support/std",
-    "frame-system/std",
-    "sp-std/std",
-
-    "orml-utilities/std",
-
-    "minterest-primitives/std",
-    "liquidity-pools/std",
-    "liquidation-pools/std",
-    "minterest-protocol/std",
-    "risk-manager/std",
-]
 
