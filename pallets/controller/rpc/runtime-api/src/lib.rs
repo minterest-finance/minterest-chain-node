@@ -70,6 +70,29 @@ pub struct ProtocolTotalValue {
 	pub pool_total_protocol_interest_in_usd: Balance,
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Eq, PartialEq, Encode, Decode, Default, RuntimeDebug)]
+pub struct UserData {
+	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
+	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
+	pub user_total_collateral_in_usd: Balance,
+	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
+	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
+	pub user_total_supply_in_usd: Balance,
+	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
+	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
+	pub user_total_borrow_in_usd: Balance,
+	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
+	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
+	pub user_total_supply_apy: Rate,
+	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
+	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
+	pub user_total_borrow_apy: Rate,
+	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
+	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
+	pub user_net_apy: Rate,
+}
+
 #[cfg(feature = "std")]
 fn serialize_as_string<S: Serializer, T: std::fmt::Display>(t: &T, serializer: S) -> Result<S::Ok, S::Error> {
 	serializer.serialize_str(&t.to_string())
@@ -87,6 +110,8 @@ sp_api::decl_runtime_apis! {
 	where
 		AccountId: Codec,
 	{
+		fn get_user_data(account_id: AccountId) -> Option<UserData>;
+
 		fn get_protocol_total_values() -> Option<ProtocolTotalValue>;
 
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState>;
