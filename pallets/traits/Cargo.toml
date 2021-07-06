@@ -11,9 +11,6 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
 
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
-orml-utilities = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
-
 minterest-primitives = { path = "../../primitives", default-features = false }
 
 [features]
@@ -24,9 +21,6 @@ std = [
     "sp-std/std",
     "sp-arithmetic/std",
     "frame-support/std",
-
-    "orml-traits/std",
-    "orml-utilities/std",
 
     "minterest-primitives/std",
 ]

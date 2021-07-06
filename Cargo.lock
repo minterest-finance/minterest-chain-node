@@ -941,7 +941,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits 0.4.1-dev",
- "orml-utilities 0.4.1-dev",
  "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
@@ -1711,9 +1710,9 @@ dependencies = [
 
 [[package]]
 name = "finality-grandpa"
-version = "0.14.2"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c29b0f7ece4ac0afa32edd8ab1c1c8fec9f0ea1d8c92107e829150ae156854e"
+checksum = "74a1bfdcc776e63e49f741c7ce6116fa1b887e8ac2e3ccb14dd4aa113e54feb9"
 dependencies = [
  "either",
  "futures 0.3.15",
@@ -2870,7 +2869,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits 0.4.1-dev",
- "orml-utilities 0.4.1-dev",
  "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
@@ -3744,7 +3742,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits 0.4.1-dev",
- "orml-utilities 0.4.1-dev",
  "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
@@ -3766,7 +3763,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits 0.4.1-dev",
- "orml-utilities 0.4.1-dev",
  "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
@@ -4023,7 +4019,6 @@ dependencies = [
  "minterest-primitives",
  "orml-tokens",
  "orml-traits 0.4.1-dev",
- "orml-utilities 0.4.1-dev",
  "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
@@ -4040,7 +4035,6 @@ name = "minterest-primitives"
 version = "0.5.0"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
- "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "hex-literal",
  "parity-scale-codec",
  "serde",
@@ -4066,7 +4060,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits 0.4.1-dev",
- "orml-utilities 0.4.1-dev",
  "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
@@ -4245,7 +4238,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits 0.4.1-dev",
- "orml-utilities 0.4.1-dev",
  "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
@@ -4995,8 +4987,6 @@ version = "0.5.0"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "minterest-primitives",
- "orml-traits 0.4.1-dev",
- "orml-utilities 0.4.1-dev",
  "parity-scale-codec",
  "sp-arithmetic 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
@@ -5522,9 +5512,9 @@ dependencies = [
 
 [[package]]
 name = "primitive-types"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2415937401cb030a2a0a4d922483f945fa068f52a7dbb22ce0fe5f2b6f6adace"
+checksum = "06345ee39fbccfb06ab45f3a1a5798d9dafa04cb8921a76d227040003a234b0e"
 dependencies = [
  "fixed-hash",
  "impl-codec",
@@ -6051,7 +6041,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits 0.4.1-dev",
- "orml-utilities 0.4.1-dev",
  "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
