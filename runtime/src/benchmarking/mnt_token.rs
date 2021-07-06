@@ -2,7 +2,6 @@ use super::utils::{create_pools, prepare_for_mnt_distribution};
 use crate::{EnabledUnderlyingAssetsIds, MntToken, Runtime, System, DOLLARS, DOT};
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
-use sp_std::prelude::*;
 
 runtime_benchmarks! {
 	{ Runtime, mnt_token }

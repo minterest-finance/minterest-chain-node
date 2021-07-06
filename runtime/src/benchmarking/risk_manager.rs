@@ -9,7 +9,6 @@ use orml_benchmarking::runtime_benchmarks;
 use orml_traits::MultiCurrency;
 use pallet_traits::PoolsManager;
 use sp_runtime::traits::{AccountIdConversion, One};
-use sp_runtime::FixedPointNumber;
 use sp_std::prelude::*;
 
 runtime_benchmarks! {
