@@ -31,8 +31,9 @@ mod tests {
 				));
 
 				// Calculate expected amount of wrapped tokens for Alice
+				let exchange_rate = TestPools::get_exchange_rate(DOT).unwrap();
 				let alice_expected_amount_wrapped_tokens =
-					TestController::convert_to_wrapped(DOT, alice_deposited_amount).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount, exchange_rate).unwrap();
 
 				// Checking pool available liquidity increased by 60 000
 				assert_eq!(
@@ -61,8 +62,9 @@ mod tests {
 				));
 
 				// Calculate expected amount of wrapped tokens for Bob
+				let exchange_rate = TestPools::get_exchange_rate(DOT).unwrap();
 				let bob_expected_amount_wrapped_tokens =
-					TestController::convert_to_wrapped(DOT, bob_deposited_amount).unwrap();
+					TestPools::underlying_to_wrapped(bob_deposited_amount, exchange_rate).unwrap();
 
 				// Checking pool available liquidity increased by 60 000
 				assert_eq!(
@@ -97,7 +99,7 @@ mod tests {
 				// Alice try to deposit ONE_HUNDRED to DOT pool
 				assert_noop!(
 					MinterestProtocol::deposit_underlying(Origin::signed(ALICE), DOT, ONE_HUNDRED_THOUSAND),
-					controller::Error::<Test>::ConversionError
+					liquidity_pools::Error::<Test>::ConversionError
 				);
 
 				// Alice deposit to DOT pool.
@@ -179,14 +181,15 @@ mod tests {
 					Currencies::free_balance(ETH, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_eth
 				);
+				let exchange_rate = TestPools::get_exchange_rate(DOT).unwrap();
 				let expected_amount_wrapped_tokens_in_dot =
-					TestController::convert_to_wrapped(DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_dot, exchange_rate).unwrap();
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
 				);
 				let expected_amount_wrapped_tokens_in_eth =
-					TestController::convert_to_wrapped(ETH, alice_deposited_amount_in_eth).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_eth, exchange_rate).unwrap();
 				assert_eq!(
 					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth
@@ -241,8 +244,10 @@ mod tests {
 				);
 
 				assert_eq!(Currencies::free_balance(MDOT, &ALICE), 0);
+				let exchange_rate_eth = TestPools::get_exchange_rate(ETH).unwrap();
 				let expected_amount_wrapped_tokens_in_eth_summary = expected_amount_wrapped_tokens_in_eth
-					+ TestController::convert_to_wrapped(ETH, alice_deposited_amount_in_eth_secondary).unwrap();
+					+ TestPools::underlying_to_wrapped(alice_deposited_amount_in_eth_secondary, exchange_rate_eth)
+						.unwrap();
 				assert_eq!(
 					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth_summary
@@ -460,9 +465,10 @@ mod tests {
 				System::set_block_number(6);
 
 				// Alice redeem all DOTs
+				let exchange_rate = TestPools::get_exchange_rate(DOT).unwrap();
 				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(MDOT, &ALICE);
 				let alice_redeemed_amount_in_dot =
-					TestController::convert_from_wrapped(MDOT, alice_current_balance_amount_in_m_dot).unwrap();
+					TestPools::wrapped_to_underlying(alice_current_balance_amount_in_m_dot, exchange_rate).unwrap();
 				assert_ok!(MinterestProtocol::redeem_underlying(
 					Origin::signed(ALICE),
 					DOT,
@@ -578,8 +584,9 @@ mod tests {
 				// Alice redeem all DOTs.
 				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(MDOT, &ALICE);
 				// Expected exchange rate 1000000006581250024
+				let exchange_rate = TestPools::get_exchange_rate(DOT).unwrap();
 				let alice_redeemed_amount_in_dot =
-					TestController::convert_from_wrapped(MDOT, alice_current_balance_amount_in_m_dot).unwrap();
+					TestPools::wrapped_to_underlying(alice_current_balance_amount_in_m_dot, exchange_rate).unwrap();
 				assert_ok!(MinterestProtocol::redeem_underlying(
 					Origin::signed(ALICE),
 					DOT,
@@ -684,14 +691,16 @@ mod tests {
 					Currencies::free_balance(ETH, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_eth
 				);
+				let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
 				let expected_amount_wrapped_tokens_in_dot =
-					TestController::convert_to_wrapped(DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_dot, exchange_rate_dot).unwrap();
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
 				);
+				let exchange_rate_eth = TestPools::get_exchange_rate(ETH).unwrap();
 				let expected_amount_wrapped_tokens_in_eth =
-					TestController::convert_to_wrapped(DOT, alice_deposited_amount_in_eth).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_eth, exchange_rate_eth).unwrap();
 				assert_eq!(
 					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth
@@ -750,8 +759,10 @@ mod tests {
 				);
 
 				assert_eq!(Currencies::free_balance(MDOT, &ALICE), 0);
+				let exchange_rate_eth = TestPools::get_exchange_rate(ETH).unwrap();
 				let expected_amount_wrapped_tokens_in_eth_summary = expected_amount_wrapped_tokens_in_eth
-					+ TestController::convert_to_wrapped(ETH, alice_deposited_amount_in_eth_secondary).unwrap();
+					+ TestPools::underlying_to_wrapped(alice_deposited_amount_in_eth_secondary, exchange_rate_eth)
+						.unwrap();
 				assert_eq!(
 					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth_summary
@@ -966,8 +977,9 @@ mod tests {
 
 				// Alice redeem all DOTs
 				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(MDOT, &ALICE);
+				let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
 				let alice_redeemed_amount_in_dot =
-					TestController::convert_from_wrapped(MDOT, alice_current_balance_amount_in_m_dot).unwrap();
+					TestPools::wrapped_to_underlying(alice_current_balance_amount_in_m_dot, exchange_rate_dot).unwrap();
 				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), DOT));
 
 				// Checking free balance DOT && ETH && BTC for user.
@@ -1069,8 +1081,9 @@ mod tests {
 
 				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), DOT));
 
+				let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
 				let alice_redeemed_amount_in_dot =
-					TestController::convert_from_wrapped(MDOT, alice_current_balance_amount_in_m_dot).unwrap();
+					TestPools::wrapped_to_underlying(alice_current_balance_amount_in_m_dot, exchange_rate_dot).unwrap();
 
 				// Checking pool available liquidity.
 				assert_eq!(
@@ -1469,14 +1482,16 @@ mod tests {
 					Currencies::free_balance(ETH, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_eth
 				);
+				let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
 				let expected_amount_wrapped_tokens_in_dot =
-					TestController::convert_to_wrapped(DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_dot, exchange_rate_dot).unwrap();
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
 				);
+				let exchange_rate_eth = TestPools::get_exchange_rate(ETH).unwrap();
 				let expected_amount_wrapped_tokens_in_eth =
-					TestController::convert_to_wrapped(ETH, alice_deposited_amount_in_eth).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_eth, exchange_rate_eth).unwrap();
 				assert_eq!(
 					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth
@@ -1534,8 +1549,10 @@ mod tests {
 					Currencies::free_balance(ETH, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_eth - alice_deposited_amount_in_eth_secondary
 				);
+				let exchange_rate_eth = TestPools::get_exchange_rate(ETH).unwrap();
 				let expected_amount_wrapped_tokens_in_eth_summary = expected_amount_wrapped_tokens_in_eth
-					+ TestController::convert_to_wrapped(ETH, alice_deposited_amount_in_eth_secondary).unwrap();
+					+ TestPools::underlying_to_wrapped(alice_deposited_amount_in_eth_secondary, exchange_rate_eth)
+						.unwrap();
 				assert_eq!(
 					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth_summary
@@ -1610,8 +1627,9 @@ mod tests {
 				));
 
 				// Checking free balance DOT/MDOT && ETH for user.
+				let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
 				let expected_amount_wrapped_tokens_in_dot =
-					TestController::convert_to_wrapped(DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_dot, exchange_rate_dot).unwrap();
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
@@ -1726,8 +1744,9 @@ mod tests {
 				System::set_block_number(4);
 
 				// Checking free balance DOT/MDOT && ETH && BTC for user.
+				let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
 				let expected_amount_wrapped_tokens_in_dot =
-					TestController::convert_to_wrapped(DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_dot, exchange_rate_dot).unwrap();
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
@@ -1824,10 +1843,11 @@ mod tests {
 
 				System::set_block_number(7);
 
+				let exchange_rate_btc = TestPools::get_exchange_rate(BTC).unwrap();
 				let total_alice_deposited_amount_in_btc =
 					alice_deposited_amount_in_btc + alice_deposited_amount_in_btc_secondary;
 				let expected_amount_wrapped_tokens_in_btc =
-					TestController::convert_to_wrapped(BTC, total_alice_deposited_amount_in_btc).unwrap();
+					TestPools::underlying_to_wrapped(total_alice_deposited_amount_in_btc, exchange_rate_btc).unwrap();
 				// Alice try to transfer all MBTC.
 				assert_noop!(
 					MinterestProtocol::transfer_wrapped(

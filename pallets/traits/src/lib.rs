@@ -51,6 +51,12 @@ pub trait LiquidityPoolsManager<AccountId>: PoolsManager<AccountId> {
 	/// This is a part of a pool creation flow
 	/// Creates storage records for LiquidityPool
 	fn create_pool(currency_id: CurrencyId) -> DispatchResult;
+
+	/// Returns an array of collateral pools for the user.
+	/// The array is sorted in descending order by the number of wrapped tokens in USD.
+	///
+	/// - `who`: AccountId for which the pool array is returned.
+	fn get_user_collateral_pools(who: &AccountId) -> Result<Vec<CurrencyId>, DispatchError>;
 }
 
 /// An abstraction of pools basic functionalities.
@@ -133,37 +139,6 @@ pub trait ControllerManager<AccountId> {
 
 	/// Return minimum protocol interest needed to transfer it to liquidation pool
 	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance;
-
-	/// Gets the exchange rate between a mToken and the underlying asset.
-	/// This function does not accrue interest before calculating the exchange rate.
-	/// - `underlying_asset`: CurrencyId of underlying assets for which the exchange rate
-	/// is calculated.
-	///
-	/// returns `exchange_rate` between a mToken and the underlying asset.
-	fn get_exchange_rate(pool_id: CurrencyId) -> Result<Rate, DispatchError>;
-
-	/// Converts a specified number of underlying assets into wrapped tokens.
-	/// The calculation is based on the exchange rate.
-	///
-	/// - `underlying_asset`: CurrencyId of underlying assets to be converted to wrapped tokens.
-	/// - `underlying_amount`: The amount of underlying assets to be converted to wrapped tokens.
-	/// Returns `wrapped_amount = underlying_amount / exchange_rate`
-	fn convert_to_wrapped(underlying_asset: CurrencyId, underlying_amount: Balance) -> Result<Balance, DispatchError>;
-
-	/// Converts a specified number of wrapped tokens into underlying assets.
-	/// The calculation is based on the exchange rate.
-	///
-	/// - `wrapped_id`: CurrencyId of the wrapped tokens to be converted to underlying assets.
-	/// - `wrapped_amount`: The amount of wrapped tokens to be converted to underlying assets.
-	///
-	/// Returns `underlying_amount = wrapped_amount * exchange_rate`
-	fn convert_from_wrapped(wrapped_id: CurrencyId, wrapped_amount: Balance) -> Result<Balance, DispatchError>;
-
-	/// Returns an array of collateral pools for the user.
-	/// The array is sorted in descending order by the number of wrapped tokens in USD.
-	///
-	/// - `who`: AccountId for which the pool array is returned.
-	fn get_is_collateral_pools(who: &AccountId) -> Result<Vec<CurrencyId>, DispatchError>;
 }
 
 pub trait MntManager<AccountId> {
@@ -256,4 +231,79 @@ pub trait WhitelistManager<AccountId> {
 
 	/// Returns the set of all accounts in the whitelist.
 	fn get_whitelist_members() -> BTreeSet<AccountId>;
+}
+
+/// This trait is used to get the exchange rate between underlying assets and wrapped tokens.
+/// Call `fn accrue_interest_rate` first to get a fresh exchange rate. This trait also provides
+/// functionality for converting between mTokens, underlying assets and USD.
+pub trait CurrencyConverter {
+	/// Gets the exchange rate between the wrapped tokens and the underlying asset.
+	/// This function does not accrue interest before calculating the exchange rate.
+	///
+	/// - `pool_id`: pool ID for which the exchange rate is calculated.
+	///
+	/// returns `exchange_rate` between a mToken and the underlying asset.
+	/// Note: first call `accrue_interest` if you want to get a fresh rate.
+	fn get_exchange_rate(pool_id: CurrencyId) -> Result<Rate, DispatchError>;
+
+	/// Converts a specified number of underlying assets into wrapped tokens.
+	/// The calculation is based on the exchange rate.
+	///
+	/// - `underlying_amount`: the amount of underlying assets to be converted to wrapped tokens.
+	/// - `exchange_rate`: exchange rate between a wrapped tokens and the underlying assets.
+	///
+	/// Returns `underlying_amount / exchange_rate`
+	fn underlying_to_wrapped(underlying_amount: Balance, exchange_rate: Rate) -> Result<Balance, DispatchError>;
+
+	/// Converts a specified number of underlying assets into USD.
+	/// The calculation is based on the current oracle price.
+	///
+	/// - `underlying_amount`: the amount of underlying assets to be converted into USD.
+	/// - `oracle_price`: market value of the underlying asset in USD.
+	///
+	/// Returns `underlying_amount * oracle_price`
+	fn underlying_to_usd(underlying_amount: Balance, oracle_price: Price) -> Result<Balance, DispatchError>;
+
+	/// Converts a specified number of wrapped tokens into underlying assets.
+	/// The calculation is based on the exchange rate.
+	///
+	/// - `wrapped_amount`: the amount of wrapped tokens to be converted to underlying assets.
+	/// - `exchange_rate`: exchange rate between a wrapped tokens and the underlying assets.
+	///
+	/// Returns `wrapped_amount * exchange_rate`.
+	fn wrapped_to_underlying(wrapped_amount: Balance, exchange_rate: Rate) -> Result<Balance, DispatchError>;
+
+	/// Converts a specified number of wrapped tokens into USD.
+	/// The calculation is based on the exchange rate and the oracle price.
+	///
+	/// - `wrapped_amount`: the amount of wrapped tokens to be converted to USD.
+	/// - `exchange_rate`: exchange rate between a wrapped tokens and the underlying assets.
+	/// - `oracle_price`: market value of the underlying asset in USD.
+	///
+	/// Returns `wrapped_amount * exchange_rate * oracle_price`
+	/// Note: first call `accrue_interest` if you want to exchange at a fresh exchange rate.
+	fn wrapped_to_usd(
+		wrapped_amount: Balance,
+		exchange_rate: Rate,
+		oracle_price: Price,
+	) -> Result<Balance, DispatchError>;
+
+	/// Converts a specified number of USD into underlying assets.
+	/// The calculation is based on the current oracle price.
+	///
+	/// - `usd_amount`: the amount of USD to be converted to underlying assets.
+	/// - `oracle_price`: market value of the underlying asset in USD.
+	///
+	/// Returns `usd_amount / oracle_price`
+	fn usd_to_underlying(usd_amount: Balance, oracle_price: Price) -> Result<Balance, DispatchError>;
+
+	/// Converts a specified amount of USD into wrapped tokens.
+	/// The calculation is based on the exchange rate and the oracle price.
+	///
+	/// - `usd_amount`: the amount of USD to be converted into wrapped tokens.
+	/// - `exchange_rate`: exchange rate between a wrapped tokens and the underlying assets.
+	/// - `oracle_price`: market value of the underlying asset in USD.
+	///
+	/// Returns `usd_amount / oracle_price / exchange_rate `
+	fn usd_to_wrapped(usd_amount: Balance, exchange_rate: Rate, oracle_price: Price) -> Result<Balance, DispatchError>;
 }

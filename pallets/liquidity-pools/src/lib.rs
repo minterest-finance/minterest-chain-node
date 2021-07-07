@@ -15,15 +15,16 @@
 use codec::{Decode, Encode};
 use frame_support::{pallet_prelude::*, traits::Get, PalletId};
 use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
-use minterest_primitives::{Balance, CurrencyId, Rate};
+use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{Borrowing, LiquidityPoolsManager, PoolsManager, PricesManager};
+use pallet_traits::{Borrowing, CurrencyConverter, LiquidityPoolsManager, PoolsManager, PricesManager};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+use sp_runtime::traits::{CheckedDiv, CheckedMul};
 use sp_runtime::{
 	traits::{AccountIdConversion, One, Zero},
-	DispatchError, DispatchResult, RuntimeDebug,
+	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
 };
 use sp_std::{result, vec::Vec};
 
@@ -58,6 +59,9 @@ pub struct PoolUserData {
 	/// Number of partial liquidations for debt
 	pub liquidation_attempts: u8,
 }
+
+type RateResult = result::Result<Rate, DispatchError>;
+type BalanceResult = result::Result<Balance, DispatchError>;
 
 #[cfg(test)]
 mod mock;
@@ -106,6 +110,10 @@ pub mod module {
 		RepayAmountTooBig,
 		/// Borrow balance exceeds maximum value.
 		BorrowBalanceOverflow,
+		/// Exchange rate calculation error.
+		ExchangeRateCalculationError,
+		/// Conversion error between underlying asset and wrapped token.
+		ConversionError,
 		/// Pool not found.
 		PoolNotFound,
 		/// Pool is already created
@@ -162,8 +170,39 @@ pub mod module {
 	impl<T: Config> Pallet<T> {}
 }
 
-// Dispatchable calls implementation
-impl<T: Config> Pallet<T> {}
+// Private functions
+impl<T: Config> Pallet<T> {
+	/// Calculates the exchange rate from the underlying to the mToken.
+	/// - `pool_cash`: The total amount of underlying tokens the pool has.
+	/// - `pool_supply_wrap`: Total number of wrapped tokens in circulation.
+	/// - `pool_protocol_interest`: Total amount of interest of the underlying held in the pool.
+	/// - `pool_borrowed`: Total amount of outstanding borrows of the underlying in this pool.
+	///
+	/// returns `exchange_rate = (pool_cash + pool_borrowed - pool_protocol_interest) /
+	/// pool_supply_wrap`.
+	fn calculate_exchange_rate(
+		pool_cash: Balance,
+		pool_supply_wrap: Balance,
+		pool_protocol_interest: Balance,
+		pool_borrowed: Balance,
+	) -> RateResult {
+		let exchange_rate = match pool_supply_wrap.is_zero() {
+			// If there are no tokens minted: exchange_rate = initial_exchange_rate.
+			true => T::InitialExchangeRate::get(),
+
+			// Otherwise: exchange_rate = (pool_cash + pool_borrowed - pool_protocol_interest) / pool_supply_wrap
+			_ => Rate::saturating_from_rational(
+				pool_cash
+					.checked_add(pool_borrowed)
+					.and_then(|v| v.checked_sub(pool_protocol_interest))
+					.ok_or(Error::<T>::ExchangeRateCalculationError)?,
+				pool_supply_wrap,
+			),
+		};
+
+		Ok(exchange_rate)
+	}
+}
 
 // Storage setters for LiquidityPools
 impl<T: Config> Pallet<T> {
@@ -267,7 +306,6 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-// Trait Borrowing for LiquidityPools
 impl<T: Config> Borrowing<T::AccountId> for Pallet<T> {
 	/// Updates the new borrower balance and pool total borrow balances during the borrow operation.
 	/// Also sets the global borrow_index to user interest index.
@@ -389,5 +427,122 @@ impl<T: Config> LiquidityPoolsManager<T::AccountId> for Pallet<T> {
 			},
 		);
 		Ok(())
+	}
+
+	/// Returns an array of collateral pools for the user.
+	/// The array is sorted in descending order by the number of wrapped tokens in USD.
+	///
+	/// - `who`: AccountId for which the pool array is returned.
+	fn get_user_collateral_pools(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
+		let mut pools: Vec<(CurrencyId, Balance)> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.iter()
+			.filter(|&underlying_id| {
+				Self::pool_exists(underlying_id) && Self::check_user_available_collateral(&who, *underlying_id)
+			})
+			.filter_map(|&pool_id| {
+				let wrapped_id = pool_id.wrapped_asset()?;
+
+				// We calculate the value of the user's wrapped tokens in USD.
+				let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id, &who);
+				if user_supply_wrap.is_zero() {
+					return None;
+				}
+				let exchange_rate = Self::get_exchange_rate(pool_id).ok()?;
+				let user_supply_underlying = Self::wrapped_to_underlying(user_supply_wrap, exchange_rate).ok()?;
+				let oracle_price = T::PriceSource::get_underlying_price(pool_id)?;
+				let user_supply_in_usd = Rate::from_inner(user_supply_underlying)
+					.checked_mul(&oracle_price)
+					.map(|x| x.into_inner())?;
+
+				Some((pool_id, user_supply_in_usd))
+			})
+			.collect();
+
+		// Sorted array of pools in descending order.
+		pools.sort_by(|x, y| y.1.cmp(&x.1));
+
+		Ok(pools.iter().map(|pool| pool.0).collect::<Vec<CurrencyId>>())
+	}
+}
+
+impl<T: Config> CurrencyConverter for Pallet<T> {
+	/// Gets the exchange rate between a mToken and the underlying asset.
+	fn get_exchange_rate(underlying_asset: CurrencyId) -> RateResult {
+		ensure!(Self::pool_exists(&underlying_asset), Error::<T>::PoolNotFound);
+
+		let wrapped_asset_id = underlying_asset
+			.wrapped_asset()
+			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+
+		let pool_supply_underlying = Self::get_pool_available_liquidity(underlying_asset);
+		let pool_supply_wrap = T::MultiCurrency::total_issuance(wrapped_asset_id);
+		let pool_data = Self::get_pool_data(underlying_asset);
+
+		Self::calculate_exchange_rate(
+			pool_supply_underlying,
+			pool_supply_wrap,
+			pool_data.protocol_interest,
+			pool_data.borrowed,
+		)
+	}
+
+	/// Converts a specified number of underlying assets into wrapped tokens.
+	fn underlying_to_wrapped(underlying_amount: Balance, exchange_rate: Rate) -> BalanceResult {
+		let wrapped_amount = Rate::from_inner(underlying_amount)
+			.checked_div(&exchange_rate)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::ConversionError)?;
+		Ok(wrapped_amount)
+	}
+
+	/// Converts a specified number of underlying assets into USD.
+	fn underlying_to_usd(underlying_amount: Balance, oracle_price: Price) -> BalanceResult {
+		let usd_amount = Rate::from_inner(underlying_amount)
+			.checked_mul(&oracle_price)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::ConversionError)?;
+		Ok(usd_amount)
+	}
+
+	/// Converts a specified number of wrapped tokens into underlying assets.
+	fn wrapped_to_underlying(wrapped_amount: Balance, exchange_rate: Rate) -> BalanceResult {
+		let underlying_amount = Rate::from_inner(wrapped_amount)
+			.checked_mul(&exchange_rate)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::ConversionError)?;
+		Ok(underlying_amount)
+	}
+
+	/// Converts a specified number of wrapped tokens into USD.
+	fn wrapped_to_usd(
+		wrapped_amount: Balance,
+		exchange_rate: Rate,
+		oracle_price: Price,
+	) -> Result<Balance, DispatchError> {
+		let usd_amount = Rate::from_inner(wrapped_amount)
+			.checked_mul(&exchange_rate)
+			.and_then(|v| v.checked_mul(&oracle_price))
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::ConversionError)?;
+		Ok(usd_amount)
+	}
+
+	/// Converts a specified number of USD into underlying assets.
+	fn usd_to_underlying(usd_amount: Balance, oracle_price: Price) -> Result<Balance, DispatchError> {
+		let underlying_amount = Rate::from_inner(usd_amount)
+			.checked_div(&oracle_price)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::ConversionError)?;
+		Ok(underlying_amount)
+	}
+
+	/// Converts a specified amount of USD into wrapped tokens.
+	fn usd_to_wrapped(usd_amount: Balance, exchange_rate: Rate, oracle_price: Price) -> Result<Balance, DispatchError> {
+		let wrapped_amount = Rate::from_inner(usd_amount)
+			.checked_div(&oracle_price)
+			.and_then(|v| v.checked_div(&exchange_rate))
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::ConversionError)?;
+		Ok(wrapped_amount)
 	}
 }

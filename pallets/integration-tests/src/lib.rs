@@ -22,7 +22,7 @@ mod tests {
 	use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 	use minterest_protocol::{Error as MinterestProtocolError, PoolInitData};
 	use orml_traits::{parameter_type_with_key, MultiCurrency};
-	use pallet_traits::{ControllerManager, PoolsManager, PricesManager};
+	use pallet_traits::{CurrencyConverter, PoolsManager, PricesManager};
 	use risk_manager::RiskManagerData;
 	use sp_core::H256;
 	use sp_runtime::{
@@ -37,6 +37,7 @@ mod tests {
 
 	mod controller_tests;
 	mod liquidation_tests;
+	mod liquidity_pools_tests;
 	mod minterest_model_tests;
 	mod minterest_protocol_tests;
 	mod mnt_token_tests;

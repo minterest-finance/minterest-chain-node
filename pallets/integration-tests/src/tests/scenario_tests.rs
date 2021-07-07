@@ -438,8 +438,10 @@ mod tests {
 				);
 
 				// Check the underline amount before fn accrue_interest called
+				let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
 				let alice_underlining_amount: Balance =
-					TestController::convert_from_wrapped(MDOT, alice_m_dot_free_balance_block_number_1).unwrap();
+					TestPools::wrapped_to_underlying(alice_m_dot_free_balance_block_number_1, exchange_rate_dot)
+						.unwrap();
 
 				System::set_block_number(5);
 

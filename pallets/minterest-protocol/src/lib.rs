@@ -22,8 +22,8 @@ use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	Borrowing, ControllerManager, LiquidationPoolsManager, LiquidityPoolsManager, MinterestModelManager, MntManager,
-	PoolsManager, RiskManager, WhitelistManager,
+	Borrowing, ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolsManager,
+	MinterestModelManager, MntManager, PoolsManager, RiskManager, WhitelistManager,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -73,6 +73,7 @@ pub struct PoolInitData {
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
+	use pallet_traits::CurrencyConverter;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + liquidity_pools::Config + SendTransactionTypes<Call<Self>> {
@@ -86,7 +87,7 @@ pub mod module {
 		type ManagerLiquidationPools: LiquidationPoolsManager<Self::AccountId>;
 
 		/// The basic liquidity pools.
-		type ManagerLiquidityPools: LiquidityPoolsManager<Self::AccountId>;
+		type ManagerLiquidityPools: LiquidityPoolsManager<Self::AccountId> + CurrencyConverter;
 
 		/// Provides MNT token distribution functionality.
 		type MntManager: MntManager<Self::AccountId>;
@@ -518,11 +519,12 @@ pub mod module {
 				<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id),
 				Error::<T>::IsCollateralAlreadyDisabled
 			);
-
+			T::ControllerManager::accrue_interest_rate(pool_id)?;
+			let exchange_rate = T::ManagerLiquidityPools::get_exchange_rate(pool_id)?;
 			let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 			let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &sender);
 			let user_balance_disabled_asset =
-				T::ControllerManager::convert_from_wrapped(wrapped_id, user_balance_wrapped_tokens)?;
+				T::ManagerLiquidityPools::wrapped_to_underlying(user_balance_wrapped_tokens, exchange_rate)?;
 
 			// Check if the user will have enough collateral if he removes one of the collaterals.
 			let (_, shortfall) = T::ControllerManager::get_hypothetical_account_liquidity(
@@ -614,7 +616,8 @@ impl<T: Config> Pallet<T> {
 			.wrapped_asset()
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
-		let wrapped_amount = T::ControllerManager::convert_to_wrapped(underlying_asset, underlying_amount)?;
+		let exchange_rate = T::ManagerLiquidityPools::get_exchange_rate(underlying_asset)?;
+		let wrapped_amount = T::ManagerLiquidityPools::underlying_to_wrapped(underlying_amount, exchange_rate)?;
 
 		T::MultiCurrency::transfer(
 			underlying_asset,
@@ -652,7 +655,7 @@ impl<T: Config> Pallet<T> {
 		);
 
 		T::ControllerManager::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
-
+		let exchange_rate = T::ManagerLiquidityPools::get_exchange_rate(underlying_asset)?;
 		let wrapped_id = underlying_asset
 			.wrapped_asset()
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
@@ -664,16 +667,17 @@ impl<T: Config> Pallet<T> {
 					total_wrapped_amount > Balance::zero(),
 					Error::<T>::NotEnoughWrappedTokens
 				);
-				underlying_amount = T::ControllerManager::convert_from_wrapped(wrapped_id, total_wrapped_amount)?;
+				underlying_amount =
+					T::ManagerLiquidityPools::wrapped_to_underlying(total_wrapped_amount, exchange_rate)?;
 				total_wrapped_amount
 			}
 			(_, 0, false) => {
 				ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
-				T::ControllerManager::convert_to_wrapped(underlying_asset, underlying_amount)?
+				T::ManagerLiquidityPools::underlying_to_wrapped(underlying_amount, exchange_rate)?
 			}
 			_ => {
 				ensure!(wrapped_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
-				underlying_amount = T::ControllerManager::convert_from_wrapped(wrapped_id, wrapped_amount)?;
+				underlying_amount = T::ManagerLiquidityPools::wrapped_to_underlying(wrapped_amount, exchange_rate)?;
 				wrapped_amount
 			}
 		};

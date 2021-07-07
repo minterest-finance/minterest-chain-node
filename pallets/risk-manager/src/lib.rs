@@ -25,8 +25,8 @@ use frame_system::{
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	ControllerManager, LiquidationPoolsManager, LiquidityPoolsManager, MntManager, PoolsManager, PricesManager,
-	RiskManager,
+	ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolsManager, MntManager, PoolsManager,
+	PricesManager, RiskManager,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -82,6 +82,7 @@ type MinterestProtocol<T> = minterest_protocol::Pallet<T>;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
+	use pallet_traits::CurrencyConverter;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + minterest_protocol::Config + SendTransactionTypes<Call<Self>> {
@@ -97,7 +98,7 @@ pub mod module {
 		type LiquidationPoolsManager: LiquidationPoolsManager<Self::AccountId>;
 
 		/// Pools are responsible for holding funds for automatic liquidation.
-		type LiquidityPoolsManager: LiquidityPoolsManager<Self::AccountId>;
+		type LiquidityPoolsManager: LiquidityPoolsManager<Self::AccountId> + CurrencyConverter;
 
 		/// Public API of controller pallet
 		type ControllerManager: ControllerManager<Self::AccountId>;
@@ -538,7 +539,7 @@ impl<T: Config> Pallet<T> {
 
 		// Get an array of collateral pools for the borrower.
 		// The array is sorted in descending order by the number of wrapped tokens in USD.
-		let collateral_pools = <T as Config>::ControllerManager::get_is_collateral_pools(&borrower)?;
+		let collateral_pools = T::LiquidityPoolsManager::get_user_collateral_pools(&borrower)?;
 
 		// Collect seized pools.
 		let mut seized_pools: Vec<CurrencyId> = Vec::new();
@@ -558,7 +559,7 @@ impl<T: Config> Pallet<T> {
 				// seize_tokens = seize_amount / (price_collateral * exchange_rate)
 				let price_collateral =
 					T::PriceSource::get_underlying_price(collateral_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-				let exchange_rate = <T as Config>::ControllerManager::get_exchange_rate(collateral_pool_id)?;
+				let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(collateral_pool_id)?;
 				let seize_tokens = Rate::from_inner(seize_amount)
 					.checked_div(
 						&price_collateral
@@ -577,7 +578,7 @@ impl<T: Config> Pallet<T> {
 					Ordering::Less => {
 						// seize_underlying = balance_wrapped_token * exchange_rate
 						let seize_underlying =
-							<T as Config>::ControllerManager::convert_from_wrapped(wrapped_id, balance_wrapped_token)?;
+							T::LiquidityPoolsManager::wrapped_to_underlying(balance_wrapped_token, exchange_rate)?;
 						T::MultiCurrency::withdraw(wrapped_id, &borrower, balance_wrapped_token)?;
 						// seize_amount = seize_amount - (seize_underlying * price_collateral)
 						seize_amount -= Rate::from_inner(seize_underlying)
@@ -590,7 +591,7 @@ impl<T: Config> Pallet<T> {
 					_ => {
 						// seize_underlying = seize_tokens * exchange_rate
 						let seize_underlying =
-							<T as Config>::ControllerManager::convert_from_wrapped(wrapped_id, seize_tokens)?;
+							T::LiquidityPoolsManager::wrapped_to_underlying(seize_tokens, exchange_rate)?;
 						T::MultiCurrency::withdraw(wrapped_id, &borrower, seize_tokens)?;
 						// seize_amount = 0, since all seize_tokens have already been withdrawn
 						seize_amount = Balance::zero();

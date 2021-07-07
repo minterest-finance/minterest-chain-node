@@ -89,6 +89,18 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn pool_borrow_underlying(mut self, pool_id: CurrencyId, pool_borrowed: Balance) -> Self {
+		self.pools.push((
+			pool_id,
+			Pool {
+				borrowed: pool_borrowed,
+				borrow_index: Rate::saturating_from_rational(1, 1),
+				protocol_interest: Balance::zero(),
+			},
+		));
+		self
+	}
+
 	pub fn pool_with_params(
 		mut self,
 		pool_id: CurrencyId,
