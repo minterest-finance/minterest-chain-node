@@ -334,7 +334,7 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 			);
 
 			// Alice set collateral parameter value to true for DOT pool. Alice can borrow.
-			<LiquidityPools<Runtime>>::enable_is_collateral_internal(&ALICE, DOT);
+			TestPools::enable_is_collateral_internal(&ALICE, DOT);
 
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, DOT, 0, 50),
@@ -417,7 +417,7 @@ fn redeem_allowed_should_work() {
 		assert_ok!(Controller::redeem_allowed(DOT, &ALICE, dollars(40_u128)));
 
 		// collateral parameter is set to true.
-		<LiquidityPools<Runtime>>::enable_is_collateral_internal(&ALICE, DOT);
+		TestPools::enable_is_collateral_internal(&ALICE, DOT);
 
 		assert_err!(
 			Controller::redeem_allowed(DOT, &ALICE, dollars(100_u128)),
@@ -436,7 +436,7 @@ fn borrow_allowed_should_work() {
 		);
 
 		// collateral parameter is set to true. User can borrow.
-		<LiquidityPools<Runtime>>::enable_is_collateral_internal(&ALICE, DOT);
+		TestPools::enable_is_collateral_internal(&ALICE, DOT);
 
 		assert_ok!(Controller::borrow_allowed(DOT, &ALICE, dollars(10_u128)));
 

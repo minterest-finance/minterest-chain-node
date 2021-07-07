@@ -136,62 +136,62 @@ fn protocol_operations_not_working_for_nonexisting_pool() {
 		.execute_with(|| {
 			assert_noop!(
 				TestMinterestProtocol::deposit_underlying(alice_origin(), ETH, dollars(60_u128)),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::redeem(alice_origin(), ETH),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::redeem_underlying(alice_origin(), ETH, dollars(60_u128)),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::redeem_wrapped(alice_origin(), METH, dollars(60_u128)),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::borrow(alice_origin(), ETH, dollars(60_u128)),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::repay(alice_origin(), ETH, Balance::zero()),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::repay_all(alice_origin(), ETH),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::repay_on_behalf(bob_origin(), ETH, ALICE, dollars(10_u128)),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::enable_is_collateral(alice_origin(), ETH),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::disable_is_collateral(alice_origin(), ETH),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::transfer_wrapped(alice_origin(), BOB, METH, dollars(10_u128)),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::claim_mnt(alice_origin(), vec![DOT, ETH]),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 		});
 }
@@ -222,7 +222,7 @@ fn deposit_underlying_should_work() {
 
 			// Check liquidation_attempts has been reset.
 			assert_eq!(
-				LiquidityPools::<Test>::pool_user_data(DOT, ALICE).liquidation_attempts,
+				TestPools::get_pool_user_data(DOT, &ALICE).liquidation_attempts,
 				u8::zero()
 			);
 

@@ -18,7 +18,9 @@
 
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
+use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, Operation, Rate};
+pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
 	Borrowing, ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolsStorageProvider,
@@ -32,8 +34,6 @@ use sp_runtime::{
 };
 use sp_std::{result, vec::Vec};
 
-pub use module::*;
-
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -42,7 +42,6 @@ mod tests;
 pub mod weights;
 pub use weights::WeightInfo;
 
-type LiquidityPools<T> = liquidity_pools::Pallet<T>;
 type TokensResult = result::Result<(Balance, CurrencyId, Balance), DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 
@@ -74,19 +73,22 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + liquidity_pools::Config + SendTransactionTypes<Call<Self>> {
+	pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		/// The `MultiCurrency` implementation.
+		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 
 		/// The basic liquidity pools.
 		type ManagerLiquidationPools: LiquidationPoolsManager<Self::AccountId>;
 
 		/// The basic liquidity pools.
-		type ManagerLiquidityPools: LiquidityPoolsStorageProvider<Self::AccountId>
+		type ManagerLiquidityPools: LiquidityPoolsStorageProvider<Self::AccountId, Pool>
 			+ PoolsManager<Self::AccountId>
 			+ CurrencyConverter
 			+ Borrowing<Self::AccountId>
-			+ UserStorageProvider<Self::AccountId>;
+			+ UserStorageProvider<Self::AccountId, PoolUserData>;
 
 		/// Provides MNT token distribution functionality.
 		type MntManager: MntManager<Self::AccountId>;
@@ -145,6 +147,8 @@ pub mod module {
 		NotValidWrappedTokenId,
 		/// Pool is already created
 		PoolAlreadyCreated,
+		/// Pool not found.
+		PoolNotFound,
 	}
 
 	#[pallet::event]
@@ -477,7 +481,7 @@ pub mod module {
 			);
 			ensure!(
 				T::ManagerLiquidityPools::pool_exists(&pool_id),
-				liquidity_pools::Error::<T>::PoolNotFound
+				Error::<T>::PoolNotFound
 			);
 
 			ensure!(
@@ -511,11 +515,11 @@ pub mod module {
 			);
 			ensure!(
 				T::ManagerLiquidityPools::pool_exists(&pool_id),
-				liquidity_pools::Error::<T>::PoolNotFound
+				Error::<T>::PoolNotFound
 			);
 
 			ensure!(
-				<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id),
+				T::ManagerLiquidityPools::check_user_available_collateral(&sender, pool_id),
 				Error::<T>::IsCollateralAlreadyDisabled
 			);
 			T::ControllerManager::accrue_interest_rate(pool_id)?;
@@ -535,7 +539,7 @@ pub mod module {
 			.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 			ensure!(shortfall == 0, Error::<T>::IsCollateralCannotBeDisabled);
 
-			<LiquidityPools<T>>::disable_is_collateral_internal(&sender, pool_id);
+			T::ManagerLiquidityPools::disable_is_collateral_internal(&sender, pool_id);
 			Self::deposit_event(Event::PoolDisabledIsCollateral(sender, pool_id));
 			Ok(().into())
 		}
@@ -556,7 +560,7 @@ pub mod module {
 // Dispatchable calls implementation
 impl<T: Config> Pallet<T> {
 	fn do_create_pool(pool_id: CurrencyId, pool_data: PoolInitData) -> DispatchResult {
-		<LiquidityPools<T>>::create_pool(pool_id)?;
+		T::ManagerLiquidityPools::create_pool(pool_id)?;
 		T::MinterestModelAPI::create_pool(
 			pool_id,
 			pool_data.kink,
@@ -590,7 +594,7 @@ impl<T: Config> Pallet<T> {
 		);
 		ensure!(
 			T::ManagerLiquidityPools::pool_exists(&underlying_asset),
-			liquidity_pools::Error::<T>::PoolNotFound
+			Error::<T>::PoolNotFound
 		);
 
 		ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
@@ -628,10 +632,10 @@ impl<T: Config> Pallet<T> {
 		T::MultiCurrency::deposit(wrapped_id, &who, wrapped_amount)?;
 
 		// Reset liquidation_attempts if it's greater than zero.
-		let mut pool_params = <LiquidityPools<T>>::pool_user_data(underlying_asset, &who);
+		let mut pool_params = T::ManagerLiquidityPools::get_pool_user_data(underlying_asset, &who);
 		if !pool_params.liquidation_attempts.is_zero() {
 			pool_params.liquidation_attempts = u8::zero();
-			<LiquidityPools<T>>::set_pool_user_data(&who, underlying_asset, pool_params);
+			T::ManagerLiquidityPools::set_pool_user_data(&who, underlying_asset, pool_params);
 		}
 
 		Ok((underlying_amount, wrapped_id, wrapped_amount))
@@ -650,7 +654,7 @@ impl<T: Config> Pallet<T> {
 		);
 		ensure!(
 			T::ManagerLiquidityPools::pool_exists(&underlying_asset),
-			liquidity_pools::Error::<T>::PoolNotFound
+			Error::<T>::PoolNotFound
 		);
 
 		T::ControllerManager::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
@@ -725,7 +729,7 @@ impl<T: Config> Pallet<T> {
 		);
 		ensure!(
 			T::ManagerLiquidityPools::pool_exists(&underlying_asset),
-			liquidity_pools::Error::<T>::PoolNotFound
+			Error::<T>::PoolNotFound
 		);
 
 		let pool_available_liquidity = T::ManagerLiquidityPools::get_pool_available_liquidity(underlying_asset);
@@ -753,7 +757,7 @@ impl<T: Config> Pallet<T> {
 		// Fetch the amount the borrower owes, with accumulated interest.
 		let account_borrows = T::ControllerManager::borrow_balance_stored(&who, underlying_asset)?;
 
-		<LiquidityPools<T>>::update_state_on_borrow(&who, underlying_asset, borrow_amount, account_borrows)?;
+		T::ManagerLiquidityPools::update_state_on_borrow(&who, underlying_asset, borrow_amount, account_borrows)?;
 
 		// Transfer the borrow_amount from the protocol account to the borrower's account.
 		T::MultiCurrency::transfer(
@@ -785,7 +789,7 @@ impl<T: Config> Pallet<T> {
 		);
 		ensure!(
 			T::ManagerLiquidityPools::pool_exists(&underlying_asset),
-			liquidity_pools::Error::<T>::PoolNotFound
+			Error::<T>::PoolNotFound
 		);
 
 		T::ControllerManager::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
@@ -831,7 +835,7 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::NotEnoughUnderlyingAsset
 		);
 
-		<LiquidityPools<T>>::update_state_on_repay(&borrower, underlying_asset, repay_amount, account_borrows)?;
+		T::ManagerLiquidityPools::update_state_on_repay(&borrower, underlying_asset, repay_amount, account_borrows)?;
 
 		// Transfer the repay_amount from the borrower's account to the protocol account.
 		T::MultiCurrency::transfer(
@@ -865,7 +869,7 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::NotValidWrappedTokenId)?;
 		ensure!(
 			T::ManagerLiquidityPools::pool_exists(&underlying_asset),
-			liquidity_pools::Error::<T>::PoolNotFound
+			Error::<T>::PoolNotFound
 		);
 
 		// Fail if transfer is not allowed
@@ -912,7 +916,7 @@ impl<T: Config> Pallet<T> {
 			)
 			.is_ok()
 			{
-				<LiquidityPools<T>>::set_pool_protocol_interest(pool_id, new_protocol_interest);
+				T::ManagerLiquidityPools::set_pool_protocol_interest(pool_id, new_protocol_interest);
 			} else {
 				Self::deposit_event(Event::ProtocolInterestTransferFailed(pool_id));
 			}
@@ -932,7 +936,7 @@ impl<T: Config> Pallet<T> {
 			);
 			ensure!(
 				T::ManagerLiquidityPools::pool_exists(&pool_id),
-				liquidity_pools::Error::<T>::PoolNotFound
+				Error::<T>::PoolNotFound
 			);
 
 			T::MntManager::update_mnt_borrow_index(pool_id)?;

@@ -200,6 +200,8 @@ macro_rules! mock_impl_controller_config {
 
 		impl controller::Config for $target {
 			type Event = Event;
+			type MultiCurrency = orml_currencies::Pallet<$target>;
+			type PriceSource = MockPriceSource;
 			type LiquidityPoolsManager = liquidity_pools::Pallet<$target>;
 			type MinterestModelManager = minterest_model::Pallet<$target>;
 			type MaxBorrowCap = MaxBorrowCap;
@@ -248,6 +250,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 	($target:ty, $acc:ident) => {
 		impl minterest_protocol::Config for $target {
 			type Event = Event;
+			type MultiCurrency = orml_currencies::Pallet<$target>;
 			type ManagerLiquidationPools = liquidation_pools::Pallet<$target>;
 			type ManagerLiquidityPools = liquidity_pools::Pallet<$target>;
 			type MntManager = mnt_token::Pallet<$target>;
@@ -271,6 +274,7 @@ macro_rules! mock_impl_risk_manager_config {
 
 		impl risk_manager::Config for $target {
 			type Event = Event;
+			type PriceSource = MockPriceSource;
 			type UnsignedPriority = RiskManagerPriority;
 			type LiquidationPoolsManager = liquidation_pools::Pallet<$target>;
 			type LiquidityPoolsManager = liquidity_pools::Pallet<$target>;

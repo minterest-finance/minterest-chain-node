@@ -204,9 +204,7 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config> UserStorageProvider<T::AccountId> for Pallet<T> {
-	type PoolUserData = PoolUserData;
-
+impl<T: Config> UserStorageProvider<T::AccountId, PoolUserData> for Pallet<T> {
 	fn set_pool_user_data(who: &T::AccountId, pool_id: CurrencyId, pool_user_data: PoolUserData) {
 		PoolUserParams::<T>::insert(pool_id, who, pool_user_data)
 	}
@@ -221,6 +219,10 @@ impl<T: Config> UserStorageProvider<T::AccountId> for Pallet<T> {
 			p.borrowed = new_borrow_underlying;
 			p.interest_index = new_interest_index;
 		})
+	}
+
+	fn get_pool_user_data(pool_id: CurrencyId, who: &T::AccountId) -> PoolUserData {
+		Self::pool_user_data(pool_id, who)
 	}
 
 	fn get_user_borrow_index(who: &T::AccountId, pool_id: CurrencyId) -> Rate {
@@ -389,9 +391,7 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	}
 }
 
-impl<T: Config> LiquidityPoolsStorageProvider<T::AccountId> for Pallet<T> {
-	type Pool = Pool;
-
+impl<T: Config> LiquidityPoolsStorageProvider<T::AccountId, Pool> for Pallet<T> {
 	fn set_pool_data(pool_id: CurrencyId, pool_data: Pool) {
 		Pools::<T>::insert(pool_id, pool_data)
 	}

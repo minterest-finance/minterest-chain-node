@@ -346,6 +346,7 @@ impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime 
 
 impl minterest_protocol::Config for Runtime {
 	type Event = Event;
+	type MultiCurrency = Currencies;
 	type ManagerLiquidationPools = LiquidationPools;
 	type ManagerLiquidityPools = LiquidityPools;
 	type MntManager = MntToken;
@@ -411,6 +412,8 @@ parameter_types! {
 
 impl controller::Config for Runtime {
 	type Event = Event;
+	type MultiCurrency = Currencies;
+	type PriceSource = Prices;
 	type LiquidityPoolsManager = LiquidityPools;
 	type MinterestModelManager = MinterestModel;
 	type MaxBorrowCap = MaxBorrowCap;
@@ -445,6 +448,7 @@ parameter_types! {
 
 impl risk_manager::Config for Runtime {
 	type Event = Event;
+	type PriceSource = Prices;
 	type UnsignedPriority = RiskManagerPriority;
 	type LiquidationPoolsManager = LiquidationPools;
 	type LiquidityPoolsManager = LiquidityPools;

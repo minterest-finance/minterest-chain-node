@@ -34,11 +34,9 @@ pub trait PoolsManager<AccountId> {
 }
 
 /// Provides functionality for working with storage of liquidity pools.
-pub trait LiquidityPoolsStorageProvider<AccountId> {
-	type Pool;
-
+pub trait LiquidityPoolsStorageProvider<AccountId, Pool> {
 	/// Sets pool data.
-	fn set_pool_data(pool_id: CurrencyId, pool_data: Self::Pool);
+	fn set_pool_data(pool_id: CurrencyId, pool_data: Pool);
 
 	/// Sets the total borrowed value in the pool.
 	fn set_pool_borrow_underlying(pool_id: CurrencyId, new_pool_borrows: Balance);
@@ -47,7 +45,7 @@ pub trait LiquidityPoolsStorageProvider<AccountId> {
 	fn set_pool_protocol_interest(pool_id: CurrencyId, new_pool_protocol_interest: Balance);
 
 	/// Gets pool associated data.
-	fn get_pool_data(pool_id: CurrencyId) -> Self::Pool;
+	fn get_pool_data(pool_id: CurrencyId) -> Pool;
 
 	/// Get list of users with active loan positions for a particular pool.
 	fn get_pool_members_with_loans(underlying_asset: CurrencyId) -> Result<Vec<AccountId>, DispatchError>;
@@ -75,11 +73,9 @@ pub trait LiquidityPoolsStorageProvider<AccountId> {
 
 /// Provides functionality for working with a user's storage. Set parameters in storage,
 /// get parameters, check parameters.
-pub trait UserStorageProvider<AccountId> {
-	type PoolUserData;
-
+pub trait UserStorageProvider<AccountId, PoolUserData> {
 	/// Sets pool user data.
-	fn set_pool_user_data(who: &AccountId, pool_id: CurrencyId, pool_user_data: Self::PoolUserData);
+	fn set_pool_user_data(who: &AccountId, pool_id: CurrencyId, pool_user_data: PoolUserData);
 
 	/// Sets the total borrowed and interest index for user.
 	fn set_user_borrow_and_interest_index(
@@ -88,6 +84,9 @@ pub trait UserStorageProvider<AccountId> {
 		new_borrow_underlying: Balance,
 		new_interest_index: Rate,
 	);
+
+	/// Gets pool user data.
+	fn get_pool_user_data(pool_id: CurrencyId, who: &AccountId) -> PoolUserData;
 
 	/// Global borrow_index as of the most recent balance-changing action.
 	fn get_user_borrow_index(who: &AccountId, pool_id: CurrencyId) -> Rate;

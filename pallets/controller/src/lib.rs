@@ -14,7 +14,7 @@
 use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
-use liquidity_pools::Pool;
+use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::{
 	arithmetic::sum_with_mult_result,
 	constants::time::BLOCKS_PER_YEAR,
@@ -110,7 +110,6 @@ impl frame_support::traits::Get<PauseKeeper> for GetAllPaused {
 	}
 }
 
-type LiquidityPools<T> = liquidity_pools::Pallet<T>;
 type RateResult = result::Result<Rate, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 type LiquidityResult = result::Result<(Balance, Balance), DispatchError>;
@@ -120,15 +119,21 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + liquidity_pools::Config {
+	pub trait Config: frame_system::Config {
 		/// The overarching event type.
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
 
+		/// The `MultiCurrency` implementation.
+		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
+
+		/// The price source of currencies
+		type PriceSource: PricesManager<CurrencyId>;
+
 		/// Provides the basic liquidity pools manager and liquidity pool functionality.
-		type LiquidityPoolsManager: LiquidityPoolsStorageProvider<Self::AccountId>
+		type LiquidityPoolsManager: LiquidityPoolsStorageProvider<Self::AccountId, Pool>
 			+ PoolsManager<Self::AccountId>
 			+ CurrencyConverter
-			+ UserStorageProvider<Self::AccountId>;
+			+ UserStorageProvider<Self::AccountId, PoolUserData>;
 
 		/// Provides the basic minterest model functionality.
 		type MinterestModelManager: MinterestModelManager;
@@ -483,7 +488,7 @@ impl<T: Config> Pallet<T> {
 	pub fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate> {
 		Self::accrue_interest_rate(pool_id).ok()?;
 		let pool_supply_underlying = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
-		let pool_data = <LiquidityPools<T>>::get_pool_data(pool_id);
+		let pool_data = T::LiquidityPoolsManager::get_pool_data(pool_id);
 		Self::calculate_utilization_rate(pool_supply_underlying, pool_data.borrowed, pool_data.protocol_interest).ok()
 	}
 
@@ -561,7 +566,7 @@ impl<T: Config> Pallet<T> {
 					let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 					let pool_supply_wrap = T::MultiCurrency::total_issuance(wrapped_id);
 					let pool_supply_underlying = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
-					let pool_data = <LiquidityPools<T>>::get_pool_data(pool_id);
+					let pool_data = T::LiquidityPoolsManager::get_pool_data(pool_id);
 
 					let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id)?;
 					let oracle_price =
@@ -599,7 +604,7 @@ impl<T: Config> Pallet<T> {
 	pub fn get_user_total_collateral(who: T::AccountId) -> BalanceResult {
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
-			.filter(|&pool_id| <LiquidityPools<T>>::check_user_available_collateral(&who, *pool_id))
+			.filter(|&pool_id| T::LiquidityPoolsManager::check_user_available_collateral(&who, *pool_id))
 			.try_fold(Balance::zero(), |acc, &pool_id| -> BalanceResult {
 				let user_supply_underlying = Self::get_user_supply_underlying_per_asset(&who, pool_id)?;
 				let pool_collateral_factor = Self::controller_params(pool_id).collateral_factor;
@@ -818,7 +823,7 @@ impl<T: Config> Pallet<T> {
 		underlying_asset: CurrencyId,
 		pool_borrow_index: Rate,
 	) -> BalanceResult {
-		let user_borrow_underlying = <LiquidityPools<T>>::get_user_borrow_balance(&who, underlying_asset);
+		let user_borrow_underlying = T::LiquidityPoolsManager::get_user_borrow_balance(&who, underlying_asset);
 
 		// If user_borrow_balance = 0 then borrow_index is likely also 0.
 		// Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
@@ -826,7 +831,7 @@ impl<T: Config> Pallet<T> {
 			return Ok(Balance::zero());
 		};
 
-		let user_borrow_index = <LiquidityPools<T>>::get_user_borrow_index(&who, underlying_asset);
+		let user_borrow_index = T::LiquidityPoolsManager::get_user_borrow_index(&who, underlying_asset);
 
 		// Calculate new user borrow balance using the borrow index:
 		// recent_user_borrow_balance = user_borrow_balance * pool_borrow_index / user_borrow_index
@@ -1018,7 +1023,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 				.and_then(|v| v.checked_mul(&oracle_price))
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			if <LiquidityPools<T>>::check_user_available_collateral(&account, underlying_asset) {
+			if T::LiquidityPoolsManager::check_user_available_collateral(&account, underlying_asset) {
 				let m_token_balance = T::MultiCurrency::free_balance(asset, account);
 
 				// sum_collateral += tokens_to_denom * m_token_balance
@@ -1081,7 +1086,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		}
 
 		let pool_supply_underlying = T::LiquidityPoolsManager::get_pool_available_liquidity(underlying_asset);
-		let pool_data = <LiquidityPools<T>>::get_pool_data(underlying_asset);
+		let pool_data = T::LiquidityPoolsManager::get_pool_data(underlying_asset);
 		let utilization_rate =
 			Self::calculate_utilization_rate(pool_supply_underlying, pool_data.borrowed, pool_data.protocol_interest)?;
 
@@ -1134,7 +1139,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		ControllerParams::<T>::mutate(underlying_asset, |data| {
 			data.last_interest_accrued_block = current_block_number
 		});
-		<LiquidityPools<T>>::set_pool_data(
+		T::LiquidityPoolsManager::set_pool_data(
 			underlying_asset,
 			Pool {
 				borrowed: updated_pool_borrow_underlying,
@@ -1167,7 +1172,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	///
 	/// Return Ok if the redeem is allowed.
 	fn redeem_allowed(underlying_asset: CurrencyId, redeemer: &T::AccountId, redeem_amount: Balance) -> DispatchResult {
-		if LiquidityPools::<T>::check_user_available_collateral(&redeemer, underlying_asset) {
+		if T::LiquidityPoolsManager::check_user_available_collateral(&redeemer, underlying_asset) {
 			let (_, shortfall) =
 				Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset, redeem_amount, 0)
 					.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;

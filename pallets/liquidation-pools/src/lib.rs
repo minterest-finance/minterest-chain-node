@@ -16,9 +16,9 @@ use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 	pallet_prelude::*,
 };
+use liquidity_pools::Pool;
 use minterest_primitives::{arithmetic::sum_with_mult_result, Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
-
 use pallet_traits::{
 	CurrencyConverter, DEXManager, LiquidationPoolsManager, LiquidityPoolsStorageProvider, PoolsManager, PricesManager,
 };
@@ -29,9 +29,9 @@ use sp_runtime::{
 	DispatchResult, FixedPointNumber, RuntimeDebug,
 };
 
+use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 pub use module::*;
-use sp_std::cmp::Ordering;
-use sp_std::prelude::*;
+use sp_std::{cmp::Ordering, prelude::*};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -42,7 +42,6 @@ mod mock;
 mod tests;
 
 pub mod weights;
-use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 pub use weights::WeightInfo;
 
 const OFFCHAIN_LIQUIDATION_WORKER_LOCK: &[u8] = b"pallets/liquidation-pools/lock/";
@@ -94,7 +93,7 @@ pub mod module {
 		type PriceSource: PricesManager<CurrencyId>;
 
 		/// The basic liquidity pools manager.
-		type LiquidityPoolsManager: LiquidityPoolsStorageProvider<Self::AccountId>
+		type LiquidityPoolsManager: LiquidityPoolsStorageProvider<Self::AccountId, Pool>
 			+ CurrencyConverter
 			+ PoolsManager<Self::AccountId>;
 

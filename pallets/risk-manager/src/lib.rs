@@ -22,6 +22,8 @@ use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 	pallet_prelude::*,
 };
+use liquidity_pools::{Pool, PoolUserData};
+use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
@@ -55,7 +57,6 @@ mod mock;
 mod tests;
 
 pub mod weights;
-use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 pub use weights::WeightInfo;
 
 /// RiskManager metadata
@@ -76,7 +77,6 @@ pub struct RiskManagerData {
 	pub liquidation_fee: Rate,
 }
 
-type LiquidityPools<T> = liquidity_pools::Pallet<T>;
 type MinterestProtocol<T> = minterest_protocol::Pallet<T>;
 
 #[frame_support::pallet]
@@ -86,6 +86,9 @@ pub mod module {
 	#[pallet::config]
 	pub trait Config: frame_system::Config + minterest_protocol::Config + SendTransactionTypes<Call<Self>> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		/// The price source of currencies.
+		type PriceSource: PricesManager<CurrencyId>;
 
 		/// A configuration for base priority of unsigned transactions.
 		///
@@ -97,10 +100,10 @@ pub mod module {
 		type LiquidationPoolsManager: LiquidationPoolsManager<Self::AccountId>;
 
 		/// Pools are responsible for holding funds for automatic liquidation.
-		type LiquidityPoolsManager: LiquidityPoolsStorageProvider<Self::AccountId>
+		type LiquidityPoolsManager: LiquidityPoolsStorageProvider<Self::AccountId, Pool>
 			+ PoolsManager<Self::AccountId>
 			+ CurrencyConverter
-			+ UserStorageProvider<Self::AccountId>;
+			+ UserStorageProvider<Self::AccountId, PoolUserData>;
 
 		/// Public API of controller pallet
 		type ControllerManager: ControllerManager<Self::AccountId>;
@@ -132,6 +135,8 @@ pub mod module {
 		InvalidFeedPrice,
 		/// Pool is already created
 		PoolAlreadyCreated,
+		/// Pool not found.
+		PoolNotFound,
 	}
 
 	#[pallet::event]
@@ -150,7 +155,6 @@ pub mod module {
 		/// Unsafe loan has been successfully liquidated: \[who, liquidate_amount_in_usd,
 		/// liquidated_pool_id, seized_pools, partial_liquidation\]
 		LiquidateUnsafeLoan(T::AccountId, Balance, CurrencyId, Vec<CurrencyId>, bool),
-
 		/// New pool had been created: \[pool_id\]
 		PoolAdded(CurrencyId),
 	}
@@ -346,7 +350,7 @@ pub mod module {
 			ensure_none(origin)?;
 			ensure!(
 				T::ManagerLiquidityPools::pool_exists(&pool_id),
-				liquidity_pools::Error::<T>::PoolNotFound
+				Error::<T>::PoolNotFound
 			);
 
 			let who = T::Lookup::lookup(who)?;
@@ -393,8 +397,8 @@ impl<T: Config> Pallet<T> {
 			log::info!("RiskManager starts processing loans for {:?}", currency_id);
 			<T as module::Config>::ControllerManager::accrue_interest_rate(*currency_id)
 				.map_err(|_| OffchainErr::CheckFail)?;
-			let pool_members =
-				<LiquidityPools<T>>::get_pool_members_with_loans(*currency_id).map_err(|_| OffchainErr::CheckFail)?;
+			let pool_members = T::LiquidityPoolsManager::get_pool_members_with_loans(*currency_id)
+				.map_err(|_| OffchainErr::CheckFail)?;
 			for member in pool_members.into_iter() {
 				// We check if the user has the collateral so as not to start the liquidation process
 				// for users who have collateral = 0 and borrow > 0.
