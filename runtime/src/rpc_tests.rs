@@ -1876,12 +1876,12 @@ fn get_user_data_rpc_should_work() {
 		assert_eq!(
 			get_user_data(ALICE::get()),
 			Some(UserData {
-				user_total_collateral_in_usd: Balance::one(),
-				user_total_supply_in_usd: Balance::one(),
-				user_total_borrow_in_usd: Balance::one(),
-				user_total_supply_apy: Rate::one(),
-				user_total_borrow_apy: Rate::one(),
-				user_net_apy: Rate::one()
+				total_collateral_in_usd: Balance::one(),
+				total_supply_in_usd: Balance::one(),
+				total_borrow_in_usd: Balance::one(),
+				total_supply_apy: Rate::one(),
+				total_borrow_apy: Rate::one(),
+				net_apy: Rate::one()
 			})
 		);
 	})

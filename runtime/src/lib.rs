@@ -773,7 +773,7 @@ impl_runtime_apis! {
 
 	impl controller_rpc_runtime_api::ControllerRuntimeApi<Block, AccountId> for Runtime {
 		fn get_user_data(_account_id: AccountId) -> Option<UserData> {
-			Some(UserData { user_total_collateral_in_usd: Balance::one(), user_total_supply_in_usd: Balance::one(), user_total_borrow_in_usd: Balance::one(), user_total_supply_apy: Rate::one(), user_total_borrow_apy: Rate::one(), user_net_apy: Rate::one() })
+			Some(UserData { total_collateral_in_usd: Balance::one(), total_supply_in_usd: Balance::one(), total_borrow_in_usd: Balance::one(), total_supply_apy: Rate::one(), total_borrow_apy: Rate::one(), net_apy: Rate::one() })
 		}
 
 		fn get_protocol_total_values() -> Option<ProtocolTotalValue> {

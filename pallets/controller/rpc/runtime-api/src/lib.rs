@@ -75,22 +75,22 @@ pub struct ProtocolTotalValue {
 pub struct UserData {
 	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
 	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
-	pub user_total_collateral_in_usd: Balance,
+	pub total_collateral_in_usd: Balance,
 	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
 	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
-	pub user_total_supply_in_usd: Balance,
+	pub total_supply_in_usd: Balance,
 	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
 	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
-	pub user_total_borrow_in_usd: Balance,
+	pub total_borrow_in_usd: Balance,
 	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
 	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
-	pub user_total_supply_apy: Rate,
+	pub total_supply_apy: Rate,
 	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
 	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
-	pub user_total_borrow_apy: Rate,
+	pub total_borrow_apy: Rate,
 	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
 	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
-	pub user_net_apy: Rate,
+	pub net_apy: Rate,
 }
 
 #[cfg(feature = "std")]
