@@ -448,11 +448,8 @@ impl<T: Config> LiquidityPoolsManager<T::AccountId> for Pallet<T> {
 					return None;
 				}
 				let exchange_rate = Self::get_exchange_rate(pool_id).ok()?;
-				let user_supply_underlying = Self::wrapped_to_underlying(user_supply_wrap, exchange_rate).ok()?;
 				let oracle_price = T::PriceSource::get_underlying_price(pool_id)?;
-				let user_supply_in_usd = Rate::from_inner(user_supply_underlying)
-					.checked_mul(&oracle_price)
-					.map(|x| x.into_inner())?;
+				let user_supply_in_usd = Self::wrapped_to_usd(user_supply_wrap, exchange_rate, oracle_price).ok()?;
 
 				Some((pool_id, user_supply_in_usd))
 			})

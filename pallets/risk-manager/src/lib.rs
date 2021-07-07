@@ -489,10 +489,7 @@ impl<T: Config> Pallet<T> {
 		// total_repay_amount = borrow_balance * price_borrowed
 		let borrow_balance =
 			<T as module::Config>::ControllerManager::borrow_balance_stored(&borrower, liquidated_pool_id)?;
-		let total_repay_amount = Rate::from_inner(borrow_balance)
-			.checked_mul(&price_borrowed)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
+		let total_repay_amount = T::LiquidityPoolsManager::underlying_to_usd(borrow_balance, price_borrowed)?;
 
 		let liquidation_attempts = <LiquidityPools<T>>::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
 
@@ -560,14 +557,8 @@ impl<T: Config> Pallet<T> {
 				let price_collateral =
 					T::PriceSource::get_underlying_price(collateral_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 				let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(collateral_pool_id)?;
-				let seize_tokens = Rate::from_inner(seize_amount)
-					.checked_div(
-						&price_collateral
-							.checked_mul(&exchange_rate)
-							.ok_or(Error::<T>::NumOverflow)?,
-					)
-					.map(|x| x.into_inner())
-					.ok_or(Error::<T>::NumOverflow)?;
+				let seize_tokens =
+					T::LiquidityPoolsManager::usd_to_wrapped(seize_amount, exchange_rate, price_collateral)?;
 
 				<T as module::Config>::MntManager::update_mnt_supply_index(collateral_pool_id)?;
 				<T as module::Config>::MntManager::distribute_supplier_mnt(collateral_pool_id, &borrower, false)?;
@@ -626,10 +617,7 @@ impl<T: Config> Pallet<T> {
 
 		// Calculating the number of assets that must be repaid out of the liquidation pool.
 		// repay_assets = already_seized_amount / (liquidation_fee * price_borrowed)
-		let repay_assets = Rate::from_inner(repay_amount)
-			.checked_div(&price_borrowed)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
+		let repay_assets = T::LiquidityPoolsManager::usd_to_underlying(repay_amount, price_borrowed)?;
 
 		<MinterestProtocol<T>>::do_repay_fresh(
 			&liquidation_pool_account_id,

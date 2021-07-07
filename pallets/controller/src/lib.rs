@@ -493,7 +493,7 @@ impl<T: Config> Pallet<T> {
 			.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
 			.try_fold(
 				(Balance::zero(), Balance::zero()),
-				|(mut acc_user_supply_in_usd, mut acc_user_borrowed_in_usd),
+				|(mut acc_user_total_supply_in_usd, mut acc_user_total_borrowed_in_usd),
 				 &pool_id|
 				 -> result::Result<(Balance, Balance), DispatchError> {
 					let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::PoolNotFound)?;
@@ -505,7 +505,7 @@ impl<T: Config> Pallet<T> {
 						!<LiquidityPools<T>>::get_user_borrow_balance(&who, pool_id).is_zero();
 					// Skip this pool if there is nothing to calculate
 					if !has_user_supply_wrap_balance && !has_user_borrow_underlying_balance {
-						return Ok((acc_user_supply_in_usd, acc_user_borrowed_in_usd));
+						return Ok((acc_user_total_supply_in_usd, acc_user_total_borrowed_in_usd));
 					}
 					let oracle_price =
 						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
@@ -514,21 +514,17 @@ impl<T: Config> Pallet<T> {
 
 					if has_user_supply_wrap_balance {
 						let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id)?;
-						acc_user_supply_in_usd += Rate::from_inner(user_supply_wrap)
-							.checked_mul(&exchange_rate)
-							.and_then(|v| v.checked_mul(&oracle_price))
-							.map(|x| x.into_inner())
-							.ok_or(Error::<T>::BalanceOverflow)?;
+						let user_supply_in_usd =
+							T::LiquidityPoolsManager::wrapped_to_usd(user_supply_wrap, exchange_rate, oracle_price)?;
+						acc_user_total_supply_in_usd += user_supply_in_usd
 					}
 					if has_user_borrow_underlying_balance {
-						let user_borrow_balance = Self::borrow_balance_stored(&who, pool_id)?;
-						let user_borrow_balance_in_usd = Rate::from_inner(user_borrow_balance)
-							.checked_mul(&oracle_price)
-							.map(|x| x.into_inner())
-							.ok_or(Error::<T>::BalanceOverflow)?;
-						acc_user_borrowed_in_usd += user_borrow_balance_in_usd;
+						let user_borrow_underlying = Self::borrow_balance_stored(&who, pool_id)?;
+						let user_borrow_in_usd =
+							T::LiquidityPoolsManager::underlying_to_usd(user_borrow_underlying, oracle_price)?;
+						acc_user_total_borrowed_in_usd += user_borrow_in_usd
 					}
-					Ok((acc_user_supply_in_usd, acc_user_borrowed_in_usd))
+					Ok((acc_user_total_supply_in_usd, acc_user_total_borrowed_in_usd))
 				},
 			)
 	}
@@ -567,30 +563,14 @@ impl<T: Config> Pallet<T> {
 					let oracle_price =
 						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
-					// Calculate pool_supply in USD
-					let pool_supply_in_usd = Rate::from_inner(pool_supply_underlying)
-						.checked_mul(&oracle_price)
-						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?;
-
-					// Calculate tvl in USD
-					let pool_tvl_in_usd = Rate::from_inner(pool_supply_wrap)
-						.checked_mul(&exchange_rate)
-						.and_then(|v| v.checked_mul(&oracle_price))
-						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?;
-
-					// Calculate pool_borrow in USD
-					let pool_borrow_in_usd = Rate::from_inner(pool_data.borrowed)
-						.checked_mul(&oracle_price)
-						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?;
-
-					// Calculate pool_protocol_interest in USD
-					let pool_protocol_interest_in_usd = Rate::from_inner(pool_data.protocol_interest)
-						.checked_mul(&oracle_price)
-						.map(|x| x.into_inner())
-						.ok_or(Error::<T>::NumOverflow)?;
+					let pool_supply_in_usd =
+						T::LiquidityPoolsManager::underlying_to_usd(pool_supply_underlying, oracle_price)?;
+					let pool_tvl_in_usd =
+						T::LiquidityPoolsManager::wrapped_to_usd(pool_supply_wrap, exchange_rate, oracle_price)?;
+					let pool_borrow_in_usd =
+						T::LiquidityPoolsManager::underlying_to_usd(pool_data.borrowed, oracle_price)?;
+					let pool_protocol_interest_in_usd =
+						T::LiquidityPoolsManager::underlying_to_usd(pool_data.protocol_interest, oracle_price)?;
 
 					Ok((
 						protocol_available_liquidity
@@ -620,13 +600,12 @@ impl<T: Config> Pallet<T> {
 				let user_supply_underlying = Self::get_user_supply_underlying_per_asset(&who, pool_id)?;
 				let pool_collateral_factor = Self::controller_params(pool_id).collateral_factor;
 				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-
-				let user_collateral_in_usd = Rate::from_inner(user_supply_underlying)
-					.checked_mul(&oracle_price)
-					.and_then(|x| x.checked_mul(&pool_collateral_factor))
+				let user_supply_usd =
+					T::LiquidityPoolsManager::underlying_to_usd(user_supply_underlying, oracle_price)?;
+				let user_collateral_in_usd = Rate::from_inner(user_supply_usd)
+					.checked_mul(&pool_collateral_factor)
 					.map(|x| x.into_inner())
 					.ok_or(Error::<T>::NumOverflow)?;
-
 				Ok(acc + user_collateral_in_usd)
 			})
 	}
@@ -659,18 +638,15 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::PoolNotFound
 		);
 		let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
-
 		let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
 		if user_balance_wrapped_tokens.is_zero() {
 			return Ok(Balance::zero());
 		}
-
 		Self::accrue_interest_rate(pool_id)?;
 		let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id)?;
-		Ok(Rate::from_inner(user_balance_wrapped_tokens)
-			.checked_mul(&exchange_rate)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?)
+		let user_supply_underlying =
+			T::LiquidityPoolsManager::wrapped_to_underlying(user_balance_wrapped_tokens, exchange_rate)?;
+		Ok(user_supply_underlying)
 	}
 
 	/// Calculate total user's supply APY, borrow APY and Net APY.
@@ -728,19 +704,12 @@ impl<T: Config> Pallet<T> {
 				 -> result::Result<(Interest, Interest, Interest, Interest, Balance, Balance), DispatchError> {
 					let user_supply_underlying = Self::get_user_supply_underlying_per_asset(&who, pool_id)?;
 					let user_borrow_underlying = Self::get_user_borrow_per_asset(&who, pool_id)?;
-
 					let oracle_price =
 						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-
-					let calculate_value_in_usd = |balance: Balance| {
-						Rate::from_inner(balance)
-							.checked_mul(&oracle_price)
-							.map(|x| x.into_inner())
-							.ok_or(Error::<T>::BalanceOverflow)
-					};
-
-					let user_supply_in_usd = calculate_value_in_usd(user_supply_underlying)?;
-					let user_borrow_in_usd = calculate_value_in_usd(user_borrow_underlying)?;
+					let user_supply_in_usd =
+						T::LiquidityPoolsManager::underlying_to_usd(user_supply_underlying, oracle_price)?;
+					let user_borrow_in_usd =
+						T::LiquidityPoolsManager::underlying_to_usd(user_borrow_underlying, oracle_price)?;
 
 					let (_, borrow_rate, supply_rate) =
 						Self::get_pool_exchange_borrow_and_supply_rates(pool_id).ok_or(Error::<T>::NumOverflow)?;
@@ -773,8 +742,12 @@ impl<T: Config> Pallet<T> {
 						acc_user_mnt_borrow_interest
 							.checked_add(&user_mnt_borrow_interest)
 							.ok_or(Error::<T>::BalanceOverflow)?,
-						user_total_supply_usd + user_supply_in_usd,
-						user_total_borrow_usd + user_borrow_in_usd,
+						user_total_supply_usd
+							.checked_add(user_supply_in_usd)
+							.ok_or(Error::<T>::BalanceOverflow)?,
+						user_total_borrow_usd
+							.checked_add(user_borrow_in_usd)
+							.ok_or(Error::<T>::BalanceOverflow)?,
 					))
 				},
 			)?;
@@ -820,10 +793,8 @@ impl<T: Config> Pallet<T> {
 				.checked_add(borrow_amount)
 				.ok_or(Error::<T>::BalanceOverflow)?;
 
-			let new_borrow_balance_in_usd = Rate::from_inner(new_pool_borrows)
-				.checked_mul(&oracle_price)
-				.map(|x| x.into_inner())
-				.ok_or(Error::<T>::BalanceOverflow)?;
+			let new_borrow_balance_in_usd =
+				T::LiquidityPoolsManager::underlying_to_usd(new_pool_borrows, oracle_price)?;
 
 			Ok(new_borrow_balance_in_usd >= borrow_cap)
 		} else {

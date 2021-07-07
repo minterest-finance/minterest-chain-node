@@ -19,10 +19,12 @@ use frame_system::{
 use minterest_primitives::{arithmetic::sum_with_mult_result, Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 
-use pallet_traits::{DEXManager, LiquidationPoolsManager, LiquidityPoolsManager, PoolsManager, PricesManager};
+use pallet_traits::{
+	CurrencyConverter, DEXManager, LiquidationPoolsManager, LiquidityPoolsManager, PoolsManager, PricesManager,
+};
 use sp_runtime::{
 	offchain::storage_lock::{StorageLock, Time},
-	traits::{AccountIdConversion, CheckedDiv, CheckedMul, One, Zero},
+	traits::{AccountIdConversion, CheckedMul, One, Zero},
 	transaction_validity::TransactionPriority,
 	DispatchResult, FixedPointNumber, RuntimeDebug,
 };
@@ -64,6 +66,7 @@ type BalanceResult = sp_std::result::Result<Balance, DispatchError>;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
+	use pallet_traits::CurrencyConverter;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
@@ -91,7 +94,7 @@ pub mod module {
 		type PriceSource: PricesManager<CurrencyId>;
 
 		/// The basic liquidity pools manager.
-		type LiquidityPoolsManager: LiquidityPoolsManager<Self::AccountId>;
+		type LiquidityPoolsManager: LiquidityPoolsManager<Self::AccountId> + CurrencyConverter;
 
 		/// The origin which may update liquidation pools parameters. Root or
 		/// Half Minterest Council can always do this.
@@ -464,25 +467,25 @@ impl<T: Config> Pallet<T> {
 					 -> sp_std::result::Result<(Vec<LiquidationInformation>, Balance, Balance), DispatchError> {
 						let oracle_price =
 							T::PriceSource::get_underlying_price(*pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-						// Liquidation pool balance in USD: liquidation_pool_balance * oracle_price
-						let liquidation_pool_balance = Rate::from_inner(Self::get_pool_available_liquidity(*pool_id))
-							.checked_mul(&oracle_price)
-							.map(|x| x.into_inner())
-							.ok_or(Error::<T>::BalanceOverflow)?;
+						let liquidation_pool_supply_underlying = Self::get_pool_available_liquidity(*pool_id);
+						let liquidation_pool_supply_usd = T::LiquidityPoolsManager::underlying_to_usd(
+							liquidation_pool_supply_underlying,
+							oracle_price,
+						)?;
 						let ideal_balance = Self::calculate_ideal_balance(*pool_id)?;
 
 						// If the pool is not balanced:
 						// oversupply = liquidation_pool_balance - ideal_balance
 						// shortfall = ideal_balance - liquidation_pool_balance
-						let (oversupply, shortfall) = match liquidation_pool_balance.cmp(&ideal_balance) {
-							Ordering::Greater => (liquidation_pool_balance - ideal_balance, Balance::zero()),
-							Ordering::Less => (Balance::zero(), ideal_balance - liquidation_pool_balance),
+						let (oversupply, shortfall) = match liquidation_pool_supply_usd.cmp(&ideal_balance) {
+							Ordering::Greater => (liquidation_pool_supply_usd - ideal_balance, Balance::zero()),
+							Ordering::Less => (Balance::zero(), ideal_balance - liquidation_pool_supply_usd),
 							Ordering::Equal => (Balance::zero(), Balance::zero()),
 						};
 
 						current_vec.push(LiquidationInformation {
 							pool_id: *pool_id,
-							balance: liquidation_pool_balance,
+							balance: liquidation_pool_supply_usd,
 							oversupply,
 							shortfall,
 						});
@@ -503,12 +506,12 @@ impl<T: Config> Pallet<T> {
 							)
 							.ok_or(Error::<T>::NumOverflow)?;
 
-						if liquidation_pool_balance > right_border {
+						if liquidation_pool_supply_usd > right_border {
 							current_sum_oversupply = current_sum_oversupply
 								.checked_add(oversupply)
 								.ok_or(Error::<T>::BalanceOverflow)?;
 						}
-						if liquidation_pool_balance < left_border {
+						if liquidation_pool_supply_usd < left_border {
 							current_sum_shortfall = current_sum_shortfall
 								.checked_add(shortfall)
 								.ok_or(Error::<T>::BalanceOverflow)?;
@@ -586,14 +589,8 @@ impl<T: Config> Pallet<T> {
 			T::PriceSource::get_underlying_price(supply_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 		let target_oracle_price =
 			T::PriceSource::get_underlying_price(target_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-		let max_supply_amount = Rate::from_inner(amount)
-			.checked_div(&supply_oracle_price)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-		let target_amount = Rate::from_inner(amount)
-			.checked_div(&target_oracle_price)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
+		let max_supply_amount = T::LiquidityPoolsManager::usd_to_underlying(amount, supply_oracle_price)?;
+		let target_amount = T::LiquidityPoolsManager::usd_to_underlying(amount, target_oracle_price)?;
 		Ok((max_supply_amount, target_amount))
 	}
 
@@ -605,17 +602,16 @@ impl<T: Config> Pallet<T> {
 	fn calculate_ideal_balance(pool_id: CurrencyId) -> BalanceResult {
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 		let balance_ratio = Self::liquidation_pools_data(pool_id).balance_ratio;
-
 		// Liquidation pool ideal balance in USD: liquidity_pool_balance * balance_ratio * oracle_price
-		let ideal_balance = Rate::from_inner(T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id))
+		let ideal_balance_usd = Rate::from_inner(T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id))
 			.checked_mul(&balance_ratio)
 			.and_then(|v| v.checked_mul(&oracle_price))
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::BalanceOverflow)?;
 
 		match Self::liquidation_pools_data(pool_id).max_ideal_balance {
-			Some(max_ideal_balance) => Ok(ideal_balance.min(max_ideal_balance)),
-			None => Ok(ideal_balance),
+			Some(max_ideal_balance) => Ok(ideal_balance_usd.min(max_ideal_balance)),
+			None => Ok(ideal_balance_usd),
 		}
 	}
 
