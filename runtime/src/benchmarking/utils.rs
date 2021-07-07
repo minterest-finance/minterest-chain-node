@@ -10,7 +10,7 @@ use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 use frame_system::{pallet_prelude::OriginFor, RawOrigin};
 use liquidity_pools::Pool;
 use orml_traits::MultiCurrency;
-use pallet_traits::LiquidityPoolsStorageProvider;
+use pallet_traits::LiquidityPoolStorageProvider;
 use sp_runtime::{
 	traits::{AccountIdConversion, One, StaticLookup, Zero},
 	FixedPointNumber,

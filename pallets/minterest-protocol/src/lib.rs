@@ -23,7 +23,7 @@ use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, Balance, Cur
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	Borrowing, ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolsStorageProvider,
+	Borrowing, ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolStorageProvider,
 	MinterestModelManager, MntManager, PoolsManager, RiskManager, UserStorageProvider, WhitelistManager,
 };
 #[cfg(feature = "std")]
@@ -84,7 +84,7 @@ pub mod module {
 		type ManagerLiquidationPools: LiquidationPoolsManager<Self::AccountId>;
 
 		/// The basic liquidity pools.
-		type ManagerLiquidityPools: LiquidityPoolsStorageProvider<Self::AccountId, Pool>
+		type ManagerLiquidityPools: LiquidityPoolStorageProvider<Self::AccountId, Pool>
 			+ PoolsManager<Self::AccountId>
 			+ CurrencyConverter
 			+ Borrowing<Self::AccountId>

@@ -24,7 +24,7 @@ use minterest_primitives::{Balance, CurrencyId, Interest, Operation, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	ControllerManager, CurrencyConverter, LiquidityPoolsStorageProvider, MinterestModelManager, MntManager,
+	ControllerManager, CurrencyConverter, LiquidityPoolStorageProvider, MinterestModelManager, MntManager,
 	PoolsManager, PricesManager, UserStorageProvider,
 };
 #[cfg(feature = "std")]
@@ -130,7 +130,7 @@ pub mod module {
 		type PriceSource: PricesManager<CurrencyId>;
 
 		/// Provides the basic liquidity pools manager and liquidity pool functionality.
-		type LiquidityPoolsManager: LiquidityPoolsStorageProvider<Self::AccountId, Pool>
+		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, Pool>
 			+ PoolsManager<Self::AccountId>
 			+ CurrencyConverter
 			+ UserStorageProvider<Self::AccountId, PoolUserData>;

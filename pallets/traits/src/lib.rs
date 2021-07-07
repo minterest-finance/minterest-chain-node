@@ -34,7 +34,7 @@ pub trait PoolsManager<AccountId> {
 }
 
 /// Provides functionality for working with storage of liquidity pools.
-pub trait LiquidityPoolsStorageProvider<AccountId, Pool> {
+pub trait LiquidityPoolStorageProvider<AccountId, Pool> {
 	/// Sets pool data.
 	fn set_pool_data(pool_id: CurrencyId, pool_data: Pool);
 

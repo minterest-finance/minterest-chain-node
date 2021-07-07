@@ -27,7 +27,7 @@ use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolsStorageProvider, MntManager,
+	ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolStorageProvider, MntManager,
 	PoolsManager, PricesManager, RiskManager, UserStorageProvider,
 };
 #[cfg(feature = "std")]
@@ -100,7 +100,7 @@ pub mod module {
 		type LiquidationPoolsManager: LiquidationPoolsManager<Self::AccountId>;
 
 		/// Pools are responsible for holding funds for automatic liquidation.
-		type LiquidityPoolsManager: LiquidityPoolsStorageProvider<Self::AccountId, Pool>
+		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, Pool>
 			+ PoolsManager<Self::AccountId>
 			+ CurrencyConverter
 			+ UserStorageProvider<Self::AccountId, PoolUserData>;

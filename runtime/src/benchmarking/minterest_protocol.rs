@@ -12,7 +12,7 @@ use liquidity_pools::Pool;
 use minterest_protocol::PoolInitData;
 use orml_benchmarking::runtime_benchmarks;
 use orml_traits::MultiCurrency;
-use pallet_traits::{LiquidityPoolsStorageProvider, UserStorageProvider};
+use pallet_traits::{LiquidityPoolStorageProvider, UserStorageProvider};
 use sp_runtime::{
 	traits::{AccountIdConversion, One, Zero},
 	FixedPointNumber,

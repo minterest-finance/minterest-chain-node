@@ -20,7 +20,7 @@ use liquidity_pools::Pool;
 use minterest_primitives::{arithmetic::sum_with_mult_result, Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	CurrencyConverter, DEXManager, LiquidationPoolsManager, LiquidityPoolsStorageProvider, PoolsManager, PricesManager,
+	CurrencyConverter, DEXManager, LiquidationPoolsManager, LiquidityPoolStorageProvider, PoolsManager, PricesManager,
 };
 use sp_runtime::{
 	offchain::storage_lock::{StorageLock, Time},
@@ -93,7 +93,7 @@ pub mod module {
 		type PriceSource: PricesManager<CurrencyId>;
 
 		/// The basic liquidity pools manager.
-		type LiquidityPoolsManager: LiquidityPoolsStorageProvider<Self::AccountId, Pool>
+		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, Pool>
 			+ CurrencyConverter
 			+ PoolsManager<Self::AccountId>;
 

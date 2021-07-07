@@ -11,7 +11,7 @@ use liquidity_pools::Pool;
 use minterest_primitives::{currency::MNT, Balance, CurrencyId, Price, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerManager, LiquidityPoolsStorageProvider, MntManager, PoolsManager, PricesManager};
+use pallet_traits::{ControllerManager, LiquidityPoolStorageProvider, MntManager, PoolsManager, PricesManager};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
 	DispatchResult, FixedPointNumber, FixedU128,
@@ -82,7 +82,7 @@ pub mod module {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Provides Liquidity Pool functionality
-		type LiquidityPoolsManager: LiquidityPoolsStorageProvider<Self::AccountId, Pool> + PoolsManager<Self::AccountId>;
+		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, Pool> + PoolsManager<Self::AccountId>;
 
 		/// The origin which may update MNT token parameters. Root or
 		/// Two Thirds Minterest Council can always do this

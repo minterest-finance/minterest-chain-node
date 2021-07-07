@@ -2,11 +2,20 @@
 //!
 //! ## Overview
 //!
-//! This pallet is managing information required for interest calculation.
-//! Besides every pool contains some amount of "dead money" which are stored in
-//! `pool_protocol_interest`. These tokens don`t take part in protocol economy.
-//! Also it contains a set of helper functions for conversion between underlying asset and wrapped
-//! token.
+//! This pallet stores data about user and liquidity pools. The account of this pallet contains all
+//! liquidity that is deposited by users in the protocol. Also This pallet is managing
+//! information required for interest calculation.
+//!
+//! ## Interface
+//!
+//! Implements the public API in the form of the following traits:
+//! -`PoolsManager`: an abstraction of pools basic functionalities.
+//! -`LiquidityPoolStorageProvider`: provides functionality for working with storage of
+//! liquidity pools.
+//! -`UserStorageProvider`: provides functionality for working with a user's storage.
+//! Set parameters in storage, get parameters, check parameters.
+//! -`CurrencyConverter`: used to get the exchange rate between underlying assets and wrapped tokens.
+//!  This trait also provides functionality for converting between mTokens, underlying assets and USD.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
@@ -18,7 +27,7 @@ use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, Balance, Cur
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	Borrowing, CurrencyConverter, LiquidityPoolsStorageProvider, PoolsManager, PricesManager, UserStorageProvider,
+	Borrowing, CurrencyConverter, LiquidityPoolStorageProvider, PoolsManager, PricesManager, UserStorageProvider,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -391,7 +400,7 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	}
 }
 
-impl<T: Config> LiquidityPoolsStorageProvider<T::AccountId, Pool> for Pallet<T> {
+impl<T: Config> LiquidityPoolStorageProvider<T::AccountId, Pool> for Pallet<T> {
 	fn set_pool_data(pool_id: CurrencyId, pool_data: Pool) {
 		Pools::<T>::insert(pool_id, pool_data)
 	}
