@@ -329,7 +329,7 @@ mod tests {
 				assert_eq!(TestController::get_user_total_collateral(ALICE), Ok(Balance::zero()));
 				// Borrower total borrow equal: shortfall / BTC price ($100)
 				assert_eq!(
-					TestController::get_user_borrow_per_asset(&ALICE, BTC),
+					TestController::get_user_borrow_underlying_balance(&ALICE, BTC),
 					Ok(4_809_524_259_523_809_523_809_500 / 100)
 				);
 			})

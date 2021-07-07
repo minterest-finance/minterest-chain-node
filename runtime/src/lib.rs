@@ -822,11 +822,11 @@ impl_runtime_apis! {
 		}
 
 		fn get_user_borrow_per_asset(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
-				Some(BalanceInfo{amount: Controller::get_user_borrow_per_asset(&account_id, underlying_asset_id).ok()?})
+				Some(BalanceInfo{amount: Controller::get_user_borrow_underlying_balance(&account_id, underlying_asset_id).ok()?})
 		}
 
 		fn get_user_underlying_balance_per_asset(account_id: AccountId, pool_id: CurrencyId) -> Option<BalanceInfo> {
-				Some(BalanceInfo{amount: Controller::get_user_supply_underlying_per_asset(&account_id, pool_id).ok()?})
+				Some(BalanceInfo{amount: Controller::get_user_supply_underlying_balance(&account_id, pool_id).ok()?})
 		}
 
 		fn pool_exists(underlying_asset_id: CurrencyId) -> bool {
