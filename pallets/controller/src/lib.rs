@@ -35,8 +35,7 @@ use sp_runtime::{
 };
 use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
 pub use weights::WeightInfo;
-#[cfg(test)]
-mod mock;
+
 #[cfg(test)]
 mod tests;
 pub mod weights;

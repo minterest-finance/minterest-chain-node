@@ -1,9 +1,8 @@
-pub use test_helper::*;
-
-use controller::{ControllerData, PauseKeeper};
+pub use controller::{ControllerData, PauseKeeper, *};
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::{Pool, PoolUserData};
-//use minterest_model::MinterestModelData;
+use minterest_model::MinterestModelData;
+pub use test_helper::*;
 
 use frame_support::{
 	ord_parameter_types,
@@ -70,6 +69,7 @@ thread_local! {
 
 ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
+	pub const OneAlice: AccountId = 1;
 }
 
 pub struct WhitelistMembers;
@@ -78,11 +78,9 @@ impl Contains<u64> for WhitelistMembers {
 	fn contains(who: &AccountId) -> bool {
 		TWO.with(|v| v.borrow().contains(who))
 	}
-
 	fn sorted_members() -> Vec<u64> {
 		TWO.with(|v| v.borrow().clone())
 	}
-
 	#[cfg(feature = "runtime-benchmarks")]
 	fn add(new: &u128) {
 		TWO.with(|v| {
@@ -99,15 +97,17 @@ mock_impl_orml_tokens_config!(TestRuntime);
 mock_impl_orml_currencies_config!(TestRuntime);
 mock_impl_liquidity_pools_config!(TestRuntime);
 mock_impl_liquidation_pools_config!(TestRuntime);
-mock_impl_controller_config!(TestRuntime, ZeroAdmin);
-mock_impl_minterest_model_config!(TestRuntime, ZeroAdmin);
+mock_impl_controller_config!(TestRuntime, OneAlice);
+mock_impl_minterest_model_config!(TestRuntime, OneAlice);
 mock_impl_dex_config!(TestRuntime);
+mock_impl_mnt_token_config!(TestRuntime, OneAlice);
+mock_impl_risk_manager_config!(TestRuntime, OneAlice);
+mock_impl_whitelist_module_config!(TestRuntime, OneAlice);
+mock_impl_minterest_protocol_config!(TestRuntime, OneAlice);
 
-mock_impl_mnt_token_config!(TestRuntime, ZeroAdmin);
-mock_impl_risk_manager_config!(TestRuntime, ZeroAdmin);
-mock_impl_whitelist_module_config!(TestRuntime, ZeroAdmin);
-mock_impl_minterest_protocol_config!(TestRuntime, ZeroAdmin);
-
+// -----------------------------------------------------------------------------------------
+// 										PRICE SOURCE
+// -----------------------------------------------------------------------------------------
 pub struct MockPriceSource;
 
 impl MockPriceSource {
@@ -126,6 +126,13 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
+// -----------------------------------------------------------------------------------------
+// 									EXTERNALITY BUILDER
+// -----------------------------------------------------------------------------------------
+/// ExtBuilder declaration.
+/// ExtBuilder is a struct to store configuration of your test runtime.
+///
+/// ExtBuilder
 //TODO: Rename to ExtBuilder after full tests rework
 pub struct ExtBuilderNew {
 	pub endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -136,9 +143,11 @@ pub struct ExtBuilderNew {
 	pub mnt_claim_threshold: Balance,
 	pub controller_dates: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
 	pub pause_keepers: Vec<(CurrencyId, PauseKeeper)>,
-	//pub minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
+	pub minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
 }
 
+/// Default values for ExtBuilder.
+/// By default you runtime will be configured with this values for corresponding fields.
 impl Default for ExtBuilderNew {
 	fn default() -> Self {
 		Self {
@@ -150,11 +159,312 @@ impl Default for ExtBuilderNew {
 			mnt_claim_threshold: Balance::zero(),
 			controller_dates: Vec::new(),
 			pause_keepers: vec![],
-			//minterest_model_params: vec![],
+			minterest_model_params: vec![],
 		}
 	}
 }
 
+// -----------------------------------------------------------------------------------------
+// 										CONFIGURATION TRAITS
+// -----------------------------------------------------------------------------------------
+/// Configuration traits.
+/// Below, you will find a set of functions for configuration of test runtime.
+/// Those functions allow you to set system variables, such as pools, balances, and rates,
+/// to implement various test scenarios.
+/// To make things more readable and customizable, all these configuration functions are
+/// organized in traits according to their purpose.
+
+// -----------------------------------------------------------------------------------------
+// 										Traits declaration.
+// -----------------------------------------------------------------------------------------
+
+/// Provides functionality to configure various balances.
+// TODO: refactor using generics?
+pub trait BalanceTestConfigurator {
+	/// Set balance for the particular user
+	/// - 'user': id of users account
+	/// - 'currency_id': currency
+	/// - 'balance': balance value to set
+	fn set_user_balance(self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self;
+
+	/// Set balance for the particular pool
+	/// - 'currency_id': pool ideal
+	/// - 'balance': balance value to set
+	fn set_pool_balance(self, currency_id: CurrencyId, balance: Balance) -> Self;
+	// TODO: Add description
+	fn set_dex_balance(self, currency_id: CurrencyId, balance: Balance) -> Self;
+}
+
+// pool_moc -> pool_init_default
+// pool_total_borrowed -> init_pool
+// liquidity_pool -> init_pool
+pub trait PoolTestConfigurator {
+	///TODO: Add description
+	fn init_pool_default(self, pool_id: CurrencyId) -> Self;
+	///TODO: Add description
+	fn init_pool(
+		self,
+		pool_id: CurrencyId,
+		total_borrowed: Balance,
+		borrow_index: Rate,
+		total_protocol_interest: Balance,
+	) -> Self;
+	// TODO: Add description
+	fn set_pool_user_data(
+		self,
+		pool_id: CurrencyId,
+		user: AccountId,
+		total_borrowed: Balance,
+		interest_index: Rate,
+		is_collateral: bool,
+		liquidation_attempts: u8,
+	) -> Self;
+}
+
+pub trait LiqudationPoolTestConfigurator {
+	// TODO: Add description
+	fn init_liquidation_pool(
+		self,
+		pool_id: CurrencyId,
+		deviation_threshold: Rate,
+		balance_ratio: Rate,
+		max_ideal_balance: Option<Balance>,
+	) -> Self;
+	// TODO: Add description
+	fn set_liquidation_pool_balance(self, currency_id: CurrencyId, balance: Balance) -> Self;
+}
+
+pub trait MntTestConfigurator {
+	// TODO: Add description
+	fn mnt_enabled_pools(self, pools: Vec<(CurrencyId, Balance)>) -> Self;
+	// TODO: Add description
+	fn enable_minting_for_all_pools(self, speed: Balance) -> Self;
+	// TODO: Add description
+	fn set_mnt_claim_threshold(self, threshold: Balance) -> Self;
+	// TODO: Add description
+	fn set_mnt_account_balance(self, balance: Balance) -> Self;
+}
+
+pub trait ControllerTestConfigurator {
+	// TODO: Add description
+	fn set_controller_data(
+		self,
+		currency_id: CurrencyId,
+		last_interest_accrued_block: BlockNumber,
+		protocol_interest_factor: Rate,
+		max_borrow_rate: Rate,
+		collateral_factor: Rate,
+		borrow_cap: Option<Balance>,
+		protocol_interest_threshold: Balance,
+	) -> Self;
+	// TODO: Add description for
+	fn pause_keeper(self, currency_id: CurrencyId, is_paused: bool) -> Self;
+}
+
+pub trait MinterestModelConfigurator {
+	// TODO: Add description
+	fn set_minterest_model_params(
+		self,
+		currency_id: CurrencyId,
+		kink: Rate,
+		base_rate_per_block: Rate,
+		multiplier_per_block: Rate,
+		jump_multiplier_per_block: Rate,
+	) -> Self;
+}
+
+// -----------------------------------------------------------------------------------------
+//  								Traits implementation.
+// -----------------------------------------------------------------------------------------
+impl BalanceTestConfigurator for ExtBuilderNew {
+	fn set_user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts.push((user, currency_id, balance));
+		self
+	}
+
+	fn set_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		/*	self.endowed_accounts
+		.push((TestPools::pools_account_id(), currency_id, balance));*/
+		//FIXME
+		self
+	}
+
+	fn set_dex_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		/*self.endowed_accounts
+		.push((TestDex::dex_account_id(), currency_id, balance));*/
+		//FIXME
+		self
+	}
+}
+
+impl PoolTestConfigurator for ExtBuilderNew {
+	fn init_pool_default(mut self, pool_id: CurrencyId) -> Self {
+		self.pools.push((
+			pool_id,
+			Pool {
+				total_borrowed: Balance::zero(),
+				borrow_index: Rate::one(),
+				total_protocol_interest: Balance::zero(),
+			},
+		));
+		self
+	}
+
+	fn init_pool(
+		mut self,
+		pool_id: CurrencyId,
+		total_borrowed: Balance,
+		borrow_index: Rate,
+		total_protocol_interest: Balance,
+	) -> Self {
+		self.pools.push((
+			pool_id,
+			Pool {
+				total_borrowed,
+				borrow_index,
+				total_protocol_interest,
+			},
+		));
+		self
+	}
+
+	fn set_pool_user_data(
+		mut self,
+		pool_id: CurrencyId,
+		user: AccountId,
+		total_borrowed: Balance,
+		interest_index: Rate,
+		is_collateral: bool,
+		liquidation_attempts: u8,
+	) -> Self {
+		self.pool_user_data.push((
+			pool_id,
+			user,
+			PoolUserData {
+				total_borrowed,
+				interest_index,
+				is_collateral,
+				liquidation_attempts,
+			},
+		));
+		self
+	}
+}
+
+impl MntTestConfigurator for ExtBuilderNew {
+	fn mnt_enabled_pools(mut self, pools: Vec<(CurrencyId, Balance)>) -> Self {
+		self.minted_pools = pools;
+		self
+	}
+
+	fn enable_minting_for_all_pools(mut self, speed: Balance) -> Self {
+		self.minted_pools = vec![(KSM, speed), (DOT, speed), (ETH, speed), (BTC, speed)];
+		self
+	}
+
+	fn set_mnt_claim_threshold(mut self, threshold: u128) -> Self {
+		self.mnt_claim_threshold = threshold * DOLLARS;
+		self
+	}
+
+	fn set_mnt_account_balance(mut self, balance: Balance) -> Self {
+		/*self.endowed_accounts
+		.push((TestMntToken::get_account_id(), MNT, balance));*/
+		//FIXME
+		self
+	}
+}
+
+impl LiqudationPoolTestConfigurator for ExtBuilderNew {
+	fn init_liquidation_pool(
+		mut self,
+		pool_id: CurrencyId,
+		deviation_threshold: Rate,
+		balance_ratio: Rate,
+		max_ideal_balance: Option<Balance>,
+	) -> Self {
+		self.liquidation_pools.push((
+			pool_id,
+			LiquidationPoolData {
+				deviation_threshold,
+				balance_ratio,
+				max_ideal_balance,
+			},
+		));
+		self
+	}
+
+	fn set_liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		/*self.endowed_accounts
+		.push((TestLiquidationPools::pools_account_id(), currency_id, balance));*/
+		//FIXME
+		self
+	}
+}
+
+impl ControllerTestConfigurator for ExtBuilderNew {
+	fn set_controller_data(
+		mut self,
+		currency_id: CurrencyId,
+		last_interest_accrued_block: BlockNumber,
+		protocol_interest_factor: Rate,
+		max_borrow_rate: Rate,
+		collateral_factor: Rate,
+		borrow_cap: Option<Balance>,
+		protocol_interest_threshold: Balance,
+	) -> Self {
+		self.controller_dates.push((
+			currency_id,
+			ControllerData {
+				last_interest_accrued_block,
+				protocol_interest_factor,
+				max_borrow_rate,
+				collateral_factor,
+				borrow_cap,
+				protocol_interest_threshold,
+			},
+		));
+		self
+	}
+
+	fn pause_keeper(mut self, currency_id: CurrencyId, is_paused: bool) -> Self {
+		self.pause_keepers.push((
+			currency_id,
+			if is_paused {
+				PauseKeeper::all_paused()
+			} else {
+				PauseKeeper::all_unpaused()
+			},
+		));
+		self
+	}
+}
+
+impl MinterestModelConfigurator for ExtBuilderNew {
+	fn set_minterest_model_params(
+		mut self,
+		currency_id: CurrencyId,
+		kink: Rate,
+		base_rate_per_block: Rate,
+		multiplier_per_block: Rate,
+		jump_multiplier_per_block: Rate,
+	) -> Self {
+		self.minterest_model_params.push((
+			currency_id,
+			MinterestModelData {
+				kink,
+				base_rate_per_block,
+				multiplier_per_block,
+				jump_multiplier_per_block,
+			},
+		));
+		self
+	}
+}
+
+// -----------------------------------------------------------------------------------------
+// 									EXTERNALITIES BUILDING
+// -----------------------------------------------------------------------------------------
 pub trait BuildExternalities {
 	fn build(self) -> sp_io::TestExternalities;
 }
@@ -216,248 +526,15 @@ impl BuildExternalities for ExtBuilderNew {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
+		minterest_model::GenesisConfig::<TestRuntime> {
+			minterest_model_params: self.minterest_model_params,
+			_phantom: Default::default(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));
 		ext
-	}
-}
-//// ---------------
-
-pub trait BalanceTestConfigurator {
-	// TODO: refactor using generics
-	// TODO: Add description
-	fn user_balance(self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self;
-	// TODO: Add description
-	fn pool_balance(self, currency_id: CurrencyId, balance: Balance) -> Self;
-	// TODO: Add description
-	fn dex_balance(self, currency_id: CurrencyId, balance: Balance) -> Self;
-}
-
-// pool_moc -> pool_init_defaults
-// pool_total_borrowed -> pool_init_params
-// liquidity_pool -> pool_init
-pub trait PoolTestConfigurator {
-	///TODO: Add description
-	fn pool_init_default(self, pool_id: CurrencyId) -> Self;
-	///TODO: Add description
-	fn pool_init_params(
-		self,
-		pool_id: CurrencyId,
-		total_borrowed: Balance,
-		borrow_index: Rate,
-		total_protocol_interest: Balance,
-	) -> Self;
-	// TODO: Add description
-	fn pool_user_data(
-		self,
-		pool_id: CurrencyId,
-		user: AccountId,
-		total_borrowed: Balance,
-		interest_index: Rate,
-		is_collateral: bool,
-		liquidation_attempts: u8,
-	) -> Self;
-}
-
-pub trait LiqudationPoolTestConfigurator {
-	// TODO: Add description
-	fn liquidation_pool_init_param(
-		self,
-		pool_id: CurrencyId,
-		deviation_threshold: Rate,
-		balance_ratio: Rate,
-		max_ideal_balance: Option<Balance>,
-	) -> Self;
-	// TODO: Add description
-	fn liquidation_pool_balance(self, currency_id: CurrencyId, balance: Balance) -> Self;
-}
-
-pub trait MntTestConfigurator {
-	// TODO: Add description
-	fn mnt_enabled_pools(self, pools: Vec<(CurrencyId, Balance)>) -> Self;
-	// TODO: Add description
-	fn enable_minting_for_all_pools(self, speed: Balance) -> Self;
-	// TODO: Add description
-	fn mnt_claim_threshold(self, threshold: Balance) -> Self;
-	// TODO: Add description
-	fn mnt_account_balance(self, balance: Balance) -> Self;
-}
-
-pub trait ControllerTestConfigurator {
-	// TODO: Add description
-	fn controller_data(
-		self,
-		currency_id: CurrencyId,
-		last_interest_accrued_block: BlockNumber,
-		protocol_interest_factor: Rate,
-		max_borrow_rate: Rate,
-		collateral_factor: Rate,
-		borrow_cap: Option<Balance>,
-		protocol_interest_threshold: Balance,
-	) -> Self;
-	// TODO: Add description for
-	fn pause_keeper(self, currency_id: CurrencyId, is_paused: bool) -> Self;
-}
-
-// ######################
-// TRAITS IMPLEMENTATION
-// ######################
-impl BalanceTestConfigurator for ExtBuilderNew {
-	fn user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
-		self.endowed_accounts.push((user, currency_id, balance));
-		self
-	}
-
-	fn pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-		self.endowed_accounts
-			.push((TestPools::pools_account_id(), currency_id, balance));
-		self
-	}
-
-	fn dex_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-		self.endowed_accounts
-			.push((TestDex::dex_account_id(), currency_id, balance));
-		self
-	}
-}
-
-impl PoolTestConfigurator for ExtBuilderNew {
-	fn pool_init_default(mut self, pool_id: CurrencyId) -> Self {
-		self.pools.push((
-			pool_id,
-			Pool {
-				total_borrowed: Balance::zero(),
-				borrow_index: Rate::one(),
-				total_protocol_interest: Balance::zero(),
-			},
-		));
-		self
-	}
-
-	fn pool_init_params(
-		mut self,
-		pool_id: CurrencyId,
-		total_borrowed: Balance,
-		borrow_index: Rate,
-		total_protocol_interest: Balance,
-	) -> Self {
-		self.pools.push((
-			pool_id,
-			Pool {
-				total_borrowed,
-				borrow_index,
-				total_protocol_interest,
-			},
-		));
-		self
-	}
-
-	fn pool_user_data(
-		mut self,
-		pool_id: CurrencyId,
-		user: AccountId,
-		total_borrowed: Balance,
-		interest_index: Rate,
-		is_collateral: bool,
-		liquidation_attempts: u8,
-	) -> Self {
-		self.pool_user_data.push((
-			pool_id,
-			user,
-			PoolUserData {
-				total_borrowed,
-				interest_index,
-				is_collateral,
-				liquidation_attempts,
-			},
-		));
-		self
-	}
-}
-
-impl MntTestConfigurator for ExtBuilderNew {
-	fn mnt_enabled_pools(mut self, pools: Vec<(CurrencyId, Balance)>) -> Self {
-		self.minted_pools = pools;
-		self
-	}
-
-	fn enable_minting_for_all_pools(mut self, speed: Balance) -> Self {
-		self.minted_pools = vec![(KSM, speed), (DOT, speed), (ETH, speed), (BTC, speed)];
-		self
-	}
-
-	fn mnt_claim_threshold(mut self, threshold: u128) -> Self {
-		self.mnt_claim_threshold = threshold * DOLLARS;
-		self
-	}
-
-	fn mnt_account_balance(mut self, balance: Balance) -> Self {
-		self.endowed_accounts
-			.push((TestMntToken::get_account_id(), MNT, balance));
-		self
-	}
-}
-
-impl LiqudationPoolTestConfigurator for ExtBuilderNew {
-	fn liquidation_pool_init_param(
-		mut self,
-		pool_id: CurrencyId,
-		deviation_threshold: Rate,
-		balance_ratio: Rate,
-		max_ideal_balance: Option<Balance>,
-	) -> Self {
-		self.liquidation_pools.push((
-			pool_id,
-			LiquidationPoolData {
-				deviation_threshold,
-				balance_ratio,
-				max_ideal_balance,
-			},
-		));
-		self
-	}
-
-	fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-		self.endowed_accounts
-			.push((TestLiquidationPools::pools_account_id(), currency_id, balance));
-		self
-	}
-}
-
-impl ControllerTestConfigurator for ExtBuilderNew {
-	fn controller_data(
-		mut self,
-		currency_id: CurrencyId,
-		last_interest_accrued_block: BlockNumber,
-		protocol_interest_factor: Rate,
-		max_borrow_rate: Rate,
-		collateral_factor: Rate,
-		borrow_cap: Option<Balance>,
-		protocol_interest_threshold: Balance,
-	) -> Self {
-		self.controller_dates.push((
-			currency_id,
-			ControllerData {
-				last_interest_accrued_block,
-				protocol_interest_factor,
-				max_borrow_rate,
-				collateral_factor,
-				borrow_cap,
-				protocol_interest_threshold,
-			},
-		));
-		self
-	}
-
-	fn pause_keeper(mut self, currency_id: CurrencyId, is_paused: bool) -> Self {
-		self.pause_keepers.push((
-			currency_id,
-			if is_paused {
-				PauseKeeper::all_paused()
-			} else {
-				PauseKeeper::all_unpaused()
-			},
-		));
-		self
 	}
 }
