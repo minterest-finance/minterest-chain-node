@@ -14,6 +14,7 @@
 use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
+use liquidity_pools::Pool;
 use minterest_primitives::{
 	arithmetic::sum_with_mult_result,
 	constants::time::BLOCKS_PER_YEAR,
@@ -23,8 +24,8 @@ use minterest_primitives::{Balance, CurrencyId, Interest, Operation, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	ControllerManager, CurrencyConverter, LiquidityPoolsManager, MinterestModelManager, MntManager, PoolsManager,
-	PricesManager,
+	ControllerManager, CurrencyConverter, LiquidityPoolsStorageProvider, MinterestModelManager, MntManager,
+	PoolsManager, PricesManager, UserStorageProvider,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -34,6 +35,7 @@ use sp_runtime::{
 };
 use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
 pub use weights::WeightInfo;
+
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -116,7 +118,6 @@ type LiquidityResult = result::Result<(Balance, Balance), DispatchError>;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use pallet_traits::CurrencyConverter;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + liquidity_pools::Config {
@@ -124,7 +125,10 @@ pub mod module {
 		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Provides the basic liquidity pools manager and liquidity pool functionality.
-		type LiquidityPoolsManager: LiquidityPoolsManager<Self::AccountId> + CurrencyConverter;
+		type LiquidityPoolsManager: LiquidityPoolsStorageProvider<Self::AccountId>
+			+ PoolsManager<Self::AccountId>
+			+ CurrencyConverter
+			+ UserStorageProvider<Self::AccountId>;
 
 		/// Provides the basic minterest model functionality.
 		type MinterestModelManager: MinterestModelManager;
@@ -502,7 +506,7 @@ impl<T: Config> Pallet<T> {
 					let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id, &who);
 					let has_user_supply_wrap_balance = !user_supply_wrap.is_zero();
 					let has_user_borrow_underlying_balance =
-						!<LiquidityPools<T>>::get_user_borrow_balance(&who, pool_id).is_zero();
+						!T::LiquidityPoolsManager::get_user_borrow_balance(&who, pool_id).is_zero();
 					// Skip this pool if there is nothing to calculate
 					if !has_user_supply_wrap_balance && !has_user_borrow_underlying_balance {
 						return Ok((acc_user_total_supply_in_usd, acc_user_total_borrowed_in_usd));
@@ -1132,9 +1136,11 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		});
 		<LiquidityPools<T>>::set_pool_data(
 			underlying_asset,
-			updated_pool_borrow_underlying,
-			updated_borrow_index,
-			updated_pool_protocol_interest,
+			Pool {
+				borrowed: updated_pool_borrow_underlying,
+				borrow_index: updated_borrow_index,
+				protocol_interest: updated_pool_protocol_interest,
+			},
 		);
 		Ok(())
 	}

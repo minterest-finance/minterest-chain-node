@@ -9,7 +9,14 @@ use sp_arithmetic::FixedPointNumber;
 #[test]
 fn set_pool_data_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		TestPools::set_pool_data(DOT, ONE_HUNDRED, Rate::saturating_from_rational(125, 100), ONE_HUNDRED);
+		TestPools::set_pool_data(
+			DOT,
+			Pool {
+				borrowed: ONE_HUNDRED,
+				borrow_index: Rate::saturating_from_rational(125, 100),
+				protocol_interest: ONE_HUNDRED,
+			},
+		);
 		assert_eq!(<Pools<Test>>::get(DOT).borrowed, ONE_HUNDRED);
 		assert_eq!(
 			<Pools<Test>>::get(DOT).borrow_index,
@@ -342,6 +349,27 @@ fn get_user_collateral_pools_should_work() {
 			assert_eq!(TestPools::get_user_collateral_pools(&ALICE), Ok(vec![DOT, ETH]));
 			assert_eq!(TestPools::get_user_collateral_pools(&BOB), Ok(vec![]));
 		});
+}
+
+#[test]
+fn mutate_user_liquidation_attempts_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		TestPools::mutate_user_liquidation_attempts(DOT, &ALICE, true);
+		assert_eq!(
+			crate::PoolUserParams::<Test>::get(DOT, ALICE).liquidation_attempts,
+			u8::one()
+		);
+		TestPools::mutate_user_liquidation_attempts(DOT, &ALICE, true);
+		assert_eq!(
+			crate::PoolUserParams::<Test>::get(DOT, ALICE).liquidation_attempts,
+			2_u8
+		);
+		TestPools::mutate_user_liquidation_attempts(DOT, &ALICE, false);
+		assert_eq!(
+			crate::PoolUserParams::<Test>::get(DOT, ALICE).liquidation_attempts,
+			u8::zero()
+		);
+	})
 }
 
 // Currency converter tests

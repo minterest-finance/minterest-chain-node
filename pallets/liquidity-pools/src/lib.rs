@@ -4,7 +4,7 @@
 //!
 //! This pallet is managing information required for interest calculation.
 //! Besides every pool contains some amount of "dead money" which are stored in
-//! `tpool_protocol_interest`. These tokens don`t take part in protocol economy.
+//! `pool_protocol_interest`. These tokens don`t take part in protocol economy.
 //! Also it contains a set of helper functions for conversion between underlying asset and wrapped
 //! token.
 
@@ -14,16 +14,16 @@
 
 use codec::{Decode, Encode};
 use frame_support::{pallet_prelude::*, traits::Get, PalletId};
-use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
-use minterest_primitives::{Balance, CurrencyId, Price, Rate};
+use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, Price, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{Borrowing, CurrencyConverter, LiquidityPoolsManager, PoolsManager, PricesManager};
+use pallet_traits::{
+	Borrowing, CurrencyConverter, LiquidityPoolsStorageProvider, PoolsManager, PricesManager, UserStorageProvider,
+};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::traits::{CheckedDiv, CheckedMul};
 use sp_runtime::{
-	traits::{AccountIdConversion, One, Zero},
+	traits::{AccountIdConversion, CheckedDiv, CheckedMul, One, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
 };
 use sp_std::{result, vec::Vec};
@@ -122,11 +122,11 @@ pub mod module {
 
 	#[pallet::storage]
 	#[pallet::getter(fn pools)]
-	pub type Pools<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Pool, ValueQuery>;
+	pub(crate) type Pools<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Pool, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn pool_user_data)]
-	pub type PoolUserParams<T: Config> =
+	pub(crate) type PoolUserParams<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, CurrencyId, Twox64Concat, T::AccountId, PoolUserData, ValueQuery>;
 
 	#[pallet::genesis_config]
@@ -204,32 +204,14 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-// Storage setters for LiquidityPools
-impl<T: Config> Pallet<T> {
-	/// Sets pool data
-	pub fn set_pool_data(pool_id: CurrencyId, borrowed: Balance, borrow_index: Rate, protocol_interest: Balance) {
-		Pools::<T>::insert(
-			pool_id,
-			Pool {
-				borrowed,
-				borrow_index,
-				protocol_interest,
-			},
-		)
+impl<T: Config> UserStorageProvider<T::AccountId> for Pallet<T> {
+	type PoolUserData = PoolUserData;
+
+	fn set_pool_user_data(who: &T::AccountId, pool_id: CurrencyId, pool_user_data: PoolUserData) {
+		PoolUserParams::<T>::insert(pool_id, who, pool_user_data)
 	}
 
-	/// Sets the total borrowed value in the pool.
-	pub fn set_pool_borrow_underlying(pool_id: CurrencyId, new_pool_borrows: Balance) {
-		Pools::<T>::mutate(pool_id, |pool| pool.borrowed = new_pool_borrows);
-	}
-
-	/// Sets the total interest in the pool.
-	pub fn set_pool_protocol_interest(pool_id: CurrencyId, new_pool_protocol_interest: Balance) {
-		Pools::<T>::mutate(pool_id, |r| r.protocol_interest = new_pool_protocol_interest)
-	}
-
-	/// Sets the total borrowed and interest index for user.
-	pub fn set_user_borrow_and_interest_index(
+	fn set_user_borrow_and_interest_index(
 		who: &T::AccountId,
 		pool_id: CurrencyId,
 		new_borrow_underlying: Balance,
@@ -241,56 +223,51 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	/// Sets the parameter `is_collateral` to `true`.
-	pub fn enable_is_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
-		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = true)
-	}
-
-	/// Sets the parameter `is_collateral` to `false`.
-	pub fn disable_is_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
-		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = false);
-	}
-}
-
-impl<T: Config> Pallet<T> {
-	/// Gets pool associated data
-	pub fn get_pool_data(pool_id: CurrencyId) -> Pool {
-		Self::pools(pool_id)
-	}
-
-	/// Global borrow_index as of the most recent balance-changing action
-	pub fn get_user_borrow_index(who: &T::AccountId, pool_id: CurrencyId) -> Rate {
+	fn get_user_borrow_index(who: &T::AccountId, pool_id: CurrencyId) -> Rate {
 		Self::pool_user_data(pool_id, who).interest_index
 	}
 
-	/// Gets total user borrowing.
-	pub fn get_user_borrow_balance(who: &T::AccountId, pool_id: CurrencyId) -> Balance {
+	fn get_user_borrow_balance(who: &T::AccountId, pool_id: CurrencyId) -> Balance {
 		Self::pool_user_data(pool_id, who).borrowed
 	}
 
-	/// Checks if the user has enabled the pool as collateral.
-	pub fn check_user_available_collateral(who: &T::AccountId, pool_id: CurrencyId) -> bool {
-		Self::pool_user_data(pool_id, who).is_collateral
-	}
-
-	/// Get list of users with active loan positions for a particular pool.
-	pub fn get_pool_members_with_loans(
-		underlying_asset: CurrencyId,
-	) -> result::Result<Vec<T::AccountId>, DispatchError> {
-		let user_vec: Vec<T::AccountId> = PoolUserParams::<T>::iter_prefix(underlying_asset)
-			.filter(|(_, pool_user_data)| !pool_user_data.borrowed.is_zero())
-			.map(|(account, _)| account)
-			.collect();
-		Ok(user_vec)
-	}
-
-	/// Gets user liquidation attempts.
-	pub fn get_user_liquidation_attempts(who: &T::AccountId, pool_id: CurrencyId) -> u8 {
+	fn get_user_liquidation_attempts(who: &T::AccountId, pool_id: CurrencyId) -> u8 {
 		Self::pool_user_data(pool_id, who).liquidation_attempts
 	}
 
-	/// Checks if the user has the collateral.
-	pub fn check_user_has_collateral(who: &T::AccountId) -> bool {
+	fn get_user_collateral_pools(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
+		let mut pools: Vec<(CurrencyId, Balance)> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.iter()
+			.filter(|&underlying_id| {
+				Self::pool_exists(underlying_id) && Self::check_user_available_collateral(&who, *underlying_id)
+			})
+			.filter_map(|&pool_id| {
+				let wrapped_id = pool_id.wrapped_asset()?;
+
+				// We calculate the value of the user's wrapped tokens in USD.
+				let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id, &who);
+				if user_supply_wrap.is_zero() {
+					return None;
+				}
+				let exchange_rate = Self::get_exchange_rate(pool_id).ok()?;
+				let oracle_price = T::PriceSource::get_underlying_price(pool_id)?;
+				let user_supply_in_usd = Self::wrapped_to_usd(user_supply_wrap, exchange_rate, oracle_price).ok()?;
+
+				Some((pool_id, user_supply_in_usd))
+			})
+			.collect();
+
+		// Sorted array of pools in descending order.
+		pools.sort_by(|x, y| y.1.cmp(&x.1));
+
+		Ok(pools.iter().map(|pool| pool.0).collect::<Vec<CurrencyId>>())
+	}
+
+	fn check_user_available_collateral(who: &T::AccountId, pool_id: CurrencyId) -> bool {
+		Self::pool_user_data(pool_id, who).is_collateral
+	}
+
+	fn check_user_has_collateral(who: &T::AccountId) -> bool {
 		for &pool_id in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
 			.filter(|&underlying_id| {
@@ -303,6 +280,26 @@ impl<T: Config> Pallet<T> {
 			}
 		}
 		false
+	}
+
+	fn mutate_user_liquidation_attempts(pool_id: CurrencyId, who: &T::AccountId, is_partial_liquidation: bool) {
+		// partial_liquidation -> liquidation_attempts += 1
+		// complete_liquidation -> liquidation_attempts = 0
+		PoolUserParams::<T>::mutate(pool_id, &who, |p| {
+			if is_partial_liquidation {
+				p.liquidation_attempts += u8::one();
+			} else {
+				p.liquidation_attempts = u8::zero();
+			}
+		})
+	}
+
+	fn enable_is_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
+		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = true)
+	}
+
+	fn disable_is_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
+		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = false);
 	}
 }
 
@@ -392,29 +389,49 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	}
 }
 
-impl<T: Config> LiquidityPoolsManager<T::AccountId> for Pallet<T> {
-	/// Gets total amount borrowed from the pool.
+impl<T: Config> LiquidityPoolsStorageProvider<T::AccountId> for Pallet<T> {
+	type Pool = Pool;
+
+	fn set_pool_data(pool_id: CurrencyId, pool_data: Pool) {
+		Pools::<T>::insert(pool_id, pool_data)
+	}
+
+	fn set_pool_borrow_underlying(pool_id: CurrencyId, new_pool_borrows: Balance) {
+		Pools::<T>::mutate(pool_id, |pool| pool.borrowed = new_pool_borrows);
+	}
+
+	fn set_pool_protocol_interest(pool_id: CurrencyId, new_pool_protocol_interest: Balance) {
+		Pools::<T>::mutate(pool_id, |r| r.protocol_interest = new_pool_protocol_interest)
+	}
+
+	fn get_pool_data(pool_id: CurrencyId) -> Pool {
+		Self::pools(pool_id)
+	}
+
+	fn get_pool_members_with_loans(underlying_asset: CurrencyId) -> result::Result<Vec<T::AccountId>, DispatchError> {
+		let user_vec: Vec<T::AccountId> = PoolUserParams::<T>::iter_prefix(underlying_asset)
+			.filter(|(_, pool_user_data)| !pool_user_data.borrowed.is_zero())
+			.map(|(account, _)| account)
+			.collect();
+		Ok(user_vec)
+	}
+
 	fn get_pool_borrow_underlying(pool_id: CurrencyId) -> Balance {
 		Self::pools(pool_id).borrowed
 	}
 
-	/// Accumulator of the total earned interest rate since the opening of the pool
 	fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate {
 		Self::pools(pool_id).borrow_index
 	}
 
-	/// Gets current total amount of protocol interest of the underlying held in this pool.
 	fn get_pool_protocol_interest(pool_id: CurrencyId) -> Balance {
 		Self::pools(pool_id).protocol_interest
 	}
 
-	/// Check if pool exists
 	fn pool_exists(underlying_asset: &CurrencyId) -> bool {
 		Pools::<T>::contains_key(underlying_asset)
 	}
 
-	/// This is a part of a pool creation flow
-	/// Creates storage records for LiquidityPool data
 	fn create_pool(currency_id: CurrencyId) -> DispatchResult {
 		ensure!(!Self::pool_exists(&currency_id), Error::<T>::PoolAlreadyCreated);
 
@@ -429,36 +446,8 @@ impl<T: Config> LiquidityPoolsManager<T::AccountId> for Pallet<T> {
 		Ok(())
 	}
 
-	/// Returns an array of collateral pools for the user.
-	/// The array is sorted in descending order by the number of wrapped tokens in USD.
-	///
-	/// - `who`: AccountId for which the pool array is returned.
-	fn get_user_collateral_pools(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
-		let mut pools: Vec<(CurrencyId, Balance)> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.iter()
-			.filter(|&underlying_id| {
-				Self::pool_exists(underlying_id) && Self::check_user_available_collateral(&who, *underlying_id)
-			})
-			.filter_map(|&pool_id| {
-				let wrapped_id = pool_id.wrapped_asset()?;
-
-				// We calculate the value of the user's wrapped tokens in USD.
-				let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id, &who);
-				if user_supply_wrap.is_zero() {
-					return None;
-				}
-				let exchange_rate = Self::get_exchange_rate(pool_id).ok()?;
-				let oracle_price = T::PriceSource::get_underlying_price(pool_id)?;
-				let user_supply_in_usd = Self::wrapped_to_usd(user_supply_wrap, exchange_rate, oracle_price).ok()?;
-
-				Some((pool_id, user_supply_in_usd))
-			})
-			.collect();
-
-		// Sorted array of pools in descending order.
-		pools.sort_by(|x, y| y.1.cmp(&x.1));
-
-		Ok(pools.iter().map(|pool| pool.0).collect::<Vec<CurrencyId>>())
+	fn remove_pool_data(pool_id: CurrencyId) {
+		Pools::<T>::remove(pool_id)
 	}
 }
 

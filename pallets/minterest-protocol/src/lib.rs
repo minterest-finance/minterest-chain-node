@@ -18,12 +18,11 @@
 
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
-use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
-use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
+use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, Operation, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	Borrowing, ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolsManager,
-	MinterestModelManager, MntManager, PoolsManager, RiskManager, WhitelistManager,
+	Borrowing, ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolsStorageProvider,
+	MinterestModelManager, MntManager, PoolsManager, RiskManager, UserStorageProvider, WhitelistManager,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -73,21 +72,21 @@ pub struct PoolInitData {
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use pallet_traits::CurrencyConverter;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + liquidity_pools::Config + SendTransactionTypes<Call<Self>> {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// Basic borrowing functions.
-		type Borrowing: Borrowing<Self::AccountId>;
-
 		/// The basic liquidity pools.
 		type ManagerLiquidationPools: LiquidationPoolsManager<Self::AccountId>;
 
 		/// The basic liquidity pools.
-		type ManagerLiquidityPools: LiquidityPoolsManager<Self::AccountId> + CurrencyConverter;
+		type ManagerLiquidityPools: LiquidityPoolsStorageProvider<Self::AccountId>
+			+ PoolsManager<Self::AccountId>
+			+ CurrencyConverter
+			+ Borrowing<Self::AccountId>
+			+ UserStorageProvider<Self::AccountId>;
 
 		/// Provides MNT token distribution functionality.
 		type MntManager: MntManager<Self::AccountId>;
@@ -482,7 +481,7 @@ pub mod module {
 			);
 
 			ensure!(
-				!<LiquidityPools<T>>::check_user_available_collateral(&sender, pool_id),
+				!T::ManagerLiquidityPools::check_user_available_collateral(&sender, pool_id),
 				Error::<T>::AlreadyIsCollateral
 			);
 
@@ -491,7 +490,7 @@ pub mod module {
 			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &sender);
 			ensure!(!user_wrapped_balance.is_zero(), Error::<T>::IsCollateralCannotBeEnabled);
 
-			<LiquidityPools<T>>::enable_is_collateral_internal(&sender, pool_id);
+			T::ManagerLiquidityPools::enable_is_collateral_internal(&sender, pool_id);
 			Self::deposit_event(Event::PoolEnabledIsCollateral(sender, pool_id));
 			Ok(().into())
 		}
@@ -632,7 +631,7 @@ impl<T: Config> Pallet<T> {
 		let mut pool_params = <LiquidityPools<T>>::pool_user_data(underlying_asset, &who);
 		if !pool_params.liquidation_attempts.is_zero() {
 			pool_params.liquidation_attempts = u8::zero();
-			liquidity_pools::PoolUserParams::<T>::insert(underlying_asset, &who, pool_params);
+			<LiquidityPools<T>>::set_pool_user_data(&who, underlying_asset, pool_params);
 		}
 
 		Ok((underlying_amount, wrapped_id, wrapped_amount))

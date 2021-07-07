@@ -33,30 +33,95 @@ pub trait PoolsManager<AccountId> {
 	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance;
 }
 
-/// Provides liquidity pool functionality
-pub trait LiquidityPoolsManager<AccountId>: PoolsManager<AccountId> {
+/// Provides functionality for working with storage of liquidity pools.
+pub trait LiquidityPoolsStorageProvider<AccountId> {
+	type Pool;
+
+	/// Sets pool data.
+	fn set_pool_data(pool_id: CurrencyId, pool_data: Self::Pool);
+
+	/// Sets the total borrowed value in the pool.
+	fn set_pool_borrow_underlying(pool_id: CurrencyId, new_pool_borrows: Balance);
+
+	/// Sets the total interest in the pool.
+	fn set_pool_protocol_interest(pool_id: CurrencyId, new_pool_protocol_interest: Balance);
+
+	/// Gets pool associated data.
+	fn get_pool_data(pool_id: CurrencyId) -> Self::Pool;
+
+	/// Get list of users with active loan positions for a particular pool.
+	fn get_pool_members_with_loans(underlying_asset: CurrencyId) -> Result<Vec<AccountId>, DispatchError>;
+
 	/// Gets total amount borrowed from the pool.
 	fn get_pool_borrow_underlying(pool_id: CurrencyId) -> Balance;
 
 	/// Gets pool borrow index
-	/// Accumulator of the total earned interest rate since the opening of the pool
+	/// Accumulator of the total earned interest rate since the opening of the pool.
 	fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate;
 
 	/// Gets current total amount of protocol interest of the underlying held in this pool.
 	fn get_pool_protocol_interest(pool_id: CurrencyId) -> Balance;
 
-	/// Check if pool exists
+	/// Check if pool exists.
 	fn pool_exists(underlying_asset: &CurrencyId) -> bool;
 
-	/// This is a part of a pool creation flow
-	/// Creates storage records for LiquidityPool
+	/// This is a part of a pool creation flow.
+	/// Creates storage records for LiquidityPool.
 	fn create_pool(currency_id: CurrencyId) -> DispatchResult;
+
+	/// Removes pool data.
+	fn remove_pool_data(pool_id: CurrencyId);
+}
+
+/// Provides functionality for working with a user's storage. Set parameters in storage,
+/// get parameters, check parameters.
+pub trait UserStorageProvider<AccountId> {
+	type PoolUserData;
+
+	/// Sets pool user data.
+	fn set_pool_user_data(who: &AccountId, pool_id: CurrencyId, pool_user_data: Self::PoolUserData);
+
+	/// Sets the total borrowed and interest index for user.
+	fn set_user_borrow_and_interest_index(
+		who: &AccountId,
+		pool_id: CurrencyId,
+		new_borrow_underlying: Balance,
+		new_interest_index: Rate,
+	);
+
+	/// Global borrow_index as of the most recent balance-changing action.
+	fn get_user_borrow_index(who: &AccountId, pool_id: CurrencyId) -> Rate;
+
+	/// Gets total user borrowing.
+	fn get_user_borrow_balance(who: &AccountId, pool_id: CurrencyId) -> Balance;
+
+	/// Gets user liquidation attempts.
+	fn get_user_liquidation_attempts(who: &AccountId, pool_id: CurrencyId) -> u8;
 
 	/// Returns an array of collateral pools for the user.
 	/// The array is sorted in descending order by the number of wrapped tokens in USD.
 	///
 	/// - `who`: AccountId for which the pool array is returned.
 	fn get_user_collateral_pools(who: &AccountId) -> Result<Vec<CurrencyId>, DispatchError>;
+
+	/// Checks if the user has enabled the pool as collateral.
+	fn check_user_available_collateral(who: &AccountId, pool_id: CurrencyId) -> bool;
+
+	/// Checks if the user has the collateral.
+	fn check_user_has_collateral(who: &AccountId) -> bool;
+
+	/// Changes the parameter liquidation_attempts depending on the type of liquidation.
+	///
+	/// - `liquidated_pool_id`: the CurrencyId of the pool with loan, for which automatic.
+	/// - `borrower`: the borrower in automatic liquidation.
+	/// - `is_partial_liquidation`: partial or complete liquidation.
+	fn mutate_user_liquidation_attempts(pool_id: CurrencyId, who: &AccountId, is_partial_liquidation: bool);
+
+	/// Sets the parameter `is_collateral` to `true`.
+	fn enable_is_collateral_internal(who: &AccountId, pool_id: CurrencyId);
+
+	/// Sets the parameter `is_collateral` to `false`.
+	fn disable_is_collateral_internal(who: &AccountId, pool_id: CurrencyId);
 }
 
 /// An abstraction of pools basic functionalities.

@@ -248,7 +248,6 @@ macro_rules! mock_impl_minterest_protocol_config {
 	($target:ty, $acc:ident) => {
 		impl minterest_protocol::Config for $target {
 			type Event = Event;
-			type Borrowing = liquidity_pools::Pallet<$target>;
 			type ManagerLiquidationPools = liquidation_pools::Pallet<$target>;
 			type ManagerLiquidityPools = liquidity_pools::Pallet<$target>;
 			type MntManager = mnt_token::Pallet<$target>;

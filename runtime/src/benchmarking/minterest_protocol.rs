@@ -53,7 +53,7 @@ runtime_benchmarks! {
 	{ Runtime, minterest_protocol }
 
 	create_pool {
-		liquidity_pools::Pools::<Runtime>::remove(DOT);
+		LiquidityPools::remove_pool_data(DOT);
 		liquidation_pools::LiquidationPoolsData::<Runtime>::remove(DOT);
 		controller::ControllerParams::<Runtime>::remove(DOT);
 		minterest_model::MinterestModelParams::<Runtime>::remove(DOT);
@@ -88,7 +88,7 @@ runtime_benchmarks! {
 		set_balance(DOT, &lender, 50_000 * DOLLARS)?;
 
 		// Set liquidation_attempts grater than zero to reset them.
-		liquidity_pools::PoolUserParams::<Runtime>::mutate(DOT, lender.clone(), |p| p.liquidation_attempts = u8::one());
+		LiquidityPools::mutate_user_liquidation_attempts(DOT, &lender, true);
 
 		System::set_block_number(10);
 
@@ -289,7 +289,7 @@ runtime_benchmarks! {
 		EnabledUnderlyingAssetsIds::get()
 			.into_iter()
 			.try_for_each(|pool_id| -> Result<(), &'static str> {
-				liquidity_pools::Pools::<Runtime>::insert(pool_id, Pool {
+				LiquidityPools::set_pool_data(pool_id, Pool {
 					borrowed: Balance::zero(),
 					borrow_index: Rate::one(),
 					protocol_interest: Balance::zero(),

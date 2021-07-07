@@ -20,7 +20,7 @@ use minterest_primitives::{arithmetic::sum_with_mult_result, Balance, CurrencyId
 use orml_traits::MultiCurrency;
 
 use pallet_traits::{
-	CurrencyConverter, DEXManager, LiquidationPoolsManager, LiquidityPoolsManager, PoolsManager, PricesManager,
+	CurrencyConverter, DEXManager, LiquidationPoolsManager, LiquidityPoolsStorageProvider, PoolsManager, PricesManager,
 };
 use sp_runtime::{
 	offchain::storage_lock::{StorageLock, Time},
@@ -94,7 +94,9 @@ pub mod module {
 		type PriceSource: PricesManager<CurrencyId>;
 
 		/// The basic liquidity pools manager.
-		type LiquidityPoolsManager: LiquidityPoolsManager<Self::AccountId> + CurrencyConverter;
+		type LiquidityPoolsManager: LiquidityPoolsStorageProvider<Self::AccountId>
+			+ CurrencyConverter
+			+ PoolsManager<Self::AccountId>;
 
 		/// The origin which may update liquidation pools parameters. Root or
 		/// Half Minterest Council can always do this.

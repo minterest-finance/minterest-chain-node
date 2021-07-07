@@ -285,27 +285,6 @@ fn liquidate_should_work() {
 }
 
 #[test]
-fn mutate_liquidation_attempts_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		TestRiskManager::mutate_liquidation_attempts(DOT, &ALICE, true);
-		assert_eq!(
-			liquidity_pools::PoolUserParams::<Test>::get(DOT, ALICE).liquidation_attempts,
-			u8::one()
-		);
-		TestRiskManager::mutate_liquidation_attempts(DOT, &ALICE, true);
-		assert_eq!(
-			liquidity_pools::PoolUserParams::<Test>::get(DOT, ALICE).liquidation_attempts,
-			2_u8
-		);
-		TestRiskManager::mutate_liquidation_attempts(DOT, &ALICE, false);
-		assert_eq!(
-			liquidity_pools::PoolUserParams::<Test>::get(DOT, ALICE).liquidation_attempts,
-			u8::zero()
-		);
-	})
-}
-
-#[test]
 fn complete_liquidation_one_collateral_should_work() {
 	ExtBuilder::default()
 		.liquidity_pool_balance(DOT, dollars(110_000))

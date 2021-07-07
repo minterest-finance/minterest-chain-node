@@ -25,8 +25,8 @@ use frame_system::{
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolsManager, MntManager, PoolsManager,
-	PricesManager, RiskManager,
+	ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolsStorageProvider, MntManager,
+	PoolsManager, PricesManager, RiskManager, UserStorageProvider,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -82,7 +82,6 @@ type MinterestProtocol<T> = minterest_protocol::Pallet<T>;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use pallet_traits::CurrencyConverter;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + minterest_protocol::Config + SendTransactionTypes<Call<Self>> {
@@ -98,7 +97,10 @@ pub mod module {
 		type LiquidationPoolsManager: LiquidationPoolsManager<Self::AccountId>;
 
 		/// Pools are responsible for holding funds for automatic liquidation.
-		type LiquidityPoolsManager: LiquidityPoolsManager<Self::AccountId> + CurrencyConverter;
+		type LiquidityPoolsManager: LiquidityPoolsStorageProvider<Self::AccountId>
+			+ PoolsManager<Self::AccountId>
+			+ CurrencyConverter
+			+ UserStorageProvider<Self::AccountId>;
 
 		/// Public API of controller pallet
 		type ControllerManager: ControllerManager<Self::AccountId>;
@@ -396,7 +398,7 @@ impl<T: Config> Pallet<T> {
 			for member in pool_members.into_iter() {
 				// We check if the user has the collateral so as not to start the liquidation process
 				// for users who have collateral = 0 and borrow > 0.
-				let user_has_collateral = <LiquidityPools<T>>::check_user_has_collateral(&member);
+				let user_has_collateral = T::LiquidityPoolsManager::check_user_has_collateral(&member);
 
 				// Checks if the liquidation should be allowed to occur.
 				if user_has_collateral {
@@ -491,7 +493,8 @@ impl<T: Config> Pallet<T> {
 			<T as module::Config>::ControllerManager::borrow_balance_stored(&borrower, liquidated_pool_id)?;
 		let total_repay_amount = T::LiquidityPoolsManager::underlying_to_usd(borrow_balance, price_borrowed)?;
 
-		let liquidation_attempts = <LiquidityPools<T>>::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
+		let liquidation_attempts =
+			T::LiquidityPoolsManager::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
 
 		let is_partial_liquidation = total_repay_amount
 			>= RiskManagerParams::<T>::get(liquidated_pool_id).min_partial_liquidation_sum
@@ -504,7 +507,11 @@ impl<T: Config> Pallet<T> {
 		let (seized_pools, repay_amount) = Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, seize_amount)?;
 
 		if is_attempt_increment_required {
-			Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation);
+			T::LiquidityPoolsManager::mutate_user_liquidation_attempts(
+				liquidated_pool_id,
+				&borrower,
+				is_partial_liquidation,
+			);
 		}
 
 		Self::deposit_event(Event::LiquidateUnsafeLoan(
@@ -683,27 +690,6 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		Ok((seize_amount, is_attempt_increment_required))
-	}
-
-	/// Changes the parameter liquidation_attempts depending on the type of liquidation.
-	///
-	/// - `liquidated_pool_id`: the CurrencyId of the pool with loan, for which automatic.
-	/// - `borrower`: the borrower in automatic liquidation.
-	/// - `is_partial_liquidation`: partial or complete liquidation.
-	fn mutate_liquidation_attempts(
-		liquidated_pool_id: CurrencyId,
-		borrower: &T::AccountId,
-		is_partial_liquidation: bool,
-	) {
-		// partial_liquidation -> liquidation_attempts += 1
-		// complete_liquidation -> liquidation_attempts = 0
-		liquidity_pools::PoolUserParams::<T>::mutate(liquidated_pool_id, &borrower, |p| {
-			if is_partial_liquidation {
-				p.liquidation_attempts += u8::one();
-			} else {
-				p.liquidation_attempts = u8::zero();
-			}
-		})
 	}
 
 	fn is_valid_liquidation_fee(liquidation_fee: Rate) -> bool {
