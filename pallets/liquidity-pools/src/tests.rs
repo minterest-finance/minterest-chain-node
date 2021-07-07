@@ -291,52 +291,6 @@ fn check_user_has_collateral_should_work() {
 }
 
 #[test]
-fn underlying_to_wrapped_should_work() {
-	ExtBuilder::default()
-		.user_balance(ALICE, DOT, ONE_HUNDRED)
-		.user_balance(ALICE, MDOT, ONE_HUNDRED)
-		.pool_borrow_underlying(DOT, dollars(40))
-		.build()
-		.execute_with(|| {
-			// exchange_rate = 40 / 100 = 0.4
-			let exchange_rate = TestPools::get_exchange_rate(DOT).unwrap();
-			assert_eq!(TestPools::underlying_to_wrapped(10, exchange_rate), Ok(25));
-
-			// Overflow in calculation: wrapped_amount = max_value() / exchange_rate,
-			// when exchange_rate < 1
-			assert_err!(
-				TestPools::underlying_to_wrapped(Balance::max_value(), exchange_rate),
-				Error::<Test>::ConversionError
-			);
-		});
-}
-
-#[test]
-fn wrapped_to_underlying_should_work() {
-	ExtBuilder::default()
-		.pool_with_params(DOT, Balance::zero(), Rate::zero(), Balance::zero())
-		.pool_with_params(BTC, Balance::zero(), Rate::zero(), Balance::zero())
-		.user_balance(ALICE, DOT, ONE_HUNDRED)
-		.user_balance(ALICE, MDOT, ONE_HUNDRED)
-		.user_balance(ALICE, MBTC, 1)
-		.pool_balance(BTC, ONE_HUNDRED)
-		.pool_borrow_underlying(DOT, dollars(40))
-		.build()
-		.execute_with(|| {
-			let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
-			// underlying_amount = 10 * 0.4 = 4
-			assert_eq!(TestPools::wrapped_to_underlying(10, exchange_rate_dot), Ok(4));
-
-			// Overflow in calculation: underlying_amount = max_value() * exchange_rate
-			let exchange_rate_btc = TestPools::get_exchange_rate(BTC).unwrap();
-			assert_err!(
-				TestPools::wrapped_to_underlying(Balance::max_value(), exchange_rate_btc),
-				Error::<Test>::ConversionError
-			);
-		});
-}
-
-#[test]
 fn calculate_exchange_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// exchange_rate = (102 - 2 + 20) / 100 = 1.2
@@ -365,24 +319,6 @@ fn calculate_exchange_rate_should_work() {
 }
 
 #[test]
-fn get_exchange_rate_should_work() {
-	ExtBuilder::default()
-		.pool_balance(DOT, dollars(100_u128))
-		.user_balance(ALICE, MDOT, dollars(125_u128))
-		.pool_borrow_underlying(DOT, dollars(300_u128))
-		.build()
-		.execute_with(|| {
-			// Pool needs to be created first
-			assert_noop!(TestPools::get_exchange_rate(ETH), Error::<Test>::PoolNotFound);
-			// exchange_rate = (100 - 0 + 300) / 125 = 3.2
-			assert_eq!(
-				TestPools::get_exchange_rate(DOT),
-				Ok(Rate::saturating_from_rational(32, 10))
-			);
-		});
-}
-
-#[test]
 fn get_user_collateral_pools_should_work() {
 	ExtBuilder::default()
 		.pool_balance(KSM, 1 * TEN_THOUSAND)
@@ -405,5 +341,83 @@ fn get_user_collateral_pools_should_work() {
 		.execute_with(|| {
 			assert_eq!(TestPools::get_user_collateral_pools(&ALICE), Ok(vec![DOT, ETH]));
 			assert_eq!(TestPools::get_user_collateral_pools(&BOB), Ok(vec![]));
+		});
+}
+
+// Currency converter tests
+#[test]
+fn get_exchange_rate_should_work() {
+	ExtBuilder::default()
+		.pool_balance(DOT, dollars(100_u128))
+		.user_balance(ALICE, MDOT, dollars(125_u128))
+		.pool_borrow_underlying(DOT, dollars(300_u128))
+		.build()
+		.execute_with(|| {
+			// Pool needs to be created first
+			assert_noop!(TestPools::get_exchange_rate(ETH), Error::<Test>::PoolNotFound);
+			// exchange_rate = (100 - 0 + 300) / 125 = 3.2
+			assert_eq!(
+				TestPools::get_exchange_rate(DOT),
+				Ok(Rate::saturating_from_rational(32, 10))
+			);
+		});
+}
+
+#[test]
+fn underlying_to_wrapped_and_usd_should_work() {
+	ExtBuilder::default()
+		.user_balance(ALICE, DOT, ONE_HUNDRED)
+		.user_balance(ALICE, MDOT, ONE_HUNDRED)
+		.pool_borrow_underlying(DOT, dollars(40))
+		.build()
+		.execute_with(|| {
+			// exchange_rate = 40 / 100 = 0.4
+			let exchange_rate = TestPools::get_exchange_rate(DOT).unwrap();
+			assert_eq!(TestPools::underlying_to_wrapped(10, exchange_rate), Ok(25));
+
+			// Overflow in calculation: wrapped_amount = max_value() / exchange_rate,
+			// when exchange_rate < 1
+			assert_err!(
+				TestPools::underlying_to_wrapped(Balance::max_value(), exchange_rate),
+				Error::<Test>::ConversionError
+			);
+
+			// oracle_price = 2 USD.
+			let oracle_price = <Test as Config>::PriceSource::get_underlying_price(DOT).unwrap();
+			assert_eq!(TestPools::underlying_to_usd(10, oracle_price), Ok(20));
+
+			assert_eq!(TestPools::usd_to_underlying(20, oracle_price), Ok(10));
+		});
+}
+
+#[test]
+fn wrapped_to_underlying_and_usd_should_work() {
+	ExtBuilder::default()
+		.pool_with_params(DOT, Balance::zero(), Rate::zero(), Balance::zero())
+		.pool_with_params(BTC, Balance::zero(), Rate::zero(), Balance::zero())
+		.user_balance(ALICE, DOT, ONE_HUNDRED)
+		.user_balance(ALICE, MDOT, ONE_HUNDRED)
+		.user_balance(ALICE, MBTC, 1)
+		.pool_balance(BTC, ONE_HUNDRED)
+		.pool_borrow_underlying(DOT, dollars(40))
+		.build()
+		.execute_with(|| {
+			let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
+			// underlying_amount = 10 * 0.4 = 4
+			assert_eq!(TestPools::wrapped_to_underlying(10, exchange_rate_dot), Ok(4));
+
+			// Overflow in calculation: underlying_amount = max_value() * exchange_rate
+			let exchange_rate_btc = TestPools::get_exchange_rate(BTC).unwrap();
+			assert_err!(
+				TestPools::wrapped_to_underlying(Balance::max_value(), exchange_rate_btc),
+				Error::<Test>::ConversionError
+			);
+
+			// oracle_price = 2 USD.
+			let oracle_price = <Test as Config>::PriceSource::get_underlying_price(DOT).unwrap();
+			assert_eq!(TestPools::wrapped_to_usd(10, exchange_rate_dot, oracle_price), Ok(8));
+
+			// wrapped_amount = 20 / 2 / 0.4 = 25
+			assert_eq!(TestPools::usd_to_wrapped(20, exchange_rate_dot, oracle_price), Ok(25));
 		});
 }

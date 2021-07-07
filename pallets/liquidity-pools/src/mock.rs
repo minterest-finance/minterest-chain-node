@@ -8,6 +8,7 @@ pub use minterest_primitives::currency::CurrencyType::WrappedToken;
 use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId};
 use orml_traits::parameter_type_with_key;
+use pallet_traits::PricesManager;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -48,10 +49,9 @@ parameter_types! {
 }
 
 pub struct MockPriceSource;
-
 impl PricesManager<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
-		Some(Price::one())
+		Some(Price::saturating_from_integer(2))
 	}
 
 	fn lock_price(_currency_id: CurrencyId) {}
