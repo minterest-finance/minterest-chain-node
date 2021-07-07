@@ -157,15 +157,15 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 		at: Option<BlockHash>,
 	) -> Result<Option<(Interest, Interest, Interest)>>;
 
-	// FIXME: Currently all parameters are stabbed to equal to one.
+	// TODO: Currently all parameters are stabbed to equal to one.
 	/// Return user's information which is required by WEB 2.0 part.
 	///
 	///  - `&self` :  Self reference
 	///  - `account_id`: current account id.
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	/// Returns:
-	/// - (user_total_collateral,user_total_supply_in_usd,user_total_borrow_in_usd,
-	///   user_total_supply_apy,user_total_borrow_apy,user_net_apy)
+	/// - (user_total_collateral, user_total_supply_in_usd, user_total_borrow_in_usd,
+	///   user_total_supply_apy, user_total_borrow_apy, user_net_apy)
 	#[rpc(name = "controller_getUserData")]
 	fn get_user_data(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<UserData>>;
 }

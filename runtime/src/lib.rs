@@ -772,6 +772,7 @@ impl_runtime_apis! {
 	}
 
 	impl controller_rpc_runtime_api::ControllerRuntimeApi<Block, AccountId> for Runtime {
+		// TODO: Fill RPC with real data according to task MIN-483
 		fn get_user_data(_account_id: AccountId) -> Option<UserData> {
 			Some(UserData { total_collateral_in_usd: Balance::one(), total_supply_in_usd: Balance::one(), total_borrow_in_usd: Balance::one(), total_supply_apy: Rate::one(), total_borrow_apy: Rate::one(), net_apy: Rate::one() })
 		}
