@@ -644,10 +644,10 @@ impl<T: Config> Pallet<T> {
 		T::MultiCurrency::deposit(wrapped_id, &who, deposit_wrapped_amount)?;
 
 		// Reset liquidation_attempts if it's greater than zero.
-		let mut pool_params = T::ManagerLiquidityPools::get_pool_user_data(underlying_asset, &who);
+		let mut pool_params = T::ManagerLiquidityPools::get_user_data(underlying_asset, &who);
 		if !pool_params.liquidation_attempts.is_zero() {
 			pool_params.liquidation_attempts = u8::zero();
-			T::ManagerLiquidityPools::set_pool_user_data(&who, underlying_asset, pool_params);
+			T::ManagerLiquidityPools::set_user_data(&who, underlying_asset, pool_params);
 		}
 
 		Ok((deposit_underlying_amount, wrapped_id, deposit_wrapped_amount))
@@ -746,7 +746,7 @@ impl<T: Config> Pallet<T> {
 
 		let pool_available_liquidity = T::ManagerLiquidityPools::get_pool_available_liquidity(underlying_asset);
 
-		// Raise an error if protocol has insufficient underlying cash.
+		// Raise an error if pool has insufficient supply underlying balance.
 		ensure!(
 			borrow_amount <= pool_available_liquidity,
 			Error::<T>::NotEnoughLiquidityAvailable

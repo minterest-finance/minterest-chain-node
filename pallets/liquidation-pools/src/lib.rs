@@ -630,7 +630,7 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	fn pools_account_id() -> T::AccountId {
 		T::LiquidationPoolsPalletId::get().into_account()
 	}
-	/// Gets current the total amount of cash the liquidation pool has.
+	/// Gets current liquidation pool underlying amount.
 	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance {
 		let module_account_id = Self::pools_account_id();
 		T::MultiCurrency::free_balance(pool_id, &module_account_id)

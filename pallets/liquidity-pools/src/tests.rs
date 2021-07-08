@@ -311,7 +311,7 @@ fn calculate_exchange_rate_should_work() {
 			Ok(Rate::saturating_from_rational(1, 1))
 		);
 
-		// Overflow in calculation: pool_cash + pool_borrowed
+		// Overflow in calculation: pool_supply_underlying + pool_borrow_underlying
 		assert_noop!(
 			TestPools::calculate_exchange_rate(Balance::max_value(), 100, 100, 100),
 			Error::<Test>::ExchangeRateCalculationError

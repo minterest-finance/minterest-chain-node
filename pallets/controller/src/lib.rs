@@ -842,7 +842,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Calculates the utilization rate of the pool.
-	/// - `pool_supply_underlying_balance`: The amount of cash in the pool.
+	/// - `pool_supply_underlying_balance`: The amount of underlying assets in the pool.
 	/// - `pool_borrow_underlying`: The amount of borrows in the pool.
 	/// - `pool_protocol_interest`: The amount of interest in the pool (currently unused).
 	///

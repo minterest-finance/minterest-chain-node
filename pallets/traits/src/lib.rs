@@ -74,8 +74,8 @@ pub trait LiquidityPoolStorageProvider<AccountId, Pool> {
 /// Provides functionality for working with a user's storage. Set parameters in storage,
 /// get parameters, check parameters.
 pub trait UserStorageProvider<AccountId, PoolUserData> {
-	/// Sets pool user data.
-	fn set_pool_user_data(who: &AccountId, pool_id: CurrencyId, pool_user_data: PoolUserData);
+	/// Sets user data.
+	fn set_user_data(who: &AccountId, pool_id: CurrencyId, user_data: PoolUserData);
 
 	/// Sets the total borrowed and interest index for user.
 	fn set_user_borrow_and_interest_index(
@@ -85,8 +85,8 @@ pub trait UserStorageProvider<AccountId, PoolUserData> {
 		new_interest_index: Rate,
 	);
 
-	/// Gets pool user data.
-	fn get_pool_user_data(pool_id: CurrencyId, who: &AccountId) -> PoolUserData;
+	/// Gets user data.
+	fn get_user_data(pool_id: CurrencyId, who: &AccountId) -> PoolUserData;
 
 	/// Global borrow_index as of the most recent balance-changing action.
 	fn get_user_borrow_index(who: &AccountId, pool_id: CurrencyId) -> Rate;
