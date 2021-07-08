@@ -14,8 +14,9 @@
 //! liquidity pools.
 //! -`UserStorageProvider`: provides functionality for working with a user's storage.
 //! Set parameters in storage, get parameters, check parameters.
-//! -`CurrencyConverter`: used to get the exchange rate between underlying assets and wrapped tokens.
-//!  This trait also provides functionality for converting between mTokens, underlying assets and USD.
+//! -`CurrencyConverter`: used to get the exchange rate between underlying assets and wrapped
+//! tokens. This trait also provides functionality for converting between mTokens, underlying
+//! assets and USD.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
