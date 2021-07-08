@@ -33,7 +33,7 @@ pub mod currency_mock {
 	pub const ONE_HUNDRED_THOUSAND: Balance = 100_000 * DOLLARS;
 	pub const ONE_MILL: Balance = 1_000_000 * DOLLARS;
 
-	pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
+	pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000 * DOLLARS;
 }
 
 pub mod users_mock {
@@ -257,7 +257,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type ProtocolWeightInfo = ();
 			type ControllerManager = controller::Pallet<$target>;
 			type RiskManagerAPI = TestRiskManager;
-			type MinterestModelAPI = TestMinterestModel;
+			type MinterestModelManager = TestMinterestModel;
 			type CreatePoolOrigin = EnsureSignedBy<$acc, AccountId>;
 			type WhitelistManager = whitelist_module::Pallet<$target>;
 		}

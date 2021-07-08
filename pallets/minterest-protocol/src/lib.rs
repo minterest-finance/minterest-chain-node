@@ -103,7 +103,7 @@ pub mod module {
 		type RiskManagerAPI: RiskManager;
 
 		/// Public API of risk manager pallet.
-		type MinterestModelAPI: MinterestModelManager;
+		type MinterestModelManager: MinterestModelManager;
 
 		/// The origin which may create pools. Root or
 		/// Half Minterest Council can always do this.
@@ -157,35 +157,26 @@ pub mod module {
 		/// Underlying assets added to pool and wrapped tokens minted: \[who, underlying_asset,
 		/// underlying_amount, wrapped_currency_id, wrapped_amount\]
 		Deposited(T::AccountId, CurrencyId, Balance, CurrencyId, Balance),
-
 		/// Underlying assets and wrapped tokens redeemed: \[who, underlying_asset,
 		/// underlying_amount, wrapped_currency_id, wrapped_amount\]
 		Redeemed(T::AccountId, CurrencyId, Balance, CurrencyId, Balance),
-
 		/// Borrowed a specific amount of the pool currency: \[who, underlying_asset,
 		/// the_amount_to_be_borrowed\]
 		Borrowed(T::AccountId, CurrencyId, Balance),
-
 		/// Repaid a borrow on the specific pool, for the specified amount: \[who,
 		/// underlying_asset, the_amount_repaid\]
 		Repaid(T::AccountId, CurrencyId, Balance),
-
 		/// Claimed the MNT accrued by holder: \[holder\]
 		Claimed(T::AccountId),
-
 		/// Transferred specified amount on a specified pool from one account to another:
 		/// \[who, receiver, wrapped_currency_id, wrapped_amount\]
 		Transferred(T::AccountId, T::AccountId, CurrencyId, Balance),
-
 		/// The user allowed the assets in the pool to be used as collateral: \[who, pool_id\]
 		PoolEnabledIsCollateral(T::AccountId, CurrencyId),
-
 		/// The user forbids the assets in the pool to be used as collateral: \[who, pool_id\]
 		PoolDisabledIsCollateral(T::AccountId, CurrencyId),
-
 		/// Unable to transfer protocol interest from liquidity to liquidation pool: \[pool_id\]
 		ProtocolInterestTransferFailed(CurrencyId),
-
 		/// New pool had been created: \[pool_id\]
 		PoolCreated(CurrencyId),
 	}
@@ -195,6 +186,8 @@ pub mod module {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+		/// This hook performs the transfer of protocol interest from liquidity pools to
+		/// liquidation pools. Runs after finalizing each block.
 		fn on_finalize(_block_number: T::BlockNumber) {
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 				.iter()
@@ -525,19 +518,19 @@ pub mod module {
 			T::ControllerManager::accrue_interest_rate(pool_id)?;
 			let exchange_rate = T::ManagerLiquidityPools::get_exchange_rate(pool_id)?;
 			let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
-			let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &sender);
-			let user_balance_disabled_asset =
-				T::ManagerLiquidityPools::wrapped_to_underlying(user_balance_wrapped_tokens, exchange_rate)?;
+			let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id, &sender);
+			let user_supply_underlying =
+				T::ManagerLiquidityPools::wrapped_to_underlying(user_supply_wrap, exchange_rate)?;
 
 			// Check if the user will have enough collateral if he removes one of the collaterals.
 			let (_, shortfall) = T::ControllerManager::get_hypothetical_account_liquidity(
 				&sender,
 				pool_id,
-				user_balance_disabled_asset,
-				0,
+				user_supply_underlying,
+				Balance::zero(),
 			)
 			.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
-			ensure!(shortfall == 0, Error::<T>::IsCollateralCannotBeDisabled);
+			ensure!(shortfall.is_zero(), Error::<T>::IsCollateralCannotBeDisabled);
 
 			T::ManagerLiquidityPools::disable_is_collateral_internal(&sender, pool_id);
 			Self::deposit_event(Event::PoolDisabledIsCollateral(sender, pool_id));
@@ -557,11 +550,14 @@ pub mod module {
 	}
 }
 
-// Dispatchable calls implementation
+// Private functions
 impl<T: Config> Pallet<T> {
+	/// This is a part of a new currency creation flow.
+	/// Calls internal functions `create_pool` in pallets: liquidity-pools, minterest-model,
+	/// controller, liquidation pool, risk-manager.
 	fn do_create_pool(pool_id: CurrencyId, pool_data: PoolInitData) -> DispatchResult {
 		T::ManagerLiquidityPools::create_pool(pool_id)?;
-		T::MinterestModelAPI::create_pool(
+		T::MinterestModelManager::create_pool(
 			pool_id,
 			pool_data.kink,
 			pool_data.base_rate_per_block,
@@ -587,7 +583,23 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	fn do_deposit(who: &T::AccountId, underlying_asset: CurrencyId, underlying_amount: Balance) -> TokensResult {
+	/// Performs the necessary checks for for the existence of currency, check the user's
+	/// balance, calls `accrue_interest_rate`, `update_mnt_supply_index`, `distribute_supplier_mnt`.
+	/// Transfers an asset into the protocol. The user receives a quantity of mTokens equal
+	/// to the underlying tokens supplied, divided by the current Exchange Rate.
+	/// Also resets `user_liquidation_attempts` if it's greater than zero.
+	///
+	/// - `underlying_asset`: CurrencyId of underlying assets to be transferred into the
+	///   protocol.
+	/// - `deposit_underlying_amount`: The amount of the asset to be supplied, in units of the
+	///   underlying asset.
+	///
+	/// Returns (`deposit_underlying_amount`, `wrapped_id`, `deposit_wrapped_amount`).
+	fn do_deposit(
+		who: &T::AccountId,
+		underlying_asset: CurrencyId,
+		deposit_underlying_amount: Balance,
+	) -> TokensResult {
 		ensure!(
 			underlying_asset.is_supported_underlying_asset(),
 			Error::<T>::NotValidUnderlyingAssetId
@@ -597,10 +609,10 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::PoolNotFound
 		);
 
-		ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
+		ensure!(!deposit_underlying_amount.is_zero(), Error::<T>::ZeroBalanceTransaction);
 
 		ensure!(
-			underlying_amount <= T::MultiCurrency::free_balance(underlying_asset, &who),
+			deposit_underlying_amount <= T::MultiCurrency::free_balance(underlying_asset, &who),
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
@@ -620,16 +632,17 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
 		let exchange_rate = T::ManagerLiquidityPools::get_exchange_rate(underlying_asset)?;
-		let wrapped_amount = T::ManagerLiquidityPools::underlying_to_wrapped(underlying_amount, exchange_rate)?;
+		let deposit_wrapped_amount =
+			T::ManagerLiquidityPools::underlying_to_wrapped(deposit_underlying_amount, exchange_rate)?;
 
 		T::MultiCurrency::transfer(
 			underlying_asset,
 			&who,
 			&T::ManagerLiquidityPools::pools_account_id(),
-			underlying_amount,
+			deposit_underlying_amount,
 		)?;
 
-		T::MultiCurrency::deposit(wrapped_id, &who, wrapped_amount)?;
+		T::MultiCurrency::deposit(wrapped_id, &who, deposit_wrapped_amount)?;
 
 		// Reset liquidation_attempts if it's greater than zero.
 		let mut pool_params = T::ManagerLiquidityPools::get_pool_user_data(underlying_asset, &who);
@@ -638,7 +651,7 @@ impl<T: Config> Pallet<T> {
 			T::ManagerLiquidityPools::set_pool_user_data(&who, underlying_asset, pool_params);
 		}
 
-		Ok((underlying_amount, wrapped_id, wrapped_amount))
+		Ok((deposit_underlying_amount, wrapped_id, deposit_wrapped_amount))
 	}
 
 	fn do_redeem(
@@ -797,57 +810,6 @@ impl<T: Config> Pallet<T> {
 		Ok(repay_amount)
 	}
 
-	/// Borrows are repaid by another user (possibly the borrower).
-	///
-	/// - `who`: the account paying off the borrow.
-	/// - `borrower`: the account with the debt being payed off.
-	/// - `underlying_asset`: the currency ID of the underlying asset to repay.
-	/// - `repay_amount`: the amount of the underlying asset to repay.
-	pub fn do_repay_fresh(
-		who: &T::AccountId,
-		borrower: &T::AccountId,
-		underlying_asset: CurrencyId,
-		mut repay_amount: Balance,
-		all_assets: bool,
-	) -> BalanceResult {
-		if !all_assets {
-			ensure!(!repay_amount.is_zero(), Error::<T>::ZeroBalanceTransaction);
-		}
-
-		// Fail if repay_borrow not allowed
-		ensure!(
-			T::ControllerManager::is_operation_allowed(underlying_asset, Operation::Repay),
-			Error::<T>::OperationPaused
-		);
-
-		T::MntManager::update_mnt_borrow_index(underlying_asset)?;
-		T::MntManager::distribute_borrower_mnt(underlying_asset, borrower, false)?;
-
-		// Fetch the amount the borrower owes, with accumulated interest
-		let account_borrows = T::ControllerManager::borrow_balance_stored(&borrower, underlying_asset)?;
-
-		if repay_amount.is_zero() {
-			repay_amount = account_borrows
-		}
-
-		ensure!(
-			repay_amount <= T::MultiCurrency::free_balance(underlying_asset, &who),
-			Error::<T>::NotEnoughUnderlyingAsset
-		);
-
-		T::ManagerLiquidityPools::update_state_on_repay(&borrower, underlying_asset, repay_amount, account_borrows)?;
-
-		// Transfer the repay_amount from the borrower's account to the protocol account.
-		T::MultiCurrency::transfer(
-			underlying_asset,
-			&who,
-			&T::ManagerLiquidityPools::pools_account_id(),
-			repay_amount,
-		)?;
-
-		Ok(repay_amount)
-	}
-
 	/// Sender transfers their tokens to other account
 	///
 	/// - `who`: the account transferring tokens.
@@ -945,5 +907,61 @@ impl<T: Config> Pallet<T> {
 			T::MntManager::distribute_supplier_mnt(pool_id, holder, true)?;
 			Ok(())
 		})
+	}
+}
+
+// Public API
+impl<T: Config> Pallet<T> {
+	/// Borrows are repaid by another user (possibly the borrower).
+	///
+	/// - `who`: the account paying off the borrow.
+	/// - `borrower`: the account with the debt being payed off.
+	/// - `underlying_asset`: the currency ID of the underlying asset to repay.
+	/// - `repay_amount`: the amount of the underlying asset to repay.
+	///
+	/// Note: this function should be used after `accrue_interest_rate`.
+	pub fn do_repay_fresh(
+		who: &T::AccountId,
+		borrower: &T::AccountId,
+		underlying_asset: CurrencyId,
+		mut repay_amount: Balance,
+		all_assets: bool,
+	) -> BalanceResult {
+		if !all_assets {
+			ensure!(!repay_amount.is_zero(), Error::<T>::ZeroBalanceTransaction);
+		}
+
+		// Fail if repay_borrow not allowed
+		ensure!(
+			T::ControllerManager::is_operation_allowed(underlying_asset, Operation::Repay),
+			Error::<T>::OperationPaused
+		);
+
+		T::MntManager::update_mnt_borrow_index(underlying_asset)?;
+		T::MntManager::distribute_borrower_mnt(underlying_asset, borrower, false)?;
+
+		// Fetch the amount the borrower owes, with accumulated interest
+		let account_borrows = T::ControllerManager::borrow_balance_stored(&borrower, underlying_asset)?;
+
+		if repay_amount.is_zero() {
+			repay_amount = account_borrows
+		}
+
+		ensure!(
+			repay_amount <= T::MultiCurrency::free_balance(underlying_asset, &who),
+			Error::<T>::NotEnoughUnderlyingAsset
+		);
+
+		T::ManagerLiquidityPools::update_state_on_repay(&borrower, underlying_asset, repay_amount, account_borrows)?;
+
+		// Transfer the repay_amount from the borrower's account to the protocol account.
+		T::MultiCurrency::transfer(
+			underlying_asset,
+			&who,
+			&T::ManagerLiquidityPools::pools_account_id(),
+			repay_amount,
+		)?;
+
+		Ok(repay_amount)
 	}
 }

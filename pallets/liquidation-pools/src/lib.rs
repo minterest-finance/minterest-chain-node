@@ -145,7 +145,7 @@ pub mod module {
 		BalanceRatioChanged(CurrencyId, Rate),
 		///  Maximum ideal balance has been successfully changed: \[pool_id, new_threshold_value\]
 		MaxIdealBalanceChanged(CurrencyId, Option<Balance>),
-		///  Successfull transfer to liqudation pull: \[underlying_asset_id, underlying_amount,
+		///  Successful transfer to liquidation pull: \[underlying_asset_id, underlying_amount,
 		/// who\]
 		TransferToLiquidationPool(CurrencyId, Balance, T::AccountId),
 	}
