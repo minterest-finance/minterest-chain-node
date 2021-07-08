@@ -89,7 +89,7 @@ runtime_benchmarks! {
 		set_balance(DOT, &lender, 50_000 * DOLLARS)?;
 
 		// Set liquidation_attempts grater than zero to reset them.
-		LiquidityPools::mutate_user_liquidation_attempts(DOT, &lender, true);
+		LiquidityPools::increase_user_liquidation_attempts(DOT, &lender);
 
 		System::set_block_number(10);
 
