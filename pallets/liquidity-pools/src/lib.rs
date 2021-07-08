@@ -186,10 +186,11 @@ impl<T: Config> Pallet<T> {
 	/// - `pool_supply_underlying`: The total amount of underlying tokens the liquidity pool has.
 	/// - `pool_supply_wrap`: Total number of wrapped tokens in circulation.
 	/// - `pool_protocol_interest`: Total amount of interest of the underlying held in the pool.
-	/// - `pool_borrow_underlying`: Total amount of outstanding borrows of the underlying in this pool.
+	/// - `pool_borrow_underlying`: Total amount of outstanding borrows of the underlying in this
+	/// pool.
 	///
-	/// returns `exchange_rate = (pool_supply_underlying + pool_borrow_underlying - pool_protocol_interest) /
-	/// pool_supply_wrap`.
+	/// returns `exchange_rate = (pool_supply_underlying + pool_borrow_underlying -
+	/// - pool_protocol_interest) / pool_supply_wrap`.
 	fn calculate_exchange_rate(
 		pool_supply_underlying: Balance,
 		pool_supply_wrap: Balance,
