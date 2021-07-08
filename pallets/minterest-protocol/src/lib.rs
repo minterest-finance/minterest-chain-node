@@ -589,8 +589,7 @@ impl<T: Config> Pallet<T> {
 	/// to the underlying tokens supplied, divided by the current Exchange Rate.
 	/// Also resets `user_liquidation_attempts` if it's greater than zero.
 	///
-	/// - `underlying_asset`: CurrencyId of underlying assets to be transferred into the
-	///   protocol.
+	/// - `underlying_asset`: CurrencyId of underlying assets to be transferred into the protocol.
 	/// - `deposit_underlying_amount`: The amount of the asset to be supplied, in units of the
 	///   underlying asset.
 	///
