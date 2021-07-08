@@ -1024,7 +1024,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			if T::LiquidityPoolsManager::is_pool_collateral(&account, underlying_asset) {
 				let user_supply_wrap = T::MultiCurrency::free_balance(asset, account);
 
-				// user_total_collateral += tokens_to_denom * m_token_balance
+				// user_total_collateral += tokens_to_denom * user_supply_wrap
 				user_total_collateral = sum_with_mult_result(user_total_collateral, user_supply_wrap, tokens_to_denom)
 					.map_err(|_| Error::<T>::CollateralBalanceOverflow)?;
 			}
