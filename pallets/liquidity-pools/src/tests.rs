@@ -63,20 +63,20 @@ fn set_user_borrow_and_interest_index_should_work() {
 }
 
 #[test]
-fn enable_is_collateral_internal_should_work() {
+fn enable_is_collateral_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Alice enable as collateral DOT pool.
-		TestPools::enable_is_collateral_internal(&ALICE, DOT);
+		TestPools::enable_is_collateral(&ALICE, DOT);
 
 		assert!(<PoolUserParams<Test>>::get(DOT, ALICE).is_collateral);
 	});
 }
 
 #[test]
-fn disable_is_collateral_internal_should_work() {
+fn enable_is_collateral_internal_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		// Alice disable collateral DOT pool.
-		TestPools::disable_is_collateral_internal(&ALICE, DOT);
+		TestPools::disable_is_collateral(&ALICE, DOT);
 
 		assert!(!<PoolUserParams<Test>>::get(DOT, ALICE).is_collateral);
 	});
@@ -169,12 +169,12 @@ fn check_user_available_is_collateral_should_work() {
 		.build()
 		.execute_with(|| {
 			// collateral parameter is set to false
-			assert!(!TestPools::check_user_available_collateral(&ALICE, DOT));
+			assert!(!TestPools::is_pool_collateral(&ALICE, DOT));
 
 			// set collateral parameter to true
-			TestPools::enable_is_collateral_internal(&ALICE, DOT);
+			TestPools::enable_is_collateral(&ALICE, DOT);
 
-			assert!(TestPools::check_user_available_collateral(&ALICE, DOT));
+			assert!(TestPools::is_pool_collateral(&ALICE, DOT));
 		});
 }
 
@@ -268,8 +268,8 @@ fn get_pool_members_with_loans_should_work() {
 		.pool_user_data_with_params(BTC, CHARLIE, ONE_HUNDRED, Rate::default(), true, 0)
 		.build()
 		.execute_with(|| {
-			assert_eq!(TestPools::get_pool_members_with_loans(DOT), Ok(vec![3, 1]));
-			assert_eq!(TestPools::get_pool_members_with_loans(BTC), Ok(vec![3]));
+			assert_eq!(TestPools::get_pool_members_with_loans(DOT), Ok(vec![CHARLIE, ALICE]));
+			assert_eq!(TestPools::get_pool_members_with_loans(BTC), Ok(vec![CHARLIE]));
 		});
 }
 
@@ -352,19 +352,19 @@ fn get_user_collateral_pools_should_work() {
 }
 
 #[test]
-fn mutate_user_liquidation_attempts_should_work() {
+fn increase_and_reset_user_liquidation_attempts_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		TestPools::mutate_user_liquidation_attempts(DOT, &ALICE, true);
+		TestPools::increase_user_liquidation_attempts(DOT, &ALICE);
 		assert_eq!(
 			crate::PoolUserParams::<Test>::get(DOT, ALICE).liquidation_attempts,
 			u8::one()
 		);
-		TestPools::mutate_user_liquidation_attempts(DOT, &ALICE, true);
+		TestPools::increase_user_liquidation_attempts(DOT, &ALICE);
 		assert_eq!(
 			crate::PoolUserParams::<Test>::get(DOT, ALICE).liquidation_attempts,
 			2_u8
 		);
-		TestPools::mutate_user_liquidation_attempts(DOT, &ALICE, false);
+		TestPools::reset_user_liquidation_attempts(DOT, &ALICE);
 		assert_eq!(
 			crate::PoolUserParams::<Test>::get(DOT, ALICE).liquidation_attempts,
 			u8::zero()

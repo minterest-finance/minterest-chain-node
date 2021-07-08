@@ -252,9 +252,7 @@ impl<T: Config> UserStorageProvider<T::AccountId, PoolUserData> for Pallet<T> {
 	fn get_user_collateral_pools(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
 		let mut pools: Vec<(CurrencyId, Balance)> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
-			.filter(|&underlying_id| {
-				Self::pool_exists(underlying_id) && Self::check_user_available_collateral(&who, *underlying_id)
-			})
+			.filter(|&underlying_id| Self::pool_exists(underlying_id) && Self::is_pool_collateral(&who, *underlying_id))
 			.filter_map(|&pool_id| {
 				let wrapped_id = pool_id.wrapped_asset()?;
 
@@ -277,16 +275,15 @@ impl<T: Config> UserStorageProvider<T::AccountId, PoolUserData> for Pallet<T> {
 		Ok(pools.iter().map(|pool| pool.0).collect::<Vec<CurrencyId>>())
 	}
 
-	fn check_user_available_collateral(who: &T::AccountId, pool_id: CurrencyId) -> bool {
+	fn is_pool_collateral(who: &T::AccountId, pool_id: CurrencyId) -> bool {
 		Self::pool_user_data(pool_id, who).is_collateral
 	}
 
 	fn check_user_has_collateral(who: &T::AccountId) -> bool {
 		for &pool_id in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
-			.filter(|&underlying_id| {
-				Self::pool_exists(underlying_id) && Self::check_user_available_collateral(&who, *underlying_id)
-			}) {
+			.filter(|&underlying_id| Self::pool_exists(underlying_id) && Self::is_pool_collateral(&who, *underlying_id))
+		{
 			if let Some(wrapped_id) = pool_id.wrapped_asset() {
 				if !T::MultiCurrency::free_balance(wrapped_id, &who).is_zero() {
 					return true;
@@ -296,23 +293,23 @@ impl<T: Config> UserStorageProvider<T::AccountId, PoolUserData> for Pallet<T> {
 		false
 	}
 
-	fn mutate_user_liquidation_attempts(pool_id: CurrencyId, who: &T::AccountId, is_partial_liquidation: bool) {
-		// partial_liquidation -> liquidation_attempts += 1
-		// complete_liquidation -> liquidation_attempts = 0
+	fn increase_user_liquidation_attempts(pool_id: CurrencyId, who: &T::AccountId) {
 		PoolUserParams::<T>::mutate(pool_id, &who, |p| {
-			if is_partial_liquidation {
-				p.liquidation_attempts += u8::one();
-			} else {
-				p.liquidation_attempts = u8::zero();
-			}
+			p.liquidation_attempts += u8::one();
 		})
 	}
 
-	fn enable_is_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
+	fn reset_user_liquidation_attempts(pool_id: CurrencyId, who: &T::AccountId) {
+		PoolUserParams::<T>::mutate(pool_id, &who, |p| {
+			p.liquidation_attempts = u8::zero();
+		})
+	}
+
+	fn enable_is_collateral(who: &T::AccountId, pool_id: CurrencyId) {
 		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = true)
 	}
 
-	fn disable_is_collateral_internal(who: &T::AccountId, pool_id: CurrencyId) {
+	fn disable_is_collateral(who: &T::AccountId, pool_id: CurrencyId) {
 		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = false);
 	}
 }
@@ -464,7 +461,10 @@ impl<T: Config> LiquidityPoolStorageProvider<T::AccountId, Pool> for Pallet<T> {
 }
 
 impl<T: Config> CurrencyConverter for Pallet<T> {
-	/// Gets the exchange rate between a mToken and the underlying asset.
+	/// Gets the exchange rate between a wrapped token and the underlying asset.
+	///
+	/// returns `exchange_rate = (pool_supply_underlying + pool_borrow_underlying -
+	/// - pool_protocol_interest) / pool_supply_wrap`.
 	fn get_exchange_rate(underlying_asset: CurrencyId) -> RateResult {
 		ensure!(Self::pool_exists(&underlying_asset), Error::<T>::PoolNotFound);
 
@@ -517,11 +517,8 @@ impl<T: Config> CurrencyConverter for Pallet<T> {
 		exchange_rate: Rate,
 		oracle_price: Price,
 	) -> Result<Balance, DispatchError> {
-		let usd_amount = Rate::from_inner(wrapped_amount)
-			.checked_mul(&exchange_rate)
-			.and_then(|v| v.checked_mul(&oracle_price))
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::ConversionError)?;
+		let underlying_amount = Self::wrapped_to_underlying(wrapped_amount, exchange_rate)?;
+		let usd_amount = Self::underlying_to_usd(underlying_amount, oracle_price)?;
 		Ok(usd_amount)
 	}
 
@@ -536,11 +533,8 @@ impl<T: Config> CurrencyConverter for Pallet<T> {
 
 	/// Converts a specified amount of USD into wrapped tokens.
 	fn usd_to_wrapped(usd_amount: Balance, exchange_rate: Rate, oracle_price: Price) -> Result<Balance, DispatchError> {
-		let wrapped_amount = Rate::from_inner(usd_amount)
-			.checked_div(&oracle_price)
-			.and_then(|v| v.checked_div(&exchange_rate))
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::ConversionError)?;
+		let underlying_amount = Self::usd_to_underlying(usd_amount, oracle_price)?;
+		let wrapped_amount = Self::underlying_to_wrapped(underlying_amount, exchange_rate)?;
 		Ok(wrapped_amount)
 	}
 }

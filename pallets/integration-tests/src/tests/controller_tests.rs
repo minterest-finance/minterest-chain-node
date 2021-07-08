@@ -14,7 +14,7 @@ mod tests {
 	// 1. Alice can't disable DOT as collateral (because 40 ETH won't cover 50 BTC borrowing);
 	// 2. Alice can disable ETH as collateral (because 60 DOT will cover 50 BTC borrowing);
 	#[test]
-	fn disable_is_collateral_internal_fails_if_not_cover_borrowing() {
+	fn disable_is_collateral_fails_if_not_cover_borrowing() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(BTC)

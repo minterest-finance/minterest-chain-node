@@ -511,11 +511,10 @@ impl<T: Config> Pallet<T> {
 		let (seized_pools, repay_amount) = Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, seize_amount)?;
 
 		if is_attempt_increment_required {
-			T::LiquidityPoolsManager::mutate_user_liquidation_attempts(
-				liquidated_pool_id,
-				&borrower,
-				is_partial_liquidation,
-			);
+			match is_partial_liquidation {
+				true => T::LiquidityPoolsManager::increase_user_liquidation_attempts(liquidated_pool_id, &borrower),
+				false => T::LiquidityPoolsManager::reset_user_liquidation_attempts(liquidated_pool_id, &borrower),
+			}
 		}
 
 		Self::deposit_event(Event::LiquidateUnsafeLoan(

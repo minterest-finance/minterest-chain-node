@@ -1584,9 +1584,9 @@ fn get_mnt_borrow_and_supply_rates_should_work() {
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 15_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), BTC, 25_000 * DOLLARS));
 
-			LiquidityPools::enable_is_collateral_internal(&ALICE::get(), DOT);
-			LiquidityPools::enable_is_collateral_internal(&ALICE::get(), ETH);
-			LiquidityPools::enable_is_collateral_internal(&BOB::get(), BTC);
+			LiquidityPools::enable_is_collateral(&ALICE::get(), DOT);
+			LiquidityPools::enable_is_collateral(&ALICE::get(), ETH);
+			LiquidityPools::enable_is_collateral(&BOB::get(), BTC);
 
 			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 5_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::borrow(bob(), ETH, 10_000 * DOLLARS));

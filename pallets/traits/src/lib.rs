@@ -104,23 +104,24 @@ pub trait UserStorageProvider<AccountId, PoolUserData> {
 	fn get_user_collateral_pools(who: &AccountId) -> Result<Vec<CurrencyId>, DispatchError>;
 
 	/// Checks if the user has enabled the pool as collateral.
-	fn check_user_available_collateral(who: &AccountId, pool_id: CurrencyId) -> bool;
+	fn is_pool_collateral(who: &AccountId, pool_id: CurrencyId) -> bool;
 
 	/// Checks if the user has the collateral.
 	fn check_user_has_collateral(who: &AccountId) -> bool;
 
-	/// Changes the parameter liquidation_attempts depending on the type of liquidation.
-	///
-	/// - `liquidated_pool_id`: the CurrencyId of the pool with loan, for which automatic.
-	/// - `borrower`: the borrower in automatic liquidation.
-	/// - `is_partial_liquidation`: partial or complete liquidation.
-	fn mutate_user_liquidation_attempts(pool_id: CurrencyId, who: &AccountId, is_partial_liquidation: bool);
+	/// Increases the parameter liquidation_attempts by one for user. Used in case of partial
+	/// liquidation.
+	fn increase_user_liquidation_attempts(pool_id: CurrencyId, who: &AccountId);
+
+	/// Resets the parameter liquidation_attempts equal to zero for user. Used in case of complete
+	/// liquidation.
+	fn reset_user_liquidation_attempts(pool_id: CurrencyId, who: &AccountId);
 
 	/// Sets the parameter `is_collateral` to `true`.
-	fn enable_is_collateral_internal(who: &AccountId, pool_id: CurrencyId);
+	fn enable_is_collateral(who: &AccountId, pool_id: CurrencyId);
 
 	/// Sets the parameter `is_collateral` to `false`.
-	fn disable_is_collateral_internal(who: &AccountId, pool_id: CurrencyId);
+	fn disable_is_collateral(who: &AccountId, pool_id: CurrencyId);
 }
 
 /// An abstraction of pools basic functionalities.

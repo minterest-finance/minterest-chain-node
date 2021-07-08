@@ -603,7 +603,7 @@ impl<T: Config> Pallet<T> {
 	pub fn get_user_total_collateral(who: T::AccountId) -> BalanceResult {
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
-			.filter(|&pool_id| T::LiquidityPoolsManager::check_user_available_collateral(&who, *pool_id))
+			.filter(|&pool_id| T::LiquidityPoolsManager::is_pool_collateral(&who, *pool_id))
 			.try_fold(Balance::zero(), |acc, &pool_id| -> BalanceResult {
 				let user_supply_underlying = Self::get_user_supply_underlying_balance(&who, pool_id)?;
 				let pool_collateral_factor = Self::controller_params(pool_id).collateral_factor;
@@ -1021,10 +1021,10 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 				.and_then(|v| v.checked_mul(&oracle_price))
 				.ok_or(Error::<T>::NumOverflow)?;
 
-			if T::LiquidityPoolsManager::check_user_available_collateral(&account, underlying_asset) {
+			if T::LiquidityPoolsManager::is_pool_collateral(&account, underlying_asset) {
 				let user_supply_wrap = T::MultiCurrency::free_balance(asset, account);
 
-				// sum_collateral += tokens_to_denom * m_token_balance
+				// user_total_collateral += tokens_to_denom * m_token_balance
 				user_total_collateral = sum_with_mult_result(user_total_collateral, user_supply_wrap, tokens_to_denom)
 					.map_err(|_| Error::<T>::CollateralBalanceOverflow)?;
 			}
@@ -1171,7 +1171,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	///
 	/// Return Ok if the redeem is allowed.
 	fn redeem_allowed(underlying_asset: CurrencyId, redeemer: &T::AccountId, redeem_amount: Balance) -> DispatchResult {
-		if T::LiquidityPoolsManager::check_user_available_collateral(&redeemer, underlying_asset) {
+		if T::LiquidityPoolsManager::is_pool_collateral(&redeemer, underlying_asset) {
 			let (_, shortfall) =
 				Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset, redeem_amount, 0)
 					.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;

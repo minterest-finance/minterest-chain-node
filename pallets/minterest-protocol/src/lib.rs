@@ -228,8 +228,8 @@ pub mod module {
 			Ok(().into())
 		}
 
-		/// Transfers an asset into the protocol. The user receives a quantity of mTokens equal
-		/// to the underlying tokens supplied, divided by the current Exchange Rate.
+		/// Transfers an asset into the protocol. The user receives a quantity of wrapped Tokens
+		/// equal to the underlying tokens supplied, divided by the current Exchange Rate.
 		///
 		/// - `underlying_asset`: CurrencyId of underlying assets to be transferred into the
 		///   protocol.
@@ -478,7 +478,7 @@ pub mod module {
 			);
 
 			ensure!(
-				!T::ManagerLiquidityPools::check_user_available_collateral(&sender, pool_id),
+				!T::ManagerLiquidityPools::is_pool_collateral(&sender, pool_id),
 				Error::<T>::AlreadyIsCollateral
 			);
 
@@ -487,7 +487,7 @@ pub mod module {
 			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id, &sender);
 			ensure!(!user_wrapped_balance.is_zero(), Error::<T>::IsCollateralCannotBeEnabled);
 
-			T::ManagerLiquidityPools::enable_is_collateral_internal(&sender, pool_id);
+			T::ManagerLiquidityPools::enable_is_collateral(&sender, pool_id);
 			Self::deposit_event(Event::PoolEnabledIsCollateral(sender, pool_id));
 			Ok(().into())
 		}
@@ -512,7 +512,7 @@ pub mod module {
 			);
 
 			ensure!(
-				T::ManagerLiquidityPools::check_user_available_collateral(&sender, pool_id),
+				T::ManagerLiquidityPools::is_pool_collateral(&sender, pool_id),
 				Error::<T>::IsCollateralAlreadyDisabled
 			);
 			T::ControllerManager::accrue_interest_rate(pool_id)?;
@@ -532,7 +532,7 @@ pub mod module {
 			.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 			ensure!(shortfall.is_zero(), Error::<T>::IsCollateralCannotBeDisabled);
 
-			T::ManagerLiquidityPools::disable_is_collateral_internal(&sender, pool_id);
+			T::ManagerLiquidityPools::disable_is_collateral(&sender, pool_id);
 			Self::deposit_event(Event::PoolDisabledIsCollateral(sender, pool_id));
 			Ok(().into())
 		}
@@ -583,9 +583,9 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	/// Performs the necessary checks for for the existence of currency, check the user's
+	/// Performs the necessary checks for the existence of currency, check the user's
 	/// balance, calls `accrue_interest_rate`, `update_mnt_supply_index`, `distribute_supplier_mnt`.
-	/// Transfers an asset into the protocol. The user receives a quantity of mTokens equal
+	/// Transfers an asset into the protocol. The user receives a quantity of wrapped Tokens equal
 	/// to the underlying tokens supplied, divided by the current Exchange Rate.
 	/// Also resets `user_liquidation_attempts` if it's greater than zero.
 	///

@@ -889,7 +889,7 @@ fn enable_is_collateral_should_work() {
 			assert_ok!(TestMinterestProtocol::enable_is_collateral(alice_origin(), ETH));
 			let expected_event = Event::TestMinterestProtocol(crate::Event::PoolEnabledIsCollateral(ALICE, ETH));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
-			assert!(TestPools::check_user_available_collateral(&ALICE, ETH));
+			assert!(TestPools::is_pool_collateral(&ALICE, ETH));
 
 			// ETH pool is already collateral.
 			assert_noop!(
@@ -940,7 +940,7 @@ fn disable_is_collateral_should_work() {
 			assert_ok!(TestMinterestProtocol::disable_is_collateral(alice_origin(), ETH));
 			let expected_event = Event::TestMinterestProtocol(crate::Event::PoolDisabledIsCollateral(ALICE, ETH));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
-			assert!(!TestPools::check_user_available_collateral(&ALICE, ETH));
+			assert!(!TestPools::is_pool_collateral(&ALICE, ETH));
 
 			assert_noop!(
 				TestMinterestProtocol::disable_is_collateral(alice_origin(), ETH),
