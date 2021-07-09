@@ -9,7 +9,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use frame_support::pallet_prelude::*;
-use minterest_primitives::CurrencyId;
+use minterest_primitives::{CurrencyId, Operation};
 pub use module::*;
 use pallet_traits::{UserCollateral, UserLiquidationAttemptsManager};
 use sp_runtime::traits::{One, Zero};
@@ -87,11 +87,15 @@ impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 		UserLiquidationAttempts::<T>::mutate(&who, |p| *p = u8::zero())
 	}
 
-	fn mutate_upon_deposit(pool_id: CurrencyId, who: &T::AccountId) {
-		if T::UserCollateral::is_pool_collateral(&who, pool_id) {
-			let user_liquidation_attempts = Self::get_user_liquidation_attempts(&who);
-			if !user_liquidation_attempts.is_zero() {
-				Self::reset_to_zero(&who);
+	/// Mutates user liquidation attempts depending on user operation.
+	/// If the user makes a deposit to the collateral pool, then attempts are set to zero.
+	fn mutate_depending_operation(pool_id: CurrencyId, who: &T::AccountId, operation: Operation) {
+		if operation == Operation::Deposit {
+			if T::UserCollateral::is_pool_collateral(&who, pool_id) {
+				let user_liquidation_attempts = Self::get_user_liquidation_attempts(&who);
+				if !user_liquidation_attempts.is_zero() {
+					Self::reset_to_zero(&who);
+				}
 			}
 		}
 	}

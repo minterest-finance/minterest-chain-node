@@ -2,8 +2,9 @@
 use super::*;
 use crate as risk_manager;
 use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId};
+use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
-use minterest_primitives::{Balance, Price, Rate};
+pub use minterest_primitives::{Balance, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PricesManager;
 use sp_core::H256;
@@ -63,11 +64,41 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 }
 
 #[derive(Default)]
-pub struct ExternalityBuilder {}
+pub struct ExternalityBuilder {
+	pools: Vec<(CurrencyId, Pool)>,
+	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
+}
 
 impl ExternalityBuilder {
+	pub fn pool_user_data(
+		mut self,
+		pool_id: CurrencyId,
+		user: AccountId,
+		borrowed: Balance,
+		interest_index: Rate,
+		is_collateral: bool,
+	) -> Self {
+		self.pool_user_data.push((
+			pool_id,
+			user,
+			PoolUserData {
+				borrowed,
+				interest_index,
+				is_collateral,
+			},
+		));
+		self
+	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+		liquidity_pools::GenesisConfig::<Test> {
+			pools: self.pools,
+			pool_user_data: self.pool_user_data,
+		}
+		.assimilate_storage(&mut storage)
+		.unwrap();
 
 		let mut ext: sp_io::TestExternalities = storage.into();
 		ext.execute_with(|| System::set_block_number(1));

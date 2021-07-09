@@ -363,7 +363,8 @@ pub trait UserLiquidationAttemptsManager<AccountId> {
 	/// Resets the parameter liquidation_attempts equal to zero for user.
 	fn reset_to_zero(who: &AccountId);
 
-	/// Modifies user liquidation attempts during a deposit operation. If the user makes a deposit
-	/// to the collateral pool, then attempts are set to zero.
-	fn mutate_upon_deposit(pool_id: CurrencyId, who: &AccountId);
+	/// Mutates user liquidation attempts depending on user operation.
+	/// If the user makes a deposit to the collateral pool, then attempts are set to zero.
+	/// TODO: a liquidation handler will be added in the future
+	fn mutate_depending_operation(pool_id: CurrencyId, who: &AccountId, operation: Operation);
 }

@@ -41,6 +41,7 @@ mod mock;
 mod tests;
 
 pub mod weights;
+use minterest_primitives::Operation::Deposit;
 pub use weights::WeightInfo;
 
 type TokensResult = result::Result<(Balance, CurrencyId, Balance), DispatchError>;
@@ -638,13 +639,7 @@ impl<T: Config> Pallet<T> {
 		)?;
 
 		T::MultiCurrency::deposit(wrapped_id, &who, deposit_wrapped_amount)?;
-
-		// Reset liquidation_attempts if it's greater than zero.
-		// TODO: Fix this logic. Only deposit in collateral pool.
-		let user_liquidation_attempts = T::UserAttempts::get_user_liquidation_attempts(&who);
-		if !user_liquidation_attempts.is_zero() {
-			T::UserAttempts::reset_to_zero(&who);
-		}
+		T::UserAttempts::mutate_depending_operation(underlying_asset, &who, Deposit);
 
 		Ok((deposit_underlying_amount, wrapped_id, deposit_wrapped_amount))
 	}
