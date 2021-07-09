@@ -3,4 +3,4 @@
 # permanently specified in this file.
 
 [advisories]
-ignore = ["RUSTSEC-2021-0013", "RUSTSEC-2021-0067",  "RUSTSEC-2021-0070"]
+ignore = ["RUSTSEC-2021-0013", "RUSTSEC-2021-0067",  "RUSTSEC-2021-0070", "RUSTSEC-2021-0060"]

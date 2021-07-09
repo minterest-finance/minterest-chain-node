@@ -534,8 +534,8 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 	/// - `pool_id` - the pool to calculate rates
 	fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Rate, Rate), DispatchError> {
 		/*
-		borrow_rate = mnt_speed * mnt_price / pool_borrow_usd
-		supply_rate = mnt_speed * mnt_price / pool_supply_usd
+		borrow_rate = mnt_speed * mnt_price / pool_borrow_in_usd
+		supply_rate = mnt_speed * mnt_price / pool_tvl_in_usd
 		*/
 		T::ControllerManager::accrue_interest_rate(pool_id)?;
 		let pool_borrow_underlying = T::LiquidityPoolsManager::get_pool_borrow_underlying(pool_id);
