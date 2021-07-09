@@ -71,7 +71,6 @@ dex = { path = "../pallets/dex", default-features = false }
 module-vesting = { path = "../pallets/vesting", default-features = false }
 whitelist-module = { path = "../pallets/whitelist", default-features = false }
 whitelist-rpc-runtime-api = { path = "../pallets/whitelist/rpc/runtime-api", default-features = false }
-chainlink-price-manager = { path = "../pallets/chainlink-price-manager", default-features = false }
 
 # ORML dependencies
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
@@ -80,6 +79,9 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 orml-oracle = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
 orml-oracle-rpc-runtime-api = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
 orml-benchmarking = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, optional = true }
+
+pallet-chainlink-feed = { git = "https://github.com/smartcontractkit/chainlink-polkadot", default-features = false }
+chainlink-price-manager = { path = "../pallets/chainlink-price-manager", default-features = false }
 
 [dev-dependencies]
 test-helper = { path = "../test-helper" }
@@ -154,4 +156,5 @@ std = [
     "whitelist-module/std",
     "whitelist-rpc-runtime-api/std",
     "chainlink-price-manager/std",
+    "pallet-chainlink-feed/std",
 ]

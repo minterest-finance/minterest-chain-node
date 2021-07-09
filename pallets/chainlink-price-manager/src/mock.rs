@@ -11,6 +11,7 @@ use sp_runtime::testing::H256;
 use sp_runtime::traits::AccountIdConversion;
 use sp_runtime::traits::BlakeTwo256;
 use sp_runtime::traits::IdentityLookup;
+use test_helper::users_mock::*;
 use test_helper::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -40,15 +41,6 @@ parameter_types! {
 	pub ChainlinkPriceManagerAccountId: AccountId =  ChainlinkPriceManagerPalletId::get().into_account();
 }
 
-pub const ADMIN: AccountId = 0;
-pub fn admin() -> Origin {
-	Origin::signed(ADMIN)
-}
-ord_parameter_types! {
-	pub const ZeroAdmin: AccountId = 0;
-}
-
-pub type AccountId = u64;
 pub type FeedId = u32;
 
 const MIN_RESERVE: u128 = 100000;
@@ -76,6 +68,9 @@ impl pallet_chainlink_feed::Config for Runtime {
 	type WeightInfo = ();
 }
 
+ord_parameter_types! {
+	pub const ZeroAdmin: AccountId = 0;
+}
 impl chainlink_price_adapter::Config for Runtime {
 	type Event = Event;
 	type ChainlinkOracle = ChainlinkFeed;
@@ -94,7 +89,6 @@ pub fn test_externalities() -> sp_io::TestExternalities {
 	.assimilate_storage(&mut storage)
 	.unwrap();
 
-	let chainlink_adapter_account: AccountId = ChainlinkFeedPalletId::get().into_account();
 	pallet_chainlink_feed::GenesisConfig::<Runtime> {
 		pallet_admin: Some(ADMIN),
 		feed_creators: vec![ChainlinkPriceManagerAccountId::get()],

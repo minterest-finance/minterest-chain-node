@@ -5,6 +5,7 @@
 use crate::mock::*;
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData};
 use sp_runtime::traits::AccountIdConversion;
+use test_helper::users_mock::*;
 
 #[test]
 fn create_feed_should_fail() {
@@ -20,8 +21,8 @@ fn create_feed_should_work() {
 	let oracle3: AccountId = 300;
 	test_externalities().execute_with(|| {
 		ChainlinkPriceManager::create_feed(
-			admin(),
-			20,
+			admin_origin(),
+			0,
 			10,
 			(10, 1_000),
 			3,

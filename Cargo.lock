@@ -4483,6 +4483,7 @@ dependencies = [
  "orml-traits 0.4.1-dev",
  "pallet-aura",
  "pallet-balances",
+ "pallet-chainlink-feed",
  "pallet-collective",
  "pallet-grandpa",
  "pallet-membership",
