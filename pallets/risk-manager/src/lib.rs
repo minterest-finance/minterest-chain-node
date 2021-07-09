@@ -9,10 +9,15 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use frame_support::pallet_prelude::*;
+pub use module::*;
+use pallet_traits::UserAttempts;
+use sp_runtime::traits::{One, Zero};
 #[cfg(feature = "std")]
 use sp_std::str;
-
-pub use module::*;
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
 
 #[frame_support::pallet]
 pub mod module {
@@ -29,6 +34,11 @@ pub mod module {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {}
+
+	/// Counter of the number of partial liquidations at the user.
+	#[pallet::storage]
+	#[pallet::getter(fn user_liquidation_attempts)]
+	pub(crate) type UserLiquidationAttempts<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, u8, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -58,3 +68,17 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {}
+
+impl<T: Config> UserAttempts<T::AccountId> for Pallet<T> {
+	fn get_user_liquidation_attempts(who: &T::AccountId) -> u8 {
+		Self::user_liquidation_attempts(who)
+	}
+
+	fn increase_user_liquidation_attempts(who: &T::AccountId) {
+		UserLiquidationAttempts::<T>::mutate(who, |p| *p += u8::one())
+	}
+
+	fn reset_user_liquidation_attempts(who: &T::AccountId) {
+		UserLiquidationAttempts::<T>::mutate(&who, |p| *p = u8::zero())
+	}
+}

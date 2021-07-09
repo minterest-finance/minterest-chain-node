@@ -65,9 +65,6 @@ pub struct PoolUserData {
 
 	/// Whether or not pool liquidity is used as a collateral.
 	pub is_collateral: bool,
-
-	/// Number of partial liquidations for debt
-	pub liquidation_attempts: u8,
 }
 
 type RateResult = result::Result<Rate, DispatchError>;
@@ -245,10 +242,6 @@ impl<T: Config> UserStorageProvider<T::AccountId, PoolUserData> for Pallet<T> {
 		Self::pool_user_data(pool_id, who).borrowed
 	}
 
-	fn get_user_liquidation_attempts(who: &T::AccountId, pool_id: CurrencyId) -> u8 {
-		Self::pool_user_data(pool_id, who).liquidation_attempts
-	}
-
 	fn get_user_collateral_pools(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
 		let mut pools: Vec<(CurrencyId, Balance)> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.iter()
@@ -291,18 +284,6 @@ impl<T: Config> UserStorageProvider<T::AccountId, PoolUserData> for Pallet<T> {
 			}
 		}
 		false
-	}
-
-	fn increase_user_liquidation_attempts(pool_id: CurrencyId, who: &T::AccountId) {
-		PoolUserParams::<T>::mutate(pool_id, &who, |p| {
-			p.liquidation_attempts += u8::one();
-		})
-	}
-
-	fn reset_user_liquidation_attempts(pool_id: CurrencyId, who: &T::AccountId) {
-		PoolUserParams::<T>::mutate(pool_id, &who, |p| {
-			p.liquidation_attempts = u8::zero();
-		})
 	}
 
 	fn enable_is_collateral(who: &T::AccountId, pool_id: CurrencyId) {

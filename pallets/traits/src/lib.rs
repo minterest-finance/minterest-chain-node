@@ -94,9 +94,6 @@ pub trait UserStorageProvider<AccountId, PoolUserData> {
 	/// Gets total user borrowing.
 	fn get_user_borrow_balance(who: &AccountId, pool_id: CurrencyId) -> Balance;
 
-	/// Gets user liquidation attempts.
-	fn get_user_liquidation_attempts(who: &AccountId, pool_id: CurrencyId) -> u8;
-
 	/// Returns an array of collateral pools for the user.
 	/// The array is sorted in descending order by the number of wrapped tokens in USD.
 	///
@@ -108,14 +105,6 @@ pub trait UserStorageProvider<AccountId, PoolUserData> {
 
 	/// Checks if the user has the collateral.
 	fn check_user_has_collateral(who: &AccountId) -> bool;
-
-	/// Increases the parameter liquidation_attempts by one for user. Used in case of partial
-	/// liquidation.
-	fn increase_user_liquidation_attempts(pool_id: CurrencyId, who: &AccountId);
-
-	/// Resets the parameter liquidation_attempts equal to zero for user. Used in case of complete
-	/// liquidation.
-	fn reset_user_liquidation_attempts(pool_id: CurrencyId, who: &AccountId);
 
 	/// Sets the parameter `is_collateral` to `true`.
 	fn enable_is_collateral(who: &AccountId, pool_id: CurrencyId);
@@ -358,4 +347,18 @@ pub trait CurrencyConverter {
 	///
 	/// Returns `usd_amount / oracle_price / exchange_rate `
 	fn usd_to_wrapped(usd_amount: Balance, exchange_rate: Rate, oracle_price: Price) -> Result<Balance, DispatchError>;
+}
+
+/// Provides functionality to manage the number of attempts to partially liquidation a user's loan.
+pub trait UserAttempts<AccountId> {
+	/// Gets user liquidation attempts.
+	fn get_user_liquidation_attempts(who: &AccountId) -> u8;
+
+	/// Increases the parameter liquidation_attempts by one for user. Used in case of partial
+	/// liquidation.
+	fn increase_user_liquidation_attempts(who: &AccountId);
+
+	/// Resets the parameter liquidation_attempts equal to zero for user. Used in case of complete
+	/// liquidation.
+	fn reset_user_liquidation_attempts(who: &AccountId);
 }

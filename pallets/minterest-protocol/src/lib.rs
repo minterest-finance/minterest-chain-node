@@ -24,7 +24,7 @@ pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
 	Borrowing, ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolStorageProvider,
-	MinterestModelManager, MntManager, PoolsManager, UserStorageProvider, WhitelistManager,
+	MinterestModelManager, MntManager, PoolsManager, UserAttempts, UserStorageProvider, WhitelistManager,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -105,6 +105,10 @@ pub mod module {
 		/// The origin which may create pools. Root or
 		/// Half Minterest Council can always do this.
 		type CreatePoolOrigin: EnsureOrigin<Self::Origin>;
+
+		/// Provides functionality to manage the number of attempts to partially
+		/// liquidation a user's loan.
+		type UserAttempts: UserAttempts<Self::AccountId>;
 
 		/// Public API of whitelist module.
 		type WhitelistManager: WhitelistManager<Self::AccountId>;
@@ -633,10 +637,10 @@ impl<T: Config> Pallet<T> {
 		T::MultiCurrency::deposit(wrapped_id, &who, deposit_wrapped_amount)?;
 
 		// Reset liquidation_attempts if it's greater than zero.
-		let mut pool_params = T::ManagerLiquidityPools::get_user_data(underlying_asset, &who);
-		if !pool_params.liquidation_attempts.is_zero() {
-			pool_params.liquidation_attempts = u8::zero();
-			T::ManagerLiquidityPools::set_user_data(&who, underlying_asset, pool_params);
+		// TODO: Fix this logic. Only deposit in collateral pool.
+		let user_liquidation_attempts = T::UserAttempts::get_user_liquidation_attempts(&who);
+		if !user_liquidation_attempts.is_zero() {
+			T::UserAttempts::reset_user_liquidation_attempts(&who);
 		}
 
 		Ok((deposit_underlying_amount, wrapped_id, deposit_wrapped_amount))

@@ -27,7 +27,10 @@ pallet-traits = { path = "../traits", default-features = false }
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7"}
 
+minterest-primitives = { path = "../../primitives" }
+test-helper = { path = "../../test-helper" }
 
 [features]
 default = ["std"]

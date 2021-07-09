@@ -354,6 +354,7 @@ impl minterest_protocol::Config for Runtime {
 	type ControllerManager = Controller;
 	type MinterestModelManager = MinterestModel;
 	type CreatePoolOrigin = EnsureRootOrHalfMinterestCouncil;
+	type UserAttempts = RiskManager;
 	type WhitelistManager = Whitelist;
 }
 

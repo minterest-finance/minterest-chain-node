@@ -6033,6 +6033,7 @@ dependencies = [
  "minterest-primitives",
  "minterest-protocol",
  "orml-traits 0.4.1-dev",
+ "pallet-balances",
  "pallet-traits",
  "parity-scale-codec",
  "serde",
@@ -6041,6 +6042,7 @@ dependencies = [
  "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
+ "test-helper",
 ]
 
 [[package]]

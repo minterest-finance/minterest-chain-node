@@ -155,7 +155,7 @@ fn get_pool_borrow_index_should_work() {
 #[test]
 fn get_user_borrow_balance_should_work() {
 	ExtBuilder::default()
-		.pool_user_data_with_params(DOT, ALICE, ONE_HUNDRED, Rate::default(), true, 0)
+		.pool_user_data_with_params(DOT, ALICE, ONE_HUNDRED, Rate::default(), true)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_user_borrow_balance(&ALICE, DOT), ONE_HUNDRED);
@@ -165,7 +165,7 @@ fn get_user_borrow_balance_should_work() {
 #[test]
 fn check_user_available_is_collateral_should_work() {
 	ExtBuilder::default()
-		.pool_user_data_with_params(DOT, ALICE, Balance::default(), Rate::default(), false, 0)
+		.pool_user_data_with_params(DOT, ALICE, Balance::default(), Rate::default(), false)
 		.build()
 		.execute_with(|| {
 			// collateral parameter is set to false
@@ -248,24 +248,14 @@ fn update_state_on_repay_should_work() {
 }
 
 #[test]
-fn get_user_liquidation_attempts_should_work() {
-	ExtBuilder::default()
-		.pool_user_data_with_params(DOT, ALICE, ONE_HUNDRED, Rate::default(), true, 12)
-		.build()
-		.execute_with(|| {
-			assert_eq!(TestPools::get_user_liquidation_attempts(&ALICE, DOT), 12);
-		});
-}
-
-#[test]
 fn get_pool_members_with_loans_should_work() {
 	ExtBuilder::default()
-		.pool_user_data_with_params(DOT, ALICE, ONE_HUNDRED, Rate::default(), true, 0)
-		.pool_user_data_with_params(DOT, BOB, 0, Rate::default(), true, 0)
-		.pool_user_data_with_params(DOT, CHARLIE, 100, Rate::default(), true, 0)
-		.pool_user_data_with_params(BTC, ALICE, 0, Rate::default(), true, 0)
-		.pool_user_data_with_params(BTC, BOB, 0, Rate::default(), true, 0)
-		.pool_user_data_with_params(BTC, CHARLIE, ONE_HUNDRED, Rate::default(), true, 0)
+		.pool_user_data_with_params(DOT, ALICE, ONE_HUNDRED, Rate::default(), true)
+		.pool_user_data_with_params(DOT, BOB, 0, Rate::default(), true)
+		.pool_user_data_with_params(DOT, CHARLIE, 100, Rate::default(), true)
+		.pool_user_data_with_params(BTC, ALICE, 0, Rate::default(), true)
+		.pool_user_data_with_params(BTC, BOB, 0, Rate::default(), true)
+		.pool_user_data_with_params(BTC, CHARLIE, ONE_HUNDRED, Rate::default(), true)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_pool_members_with_loans(DOT), Ok(vec![CHARLIE, ALICE]));
@@ -279,11 +269,11 @@ fn check_user_has_collateral_should_work() {
 		.pool_mock(DOT)
 		.pool_mock(BTC)
 		.pool_mock(ETH)
-		.pool_user_data_with_params(DOT, ALICE, Balance::zero(), Rate::default(), true, 0)
-		.pool_user_data_with_params(BTC, ALICE, Balance::zero(), Rate::default(), true, 0)
-		.pool_user_data_with_params(ETH, ALICE, Balance::zero(), Rate::default(), true, 0)
-		.pool_user_data_with_params(DOT, BOB, Balance::zero(), Rate::default(), true, 0)
-		.pool_user_data_with_params(BTC, CHARLIE, Balance::zero(), Rate::default(), false, 0)
+		.pool_user_data_with_params(DOT, ALICE, Balance::zero(), Rate::default(), true)
+		.pool_user_data_with_params(BTC, ALICE, Balance::zero(), Rate::default(), true)
+		.pool_user_data_with_params(ETH, ALICE, Balance::zero(), Rate::default(), true)
+		.pool_user_data_with_params(DOT, BOB, Balance::zero(), Rate::default(), true)
+		.pool_user_data_with_params(BTC, CHARLIE, Balance::zero(), Rate::default(), false)
 		.user_balance(ALICE, MDOT, Balance::zero())
 		.user_balance(ALICE, MBTC, Balance::zero())
 		.user_balance(ALICE, METH, TEN_THOUSAND)
@@ -337,10 +327,10 @@ fn get_user_collateral_pools_should_work() {
 		.pool_borrow_underlying(DOT, ONE_HUNDRED)
 		.pool_borrow_underlying(ETH, ONE_HUNDRED)
 		.pool_borrow_underlying(BTC, ONE_HUNDRED)
-		.pool_user_data_with_params(KSM, ALICE, Balance::zero(), Rate::default(), true, 0)
-		.pool_user_data_with_params(DOT, ALICE, Balance::zero(), Rate::default(), true, 0)
-		.pool_user_data_with_params(ETH, ALICE, Balance::zero(), Rate::default(), true, 0)
-		.pool_user_data_with_params(BTC, ALICE, Balance::zero(), Rate::default(), false, 0)
+		.pool_user_data_with_params(KSM, ALICE, Balance::zero(), Rate::default(), true)
+		.pool_user_data_with_params(DOT, ALICE, Balance::zero(), Rate::default(), true)
+		.pool_user_data_with_params(ETH, ALICE, Balance::zero(), Rate::default(), true)
+		.pool_user_data_with_params(BTC, ALICE, Balance::zero(), Rate::default(), false)
 		.user_balance(ALICE, MKSM, Balance::zero())
 		.user_balance(ALICE, MDOT, TEN_THOUSAND)
 		.user_balance(ALICE, METH, TEN_THOUSAND)
@@ -350,27 +340,6 @@ fn get_user_collateral_pools_should_work() {
 			assert_eq!(TestPools::get_user_collateral_pools(&ALICE), Ok(vec![DOT, ETH]));
 			assert_eq!(TestPools::get_user_collateral_pools(&BOB), Ok(vec![]));
 		});
-}
-
-#[test]
-fn increase_and_reset_user_liquidation_attempts_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		TestPools::increase_user_liquidation_attempts(DOT, &ALICE);
-		assert_eq!(
-			crate::PoolUserParams::<Test>::get(DOT, ALICE).liquidation_attempts,
-			u8::one()
-		);
-		TestPools::increase_user_liquidation_attempts(DOT, &ALICE);
-		assert_eq!(
-			crate::PoolUserParams::<Test>::get(DOT, ALICE).liquidation_attempts,
-			2_u8
-		);
-		TestPools::reset_user_liquidation_attempts(DOT, &ALICE);
-		assert_eq!(
-			crate::PoolUserParams::<Test>::get(DOT, ALICE).liquidation_attempts,
-			u8::zero()
-		);
-	})
 }
 
 // Currency converter tests
