@@ -3,8 +3,10 @@
 #![cfg(test)]
 
 use crate::mock::*;
+use minterest_primitives::CurrencyId;
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData};
 use sp_runtime::traits::AccountIdConversion;
+use test_helper::currency_mock::*;
 use test_helper::users_mock::*;
 
 #[test]
@@ -22,11 +24,9 @@ fn create_feed_should_work() {
 	test_externalities().execute_with(|| {
 		ChainlinkPriceManager::create_feed(
 			admin_origin(),
-			0,
+			BTC,
 			10,
-			(10, 1_000),
 			3,
-			5,
 			b"desc".to_vec(),
 			2,
 			vec![
@@ -56,5 +56,8 @@ fn create_feed_should_work() {
 		let feed_result = ChainlinkFeed::feed(feed_id.into()).unwrap();
 		let RoundData { answer, .. } = feed_result.latest_data();
 		assert_eq!(answer, 42);
+
+		assert_eq!(ChainlinkPriceManager::get_underlying_price(BTC).unwrap(), 42);
+		assert_eq!(ChainlinkPriceManager::get_underlying_price(DOT), None);
 	});
 }

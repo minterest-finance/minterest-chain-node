@@ -124,6 +124,7 @@ parameter_types! {
 	pub const DexPalletId: PalletId = PalletId(*b"min/dexs");
 	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"min/lqdy");
 	pub const ChainlinkFeedPalletId: PalletId = PalletId(*b"chl/feed");
+	pub const ChainlinkPriceManagerPalletId: PalletId = PalletId(*b"chl/pram");
 }
 
 // Do not change the order of modules. Used for genesis block.
@@ -562,6 +563,7 @@ impl module_vesting::Config for Runtime {
 
 parameter_types! {
 	pub const MaxMembersWhitelistMode: u8 = 100;
+	pub ChainlinkPriceManagerAccountId: AccountId = ChainlinkPriceManagerPalletId::get().into_account();
 }
 
 impl whitelist_module::Config for Runtime {
@@ -570,9 +572,15 @@ impl whitelist_module::Config for Runtime {
 	type WhitelistOrigin = EnsureRootOrHalfMinterestCouncil;
 	type WhitelistWeightInfo = weights::whitelist::WeightInfo<Runtime>;
 }
+
+impl chainlink_price_manager::Config for Runtime {
+	type Event = Event;
+	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
+	type PalletAccountId = ChainlinkPriceManagerAccountId;
+}
+
 pub type FeedId = u32;
 pub type Value = u128;
-
 parameter_types! {
 	pub const StringLimit: u32 = 30;
 	pub const OracleCountLimit: u32 = 25;
@@ -596,6 +604,7 @@ impl pallet_chainlink_feed::Config for Runtime {
 	type OnAnswerHandler = ();
 	type WeightInfo = ();
 }
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -626,6 +635,7 @@ construct_runtime!(
 		Prices: module_prices::{Pallet, Storage, Call, Event<T>, Config<T>},
 
 		ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Config<T>, Storage, Event<T>},
+		ChainlinkPriceManager: chainlink_price_manager::{Pallet, Call, Storage, Event<T>},
 
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},

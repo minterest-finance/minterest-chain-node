@@ -9,7 +9,9 @@
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use minterest_primitives::{CurrencyId, Price};
-use pallet_chainlink_feed::{FeedOracle, RoundId};
+use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData, RoundId};
+use sp_runtime::traits::{Bounded, One, Zero};
+use sp_runtime::FixedU128;
 use sp_std::vec::Vec;
 
 mod mock;
@@ -17,7 +19,7 @@ mod tests;
 
 pub use module::*;
 
-type ChainlinkFeedPallet<T> = pallet_chainlink_feed::Module<T>;
+type ChainlinkFeedPallet<T> = pallet_chainlink_feed::Pallet<T>;
 
 #[frame_support::pallet]
 pub mod module {
@@ -26,8 +28,6 @@ pub mod module {
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_chainlink_feed::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-
-		type ChainlinkOracle: FeedOracle<Self>;
 
 		/// The pallet account id, keep all assets in Pools.
 		type PalletAccountId: Get<Self::AccountId>;
@@ -42,6 +42,16 @@ pub mod module {
 		/// Some wrong behavior
 		Wrong,
 	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn main_feed_keeper)]
+	pub type MainFeedKeeper<T: Config> = StorageMap<_, Blake2_128Concat, CurrencyId, T::FeedId, OptionQuery>;
+
+	// TODO IMPLEMENT
+	// #[pallet::storage]
+	// #[pallet::getter(fn reserve_feed_keeper)]
+	// pub type ReserveFeedKeeper<T: Config> = StorageMap<_, Blake2_128Concat, CurrencyId, T::FeedId,
+	// ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(fn deposit_event)]
@@ -60,11 +70,11 @@ pub mod module {
 		#[transactional]
 		pub fn create_feed(
 			origin: OriginFor<T>,
-			payment: pallet_chainlink_feed::BalanceOf<T>,
+			currency_id: CurrencyId,
+			// payment: pallet_chainlink_feed::BalanceOf<T>,
 			timeout: T::BlockNumber,
-			submission_value_bounds: (T::Value, T::Value),
+			// submission_value_bounds: (T::Value, T::Value),
 			min_submissions: u32,
-			decimals: u8,
 			description: Vec<u8>,
 			restart_delay: RoundId,
 			oracles: Vec<(T::AccountId, T::AccountId)>,
@@ -73,20 +83,38 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
+			let feed_id = pallet_chainlink_feed::FeedCounter::<T>::get();
 			let adapter_origin = frame_system::RawOrigin::Signed(T::PalletAccountId::get()).into();
+
 			<ChainlinkFeedPallet<T>>::create_feed(
 				adapter_origin,
-				payment,
+				pallet_chainlink_feed::BalanceOf::<T>::zero(),
 				timeout,
-				submission_value_bounds,
+				(T::Value::zero(), T::Value::max_value()), // TODO think about minimal value greater than zero
 				min_submissions,
-				decimals,
+				18, // 18 decimals
 				description,
 				restart_delay,
 				oracles,
 				pruning_window,
 				max_debt,
-			)
+			)?;
+
+			MainFeedKeeper::<T>::insert(currency_id, feed_id);
+			Ok(().into())
 		}
+	}
+}
+
+impl<T: Config> Pallet<T> {
+	pub fn get_underlying_price(currency_id: CurrencyId) -> Option<T::Value> {
+		let feed_id = MainFeedKeeper::<T>::get(currency_id);
+		if feed_id == None {
+			return None;
+		}
+
+		let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id.unwrap().into()).unwrap();
+		let RoundData { answer, .. } = feed_result.latest_data();
+		Some(answer)
 	}
 }

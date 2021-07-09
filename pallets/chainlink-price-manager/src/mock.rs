@@ -42,9 +42,7 @@ parameter_types! {
 }
 
 pub type FeedId = u32;
-
 const MIN_RESERVE: u128 = 100000;
-
 parameter_types! {
 	pub const StringLimit: u32 = 30;
 	pub const OracleCountLimit: u32 = 25;
@@ -71,9 +69,9 @@ impl pallet_chainlink_feed::Config for Runtime {
 ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
 }
+
 impl chainlink_price_adapter::Config for Runtime {
 	type Event = Event;
-	type ChainlinkOracle = ChainlinkFeed;
 	type PalletAccountId = ChainlinkPalletAccountId;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 }
