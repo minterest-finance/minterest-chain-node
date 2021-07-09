@@ -115,13 +115,13 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn pool_total_borrowed(mut self, pool_id: CurrencyId, total_borrowed: Balance) -> Self {
+	pub fn pool_borrow_underlying(mut self, pool_id: CurrencyId, pool_borrowed: Balance) -> Self {
 		self.pools.push((
 			pool_id,
 			Pool {
-				total_borrowed,
+				borrowed: pool_borrowed,
 				borrow_index: Rate::saturating_from_rational(15, 10),
-				total_protocol_interest: Balance::zero(),
+				protocol_interest: Balance::zero(),
 			},
 		));
 		self
@@ -141,7 +141,7 @@ impl ExtBuilder {
 		mut self,
 		pool_id: CurrencyId,
 		user: AccountId,
-		total_borrowed: Balance,
+		borrowed: Balance,
 		interest_index: Rate,
 		is_collateral: bool,
 		liquidation_attempts: u8,
@@ -150,7 +150,7 @@ impl ExtBuilder {
 			pool_id,
 			user,
 			PoolUserData {
-				total_borrowed,
+				borrowed,
 				interest_index,
 				is_collateral,
 				liquidation_attempts,

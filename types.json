@@ -54,9 +54,9 @@
       "liquidation_fee": "Rate"
     },
     "Pool": {
-      "total_borrowed": "Balance",
+      "borrowed": "Balance",
       "borrow_index": "Rate",
-      "total_protocol_interest": "Balance"
+      "protocol_interest": "Balance"
     },
     "LiquidationPoolData": {
       "deviation_threshold": "Rate",
@@ -64,7 +64,7 @@
       "max_ideal_balance": "Option<Balance>"
     },
     "PoolUserData": {
-      "total_borrowed": "Balance",
+      "borrowed": "Balance",
       "interest_index": "Rate",
       "is_collateral": "bool",
       "liquidation_attempts": "u8"

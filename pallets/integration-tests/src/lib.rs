@@ -22,7 +22,7 @@ mod tests {
 	use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 	use minterest_protocol::{Error as MinterestProtocolError, PoolInitData};
 	use orml_traits::{parameter_type_with_key, MultiCurrency};
-	use pallet_traits::{PoolsManager, PricesManager};
+	use pallet_traits::{CurrencyConverter, PoolsManager, PricesManager};
 	use risk_manager::RiskManagerData;
 	use sp_core::H256;
 	use sp_runtime::{
@@ -254,13 +254,13 @@ mod tests {
 			self
 		}
 
-		pub fn pool_total_borrowed(mut self, pool_id: CurrencyId, total_borrowed: Balance) -> Self {
+		pub fn pool_borrow_underlying(mut self, pool_id: CurrencyId, borrowed: Balance) -> Self {
 			self.pools.push((
 				pool_id,
 				Pool {
-					total_borrowed,
+					borrowed,
 					borrow_index: Rate::one(),
-					total_protocol_interest: Balance::zero(),
+					protocol_interest: Balance::zero(),
 				},
 			));
 			self
@@ -270,7 +270,7 @@ mod tests {
 			mut self,
 			pool_id: CurrencyId,
 			user: AccountId,
-			total_borrowed: Balance,
+			borrowed: Balance,
 			interest_index: Rate,
 			is_collateral: bool,
 			liquidation_attempts: u8,
@@ -279,7 +279,7 @@ mod tests {
 				pool_id,
 				user,
 				PoolUserData {
-					total_borrowed,
+					borrowed,
 					interest_index,
 					is_collateral,
 					liquidation_attempts,
@@ -292,9 +292,9 @@ mod tests {
 			self.pools.push((
 				pool_id,
 				Pool {
-					total_borrowed: Balance::zero(),
+					borrowed: Balance::zero(),
 					borrow_index: Rate::one(),
-					total_protocol_interest: Balance::zero(),
+					protocol_interest: Balance::zero(),
 				},
 			));
 			self
@@ -350,7 +350,7 @@ mod tests {
 			.unwrap();
 
 			controller::GenesisConfig::<Test> {
-				controller_dates: self.controller_data,
+				controller_params: self.controller_data,
 				pause_keepers: vec![
 					(ETH, PauseKeeper::all_unpaused()),
 					(DOT, PauseKeeper::all_unpaused()),

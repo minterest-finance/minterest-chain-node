@@ -8,6 +8,7 @@ pub use minterest_primitives::currency::CurrencyType::WrappedToken;
 use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId};
 use orml_traits::parameter_type_with_key;
+use pallet_traits::PricesManager;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -48,10 +49,9 @@ parameter_types! {
 }
 
 pub struct MockPriceSource;
-
 impl PricesManager<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
-		Some(Price::one())
+		Some(Price::saturating_from_integer(2))
 	}
 
 	fn lock_price(_currency_id: CurrencyId) {}
@@ -89,19 +89,31 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn pool_borrow_underlying(mut self, pool_id: CurrencyId, pool_borrowed: Balance) -> Self {
+		self.pools.push((
+			pool_id,
+			Pool {
+				borrowed: pool_borrowed,
+				borrow_index: Rate::saturating_from_rational(1, 1),
+				protocol_interest: Balance::zero(),
+			},
+		));
+		self
+	}
+
 	pub fn pool_with_params(
 		mut self,
 		pool_id: CurrencyId,
-		total_borrowed: Balance,
+		borrowed: Balance,
 		borrow_index: Rate,
-		total_protocol_interest: Balance,
+		protocol_interest: Balance,
 	) -> Self {
 		self.pools.push((
 			pool_id,
 			Pool {
-				total_borrowed,
+				borrowed,
 				borrow_index,
-				total_protocol_interest,
+				protocol_interest,
 			},
 		));
 		self
@@ -111,7 +123,7 @@ impl ExtBuilder {
 		mut self,
 		pool_id: CurrencyId,
 		user: AccountId,
-		total_borrowed: Balance,
+		borrowed: Balance,
 		interest_index: Rate,
 		is_collateral: bool,
 		liquidation_attempts: u8,
@@ -120,7 +132,7 @@ impl ExtBuilder {
 			pool_id,
 			user,
 			PoolUserData {
-				total_borrowed,
+				borrowed,
 				interest_index,
 				is_collateral,
 				liquidation_attempts,
@@ -133,21 +145,9 @@ impl ExtBuilder {
 		self.pools.push((
 			pool_id,
 			Pool {
-				total_borrowed: Balance::default(),
+				borrowed: Balance::default(),
 				borrow_index: Rate::default(),
-				total_protocol_interest: Balance::default(),
-			},
-		));
-		self
-	}
-
-	pub fn pool_total_borrowed(mut self, pool_id: CurrencyId, total_borrowed: Balance) -> Self {
-		self.pools.push((
-			pool_id,
-			Pool {
-				total_borrowed,
-				borrow_index: Rate::one(),
-				total_protocol_interest: Balance::zero(),
+				protocol_interest: Balance::default(),
 			},
 		));
 		self

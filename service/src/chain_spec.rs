@@ -257,40 +257,40 @@ fn minterest_genesis(
 				(
 					ETH,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					DOT,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					KSM,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					BTC,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 			],
 			pool_user_data: vec![],
 		},
 		controller: ControllerConfig {
-			controller_dates: vec![
+			controller_params: vec![
 				(
 					ETH,
 					ControllerData {
@@ -556,40 +556,40 @@ fn testnet_genesis(
 				(
 					ETH,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					DOT,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					KSM,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					BTC,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 			],
 			pool_user_data: vec![],
 		},
 		controller: ControllerConfig {
-			controller_dates: vec![
+			controller_params: vec![
 				(
 					ETH,
 					ControllerData {

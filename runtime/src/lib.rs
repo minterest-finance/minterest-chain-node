@@ -31,7 +31,7 @@ pub use mnt_token_rpc_runtime_api::MntBalanceInfo;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::{fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
-use pallet_traits::{ControllerManager, LiquidityPoolsManager, MntManager};
+use pallet_traits::{ControllerManager, LiquidityPoolStorageProvider, MntManager};
 use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -346,14 +346,14 @@ impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime 
 
 impl minterest_protocol::Config for Runtime {
 	type Event = Event;
-	type Borrowing = LiquidityPools;
+	type MultiCurrency = Currencies;
 	type ManagerLiquidationPools = LiquidationPools;
 	type ManagerLiquidityPools = LiquidityPools;
 	type MntManager = MntToken;
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
 	type ControllerManager = Controller;
 	type RiskManagerAPI = RiskManager;
-	type MinterestModelAPI = MinterestModel;
+	type MinterestModelManager = MinterestModel;
 	type CreatePoolOrigin = EnsureRootOrHalfMinterestCouncil;
 	type WhitelistManager = Whitelist;
 }
@@ -412,6 +412,8 @@ parameter_types! {
 
 impl controller::Config for Runtime {
 	type Event = Event;
+	type MultiCurrency = Currencies;
+	type PriceSource = Prices;
 	type LiquidityPoolsManager = LiquidityPools;
 	type MinterestModelManager = MinterestModel;
 	type MaxBorrowCap = MaxBorrowCap;
@@ -446,6 +448,7 @@ parameter_types! {
 
 impl risk_manager::Config for Runtime {
 	type Event = Event;
+	type PriceSource = Prices;
 	type UnsignedPriority = RiskManagerPriority;
 	type LiquidationPoolsManager = LiquidationPools;
 	type LiquidityPoolsManager = LiquidityPools;
@@ -791,8 +794,8 @@ impl_runtime_apis! {
 			Controller::get_utilization_rate(pool_id)
 		}
 
-		fn get_user_total_supply_and_borrowed_balance_in_usd(account_id: AccountId) -> Option<UserPoolBalanceData> {
-			let (total_supply, total_borrowed) = Controller::get_user_total_supply_and_borrowed_balance_in_usd(&account_id).ok()?;
+		fn get_user_total_supply_and_borrow_balance_in_usd(account_id: AccountId) -> Option<UserPoolBalanceData> {
+			let (total_supply, total_borrowed) = Controller::get_user_total_supply_and_borrow_balance_in_usd(&account_id).ok()?;
 
 			Some(UserPoolBalanceData {total_supply, total_borrowed})
 		}
@@ -819,11 +822,11 @@ impl_runtime_apis! {
 		}
 
 		fn get_user_borrow_per_asset(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
-				Some(BalanceInfo{amount: Controller::get_user_borrow_per_asset(&account_id, underlying_asset_id).ok()?})
+				Some(BalanceInfo{amount: Controller::get_user_borrow_underlying_balance(&account_id, underlying_asset_id).ok()?})
 		}
 
 		fn get_user_underlying_balance_per_asset(account_id: AccountId, pool_id: CurrencyId) -> Option<BalanceInfo> {
-				Some(BalanceInfo{amount: Controller::get_user_underlying_balance_per_asset(&account_id, pool_id).ok()?})
+				Some(BalanceInfo{amount: Controller::get_user_supply_underlying_balance(&account_id, pool_id).ok()?})
 		}
 
 		fn pool_exists(underlying_asset_id: CurrencyId) -> bool {

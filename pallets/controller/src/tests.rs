@@ -56,7 +56,7 @@ fn protocol_operations_not_working_for_nonexisting_pool() {
 #[test]
 fn accrue_interest_should_work() {
 	ExtBuilder::default()
-		.pool_total_borrowed(DOT, dollars(80_u128))
+		.pool_borrow_underlying(DOT, dollars(80_u128))
 		.pool_mock(BTC)
 		.pool_balance(DOT, dollars(20_u128))
 		.build()
@@ -65,8 +65,8 @@ fn accrue_interest_should_work() {
 
 			assert_ok!(Controller::accrue_interest_rate(DOT));
 
-			assert_eq!(Controller::controller_dates(DOT).last_interest_accrued_block, 1);
-			assert_eq!(TestPools::pools(DOT).total_protocol_interest, 57_600_000_000);
+			assert_eq!(Controller::controller_params(DOT).last_interest_accrued_block, 1);
+			assert_eq!(TestPools::pools(DOT).protocol_interest, 57_600_000_000);
 			assert_eq!(
 				Controller::get_pool_exchange_borrow_and_supply_rates(DOT),
 				Some((
@@ -75,7 +75,7 @@ fn accrue_interest_should_work() {
 					Rate::from_inner(100_569_600_394)
 				))
 			);
-			assert_eq!(TestPools::pools(DOT).total_borrowed, 80_000_000_576_000_000_000);
+			assert_eq!(TestPools::pools(DOT).borrowed, 80_000_000_576_000_000_000);
 			assert_eq!(
 				TestPools::pools(DOT).borrow_index,
 				Rate::from_inner(1_000_000_007_200_000_000)
@@ -86,14 +86,14 @@ fn accrue_interest_should_work() {
 #[test]
 fn accrue_interest_should_not_work() {
 	ExtBuilder::default()
-		.pool_total_borrowed(DOT, dollars(80_u128))
+		.pool_borrow_underlying(DOT, dollars(80_u128))
 		.pool_balance(DOT, dollars(20_u128))
 		.build()
 		.execute_with(|| {
 			System::set_block_number(1);
 
 			assert_ok!(Controller::accrue_interest_rate(DOT));
-			assert_eq!(Controller::controller_dates(DOT).last_interest_accrued_block, 1);
+			assert_eq!(Controller::controller_params(DOT).last_interest_accrued_block, 1);
 
 			assert_ok!(Controller::set_max_borrow_rate(
 				alice_origin(),
@@ -196,7 +196,7 @@ fn borrow_balance_stored_fails_if_num_overflow() {
 #[test]
 fn calculate_utilization_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		// if current_total_borrowed_balance == 0 then return Ok(0)
+		// if current_pool_borrow_underlying == 0 then return Ok(0)
 		assert_eq!(
 			Controller::calculate_utilization_rate(100, 0, 60),
 			Ok(Rate::from_inner(0))
@@ -207,14 +207,14 @@ fn calculate_utilization_rate_should_work() {
 			Ok(Rate::saturating_from_rational(8, 10))
 		);
 
-		// Overflow in calculation: total_balance + total_borrowed = max_value() + 80
+		// Overflow in calculation: pool_balance + pool_borrowed = max_value() + 80
 		assert_noop!(
 			Controller::calculate_utilization_rate(Balance::max_value(), 80, 2),
 			Error::<Runtime>::UtilizationRateCalculationError
 		);
 
 		// Overflow in calculation:
-		// total_balance_total_borrowed_sum - total_protocol_interest = ... - max_value()
+		// total_balance_total_borrowed_sum - pool_protocol_interest = ... - max_value()
 		assert_noop!(
 			Controller::calculate_utilization_rate(22, 80, Balance::max_value()),
 			Error::<Runtime>::UtilizationRateCalculationError
@@ -319,7 +319,7 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 		.user_balance(ALICE, DOT, 70)
 		.user_balance(ALICE, MDOT, 60)
 		.pool_balance(DOT, 60)
-		.pool_total_borrowed(DOT, 30)
+		.pool_borrow_underlying(DOT, 30)
 		.pool_user_data(DOT, ALICE, 30, Rate::saturating_from_rational(1, 1), false, 0)
 		.build()
 		.execute_with(|| {
@@ -334,7 +334,7 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 			);
 
 			// Alice set collateral parameter value to true for DOT pool. Alice can borrow.
-			<LiquidityPools<Runtime>>::enable_is_collateral_internal(&ALICE, DOT);
+			TestPools::enable_is_collateral(&ALICE, DOT);
 
 			assert_eq!(
 				Controller::get_hypothetical_account_liquidity(&ALICE, DOT, 0, 50),
@@ -352,7 +352,7 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 	ExtBuilder::default()
 		.pool_balance(DOT, dollars(100_u128))
 		.user_balance(ALICE, MDOT, dollars(125_u128))
-		.pool_total_borrowed(DOT, dollars(300_u128))
+		.pool_borrow_underlying(DOT, dollars(300_u128))
 		.build()
 		.execute_with(|| {
 			// exchange_rate = (100 - 0 + 300) / 125 = 3.2
@@ -366,7 +366,7 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 			System::set_block_number(100);
 			assert_eq!(
 				Controller::get_pool_exchange_borrow_and_supply_rates(DOT).unwrap().0,
-				Rate::from_inner(3200001458000000000)
+				Rate::from_inner(3200001458000012737)
 			);
 		});
 }
@@ -375,7 +375,7 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 fn get_pool_exchange_borrow_and_supply_rates_less_than_kink() {
 	ExtBuilder::default()
 		.pool_balance(DOT, dollars(100_u128))
-		.pool_total_borrowed(DOT, dollars(300_u128))
+		.pool_borrow_underlying(DOT, dollars(300_u128))
 		.build()
 		.execute_with(|| {
 			// utilization_rate = 300 / (100 - 0 + 300) = 0.75 < kink = 0.8
@@ -394,7 +394,7 @@ fn get_pool_exchange_borrow_and_supply_rates_less_than_kink() {
 fn get_pool_exchange_borrow_and_supply_rates_above_kink() {
 	ExtBuilder::default()
 		.pool_balance(DOT, dollars(100_u128))
-		.pool_total_borrowed(DOT, dollars(500_u128))
+		.pool_borrow_underlying(DOT, dollars(500_u128))
 		.build()
 		.execute_with(|| {
 			// utilization_rate = 500 / (100 - 0 + 500) = 0.833 > kink = 0.8
@@ -417,7 +417,7 @@ fn redeem_allowed_should_work() {
 		assert_ok!(Controller::redeem_allowed(DOT, &ALICE, dollars(40_u128)));
 
 		// collateral parameter is set to true.
-		<LiquidityPools<Runtime>>::enable_is_collateral_internal(&ALICE, DOT);
+		TestPools::enable_is_collateral(&ALICE, DOT);
 
 		assert_err!(
 			Controller::redeem_allowed(DOT, &ALICE, dollars(100_u128)),
@@ -436,7 +436,7 @@ fn borrow_allowed_should_work() {
 		);
 
 		// collateral parameter is set to true. User can borrow.
-		<LiquidityPools<Runtime>>::enable_is_collateral_internal(&ALICE, DOT);
+		TestPools::enable_is_collateral(&ALICE, DOT);
 
 		assert_ok!(Controller::borrow_allowed(DOT, &ALICE, dollars(10_u128)));
 
@@ -481,7 +481,7 @@ fn set_protocol_interest_factor_should_work() {
 		let expected_event = Event::Controller(crate::Event::InterestFactorChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(
-			Controller::controller_dates(DOT).protocol_interest_factor,
+			Controller::controller_params(DOT).protocol_interest_factor,
 			Rate::saturating_from_rational(20, 10)
 		);
 
@@ -494,7 +494,7 @@ fn set_protocol_interest_factor_should_work() {
 		let expected_event = Event::Controller(crate::Event::InterestFactorChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(
-			Controller::controller_dates(DOT).protocol_interest_factor,
+			Controller::controller_params(DOT).protocol_interest_factor,
 			Rate::from_inner(0)
 		);
 
@@ -523,7 +523,7 @@ fn set_max_borrow_rate_should_work() {
 		let expected_event = Event::Controller(crate::Event::MaxBorrowRateChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(
-			Controller::controller_dates(DOT).max_borrow_rate,
+			Controller::controller_params(DOT).max_borrow_rate,
 			Rate::saturating_from_rational(20, 10)
 		);
 
@@ -558,7 +558,7 @@ fn set_collateral_factor_should_work() {
 		let expected_event = Event::Controller(crate::Event::CollateralFactorChanged);
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert_eq!(
-			Controller::controller_dates(DOT).collateral_factor,
+			Controller::controller_params(DOT).collateral_factor,
 			Rate::saturating_from_rational(1, 2)
 		);
 

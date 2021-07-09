@@ -1,18 +1,20 @@
 #![allow(unused_imports)]
 
 use crate::{
-	AccountId, Balance, Currencies, CurrencyId, MinterestProtocol, MntTokenPalletId, Origin, Rate, Runtime, Vec,
-	Whitelist, BTC, DOLLARS, DOT, ETH, KSM, MNT,
+	AccountId, Balance, Currencies, CurrencyId, LiquidityPools, MinterestProtocol, MntTokenPalletId, Origin, Rate,
+	Runtime, Vec, Whitelist, BTC, DOLLARS, DOT, ETH, KSM, MNT,
 };
 
 use frame_benchmarking::account;
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
-use frame_system::pallet_prelude::OriginFor;
-use frame_system::RawOrigin;
+use frame_system::{pallet_prelude::OriginFor, RawOrigin};
 use liquidity_pools::Pool;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::{AccountIdConversion, One, StaticLookup};
-use sp_runtime::FixedPointNumber;
+use pallet_traits::LiquidityPoolStorageProvider;
+use sp_runtime::{
+	traits::{AccountIdConversion, One, StaticLookup, Zero},
+	FixedPointNumber,
+};
 
 pub const SEED: u32 = 0;
 
@@ -41,12 +43,12 @@ pub fn enable_whitelist_mode_and_add_member(who: &AccountId) -> DispatchResultWi
 
 pub(crate) fn create_pools(pools: &Vec<CurrencyId>) {
 	pools.into_iter().for_each(|pool_id| {
-		liquidity_pools::Pools::<Runtime>::insert(
-			pool_id,
+		LiquidityPools::set_pool_data(
+			*pool_id,
 			Pool {
-				total_borrowed: 0,
+				borrowed: Balance::zero(),
 				borrow_index: Rate::one(),
-				total_protocol_interest: 0,
+				protocol_interest: Balance::zero(),
 			},
 		);
 	});
@@ -89,33 +91,33 @@ pub mod tests {
 				(
 					ETH,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					DOT,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					KSM,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					BTC,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 			],
@@ -125,7 +127,7 @@ pub mod tests {
 		.unwrap();
 
 		controller::GenesisConfig::<Runtime> {
-			controller_dates: vec![
+			controller_params: vec![
 				(
 					ETH,
 					ControllerData {
