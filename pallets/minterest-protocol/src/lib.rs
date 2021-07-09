@@ -24,7 +24,8 @@ pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
 	Borrowing, ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolStorageProvider,
-	MinterestModelManager, MntManager, PoolsManager, UserAttempts, UserStorageProvider, WhitelistManager,
+	MinterestModelManager, MntManager, PoolsManager, UserLiquidationAttemptsManager, UserStorageProvider,
+	WhitelistManager,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -71,6 +72,7 @@ pub struct PoolInitData {
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
+	use pallet_traits::UserCollateral;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
@@ -88,7 +90,8 @@ pub mod module {
 			+ PoolsManager<Self::AccountId>
 			+ CurrencyConverter
 			+ Borrowing<Self::AccountId>
-			+ UserStorageProvider<Self::AccountId, PoolUserData>;
+			+ UserStorageProvider<Self::AccountId, PoolUserData>
+			+ UserCollateral<Self::AccountId>;
 
 		/// Provides MNT token distribution functionality.
 		type MntManager: MntManager<Self::AccountId>;
@@ -108,7 +111,7 @@ pub mod module {
 
 		/// Provides functionality to manage the number of attempts to partially
 		/// liquidation a user's loan.
-		type UserAttempts: UserAttempts<Self::AccountId>;
+		type UserAttempts: UserLiquidationAttemptsManager<Self::AccountId>;
 
 		/// Public API of whitelist module.
 		type WhitelistManager: WhitelistManager<Self::AccountId>;
@@ -640,7 +643,7 @@ impl<T: Config> Pallet<T> {
 		// TODO: Fix this logic. Only deposit in collateral pool.
 		let user_liquidation_attempts = T::UserAttempts::get_user_liquidation_attempts(&who);
 		if !user_liquidation_attempts.is_zero() {
-			T::UserAttempts::reset_user_liquidation_attempts(&who);
+			T::UserAttempts::reset_to_zero(&who);
 		}
 
 		Ok((deposit_underlying_amount, wrapped_id, deposit_wrapped_amount))

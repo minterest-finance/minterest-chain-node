@@ -448,6 +448,7 @@ parameter_types! {
 
 impl risk_manager::Config for Runtime {
 	type Event = Event;
+	type UserCollateral = LiquidityPools;
 }
 
 parameter_types! {

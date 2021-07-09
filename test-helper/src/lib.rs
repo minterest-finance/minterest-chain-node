@@ -258,6 +258,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type ControllerManager = controller::Pallet<$target>;
 			type MinterestModelManager = TestMinterestModel;
 			type CreatePoolOrigin = EnsureSignedBy<$acc, AccountId>;
+			type UserAttempts = risk_manager::Pallet<$target>;
 			type WhitelistManager = whitelist_module::Pallet<$target>;
 		}
 	};
@@ -268,6 +269,7 @@ macro_rules! mock_impl_risk_manager_config {
 	($target:ty) => {
 		impl risk_manager::Config for $target {
 			type Event = Event;
+			type UserCollateral = liquidity_pools::Pallet<$target>;
 		}
 	};
 }

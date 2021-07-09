@@ -9,7 +9,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use test_helper::*;
+pub use test_helper::*;
 
 pub type AccountId = u64;
 

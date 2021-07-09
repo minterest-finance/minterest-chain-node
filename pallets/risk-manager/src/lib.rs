@@ -9,11 +9,13 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use frame_support::pallet_prelude::*;
+use minterest_primitives::CurrencyId;
 pub use module::*;
-use pallet_traits::UserAttempts;
+use pallet_traits::{UserCollateral, UserLiquidationAttemptsManager};
 use sp_runtime::traits::{One, Zero};
 #[cfg(feature = "std")]
 use sp_std::str;
+
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -26,6 +28,9 @@ pub mod module {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		/// Provides functionality for working with a user's collateral pools.
+		type UserCollateral: UserCollateral<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -69,16 +74,25 @@ pub mod module {
 
 impl<T: Config> Pallet<T> {}
 
-impl<T: Config> UserAttempts<T::AccountId> for Pallet<T> {
+impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 	fn get_user_liquidation_attempts(who: &T::AccountId) -> u8 {
 		Self::user_liquidation_attempts(who)
 	}
 
-	fn increase_user_liquidation_attempts(who: &T::AccountId) {
+	fn increase_by_one(who: &T::AccountId) {
 		UserLiquidationAttempts::<T>::mutate(who, |p| *p += u8::one())
 	}
 
-	fn reset_user_liquidation_attempts(who: &T::AccountId) {
+	fn reset_to_zero(who: &T::AccountId) {
 		UserLiquidationAttempts::<T>::mutate(&who, |p| *p = u8::zero())
+	}
+
+	fn mutate_upon_deposit(pool_id: CurrencyId, who: &T::AccountId) {
+		if T::UserCollateral::is_pool_collateral(&who, pool_id) {
+			let user_liquidation_attempts = Self::get_user_liquidation_attempts(&who);
+			if !user_liquidation_attempts.is_zero() {
+				Self::reset_to_zero(&who);
+			}
+		}
 	}
 }

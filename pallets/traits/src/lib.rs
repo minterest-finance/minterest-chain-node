@@ -93,7 +93,10 @@ pub trait UserStorageProvider<AccountId, PoolUserData> {
 
 	/// Gets total user borrowing.
 	fn get_user_borrow_balance(who: &AccountId, pool_id: CurrencyId) -> Balance;
+}
 
+/// Provides functionality for working with a user's collateral pools.
+pub trait UserCollateral<AccountId> {
 	/// Returns an array of collateral pools for the user.
 	/// The array is sorted in descending order by the number of wrapped tokens in USD.
 	///
@@ -350,15 +353,17 @@ pub trait CurrencyConverter {
 }
 
 /// Provides functionality to manage the number of attempts to partially liquidation a user's loan.
-pub trait UserAttempts<AccountId> {
+pub trait UserLiquidationAttemptsManager<AccountId> {
 	/// Gets user liquidation attempts.
 	fn get_user_liquidation_attempts(who: &AccountId) -> u8;
 
-	/// Increases the parameter liquidation_attempts by one for user. Used in case of partial
-	/// liquidation.
-	fn increase_user_liquidation_attempts(who: &AccountId);
+	/// Increases the parameter liquidation_attempts by one for user.
+	fn increase_by_one(who: &AccountId);
 
-	/// Resets the parameter liquidation_attempts equal to zero for user. Used in case of complete
-	/// liquidation.
-	fn reset_user_liquidation_attempts(who: &AccountId);
+	/// Resets the parameter liquidation_attempts equal to zero for user.
+	fn reset_to_zero(who: &AccountId);
+
+	/// Modifies user liquidation attempts during a deposit operation. If the user makes a deposit
+	/// to the collateral pool, then attempts are set to zero.
+	fn mutate_upon_deposit(pool_id: CurrencyId, who: &AccountId);
 }

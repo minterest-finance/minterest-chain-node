@@ -29,7 +29,11 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7"}
 
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+
 minterest-primitives = { path = "../../primitives" }
+liquidity-pools = { path = "../liquidity-pools" }
 test-helper = { path = "../../test-helper" }
 
 [features]

@@ -41,6 +41,7 @@ frame_support::construct_runtime!(
 		TestDex: dex::{Pallet, Storage, Call, Event<T>},
 		TestMntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 		TestWhitelist: whitelist_module::{Pallet, Storage, Call, Event<T>, Config<T>},
+		TestRiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -72,6 +73,7 @@ mock_impl_dex_config!(Test);
 mock_impl_minterest_protocol_config!(Test, OneAlice);
 mock_impl_mnt_token_config!(Test, OneAlice);
 mock_impl_balances_config!(Test);
+mock_impl_risk_manager_config!(Test);
 mock_impl_whitelist_module_config!(Test, OneAlice);
 
 pub struct MockPriceSource;

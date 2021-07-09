@@ -153,7 +153,6 @@ impl ExtBuilder {
 				borrowed,
 				interest_index,
 				is_collateral,
-				liquidation_attempts,
 			},
 		));
 		self
