@@ -249,19 +249,6 @@ pub trait MntManager<AccountId> {
 	fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Price, Price), DispatchError>;
 }
 
-/// An abstraction of risk-manager basic functionalities.
-pub trait RiskManager {
-	/// This is a part of a pool creation flow
-	/// Creates storage records for RiskManagerParams
-	fn create_pool(
-		currency_id: CurrencyId,
-		max_attempts: u8,
-		min_partial_liquidation_sum: Balance,
-		threshold: Rate,
-		liquidation_fee: Rate,
-	) -> DispatchResult;
-}
-
 /// An abstraction of minterest-model basic functionalities.
 pub trait MinterestModelManager {
 	/// This is a part of a pool creation flow

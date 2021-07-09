@@ -256,7 +256,6 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type MntManager = mnt_token::Pallet<$target>;
 			type ProtocolWeightInfo = ();
 			type ControllerManager = controller::Pallet<$target>;
-			type RiskManagerAPI = TestRiskManager;
 			type MinterestModelManager = TestMinterestModel;
 			type CreatePoolOrigin = EnsureSignedBy<$acc, AccountId>;
 			type WhitelistManager = whitelist_module::Pallet<$target>;
@@ -266,23 +265,9 @@ macro_rules! mock_impl_minterest_protocol_config {
 
 #[macro_export]
 macro_rules! mock_impl_risk_manager_config {
-	($target:ty, $acc:ident) => {
-		parameter_types! {
-			pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
-			pub const MaxDurationMs: u64 = 1000;
-		}
-
+	($target:ty) => {
 		impl risk_manager::Config for $target {
 			type Event = Event;
-			type PriceSource = MockPriceSource;
-			type UnsignedPriority = RiskManagerPriority;
-			type LiquidationPoolsManager = liquidation_pools::Pallet<$target>;
-			type LiquidityPoolsManager = liquidity_pools::Pallet<$target>;
-			type MntManager = mnt_token::Pallet<$target>;
-			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
-			type RiskManagerWeightInfo = ();
-			type ControllerManager = controller::Pallet<$target>;
-			type OffchainWorkerMaxDurationMs = MaxDurationMs;
 		}
 	};
 }

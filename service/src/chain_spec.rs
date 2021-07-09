@@ -12,7 +12,6 @@ use node_minterest_runtime::{
 	RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, VestingConfig, WhitelistConfig, BTC, DOLLARS,
 	DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
 };
-use risk_manager::RiskManagerData;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use serde_json::map::Map;
@@ -385,44 +384,6 @@ fn minterest_genesis(
 			_phantom: Default::default(),
 		},
 		risk_manager: RiskManagerConfig {
-			risk_manager_params: vec![
-				(
-					ETH,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
-					},
-				),
-				(
-					DOT,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 100_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
-					},
-				),
-				(
-					KSM,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
-					},
-				),
-				(
-					BTC,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
-					},
-				),
-			],
 			_phantom: Default::default(),
 		},
 		liquidation_pools: LiquidationPoolsConfig {
@@ -684,44 +645,6 @@ fn testnet_genesis(
 			_phantom: Default::default(),
 		},
 		risk_manager: RiskManagerConfig {
-			risk_manager_params: vec![
-				(
-					ETH,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
-					},
-				),
-				(
-					DOT,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 100_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
-					},
-				),
-				(
-					KSM,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
-					},
-				),
-				(
-					BTC,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: FixedU128::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: FixedU128::saturating_from_rational(105, 100), // 5%
-					},
-				),
-			],
 			_phantom: Default::default(),
 		},
 		liquidation_pools: LiquidationPoolsConfig {

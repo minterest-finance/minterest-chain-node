@@ -23,7 +23,6 @@ mod tests {
 	use minterest_protocol::{Error as MinterestProtocolError, PoolInitData};
 	use orml_traits::{parameter_type_with_key, MultiCurrency};
 	use pallet_traits::{CurrencyConverter, PoolsManager, PricesManager};
-	use risk_manager::RiskManagerData;
 	use sp_core::H256;
 	use sp_runtime::{
 		testing::{Header, TestXt},
@@ -36,7 +35,6 @@ mod tests {
 	use test_helper::*;
 
 	mod controller_tests;
-	mod liquidation_tests;
 	mod liquidity_pools_tests;
 	mod minterest_model_tests;
 	mod minterest_protocol_tests;
@@ -96,7 +94,7 @@ mod tests {
 	mock_impl_dex_config!(Test);
 	mock_impl_minterest_protocol_config!(Test, ZeroAdmin);
 	mock_impl_mnt_token_config!(Test, ZeroAdmin);
-	mock_impl_risk_manager_config!(Test, ZeroAdmin);
+	mock_impl_risk_manager_config!(Test);
 	mock_impl_whitelist_module_config!(Test, ZeroAdmin);
 
 	thread_local! {
@@ -141,7 +139,6 @@ mod tests {
 		controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
 		minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
 		mnt_claim_threshold: Balance,
-		risk_manager_params: Vec<(CurrencyId, RiskManagerData)>,
 	}
 
 	impl Default for ExtBuilder {
@@ -216,7 +213,6 @@ mod tests {
 					),
 				],
 				mnt_claim_threshold: 0, // disable by default
-				risk_manager_params: vec![],
 			}
 		}
 	}
@@ -245,12 +241,6 @@ mod tests {
 		pub fn pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 			self.endowed_accounts
 				.push((TestPools::pools_account_id(), currency_id, balance));
-			self
-		}
-
-		pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-			self.endowed_accounts
-				.push((TestLiquidationPools::pools_account_id(), currency_id, balance));
 			self
 		}
 
@@ -311,19 +301,6 @@ mod tests {
 			self
 		}
 
-		pub fn risk_manager_params_default(mut self, pool_id: CurrencyId) -> Self {
-			self.risk_manager_params.push((
-				pool_id,
-				RiskManagerData {
-					max_attempts: 3,
-					min_partial_liquidation_sum: 100_000 * DOLLARS,
-					threshold: Rate::saturating_from_rational(103, 100),
-					liquidation_fee: Rate::saturating_from_rational(105, 100),
-				},
-			));
-			self
-		}
-
 		pub fn build(self) -> sp_io::TestExternalities {
 			let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
@@ -376,7 +353,6 @@ mod tests {
 			.unwrap();
 
 			risk_manager::GenesisConfig::<Test> {
-				risk_manager_params: self.risk_manager_params,
 				_phantom: Default::default(),
 			}
 			.assimilate_storage(&mut t)
@@ -394,11 +370,5 @@ mod tests {
 			ext.execute_with(|| System::set_block_number(1));
 			ext
 		}
-	}
-
-	pub(crate) fn set_prices_for_assets(prices: Vec<(CurrencyId, Price)>) {
-		prices.into_iter().for_each(|(currency_id, price)| {
-			MockPriceSource::set_underlying_price(currency_id, price);
-		});
 	}
 }

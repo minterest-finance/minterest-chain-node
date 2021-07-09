@@ -24,7 +24,7 @@ pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
 	Borrowing, ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolStorageProvider,
-	MinterestModelManager, MntManager, PoolsManager, RiskManager, UserStorageProvider, WhitelistManager,
+	MinterestModelManager, MntManager, PoolsManager, UserStorageProvider, WhitelistManager,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -98,9 +98,6 @@ pub mod module {
 
 		/// Public API of controller pallet.
 		type ControllerManager: ControllerManager<Self::AccountId>;
-
-		/// Public API of risk manager pallet.
-		type RiskManagerAPI: RiskManager;
 
 		/// Public API of risk manager pallet.
 		type MinterestModelManager: MinterestModelManager;
@@ -572,14 +569,6 @@ impl<T: Config> Pallet<T> {
 			pool_data.protocol_interest_threshold,
 		)?;
 		T::ManagerLiquidationPools::create_pool(pool_id, pool_data.deviation_threshold, pool_data.balance_ratio)?;
-		T::RiskManagerAPI::create_pool(
-			pool_id,
-			pool_data.max_attempts,
-			pool_data.min_partial_liquidation_sum,
-			pool_data.threshold,
-			pool_data.liquidation_fee,
-		)?;
-
 		Ok(())
 	}
 

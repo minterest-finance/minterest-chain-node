@@ -27,20 +27,7 @@ pallet-traits = { path = "../traits", default-features = false }
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
 
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-
-liquidity-pools = { path = "../liquidity-pools" }
-liquidation-pools = { path = "../liquidation-pools" }
-controller = { path = "../controller" }
-minterest-model = { path = "../minterest-model" }
-dex = { path = "../dex" }
-mnt-token = { path = "../mnt-token" }
-test-helper = { path = "../../test-helper" }
-module-prices = { path = "../prices" }
-whitelist-module = { path = "../whitelist" }
 
 [features]
 default = ["std"]

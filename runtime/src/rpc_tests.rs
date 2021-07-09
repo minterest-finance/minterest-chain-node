@@ -18,7 +18,6 @@ use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRunt
 use orml_traits::MultiCurrency;
 use pallet_traits::{LiquidityPoolStorageProvider, PoolsManager, PricesManager, UserStorageProvider};
 use prices_rpc_runtime_api::runtime_decl_for_PricesRuntimeApi::PricesRuntimeApi;
-use risk_manager::RiskManagerData;
 use sp_runtime::{
 	traits::{One, Zero},
 	DispatchResult, FixedPointNumber,
@@ -235,35 +234,6 @@ impl ExtBuilder {
 		.unwrap();
 
 		risk_manager::GenesisConfig::<Runtime> {
-			risk_manager_params: vec![
-				(
-					DOT,
-					RiskManagerData {
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100_000 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
-					},
-				),
-				(
-					ETH,
-					RiskManagerData {
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100_000 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
-					},
-				),
-				(
-					BTC,
-					RiskManagerData {
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100_000 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
-					},
-				),
-			],
 			_phantom: Default::default(),
 		}
 		.assimilate_storage(&mut t)

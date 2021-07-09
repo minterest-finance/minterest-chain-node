@@ -352,7 +352,6 @@ impl minterest_protocol::Config for Runtime {
 	type MntManager = MntToken;
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
 	type ControllerManager = Controller;
-	type RiskManagerAPI = RiskManager;
 	type MinterestModelManager = MinterestModel;
 	type CreatePoolOrigin = EnsureRootOrHalfMinterestCouncil;
 	type WhitelistManager = Whitelist;
@@ -448,15 +447,6 @@ parameter_types! {
 
 impl risk_manager::Config for Runtime {
 	type Event = Event;
-	type PriceSource = Prices;
-	type UnsignedPriority = RiskManagerPriority;
-	type LiquidationPoolsManager = LiquidationPools;
-	type LiquidityPoolsManager = LiquidityPools;
-	type MntManager = MntToken;
-	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
-	type RiskManagerWeightInfo = weights::risk_manager::WeightInfo<Runtime>;
-	type ControllerManager = Controller;
-	type OffchainWorkerMaxDurationMs = RiskManagerWorkerMaxDurationMs;
 }
 
 parameter_types! {
@@ -610,7 +600,7 @@ construct_runtime!(
 		LiquidityPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
 		Controller: controller::{Pallet, Storage, Call, Event, Config<T>},
 		MinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
-		RiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
+		RiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>},
 		LiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		MntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Pallet, Storage, Call, Event<T>},
@@ -919,7 +909,6 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, controller, benchmarking::controller);
 			add_benchmark!(params, batches, minterest_model, benchmarking::minterest_model);
 			add_benchmark!(params, batches, module_prices, benchmarking::prices);
-			add_benchmark!(params, batches, risk_manager, benchmarking::risk_manager);
 			add_benchmark!(params, batches, liquidation_pools, benchmarking::liquidation_pools);
 			add_benchmark!(params, batches, minterest_protocol, benchmarking::minterest_protocol);
 			add_benchmark!(params, batches, mnt_token, benchmarking::mnt_token);
