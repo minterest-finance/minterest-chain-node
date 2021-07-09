@@ -317,7 +317,8 @@ fn calculate_exchange_rate_should_work() {
 			Error::<Test>::ExchangeRateCalculationError
 		);
 
-		// Overflow in calculation: cash_plus_borrows - pool_protocol_interest
+		// Overflow in calculation: pool_supply_underlying + pool_borrow_underlying -
+		// - pool_protocol_interest
 		assert_noop!(
 			TestPools::calculate_exchange_rate(100, 100, Balance::max_value(), 100),
 			Error::<Test>::ExchangeRateCalculationError

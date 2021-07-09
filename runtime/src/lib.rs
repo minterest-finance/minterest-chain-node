@@ -794,8 +794,8 @@ impl_runtime_apis! {
 			Controller::get_utilization_rate(pool_id)
 		}
 
-		fn get_user_total_supply_and_borrowed_balance_in_usd(account_id: AccountId) -> Option<UserPoolBalanceData> {
-			let (total_supply, total_borrowed) = Controller::get_user_total_supply_and_borrowed_balance_in_usd(&account_id).ok()?;
+		fn get_user_total_supply_and_borrow_balance_in_usd(account_id: AccountId) -> Option<UserPoolBalanceData> {
+			let (total_supply, total_borrowed) = Controller::get_user_total_supply_and_borrow_balance_in_usd(&account_id).ok()?;
 
 			Some(UserPoolBalanceData {total_supply, total_borrowed})
 		}

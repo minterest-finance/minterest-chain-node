@@ -17,7 +17,10 @@ use frame_system::{
 	pallet_prelude::*,
 };
 use liquidity_pools::Pool;
-use minterest_primitives::{arithmetic::sum_with_mult_result, Balance, CurrencyId, OffchainErr, Rate};
+use minterest_primitives::{
+	arithmetic::sum_with_mult_result, currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, OffchainErr, Rate,
+};
+pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
 	CurrencyConverter, DEXManager, LiquidationPoolsManager, LiquidityPoolStorageProvider, PoolsManager, PricesManager,
@@ -28,14 +31,10 @@ use sp_runtime::{
 	transaction_validity::TransactionPriority,
 	DispatchResult, FixedPointNumber, RuntimeDebug,
 };
-
-use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
-pub use module::*;
 use sp_std::{cmp::Ordering, prelude::*};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -65,7 +64,6 @@ type BalanceResult = sp_std::result::Result<Balance, DispatchError>;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use pallet_traits::CurrencyConverter;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {

@@ -357,8 +357,8 @@ fn get_utilization_rate_rpc(pool_id: CurrencyId) -> Option<Rate> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_utilization_rate(pool_id)
 }
 
-fn get_user_total_supply_and_borrowed_balance_in_usd_rpc(account_id: AccountId) -> Option<UserPoolBalanceData> {
-	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_total_supply_and_borrowed_balance_in_usd(account_id)
+fn get_user_total_supply_and_borrow_balance_in_usd_rpc(account_id: AccountId) -> Option<UserPoolBalanceData> {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_total_supply_and_borrow_balance_in_usd(account_id)
 }
 
 fn get_hypothetical_account_liquidity_rpc(account_id: AccountId) -> Option<HypotheticalLiquidityData> {
@@ -1008,14 +1008,14 @@ fn test_user_balances_using_rpc() {
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_eq!(
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(ALICE::get()),
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(ALICE::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(0),
 					total_borrowed: dollars(0)
 				})
 			);
 			assert_eq!(
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()),
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(0),
 					total_borrowed: dollars(0)
@@ -1026,14 +1026,14 @@ fn test_user_balances_using_rpc() {
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
 
 			assert_eq!(
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(ALICE::get()),
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(ALICE::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(0),
 					total_borrowed: dollars(0)
 				})
 			);
 			assert_eq!(
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()),
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(240_000),
 					total_borrowed: dollars(0)
@@ -1052,7 +1052,7 @@ fn test_user_balances_using_rpc() {
 
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(50_000)));
 			assert_eq!(
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()),
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(240_000),
 					total_borrowed: dollars(100_000)
@@ -1067,7 +1067,7 @@ fn test_user_balances_using_rpc() {
 
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(30_000)));
 			assert_eq!(
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()),
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(240_000),
 					total_borrowed: dollars(40_000)
@@ -1081,7 +1081,7 @@ fn test_user_balances_using_rpc() {
 			);
 
 			System::set_block_number(30);
-			let account_data = get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+			let account_data = get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 			assert!(account_data.total_supply > dollars(240_000));
 			assert!(account_data.total_borrowed > dollars(40_000));
 			assert!(get_user_borrow_per_asset_rpc(BOB::get(), DOT).unwrap().amount > dollars(20_000));
@@ -1159,7 +1159,7 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 			System::set_block_number(200);
 
 			let account_data_before_repay_all =
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
@@ -1198,13 +1198,13 @@ fn test_user_total_borrowed_difference_is_ok_before_and_after_repay_using_balanc
 			System::set_block_number(150);
 
 			let account_data_before_repay =
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(10_000)));
 			let account_data_after_repay =
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
 				LiquidityPools::pool_user_data(DOT, BOB::get()).borrowed,
@@ -1237,13 +1237,13 @@ fn test_user_total_borrowed_difference_is_ok_before_and_after_borrow_using_balan
 			System::set_block_number(100);
 
 			let account_data_before_borrow =
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(30_000)));
 			let account_data_after_borrow =
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
 				LiquidityPools::pool_user_data(DOT, BOB::get()).borrowed,
@@ -1277,13 +1277,13 @@ fn test_user_total_borrowed_difference_is_ok_before_and_after_deposit_using_bala
 			System::set_block_number(100);
 
 			let account_data_before_deposit =
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(30_000)));
 			let account_data_after_deposit =
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
 				dollars(30_000),

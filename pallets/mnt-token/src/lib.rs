@@ -11,7 +11,9 @@ use liquidity_pools::Pool;
 use minterest_primitives::{currency::MNT, Balance, CurrencyId, Price, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
-use pallet_traits::{ControllerManager, LiquidityPoolStorageProvider, MntManager, PoolsManager, PricesManager};
+use pallet_traits::{
+	ControllerManager, CurrencyConverter, LiquidityPoolStorageProvider, MntManager, PoolsManager, PricesManager,
+};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
 	DispatchResult, FixedPointNumber, FixedU128,
@@ -82,7 +84,9 @@ pub mod module {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Provides Liquidity Pool functionality
-		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, Pool> + PoolsManager<Self::AccountId>;
+		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, Pool>
+			+ PoolsManager<Self::AccountId>
+			+ CurrencyConverter;
 
 		/// The origin which may update MNT token parameters. Root or
 		/// Two Thirds Minterest Council can always do this
@@ -530,10 +534,8 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 	/// - `pool_id` - the pool to calculate rates
 	fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Rate, Rate), DispatchError> {
 		/*
-		borrow_rate = mnt_speed * mnt_price / (pool_borrow_underlying * currency_price)
-		supply_rate = mnt_speed * mnt_price / (pool_supply_underlying * currency_price)
-		where:
-		 pool_supply_wrap = pool_supply_underlying - pool_protocol_interest + pool_borrow_underlying
+		borrow_rate = mnt_speed * mnt_price / pool_borrow_usd
+		supply_rate = mnt_speed * mnt_price / pool_supply_usd
 		*/
 		T::ControllerManager::accrue_interest_rate(pool_id)?;
 		let pool_borrow_underlying = T::LiquidityPoolsManager::get_pool_borrow_underlying(pool_id);
@@ -542,29 +544,25 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			return Ok((Rate::zero(), Rate::zero()));
 		}
 
-		let mnt_speed = MntSpeeds::<T>::get(pool_id);
-
 		let mnt_price = T::PriceSource::get_underlying_price(MNT).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
+		let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id)?;
+		let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+		let pool_supply_wrap = T::MultiCurrency::total_issuance(wrapped_id);
 
-		let pool_supply_underlying = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
-		let pool_protocol_interest = T::LiquidityPoolsManager::get_pool_protocol_interest(pool_id);
+		let pool_borrow_in_usd = T::LiquidityPoolsManager::underlying_to_usd(pool_borrow_underlying, oracle_price)?;
+		let pool_tvl_in_usd = T::LiquidityPoolsManager::wrapped_to_usd(pool_supply_wrap, exchange_rate, oracle_price)?;
 
-		let pool_supply_wrap = pool_supply_underlying
-			.checked_sub(pool_protocol_interest)
-			.and_then(|v| v.checked_add(pool_borrow_underlying))
-			.ok_or(Error::<T>::NumOverflow)?;
-
+		let mnt_speed = MntSpeeds::<T>::get(pool_id);
 		let rate_calculation = |x: Balance| {
 			FixedU128::from_inner(mnt_speed)
 				.checked_mul(&mnt_price)
 				.and_then(|v| v.checked_div(&Rate::from_inner(x)))
-				.and_then(|v| v.checked_div(&oracle_price))
 				.ok_or(Error::<T>::NumOverflow)
 		};
 
-		let borrow_rate: Rate = rate_calculation(pool_borrow_underlying)?;
-		let supply_rate: Rate = rate_calculation(pool_supply_wrap)?;
+		let borrow_rate: Rate = rate_calculation(pool_borrow_in_usd)?;
+		let supply_rate: Rate = rate_calculation(pool_tvl_in_usd)?;
 
 		Ok((borrow_rate, supply_rate))
 	}

@@ -492,9 +492,9 @@ impl<T: Config> Pallet<T> {
 		Self::calculate_utilization_rate(pool_supply_underlying, pool_data.borrowed, pool_data.protocol_interest).ok()
 	}
 
-	/// Calculates user total supply and user total borrowed balance in usd based on
-	/// pool_borrowed, pool_protocol_interest, borrow_index values calculated for current block.
-	pub fn get_user_total_supply_and_borrowed_balance_in_usd(
+	/// Calculates user total supply and user total borrow balance in usd based on
+	/// pool_borrow, pool_protocol_interest, borrow_index values calculated for current block.
+	pub fn get_user_total_supply_and_borrow_balance_in_usd(
 		who: &T::AccountId,
 	) -> result::Result<(Balance, Balance), DispatchError> {
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
@@ -502,19 +502,19 @@ impl<T: Config> Pallet<T> {
 			.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
 			.try_fold(
 				(Balance::zero(), Balance::zero()),
-				|(mut acc_user_total_supply_in_usd, mut acc_user_total_borrowed_in_usd),
+				|(mut acc_user_total_supply_in_usd, mut acc_user_total_borrow_in_usd),
 				 &pool_id|
 				 -> result::Result<(Balance, Balance), DispatchError> {
 					let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::PoolNotFound)?;
 
-					// Check if user has / had borrowed wrapped tokens in the pool
+					// Check if user has / had borrow wrapped tokens in the pool
 					let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id, &who);
 					let has_user_supply_wrap_balance = !user_supply_wrap.is_zero();
 					let has_user_borrow_underlying_balance =
 						!T::LiquidityPoolsManager::get_user_borrow_balance(&who, pool_id).is_zero();
 					// Skip this pool if there is nothing to calculate
 					if !has_user_supply_wrap_balance && !has_user_borrow_underlying_balance {
-						return Ok((acc_user_total_supply_in_usd, acc_user_total_borrowed_in_usd));
+						return Ok((acc_user_total_supply_in_usd, acc_user_total_borrow_in_usd));
 					}
 					let oracle_price =
 						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
@@ -531,9 +531,9 @@ impl<T: Config> Pallet<T> {
 						let user_borrow_underlying = Self::borrow_balance_stored(&who, pool_id)?;
 						let user_borrow_in_usd =
 							T::LiquidityPoolsManager::underlying_to_usd(user_borrow_underlying, oracle_price)?;
-						acc_user_total_borrowed_in_usd += user_borrow_in_usd
+						acc_user_total_borrow_in_usd += user_borrow_in_usd
 					}
-					Ok((acc_user_total_supply_in_usd, acc_user_total_borrowed_in_usd))
+					Ok((acc_user_total_supply_in_usd, acc_user_total_borrow_in_usd))
 				},
 			)
 	}
@@ -559,7 +559,7 @@ impl<T: Config> Pallet<T> {
 			.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
 			.try_fold(
 				(Balance::zero(), Balance::zero(), Balance::zero(), Balance::zero()),
-				|(protocol_supply_usd, protocol_borrow_usd, tvl, protocol_interest_usd),
+				|(pool_total_supply_usd, pool_total_borrow_usd, tvl, pool_total_interest_usd),
 				 &pool_id|
 				 -> result::Result<(Balance, Balance, Balance, Balance), DispatchError> {
 					Self::accrue_interest_rate(pool_id).ok();
@@ -581,14 +581,14 @@ impl<T: Config> Pallet<T> {
 						T::LiquidityPoolsManager::underlying_to_usd(pool_data.protocol_interest, oracle_price)?;
 
 					Ok((
-						protocol_supply_usd
+						pool_total_supply_usd
 							.checked_add(pool_supply_in_usd)
 							.ok_or(Error::<T>::BalanceOverflow)?,
-						protocol_borrow_usd
+						pool_total_borrow_usd
 							.checked_add(pool_borrow_in_usd)
 							.ok_or(Error::<T>::BalanceOverflow)?,
 						tvl.checked_add(pool_tvl_in_usd).ok_or(Error::<T>::BalanceOverflow)?,
-						protocol_interest_usd
+						pool_total_interest_usd
 							.checked_add(pool_protocol_interest_in_usd)
 							.ok_or(Error::<T>::BalanceOverflow)?,
 					))
