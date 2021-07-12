@@ -7,11 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 minterest-primitives = { path = "../primitives" }
-frame-support = {  version = '3.0.0' }
+frame-support = {  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
 
 [features]
 default = ["std"]
 std = [
     "minterest-primitives/std",
-    'frame-support/std',
+    "frame-support/std",
 ]

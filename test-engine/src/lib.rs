@@ -1,16 +1,16 @@
 pub use controller::{ControllerData, PauseKeeper, *};
+use frame_support::{
+	construct_runtime, ord_parameter_types,
+	pallet_prelude::{GenesisBuild, TransactionPriority},
+	parameter_types,
+	traits::Contains,
+	PalletId,
+};
+pub use frame_system::{offchain::SendTransactionTypes, EnsureSignedBy};
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 pub use test_helper::*;
-
-use frame_support::{
-	ord_parameter_types,
-	pallet_prelude::{GenesisBuild, TransactionPriority},
-	parameter_types,
-	traits::Contains,
-};
-pub use frame_system::{offchain::SendTransactionTypes, EnsureSignedBy};
 
 pub use minterest_primitives::{
 	currency::CurrencyType::{UnderlyingAsset, WrappedToken},
@@ -20,43 +20,42 @@ use orml_traits::parameter_type_with_key;
 use pallet_traits::{PoolsManager, PricesManager};
 use sp_runtime::{
 	testing::{Header, TestXt, H256},
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
-	FixedPointNumber, ModuleId,
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One, Zero},
 };
 use sp_std::{cell::RefCell, marker::PhantomData};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 type Block = frame_system::mocking::MockBlock<TestRuntime>;
 
-frame_support::construct_runtime!(
+construct_runtime!(
 	pub enum TestRuntime where
 		Block = Block,
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
-		Currencies: orml_currencies::{Module, Call, Event<T>},
-		MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
-		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
-		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
-		TestController: controller::{Module, Storage, Call, Event, Config<T>},
-		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
-		TestDex: dex::{Module, Storage, Call, Event<T>},
-		TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
-		TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config<T>},
-		TestWhitelist: whitelist_module::{Module, Storage, Call, Event<T>, Config<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Pallet, Call, Event<T>},
+		MinterestProtocol: minterest_protocol::{Pallet, Storage, Call, Event<T>},
+		TestPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
+		TestLiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, Config<T>},
+		TestController: controller::{Pallet, Storage, Call, Event, Config<T>},
+		TestMinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
+		TestDex: dex::{Pallet, Storage, Call, Event<T>},
+		TestMntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
+		TestRiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>},
+		TestWhitelist: whitelist_module::{Pallet, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
 parameter_types! {
-		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"lqdy/min");
-		pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"lqdn/min");
-		pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
-		pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
-		pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
-		pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
+		pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"lqdy/min");
+		pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"lqdn/min");
+		pub const MntTokenPalletId: PalletId = PalletId(*b"min/mntt");
+		pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
+		pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
+		pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
 		pub InitialExchangeRate: Rate = Rate::one();
 		pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 		pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
@@ -77,9 +76,6 @@ pub struct WhitelistMembers;
 impl Contains<u64> for WhitelistMembers {
 	fn contains(who: &AccountId) -> bool {
 		TWO.with(|v| v.borrow().contains(who))
-	}
-	fn sorted_members() -> Vec<u64> {
-		TWO.with(|v| v.borrow().clone())
 	}
 	#[cfg(feature = "runtime-benchmarks")]
 	fn add(new: &u128) {
@@ -141,7 +137,7 @@ pub struct ExtBuilderNew {
 	pub liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
 	pub minted_pools: Vec<(CurrencyId, Balance)>,
 	pub mnt_claim_threshold: Balance,
-	pub controller_dates: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
+	pub controller_params: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
 	pub pause_keepers: Vec<(CurrencyId, PauseKeeper)>,
 	pub minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
 }
@@ -157,7 +153,7 @@ impl Default for ExtBuilderNew {
 			liquidation_pools: vec![],
 			minted_pools: vec![],
 			mnt_claim_threshold: Balance::zero(),
-			controller_dates: Vec::new(),
+			controller_params: Vec::new(),
 			pause_keepers: vec![],
 			minterest_model_params: vec![],
 		}
@@ -202,19 +198,13 @@ pub trait PoolTestConfigurator {
 	///TODO: Add description
 	fn init_pool_default(self, pool_id: CurrencyId) -> Self;
 	///TODO: Add description
-	fn init_pool(
-		self,
-		pool_id: CurrencyId,
-		total_borrowed: Balance,
-		borrow_index: Rate,
-		total_protocol_interest: Balance,
-	) -> Self;
+	fn init_pool(self, pool_id: CurrencyId, borrowed: Balance, borrow_index: Rate, protocol_interest: Balance) -> Self;
 	// TODO: Add description
 	fn set_pool_user_data(
 		self,
 		pool_id: CurrencyId,
 		user: AccountId,
-		total_borrowed: Balance,
+		borrowed: Balance,
 		interest_index: Rate,
 		is_collateral: bool,
 		liquidation_attempts: u8,
@@ -300,9 +290,9 @@ impl PoolTestConfigurator for ExtBuilderNew {
 		self.pools.push((
 			pool_id,
 			Pool {
-				total_borrowed: Balance::zero(),
+				borrowed: Balance::zero(),
 				borrow_index: Rate::one(),
-				total_protocol_interest: Balance::zero(),
+				protocol_interest: Balance::zero(),
 			},
 		));
 		self
@@ -311,16 +301,16 @@ impl PoolTestConfigurator for ExtBuilderNew {
 	fn init_pool(
 		mut self,
 		pool_id: CurrencyId,
-		total_borrowed: Balance,
+		borrowed: Balance,
 		borrow_index: Rate,
-		total_protocol_interest: Balance,
+		protocol_interest: Balance,
 	) -> Self {
 		self.pools.push((
 			pool_id,
 			Pool {
-				total_borrowed,
+				borrowed,
 				borrow_index,
-				total_protocol_interest,
+				protocol_interest,
 			},
 		));
 		self
@@ -330,7 +320,7 @@ impl PoolTestConfigurator for ExtBuilderNew {
 		mut self,
 		pool_id: CurrencyId,
 		user: AccountId,
-		total_borrowed: Balance,
+		borrowed: Balance,
 		interest_index: Rate,
 		is_collateral: bool,
 		liquidation_attempts: u8,
@@ -339,7 +329,7 @@ impl PoolTestConfigurator for ExtBuilderNew {
 			pool_id,
 			user,
 			PoolUserData {
-				total_borrowed,
+				borrowed,
 				interest_index,
 				is_collateral,
 				liquidation_attempts,
@@ -409,7 +399,7 @@ impl ControllerTestConfigurator for ExtBuilderNew {
 		borrow_cap: Option<Balance>,
 		protocol_interest_threshold: Balance,
 	) -> Self {
-		self.controller_dates.push((
+		self.controller_params.push((
 			currency_id,
 			ControllerData {
 				last_interest_accrued_block,
@@ -484,7 +474,7 @@ impl BuildExternalities for ExtBuilderNew {
 		.unwrap();
 
 		orml_tokens::GenesisConfig::<TestRuntime> {
-			endowed_accounts: self
+			balances: self
 				.endowed_accounts
 				.into_iter()
 				.filter(|(_, currency_id, _)| *currency_id != MNT)
@@ -516,7 +506,7 @@ impl BuildExternalities for ExtBuilderNew {
 		.unwrap();
 
 		controller::GenesisConfig::<TestRuntime> {
-			controller_dates: self.controller_dates,
+			controller_params: self.controller_params,
 			pause_keepers: self.pause_keepers,
 		}
 		.assimilate_storage(&mut t)

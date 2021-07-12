@@ -1,11 +1,14 @@
 //! Tests for the controller pallet.
 use frame_support::{assert_err, assert_noop, assert_ok};
 pub use minterest_primitives::{Balance, CurrencyId, Interest, Operation, Rate};
-use sp_runtime::{traits::Zero, FixedPointNumber};
+use sp_runtime::{
+	traits::{One, Zero},
+	FixedPointNumber,
+};
 
 use pallet_traits::ControllerManager;
+use pallet_traits::UserStorageProvider;
 use sp_runtime::DispatchError::BadOrigin;
-
 pub use test_engine::*;
 pub use test_helper::*;
 
@@ -162,8 +165,8 @@ fn accrue_interest_should_work() {
 			System::set_block_number(1);
 
 			assert_ok!(TestController::accrue_interest_rate(DOT));
-			assert_eq!(TestController::controller_dates(DOT).last_interest_accrued_block, 1);
-			assert_eq!(TestPools::pools(DOT).total_protocol_interest, 57_600_000_000);
+			assert_eq!(TestController::controller_params(DOT).last_interest_accrued_block, 1);
+			assert_eq!(TestPools::pools(DOT).protocol_interest, 57_600_000_000);
 			assert_eq!(
 				TestController::get_pool_exchange_borrow_and_supply_rates(DOT),
 				Some((
@@ -172,7 +175,7 @@ fn accrue_interest_should_work() {
 					Rate::from_inner(100_569_600_394)
 				))
 			);
-			assert_eq!(TestPools::pools(DOT).total_borrowed, 80_000_000_576_000_000_000);
+			assert_eq!(TestPools::pools(DOT).borrowed, 80_000_000_576_000_000_000);
 			assert_eq!(
 				TestPools::pools(DOT).borrow_index,
 				Rate::from_inner(1_000_000_007_200_000_000)
@@ -211,7 +214,7 @@ fn accrue_interest_should_not_work() {
 			System::set_block_number(1);
 
 			assert_ok!(TestController::accrue_interest_rate(DOT));
-			assert_eq!(TestController::controller_dates(DOT).last_interest_accrued_block, 1);
+			assert_eq!(TestController::controller_params(DOT).last_interest_accrued_block, 1);
 
 			assert_ok!(TestController::set_max_borrow_rate(
 				alice_origin(),
@@ -358,7 +361,7 @@ fn borrow_balance_stored_fails_if_num_overflow() {
 #[test]
 fn calculate_utilization_rate_should_work() {
 	ExtBuilderNew::default().build().execute_with(|| {
-		// if current_total_borrowed_balance == 0 then return Ok(0)
+		// if current_pool_borrow_underlying == 0 then return Ok(0)
 		assert_eq!(TestController::calculate_utilization_rate(100, 0, 60), Ok(Rate::zero()));
 		// utilization_rate = 80 / (22 + 80 - 2) = 0.8
 		assert_eq!(
@@ -366,14 +369,14 @@ fn calculate_utilization_rate_should_work() {
 			Ok(Rate::saturating_from_rational(8, 10))
 		);
 
-		// Overflow in calculation: total_balance + total_borrowed = max_value() + 80
+		// Overflow in calculation: pool_balance + pool_borrowed = max_value() + 80
 		assert_noop!(
 			TestController::calculate_utilization_rate(Balance::max_value(), 80, 2),
 			Error::<TestRuntime>::UtilizationRateCalculationError
 		);
 
 		// Overflow in calculation:
-		// total_balance_total_borrowed_sum - total_protocol_interest = ... - max_value()
+		// total_balance_total_borrowed_sum - pool_protocol_interest = ... - max_value()
 		assert_noop!(
 			TestController::calculate_utilization_rate(22, 80, Balance::max_value()),
 			Error::<TestRuntime>::UtilizationRateCalculationError
@@ -550,7 +553,7 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 			);
 
 			// Alice set collateral parameter value to true for DOT pool. Alice can borrow.
-			TestPools::enable_is_collateral_internal(&ALICE, DOT);
+			TestPools::enable_is_collateral(&ALICE, DOT);
 
 			assert_eq!(
 				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 0, 50),
@@ -607,7 +610,7 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 				TestController::get_pool_exchange_borrow_and_supply_rates(DOT)
 					.unwrap()
 					.0,
-				Rate::from_inner(3200001458000000000)
+				Rate::from_inner(3200001458000012737)
 			);
 		});
 }
@@ -703,7 +706,7 @@ fn redeem_allowed_should_work() {
 			assert_ok!(TestController::redeem_allowed(DOT, &ALICE, dollars(40_u128)));
 
 			// collateral parameter is set to true.
-			TestPools::enable_is_collateral_internal(&ALICE, DOT);
+			TestPools::enable_is_collateral(&ALICE, DOT);
 
 			assert_err!(
 				TestController::redeem_allowed(DOT, &ALICE, dollars(100_u128)),
@@ -725,7 +728,7 @@ fn borrow_allowed_should_work() {
 			);
 
 			// collateral parameter is set to true. User can borrow.
-			TestPools::enable_is_collateral_internal(&ALICE, DOT);
+			TestPools::enable_is_collateral(&ALICE, DOT);
 
 			assert_ok!(TestController::borrow_allowed(DOT, &ALICE, dollars(10_u128)));
 
@@ -784,10 +787,10 @@ fn set_protocol_interest_factor_should_work() {
 				DOT,
 				Rate::saturating_from_integer(2)
 			));
-			let expected_event = Event::controller(test_engine::module::Event::InterestFactorChanged);
+			let expected_event = Event::TestController(test_engine::module::Event::InterestFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
-				TestController::controller_dates(DOT).protocol_interest_factor,
+				TestController::controller_params(DOT).protocol_interest_factor,
 				Rate::saturating_from_rational(20, 10)
 			);
 
@@ -797,10 +800,10 @@ fn set_protocol_interest_factor_should_work() {
 				DOT,
 				Rate::zero()
 			));
-			let expected_event = Event::controller(test_engine::module::Event::InterestFactorChanged);
+			let expected_event = Event::TestController(test_engine::module::Event::InterestFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
-				TestController::controller_dates(DOT).protocol_interest_factor,
+				TestController::controller_params(DOT).protocol_interest_factor,
 				Rate::zero()
 			);
 
@@ -834,10 +837,10 @@ fn set_max_borrow_rate_should_work() {
 				DOT,
 				Rate::saturating_from_integer(2)
 			));
-			let expected_event = Event::controller(test_engine::module::Event::MaxBorrowRateChanged);
+			let expected_event = Event::TestController(test_engine::module::Event::MaxBorrowRateChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
-				TestController::controller_dates(DOT).max_borrow_rate,
+				TestController::controller_params(DOT).max_borrow_rate,
 				Rate::saturating_from_rational(20, 10)
 			);
 
@@ -877,10 +880,10 @@ fn set_collateral_factor_should_work() {
 				DOT,
 				Rate::saturating_from_rational(1, 2)
 			));
-			let expected_event = Event::controller(test_engine::module::Event::CollateralFactorChanged);
+			let expected_event = Event::TestController(test_engine::module::Event::CollateralFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
-				TestController::controller_dates(DOT).collateral_factor,
+				TestController::controller_params(DOT).collateral_factor,
 				Rate::saturating_from_rational(1, 2)
 			);
 
@@ -930,22 +933,22 @@ fn pause_operation_should_work() {
 
 			assert_ok!(TestController::pause_operation(alice_origin(), DOT, Operation::Deposit));
 			let expected_event =
-				Event::controller(test_engine::module::Event::OperationIsPaused(DOT, Operation::Deposit));
+				Event::TestController(test_engine::module::Event::OperationIsPaused(DOT, Operation::Deposit));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::pause_operation(alice_origin(), DOT, Operation::Redeem));
 			let expected_event =
-				Event::controller(test_engine::module::Event::OperationIsPaused(DOT, Operation::Redeem));
+				Event::TestController(test_engine::module::Event::OperationIsPaused(DOT, Operation::Redeem));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::pause_operation(alice_origin(), DOT, Operation::Borrow));
 			let expected_event =
-				Event::controller(test_engine::module::Event::OperationIsPaused(DOT, Operation::Borrow));
+				Event::TestController(test_engine::module::Event::OperationIsPaused(DOT, Operation::Borrow));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::pause_operation(alice_origin(), DOT, Operation::Repay));
 			let expected_event =
-				Event::controller(test_engine::module::Event::OperationIsPaused(DOT, Operation::Repay));
+				Event::TestController(test_engine::module::Event::OperationIsPaused(DOT, Operation::Repay));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::pause_operation(
@@ -954,7 +957,7 @@ fn pause_operation_should_work() {
 				Operation::Transfer
 			));
 			let expected_event =
-				Event::controller(test_engine::module::Event::OperationIsPaused(DOT, Operation::Transfer));
+				Event::TestController(test_engine::module::Event::OperationIsPaused(DOT, Operation::Transfer));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert!(TestController::pause_keepers(&DOT).deposit_paused);
@@ -1004,22 +1007,22 @@ fn resume_operation_should_work() {
 				Operation::Deposit
 			));
 			let expected_event =
-				Event::controller(test_engine::module::Event::OperationIsUnPaused(KSM, Operation::Deposit));
+				Event::TestController(test_engine::module::Event::OperationIsUnPaused(KSM, Operation::Deposit));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::resume_operation(alice_origin(), KSM, Operation::Redeem));
 			let expected_event =
-				Event::controller(test_engine::module::Event::OperationIsUnPaused(KSM, Operation::Redeem));
+				Event::TestController(test_engine::module::Event::OperationIsUnPaused(KSM, Operation::Redeem));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::resume_operation(alice_origin(), KSM, Operation::Borrow));
 			let expected_event =
-				Event::controller(test_engine::module::Event::OperationIsUnPaused(KSM, Operation::Borrow));
+				Event::TestController(test_engine::module::Event::OperationIsUnPaused(KSM, Operation::Borrow));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::resume_operation(alice_origin(), KSM, Operation::Repay));
 			let expected_event =
-				Event::controller(test_engine::module::Event::OperationIsUnPaused(KSM, Operation::Repay));
+				Event::TestController(test_engine::module::Event::OperationIsUnPaused(KSM, Operation::Repay));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::resume_operation(
@@ -1027,7 +1030,7 @@ fn resume_operation_should_work() {
 				KSM,
 				Operation::Transfer
 			));
-			let expected_event = Event::controller(test_engine::module::Event::OperationIsUnPaused(
+			let expected_event = Event::TestController(test_engine::module::Event::OperationIsUnPaused(
 				KSM,
 				Operation::Transfer,
 			));
@@ -1071,12 +1074,13 @@ fn set_borrow_cap_should_work() {
 			// ALICE set borrow cap to 10.
 			assert_ok!(TestController::set_borrow_cap(alice_origin(), DOT, Some(dollars(10))));
 			let expected_event =
-				Event::controller(test_engine::module::Event::BorrowCapChanged(DOT, Some(dollars(10))));
+				Event::TestController(test_engine::module::Event::BorrowCapChanged(DOT, Some(dollars(10))));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// ALICE is able to change borrow cap to 9999
 			assert_ok!(TestController::set_borrow_cap(alice_origin(), DOT, Some(9999_u128)));
-			let expected_event = Event::controller(test_engine::module::Event::BorrowCapChanged(DOT, Some(9999_u128)));
+			let expected_event =
+				Event::TestController(test_engine::module::Event::BorrowCapChanged(DOT, Some(9999_u128)));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// Unable to set borrow cap greater than MAX_BORROW_CAP.
@@ -1087,7 +1091,7 @@ fn set_borrow_cap_should_work() {
 
 			// Alice is able to set zero borrow cap.
 			assert_ok!(TestController::set_borrow_cap(alice_origin(), DOT, Some(0_u128)));
-			let expected_event = Event::controller(test_engine::module::Event::BorrowCapChanged(DOT, Some(0_u128)));
+			let expected_event = Event::TestController(test_engine::module::Event::BorrowCapChanged(DOT, Some(0_u128)));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 		});
 }
@@ -1116,7 +1120,7 @@ fn set_protocol_interest_threshold_should_work() {
 				DOT,
 				10_u128
 			));
-			let expected_event = Event::controller(test_engine::module::Event::ProtocolInterestThresholdChanged(
+			let expected_event = Event::TestController(test_engine::module::Event::ProtocolInterestThresholdChanged(
 				DOT, 10_u128,
 			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
@@ -1127,7 +1131,7 @@ fn set_protocol_interest_threshold_should_work() {
 				DOT,
 				0_u128
 			));
-			let expected_event = Event::controller(test_engine::module::Event::ProtocolInterestThresholdChanged(
+			let expected_event = Event::TestController(test_engine::module::Event::ProtocolInterestThresholdChanged(
 				DOT, 0_u128,
 			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));

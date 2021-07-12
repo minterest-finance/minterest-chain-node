@@ -1,6 +1,7 @@
 //! RPC interface for the controller pallet.
 
 use codec::Codec;
+use controller_rpc_runtime_api::UserData;
 pub use controller_rpc_runtime_api::{
 	BalanceInfo, ControllerRuntimeApi, HypotheticalLiquidityData, PoolState, ProtocolTotalValue, UserPoolBalanceData,
 };
@@ -37,8 +38,9 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// Return:
 	/// - exchange_rate: the Exchange Rate between an mToken and the underlying asset.
 	///	is equal to:
-	/// 	exchange_rate = (total_cash + total_borrowed - total_protocol_interest) / total_supply;
-	/// 	- borrow_rate: Borrow Interest Rate
+	/// exchange_rate = (pool_supply_underlying + pool_borrow_underlying - pool_protocol_interest) /
+	/// pool_supply;
+	/// - borrow_rate: Borrow Interest Rate
 	/// - supply_rate: current Supply Interest Rate.
 	/// 	The supply rate is derived from the borrow_rate and the amount of Total Borrowed.
 	#[rpc(name = "controller_liquidityPoolState")]
@@ -155,6 +157,18 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 		account_id: AccountId,
 		at: Option<BlockHash>,
 	) -> Result<Option<(Interest, Interest, Interest)>>;
+
+	// TODO: Currently all parameters are stabbed to equal to one.
+	/// Return user's information which is required by WEB 2.0 part.
+	///
+	///  - `&self` :  Self reference
+	///  - `account_id`: current account id.
+	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	/// Returns:
+	/// - (user_total_collateral, user_total_supply_in_usd, user_total_borrow_in_usd,
+	///   user_total_supply_apy, user_total_borrow_apy, user_net_apy)
+	#[rpc(name = "controller_getUserData")]
+	fn get_user_data(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<UserData>>;
 }
 
 /// A struct that implements the [`ControllerApi`].
@@ -193,6 +207,18 @@ where
 	C::Api: ControllerRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
 {
+	fn get_user_data(&self, account_id: AccountId, at: Option<<Block as BlockT>::Hash>) -> Result<Option<UserData>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+		api.get_user_data(&at, account_id).map_err(|e| RpcError {
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
+			message: "Unable to get user data.".into(),
+			data: Some(format!("{:?}", e).into()),
+		})
+	}
+
 	fn get_protocol_total_values(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Option<ProtocolTotalValue>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
@@ -242,7 +268,7 @@ where
 		let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume the best block.
             self.client.info().best_hash));
-		api.get_user_total_supply_and_borrowed_balance_in_usd(&at, account_id)
+		api.get_user_total_supply_and_borrow_balance_in_usd(&at, account_id)
 			.map_err(|e| RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
 				message: "Unable to get balance info.".into(),

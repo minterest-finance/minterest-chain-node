@@ -9,8 +9,6 @@ use sp_std::prelude::*;
 runtime_benchmarks! {
 	{Runtime, whitelist_module}
 
-	_ {}
-
 	add_member {
 		let m in 1 .. MaxMembersWhitelistMode::get() as u32 - 1_u32;
 

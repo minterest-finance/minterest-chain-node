@@ -6,12 +6,12 @@ edition = "2018"
 
 [profile.dev]
 opt-level = 0
-panic = 'unwind'
+panic = "unwind"
 overflow-checks = true
 
 [profile.release]
 opt-level = 3
-panic = 'unwind'
+panic = "unwind"
 overflow-checks = true
 
 [[bin]]
@@ -31,22 +31,21 @@ runtime-benchmarks = [
 
 [workspace]
 members = [
-    'cli',
-    'rpc',
-    'primitives',
-    'service',
-    'runtime',
-    'test-helper',
-    'test-engine',
-    'pallets/liquidity-pools',
-    'pallets/minterest-model',
-    'pallets/minterest-protocol',
-    'pallets/controller',
-    'pallets/prices',
-    'pallets/risk-manager',
-    'pallets/liquidation-pools',
-    'pallets/mnt-token',
-    'pallets/dex',
-    'pallets/whitelist',
+    "cli",
+    "rpc",
+    "primitives",
+    "service",
+    "runtime",
+    "test-helper",
+    "pallets/liquidity-pools",
+    "pallets/minterest-model",
+    "pallets/minterest-protocol",
+    "pallets/controller",
+    "pallets/prices",
+    "pallets/risk-manager",
+    "pallets/liquidation-pools",
+    "pallets/mnt-token",
+    "pallets/dex",
+    "pallets/whitelist"
 ]
 

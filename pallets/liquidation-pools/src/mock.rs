@@ -1,7 +1,7 @@
 /// Mocks for the liquidation-pools pallet.
 use super::*;
 use crate as liquidation_pools;
-use frame_support::{ord_parameter_types, parameter_types};
+use frame_support::{ord_parameter_types, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
 use liquidity_pools::Pool;
 use minterest_primitives::Price;
@@ -30,15 +30,15 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		//ORML palletts
-		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
-		Currencies: orml_currencies::{Module, Call, Event<T>},
+		Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		// Minterest pallets
-		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, ValidateUnsigned},
-		TestLiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
-		TestDex: dex::{Module, Storage, Call, Event<T>}
+		TestLiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, ValidateUnsigned},
+		TestLiquidityPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
+		TestDex: dex::{Pallet, Storage, Call, Event<T>}
 	}
 );
 
@@ -50,8 +50,8 @@ mock_impl_dex_config!(Test);
 mock_impl_balances_config!(Test);
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"lqdy/min");
-	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
+	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"lqdy/min");
+	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
@@ -88,8 +88,8 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 }
 
 parameter_types! {
-	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"lqdn/min");
-	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
+	pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"lqdn/min");
+	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
 	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value();
 }
 
@@ -99,14 +99,14 @@ ord_parameter_types! {
 
 impl Config for Test {
 	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Test>;
+	type MultiCurrency = orml_tokens::Pallet<Test>;
 	type UnsignedPriority = LiquidityPoolsPriority;
 	type PriceSource = MockPriceSource;
-	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
+	type LiquidationPoolsPalletId = LiquidationPoolsPalletId;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
-	type LiquidityPoolsManager = liquidity_pools::Module<Test>;
-	type Dex = dex::Module<Test>;
+	type LiquidityPoolsManager = liquidity_pools::Pallet<Test>;
+	type Dex = dex::Pallet<Test>;
 	type LiquidationPoolsWeightInfo = ();
 }
 
@@ -139,25 +139,25 @@ impl Default for ExternalityBuilder {
 				(
 					DOT,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					ETH,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					BTC,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 			],
@@ -209,9 +209,9 @@ impl ExternalityBuilder {
 		self.liquidity_pools.push((
 			pool_id,
 			Pool {
-				total_borrowed: Balance::zero(),
+				borrowed: Balance::zero(),
 				borrow_index: Rate::one(),
-				total_protocol_interest: Balance::zero(),
+				protocol_interest: Balance::zero(),
 			},
 		));
 		self
@@ -239,7 +239,7 @@ impl ExternalityBuilder {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 		orml_tokens::GenesisConfig::<Test> {
-			endowed_accounts: self.endowed_accounts,
+			balances: self.endowed_accounts,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

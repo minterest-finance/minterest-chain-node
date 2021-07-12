@@ -16,17 +16,19 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-use frame_support::{debug, ensure, pallet_prelude::*, traits::Get, transactional};
+use frame_support::{ensure, log, pallet_prelude::*, traits::Get, transactional};
 use frame_system::{
 	ensure_none,
 	offchain::{SendTransactionTypes, SubmitTransaction},
 	pallet_prelude::*,
 };
+use liquidity_pools::{Pool, PoolUserData};
+use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	ControllerManager, LiquidationPoolsManager, LiquidityPoolsManager, MntManager, PoolsManager, PricesManager,
-	RiskManager,
+	ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolStorageProvider, MntManager,
+	PoolsManager, PricesManager, RiskManager, UserStorageProvider,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -55,7 +57,6 @@ mod mock;
 mod tests;
 
 pub mod weights;
-use minterest_primitives::currency::CurrencyType::UnderlyingAsset;
 pub use weights::WeightInfo;
 
 /// RiskManager metadata
@@ -76,8 +77,7 @@ pub struct RiskManagerData {
 	pub liquidation_fee: Rate,
 }
 
-type LiquidityPools<T> = liquidity_pools::Module<T>;
-type MinterestProtocol<T> = minterest_protocol::Module<T>;
+type MinterestProtocol<T> = minterest_protocol::Pallet<T>;
 
 #[frame_support::pallet]
 pub mod module {
@@ -86,6 +86,9 @@ pub mod module {
 	#[pallet::config]
 	pub trait Config: frame_system::Config + minterest_protocol::Config + SendTransactionTypes<Call<Self>> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		/// The price source of currencies.
+		type PriceSource: PricesManager<CurrencyId>;
 
 		/// A configuration for base priority of unsigned transactions.
 		///
@@ -97,7 +100,10 @@ pub mod module {
 		type LiquidationPoolsManager: LiquidationPoolsManager<Self::AccountId>;
 
 		/// Pools are responsible for holding funds for automatic liquidation.
-		type LiquidityPoolsManager: LiquidityPoolsManager<Self::AccountId>;
+		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, Pool>
+			+ PoolsManager<Self::AccountId>
+			+ CurrencyConverter
+			+ UserStorageProvider<Self::AccountId, PoolUserData>;
 
 		/// Public API of controller pallet
 		type ControllerManager: ControllerManager<Self::AccountId>;
@@ -129,6 +135,8 @@ pub mod module {
 		InvalidFeedPrice,
 		/// Pool is already created
 		PoolAlreadyCreated,
+		/// Pool not found.
+		PoolNotFound,
 	}
 
 	#[pallet::event]
@@ -147,7 +155,6 @@ pub mod module {
 		/// Unsafe loan has been successfully liquidated: \[who, liquidate_amount_in_usd,
 		/// liquidated_pool_id, seized_pools, partial_liquidation\]
 		LiquidateUnsafeLoan(T::AccountId, Balance, CurrencyId, Vec<CurrencyId>, bool),
-
 		/// New pool had been created: \[pool_id\]
 		PoolAdded(CurrencyId),
 	}
@@ -193,23 +200,23 @@ pub mod module {
 		/// Runs after every block. Start offchain worker to check unsafe loan and
 		/// submit unsigned tx to trigger liquidation.
 		fn offchain_worker(now: T::BlockNumber) {
-			debug::info!("Entering in RiskManager off-chain worker");
+			log::info!("Entering in RiskManager off-chain worker");
 
 			if let Err(e) = Self::_offchain_worker() {
-				debug::info!(
+				log::info!(
 					target: "RiskManager offchain worker",
 					"cannot run offchain worker at {:?}: {:?}",
 					now,
 					e,
 				);
 			} else {
-				debug::debug!(
+				log::debug!(
 					target: "RiskManager offchain worker",
 					" RiskManager offchain worker start at block: {:?} already done!",
 					now,
 				);
 			}
-			debug::info!("Exited from RiskManager off-chain worker");
+			log::info!("Exited from RiskManager off-chain worker");
 		}
 	}
 
@@ -343,7 +350,7 @@ pub mod module {
 			ensure_none(origin)?;
 			ensure!(
 				T::ManagerLiquidityPools::pool_exists(&pool_id),
-				liquidity_pools::Error::<T>::PoolNotFound
+				Error::<T>::PoolNotFound
 			);
 
 			let who = T::Lookup::lookup(who)?;
@@ -387,15 +394,15 @@ impl<T: Config> Pallet<T> {
 		let working_start_time = sp_io::offchain::timestamp();
 
 		for (pos, currency_id) in underlying_assets.iter().enumerate() {
-			debug::info!("RiskManager starts processing loans for {:?}", currency_id);
+			log::info!("RiskManager starts processing loans for {:?}", currency_id);
 			<T as module::Config>::ControllerManager::accrue_interest_rate(*currency_id)
 				.map_err(|_| OffchainErr::CheckFail)?;
-			let pool_members =
-				<LiquidityPools<T>>::get_pool_members_with_loans(*currency_id).map_err(|_| OffchainErr::CheckFail)?;
+			let pool_members = T::LiquidityPoolsManager::get_pool_members_with_loans(*currency_id)
+				.map_err(|_| OffchainErr::CheckFail)?;
 			for member in pool_members.into_iter() {
 				// We check if the user has the collateral so as not to start the liquidation process
 				// for users who have collateral = 0 and borrow > 0.
-				let user_has_collateral = <LiquidityPools<T>>::check_user_has_collateral(&member);
+				let user_has_collateral = T::LiquidityPoolsManager::check_user_has_collateral(&member);
 
 				// Checks if the liquidation should be allowed to occur.
 				if user_has_collateral {
@@ -419,7 +426,7 @@ impl<T: Config> Pallet<T> {
 
 				if guard.extend_lock().is_err() {
 					// The lock's deadline is happened
-					debug::warn!(
+					log::warn!(
 						"Risk Manager offchain worker hasn't(!) processed all pools. \
 						MAX duration time is expired. Loans checked count: {:?}, \
 						loans liquidated count: {:?}",
@@ -430,11 +437,11 @@ impl<T: Config> Pallet<T> {
 					return Ok(());
 				}
 			}
-			debug::info!("RiskManager finished processing loans for {:?}", currency_id);
+			log::info!("RiskManager finished processing loans for {:?}", currency_id);
 		}
 
 		let working_time = sp_io::offchain::timestamp().diff(&working_start_time);
-		debug::info!(
+		log::info!(
 			"Risk Manager offchain worker has processed all pools. Loans checked count {:?}, \
 			loans liquidated count: {:?}, execution time(ms): {:?}",
 			loans_checked_count,
@@ -464,7 +471,7 @@ impl<T: Config> Pallet<T> {
 		let who = T::Lookup::unlookup(borrower);
 		let call = Call::<T>::liquidate(who.clone(), pool_id);
 		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
-			debug::info!(
+			log::info!(
 				target: "RiskManager offchain worker",
 				"submit unsigned liquidation for \n AccountId {:?} CurrencyId {:?} \nfailed!",
 				who, pool_id,
@@ -488,12 +495,10 @@ impl<T: Config> Pallet<T> {
 		// total_repay_amount = borrow_balance * price_borrowed
 		let borrow_balance =
 			<T as module::Config>::ControllerManager::borrow_balance_stored(&borrower, liquidated_pool_id)?;
-		let total_repay_amount = Rate::from_inner(borrow_balance)
-			.checked_mul(&price_borrowed)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
+		let total_repay_amount = T::LiquidityPoolsManager::underlying_to_usd(borrow_balance, price_borrowed)?;
 
-		let liquidation_attempts = <LiquidityPools<T>>::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
+		let liquidation_attempts =
+			T::LiquidityPoolsManager::get_user_liquidation_attempts(&borrower, liquidated_pool_id);
 
 		let is_partial_liquidation = total_repay_amount
 			>= RiskManagerParams::<T>::get(liquidated_pool_id).min_partial_liquidation_sum
@@ -506,7 +511,10 @@ impl<T: Config> Pallet<T> {
 		let (seized_pools, repay_amount) = Self::liquidate_borrow_fresh(&borrower, liquidated_pool_id, seize_amount)?;
 
 		if is_attempt_increment_required {
-			Self::mutate_liquidation_attempts(liquidated_pool_id, &borrower, is_partial_liquidation);
+			match is_partial_liquidation {
+				true => T::LiquidityPoolsManager::increase_user_liquidation_attempts(liquidated_pool_id, &borrower),
+				false => T::LiquidityPoolsManager::reset_user_liquidation_attempts(liquidated_pool_id, &borrower),
+			}
 		}
 
 		Self::deposit_event(Event::LiquidateUnsafeLoan(
@@ -538,7 +546,7 @@ impl<T: Config> Pallet<T> {
 
 		// Get an array of collateral pools for the borrower.
 		// The array is sorted in descending order by the number of wrapped tokens in USD.
-		let collateral_pools = <LiquidityPools<T>>::get_is_collateral_pools(&borrower)?;
+		let collateral_pools = T::LiquidityPoolsManager::get_user_collateral_pools(&borrower)?;
 
 		// Collect seized pools.
 		let mut seized_pools: Vec<CurrencyId> = Vec::new();
@@ -558,15 +566,9 @@ impl<T: Config> Pallet<T> {
 				// seize_tokens = seize_amount / (price_collateral * exchange_rate)
 				let price_collateral =
 					T::PriceSource::get_underlying_price(collateral_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-				let exchange_rate = <LiquidityPools<T>>::get_exchange_rate(collateral_pool_id)?;
-				let seize_tokens = Rate::from_inner(seize_amount)
-					.checked_div(
-						&price_collateral
-							.checked_mul(&exchange_rate)
-							.ok_or(Error::<T>::NumOverflow)?,
-					)
-					.map(|x| x.into_inner())
-					.ok_or(Error::<T>::NumOverflow)?;
+				let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(collateral_pool_id)?;
+				let seize_tokens =
+					T::LiquidityPoolsManager::usd_to_wrapped(seize_amount, exchange_rate, price_collateral)?;
 
 				<T as module::Config>::MntManager::update_mnt_supply_index(collateral_pool_id)?;
 				<T as module::Config>::MntManager::distribute_supplier_mnt(collateral_pool_id, &borrower, false)?;
@@ -577,7 +579,7 @@ impl<T: Config> Pallet<T> {
 					Ordering::Less => {
 						// seize_underlying = balance_wrapped_token * exchange_rate
 						let seize_underlying =
-							<LiquidityPools<T>>::convert_from_wrapped(wrapped_id, balance_wrapped_token)?;
+							T::LiquidityPoolsManager::wrapped_to_underlying(balance_wrapped_token, exchange_rate)?;
 						T::MultiCurrency::withdraw(wrapped_id, &borrower, balance_wrapped_token)?;
 						// seize_amount = seize_amount - (seize_underlying * price_collateral)
 						seize_amount -= Rate::from_inner(seize_underlying)
@@ -589,7 +591,8 @@ impl<T: Config> Pallet<T> {
 					// Enough collateral wrapped tokens. Transfer all seize_tokens to liquidation_pool.
 					_ => {
 						// seize_underlying = seize_tokens * exchange_rate
-						let seize_underlying = <LiquidityPools<T>>::convert_from_wrapped(wrapped_id, seize_tokens)?;
+						let seize_underlying =
+							T::LiquidityPoolsManager::wrapped_to_underlying(seize_tokens, exchange_rate)?;
 						T::MultiCurrency::withdraw(wrapped_id, &borrower, seize_tokens)?;
 						// seize_amount = 0, since all seize_tokens have already been withdrawn
 						seize_amount = Balance::zero();
@@ -624,10 +627,7 @@ impl<T: Config> Pallet<T> {
 
 		// Calculating the number of assets that must be repaid out of the liquidation pool.
 		// repay_assets = already_seized_amount / (liquidation_fee * price_borrowed)
-		let repay_assets = Rate::from_inner(repay_amount)
-			.checked_div(&price_borrowed)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
+		let repay_assets = T::LiquidityPoolsManager::usd_to_underlying(repay_amount, price_borrowed)?;
 
 		<MinterestProtocol<T>>::do_repay_fresh(
 			&liquidation_pool_account_id,
@@ -695,27 +695,6 @@ impl<T: Config> Pallet<T> {
 		Ok((seize_amount, is_attempt_increment_required))
 	}
 
-	/// Changes the parameter liquidation_attempts depending on the type of liquidation.
-	///
-	/// - `liquidated_pool_id`: the CurrencyId of the pool with loan, for which automatic.
-	/// - `borrower`: the borrower in automatic liquidation.
-	/// - `is_partial_liquidation`: partial or complete liquidation.
-	pub fn mutate_liquidation_attempts(
-		liquidated_pool_id: CurrencyId,
-		borrower: &T::AccountId,
-		is_partial_liquidation: bool,
-	) {
-		// partial_liquidation -> liquidation_attempts += 1
-		// complete_liquidation -> liquidation_attempts = 0
-		liquidity_pools::PoolUserParams::<T>::mutate(liquidated_pool_id, &borrower, |p| {
-			if is_partial_liquidation {
-				p.liquidation_attempts += u8::one();
-			} else {
-				p.liquidation_attempts = u8::zero();
-			}
-		})
-	}
-
 	fn is_valid_liquidation_fee(liquidation_fee: Rate) -> bool {
 		liquidation_fee >= Rate::one() && liquidation_fee <= Rate::saturating_from_rational(15, 10)
 	}
@@ -761,7 +740,7 @@ impl<T: Config> ValidateUnsigned for Pallet<T> {
 		match call {
 			Call::liquidate(who, pool_id) => ValidTransaction::with_tag_prefix("RiskManagerOffchainWorker")
 				.priority(T::UnsignedPriority::get())
-				.and_provides((<frame_system::Module<T>>::block_number(), pool_id, who))
+				.and_provides((<frame_system::Pallet<T>>::block_number(), pool_id, who))
 				.longevity(64_u64)
 				.propagate(true)
 				.build(),

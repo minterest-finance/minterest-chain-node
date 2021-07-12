@@ -54,9 +54,9 @@
       "liquidation_fee": "Rate"
     },
     "Pool": {
-      "total_borrowed": "Balance",
+      "borrowed": "Balance",
       "borrow_index": "Rate",
-      "total_protocol_interest": "Balance"
+      "protocol_interest": "Balance"
     },
     "LiquidationPoolData": {
       "deviation_threshold": "Rate",
@@ -64,7 +64,7 @@
       "max_ideal_balance": "Option<Balance>"
     },
     "PoolUserData": {
-      "total_borrowed": "Balance",
+      "borrowed": "Balance",
       "interest_index": "Rate",
       "is_collateral": "bool",
       "liquidation_attempts": "u8"
@@ -130,6 +130,14 @@
       "pool_total_borrow_in_usd": "Balance",
       "tvl_in_usd": "Balance",
       "pool_total_protocol_interest_in_usd": "Balance"
+    },
+    "UserData": {
+      "total_collateral_in_usd": "Balance",
+      "total_supply_in_usd": "Balance",
+      "total_borrow_in_usd": "Balance",
+      "total_supply_apy": "Rate",
+      "total_borrow_apy": "Rate",
+      "net_apy": "Rate"
     },
     "MntBalanceInfo": {
       "amount": "Balance"

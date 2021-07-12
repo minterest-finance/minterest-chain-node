@@ -8,6 +8,7 @@ pub use minterest_primitives::currency::CurrencyType::WrappedToken;
 use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId};
 use orml_traits::parameter_type_with_key;
+use pallet_traits::PricesManager;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -25,11 +26,11 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
-		Currencies: orml_currencies::{Module, Call, Event<T>},
-		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Pallet, Call, Event<T>},
+		TestPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
 	}
 );
 
@@ -40,18 +41,17 @@ mock_impl_liquidity_pools_config!(Test);
 mock_impl_balances_config!(Test);
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
-	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
+	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"min/lqdy");
+	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
 pub struct MockPriceSource;
-
 impl PricesManager<CurrencyId> for MockPriceSource {
 	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
-		Some(Price::one())
+		Some(Price::saturating_from_integer(2))
 	}
 
 	fn lock_price(_currency_id: CurrencyId) {}
@@ -89,19 +89,31 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn pool_borrow_underlying(mut self, pool_id: CurrencyId, pool_borrowed: Balance) -> Self {
+		self.pools.push((
+			pool_id,
+			Pool {
+				borrowed: pool_borrowed,
+				borrow_index: Rate::saturating_from_rational(1, 1),
+				protocol_interest: Balance::zero(),
+			},
+		));
+		self
+	}
+
 	pub fn pool_with_params(
 		mut self,
 		pool_id: CurrencyId,
-		total_borrowed: Balance,
+		borrowed: Balance,
 		borrow_index: Rate,
-		total_protocol_interest: Balance,
+		protocol_interest: Balance,
 	) -> Self {
 		self.pools.push((
 			pool_id,
 			Pool {
-				total_borrowed,
+				borrowed,
 				borrow_index,
-				total_protocol_interest,
+				protocol_interest,
 			},
 		));
 		self
@@ -111,7 +123,7 @@ impl ExtBuilder {
 		mut self,
 		pool_id: CurrencyId,
 		user: AccountId,
-		total_borrowed: Balance,
+		borrowed: Balance,
 		interest_index: Rate,
 		is_collateral: bool,
 		liquidation_attempts: u8,
@@ -120,7 +132,7 @@ impl ExtBuilder {
 			pool_id,
 			user,
 			PoolUserData {
-				total_borrowed,
+				borrowed,
 				interest_index,
 				is_collateral,
 				liquidation_attempts,
@@ -133,21 +145,9 @@ impl ExtBuilder {
 		self.pools.push((
 			pool_id,
 			Pool {
-				total_borrowed: Balance::default(),
+				borrowed: Balance::default(),
 				borrow_index: Rate::default(),
-				total_protocol_interest: Balance::default(),
-			},
-		));
-		self
-	}
-
-	pub fn pool_total_borrowed(mut self, pool_id: CurrencyId, total_borrowed: Balance) -> Self {
-		self.pools.push((
-			pool_id,
-			Pool {
-				total_borrowed,
-				borrow_index: Rate::one(),
-				total_protocol_interest: Balance::zero(),
+				protocol_interest: Balance::default(),
 			},
 		));
 		self
@@ -157,7 +157,7 @@ impl ExtBuilder {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 		orml_tokens::GenesisConfig::<Test> {
-			endowed_accounts: self.endowed_accounts,
+			balances: self.endowed_accounts,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

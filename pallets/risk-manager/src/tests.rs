@@ -5,7 +5,7 @@ use minterest_primitives::Price;
 use mock::{Event, *};
 use sp_core::offchain::{
 	testing::{TestOffchainExt, TestTransactionPoolExt},
-	OffchainExt, TransactionPoolExt,
+	OffchainDbExt, OffchainWorkerExt, TransactionPoolExt,
 };
 use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 use test_helper::offchain_ext::OffChainExtWithHooks;
@@ -21,10 +21,11 @@ fn test_offchain_worker_lock_expired() {
 		.build();
 
 	let (offchain, state) = TestOffchainExt::new();
-	let offchain_ext = OffChainExtWithHooks::new(offchain, None);
+	let offchain_ext = OffChainExtWithHooks::new(offchain);
 
 	let (pool, trans_pool_state) = TestTransactionPoolExt::new();
-	ext.register_extension(OffchainExt::new(offchain_ext));
+	ext.register_extension(OffchainDbExt::new(offchain_ext.clone()));
+	ext.register_extension(OffchainWorkerExt::new(offchain_ext));
 	ext.register_extension(TransactionPoolExt::new(pool));
 
 	ext.execute_with(|| {
@@ -90,7 +91,8 @@ fn test_offchain_worker_simple_liquidation() {
 
 	let (offchain, state) = TestOffchainExt::new();
 	let (pool, trans_pool_state) = TestTransactionPoolExt::new();
-	ext.register_extension(OffchainExt::new(offchain));
+	ext.register_extension(OffchainDbExt::new(offchain.clone()));
+	ext.register_extension(OffchainWorkerExt::new(offchain));
 	ext.register_extension(TransactionPoolExt::new(pool));
 
 	ext.execute_with(|| {
@@ -140,13 +142,13 @@ fn set_max_attempts_should_work() {
 		// Can be set to 0.0
 		assert_ok!(TestRiskManager::set_max_attempts(admin_origin(), DOT, 0));
 		assert_eq!(TestRiskManager::risk_manager_params(DOT).max_attempts, 0);
-		let expected_event = Event::risk_manager(crate::Event::MaxValueOFLiquidationAttempsHasChanged(0));
+		let expected_event = Event::TestRiskManager(crate::Event::MaxValueOFLiquidationAttempsHasChanged(0));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// ALICE set max_attempts equal 2.0
 		assert_ok!(TestRiskManager::set_max_attempts(admin_origin(), DOT, 2));
 		assert_eq!(TestRiskManager::risk_manager_params(DOT).max_attempts, 2);
-		let expected_event = Event::risk_manager(crate::Event::MaxValueOFLiquidationAttempsHasChanged(2));
+		let expected_event = Event::TestRiskManager(crate::Event::MaxValueOFLiquidationAttempsHasChanged(2));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Administrator.
@@ -173,7 +175,8 @@ fn set_min_partial_liquidation_sum_should_work() {
 			TestRiskManager::risk_manager_params(DOT).min_partial_liquidation_sum,
 			Balance::zero()
 		);
-		let expected_event = Event::risk_manager(crate::Event::MinSumForPartialLiquidationHasChanged(Balance::zero()));
+		let expected_event =
+			Event::TestRiskManager(crate::Event::MinSumForPartialLiquidationHasChanged(Balance::zero()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// ALICE set min_partial_liquidation_sum equal to one hundred.
@@ -186,7 +189,7 @@ fn set_min_partial_liquidation_sum_should_work() {
 			TestRiskManager::risk_manager_params(DOT).min_partial_liquidation_sum,
 			ONE_HUNDRED
 		);
-		let expected_event = Event::risk_manager(crate::Event::MinSumForPartialLiquidationHasChanged(ONE_HUNDRED));
+		let expected_event = Event::TestRiskManager(crate::Event::MinSumForPartialLiquidationHasChanged(ONE_HUNDRED));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Administrator.
@@ -209,13 +212,13 @@ fn set_threshold_should_work() {
 		// Can be set to 0.0
 		assert_ok!(TestRiskManager::set_threshold(admin_origin(), DOT, Rate::zero()));
 		assert_eq!(TestRiskManager::risk_manager_params(DOT).threshold, Rate::zero());
-		let expected_event = Event::risk_manager(crate::Event::ValueOfThresholdHasChanged(Rate::zero()));
+		let expected_event = Event::TestRiskManager(crate::Event::ValueOfThresholdHasChanged(Rate::zero()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// ALICE set min_partial_liquidation_sum equal one hundred.
 		assert_ok!(TestRiskManager::set_threshold(admin_origin(), DOT, Rate::one()));
 		assert_eq!(TestRiskManager::risk_manager_params(DOT).threshold, Rate::one());
-		let expected_event = Event::risk_manager(crate::Event::ValueOfThresholdHasChanged(Rate::one()));
+		let expected_event = Event::TestRiskManager(crate::Event::ValueOfThresholdHasChanged(Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Administrator.
@@ -238,7 +241,7 @@ fn set_liquidation_fee_should_work() {
 		// Can be set to 1.0
 		assert_ok!(TestRiskManager::set_liquidation_fee(admin_origin(), DOT, Rate::one()));
 		assert_eq!(TestRiskManager::risk_manager_params(DOT).liquidation_fee, Rate::one());
-		let expected_event = Event::risk_manager(crate::Event::ValueOfLiquidationFeeHasChanged(Rate::one()));
+		let expected_event = Event::TestRiskManager(crate::Event::ValueOfLiquidationFeeHasChanged(Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// Can not be set to 0.0
@@ -282,27 +285,6 @@ fn liquidate_should_work() {
 }
 
 #[test]
-fn mutate_liquidation_attempts_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		TestRiskManager::mutate_liquidation_attempts(DOT, &ALICE, true);
-		assert_eq!(
-			liquidity_pools::PoolUserParams::<Test>::get(DOT, ALICE).liquidation_attempts,
-			u8::one()
-		);
-		TestRiskManager::mutate_liquidation_attempts(DOT, &ALICE, true);
-		assert_eq!(
-			liquidity_pools::PoolUserParams::<Test>::get(DOT, ALICE).liquidation_attempts,
-			2_u8
-		);
-		TestRiskManager::mutate_liquidation_attempts(DOT, &ALICE, false);
-		assert_eq!(
-			liquidity_pools::PoolUserParams::<Test>::get(DOT, ALICE).liquidation_attempts,
-			u8::zero()
-		);
-	})
-}
-
-#[test]
 fn complete_liquidation_one_collateral_should_work() {
 	ExtBuilder::default()
 		.liquidity_pool_balance(DOT, dollars(110_000))
@@ -310,7 +292,7 @@ fn complete_liquidation_one_collateral_should_work() {
 		.user_balance(ALICE, MDOT, dollars(100_000))
 		.user_balance(BOB, MDOT, dollars(100_000))
 		.pool_user_data(DOT, ALICE, dollars(90_000), Rate::one(), true, 3)
-		.pool_total_borrowed(DOT, dollars(90_000))
+		.pool_borrow_underlying(DOT, dollars(90_000))
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all pools.
@@ -318,7 +300,7 @@ fn complete_liquidation_one_collateral_should_work() {
 
 			assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, DOT));
 
-			let expected_event = Event::risk_manager(crate::Event::LiquidateUnsafeLoan(
+			let expected_event = Event::TestRiskManager(crate::Event::LiquidateUnsafeLoan(
 				ALICE,
 				180_000 * DOLLARS,
 				DOT,
@@ -332,8 +314,8 @@ fn complete_liquidation_one_collateral_should_work() {
 			assert_eq!(TestPools::get_pool_available_liquidity(DOT), dollars(105_500));
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), dollars(104_500));
 
-			assert_eq!(TestPools::pools(DOT).total_borrowed, Balance::zero());
-			assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, Balance::zero());
+			assert_eq!(TestPools::pools(DOT).borrowed, Balance::zero());
+			assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, Balance::zero());
 
 			assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, 0);
 		})
@@ -354,7 +336,7 @@ fn complete_liquidation_multi_collateral_should_work() {
 		.user_balance(CHARLIE, MDOT, 100_000 * DOLLARS)
 		.pool_user_data(DOT, ALICE, 90_000 * DOLLARS, Rate::one(), true, 3)
 		.pool_user_data(ETH, ALICE, 0, Rate::one(), true, 0)
-		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all pools.
@@ -362,7 +344,7 @@ fn complete_liquidation_multi_collateral_should_work() {
 
 			assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, DOT));
 
-			let expected_event = Event::risk_manager(crate::Event::LiquidateUnsafeLoan(
+			let expected_event = Event::TestRiskManager(crate::Event::LiquidateUnsafeLoan(
 				ALICE,
 				180_000 * DOLLARS,
 				DOT,
@@ -380,8 +362,8 @@ fn complete_liquidation_multi_collateral_should_work() {
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), 60_000 * DOLLARS);
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(ETH), 144_500 * DOLLARS);
 
-			assert_eq!(TestPools::pools(DOT).total_borrowed, Balance::zero());
-			assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, Balance::zero());
+			assert_eq!(TestPools::pools(DOT).borrowed, Balance::zero());
+			assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, Balance::zero());
 
 			assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, 0);
 		})
@@ -395,7 +377,7 @@ fn partial_liquidation_one_collateral_should_work() {
 		.user_balance(ALICE, MDOT, 100_000 * DOLLARS)
 		.user_balance(BOB, MDOT, 100_000 * DOLLARS)
 		.pool_user_data(DOT, ALICE, 90_000 * DOLLARS, Rate::one(), true, 0)
-		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all pools.
@@ -403,7 +385,7 @@ fn partial_liquidation_one_collateral_should_work() {
 
 			assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, DOT));
 
-			let expected_event = Event::risk_manager(crate::Event::LiquidateUnsafeLoan(
+			let expected_event = Event::TestRiskManager(crate::Event::LiquidateUnsafeLoan(
 				ALICE,
 				54_000 * DOLLARS,
 				DOT,
@@ -417,8 +399,8 @@ fn partial_liquidation_one_collateral_should_work() {
 			assert_eq!(TestPools::get_pool_available_liquidity(DOT), 108_650 * DOLLARS);
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), 101_350 * DOLLARS);
 
-			assert_eq!(TestPools::pools(DOT).total_borrowed, 63_000 * DOLLARS);
-			assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, 63_000 * DOLLARS);
+			assert_eq!(TestPools::pools(DOT).borrowed, 63_000 * DOLLARS);
+			assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, 63_000 * DOLLARS);
 
 			assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, 1);
 		})
@@ -439,7 +421,7 @@ fn partial_liquidation_multi_collateral_should_work() {
 		.user_balance(CHARLIE, MDOT, 100_000 * DOLLARS)
 		.pool_user_data(DOT, ALICE, 90_000 * DOLLARS, Rate::one(), true, 0)
 		.pool_user_data(ETH, ALICE, 0, Rate::one(), true, 0)
-		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all pools.
@@ -447,7 +429,7 @@ fn partial_liquidation_multi_collateral_should_work() {
 
 			assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, DOT));
 
-			let expected_event = Event::risk_manager(crate::Event::LiquidateUnsafeLoan(
+			let expected_event = Event::TestRiskManager(crate::Event::LiquidateUnsafeLoan(
 				ALICE,
 				54_000 * DOLLARS,
 				DOT,
@@ -465,8 +447,8 @@ fn partial_liquidation_multi_collateral_should_work() {
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), 73_000 * DOLLARS);
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(ETH), 128_350 * DOLLARS);
 
-			assert_eq!(TestPools::pools(DOT).total_borrowed, 63_000 * DOLLARS);
-			assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, 63_000 * DOLLARS);
+			assert_eq!(TestPools::pools(DOT).borrowed, 63_000 * DOLLARS);
+			assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, 63_000 * DOLLARS);
 
 			assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, 1);
 		})
@@ -483,7 +465,7 @@ fn complete_liquidation_should_not_work() {
 		.user_balance(CHARLIE, MDOT, 100_000 * DOLLARS)
 		.pool_user_data(DOT, ALICE, 90_000 * DOLLARS, Rate::one(), true, 3)
 		.pool_user_data(ETH, ALICE, 0, Rate::one(), false, 0)
-		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			assert_err!(
@@ -504,7 +486,7 @@ fn partial_liquidation_should_not_work() {
 		.user_balance(CHARLIE, MDOT, 100_000 * DOLLARS)
 		.pool_user_data(DOT, ALICE, 90_000 * DOLLARS, Rate::one(), true, 2)
 		.pool_user_data(BTC, ALICE, 0, Rate::one(), true, 0)
-		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			assert_err!(
@@ -524,7 +506,7 @@ fn complete_liquidation_one_collateral_not_enough_balance_should_work() {
 		.user_balance(ALICE, MDOT, dollars(100_000))
 		.user_balance(BOB, MDOT, dollars(100_000))
 		.pool_user_data(DOT, ALICE, dollars(90_000), Rate::one(), true, 3)
-		.pool_total_borrowed(DOT, dollars(90_000))
+		.pool_borrow_underlying(DOT, dollars(90_000))
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all pools.
@@ -532,7 +514,7 @@ fn complete_liquidation_one_collateral_not_enough_balance_should_work() {
 
 			assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, DOT));
 
-			let expected_event = Event::risk_manager(crate::Event::LiquidateUnsafeLoan(
+			let expected_event = Event::TestRiskManager(crate::Event::LiquidateUnsafeLoan(
 				ALICE,
 				100_000 * DOLLARS,
 				DOT,
@@ -546,8 +528,8 @@ fn complete_liquidation_one_collateral_not_enough_balance_should_work() {
 			assert_eq!(TestPools::get_pool_available_liquidity(DOT), dollars(107_500));
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), dollars(52_500));
 
-			assert_eq!(TestPools::pools(DOT).total_borrowed, dollars(40_000));
-			assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, dollars(40_000));
+			assert_eq!(TestPools::pools(DOT).borrowed, dollars(40_000));
+			assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, dollars(40_000));
 
 			assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, 3);
 		})
@@ -568,7 +550,7 @@ fn complete_liquidation_multi_collateral_not_enough_balance_should_work() {
 		.user_balance(CHARLIE, MDOT, 100_000 * DOLLARS)
 		.pool_user_data(DOT, ALICE, 90_000 * DOLLARS, Rate::one(), true, 3)
 		.pool_user_data(ETH, ALICE, 0, Rate::one(), true, 0)
-		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all pools.
@@ -576,7 +558,7 @@ fn complete_liquidation_multi_collateral_not_enough_balance_should_work() {
 
 			assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, DOT));
 
-			let expected_event = Event::risk_manager(crate::Event::LiquidateUnsafeLoan(
+			let expected_event = Event::TestRiskManager(crate::Event::LiquidateUnsafeLoan(
 				ALICE,
 				120_000 * DOLLARS,
 				DOT,
@@ -594,8 +576,8 @@ fn complete_liquidation_multi_collateral_not_enough_balance_should_work() {
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), 50_000 * DOLLARS);
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(ETH), 113_000 * DOLLARS);
 
-			assert_eq!(TestPools::pools(DOT).total_borrowed, dollars(30_000));
-			assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, dollars(30_000));
+			assert_eq!(TestPools::pools(DOT).borrowed, dollars(30_000));
+			assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, dollars(30_000));
 
 			assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, 3);
 		})
@@ -616,7 +598,7 @@ fn partial_liquidation_multi_collateral_not_enough_balance_should_work() {
 		.user_balance(CHARLIE, MDOT, 100_000 * DOLLARS)
 		.pool_user_data(DOT, ALICE, 90_000 * DOLLARS, Rate::one(), true, 0)
 		.pool_user_data(ETH, ALICE, 0, Rate::one(), true, 0)
-		.pool_total_borrowed(DOT, 90_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 90_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Set price = 2.00 USD for all pools.
@@ -624,7 +606,7 @@ fn partial_liquidation_multi_collateral_not_enough_balance_should_work() {
 
 			assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, DOT));
 
-			let expected_event = Event::risk_manager(crate::Event::LiquidateUnsafeLoan(
+			let expected_event = Event::TestRiskManager(crate::Event::LiquidateUnsafeLoan(
 				ALICE,
 				20_000 * DOLLARS,
 				DOT,
@@ -642,8 +624,8 @@ fn partial_liquidation_multi_collateral_not_enough_balance_should_work() {
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(DOT), Balance::zero());
 			assert_eq!(LiquidationPools::get_pool_available_liquidity(ETH), dollars(110_500));
 
-			assert_eq!(TestPools::pools(DOT).total_borrowed, dollars(80_000));
-			assert_eq!(TestPools::pool_user_data(DOT, ALICE).total_borrowed, dollars(80_000));
+			assert_eq!(TestPools::pools(DOT).borrowed, dollars(80_000));
+			assert_eq!(TestPools::pool_user_data(DOT, ALICE).borrowed, dollars(80_000));
 
 			assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, 0);
 		})

@@ -16,7 +16,7 @@ mod weights;
 mod weights_test;
 
 pub use controller_rpc_runtime_api::{
-	BalanceInfo, HypotheticalLiquidityData, PoolState, ProtocolTotalValue, UserPoolBalanceData,
+	BalanceInfo, HypotheticalLiquidityData, PoolState, ProtocolTotalValue, UserData, UserPoolBalanceData,
 };
 use minterest_primitives::constants::fee::WeightToFee;
 pub use minterest_primitives::{
@@ -31,7 +31,7 @@ pub use mnt_token_rpc_runtime_api::MntBalanceInfo;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::{fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
-use pallet_traits::{ControllerManager, LiquidityPoolsManager, MntManager};
+use pallet_traits::{ControllerManager, LiquidityPoolStorageProvider, MntManager};
 use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -42,9 +42,9 @@ use sp_core::{
 };
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, Zero},
+	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, One, Zero},
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchResult, FixedPointNumber, ModuleId,
+	ApplyExtrinsicResult, DispatchResult, FixedPointNumber,
 };
 use sp_std::{cmp::Ordering, convert::TryFrom, prelude::*};
 #[cfg(feature = "std")]
@@ -54,12 +54,12 @@ use sp_version::RuntimeVersion;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, debug, parameter_types,
-	traits::{KeyOwnerProofSystem, Randomness},
+	traits::{KeyOwnerProofSystem, Randomness, SortedMembers},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
 	},
-	IterableStorageDoubleMap, StorageValue,
+	IterableStorageDoubleMap, PalletId, StorageValue,
 };
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
@@ -117,21 +117,21 @@ pub fn native_version() -> NativeVersion {
 	}
 }
 
-// Module accounts of runtime
+// Pallet accounts of runtime
 parameter_types! {
-	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
-	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
-	pub const DexModuleId: ModuleId = ModuleId(*b"min/dexs");
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
+	pub const MntTokenPalletId: PalletId = PalletId(*b"min/mntt");
+	pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"min/lqdn");
+	pub const DexPalletId: PalletId = PalletId(*b"min/dexs");
+	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"min/lqdy");
 }
 
 // Do not change the order of modules. Used for genesis block.
 pub fn get_all_modules_accounts() -> Vec<AccountId> {
 	vec![
-		MntTokenModuleId::get().into_account(),
-		LiquidationPoolsModuleId::get().into_account(),
-		DexModuleId::get().into_account(),
-		LiquidityPoolsModuleId::get().into_account(),
+		MntTokenPalletId::get().into_account(),
+		LiquidationPoolsPalletId::get().into_account(),
+		DexPalletId::get().into_account(),
+		LiquidityPoolsPalletId::get().into_account(),
 	]
 }
 
@@ -197,6 +197,10 @@ impl frame_system::Config for Runtime {
 	type SystemWeightInfo = ();
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
+	/// What to do if the user wants the code set to something. Just use `()` unless you are in
+	/// cumulus.
+	/// TODO MIN-293
+	type OnSetCode = ();
 }
 
 impl pallet_aura::Config for Runtime {
@@ -234,6 +238,7 @@ impl pallet_timestamp::Config for Runtime {
 parameter_types! {
 	pub const ExistentialDeposit: Balance = DOLLARS; // 1 MNT
 	pub const MaxLocks: u32 = 50;
+	pub const MaxReserves: u32 = 256;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -242,6 +247,10 @@ impl pallet_balances::Config for Runtime {
 	type Balance = Balance;
 	/// The ubiquitous event type.
 	type Event = Event;
+	/// The maximum number of named reserves that can exist on an account.
+	type MaxReserves = MaxReserves;
+	/// The id type for named reserves.
+	type ReserveIdentifier = [u8; 8];
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
@@ -314,8 +323,13 @@ impl pallet_membership::Config<MinterestCouncilMembershipInstance> for Runtime {
 	type PrimeOrigin = EnsureRootOrThreeFourthsMinterestCouncil;
 	type MembershipInitialized = MinterestCouncil;
 	type MembershipChanged = MinterestCouncil;
+	type MaxMembers = MinterestCouncilMaxMembers;
+	type WeightInfo = ();
 }
 
+// It is possible to remove MinterestOracle and this pallets after implementing chainlink.
+// If we decided to save it. Need to fix MembershipInitialized and MembershipChanged types.
+// TODO MIN-446
 type OperatorMembershipInstanceMinterest = pallet_membership::Instance2;
 impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime {
 	type Event = Event;
@@ -324,20 +338,22 @@ impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime 
 	type SwapOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type ResetOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type PrimeOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
-	type MembershipInitialized = MinterestOracle;
+	type MembershipInitialized = ();
 	type MembershipChanged = MinterestOracle;
+	type MaxMembers = MinterestCouncilMaxMembers;
+	type WeightInfo = ();
 }
 
 impl minterest_protocol::Config for Runtime {
 	type Event = Event;
-	type Borrowing = LiquidityPools;
+	type MultiCurrency = Currencies;
 	type ManagerLiquidationPools = LiquidationPools;
 	type ManagerLiquidityPools = LiquidityPools;
 	type MntManager = MntToken;
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
 	type ControllerManager = Controller;
 	type RiskManagerAPI = RiskManager;
-	type MinterestModelAPI = MinterestModel;
+	type MinterestModelManager = MinterestModel;
 	type CreatePoolOrigin = EnsureRootOrHalfMinterestCouncil;
 	type WhitelistManager = Whitelist;
 }
@@ -356,6 +372,7 @@ impl orml_tokens::Config for Runtime {
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
+	type MaxLocks = MaxLocks;
 }
 
 parameter_types! {
@@ -373,7 +390,7 @@ impl orml_currencies::Config for Runtime {
 }
 
 parameter_types! {
-	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
+	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
 	pub const InitialExchangeRate: Rate = INITIAL_EXCHANGE_RATE;
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
@@ -382,7 +399,7 @@ parameter_types! {
 impl liquidity_pools::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type PriceSource = Prices;
-	type ModuleId = LiquidityPoolsModuleId;
+	type PalletId = LiquidityPoolsPalletId;
 	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
 	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
@@ -395,6 +412,8 @@ parameter_types! {
 
 impl controller::Config for Runtime {
 	type Event = Event;
+	type MultiCurrency = Currencies;
+	type PriceSource = Prices;
 	type LiquidityPoolsManager = LiquidityPools;
 	type MinterestModelManager = MinterestModel;
 	type MaxBorrowCap = MaxBorrowCap;
@@ -429,6 +448,7 @@ parameter_types! {
 
 impl risk_manager::Config for Runtime {
 	type Event = Event;
+	type PriceSource = Prices;
 	type UnsignedPriority = RiskManagerPriority;
 	type LiquidationPoolsManager = LiquidationPools;
 	type LiquidityPoolsManager = LiquidityPools;
@@ -440,7 +460,7 @@ impl risk_manager::Config for Runtime {
 }
 
 parameter_types! {
-	pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
+	pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
 }
 
 impl mnt_token::Config for Runtime {
@@ -463,7 +483,7 @@ where
 }
 
 parameter_types! {
-	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
+	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
 }
 
 impl liquidation_pools::Config for Runtime {
@@ -472,7 +492,7 @@ impl liquidation_pools::Config for Runtime {
 	type UnsignedPriority = LiquidityPoolsPriority;
 	type LiquidationPoolAccountId = LiquidationPoolAccountId;
 	type PriceSource = Prices;
-	type LiquidationPoolsModuleId = LiquidationPoolsModuleId;
+	type LiquidationPoolsPalletId = LiquidationPoolsPalletId;
 	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type LiquidityPoolsManager = LiquidityPools;
 	type Dex = Dex;
@@ -483,10 +503,10 @@ parameter_types! {
 	pub const MinimumCount: u32 = 1;
 	pub const ExpiresIn: Moment = 1000 * 60 * 60; // 60 mins
 	pub ZeroAccountId: AccountId = AccountId::from([0u8; 32]);
+	pub const MaxHasDispatchedSize: u32 = 100;
 }
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, minterest_primitives::Moment>;
-
 type MinterestDataProvider = orml_oracle::Instance1;
 impl orml_oracle::Config<MinterestDataProvider> for Runtime {
 	type Event = Event;
@@ -497,6 +517,8 @@ impl orml_oracle::Config<MinterestDataProvider> for Runtime {
 	type OracleValue = Price;
 	type RootOperatorAccountId = ZeroAccountId;
 	type WeightInfo = ();
+	type Members = OperatorMembershipMinterest;
+	type MaxHasDispatchedSize = MaxHasDispatchedSize;
 }
 
 create_median_value_data_provider!(
@@ -514,13 +536,13 @@ impl DataFeeder<CurrencyId, Price, AccountId> for AggregatedDataProvider {
 }
 
 parameter_types! {
-	pub DexAccountId: AccountId = DexModuleId::get().into_account();
+	pub DexAccountId: AccountId = DexPalletId::get().into_account();
 }
 
 impl dex::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	type DexModuleId = DexModuleId;
+	type DexPalletId = DexPalletId;
 	type DexAccountId = DexAccountId;
 }
 
@@ -532,7 +554,7 @@ parameter_types! {
 
 impl module_vesting::Config for Runtime {
 	type Event = Event;
-	type Currency = pallet_balances::Module<Runtime>;
+	type Currency = pallet_balances::Pallet<Runtime>;
 	type MinVestedTransfer = MinVestedTransfer;
 	type VestedTransferOrigin = EnsureRootOrTwoThirdsMinterestCouncil;
 	type WeightInfo = weights::vesting::WeightInfo<Runtime>;
@@ -558,45 +580,43 @@ construct_runtime!(
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
-		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 
 		// Tokens & Related
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
-		Currencies: orml_currencies::{Module, Call, Event<T>},
-		Vesting: module_vesting::{Module, Storage, Call, Event<T>, Config<T>},
-		TransactionPayment: pallet_transaction_payment::{Module, Storage},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Pallet, Call, Event<T>},
+		Vesting: module_vesting::{Pallet, Storage, Call, Event<T>, Config<T>},
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
 
 		// Consensus & Staking
-		Aura: pallet_aura::{Module, Config<T>},
-		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
+		Aura: pallet_aura::{Pallet, Config<T>},
+		Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
 
 		// Governance
-		MinterestCouncil: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		MinterestCouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
+		MinterestCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		MinterestCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
 
 		// Oracle and Prices
-		MinterestOracle: orml_oracle::<Instance1>::{Module, Storage, Call, Config<T>, Event<T>},
-		Prices: module_prices::{Module, Storage, Call, Event<T>, Config<T>},
+		MinterestOracle: orml_oracle::<Instance1>::{Pallet, Storage, Call, Event<T>},
+		Prices: module_prices::{Pallet, Storage, Call, Event<T>, Config<T>},
 
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
-		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
+		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
 
 		// Minterest pallets
-		MinterestProtocol: minterest_protocol::{Module, Call, Event<T>},
-		LiquidityPools: liquidity_pools::{Module, Storage, Call, Config<T>},
-		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		MinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
-		RiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
-		LiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
-		MntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
-		Dex: dex::{Module, Storage, Call, Event<T>},
-		Whitelist: whitelist_module::{Module, Storage, Call, Event<T>, Config<T>},
-
+		MinterestProtocol: minterest_protocol::{Pallet, Call, Event<T>},
+		LiquidityPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
+		Controller: controller::{Pallet, Storage, Call, Event, Config<T>},
+		MinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
+		RiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
+		LiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
+		MntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
+		Dex: dex::{Pallet, Storage, Call, Event<T>},
+		Whitelist: whitelist_module::{Pallet, Storage, Call, Event<T>, Config<T>},
 		// Dev
-		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
 	}
 );
 
@@ -626,7 +646,7 @@ pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signatu
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
 /// Executive: handles dispatch to the various pallets.
 pub type Executive =
-	frame_executive::Executive<Runtime, Block, frame_system::ChainContext<Runtime>, Runtime, AllModules>;
+	frame_executive::Executive<Runtime, Block, frame_system::ChainContext<Runtime>, Runtime, AllPallets>;
 
 impl_runtime_apis! {
 	impl sp_api::Core<Block> for Runtime {
@@ -668,10 +688,6 @@ impl_runtime_apis! {
 		) -> sp_inherents::CheckInherentsResult {
 			data.check_extrinsics(&block)
 		}
-
-		fn random_seed() -> <Block as BlockT>::Hash {
-			RandomnessCollectiveFlip::random_seed()
-		}
 	}
 
 	impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
@@ -690,8 +706,8 @@ impl_runtime_apis! {
 	}
 
 	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
-		fn slot_duration() -> u64 {
-			Aura::slot_duration()
+		fn slot_duration() -> sp_consensus_aura::SlotDuration {
+			sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
 		}
 
 		fn authorities() -> Vec<AuraId> {
@@ -759,6 +775,11 @@ impl_runtime_apis! {
 	}
 
 	impl controller_rpc_runtime_api::ControllerRuntimeApi<Block, AccountId> for Runtime {
+		// TODO: Fill RPC with real data according to task MIN-483
+		fn get_user_data(_account_id: AccountId) -> Option<UserData> {
+			Some(UserData { total_collateral_in_usd: Balance::one(), total_supply_in_usd: Balance::one(), total_borrow_in_usd: Balance::one(), total_supply_apy: Rate::one(), total_borrow_apy: Rate::one(), net_apy: Rate::one() })
+		}
+
 		fn get_protocol_total_values() -> Option<ProtocolTotalValue> {
 		let (pool_total_supply_in_usd, pool_total_borrow_in_usd, tvl_in_usd, pool_total_protocol_interest_in_usd) = Controller::get_protocol_total_values().ok()?;
 				Some(ProtocolTotalValue{pool_total_supply_in_usd, pool_total_borrow_in_usd, tvl_in_usd, pool_total_protocol_interest_in_usd })
@@ -773,8 +794,8 @@ impl_runtime_apis! {
 			Controller::get_utilization_rate(pool_id)
 		}
 
-		fn get_user_total_supply_and_borrowed_balance_in_usd(account_id: AccountId) -> Option<UserPoolBalanceData> {
-			let (total_supply, total_borrowed) = Controller::get_user_total_supply_and_borrowed_balance_in_usd(&account_id).ok()?;
+		fn get_user_total_supply_and_borrow_balance_in_usd(account_id: AccountId) -> Option<UserPoolBalanceData> {
+			let (total_supply, total_borrowed) = Controller::get_user_total_supply_and_borrow_balance_in_usd(&account_id).ok()?;
 
 			Some(UserPoolBalanceData {total_supply, total_borrowed})
 		}
@@ -801,11 +822,11 @@ impl_runtime_apis! {
 		}
 
 		fn get_user_borrow_per_asset(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
-				Some(BalanceInfo{amount: Controller::get_user_borrow_per_asset(&account_id, underlying_asset_id).ok()?})
+				Some(BalanceInfo{amount: Controller::get_user_borrow_underlying_balance(&account_id, underlying_asset_id).ok()?})
 		}
 
 		fn get_user_underlying_balance_per_asset(account_id: AccountId, pool_id: CurrencyId) -> Option<BalanceInfo> {
-				Some(BalanceInfo{amount: Controller::get_user_underlying_balance_per_asset(&account_id, pool_id).ok()?})
+				Some(BalanceInfo{amount: Controller::get_user_supply_underlying_balance(&account_id, pool_id).ok()?})
 		}
 
 		fn pool_exists(underlying_asset_id: CurrencyId) -> bool {

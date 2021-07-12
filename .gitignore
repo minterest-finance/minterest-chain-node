@@ -29,5 +29,8 @@ venv.bak/
 !./cargo/audit.toml
 ./cargo/*
 
-#Merge artifacts
+# Debug settings
+.vimspector.json
+
+# Merge artifacts
 *.orig

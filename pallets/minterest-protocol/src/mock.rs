@@ -3,7 +3,7 @@
 use super::*;
 use crate as minterest_protocol;
 use controller::{ControllerData, PauseKeeper};
-use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
+use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
@@ -14,8 +14,8 @@ use pallet_traits::{PricesManager, RiskManager};
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-	FixedPointNumber, ModuleId,
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One},
+	FixedPointNumber,
 };
 pub use test_helper::*;
 
@@ -29,18 +29,18 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
-		Currencies: orml_currencies::{Module, Call, Event<T>},
-		Controller: controller::{Module, Storage, Call, Event, Config<T>},
-		TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
-		TestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
-		TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
-		TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
-		TestDex: dex::{Module, Storage, Call, Event<T>},
-		TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
-		TestWhitelist: whitelist_module::{Module, Storage, Call, Event<T>, Config<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Pallet, Call, Event<T>},
+		Controller: controller::{Pallet, Storage, Call, Event, Config<T>},
+		TestMinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
+		TestMinterestProtocol: minterest_protocol::{Pallet, Storage, Call, Event<T>},
+		TestPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
+		TestLiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, Config<T>},
+		TestDex: dex::{Pallet, Storage, Call, Event<T>},
+		TestMntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
+		TestWhitelist: whitelist_module::{Pallet, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -50,12 +50,12 @@ ord_parameter_types! {
 }
 
 parameter_types! {
-	pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"min/lqdy");
-	pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"min/lqdn");
-	pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
-	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
-	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
-	pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
+	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"min/lqdy");
+	pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"min/lqdn");
+	pub const MntTokenPalletId: PalletId = PalletId(*b"min/mntt");
+	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
+	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
+	pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
@@ -194,16 +194,16 @@ impl ExtBuilder {
 	pub fn pool_with_params(
 		mut self,
 		pool_id: CurrencyId,
-		total_borrowed: Balance,
+		borrowed: Balance,
 		borrow_index: Rate,
-		total_protocol_interest: Balance,
+		protocol_interest: Balance,
 	) -> Self {
 		self.pools.push((
 			pool_id,
 			Pool {
-				total_borrowed,
+				borrowed,
 				borrow_index,
-				total_protocol_interest,
+				protocol_interest,
 			},
 		));
 		self
@@ -225,7 +225,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		orml_tokens::GenesisConfig::<Test> {
-			endowed_accounts: self
+			balances: self
 				.endowed_accounts
 				.into_iter()
 				.filter(|(_, currency_id, _)| *currency_id != MNT)
@@ -241,7 +241,7 @@ impl ExtBuilder {
 					DOT,
 					ALICE,
 					PoolUserData {
-						total_borrowed: 0,
+						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
 						liquidation_attempts: 3,
@@ -251,7 +251,7 @@ impl ExtBuilder {
 					ETH,
 					ALICE,
 					PoolUserData {
-						total_borrowed: 0,
+						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: false,
 						liquidation_attempts: 0,
@@ -261,7 +261,7 @@ impl ExtBuilder {
 					KSM,
 					ALICE,
 					PoolUserData {
-						total_borrowed: 0,
+						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
 						liquidation_attempts: 0,
@@ -271,7 +271,7 @@ impl ExtBuilder {
 					BTC,
 					ALICE,
 					PoolUserData {
-						total_borrowed: 0,
+						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
 						liquidation_attempts: 0,
@@ -281,7 +281,7 @@ impl ExtBuilder {
 					DOT,
 					BOB,
 					PoolUserData {
-						total_borrowed: 0,
+						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
 						liquidation_attempts: 0,
@@ -291,7 +291,7 @@ impl ExtBuilder {
 					BTC,
 					BOB,
 					PoolUserData {
-						total_borrowed: 0,
+						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
 						liquidation_attempts: 0,
@@ -303,7 +303,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		controller::GenesisConfig::<Test> {
-			controller_dates: self.controller_data,
+			controller_params: self.controller_data,
 			pause_keepers: vec![
 				(ETH, PauseKeeper::all_unpaused()),
 				(DOT, PauseKeeper::all_unpaused()),

@@ -46,13 +46,13 @@ fn add_member_should_works() {
 
 		// Add Alice to whitelist.
 		assert_ok!(Whitelist::add_member(admin(), ALICE));
-		let expected_event = Event::whitelist_module(crate::Event::MemberAdded(ALICE));
+		let expected_event = Event::Whitelist(crate::Event::MemberAdded(ALICE));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(Members::<Test>::contains_key(&ALICE));
 
 		// Add Bob to whitelist.
 		assert_ok!(Whitelist::add_member(admin(), BOB));
-		let expected_event = Event::whitelist_module(crate::Event::MemberAdded(BOB));
+		let expected_event = Event::Whitelist(crate::Event::MemberAdded(BOB));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(Members::<Test>::contains_key(&BOB));
 
@@ -103,7 +103,7 @@ fn remove_member_should_works() {
 
 			// Remove Bob from whitelist.
 			assert_ok!(Whitelist::remove_member(admin(), BOB));
-			let expected_event = Event::whitelist_module(crate::Event::MemberRemoved(2));
+			let expected_event = Event::Whitelist(crate::Event::MemberRemoved(2));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// Check storage changes.
@@ -118,7 +118,7 @@ fn remove_member_should_works() {
 fn switch_whitelist_mode_should_work() {
 	ExternalityBuilder::default().build().execute_with(|| {
 		assert_ok!(Whitelist::switch_whitelist_mode(admin(), true));
-		let expected_event = Event::whitelist_module(crate::Event::ProtocolOperationModeSwitched(true));
+		let expected_event = Event::Whitelist(crate::Event::ProtocolOperationModeSwitched(true));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 		assert!(Whitelist::whitelist_mode());
 

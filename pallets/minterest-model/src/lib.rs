@@ -1,4 +1,4 @@
-//! # Minterest Model Module
+//! # Minterest Model Pallet
 //!
 //! ## Overview
 //!
@@ -37,7 +37,7 @@ use pallet_traits::MinterestModelManager;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedDiv, CheckedMul},
+	traits::{CheckedAdd, CheckedDiv, CheckedMul, One, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, result};

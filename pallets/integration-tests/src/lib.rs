@@ -1,4 +1,4 @@
-//! # Integration Tests Module
+//! # Integration Tests Pallet
 //!
 //! ## Overview
 //!
@@ -12,8 +12,9 @@
 #[cfg(test)]
 mod tests {
 	use controller::{ControllerData, PauseKeeper};
-	use frame_support::traits::Contains;
-	use frame_support::{assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types};
+	use frame_support::{
+		assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId,
+	};
 	use frame_system::{offchain::SendTransactionTypes, EnsureSignedBy};
 	use liquidity_pools::{Pool, PoolUserData};
 	use minterest_model::MinterestModelData;
@@ -21,14 +22,14 @@ mod tests {
 	use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 	use minterest_protocol::{Error as MinterestProtocolError, PoolInitData};
 	use orml_traits::{parameter_type_with_key, MultiCurrency};
-	use pallet_traits::{PoolsManager, PricesManager};
+	use pallet_traits::{CurrencyConverter, PoolsManager, PricesManager};
 	use risk_manager::RiskManagerData;
 	use sp_core::H256;
 	use sp_runtime::{
 		testing::{Header, TestXt},
-		traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Zero},
+		traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One, Zero},
 		transaction_validity::TransactionPriority,
-		FixedPointNumber, ModuleId,
+		FixedPointNumber,
 	};
 	use sp_std::cell::RefCell;
 	use std::collections::HashMap;
@@ -52,19 +53,19 @@ mod tests {
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 		{
-			System: frame_system::{Module, Call, Config, Storage, Event<T>},
-			Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-			Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
-			Currencies: orml_currencies::{Module, Call, Event<T>},
-			MinterestProtocol: minterest_protocol::{Module, Storage, Call, Event<T>},
-			TestPools: liquidity_pools::{Module, Storage, Call, Config<T>},
-			TestLiquidationPools: liquidation_pools::{Module, Storage, Call, Event<T>, Config<T>},
-			TestController: controller::{Module, Storage, Call, Event, Config<T>},
-			TestMinterestModel: minterest_model::{Module, Storage, Call, Event, Config<T>},
-			TestDex: dex::{Module, Storage, Call, Event<T>},
-			TestMntToken: mnt_token::{Module, Storage, Call, Event<T>, Config<T>},
-			TestRiskManager: risk_manager::{Module, Storage, Call, Event<T>, Config<T>},
-			TestWhitelist: whitelist_module::{Module, Storage, Call, Event<T>, Config<T>},
+			System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+			Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+			Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>},
+			Currencies: orml_currencies::{Pallet, Call, Event<T>},
+			MinterestProtocol: minterest_protocol::{Pallet, Storage, Call, Event<T>},
+			TestPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
+			TestLiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, Config<T>},
+			TestController: controller::{Pallet, Storage, Call, Event, Config<T>},
+			TestMinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
+			TestDex: dex::{Pallet, Storage, Call, Event<T>},
+			TestMntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
+			TestRiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>},
+			TestWhitelist: whitelist_module::{Pallet, Storage, Call, Event<T>, Config<T>},
 		}
 	);
 
@@ -73,12 +74,12 @@ mod tests {
 	}
 
 	parameter_types! {
-		pub const LiquidityPoolsModuleId: ModuleId = ModuleId(*b"lqdy/min");
-		pub const LiquidationPoolsModuleId: ModuleId = ModuleId(*b"lqdn/min");
-		pub const MntTokenModuleId: ModuleId = ModuleId(*b"min/mntt");
-		pub LiquidityPoolAccountId: AccountId = LiquidityPoolsModuleId::get().into_account();
-		pub LiquidationPoolAccountId: AccountId = LiquidationPoolsModuleId::get().into_account();
-		pub MntTokenAccountId: AccountId = MntTokenModuleId::get().into_account();
+		pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"lqdy/min");
+		pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"lqdn/min");
+		pub const MntTokenPalletId: PalletId = PalletId(*b"min/mntt");
+		pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
+		pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
+		pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
 		pub InitialExchangeRate: Rate = Rate::one();
 		pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 		pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
@@ -130,21 +131,6 @@ mod tests {
 
 	thread_local! {
 		static FOUR: RefCell<Vec<u64>> = RefCell::new(vec![4]);
-	}
-
-	pub struct WhitelistMembers;
-	impl Contains<u64> for WhitelistMembers {
-		fn sorted_members() -> Vec<u64> {
-			vec![4]
-		}
-		#[cfg(feature = "runtime-benchmarks")]
-		fn add(new: &u128) {
-			TEN_TO_FOURTEEN.with(|v| {
-				let mut members = v.borrow_mut();
-				members.push(*new);
-				members.sort();
-			})
-		}
 	}
 
 	pub struct ExtBuilder {
@@ -268,13 +254,13 @@ mod tests {
 			self
 		}
 
-		pub fn pool_total_borrowed(mut self, pool_id: CurrencyId, total_borrowed: Balance) -> Self {
+		pub fn pool_borrow_underlying(mut self, pool_id: CurrencyId, borrowed: Balance) -> Self {
 			self.pools.push((
 				pool_id,
 				Pool {
-					total_borrowed,
+					borrowed,
 					borrow_index: Rate::one(),
-					total_protocol_interest: Balance::zero(),
+					protocol_interest: Balance::zero(),
 				},
 			));
 			self
@@ -284,7 +270,7 @@ mod tests {
 			mut self,
 			pool_id: CurrencyId,
 			user: AccountId,
-			total_borrowed: Balance,
+			borrowed: Balance,
 			interest_index: Rate,
 			is_collateral: bool,
 			liquidation_attempts: u8,
@@ -293,7 +279,7 @@ mod tests {
 				pool_id,
 				user,
 				PoolUserData {
-					total_borrowed,
+					borrowed,
 					interest_index,
 					is_collateral,
 					liquidation_attempts,
@@ -306,9 +292,9 @@ mod tests {
 			self.pools.push((
 				pool_id,
 				Pool {
-					total_borrowed: Balance::zero(),
+					borrowed: Balance::zero(),
 					borrow_index: Rate::one(),
-					total_protocol_interest: Balance::zero(),
+					protocol_interest: Balance::zero(),
 				},
 			));
 			self
@@ -354,7 +340,7 @@ mod tests {
 			.unwrap();
 
 			orml_tokens::GenesisConfig::<Test> {
-				endowed_accounts: self
+				balances: self
 					.endowed_accounts
 					.into_iter()
 					.filter(|(_, currency_id, _)| *currency_id != MNT)
@@ -364,7 +350,7 @@ mod tests {
 			.unwrap();
 
 			controller::GenesisConfig::<Test> {
-				controller_dates: self.controller_data,
+				controller_params: self.controller_data,
 				pause_keepers: vec![
 					(ETH, PauseKeeper::all_unpaused()),
 					(DOT, PauseKeeper::all_unpaused()),

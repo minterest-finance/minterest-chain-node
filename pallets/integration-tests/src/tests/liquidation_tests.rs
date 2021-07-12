@@ -108,7 +108,7 @@ mod tests {
 				current sum_borrow = $175_000_000 - $52_500_000 = $122_500_000 < sum_collateral = $138_375_000 * 0.9 = $124_537_500;
 				NOTE: 0.3 - temporary factor for partial liquidation;
 				 */
-				let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
+				let expected_event = Event::TestRiskManager(risk_manager::Event::LiquidateUnsafeLoan(
 					BOB,
 					52_500_003_307_499_999_999_999_924, // repay_amount = $52_500_000;
 					BTC,                                // liquidated_pool_id;
@@ -120,7 +120,7 @@ mod tests {
 				assert_eq!(
 					TestPools::pool_user_data(BTC, BOB),
 					PoolUserData {
-						total_borrowed: 2_450_000_154_350_000_000_000, // 3500 BTC - 1_050 BTC = 2_450 BTC
+						borrowed: 2_450_000_154_350_000_000_000, // 3500 BTC - 1_050 BTC = 2_450 BTC
 						interest_index: Rate::from_inner(1_000_000_063_000_000_000),
 						is_collateral: false,
 						liquidation_attempts: 1,
@@ -177,7 +177,7 @@ mod tests {
 				// Call complete liquidation:
 				assert_ok!(TestRiskManager::liquidate_unsafe_loan(BOB, BTC));
 
-				let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
+				let expected_event = Event::TestRiskManager(risk_manager::Event::LiquidateUnsafeLoan(
 					BOB,
 					52_010_835_370_810_769_596_505, // repay_amount = $52_010;
 					BTC,                            // liquidated_pool_id;
@@ -210,7 +210,7 @@ mod tests {
 				assert_eq!(
 					TestPools::pool_user_data(BTC, BOB),
 					PoolUserData {
-						total_borrowed: 0,
+						borrowed: 0,
 						interest_index: Rate::from_inner(1_000_000_085_059_004_489),
 						is_collateral: false,
 						liquidation_attempts: 0,
@@ -277,7 +277,7 @@ mod tests {
 				set_prices_for_assets(vec![(BTC, Rate::saturating_from_integer(100))]);
 				System::set_block_number(40);
 				assert_ok!(TestRiskManager::liquidate_unsafe_loan(ALICE, BTC));
-				let expected_event = Event::risk_manager(risk_manager::Event::LiquidateUnsafeLoan(
+				let expected_event = Event::TestRiskManager(risk_manager::Event::LiquidateUnsafeLoan(
 					ALICE,
 					190_476_190_476_190_476_190_476, // repay_amount = $190_476;
 					BTC,                             // liquidated_pool_id;
@@ -289,7 +289,7 @@ mod tests {
 				assert_eq!(
 					TestPools::pool_user_data(BTC, ALICE),
 					PoolUserData {
-						total_borrowed: 48_095_242_595_238_095_238_095, // 50_000 BTC - 1904.76 BTC = 48_095.24 BTC
+						borrowed: 48_095_242_595_238_095_238_095, // 50_000 BTC - 1904.76 BTC = 48_095.24 BTC
 						interest_index: Rate::from_inner(1_000_000_090_000_000_000),
 						is_collateral: false,
 						liquidation_attempts: 0,
@@ -329,7 +329,7 @@ mod tests {
 				assert_eq!(TestController::get_user_total_collateral(ALICE), Ok(Balance::zero()));
 				// Borrower total borrow equal: shortfall / BTC price ($100)
 				assert_eq!(
-					TestController::get_user_borrow_per_asset(&ALICE, BTC),
+					TestController::get_user_borrow_underlying_balance(&ALICE, BTC),
 					Ok(4_809_524_259_523_809_523_809_500 / 100)
 				);
 			})

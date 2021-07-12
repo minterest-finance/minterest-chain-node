@@ -8,8 +8,10 @@ use minterest_primitives::{Balance, CurrencyId, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::MntManager;
 use sp_arithmetic::FixedPointNumber;
-use sp_runtime::traits::Zero;
-use sp_runtime::DispatchError::BadOrigin;
+use sp_runtime::{
+	traits::{One, Zero},
+	DispatchError::BadOrigin,
+};
 
 const MNT_PALLET_START_BALANCE: Balance = 1_000_000 * DOLLARS;
 
@@ -52,7 +54,7 @@ fn check_supplier_accrued(
 fn distribute_mnt_to_borrower_with_threshold() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools(10 * DOLLARS)
-		.pool_total_borrowed(DOT, 150_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 150_000 * DOLLARS)
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_threshold(20)
 		.pool_user_data(
@@ -105,7 +107,7 @@ fn distribute_mnt_to_supplier_with_threshold() {
 		.enable_minting_for_all_pools(10 * DOLLARS)
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_threshold(20)
-		.pool_total_borrowed(DOT, 100 * DOLLARS)
+		.pool_borrow_underlying(DOT, 100 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Award for ALICE is 10 per block
@@ -139,8 +141,8 @@ fn distribute_mnt_to_supplier_from_different_pools() {
 		.mnt_enabled_pools(vec![(DOT, 2 * DOLLARS), (KSM, 8 * DOLLARS)])
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_threshold(0)
-		.pool_total_borrowed(DOT, 100 * DOLLARS)
-		.pool_total_borrowed(KSM, 100 * DOLLARS)
+		.pool_borrow_underlying(DOT, 100 * DOLLARS)
+		.pool_borrow_underlying(KSM, 100 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Check accruing mnt tokens from two pools for supplier
@@ -169,8 +171,8 @@ fn distribute_mnt_to_supplier_from_different_pools() {
 fn distribute_mnt_to_borrower_from_different_pools() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools(5 * DOLLARS)
-		.pool_total_borrowed(DOT, 150_000 * DOLLARS)
-		.pool_total_borrowed(KSM, 150_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 150_000 * DOLLARS)
+		.pool_borrow_underlying(KSM, 150_000 * DOLLARS)
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_threshold(0)
 		.pool_user_data(
@@ -212,7 +214,7 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 			let dot_mnt_speed = 5 * DOLLARS;
 			// Check event about distributing mnt tokens by DOT pool
 			let borrower_index = MntToken::mnt_borrower_index(DOT, ALICE);
-			let event = Event::mnt_token(crate::Event::MntDistributedToBorrower(
+			let event = Event::MntToken(crate::Event::MntDistributedToBorrower(
 				DOT,
 				ALICE,
 				dot_mnt_speed,
@@ -233,7 +235,7 @@ fn distribute_borrowers_mnt() {
 		.enable_minting_for_all_pools(10 * DOLLARS)
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_threshold(0)
-		.pool_total_borrowed(DOT, 150_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 150_000 * DOLLARS)
 		.pool_user_data(
 			DOT,
 			ALICE,
@@ -286,7 +288,7 @@ fn distribute_borrowers_mnt() {
 fn distribute_borrower_mnt() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools(12 * DOLLARS)
-		.pool_total_borrowed(DOT, 150_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 150_000 * DOLLARS)
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_threshold(0)
 		.pool_user_data(
@@ -331,10 +333,10 @@ fn test_update_mnt_borrow_index() {
 	// TODO: check later
 	ExtBuilder::default()
 		.enable_minting_for_all_pools(10 * DOLLARS)
-		.pool_total_borrowed(DOT, 15_000 * DOLLARS)
-		.pool_total_borrowed(ETH, 30_000 * DOLLARS)
-		.pool_total_borrowed(KSM, 45_000 * DOLLARS)
-		.pool_total_borrowed(BTC, 60_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 15_000 * DOLLARS)
+		.pool_borrow_underlying(ETH, 30_000 * DOLLARS)
+		.pool_borrow_underlying(KSM, 45_000 * DOLLARS)
+		.pool_borrow_underlying(BTC, 60_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			let initial_index = Rate::one();
@@ -362,7 +364,7 @@ fn test_update_mnt_borrow_index_simple() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools(1 * DOLLARS)
 		// total borrows needs to calculate mnt_speeds
-		.pool_total_borrowed(DOT, 150_000 * DOLLARS)
+		.pool_borrow_underlying(DOT, 150_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			/*
@@ -370,12 +372,12 @@ fn test_update_mnt_borrow_index_simple() {
 			So block_delta = 1
 
 			Input parameters: 	dot_speed = 1,
-								total_borrowed = 150,
+								pool_borrowed = 150,
 								pool_borrow_index = 1.5,
 								mnt_acquired = delta_blocks * dot_speed = 1
 
 			This is how much currency was borrowed without interest
-			borrow_total_amount = total_borrowed(150000) / pool_borrow_index(1.5)  = 100000
+			borrow_total_amount = pool_borrowed(150000) / pool_borrow_index(1.5)  = 100000
 
 			How much MNT tokens were earned per block
 			ratio = mnt_acquired / borrow_total_amount = 0.00001
@@ -401,7 +403,7 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 		.mnt_account_balance(MNT_PALLET_START_BALANCE)
 		.set_mnt_claim_threshold(0)
 		// total borrows needs to calculate mnt_speeds
-		.pool_total_borrowed(DOT, 50 * DOLLARS)
+		.pool_borrow_underlying(DOT, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			/*
@@ -444,7 +446,7 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 					assert_eq!(MntToken::mnt_accrued(supplier_id), 0);
 
 					let supplier_index = MntToken::mnt_supplier_index(DOT, supplier_id).unwrap();
-					let event = Event::mnt_token(crate::Event::MntDistributedToSupplier(
+					let event = Event::MntToken(crate::Event::MntDistributedToSupplier(
 						DOT,
 						supplier_id,
 						distributed_amount,
@@ -485,10 +487,10 @@ fn test_update_mnt_supply_index() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools(2 * DOLLARS)
 		// total borrows needs to calculate mnt_speeds
-		.pool_total_borrowed(DOT, 50 * DOLLARS)
-		.pool_total_borrowed(ETH, 50 * DOLLARS)
-		.pool_total_borrowed(KSM, 50 * DOLLARS)
-		.pool_total_borrowed(BTC, 50 * DOLLARS)
+		.pool_borrow_underlying(DOT, 50 * DOLLARS)
+		.pool_borrow_underlying(ETH, 50 * DOLLARS)
+		.pool_borrow_underlying(KSM, 50 * DOLLARS)
+		.pool_borrow_underlying(BTC, 50 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			//
@@ -526,7 +528,7 @@ fn test_update_mnt_supply_index() {
 fn test_update_mnt_supply_index_simple() {
 	ExtBuilder::default()
 		// total_borrow shouldn't be zero at least for one market to calculate mnt speeds
-		.pool_total_borrowed(ETH, 150_000 * DOLLARS)
+		.pool_borrow_underlying(ETH, 150_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Input parameters:
@@ -573,8 +575,8 @@ fn test_minting_enable_disable() {
 	};
 	ExtBuilder::default()
 		.user_balance(ADMIN, MDOT, 100 * DOLLARS)
-		.pool_total_borrowed(DOT, 50 * DOLLARS)
-		.pool_total_borrowed(KSM, 50 * DOLLARS)
+		.pool_borrow_underlying(DOT, 50 * DOLLARS)
+		.pool_borrow_underlying(KSM, 50 * DOLLARS)
 		.mnt_account_balance(100 * DOLLARS)
 		.build()
 		.execute_with(|| {
@@ -596,7 +598,7 @@ fn test_minting_enable_disable() {
 			// Enable the distribution of MNT tokens in the DOT liquidity pool
 			let dot_speed = 2 * DOLLARS;
 			assert_ok!(MntToken::set_speed(admin_origin(), DOT, dot_speed));
-			let speed_changed_event = Event::mnt_token(crate::Event::MntSpeedChanged(DOT, dot_speed));
+			let speed_changed_event = Event::MntToken(crate::Event::MntSpeedChanged(DOT, dot_speed));
 			assert!(System::events()
 				.iter()
 				.any(|record| record.event == speed_changed_event));
@@ -613,7 +615,7 @@ fn test_minting_enable_disable() {
 			// Enable the distribution of MNT tokens in the KSM liquidity pool
 			let ksm_speed = 2 * DOLLARS;
 			assert_ok!(MntToken::set_speed(admin_origin(), KSM, ksm_speed));
-			let speed_changed_event = Event::mnt_token(crate::Event::MntSpeedChanged(KSM, ksm_speed));
+			let speed_changed_event = Event::MntToken(crate::Event::MntSpeedChanged(KSM, ksm_speed));
 			assert!(System::events()
 				.iter()
 				.any(|record| record.event == speed_changed_event));
@@ -623,7 +625,7 @@ fn test_minting_enable_disable() {
 
 			// Disable the distribution of MNT tokens in the DOT liquidity pool
 			assert_ok!(MntToken::set_speed(admin_origin(), DOT, Balance::zero()));
-			let speed_changed_event = Event::mnt_token(crate::Event::MntSpeedChanged(DOT, Balance::zero()));
+			let speed_changed_event = Event::MntToken(crate::Event::MntSpeedChanged(DOT, Balance::zero()));
 			assert!(System::events()
 				.iter()
 				.any(|record| record.event == speed_changed_event));
