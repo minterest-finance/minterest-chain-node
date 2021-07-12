@@ -925,6 +925,11 @@ impl<T: Config> Pallet<T> {
 		Ok(current_block_number - accrual_block_number_previous)
 	}
 
+	pub fn extend_calculate_block_delta<F>(f:F)
+		where F: 'static + Fn(Box<dyn Fn(T::BlockNumber,T::BlockNumber ) -> result::Result<T::BlockNumber, DispatchError> + Send + Sync>) + Send + Sync{
+		f(Box::new(Self::calculate_block_delta));
+	}
+
 	/// Calculates pool borrows, pool protocol interest and pool borrow index for given pool.
 	/// Applies accrued interest to pool borrows and protocol interest and calculates interest
 	/// accrued from the last checkpointed block up to the current block.
