@@ -370,7 +370,12 @@ pub trait UserLiquidationAttemptsManager<AccountId> {
 }
 
 /// Creates storage records for risk-manager pallet. This is a part of a pool creation flow.
-pub trait RiskManager {
-	/// Creates storage records for risk-manager pallet: `liquidation_fee` and `liquidation_threshold`
+pub trait RiskManagerStorageProvider {
+	/// Creates storage records for risk-manager pallet: `liquidation_fee`
+	/// and `liquidation_threshold`
 	fn create_pool(pool_id: CurrencyId, liquidation_threshold: Rate, liquidation_fee: Rate) -> DispatchResult;
+
+	/// Removes parameter values `liquidation_fee` and `liquidation_threshold` in the
+	/// risk-manager pallet.
+	fn remove_pool(pool_id: CurrencyId);
 }

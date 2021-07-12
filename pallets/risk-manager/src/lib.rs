@@ -11,7 +11,7 @@
 use frame_support::{pallet_prelude::*, transactional};
 use minterest_primitives::{CurrencyId, Operation, Rate};
 pub use module::*;
-use pallet_traits::{RiskManager, UserCollateral, UserLiquidationAttemptsManager};
+use pallet_traits::{RiskManagerStorageProvider, UserCollateral, UserLiquidationAttemptsManager};
 use sp_runtime::{
 	traits::{One, Zero},
 	FixedPointNumber,
@@ -56,7 +56,7 @@ pub mod module {
 	pub enum Error<T> {
 		/// The currency is not enabled in protocol.
 		NotValidUnderlyingAssetId,
-		/// Liquidation fee can't be less than one && greater than 1.5.
+		/// Liquidation fee can't be greater than 0.5.
 		InvalidLiquidationFeeValue,
 		/// Risk manager storage (liquidation_fee, liquidation_threshold) is already created.
 		RiskManagerParamsAlreadyCreated,
@@ -177,16 +177,16 @@ pub mod module {
 
 // Private functions
 impl<T: Config> Pallet<T> {
-	/// // Checks if 1.0 <= liquidation_fee <= 1.5
+	/// Checks if liquidation_fee <= 0.5
 	fn is_valid_liquidation_fee(liquidation_fee: Rate) -> bool {
-		liquidation_fee >= Rate::one() && liquidation_fee <= Rate::saturating_from_rational(15, 10)
+		liquidation_fee <= Rate::saturating_from_rational(5, 10)
 	}
 }
 
-impl<T: Config> RiskManager for Pallet<T> {
+impl<T: Config> RiskManagerStorageProvider for Pallet<T> {
 	fn create_pool(pool_id: CurrencyId, liquidation_threshold: Rate, liquidation_fee: Rate) -> DispatchResult {
 		ensure!(
-			!LiquidationFee::<T>::contains_key(pool_id) && LiquidationThreshold::<T>::try_get().is_ok(),
+			!LiquidationFee::<T>::contains_key(pool_id),
 			Error::<T>::RiskManagerParamsAlreadyCreated
 		);
 		ensure!(
@@ -196,6 +196,10 @@ impl<T: Config> RiskManager for Pallet<T> {
 		LiquidationFee::<T>::insert(pool_id, liquidation_fee);
 		LiquidationThreshold::<T>::put(liquidation_threshold);
 		Ok(())
+	}
+
+	fn remove_pool(pool_id: CurrencyId) {
+		LiquidationFee::<T>::remove(pool_id)
 	}
 }
 

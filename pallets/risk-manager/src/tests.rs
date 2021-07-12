@@ -40,21 +40,24 @@ fn mutate_depending_operation_should_work() {
 #[test]
 fn set_liquidation_fee_should_work() {
 	ExternalityBuilder::default().build().execute_with(|| {
-		// Can be set to 1.0
-		assert_ok!(TestRiskManager::set_liquidation_fee(admin_origin(), DOT, Rate::one()));
-		assert_eq!(TestRiskManager::liquidation_fee(DOT), Rate::one());
-		let expected_event = Event::TestRiskManager(crate::Event::LiquidationFeeUpdated(Rate::one()));
+		// Can be set to 0..
+		assert_ok!(TestRiskManager::set_liquidation_fee(
+			admin_origin(),
+			DOT,
+			Rate::saturating_from_rational(3, 10)
+		));
+		assert_eq!(
+			TestRiskManager::liquidation_fee(DOT),
+			Rate::saturating_from_rational(3, 10)
+		);
+		let expected_event = Event::TestRiskManager(crate::Event::LiquidationFeeUpdated(
+			Rate::saturating_from_rational(3, 10),
+		));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
-		// Can not be set to 0.0
+		// Can not be set to 1.0
 		assert_noop!(
-			TestRiskManager::set_liquidation_fee(admin_origin(), DOT, Rate::zero()),
-			Error::<Test>::InvalidLiquidationFeeValue
-		);
-
-		// Can not be set to 2.0
-		assert_noop!(
-			TestRiskManager::set_liquidation_fee(admin_origin(), DOT, Rate::saturating_from_integer(2)),
+			TestRiskManager::set_liquidation_fee(admin_origin(), DOT, Rate::one()),
 			Error::<Test>::InvalidLiquidationFeeValue
 		);
 

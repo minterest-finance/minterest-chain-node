@@ -329,9 +329,7 @@ pub(crate) fn create_dummy_pool_init_data() -> PoolInitData {
 		protocol_interest_threshold: 100000,
 		deviation_threshold: Rate::saturating_from_rational(5, 100),
 		balance_ratio: Rate::saturating_from_rational(2, 10),
-		max_attempts: 3,
-		min_partial_liquidation_sum: 100 * DOLLARS,
-		liquidation_threshold: Rate::saturating_from_rational(103, 100),
-		liquidation_fee: Rate::saturating_from_rational(105, 100),
+		liquidation_threshold: Rate::saturating_from_rational(3, 100),
+		liquidation_fee: Rate::saturating_from_rational(5, 100),
 	}
 }

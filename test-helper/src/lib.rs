@@ -259,6 +259,7 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type MinterestModelManager = TestMinterestModel;
 			type CreatePoolOrigin = EnsureSignedBy<$acc, AccountId>;
 			type UserLiquidationAttempts = risk_manager::Pallet<$target>;
+			type RiskManager = risk_manager::Pallet<$target>;
 			type WhitelistManager = whitelist_module::Pallet<$target>;
 		}
 	};

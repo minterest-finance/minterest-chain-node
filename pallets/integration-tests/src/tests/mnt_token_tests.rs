@@ -246,6 +246,13 @@ mod tests {
 					},
 				),
 			])
+			.set_risk_manager_params(
+				vec![
+					(DOT, Rate::saturating_from_rational(5, 100)),
+					(ETH, Rate::saturating_from_rational(5, 100)),
+				],
+				Rate::saturating_from_rational(3, 100),
+			)
 			.pool_initial(DOT)
 			.pool_initial(ETH)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
@@ -314,10 +321,8 @@ mod tests {
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 						deviation_threshold: Rate::saturating_from_rational(1, 10),
 						balance_ratio: Rate::saturating_from_rational(2, 10),
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100 * DOLLARS,
-						liquidation_threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
+						liquidation_threshold: Rate::saturating_from_rational(3, 100),
+						liquidation_fee: Rate::saturating_from_rational(5, 100),
 					},
 				));
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -393,6 +398,13 @@ mod tests {
 					jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
 				},
 			)])
+			.set_risk_manager_params(
+				vec![
+					(DOT, Rate::saturating_from_rational(5, 100)),
+					(ETH, Rate::saturating_from_rational(5, 100)),
+				],
+				Rate::saturating_from_rational(3, 100),
+			)
 			.pool_initial(ETH)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ADMIN, BTC, ONE_HUNDRED_THOUSAND)
@@ -456,10 +468,8 @@ mod tests {
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 						deviation_threshold: Rate::saturating_from_rational(1, 10),
 						balance_ratio: Rate::saturating_from_rational(2, 10),
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100 * DOLLARS,
-						liquidation_threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
+						liquidation_threshold: Rate::saturating_from_rational(3, 100),
+						liquidation_fee: Rate::saturating_from_rational(5, 100),
 					},
 				));
 				assert_ok!(MinterestProtocol::deposit_underlying(

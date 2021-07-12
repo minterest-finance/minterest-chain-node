@@ -26,8 +26,8 @@ pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
 	Borrowing, ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolStorageProvider,
-	MinterestModelManager, MntManager, PoolsManager, RiskManager, UserCollateral, UserLiquidationAttemptsManager,
-	UserStorageProvider, WhitelistManager,
+	MinterestModelManager, MntManager, PoolsManager, RiskManagerStorageProvider, UserCollateral,
+	UserLiquidationAttemptsManager, UserStorageProvider, WhitelistManager,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -116,7 +116,7 @@ pub mod module {
 		type WhitelistManager: WhitelistManager<Self::AccountId>;
 
 		/// Public API of controller pallet.
-		type RiskManager: RiskManager;
+		type RiskManager: RiskManagerStorageProvider;
 	}
 
 	#[pallet::error]

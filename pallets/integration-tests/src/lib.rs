@@ -227,6 +227,16 @@ mod tests {
 	}
 
 	impl ExtBuilder {
+		pub fn set_risk_manager_params(
+			mut self,
+			liquidation_fee: Vec<(CurrencyId, Rate)>,
+			liquidation_threshold: Rate,
+		) -> Self {
+			self.liquidation_fee = liquidation_fee;
+			self.liquidation_threshold = liquidation_threshold;
+			self
+		}
+
 		pub fn set_controller_data(mut self, pools: Vec<(CurrencyId, ControllerData<BlockNumber>)>) -> Self {
 			self.controller_data = pools;
 			self
