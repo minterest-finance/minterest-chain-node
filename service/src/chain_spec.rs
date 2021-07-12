@@ -384,6 +384,13 @@ fn minterest_genesis(
 			_phantom: Default::default(),
 		},
 		risk_manager: RiskManagerConfig {
+			liquidation_fee: vec![
+				(DOT, FixedU128::saturating_from_rational(105, 100)),
+				(ETH, FixedU128::saturating_from_rational(105, 100)),
+				(BTC, FixedU128::saturating_from_rational(105, 100)),
+				(KSM, FixedU128::saturating_from_rational(105, 100)),
+			],
+			liquidation_threshold: FixedU128::saturating_from_rational(103, 100),
 			_phantom: Default::default(),
 		},
 		liquidation_pools: LiquidationPoolsConfig {
@@ -645,6 +652,13 @@ fn testnet_genesis(
 			_phantom: Default::default(),
 		},
 		risk_manager: RiskManagerConfig {
+			liquidation_fee: vec![
+				(DOT, FixedU128::saturating_from_rational(5, 100)), // 5%
+				(ETH, FixedU128::saturating_from_rational(5, 100)), // 5%
+				(BTC, FixedU128::saturating_from_rational(5, 100)), // 5%
+				(KSM, FixedU128::saturating_from_rational(5, 100)), // 5%
+			],
+			liquidation_threshold: FixedU128::saturating_from_rational(3, 100), // 3%
 			_phantom: Default::default(),
 		},
 		liquidation_pools: LiquidationPoolsConfig {

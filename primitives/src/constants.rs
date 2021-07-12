@@ -27,6 +27,19 @@ pub mod currency {
 	pub const MILLICENTS: Balance = CENTS / 1000;
 }
 
+pub mod liquidation {
+	use crate::constants::currency::DOLLARS;
+	use crate::Balance;
+
+	/// Minimal sum for partial liquidation.
+	/// Loans with amount below this parameter will be liquidate in full.
+	pub const PARTIAL_LIQUIDATION_MIN_SUM: Balance = 100_000 * DOLLARS;
+
+	/// The maximum number of partial liquidations a user has. After reaching this parameter,
+	/// a complete liquidation occurs.
+	pub const PARTIAL_LIQUIDATION_MAX_ATTEMPTS: u8 = 3_u8;
+}
+
 pub mod fee {
 	use crate::Balance;
 	use frame_support::weights::{

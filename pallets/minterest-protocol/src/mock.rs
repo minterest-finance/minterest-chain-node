@@ -73,7 +73,7 @@ mock_impl_dex_config!(Test);
 mock_impl_minterest_protocol_config!(Test, OneAlice);
 mock_impl_mnt_token_config!(Test, OneAlice);
 mock_impl_balances_config!(Test);
-mock_impl_risk_manager_config!(Test);
+mock_impl_risk_manager_config!(Test, OneAlice);
 mock_impl_whitelist_module_config!(Test, OneAlice);
 
 pub struct MockPriceSource;

@@ -266,10 +266,18 @@ macro_rules! mock_impl_minterest_protocol_config {
 
 #[macro_export]
 macro_rules! mock_impl_risk_manager_config {
-	($target:ty) => {
+	($target:ty, $acc:ident) => {
+		parameter_types! {
+			pub const PartialLiquidationMinSum: Balance = 100_000 * DOLLARS;
+			pub const PartialLiquidationMaxAttempts: u8 = 3_u8;
+		}
+
 		impl risk_manager::Config for $target {
 			type Event = Event;
 			type UserCollateral = liquidity_pools::Pallet<$target>;
+			type PartialLiquidationMinSum = PartialLiquidationMinSum;
+			type PartialLiquidationMaxAttempts = PartialLiquidationMaxAttempts;
+			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 		}
 	};
 }

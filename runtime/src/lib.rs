@@ -18,20 +18,27 @@ mod weights_test;
 pub use controller_rpc_runtime_api::{
 	BalanceInfo, HypotheticalLiquidityData, PoolState, ProtocolTotalValue, UserData, UserPoolBalanceData,
 };
+use frame_system::{EnsureOneOf, EnsureRoot};
 use minterest_primitives::constants::fee::WeightToFee;
 pub use minterest_primitives::{
+	constants::{
+		currency::DOLLARS,
+		liquidation::{PARTIAL_LIQUIDATION_MAX_ATTEMPTS, PARTIAL_LIQUIDATION_MIN_SUM},
+		time::{BLOCKS_PER_YEAR, DAYS, SLOT_DURATION},
+		INITIAL_EXCHANGE_RATE, MAX_BORROW_CAP, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION,
+	},
 	currency::{
 		CurrencyType::{UnderlyingAsset, WrappedToken},
 		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
 	},
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index,
-	Interest, Moment, Operation, Price, Rate, Signature,
+	Interest, Moment, Operation, Price, Rate, Signature, VestingBucket,
 };
 pub use mnt_token_rpc_runtime_api::MntBalanceInfo;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::{fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
-use pallet_traits::{ControllerManager, LiquidityPoolStorageProvider, MntManager};
+use pallet_traits::{ControllerManager, LiquidityPoolStorageProvider, MntManager, PricesManager, WhitelistManager};
 use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -67,13 +74,6 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill, Perquintill};
 
-use frame_system::{EnsureOneOf, EnsureRoot};
-pub use minterest_primitives::{
-	constants::{currency::*, time::*, *},
-	currency::*,
-	*,
-};
-use pallet_traits::{PricesManager, WhitelistManager};
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -441,14 +441,16 @@ impl minterest_model::Config for Runtime {
 }
 
 parameter_types! {
-	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
-	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
-	pub const RiskManagerWorkerMaxDurationMs: u64 = 2000;
+	pub const PartialLiquidationMinSum: Balance = PARTIAL_LIQUIDATION_MIN_SUM;
+	pub const PartialLiquidationMaxAttempts: u8 = PARTIAL_LIQUIDATION_MAX_ATTEMPTS;
 }
 
 impl risk_manager::Config for Runtime {
 	type Event = Event;
 	type UserCollateral = LiquidityPools;
+	type PartialLiquidationMinSum = PartialLiquidationMinSum;
+	type PartialLiquidationMaxAttempts = PartialLiquidationMaxAttempts;
+	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 
 parameter_types! {
@@ -476,6 +478,7 @@ where
 
 parameter_types! {
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
+	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
 }
 
 impl liquidation_pools::Config for Runtime {

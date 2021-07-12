@@ -94,7 +94,7 @@ mod tests {
 	mock_impl_dex_config!(Test);
 	mock_impl_minterest_protocol_config!(Test, ZeroAdmin);
 	mock_impl_mnt_token_config!(Test, ZeroAdmin);
-	mock_impl_risk_manager_config!(Test);
+	mock_impl_risk_manager_config!(Test, ZeroAdmin);
 	mock_impl_whitelist_module_config!(Test, ZeroAdmin);
 
 	thread_local! {
@@ -139,6 +139,8 @@ mod tests {
 		controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
 		minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
 		mnt_claim_threshold: Balance,
+		liquidation_fee: Vec<(CurrencyId, Rate)>,
+		liquidation_threshold: Rate,
 	}
 
 	impl Default for ExtBuilder {
@@ -213,6 +215,13 @@ mod tests {
 					),
 				],
 				mnt_claim_threshold: 0, // disable by default
+				liquidation_fee: vec![
+					(DOT, Rate::saturating_from_rational(5, 100)),
+					(ETH, Rate::saturating_from_rational(5, 100)),
+					(BTC, Rate::saturating_from_rational(5, 100)),
+					(KSM, Rate::saturating_from_rational(5, 100)),
+				],
+				liquidation_threshold: Rate::saturating_from_rational(3, 100),
 			}
 		}
 	}
@@ -351,6 +360,8 @@ mod tests {
 			.unwrap();
 
 			risk_manager::GenesisConfig::<Test> {
+				liquidation_fee: self.liquidation_fee,
+				liquidation_threshold: self.liquidation_threshold,
 				_phantom: Default::default(),
 			}
 			.assimilate_storage(&mut t)

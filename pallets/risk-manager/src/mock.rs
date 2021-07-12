@@ -2,6 +2,7 @@
 use super::*;
 use crate as risk_manager;
 use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId};
+use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
 use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 pub use minterest_primitives::{Balance, Price, Rate};
@@ -9,7 +10,7 @@ use orml_traits::parameter_type_with_key;
 use pallet_traits::PricesManager;
 use sp_core::H256;
 use sp_runtime::{
-	testing::{Header, TestXt},
+	testing::Header,
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 };
 pub use test_helper::*;
@@ -33,6 +34,10 @@ frame_support::construct_runtime!(
 	}
 );
 
+ord_parameter_types! {
+	pub const ZeroAdmin: AccountId = 0;
+}
+
 parameter_types! {
 	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"lqdi/min");
 	pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"lqdn/min");
@@ -48,7 +53,7 @@ mock_impl_balances_config!(Test);
 mock_impl_orml_tokens_config!(Test);
 mock_impl_orml_currencies_config!(Test);
 mock_impl_liquidity_pools_config!(Test);
-mock_impl_risk_manager_config!(Test);
+mock_impl_risk_manager_config!(Test, ZeroAdmin);
 
 pub struct MockPriceSource;
 

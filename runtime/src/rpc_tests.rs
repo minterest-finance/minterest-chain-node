@@ -40,6 +40,8 @@ struct ExtBuilder {
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	minted_pools: Vec<(CurrencyId, Balance)>,
+	liquidation_fee: Vec<(CurrencyId, Rate)>,
+	liquidation_threshold: Rate,
 }
 
 impl Default for ExtBuilder {
@@ -71,6 +73,13 @@ impl Default for ExtBuilder {
 				(ETH, 2 * DOLLARS),
 				(BTC, 2 * DOLLARS),
 			],
+			liquidation_fee: vec![
+				(DOT, Rate::saturating_from_rational(5, 100)),
+				(ETH, Rate::saturating_from_rational(5, 100)),
+				(BTC, Rate::saturating_from_rational(5, 100)),
+				(KSM, Rate::saturating_from_rational(5, 100)),
+			],
+			liquidation_threshold: Rate::saturating_from_rational(3, 100),
 		}
 	}
 }
@@ -234,6 +243,8 @@ impl ExtBuilder {
 		.unwrap();
 
 		risk_manager::GenesisConfig::<Runtime> {
+			liquidation_fee: self.liquidation_fee,
+			liquidation_threshold: self.liquidation_threshold,
 			_phantom: Default::default(),
 		}
 		.assimilate_storage(&mut t)
