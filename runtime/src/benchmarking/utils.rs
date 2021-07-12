@@ -70,13 +70,14 @@ pub(crate) fn prepare_for_mnt_distribution(pools: Vec<CurrencyId>) -> Result<(),
 #[cfg(test)]
 pub mod tests {
 	use super::*;
-	use crate::constants::currency::DOLLARS;
-	use crate::constants::PROTOCOL_INTEREST_TRANSFER_THRESHOLD;
 	use controller::{ControllerData, PauseKeeper};
 	use frame_support::traits::GenesisBuild;
 	use liquidity_pools::Pool;
 	use minterest_model::MinterestModelData;
-	use minterest_primitives::{Balance, Rate};
+	use minterest_primitives::{
+		constants::{currency::DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD},
+		{Balance, Rate},
+	};
 	use sp_runtime::{traits::Zero, FixedU128};
 
 	// This GenesisConfig is a copy of testnet_genesis.
@@ -226,6 +227,13 @@ pub mod tests {
 		.unwrap();
 
 		risk_manager::GenesisConfig::<Runtime> {
+			liquidation_fee: vec![
+				(DOT, FixedU128::saturating_from_rational(5, 100)), // 5%
+				(ETH, FixedU128::saturating_from_rational(5, 100)), // 5%
+				(BTC, FixedU128::saturating_from_rational(5, 100)), // 5%
+				(KSM, FixedU128::saturating_from_rational(5, 100)), // 5%
+			],
+			liquidation_threshold: FixedU128::saturating_from_rational(3, 100), // 3%
 			_phantom: Default::default(),
 		}
 		.assimilate_storage(&mut storage)

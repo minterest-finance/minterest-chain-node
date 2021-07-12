@@ -368,3 +368,9 @@ pub trait UserLiquidationAttemptsManager<AccountId> {
 	/// TODO: a liquidation handler will be added in the future
 	fn mutate_depending_operation(pool_id: CurrencyId, who: &AccountId, operation: Operation);
 }
+
+/// Creates storage records for risk-manager pallet. This is a part of a pool creation flow.
+pub trait RiskManager {
+	/// Creates storage records for risk-manager pallet: `liquidation_fee` and `liquidation_threshold`
+	fn create_pool(pool_id: CurrencyId, liquidation_threshold: Rate, liquidation_fee: Rate) -> DispatchResult;
+}

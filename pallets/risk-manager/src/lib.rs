@@ -11,7 +11,7 @@
 use frame_support::{pallet_prelude::*, transactional};
 use minterest_primitives::{CurrencyId, Operation, Rate};
 pub use module::*;
-use pallet_traits::{UserCollateral, UserLiquidationAttemptsManager};
+use pallet_traits::{RiskManager, UserCollateral, UserLiquidationAttemptsManager};
 use sp_runtime::{
 	traits::{One, Zero},
 	FixedPointNumber,
@@ -58,6 +58,8 @@ pub mod module {
 		NotValidUnderlyingAssetId,
 		/// Liquidation fee can't be less than one && greater than 1.5.
 		InvalidLiquidationFeeValue,
+		/// Risk manager storage (liquidation_fee, liquidation_threshold) is already created.
+		RiskManagerParamsAlreadyCreated,
 	}
 
 	#[pallet::event]
@@ -105,9 +107,10 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.liquidation_fee
-				.iter()
-				.for_each(|(pool_id, liquidation_fee)| LiquidationFee::<T>::insert(pool_id, liquidation_fee));
+			self.liquidation_fee.iter().for_each(|(pool_id, liquidation_fee)| {
+				Pallet::<T>::is_valid_liquidation_fee(*liquidation_fee);
+				LiquidationFee::<T>::insert(pool_id, liquidation_fee)
+			});
 			LiquidationThreshold::<T>::put(self.liquidation_threshold);
 		}
 	}
@@ -155,7 +158,11 @@ pub mod module {
 		/// The dispatch origin of this call must be 'RiskManagerUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_threshold(origin: OriginFor<T>, pool_id: CurrencyId, threshold: Rate) -> DispatchResultWithPostInfo {
+		pub fn set_liquidation_threshold(
+			origin: OriginFor<T>,
+			pool_id: CurrencyId,
+			threshold: Rate,
+		) -> DispatchResultWithPostInfo {
 			T::RiskManagerUpdateOrigin::ensure_origin(origin)?;
 			ensure!(
 				pool_id.is_supported_underlying_asset(),
@@ -173,6 +180,22 @@ impl<T: Config> Pallet<T> {
 	/// // Checks if 1.0 <= liquidation_fee <= 1.5
 	fn is_valid_liquidation_fee(liquidation_fee: Rate) -> bool {
 		liquidation_fee >= Rate::one() && liquidation_fee <= Rate::saturating_from_rational(15, 10)
+	}
+}
+
+impl<T: Config> RiskManager for Pallet<T> {
+	fn create_pool(pool_id: CurrencyId, liquidation_threshold: Rate, liquidation_fee: Rate) -> DispatchResult {
+		ensure!(
+			!LiquidationFee::<T>::contains_key(pool_id) && LiquidationThreshold::<T>::try_get().is_ok(),
+			Error::<T>::RiskManagerParamsAlreadyCreated
+		);
+		ensure!(
+			Self::is_valid_liquidation_fee(liquidation_fee),
+			Error::<T>::InvalidLiquidationFeeValue
+		);
+		LiquidationFee::<T>::insert(pool_id, liquidation_fee);
+		LiquidationThreshold::<T>::put(liquidation_threshold);
+		Ok(())
 	}
 }
 
