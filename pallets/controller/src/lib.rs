@@ -885,7 +885,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// returns `utilization_rate =
 	///  pool_borrows / (pool_cash + pool_borrows - pool_protocol_interest)`
-	fn calculate_utilization_rate(
+	pub fn calculate_utilization_rate(
 		pool_supply_underlying_balance: Balance,
 		pool_borrowed_balance: Balance,
 		pool_protocol_interest: Balance,
@@ -913,7 +913,7 @@ impl<T: Config> Pallet<T> {
 	/// - `accrual_block_number_previous`: Number of the last block with accruals.
 	///
 	/// returns `current_block_number - accrual_block_number_previous`
-	fn calculate_block_delta(
+	pub fn calculate_block_delta(
 		current_block_number: T::BlockNumber,
 		accrual_block_number_previous: T::BlockNumber,
 	) -> result::Result<T::BlockNumber, DispatchError> {
@@ -1008,7 +1008,7 @@ impl<T: Config> Pallet<T> {
 	/// - `block_delta`: The number of blocks elapsed since the last accrual.
 	///
 	/// returns `interest_factor = current_borrow_interest_rate * block_delta`.
-	fn calculate_interest_factor(current_borrow_interest_rate: Rate, block_delta: T::BlockNumber) -> RateResult {
+	pub fn calculate_interest_factor(current_borrow_interest_rate: Rate, block_delta: T::BlockNumber) -> RateResult {
 		let block_delta_as_usize = TryInto::<usize>::try_into(block_delta)
 			.ok()
 			.expect("blockchain will not exceed 2^32 blocks; qed");
