@@ -16,7 +16,7 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Interest, Operation, Price};
 use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
 use orml_traits::MultiCurrency;
-use pallet_traits::{LiquidityPoolStorageProvider, PoolsManager, PricesManager, UserStorageProvider};
+use pallet_traits::{LiquidityPoolStorageProvider, PoolsManager, PricesManager, UserCollateral, UserStorageProvider};
 use prices_rpc_runtime_api::runtime_decl_for_PricesRuntimeApi::PricesRuntimeApi;
 use sp_runtime::{
 	traits::{One, Zero},

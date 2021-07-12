@@ -232,7 +232,6 @@ impl ExtBuilder {
 						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
-						liquidation_attempts: 3,
 					},
 				),
 				(
@@ -242,7 +241,6 @@ impl ExtBuilder {
 						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: false,
-						liquidation_attempts: 0,
 					},
 				),
 				(
@@ -252,7 +250,6 @@ impl ExtBuilder {
 						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
-						liquidation_attempts: 0,
 					},
 				),
 				(
@@ -262,7 +259,6 @@ impl ExtBuilder {
 						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
-						liquidation_attempts: 0,
 					},
 				),
 				(
@@ -272,7 +268,6 @@ impl ExtBuilder {
 						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
-						liquidation_attempts: 0,
 					},
 				),
 				(
@@ -282,7 +277,6 @@ impl ExtBuilder {
 						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
-						liquidation_attempts: 0,
 					},
 				),
 			],

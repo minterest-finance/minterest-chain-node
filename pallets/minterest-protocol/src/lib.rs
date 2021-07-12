@@ -112,7 +112,7 @@ pub mod module {
 
 		/// Provides functionality to manage the number of attempts to partially
 		/// liquidation a user's loan.
-		type UserAttempts: UserLiquidationAttemptsManager<Self::AccountId>;
+		type UserLiquidationAttempts: UserLiquidationAttemptsManager<Self::AccountId>;
 
 		/// Public API of whitelist module.
 		type WhitelistManager: WhitelistManager<Self::AccountId>;
@@ -639,7 +639,7 @@ impl<T: Config> Pallet<T> {
 		)?;
 
 		T::MultiCurrency::deposit(wrapped_id, &who, deposit_wrapped_amount)?;
-		T::UserAttempts::mutate_depending_operation(underlying_asset, &who, Deposit);
+		T::UserLiquidationAttempts::mutate_depending_operation(underlying_asset, &who, Deposit);
 
 		Ok((deposit_underlying_amount, wrapped_id, deposit_wrapped_amount))
 	}
