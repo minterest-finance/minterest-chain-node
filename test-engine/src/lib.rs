@@ -111,7 +111,7 @@ mock_impl_minterest_protocol_config!(TestRuntime, OneAlice);
 pub struct MockPriceSource;
 
 impl MockPriceSource {
-	fn set_underlying_price(price: Option<Price>) {
+	pub fn set_underlying_price(price: Option<Price>) {
 		UNDERLYING_PRICE.with(|v| *v.borrow_mut() = price);
 	}
 }
@@ -195,7 +195,7 @@ pub trait BalanceTestConfigurator {
 	fn set_dex_balance(self, currency_id: CurrencyId, balance: Balance) -> Self;
 }
 
-// pool_moc -> pool_init_default
+// pool_moc -> init_pool_default
 // pool_total_borrowed -> init_pool
 // liquidity_pool -> init_pool
 pub trait PoolTestConfigurator {
@@ -258,7 +258,7 @@ pub trait ControllerTestConfigurator {
 		protocol_interest_threshold: Balance,
 	) -> Self;
 	// TODO: Add description for
-	fn pause_keeper(self, currency_id: CurrencyId, is_paused: bool) -> Self;
+	fn set_pause_keeper(self, currency_id: CurrencyId, is_paused: bool) -> Self;
 }
 
 pub trait MinterestModelConfigurator {
@@ -283,16 +283,14 @@ impl BalanceTestConfigurator for ExtBuilderNew {
 	}
 
 	fn set_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-		/*	self.endowed_accounts
-		.push((TestPools::pools_account_id(), currency_id, balance));*/
-		//FIXME
+		self.endowed_accounts
+			.push((TestPools::pools_account_id(), currency_id, balance));
 		self
 	}
 
 	fn set_dex_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-		/*self.endowed_accounts
-		.push((TestDex::dex_account_id(), currency_id, balance));*/
-		//FIXME
+		self.endowed_accounts
+			.push((TestDex::dex_account_id(), currency_id, balance));
 		self
 	}
 }
@@ -368,9 +366,8 @@ impl MntTestConfigurator for ExtBuilderNew {
 	}
 
 	fn set_mnt_account_balance(mut self, balance: Balance) -> Self {
-		/*self.endowed_accounts
-		.push((TestMntToken::get_account_id(), MNT, balance));*/
-		//FIXME
+		self.endowed_accounts
+			.push((TestMntToken::get_account_id(), MNT, balance));
 		self
 	}
 }
@@ -395,9 +392,8 @@ impl LiqudationPoolTestConfigurator for ExtBuilderNew {
 	}
 
 	fn set_liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-		/*self.endowed_accounts
-		.push((TestLiquidationPools::pools_account_id(), currency_id, balance));*/
-		//FIXME
+		self.endowed_accounts
+			.push((TestLiquidationPools::pools_account_id(), currency_id, balance));
 		self
 	}
 }
@@ -427,7 +423,7 @@ impl ControllerTestConfigurator for ExtBuilderNew {
 		self
 	}
 
-	fn pause_keeper(mut self, currency_id: CurrencyId, is_paused: bool) -> Self {
+	fn set_pause_keeper(mut self, currency_id: CurrencyId, is_paused: bool) -> Self {
 		self.pause_keepers.push((
 			currency_id,
 			if is_paused {
