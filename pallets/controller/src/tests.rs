@@ -176,16 +176,20 @@ fn accrue_interest_should_not_work() {
 #[test]
 fn calculate_block_delta_should_work() {
 	ExtBuilderNew::default().build().execute_with(|| {
-		// block_delta = 10 - 5 = 5
-		assert_eq!(TestController::calculate_block_delta(10, 5), Ok(5));
+		fn inj(f:Box<dyn Fn(BlockNumber,BlockNumber )-> sp_std::result::Result<BlockNumber, sp_runtime::DispatchError> + Send + Sync>){
+			// block_delta = 10 - 5 = 5
+			assert_eq!(f(10, 5), Ok(5));
 
-		// Overflow in calculation: 5 - 10 = -5 < 0
-		assert_noop!(
-			TestController::calculate_block_delta(5, 10),
+			// Overflow in calculation: 5 - 10 = -5 < 0
+			assert_noop!(
+			f(5, 10),
 			Error::<TestRuntime>::NumOverflow
 		);
+		}
+		TestController::extend_calculate_block_delta(inj);
 	});
 }
+
 /*
 #[test]
 fn calculate_interest_factor_should_work() {
