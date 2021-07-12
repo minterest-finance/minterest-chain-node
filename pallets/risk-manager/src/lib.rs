@@ -700,7 +700,7 @@ impl<T: Config> Pallet<T> {
 	/// - `liquidated_pool_id`: the CurrencyId of the pool with loan, for which automatic.
 	/// - `borrower`: the borrower in automatic liquidation.
 	/// - `is_partial_liquidation`: partial or complete liquidation.
-	fn mutate_liquidation_attempts(
+	pub fn mutate_liquidation_attempts(
 		liquidated_pool_id: CurrencyId,
 		borrower: &T::AccountId,
 		is_partial_liquidation: bool,
