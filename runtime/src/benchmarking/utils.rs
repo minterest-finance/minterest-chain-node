@@ -77,9 +77,7 @@ pub mod tests {
 	use liquidity_pools::Pool;
 	use minterest_model::MinterestModelData;
 	use minterest_primitives::{Balance, Rate};
-	use risk_manager::RiskManagerData;
-	use sp_runtime::traits::Zero;
-	use sp_runtime::FixedU128;
+	use sp_runtime::{traits::Zero, FixedU128};
 
 	// This GenesisConfig is a copy of testnet_genesis.
 	pub fn test_externalities() -> sp_io::TestExternalities {
@@ -228,44 +226,6 @@ pub mod tests {
 		.unwrap();
 
 		risk_manager::GenesisConfig::<Runtime> {
-			risk_manager_params: vec![
-				(
-					ETH,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: Rate::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
-					},
-				),
-				(
-					DOT,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 100_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: Rate::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
-					},
-				),
-				(
-					KSM,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: Rate::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
-					},
-				),
-				(
-					BTC,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: Rate::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
-					},
-				),
-			],
 			_phantom: Default::default(),
 		}
 		.assimilate_storage(&mut storage)

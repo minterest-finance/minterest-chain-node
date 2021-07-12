@@ -3,8 +3,8 @@ use super::utils::{
 };
 use crate::{
 	AccountId, Balance, Currencies, EnabledUnderlyingAssetsIds, EnabledWrappedTokensId, LiquidityPools,
-	LiquidityPoolsPalletId, MinterestProtocol, MntTokenPalletId, Origin, Rate, Runtime, System, Whitelist, BTC,
-	DOLLARS, DOT, ETH, KSM, MBTC, MDOT, MNT,
+	LiquidityPoolsPalletId, MinterestProtocol, MntTokenPalletId, Origin, Rate, RiskManager, Runtime, System, Whitelist,
+	BTC, DOLLARS, DOT, ETH, KSM, MBTC, MDOT, MNT,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
@@ -12,7 +12,7 @@ use liquidity_pools::Pool;
 use minterest_protocol::PoolInitData;
 use orml_benchmarking::runtime_benchmarks;
 use orml_traits::MultiCurrency;
-use pallet_traits::{LiquidityPoolStorageProvider, UserStorageProvider};
+use pallet_traits::{LiquidityPoolStorageProvider, UserLiquidationAttemptsManager, UserStorageProvider};
 use sp_runtime::{
 	traits::{AccountIdConversion, One, Zero},
 	FixedPointNumber,
@@ -58,7 +58,6 @@ runtime_benchmarks! {
 		liquidation_pools::LiquidationPoolsData::<Runtime>::remove(DOT);
 		controller::ControllerParams::<Runtime>::remove(DOT);
 		minterest_model::MinterestModelParams::<Runtime>::remove(DOT);
-		risk_manager::RiskManagerParams::<Runtime>::remove(DOT);
 	}: _(
 		RawOrigin::Root,
 		DOT,
@@ -89,7 +88,7 @@ runtime_benchmarks! {
 		set_balance(DOT, &lender, 50_000 * DOLLARS)?;
 
 		// Set liquidation_attempts grater than zero to reset them.
-		LiquidityPools::increase_user_liquidation_attempts(DOT, &lender);
+		RiskManager::increase_by_one(&lender);
 
 		System::set_block_number(10);
 

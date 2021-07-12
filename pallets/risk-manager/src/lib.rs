@@ -90,12 +90,10 @@ impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 	/// Mutates user liquidation attempts depending on user operation.
 	/// If the user makes a deposit to the collateral pool, then attempts are set to zero.
 	fn mutate_depending_operation(pool_id: CurrencyId, who: &T::AccountId, operation: Operation) {
-		if operation == Operation::Deposit {
-			if T::UserCollateral::is_pool_collateral(&who, pool_id) {
-				let user_liquidation_attempts = Self::get_user_liquidation_attempts(&who);
-				if !user_liquidation_attempts.is_zero() {
-					Self::reset_to_zero(&who);
-				}
+		if operation == Operation::Deposit && T::UserCollateral::is_pool_collateral(&who, pool_id) {
+			let user_liquidation_attempts = Self::get_user_liquidation_attempts(&who);
+			if !user_liquidation_attempts.is_zero() {
+				Self::reset_to_zero(&who);
 			}
 		}
 	}
