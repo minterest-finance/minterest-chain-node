@@ -316,7 +316,7 @@ mod tests {
 						balance_ratio: Rate::saturating_from_rational(2, 10),
 						max_attempts: 3,
 						min_partial_liquidation_sum: 100 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
+						liquidation_threshold: Rate::saturating_from_rational(103, 100),
 						liquidation_fee: Rate::saturating_from_rational(105, 100),
 					},
 				));
@@ -458,7 +458,7 @@ mod tests {
 						balance_ratio: Rate::saturating_from_rational(2, 10),
 						max_attempts: 3,
 						min_partial_liquidation_sum: 100 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
+						liquidation_threshold: Rate::saturating_from_rational(103, 100),
 						liquidation_fee: Rate::saturating_from_rational(105, 100),
 					},
 				));

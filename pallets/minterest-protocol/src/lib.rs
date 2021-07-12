@@ -19,13 +19,15 @@
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
 use liquidity_pools::{Pool, PoolUserData};
-use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, Operation, Rate};
+use minterest_primitives::{
+	currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, Operation, Operation::Deposit, Rate,
+};
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
 	Borrowing, ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolStorageProvider,
-	MinterestModelManager, MntManager, PoolsManager, UserLiquidationAttemptsManager, UserStorageProvider,
-	WhitelistManager,
+	MinterestModelManager, MntManager, PoolsManager, RiskManager, UserCollateral, UserLiquidationAttemptsManager,
+	UserStorageProvider, WhitelistManager,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -41,7 +43,6 @@ mod mock;
 mod tests;
 
 pub mod weights;
-use minterest_primitives::Operation::Deposit;
 pub use weights::WeightInfo;
 
 type TokensResult = result::Result<(Balance, CurrencyId, Balance), DispatchError>;
@@ -64,16 +65,13 @@ pub struct PoolInitData {
 	pub deviation_threshold: Rate,
 	pub balance_ratio: Rate,
 	// Risk manager storage data
-	pub max_attempts: u8,
-	pub min_partial_liquidation_sum: Balance,
-	pub threshold: Rate,
+	pub liquidation_threshold: Rate,
 	pub liquidation_fee: Rate,
 }
 
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use pallet_traits::UserCollateral;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
@@ -116,6 +114,9 @@ pub mod module {
 
 		/// Public API of whitelist module.
 		type WhitelistManager: WhitelistManager<Self::AccountId>;
+
+		/// Public API of controller pallet.
+		type RiskManager: RiskManager;
 	}
 
 	#[pallet::error]
@@ -577,6 +578,7 @@ impl<T: Config> Pallet<T> {
 			pool_data.protocol_interest_threshold,
 		)?;
 		T::ManagerLiquidationPools::create_pool(pool_id, pool_data.deviation_threshold, pool_data.balance_ratio)?;
+		T::RiskManager::create_pool(pool_id, pool_data.liquidation_threshold, pool_data.liquidation_fee)?;
 		Ok(())
 	}
 

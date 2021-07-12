@@ -65,7 +65,7 @@ pub trait LiquidityPoolStorageProvider<AccountId, Pool> {
 
 	/// This is a part of a pool creation flow.
 	/// Creates storage records for LiquidityPool.
-	fn create_pool(currency_id: CurrencyId) -> DispatchResult;
+	fn create_pool(pool_id: CurrencyId) -> DispatchResult;
 
 	/// Removes pool data.
 	fn remove_pool_data(pool_id: CurrencyId);
@@ -120,7 +120,7 @@ pub trait UserCollateral<AccountId> {
 pub trait LiquidationPoolsManager<AccountId>: PoolsManager<AccountId> {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for LiquidationPoolsData
-	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult;
+	fn create_pool(pool_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult;
 }
 
 /// An abstraction of prices basic functionalities.
@@ -162,7 +162,7 @@ pub trait ControllerManager<AccountId> {
 	/// Creates storage records for ControllerParams and PauseKeepers
 	/// All operations are unpaused after this function call
 	fn create_pool(
-		currency_id: CurrencyId,
+		pool_id: CurrencyId,
 		protocol_interest_factor: Rate,
 		max_borrow_rate: Rate,
 		collateral_factor: Rate,
@@ -246,7 +246,7 @@ pub trait MinterestModelManager {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for MinterestModelParams
 	fn create_pool(
-		currency_id: CurrencyId,
+		pool_id: CurrencyId,
 		kink: Rate,
 		base_rate_per_block: Rate,
 		multiplier_per_block: Rate,
