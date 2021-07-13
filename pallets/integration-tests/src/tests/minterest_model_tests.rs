@@ -11,7 +11,7 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Alice deposit 40 DOT in pool
@@ -38,7 +38,7 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool
@@ -78,8 +78,8 @@ mod tests {
 			.pool_initial(DOT)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
-			.pool_user_data(DOT, BOB, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+			.pool_user_data(DOT, BOB, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Alice deposit to DOT pool

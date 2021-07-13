@@ -63,7 +63,6 @@ fn distribute_mnt_to_borrower_with_threshold() {
 			150_000 * DOLLARS,
 			Rate::saturating_from_rational(15, 10), // because pool borrow index is hardcoded to 1.5 too
 			true,
-			0,
 		)
 		.build()
 		.execute_with(|| {
@@ -181,7 +180,6 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 			150_000 * DOLLARS,
 			Rate::saturating_from_rational(15, 10), // because pool borrow index is hardcoded to 1.5
 			true,
-			0,
 		)
 		.pool_user_data(
 			KSM,
@@ -189,7 +187,6 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 			150_000 * DOLLARS,
 			Rate::saturating_from_rational(15, 10), // because pool borrow index is hardcoded to 1.5
 			true,
-			0,
 		)
 		.build()
 		.execute_with(|| {
@@ -242,7 +239,6 @@ fn distribute_borrowers_mnt() {
 			30_000 * DOLLARS,
 			Rate::saturating_from_rational(15, 10), // because pool borrow index is hardcoded to 1.5
 			true,
-			0,
 		)
 		.pool_user_data(
 			DOT,
@@ -250,7 +246,6 @@ fn distribute_borrowers_mnt() {
 			120_000 * DOLLARS,
 			Rate::saturating_from_rational(15, 10), // because pool borrow index is hardcoded to 1.5
 			true,
-			0,
 		)
 		.build()
 		.execute_with(|| {
@@ -297,7 +292,6 @@ fn distribute_borrower_mnt() {
 			150_000 * DOLLARS,
 			Rate::saturating_from_rational(15, 10), // because pool borrow index is hardcoded to 1.5 too
 			true,
-			0,
 		)
 		.build()
 		.execute_with(|| {

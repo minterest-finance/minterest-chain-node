@@ -9,6 +9,7 @@ use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use minterest_primitives::Rate;
+use pallet_traits::UserCollateral;
 use sp_runtime::{traits::One, FixedPointNumber};
 
 fn dollars<T: Into<u128>>(d: T) -> Balance {
@@ -117,10 +118,8 @@ fn create_pool_should_not_work_when_minterest_model_storage_has_data() {
 						protocol_interest_threshold: 100000,
 						deviation_threshold: Rate::saturating_from_rational(5, 100),
 						balance_ratio: Rate::saturating_from_rational(2, 10),
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
+						liquidation_threshold: Rate::saturating_from_rational(3, 100),
+						liquidation_fee: Rate::saturating_from_rational(5, 100),
 					},
 				),
 				minterest_model::Error::<Test>::PoolAlreadyCreated,
@@ -221,7 +220,7 @@ fn deposit_underlying_should_work() {
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// Check liquidation_attempts has been reset.
-			assert_eq!(TestPools::get_user_data(DOT, &ALICE).liquidation_attempts, u8::zero());
+			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), u8::zero());
 
 			// MDOT pool does not exist.
 			assert_noop!(

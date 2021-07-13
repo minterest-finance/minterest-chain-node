@@ -10,7 +10,7 @@ use minterest_model::MinterestModelData;
 pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
-use pallet_traits::{PricesManager, RiskManager};
+use pallet_traits::PricesManager;
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
@@ -41,6 +41,7 @@ frame_support::construct_runtime!(
 		TestDex: dex::{Pallet, Storage, Call, Event<T>},
 		TestMntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 		TestWhitelist: whitelist_module::{Pallet, Storage, Call, Event<T>, Config<T>},
+		TestRiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -72,21 +73,8 @@ mock_impl_dex_config!(Test);
 mock_impl_minterest_protocol_config!(Test, OneAlice);
 mock_impl_mnt_token_config!(Test, OneAlice);
 mock_impl_balances_config!(Test);
+mock_impl_risk_manager_config!(Test, OneAlice);
 mock_impl_whitelist_module_config!(Test, OneAlice);
-
-pub struct TestRiskManager;
-
-impl RiskManager for TestRiskManager {
-	fn create_pool(
-		_currency_id: CurrencyId,
-		_max_attempts: u8,
-		_min_partial_liquidation_sum: u128,
-		_threshold: Rate,
-		_liquidation_fee: Rate,
-	) -> DispatchResult {
-		Ok(())
-	}
-}
 
 pub struct MockPriceSource;
 
@@ -244,7 +232,6 @@ impl ExtBuilder {
 						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
-						liquidation_attempts: 3,
 					},
 				),
 				(
@@ -254,7 +241,6 @@ impl ExtBuilder {
 						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: false,
-						liquidation_attempts: 0,
 					},
 				),
 				(
@@ -264,7 +250,6 @@ impl ExtBuilder {
 						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
-						liquidation_attempts: 0,
 					},
 				),
 				(
@@ -274,7 +259,6 @@ impl ExtBuilder {
 						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
-						liquidation_attempts: 0,
 					},
 				),
 				(
@@ -284,7 +268,6 @@ impl ExtBuilder {
 						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
-						liquidation_attempts: 0,
 					},
 				),
 				(
@@ -294,7 +277,6 @@ impl ExtBuilder {
 						borrowed: 0,
 						interest_index: Rate::from_inner(0),
 						is_collateral: true,
-						liquidation_attempts: 0,
 					},
 				),
 			],
@@ -347,9 +329,7 @@ pub(crate) fn create_dummy_pool_init_data() -> PoolInitData {
 		protocol_interest_threshold: 100000,
 		deviation_threshold: Rate::saturating_from_rational(5, 100),
 		balance_ratio: Rate::saturating_from_rational(2, 10),
-		max_attempts: 3,
-		min_partial_liquidation_sum: 100 * DOLLARS,
-		threshold: Rate::saturating_from_rational(103, 100),
-		liquidation_fee: Rate::saturating_from_rational(105, 100),
+		liquidation_threshold: Rate::saturating_from_rational(3, 100),
+		liquidation_fee: Rate::saturating_from_rational(5, 100),
 	}
 }
