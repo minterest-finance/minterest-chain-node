@@ -180,22 +180,23 @@
         "perPeriod": "Rate"
       },
       "VestingScheduleOf": "VestingSchedule",
-      "AccountInfo": {
-        "nonce": "Index",
-        "consumers": "RefCount",
-        "providers": "RefCount",
-        "sufficients": "RefCount",
-        "data": {
-          "free": "Balance",
-          "reserved": "Balance",
-          "misc_frozen": "Balance",
-          "fee_frozen": "Balance"
-        }
+      "SubstrateAccountData": {
+        "free": "Balance",
+        "reserved": "Balance",
+        "misc_frozen": "Balance",
+        "fee_frozen": "Balance"
       },
       "AccountData": {
         "free": "Balance",
         "reserved": "Balance",
         "frozen": "Balance"
+      },
+      "AccountInfo": {
+        "nonce": "Index",
+        "consumers": "RefCount",
+        "providers": "RefCount",
+        "sufficients": "RefCount",
+        "data": "SubstrateAccountData"
       }
     },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
