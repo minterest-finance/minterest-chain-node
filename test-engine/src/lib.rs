@@ -130,7 +130,6 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 // -----------------------------------------------------------------------------------------
 /// ExtBuilder declaration.
 /// ExtBuilder is a struct to store configuration of your test runtime.
-///
 //TODO: Rename to ExtBuilder after full tests rework
 pub struct ExtBuilderNew {
 	pub endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -243,7 +242,7 @@ impl ExtBuilderNew {
 	/// - 'pool_id': pool id
 	/// - 'user': user id
 	/// - 'borrowed': total balance (with accrued interest), after applying the most recent
-	/// 			  balance-changing action.
+	///   balance-changing action.
 	/// - 'interest_index': global borrow_index as of the most recent balance-changing action
 	/// - 'is_collateral': can pool be used as collateral for the current user
 	/// - 'liquidation_attempts': number of partial liquidations for debt
@@ -302,7 +301,7 @@ impl ExtBuilderNew {
 	/// - 'pool_id': pool id
 	/// - 'deviation_threshold': threshold
 	/// - 'balance_ratio': represents the percentage of working pool value to be covered by value in
-	/// 				   Liquidation Poll.
+	///   Liquidation Poll.
 	/// - 'max_ideal_balance': maximum ideal balance during pool balancing
 	pub fn init_liquidation_pool(
 		mut self,
@@ -338,13 +337,12 @@ impl ExtBuilderNew {
 	/// into protocol interest.
 	/// - 'max_borrow_rate': maximum borrow rate.
 	/// - 'collateral_factor': this multiplier represents which share of the supplied value can be
-	/// 						used as a collateral for
-	/// 						loans. For instance, 0.9 allows 90% of total pool value to be used
-	/// 						as a collateral. Must be between 0 and 1.
+	///   used as a collateral for loans. For instance, 0.9 allows 90% of total pool value to be
+	///   used as a collateral. Must be between 0 and 1.
 	/// - 'borrow_cap': maximum total borrow amount per pool in usd. No value means infinite borrow
-	/// 				cap.
+	///   cap.
 	/// - protocol_interest_threshold': minimum protocol interest needed to transfer it to
-	/// 								liquidation pool
+	///   liquidation pool
 	pub fn set_controller_data(
 		mut self,
 		currency_id: CurrencyId,
@@ -388,11 +386,11 @@ impl ExtBuilderNew {
 	/// - 'currency_id': currency identifier
 	/// - 'kink': the utilization point at which the jump multiplier is applied
 	/// - 'base_rate_per_block': the base interest rate which is the y-intercept when utilization
-	/// 						 rate is 0
+	///   rate is 0
 	/// - 'multiplier_per_block': the multiplier of utilization rate that gives the slope of the
-	/// 						  interest rate
+	///   interest rate
 	/// - 'jump_multiplier_per_block': the multiplier of utilization rate after hitting a specified
-	///									utilization point - kink
+	///   utilization point - kink
 	pub fn set_minterest_model_params(
 		mut self,
 		currency_id: CurrencyId,
