@@ -15,7 +15,7 @@ mod tests {
 			.pool_initial(ETH)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// INITIAL PARAMS

@@ -12,7 +12,7 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -127,8 +127,8 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
-			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -293,7 +293,7 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.pool_balance(DOT, Balance::zero())
 			.build()
 			.execute_with(|| {
@@ -387,8 +387,8 @@ mod tests {
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
-			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -530,8 +530,8 @@ mod tests {
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(BOB, BTC, ONE_HUNDRED_THOUSAND)
 			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false, 0)
-			.pool_user_data(BTC, BOB, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false)
+			.pool_user_data(BTC, BOB, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -637,8 +637,8 @@ mod tests {
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(BOB, DOT, 100_000_000 * DOLLARS)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
-			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -805,7 +805,7 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -898,8 +898,8 @@ mod tests {
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
-			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -1027,9 +1027,9 @@ mod tests {
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(BOB, BTC, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false, 0)
-			.pool_user_data(DOT, BOB, Balance::zero(), Rate::zero(), false, 0)
-			.pool_user_data(BTC, BOB, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false)
+			.pool_user_data(DOT, BOB, Balance::zero(), Rate::zero(), false)
+			.pool_user_data(BTC, BOB, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance in pool
@@ -1118,7 +1118,7 @@ mod tests {
 			.pool_initial(DOT)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -1155,7 +1155,7 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -1211,7 +1211,7 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -1266,7 +1266,7 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -1338,8 +1338,8 @@ mod tests {
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
-			.pool_user_data(DOT, BOB, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+			.pool_user_data(DOT, BOB, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -1430,8 +1430,8 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
-			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -1595,7 +1595,7 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -1704,8 +1704,8 @@ mod tests {
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
-			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				assert_ok!(MinterestProtocol::deposit_underlying(
