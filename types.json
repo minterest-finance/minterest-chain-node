@@ -1,7 +1,5 @@
 {
   "CUSTOM_TYPES": {
-    "Address": "MultiAddress",
-    "TokenSymbol": {
       "Address": "MultiAddress",
       "TokenSymbol": {
         "_enum": {
