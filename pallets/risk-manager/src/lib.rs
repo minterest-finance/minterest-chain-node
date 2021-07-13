@@ -9,7 +9,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use frame_support::{pallet_prelude::*, transactional};
-use minterest_primitives::{CurrencyId, Operation, Rate};
+use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 pub use module::*;
 use pallet_traits::{RiskManagerStorageProvider, UserCollateral, UserLiquidationAttemptsManager};
 use sp_runtime::{
@@ -24,11 +24,21 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+/// Types of liquidation of user debts.
+/// TODO: add comments
+enum LiquidationMode {
+	Partial,
+	Complete,
+	ForgivableComplete,
+}
+
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
+	use frame_system::ensure_none;
 	use frame_system::pallet_prelude::OriginFor;
 	use minterest_primitives::{Balance, Rate};
+	use sp_runtime::traits::StaticLookup;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -172,6 +182,20 @@ pub mod module {
 			Self::deposit_event(Event::LiquidationThresholdUpdated(threshold));
 			Ok(().into())
 		}
+
+		/// TODO: implement
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn liquidate(
+			origin: OriginFor<T>,
+			borrower: <T::Lookup as StaticLookup>::Source,
+			liquidate_loans: Vec<(CurrencyId, Balance)>,
+			seize_supplies: Vec<(CurrencyId, Balance)>,
+		) -> DispatchResultWithPostInfo {
+			ensure_none(origin)?;
+			let borrower = T::Lookup::lookup(borrower)?;
+			Ok(().into())
+		}
 	}
 }
 
@@ -180,6 +204,15 @@ impl<T: Config> Pallet<T> {
 	/// Checks if liquidation_fee <= 0.5
 	fn is_valid_liquidation_fee(liquidation_fee: Rate) -> bool {
 		liquidation_fee <= Rate::saturating_from_rational(5, 10)
+	}
+
+	/// TODO: implement
+	fn choose_liquidation_mode(
+		user: &T::AccountId,
+		user_total_supply_usd: Balance,
+		user_total_borrow_usd: Balance,
+	) -> LiquidationMode {
+		todo!()
 	}
 }
 

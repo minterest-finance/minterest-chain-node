@@ -33,7 +33,7 @@ use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, FixedU128, RuntimeDebug,
 };
-use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
+use sp_std::{cmp::Ordering, collections::btree_set::BTreeSet, convert::TryInto, prelude::Vec, result};
 pub use weights::WeightInfo;
 
 #[cfg(test)]
@@ -1204,5 +1204,36 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	/// Return minimum protocol interest needed to transfer it to liquidation pool
 	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance {
 		Self::controller_params(pool_id).protocol_interest_threshold
+	}
+
+	/// TODO: cover with unit-tests.
+	fn get_all_users_with_unsafe_loan() -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.into_iter()
+			.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
+			.try_fold(
+				BTreeSet::new(),
+				|acc, pool_id| -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
+					let pool_users = T::LiquidityPoolsManager::get_pool_members_with_loans(pool_id)?;
+					Self::accrue_interest_rate(pool_id)?;
+					let pool_users_with_loan = pool_users
+						.into_iter()
+						.filter(|user| {
+							if let Ok((_, shortfall)) = Self::get_hypothetical_account_liquidity(
+								&user,
+								pool_id,
+								Balance::zero(),
+								Balance::zero(),
+							) {
+								!shortfall.is_zero()
+							} else {
+								false
+							}
+						})
+						.collect::<BTreeSet<T::AccountId>>();
+					acc.union(&pool_users_with_loan);
+					Ok(acc)
+				},
+			)
 	}
 }
