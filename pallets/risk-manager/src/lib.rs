@@ -220,11 +220,11 @@ pub mod module {
 		pub fn liquidate(
 			origin: OriginFor<T>,
 			borrower: <T::Lookup as StaticLookup>::Source,
-			liquidate_loans: Vec<(CurrencyId, Balance)>,
-			seize_supplies: Vec<(CurrencyId, Balance)>,
+			_liquidate_loans: Vec<(CurrencyId, Balance)>,
+			_seize_supplies: Vec<(CurrencyId, Balance)>,
 		) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
-			let borrower = T::Lookup::lookup(borrower)?;
+			let _borrower = T::Lookup::lookup(borrower)?;
 			Ok(().into())
 		}
 	}
@@ -232,6 +232,15 @@ pub mod module {
 
 // Private functions
 impl<T: Config> Pallet<T> {
+	fn _offchain_worker() -> Result<(), OffchainErr> {
+		// Check if we are a potential validator
+		if !sp_io::offchain::is_validator() {
+			return Err(OffchainErr::NotValidator);
+		}
+		Self::process_insolvent_loans()?;
+		Ok(())
+	}
+
 	/// Checks insolvent loans and liquidate them if it required.
 	fn process_insolvent_loans() -> Result<(), OffchainErr> {
 		for borrower in T::ControllerManager::get_all_users_with_unsafe_loan()
@@ -240,21 +249,18 @@ impl<T: Config> Pallet<T> {
 		{
 			let mode = Self::choose_liquidation_mode(&borrower, Balance::zero(), Balance::zero());
 			let (liquidate_loans, seize_supplies) = match mode {
-				LiquidationMode::Partial => todo!(),
-				LiquidationMode::Complete => todo!(),
-				LiquidationMode::ForgivableComplete => todo!(),
+				LiquidationMode::Partial => {
+					Self::calculate_partial_liquidation(&borrower).map_err(|_| OffchainErr::CheckFail)?
+				}
+				LiquidationMode::Complete => {
+					Self::calculate_complete_liquidation(&borrower).map_err(|_| OffchainErr::CheckFail)?
+				}
+				LiquidationMode::ForgivableComplete => {
+					Self::calculate_forgivable_complete_liquidation(&borrower).map_err(|_| OffchainErr::CheckFail)?
+				}
 			};
 			Self::submit_unsigned_liquidation(borrower, liquidate_loans, seize_supplies);
 		}
-		Ok(())
-	}
-
-	fn _offchain_worker() -> Result<(), OffchainErr> {
-		// Check if we are a potential validator
-		if !sp_io::offchain::is_validator() {
-			return Err(OffchainErr::NotValidator);
-		}
-		Self::process_insolvent_loans()?;
 		Ok(())
 	}
 
@@ -279,12 +285,42 @@ impl<T: Config> Pallet<T> {
 		liquidation_fee <= Rate::saturating_from_rational(5, 10)
 	}
 
-	/// TODO: implement
+	/// TODO: cover with tests
 	fn choose_liquidation_mode(
 		borrower: &T::AccountId,
 		borrower_total_supply_usd: Balance,
 		borrower_total_borrow_usd: Balance,
 	) -> LiquidationMode {
+		let user_liquidation_attempts = Self::get_user_liquidation_attempts(&borrower);
+		if borrower_total_borrow_usd >= T::PartialLiquidationMinSum::get()
+			&& user_liquidation_attempts < T::PartialLiquidationMaxAttempts::get()
+		{
+			LiquidationMode::Partial
+		} else if borrower_total_borrow_usd > borrower_total_supply_usd {
+			LiquidationMode::ForgivableComplete
+		} else {
+			LiquidationMode::Complete
+		}
+	}
+
+	/// TODO: implement
+	fn calculate_partial_liquidation(
+		_borrower: &T::AccountId,
+	) -> Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
+		todo!()
+	}
+
+	/// TODO: implement
+	fn calculate_complete_liquidation(
+		_borrower: &T::AccountId,
+	) -> Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
+		todo!()
+	}
+
+	/// TODO: implement
+	fn calculate_forgivable_complete_liquidation(
+		_borrower: &T::AccountId,
+	) -> Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
 		todo!()
 	}
 }
