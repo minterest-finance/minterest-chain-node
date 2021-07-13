@@ -24,6 +24,9 @@ use sp_runtime::{
 };
 use sp_std::{cell::RefCell, marker::PhantomData};
 
+// -----------------------------------------------------------------------------------------
+// 									CONSTRUCT RUNTIME
+// -----------------------------------------------------------------------------------------
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 type Block = frame_system::mocking::MockBlock<TestRuntime>;
 
@@ -128,7 +131,6 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 /// ExtBuilder declaration.
 /// ExtBuilder is a struct to store configuration of your test runtime.
 ///
-/// ExtBuilder
 //TODO: Rename to ExtBuilder after full tests rework
 pub struct ExtBuilderNew {
 	pub endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
@@ -167,126 +169,42 @@ impl Default for ExtBuilderNew {
 /// Below, you will find a set of functions for configuration of test runtime.
 /// Those functions allow you to set system variables, such as pools, balances, and rates,
 /// to implement various test scenarios.
-/// To make things more readable and customizable, all these configuration functions are
-/// organized in traits according to their purpose.
-
-// -----------------------------------------------------------------------------------------
-// 										Traits declaration.
-// -----------------------------------------------------------------------------------------
-
-/// Provides functionality to configure various balances.
-// TODO: refactor using generics?
-pub trait BalanceTestConfigurator {
-	/// Set balance for the particular user
-	/// - 'user': id of users account
-	/// - 'currency_id': currency
-	/// - 'balance': balance value to set
-	fn set_user_balance(self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self;
-
-	/// Set balance for the particular pool
-	/// - 'currency_id': pool ideal
-	/// - 'balance': balance value to set
-	fn set_pool_balance(self, currency_id: CurrencyId, balance: Balance) -> Self;
-	// TODO: Add description
-	fn set_dex_balance(self, currency_id: CurrencyId, balance: Balance) -> Self;
-}
 
 // pool_moc -> init_pool_default
 // pool_total_borrowed -> init_pool
 // liquidity_pool -> init_pool
-pub trait PoolTestConfigurator {
-	///TODO: Add description
-	fn init_pool_default(self, pool_id: CurrencyId) -> Self;
-	///TODO: Add description
-	fn init_pool(self, pool_id: CurrencyId, borrowed: Balance, borrow_index: Rate, protocol_interest: Balance) -> Self;
-	// TODO: Add description
-	fn set_pool_user_data(
-		self,
-		pool_id: CurrencyId,
-		user: AccountId,
-		borrowed: Balance,
-		interest_index: Rate,
-		is_collateral: bool,
-		liquidation_attempts: u8,
-	) -> Self;
-}
-
-pub trait LiqudationPoolTestConfigurator {
-	// TODO: Add description
-	fn init_liquidation_pool(
-		self,
-		pool_id: CurrencyId,
-		deviation_threshold: Rate,
-		balance_ratio: Rate,
-		max_ideal_balance: Option<Balance>,
-	) -> Self;
-	// TODO: Add description
-	fn set_liquidation_pool_balance(self, currency_id: CurrencyId, balance: Balance) -> Self;
-}
-
-pub trait MntTestConfigurator {
-	// TODO: Add description
-	fn mnt_enabled_pools(self, pools: Vec<(CurrencyId, Balance)>) -> Self;
-	// TODO: Add description
-	fn enable_minting_for_all_pools(self, speed: Balance) -> Self;
-	// TODO: Add description
-	fn set_mnt_claim_threshold(self, threshold: Balance) -> Self;
-	// TODO: Add description
-	fn set_mnt_account_balance(self, balance: Balance) -> Self;
-}
-
-pub trait ControllerTestConfigurator {
-	// TODO: Add description
-	fn set_controller_data(
-		self,
-		currency_id: CurrencyId,
-		last_interest_accrued_block: BlockNumber,
-		protocol_interest_factor: Rate,
-		max_borrow_rate: Rate,
-		collateral_factor: Rate,
-		borrow_cap: Option<Balance>,
-		protocol_interest_threshold: Balance,
-	) -> Self;
-	// TODO: Add description for
-	fn set_pause_keeper(self, currency_id: CurrencyId, is_paused: bool) -> Self;
-}
-
-pub trait MinterestModelConfigurator {
-	// TODO: Add description
-	fn set_minterest_model_params(
-		self,
-		currency_id: CurrencyId,
-		kink: Rate,
-		base_rate_per_block: Rate,
-		multiplier_per_block: Rate,
-		jump_multiplier_per_block: Rate,
-	) -> Self;
-}
-
-// -----------------------------------------------------------------------------------------
-//  								Traits implementation.
-// -----------------------------------------------------------------------------------------
-impl BalanceTestConfigurator for ExtBuilderNew {
-	fn set_user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
+impl ExtBuilderNew {
+	/// Set balance for the particular user
+	/// - 'user': id of users account
+	/// - 'currency_id': currency
+	/// - 'balance': balance value to set
+	pub fn set_user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts.push((user, currency_id, balance));
 		self
 	}
 
-	fn set_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+	/// Set balance for the particular pool
+	/// - 'currency_id': pool id
+	/// - 'balance': balance value to set
+	pub fn set_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((TestPools::pools_account_id(), currency_id, balance));
 		self
 	}
 
-	fn set_dex_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+	/// Set DEX balance
+	/// - 'currency_id': currency id
+	/// - 'balance': balance value
+	pub fn set_dex_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((TestDex::dex_account_id(), currency_id, balance));
 		self
 	}
-}
 
-impl PoolTestConfigurator for ExtBuilderNew {
-	fn init_pool_default(mut self, pool_id: CurrencyId) -> Self {
+	/// Initialize pool with default parameters:
+	/// borrowed: 0, borrow_index: 1, protocol_interest: 0
+	/// - 'pool_id': pool currency / id
+	pub fn init_pool_default(mut self, pool_id: CurrencyId) -> Self {
 		self.pools.push((
 			pool_id,
 			Pool {
@@ -298,7 +216,12 @@ impl PoolTestConfigurator for ExtBuilderNew {
 		self
 	}
 
-	fn init_pool(
+	/// Initialize pool
+	/// - 'pool_id': pool currency / id
+	/// - 'borrowed': value of currency borrowed from the pool_id
+	/// - 'borrow_index': index, describing change of borrow interest rate
+	/// - 'protocol_interest': interest of the protocol
+	pub fn init_pool(
 		mut self,
 		pool_id: CurrencyId,
 		borrowed: Balance,
@@ -316,7 +239,15 @@ impl PoolTestConfigurator for ExtBuilderNew {
 		self
 	}
 
-	fn set_pool_user_data(
+	/// Set user data for particular pool
+	/// - 'pool_id': pool id
+	/// - 'user': user id
+	/// - 'borrowed': total balance (with accrued interest), after applying the most
+	///				  recent balance-changing action.
+	/// - 'interest_index': global borrow_index as of the most recent balance-changing action
+	/// - 'is_collateral': can pool be used as collateral for the current user
+	/// - 'liquidation_attempts': number of partial liquidations for debt
+	pub fn set_pool_user_data(
 		mut self,
 		pool_id: CurrencyId,
 		user: AccountId,
@@ -337,33 +268,42 @@ impl PoolTestConfigurator for ExtBuilderNew {
 		));
 		self
 	}
-}
 
-impl MntTestConfigurator for ExtBuilderNew {
-	fn mnt_enabled_pools(mut self, pools: Vec<(CurrencyId, Balance)>) -> Self {
+	/// Enable minting for particular pools
+	/// - 'pools': list of pools with mnt_speeds
+	pub fn mnt_enabled_pools(mut self, pools: Vec<(CurrencyId, Balance)>) -> Self {
 		self.minted_pools = pools;
 		self
 	}
 
-	fn enable_minting_for_all_pools(mut self, speed: Balance) -> Self {
+	/// Enable minting for all pools
+	/// - 'speed': mnt minting speed
+	pub fn enable_minting_for_all_pools(mut self, speed: Balance) -> Self {
 		self.minted_pools = vec![(KSM, speed), (DOT, speed), (ETH, speed), (BTC, speed)];
 		self
 	}
 
-	fn set_mnt_claim_threshold(mut self, threshold: u128) -> Self {
+	/// Set mnt threshold
+	/// - 'threshold': mnt transfer threshold
+	pub fn set_mnt_claim_threshold(mut self, threshold: u128) -> Self {
 		self.mnt_claim_threshold = threshold * DOLLARS;
 		self
 	}
 
-	fn set_mnt_account_balance(mut self, balance: Balance) -> Self {
+	/// Set mnt balance for mnt pallets account
+	/// - 'balance': mnt balance
+	pub fn set_mnt_account_balance(mut self, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((TestMntToken::get_account_id(), MNT, balance));
 		self
 	}
-}
 
-impl LiqudationPoolTestConfigurator for ExtBuilderNew {
-	fn init_liquidation_pool(
+	/// Initialize liquidation pool
+	/// - 'pool_id': pool id
+	/// - 'deviation_threshold': threshold
+	/// - 'balance_ratio': represents the percentage of working pool value to be covered by value in Liquidation Poll.
+	/// - 'max_ideal_balance': maximum ideal balance during pool balancing
+	pub fn init_liquidation_pool(
 		mut self,
 		pool_id: CurrencyId,
 		deviation_threshold: Rate,
@@ -381,15 +321,26 @@ impl LiqudationPoolTestConfigurator for ExtBuilderNew {
 		self
 	}
 
-	fn set_liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+	/// Set balance of the liquidation pool
+	/// - 'currency_id': pool / currency id
+	/// - 'balance': balance to set
+	pub fn set_liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((TestLiquidationPools::pools_account_id(), currency_id, balance));
 		self
 	}
-}
 
-impl ControllerTestConfigurator for ExtBuilderNew {
-	fn set_controller_data(
+	/// Set controller data for the current pool
+	/// - 'currency_id': pool / currency id
+	/// - 'last_interest_accrued_block': block number that interest was last accrued at.
+	/// - 'protocol_interest_factor': defines the portion of borrower interest that is converted into protocol interest.
+	/// - 'max_borrow_rate': maximum borrow rate.
+	/// - 'collateral_factor': this multiplier represents which share of the supplied value can be used as a collateral for
+	/// 						loans. For instance, 0.9 allows 90% of total pool value to be used as a collateral. Must be
+	/// 						between 0 and 1.
+	/// - 'borrow_cap': maximum total borrow amount per pool in usd. No value means infinite borrow cap.
+	/// - protocol_interest_threshold': minimum protocol interest needed to transfer it to liquidation pool
+	pub fn set_controller_data(
 		mut self,
 		currency_id: CurrencyId,
 		last_interest_accrued_block: BlockNumber,
@@ -413,7 +364,10 @@ impl ControllerTestConfigurator for ExtBuilderNew {
 		self
 	}
 
-	fn set_pause_keeper(mut self, currency_id: CurrencyId, is_paused: bool) -> Self {
+	/// Set pausekeeper state.
+	/// - 'currency_id': currency identifier
+	/// - 'is_paused': pause / unpause all keepers for current currency
+	pub fn set_pause_keeper(mut self, currency_id: CurrencyId, is_paused: bool) -> Self {
 		self.pause_keepers.push((
 			currency_id,
 			if is_paused {
@@ -424,10 +378,14 @@ impl ControllerTestConfigurator for ExtBuilderNew {
 		));
 		self
 	}
-}
 
-impl MinterestModelConfigurator for ExtBuilderNew {
-	fn set_minterest_model_params(
+	/// Set minterest model parameters
+	/// - 'currency_id': currency identifier
+	/// - 'kink': the utilization point at which the jump multiplier is applied
+	/// - 'base_rate_per_block': the base interest rate which is the y-intercept when utilization rate is 0
+	/// - 'multiplier_per_block': the multiplier of utilization rate that gives the slope of the interest rate
+	/// - 'jump_multiplier_per_block': the multiplier of utilization rate after hitting a specified utilization point - kink
+	pub fn set_minterest_model_params(
 		mut self,
 		currency_id: CurrencyId,
 		kink: Rate,
@@ -446,17 +404,9 @@ impl MinterestModelConfigurator for ExtBuilderNew {
 		));
 		self
 	}
-}
 
-// -----------------------------------------------------------------------------------------
-// 									EXTERNALITIES BUILDING
-// -----------------------------------------------------------------------------------------
-pub trait BuildExternalities {
-	fn build(self) -> sp_io::TestExternalities;
-}
-
-impl BuildExternalities for ExtBuilderNew {
-	fn build(self) -> sp_io::TestExternalities {
+	/// Builds GenesisConfig for all pallets from ExtBuilder data
+	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()
 			.build_storage::<TestRuntime>()
 			.unwrap();
