@@ -177,8 +177,21 @@
       "nonce": "Index",
       "consumers": "RefCount",
       "providers": "RefCount",
-      "data": "AccountData"
-    }
+      "sufficients": "RefCount",
+      "data": "SubstrateAccountData"
+    },
+    "SubstrateAccountData": {
+      "free": "Balance",
+      "reserved": "Balance",
+      "misc_frozen": "Balance",
+      "fee_frozen": "Balance"
+    },
+    "OrmlAccountData": {
+      "free": "Balance",
+      "reserved": "Balance",
+      "frozen": "Balance"
+    },
+    "AccountData": "OrmlAccountData"
   },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
 }
