@@ -2,18 +2,23 @@
 //!
 //! ## Overview
 //!
-//! TODO
+//! TODO: add comments
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
 
-use frame_support::{pallet_prelude::*, transactional};
-use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
+use frame_support::{log, pallet_prelude::*, transactional};
+use frame_system::{
+	ensure_none,
+	offchain::{SendTransactionTypes, SubmitTransaction},
+	pallet_prelude::OriginFor,
+};
+use minterest_primitives::{Balance, CurrencyId, OffchainErr, Operation, Rate};
 pub use module::*;
-use pallet_traits::{RiskManagerStorageProvider, UserCollateral, UserLiquidationAttemptsManager};
+use pallet_traits::{ControllerManager, RiskManagerStorageProvider, UserCollateral, UserLiquidationAttemptsManager};
 use sp_runtime::{
-	traits::{One, Zero},
+	traits::{One, StaticLookup, Zero},
 	FixedPointNumber,
 };
 #[cfg(feature = "std")]
@@ -35,14 +40,16 @@ enum LiquidationMode {
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use frame_system::ensure_none;
-	use frame_system::pallet_prelude::OriginFor;
-	use minterest_primitives::{Balance, Rate};
-	use sp_runtime::traits::StaticLookup;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		/// A configuration for base priority of unsigned transactions.
+		///
+		/// This is exposed so that it can be tuned for particular runtime, when
+		/// multiple pallets send unsigned transactions.
+		type UnsignedPriority: Get<TransactionPriority>;
 
 		/// Provides functionality for working with a user's collateral pools.
 		type UserCollateral: UserCollateral<Self::AccountId>;
@@ -60,6 +67,9 @@ pub mod module {
 		/// The origin which may update risk manager parameters. Root or
 		/// Half Minterest Council can always do this.
 		type RiskManagerUpdateOrigin: EnsureOrigin<Self::Origin>;
+
+		/// Public API of controller pallet
+		type ControllerManager: ControllerManager<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -129,7 +139,28 @@ pub mod module {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+		/// Runs after every block. Start offchain worker to check unsafe loan and
+		/// submit unsigned tx to trigger liquidation.
+		fn offchain_worker(now: T::BlockNumber) {
+			log::info!("Entering in RiskManager off-chain worker");
+			if let Err(e) = Self::_offchain_worker() {
+				log::info!(
+					target: "RiskManager offchain worker",
+					"cannot run offchain worker at {:?}: {:?}",
+					now,
+					e,
+				);
+			} else {
+				log::debug!(
+					target: "RiskManager offchain worker",
+					" RiskManager offchain worker start at block: {:?} already done!",
+					now,
+				);
+			}
+			log::info!("Exited from RiskManager off-chain worker");
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -201,6 +232,48 @@ pub mod module {
 
 // Private functions
 impl<T: Config> Pallet<T> {
+	/// Checks insolvent loans and liquidate them if it required.
+	fn process_insolvent_loans() -> Result<(), OffchainErr> {
+		for borrower in T::ControllerManager::get_all_users_with_unsafe_loan()
+			.map_err(|_| OffchainErr::CheckFail)?
+			.into_iter()
+		{
+			let mode = Self::choose_liquidation_mode(&borrower, Balance::zero(), Balance::zero());
+			let (liquidate_loans, seize_supplies) = match mode {
+				LiquidationMode::Partial => todo!(),
+				LiquidationMode::Complete => todo!(),
+				LiquidationMode::ForgivableComplete => todo!(),
+			};
+			Self::submit_unsigned_liquidation(borrower, liquidate_loans, seize_supplies);
+		}
+		Ok(())
+	}
+
+	fn _offchain_worker() -> Result<(), OffchainErr> {
+		// Check if we are a potential validator
+		if !sp_io::offchain::is_validator() {
+			return Err(OffchainErr::NotValidator);
+		}
+		Self::process_insolvent_loans()?;
+		Ok(())
+	}
+
+	fn submit_unsigned_liquidation(
+		borrower: T::AccountId,
+		liquidate_loans: Vec<(CurrencyId, Balance)>,
+		seize_supplies: Vec<(CurrencyId, Balance)>,
+	) {
+		let who = T::Lookup::unlookup(borrower.clone());
+		let call = Call::<T>::liquidate(who.clone(), liquidate_loans, seize_supplies);
+		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
+			log::info!(
+				target: "RiskManager offchain worker",
+				"submit unsigned liquidation for \n AccountId {:?} \nfailed!",
+				borrower,
+			);
+		}
+	}
+
 	/// Checks if liquidation_fee <= 0.5
 	fn is_valid_liquidation_fee(liquidation_fee: Rate) -> bool {
 		liquidation_fee <= Rate::saturating_from_rational(5, 10)
@@ -208,9 +281,9 @@ impl<T: Config> Pallet<T> {
 
 	/// TODO: implement
 	fn choose_liquidation_mode(
-		user: &T::AccountId,
-		user_total_supply_usd: Balance,
-		user_total_borrow_usd: Balance,
+		borrower: &T::AccountId,
+		borrower_total_supply_usd: Balance,
+		borrower_total_borrow_usd: Balance,
 	) -> LiquidationMode {
 		todo!()
 	}
@@ -257,6 +330,24 @@ impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 			if !user_liquidation_attempts.is_zero() {
 				Self::reset_to_zero(&who);
 			}
+		}
+	}
+}
+
+impl<T: Config> ValidateUnsigned for Pallet<T> {
+	type Call = Call<T>;
+
+	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
+		match call {
+			Call::liquidate(who, _liquidate_loans, _seize_supplies) => {
+				ValidTransaction::with_tag_prefix("RiskManagerOffchainWorker")
+					.priority(T::UnsignedPriority::get())
+					.and_provides((<frame_system::Pallet<T>>::block_number(), who))
+					.longevity(64_u64)
+					.propagate(true)
+					.build()
+			}
+			_ => InvalidTransaction::Call.into(),
 		}
 	}
 }
