@@ -185,7 +185,10 @@
       "consumers": "RefCount",
       "providers": "RefCount",
       "data": "AccountData"
-    }
+    },
+    "FeedId": "u32",
+    "SubmissionBounds": "(u32, u32)",
+    "RoundId": "u32"
   },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
 }

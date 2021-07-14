@@ -6,11 +6,11 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::currency::GetDecimals;
 use minterest_primitives::{VestingBucket, VestingScheduleJson};
 use node_minterest_runtime::{
-	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ChainlinkFeedConfig, ControllerConfig,
-	ExistentialDeposit, GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig,
-	MinterestCouncilMembershipConfig, MinterestModelConfig, MntTokenConfig, MntTokenPalletId,
-	OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
-	TokensConfig, VestingConfig, WhitelistConfig, BTC, DOLLARS, DOT, ETH, KSM, MNT,
+	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ChainlinkFeedConfig,
+	ChainlinkPriceManagerAccountId, ControllerConfig, ExistentialDeposit, GenesisConfig, GrandpaConfig,
+	LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig, MinterestModelConfig,
+	MntTokenConfig, MntTokenPalletId, OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature,
+	SudoConfig, SystemConfig, TokensConfig, VestingConfig, WhitelistConfig, BTC, DOLLARS, DOT, ETH, KSM, MNT,
 	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
 };
 use risk_manager::RiskManagerData;
@@ -802,7 +802,7 @@ fn testnet_genesis(
 		},
 		chainlink_feed: ChainlinkFeedConfig {
 			pallet_admin: Some(root_key.clone()),
-			feed_creators: endowed_accounts,
+			feed_creators: vec![ChainlinkPriceManagerAccountId::get()],
 		},
 	}
 }

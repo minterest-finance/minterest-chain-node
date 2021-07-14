@@ -22,20 +22,15 @@ fn create_feed_should_work() {
 	let oracle2: AccountId = 200;
 	let oracle3: AccountId = 300;
 	test_externalities().execute_with(|| {
-		ChainlinkPriceManager::create_feed(
+		ChainlinkPriceManager::create_minterest_feed(
 			admin_origin(),
 			BTC,
-			10,
 			3,
-			b"desc".to_vec(),
-			2,
 			vec![
 				(oracle1, oracles_admin),
 				(oracle2, oracles_admin),
 				(oracle3, oracles_admin),
 			],
-			Some(5000),
-			None,
 		)
 		.unwrap();
 		let feed_id = 0;
@@ -52,6 +47,7 @@ fn create_feed_should_work() {
 		let RoundData { answer, .. } = feed_result.latest_data();
 		assert_eq!(answer, 0);
 		ChainlinkFeed::submit(Origin::signed(oracle3), feed_id, round_id, 42).unwrap();
+
 		// The value is returned only when 3 oracles are subbmited, because min_submissions == 3
 		let feed_result = ChainlinkFeed::feed(feed_id.into()).unwrap();
 		let RoundData { answer, .. } = feed_result.latest_data();

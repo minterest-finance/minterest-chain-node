@@ -6,13 +6,14 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
-use frame_support::{pallet_prelude::*, transactional};
+use frame_support::{log, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
-use minterest_primitives::{CurrencyId, Price};
+use minterest_primitives::{currency::TokenSymbol, BlockNumber, CurrencyId, Price};
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData, RoundId};
 use sp_runtime::traits::{Bounded, One, Zero};
 use sp_runtime::FixedU128;
 use sp_std::vec::Vec;
+use sp_std::{convert::TryInto, result};
 
 mod mock;
 mod tests;
@@ -20,6 +21,8 @@ mod tests;
 pub use module::*;
 
 type ChainlinkFeedPallet<T> = pallet_chainlink_feed::Pallet<T>;
+
+pub const ETH: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::ETH);
 
 #[frame_support::pallet]
 pub mod module {
@@ -32,8 +35,7 @@ pub mod module {
 		/// The pallet account id, keep all assets in Pools.
 		type PalletAccountId: Get<Self::AccountId>;
 
-		/// The origin which may update controller parameters. Root or
-		/// Half Minterest Council can always do this.
+		/// Root or half Minterest Council can always do this.
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 	}
 
@@ -55,25 +57,63 @@ pub mod module {
 
 	#[pallet::event]
 	#[pallet::generate_deposit(fn deposit_event)]
-	pub enum Event<T: Config> {}
+	pub enum Event<T: Config> {
+		DummyEvent(u8),
+	}
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+		fn offchain_worker(now: T::BlockNumber) {
+			log::info!("ETH price is: {:?}", Self::get_underlying_price(ETH));
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		///
 		#[pallet::weight(10_000)]
 		#[transactional]
-		pub fn create_feed(
+		pub fn create_minterest_feed(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			// payment: pallet_chainlink_feed::BalanceOf<T>,
+			min_submissions: u32,
+			oracles: Vec<(T::AccountId, T::AccountId)>,
+		) -> DispatchResultWithPostInfo {
+			T::UpdateOrigin::ensure_origin(origin)?;
+
+			let feed_id = pallet_chainlink_feed::FeedCounter::<T>::get();
+			let adapter_origin = frame_system::RawOrigin::Signed(T::PalletAccountId::get()).into();
+			let bn: T::BlockNumber = (10_u32).into();
+
+			<ChainlinkFeedPallet<T>>::create_feed(
+				adapter_origin,
+				pallet_chainlink_feed::BalanceOf::<T>::zero(),
+				bn,
+				(T::Value::zero(), T::Value::max_value()),
+				min_submissions,
+				18, // 18 decimals
+				b"".to_vec(),
+				0,
+				oracles,
+				None,
+				None,
+			)?;
+
+			// Todo REPLACE
+			MainFeedKeeper::<T>::insert(currency_id, feed_id);
+			Ok(().into())
+		}
+
+		#[pallet::weight(10_000)]
+		#[transactional]
+		pub fn create_chainlink_feed(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			payment: pallet_chainlink_feed::BalanceOf<T>,
 			timeout: T::BlockNumber,
-			// submission_value_bounds: (T::Value, T::Value),
+			submission_value_bounds: (T::Value, T::Value),
 			min_submissions: u32,
 			description: Vec<u8>,
 			restart_delay: RoundId,
@@ -88,9 +128,9 @@ pub mod module {
 
 			<ChainlinkFeedPallet<T>>::create_feed(
 				adapter_origin,
-				pallet_chainlink_feed::BalanceOf::<T>::zero(),
+				payment,
 				timeout,
-				(T::Value::zero(), T::Value::max_value()), // TODO think about minimal value greater than zero
+				submission_value_bounds,
 				min_submissions,
 				18, // 18 decimals
 				description,
@@ -109,6 +149,7 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 	pub fn get_underlying_price(currency_id: CurrencyId) -> Option<T::Value> {
 		let feed_id = MainFeedKeeper::<T>::get(currency_id);
+		// TODO produce Event if get_underlying_price isn't possible
 		if feed_id == None {
 			return None;
 		}
