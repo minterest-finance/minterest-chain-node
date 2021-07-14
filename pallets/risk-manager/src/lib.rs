@@ -37,6 +37,19 @@ enum LiquidationMode {
 	ForgivableComplete,
 }
 
+/// TODO: add comments
+// struct UserLoanState<T: Config> {
+// 	user: T::AccountId,
+// 	loans: Vec<(CurrencyId, Balance)>,
+// 	supplies: Vec<(CurrencyId, Balance)>,
+// }
+
+#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug)]
+pub struct UserLoanState {
+	loans: Vec<(CurrencyId, Balance)>,
+	supplies: Vec<(CurrencyId, Balance)>,
+}
+
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
@@ -220,8 +233,7 @@ pub mod module {
 		pub fn liquidate(
 			origin: OriginFor<T>,
 			borrower: <T::Lookup as StaticLookup>::Source,
-			_liquidate_loans: Vec<(CurrencyId, Balance)>,
-			_seize_supplies: Vec<(CurrencyId, Balance)>,
+			user_loan_state: UserLoanState,
 		) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
 			let _borrower = T::Lookup::lookup(borrower)?;
@@ -243,34 +255,29 @@ impl<T: Config> Pallet<T> {
 
 	/// Checks insolvent loans and liquidate them if it required.
 	fn process_insolvent_loans() -> Result<(), OffchainErr> {
-		for borrower in T::ControllerManager::get_all_users_with_unsafe_loan()
+		T::ControllerManager::get_all_users_with_unsafe_loan()
 			.map_err(|_| OffchainErr::CheckFail)?
 			.into_iter()
-		{
-			let mode = Self::choose_liquidation_mode(&borrower, Balance::zero(), Balance::zero());
-			let (liquidate_loans, seize_supplies) = match mode {
-				LiquidationMode::Partial => {
-					Self::calculate_partial_liquidation(&borrower).map_err(|_| OffchainErr::CheckFail)?
-				}
-				LiquidationMode::Complete => {
-					Self::calculate_complete_liquidation(&borrower).map_err(|_| OffchainErr::CheckFail)?
-				}
-				LiquidationMode::ForgivableComplete => {
-					Self::calculate_forgivable_complete_liquidation(&borrower).map_err(|_| OffchainErr::CheckFail)?
-				}
-			};
-			Self::submit_unsigned_liquidation(borrower, liquidate_loans, seize_supplies);
-		}
-		Ok(())
+			.try_for_each(|borrower| -> Result<(), OffchainErr> {
+				let mode = Self::choose_liquidation_mode(&borrower, Balance::zero(), Balance::zero());
+				let borrower_loan_state = match mode {
+					LiquidationMode::Partial => {
+						Self::calculate_partial_liquidation(&borrower).map_err(|_| OffchainErr::CheckFail)?
+					}
+					LiquidationMode::Complete => {
+						Self::calculate_complete_liquidation(&borrower).map_err(|_| OffchainErr::CheckFail)?
+					}
+					LiquidationMode::ForgivableComplete => Self::calculate_forgivable_complete_liquidation(&borrower)
+						.map_err(|_| OffchainErr::CheckFail)?,
+				};
+				Self::submit_unsigned_liquidation(borrower, borrower_loan_state);
+				Ok(())
+			})
 	}
 
-	fn submit_unsigned_liquidation(
-		borrower: T::AccountId,
-		liquidate_loans: Vec<(CurrencyId, Balance)>,
-		seize_supplies: Vec<(CurrencyId, Balance)>,
-	) {
+	fn submit_unsigned_liquidation(borrower: T::AccountId, user_loan_state: UserLoanState) {
 		let who = T::Lookup::unlookup(borrower.clone());
-		let call = Call::<T>::liquidate(who.clone(), liquidate_loans, seize_supplies);
+		let call = Call::<T>::liquidate(who.clone(), user_loan_state);
 		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
 			log::info!(
 				target: "RiskManager offchain worker",
@@ -304,23 +311,17 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// TODO: implement
-	fn calculate_partial_liquidation(
-		_borrower: &T::AccountId,
-	) -> Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
+	fn calculate_partial_liquidation(_borrower: &T::AccountId) -> Result<UserLoanState, DispatchError> {
 		todo!()
 	}
 
 	/// TODO: implement
-	fn calculate_complete_liquidation(
-		_borrower: &T::AccountId,
-	) -> Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
+	fn calculate_complete_liquidation(_borrower: &T::AccountId) -> Result<UserLoanState, DispatchError> {
 		todo!()
 	}
 
 	/// TODO: implement
-	fn calculate_forgivable_complete_liquidation(
-		_borrower: &T::AccountId,
-	) -> Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
+	fn calculate_forgivable_complete_liquidation(_borrower: &T::AccountId) -> Result<UserLoanState, DispatchError> {
 		todo!()
 	}
 }
@@ -375,7 +376,7 @@ impl<T: Config> ValidateUnsigned for Pallet<T> {
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		match call {
-			Call::liquidate(who, _liquidate_loans, _seize_supplies) => {
+			Call::liquidate(who, _borrower_loan_state) => {
 				ValidTransaction::with_tag_prefix("RiskManagerOffchainWorker")
 					.priority(T::UnsignedPriority::get())
 					.and_provides((<frame_system::Pallet<T>>::block_number(), who))
