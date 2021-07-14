@@ -956,4 +956,21 @@ impl<T: Config> Pallet<T> {
 
 		Ok(repay_amount)
 	}
+
+	/// Withdraws wrapped tokens from the borrower's account. Transfers the corresponding number
+	/// of underlying assets from the liquidity pool to the liquidation pool. Called only during
+	/// the liquidation process.
+	///
+	/// - `borrower`: borrower's account being liquidated.
+	/// - `underlying_asset`: the currency ID of the underlying asset to seize.
+	/// - `seize_underlying`: the amount of the underlying asset to seize.
+	///
+	/// Note: this function should be used after `accrue_interest_rate`.
+	pub fn do_seize_fresh(
+		_borrower: &T::AccountId,
+		_underlying_asset: CurrencyId,
+		_seize_underlying: Balance,
+	) -> DispatchResult {
+		todo!()
+	}
 }

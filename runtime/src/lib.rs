@@ -452,12 +452,15 @@ parameter_types! {
 impl risk_manager::Config for Runtime {
 	type Event = Event;
 	type UnsignedPriority = RiskManagerPriority;
+	type PriceSource = Prices;
 	type UserCollateral = LiquidityPools;
 	type PartialLiquidationMinSum = PartialLiquidationMinSum;
 	type PartialLiquidationMaxAttempts = PartialLiquidationMaxAttempts;
 	type MaxLiquidationFee = MaxLiquidationFee;
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type ControllerManager = Controller;
+	type LiquidityPoolsManager = LiquidityPools;
+	type LiquidationPoolsManager = LiquidationPools;
 }
 
 parameter_types! {

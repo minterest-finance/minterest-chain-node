@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::upper_case_acronyms)]
 
-use minterest_primitives::{Balance, CurrencyId, Operation, Price, Rate};
+use minterest_primitives::{Balance, CurrencyId, Interest, Operation, Price, Rate};
 use sp_runtime::{DispatchError, DispatchResult};
 use sp_std::{collections::btree_set::BTreeSet, result::Result, vec::Vec};
 
@@ -200,8 +200,65 @@ pub trait ControllerManager<AccountId> {
 	/// For all active pools in the protocol, it checks all users: calls accrue_interest_rate,
 	/// and then get_hypothetical_account_liquidity. If the user has a shortfall, then writes it
 	/// to the vector.
-	/// Returns: the vector of all users with an unsaved loan.
-	fn get_all_users_with_unsafe_loan() -> Result<BTreeSet<AccountId>, DispatchError>;
+	/// Returns: the vector of all users with an insolvent loan.
+	fn get_all_users_with_insolvent_loan() -> Result<BTreeSet<AccountId>, DispatchError>;
+
+	/// Gets exchange, borrow interest rate and supply interest rate. The rates is calculated
+	/// for the current block.
+	fn get_pool_exchange_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate, Rate)>;
+
+	/// Gets current utilization rate of the pool. The rate is calculated for the current block.
+	fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate>;
+
+	/// Calculates user total supply and user total borrow balance in usd based on
+	/// pool_borrow, pool_protocol_interest, borrow_index values calculated for current block.
+	fn get_user_total_supply_and_borrow_balance_in_usd(who: &AccountId) -> Result<(Balance, Balance), DispatchError>;
+
+	/// Calculates pool_total_supply, pool_total_borrow including interest, tvl (Total Value
+	/// Locked), pool_protocol_interest. All values are converted to USD.
+	/// pool_total_supply is calculated as: sum(pool_supply_usd)
+	/// where:
+	///     `pool_supply_usd` - current available liquidity in the n pool;
+	/// pool_total_borrow is calculated as: sum(fresh_pool_borrow_usd)
+	/// where:
+	///     `fresh_pool_borrow_usd` - freshest value of pool borrow in the n pool;
+	/// tvl is calculated as: sum(pool_supply_wrap * exchange_rate),
+	/// where:
+	///     `pool_supply_wrap` - total number of wrapped tokens in the n pool;
+	///     `exchange_rate` - exchange rate in the n pool;
+	/// pool_total_interest is calculated as: sum(fresh_pool_protocol_interest_usd)
+	/// where:
+	///     `fresh_pool_protocol_interest_usd` - freshest value of protocol interest in the n pool;
+	fn get_protocol_total_values() -> Result<(Balance, Balance, Balance, Balance), DispatchError>;
+
+	/// Calculate user total collateral in usd based on collateral factor, fresh exchange rate and
+	/// latest oracle price. Collateral is calculated for the current block.
+	///
+	/// - `who`: the AccountId whose collateral should be calculated.
+	fn get_user_total_collateral(who: AccountId) -> Result<Balance, DispatchError>;
+
+	/// Calculate actual borrow balance for user per asset based on fresh latest indexes.
+	///
+	/// - `who`: the AccountId whose balance should be calculated.
+	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
+	fn get_user_borrow_underlying_balance(
+		who: &AccountId,
+		underlying_asset_id: CurrencyId,
+	) -> Result<Balance, DispatchError>;
+
+	/// Calculates user balance converted to underlying asset using exchange rate calculated for the
+	/// current block.
+	///
+	/// - `who`: the AccountId whose balance should be calculated.
+	/// - `pool_id` - ID of the pool to calculate balance for.
+	fn get_user_supply_underlying_balance(who: &AccountId, pool_id: CurrencyId) -> Result<Balance, DispatchError>;
+
+	/// Calculate total user's supply APY, borrow APY and Net APY.
+	///
+	/// - `who`: the AccountId whose APY should be calculated.
+	fn get_user_total_supply_borrow_and_net_apy(
+		who: AccountId,
+	) -> Result<(Interest, Interest, Interest), DispatchError>;
 }
 
 pub trait MntManager<AccountId> {
