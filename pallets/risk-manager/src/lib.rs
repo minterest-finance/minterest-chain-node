@@ -77,6 +77,10 @@ pub mod module {
 		/// a complete liquidation occurs.
 		type PartialLiquidationMaxAttempts: Get<u8>;
 
+		#[pallet::constant]
+		/// The maximum liquidation fee.
+		type MaxLiquidationFee: Get<Rate>;
+
 		/// The origin which may update risk manager parameters. Root or
 		/// Half Minterest Council can always do this.
 		type RiskManagerUpdateOrigin: EnsureOrigin<Self::Origin>;
@@ -289,7 +293,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Checks if liquidation_fee <= 0.5
 	fn is_valid_liquidation_fee(liquidation_fee: Rate) -> bool {
-		liquidation_fee <= Rate::saturating_from_rational(5, 10)
+		liquidation_fee <= T::MaxLiquidationFee::get()
 	}
 
 	/// TODO: cover with tests
