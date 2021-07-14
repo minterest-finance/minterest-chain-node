@@ -17,37 +17,51 @@ use frame_system::{
 use minterest_primitives::{Balance, CurrencyId, OffchainErr, Operation, Rate};
 pub use module::*;
 use pallet_traits::{ControllerManager, RiskManagerStorageProvider, UserCollateral, UserLiquidationAttemptsManager};
-use sp_runtime::{
-	traits::{One, StaticLookup, Zero},
-	FixedPointNumber,
-};
+use sp_runtime::traits::{One, StaticLookup, Zero};
 #[cfg(feature = "std")]
 use sp_std::str;
+use sp_std::vec::Vec;
 
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
 
-/// Types of liquidation of user debts.
-/// TODO: add comments
+/// Types of liquidation of user loans.
 enum LiquidationMode {
 	Partial,
 	Complete,
 	ForgivableComplete,
 }
 
-/// TODO: add comments
-// struct UserLoanState<T: Config> {
-// 	user: T::AccountId,
-// 	loans: Vec<(CurrencyId, Balance)>,
-// 	supplies: Vec<(CurrencyId, Balance)>,
-// }
+/// Contains information about the transferred amounts for liquidation.
+#[derive(Encode, Decode, RuntimeDebug, Clone, PartialOrd, PartialEq)]
+pub struct LiquidationAmounts {
+	/// Contains a vector of pools and a balances that must be paid instead of the borrower from
+	/// liquidation pools to liquidity pools.
+	borrower_loans_to_repay_usd: Vec<(CurrencyId, Balance)>,
+	/// Contains a vector of pools and a balances that must be withdrawn from the user's collateral
+	/// and sent to the liquidation pools.
+	borrower_supplies_to_seize_usd: Vec<(CurrencyId, Balance)>,
+}
 
-#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug)]
+/// Contains information about the current state of the borrower's loan.
+#[derive(Encode, Decode, RuntimeDebug, Clone, PartialOrd, PartialEq)]
 pub struct UserLoanState {
+	/// Vector of user currencies and loans
 	loans: Vec<(CurrencyId, Balance)>,
+	/// Vector of user currencies and supplies
 	supplies: Vec<(CurrencyId, Balance)>,
+}
+
+impl UserLoanState {
+	fn _user_total_borrow_usd(&self) -> Balance {
+		self.loans.iter().map(|(_, v)| v).sum()
+	}
+
+	fn _user_total_supply_usd(&self) -> Balance {
+		self.supplies.iter().map(|(_, v)| v).sum()
+	}
 }
 
 #[frame_support::pallet]
@@ -237,10 +251,11 @@ pub mod module {
 		pub fn liquidate(
 			origin: OriginFor<T>,
 			borrower: <T::Lookup as StaticLookup>::Source,
-			user_loan_state: UserLoanState,
+			user_loan_state: LiquidationAmounts,
 		) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
-			let _borrower = T::Lookup::lookup(borrower)?;
+			let borrower = T::Lookup::lookup(borrower)?;
+			Self::do_liquidate(&borrower, user_loan_state)?;
 			Ok(().into())
 		}
 	}
@@ -248,38 +263,59 @@ pub mod module {
 
 // Private functions
 impl<T: Config> Pallet<T> {
+	/// Checks if the node is a validator. The worker is launched every block. The worker's working
+	/// time is limited in time. Each next worker starts checking user loans from the beginning.
+	/// Calls a processing insolvent loans function.
 	fn _offchain_worker() -> Result<(), OffchainErr> {
 		// Check if we are a potential validator
 		if !sp_io::offchain::is_validator() {
 			return Err(OffchainErr::NotValidator);
 		}
-		Self::process_insolvent_loans()?;
+
+		let mut user_unsafe_loan_iterator = T::ControllerManager::get_all_users_with_unsafe_loan()
+			.map_err(|_| OffchainErr::CheckFail)?
+			.into_iter();
+
+		//TODO: offchain worker locks
+
+		while let Some(borrower) = user_unsafe_loan_iterator.next() {
+			Self::process_insolvent_loan(borrower)?;
+			//TODO: offchain worker guard try extend
+		}
+
 		Ok(())
 	}
 
-	/// Checks insolvent loans and liquidate them if it required.
-	fn process_insolvent_loans() -> Result<(), OffchainErr> {
-		T::ControllerManager::get_all_users_with_unsafe_loan()
-			.map_err(|_| OffchainErr::CheckFail)?
-			.into_iter()
-			.try_for_each(|borrower| -> Result<(), OffchainErr> {
-				let mode = Self::choose_liquidation_mode(&borrower, Balance::zero(), Balance::zero());
-				let borrower_loan_state = match mode {
-					LiquidationMode::Partial => {
-						Self::calculate_partial_liquidation(&borrower).map_err(|_| OffchainErr::CheckFail)?
-					}
-					LiquidationMode::Complete => {
-						Self::calculate_complete_liquidation(&borrower).map_err(|_| OffchainErr::CheckFail)?
-					}
-					LiquidationMode::ForgivableComplete => Self::calculate_forgivable_complete_liquidation(&borrower)
-						.map_err(|_| OffchainErr::CheckFail)?,
-				};
-				Self::submit_unsigned_liquidation(borrower, borrower_loan_state);
-				Ok(())
-			})
+	/// Handles the user's loan. Selects one of the required types of liquidation (Partial,
+	/// Complete or Forgivable Complete) and calls extrinsic `liquidate()`.
+	///
+	/// -`borrower`: AccountId of the borrower whose loan is being processed.
+	fn process_insolvent_loan(borrower: T::AccountId) -> Result<(), OffchainErr> {
+		let _user_loan_state = Self::get_user_loan_state(&borrower).map_err(|_| OffchainErr::CheckFail)?;
+		let mode = Self::choose_liquidation_mode(&borrower, Balance::zero(), Balance::zero());
+		let borrower_loan_state = match mode {
+			LiquidationMode::Partial => {
+				Self::calculate_partial_liquidation(&borrower).map_err(|_| OffchainErr::CheckFail)?
+			}
+			LiquidationMode::Complete => {
+				Self::calculate_complete_liquidation(&borrower).map_err(|_| OffchainErr::CheckFail)?
+			}
+			LiquidationMode::ForgivableComplete => {
+				Self::calculate_forgivable_complete_liquidation(&borrower).map_err(|_| OffchainErr::CheckFail)?
+			}
+		};
+		// call to change the offchain worker local storage
+		Self::do_liquidate(&borrower, borrower_loan_state.clone()).map_err(|_| OffchainErr::CheckFail)?;
+		Self::submit_unsigned_liquidation(&borrower, borrower_loan_state);
+		Self::mutate_depending_operation(None, &borrower, Operation::Repay);
+		Ok(())
 	}
 
-	fn submit_unsigned_liquidation(borrower: T::AccountId, user_loan_state: UserLoanState) {
+	/// Submits an unsigned liquidation transaction to the blockchain.
+	///
+	/// -`borrower`: AccountId of the borrower whose loan is being processed.
+	/// -`user_loan_state`:
+	fn submit_unsigned_liquidation(borrower: &T::AccountId, user_loan_state: LiquidationAmounts) {
 		let who = T::Lookup::unlookup(borrower.clone());
 		let call = Call::<T>::liquidate(who.clone(), user_loan_state);
 		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
@@ -291,12 +327,7 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	/// Checks if liquidation_fee <= 0.5
-	fn is_valid_liquidation_fee(liquidation_fee: Rate) -> bool {
-		liquidation_fee <= T::MaxLiquidationFee::get()
-	}
-
-	/// TODO: cover with tests
+	/// Selects the liquidation mode for the user's loan.
 	fn choose_liquidation_mode(
 		borrower: &T::AccountId,
 		borrower_total_supply_usd: Balance,
@@ -314,19 +345,43 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	/// TODO: implement
-	fn calculate_partial_liquidation(_borrower: &T::AccountId) -> Result<UserLoanState, DispatchError> {
+	///
+	fn get_user_loan_state(_who: &T::AccountId) -> Result<UserLoanState, DispatchError> {
+		todo!()
+	}
+
+	///
+	fn do_liquidate(_borrower: &T::AccountId, _user_loan_state: LiquidationAmounts) -> DispatchResult {
+		// TODO: call accrue_interest somewhere
 		todo!()
 	}
 
 	/// TODO: implement
-	fn calculate_complete_liquidation(_borrower: &T::AccountId) -> Result<UserLoanState, DispatchError> {
+	///
+	/// Должна вызываться на свежем храгилище, после вызова accrue_interest.
+	fn calculate_partial_liquidation(_borrower: &T::AccountId) -> Result<LiquidationAmounts, DispatchError> {
 		todo!()
 	}
 
 	/// TODO: implement
-	fn calculate_forgivable_complete_liquidation(_borrower: &T::AccountId) -> Result<UserLoanState, DispatchError> {
+	///
+	/// Должна вызываться на свежем храгилище, после вызова accrue_interest.
+	fn calculate_complete_liquidation(_borrower: &T::AccountId) -> Result<LiquidationAmounts, DispatchError> {
 		todo!()
+	}
+
+	/// TODO: implement
+	///
+	/// Должна вызываться на свежем храгилище, после вызова accrue_interest.
+	fn calculate_forgivable_complete_liquidation(
+		_borrower: &T::AccountId,
+	) -> Result<LiquidationAmounts, DispatchError> {
+		todo!()
+	}
+
+	/// Checks if liquidation_fee <= 0.5
+	fn is_valid_liquidation_fee(liquidation_fee: Rate) -> bool {
+		liquidation_fee <= T::MaxLiquidationFee::get()
 	}
 }
 
@@ -365,12 +420,18 @@ impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 
 	/// Mutates user liquidation attempts depending on user operation.
 	/// If the user makes a deposit to the collateral pool, then attempts are set to zero.
-	fn mutate_depending_operation(pool_id: CurrencyId, who: &T::AccountId, operation: Operation) {
-		if operation == Operation::Deposit && T::UserCollateral::is_pool_collateral(&who, pool_id) {
-			let user_liquidation_attempts = Self::get_user_liquidation_attempts(&who);
-			if !user_liquidation_attempts.is_zero() {
-				Self::reset_to_zero(&who);
+	/// TODO: implement mutate in case of liquidation
+	fn mutate_depending_operation(pool_id: Option<CurrencyId>, who: &T::AccountId, operation: Operation) {
+		// pool_id existence in case of a deposit operation
+		if let Some(pool_id) = pool_id {
+			if operation == Operation::Deposit && T::UserCollateral::is_pool_collateral(&who, pool_id) {
+				let user_liquidation_attempts = Self::get_user_liquidation_attempts(&who);
+				if !user_liquidation_attempts.is_zero() {
+					Self::reset_to_zero(&who);
+				}
 			}
+		} else {
+			todo!()
 		}
 	}
 }

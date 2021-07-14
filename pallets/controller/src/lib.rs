@@ -1207,6 +1207,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	}
 
 	/// TODO: cover with unit-tests.
+	/// Calls accrue_interest.
 	fn get_all_users_with_unsafe_loan() -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.into_iter()

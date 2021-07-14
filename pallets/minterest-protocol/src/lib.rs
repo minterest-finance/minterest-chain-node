@@ -641,7 +641,7 @@ impl<T: Config> Pallet<T> {
 		)?;
 
 		T::MultiCurrency::deposit(wrapped_id, &who, deposit_wrapped_amount)?;
-		T::UserLiquidationAttempts::mutate_depending_operation(underlying_asset, &who, Deposit);
+		T::UserLiquidationAttempts::mutate_depending_operation(Some(underlying_asset), &who, Deposit);
 
 		Ok((deposit_underlying_amount, wrapped_id, deposit_wrapped_amount))
 	}

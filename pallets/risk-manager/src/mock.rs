@@ -10,13 +10,24 @@ use orml_traits::parameter_type_with_key;
 use pallet_traits::PricesManager;
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
+	testing::{Header, TestXt},
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 };
 pub use test_helper::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+
+/// An extrinsic type used for tests.
+pub type Extrinsic = TestXt<Call, ()>;
+
+impl<LocalCall> SendTransactionTypes<LocalCall> for Test
+where
+	Call: From<LocalCall>,
+{
+	type OverarchingCall = Call;
+	type Extrinsic = Extrinsic;
+}
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -30,7 +41,10 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		TestPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
-		TestRiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>},
+		TestRiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
+		TestController: controller::{Pallet, Storage, Call, Event, Config<T>},
+		TestMinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
+		TestMntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -41,8 +55,10 @@ ord_parameter_types! {
 parameter_types! {
 	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"lqdi/min");
 	pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"lqdn/min");
+	pub const MntTokenPalletId: PalletId = PalletId(*b"mntt/min");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
+	pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
 	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
@@ -54,6 +70,9 @@ mock_impl_orml_tokens_config!(Test);
 mock_impl_orml_currencies_config!(Test);
 mock_impl_liquidity_pools_config!(Test);
 mock_impl_risk_manager_config!(Test, ZeroAdmin);
+mock_impl_controller_config!(Test, ZeroAdmin);
+mock_impl_minterest_model_config!(Test, ZeroAdmin);
+mock_impl_mnt_token_config!(Test, ZeroAdmin);
 
 pub struct MockPriceSource;
 

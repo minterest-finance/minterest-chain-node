@@ -28,11 +28,11 @@ fn mutate_depending_operation_should_work() {
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 1_u8);
 
 			// ETH pool is disabled as collateral. Don't reset liquidation attempts.
-			TestRiskManager::mutate_depending_operation(ETH, &ALICE, Deposit);
+			TestRiskManager::mutate_depending_operation(Some(ETH), &ALICE, Deposit);
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 1_u8);
 
 			// DOT pool is enabled as collateral. Reset liquidation attempts to zero.
-			TestRiskManager::mutate_depending_operation(DOT, &ALICE, Deposit);
+			TestRiskManager::mutate_depending_operation(Some(DOT), &ALICE, Deposit);
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), u8::zero());
 		})
 }

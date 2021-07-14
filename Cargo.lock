@@ -6028,11 +6028,14 @@ dependencies = [
 name = "risk-manager"
 version = "0.6.0"
 dependencies = [
+ "controller",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "liquidity-pools",
+ "minterest-model",
  "minterest-primitives",
  "minterest-protocol",
+ "mnt-token",
  "orml-currencies",
  "orml-tokens",
  "orml-traits 0.4.1-dev",
