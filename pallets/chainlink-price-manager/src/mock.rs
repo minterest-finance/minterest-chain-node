@@ -7,10 +7,12 @@ use frame_support::{construct_runtime, ord_parameter_types, parameter_types, Pal
 use frame_system::EnsureSignedBy;
 use minterest_primitives::Balance;
 use sp_runtime::testing::Header;
+use sp_runtime::testing::TestXt;
 use sp_runtime::testing::H256;
 use sp_runtime::traits::AccountIdConversion;
 use sp_runtime::traits::BlakeTwo256;
 use sp_runtime::traits::IdentityLookup;
+use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
 use test_helper::users_mock::*;
 use test_helper::*;
 
@@ -66,14 +68,29 @@ impl pallet_chainlink_feed::Config for Runtime {
 	type WeightInfo = ();
 }
 
+pub type TransactionPriority = u64;
 ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
+	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value();
+
+}
+
+/// An extrinsic type used for tests.
+pub type Extrinsic = TestXt<Call, ()>;
+
+impl<LocalCall> SendTransactionTypes<LocalCall> for Runtime
+where
+	Call: From<LocalCall>,
+{
+	type OverarchingCall = Call;
+	type Extrinsic = Extrinsic;
 }
 
 impl chainlink_price_adapter::Config for Runtime {
 	type Event = Event;
 	type PalletAccountId = ChainlinkPalletAccountId;
 	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
+	type UnsignedPriority = LiquidityPoolsPriority;
 }
 
 pub fn test_externalities() -> sp_io::TestExternalities {

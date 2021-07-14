@@ -7,6 +7,7 @@
 #![allow(clippy::unused_unit)]
 
 use frame_support::{log, pallet_prelude::*, transactional};
+use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
 use frame_system::pallet_prelude::*;
 use minterest_primitives::{currency::TokenSymbol, BlockNumber, CurrencyId, Price};
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData, RoundId};
@@ -29,7 +30,7 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_chainlink_feed::Config {
+	pub trait Config: frame_system::Config + pallet_chainlink_feed::Config + SendTransactionTypes<Call<Self>> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// The pallet account id, keep all assets in Pools.
@@ -37,6 +38,11 @@ pub mod module {
 
 		/// Root or half Minterest Council can always do this.
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
+		/// A configuration for base priority of unsigned transactions.
+		///
+		/// This is exposed so that it can be tuned for particular runtime, when
+		/// multiple pallets send unsigned transactions.
+		type UnsignedPriority: Get<TransactionPriority>;
 	}
 
 	#[pallet::error]
@@ -58,6 +64,8 @@ pub mod module {
 	#[pallet::event]
 	#[pallet::generate_deposit(fn deposit_event)]
 	pub enum Event<T: Config> {
+		// feed_id, new_round
+		InitiateNewRound(T::FeedId, RoundId),
 		DummyEvent(u8),
 	}
 
@@ -67,12 +75,44 @@ pub mod module {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn offchain_worker(now: T::BlockNumber) {
+			let bn: T::BlockNumber = (5_u32).into();
+			if (now % bn).is_zero() {
+				let feed_id = MainFeedKeeper::<T>::get(ETH);
+				// TODO produce Event if get_underlying_price isn't possible
+				if feed_id == None {
+					return;
+				}
+
+				let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id.unwrap()).unwrap();
+				log::info!("This mambo number {:?}", now);
+				log::info!("Last round_id is: {:?}", feed_result.latest_round());
+				let call = Call::<T>::initiate_new_round(feed_id.unwrap(), feed_result.latest_round());
+				SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).unwrap();
+			}
 			log::info!("ETH price is: {:?}", Self::get_underlying_price(ETH));
 		}
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::weight(10_000)]
+		#[transactional]
+		pub fn initiate_new_round(origin: OriginFor<T>, feed_id: T::FeedId, new_round: RoundId) -> DispatchResultWithPostInfo {
+			Self::deposit_event(Event::InitiateNewRound(feed_id, new_round));
+			Ok(().into())
+		}
+
+		#[pallet::weight(10_000)]
+		#[transactional]
+		pub fn submit(
+			origin: OriginFor<T>,
+			#[pallet::compact] feed_id: T::FeedId,
+			#[pallet::compact] round_id: RoundId,
+			#[pallet::compact] submission: T::Value,
+		) -> DispatchResultWithPostInfo {
+			<ChainlinkFeedPallet<T>>::submit(origin, feed_id, round_id, submission)
+		}
+
 		#[pallet::weight(10_000)]
 		#[transactional]
 		pub fn create_minterest_feed(
@@ -154,8 +194,26 @@ impl<T: Config> Pallet<T> {
 			return None;
 		}
 
+		// TODO handle if price is 0
+
 		let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id.unwrap().into()).unwrap();
 		let RoundData { answer, .. } = feed_result.latest_data();
 		Some(answer)
+	}
+}
+
+impl<T: Config> ValidateUnsigned for Pallet<T> {
+	type Call = Call<T>;
+
+	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
+		match call {
+			Call::initiate_new_round(feed_id, round_id) => ValidTransaction::with_tag_prefix("ChainlinkPriceManagerWorker")
+				.priority(T::UnsignedPriority::get())
+				.and_provides((<frame_system::Pallet<T>>::block_number(), feed_id, round_id))
+				.longevity(64_u64)
+				.propagate(true)
+				.build(),
+			_ => InvalidTransaction::Call.into(),
+		}
 	}
 }
