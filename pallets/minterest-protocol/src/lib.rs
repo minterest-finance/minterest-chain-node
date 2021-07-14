@@ -775,13 +775,13 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	/// Sender repays their own borrow
+	/// Borrows are repaid by another user (possibly the borrower).
 	///
 	/// - `who`: the account paying off the borrow.
 	/// - `borrower`: the account with the debt being payed off.
 	/// - `underlying_asset`: the currency ID of the underlying asset to repay.
 	/// - `repay_amount`: the amount of the underlying asset to repay.
-	fn do_repay(
+	pub fn do_repay(
 		who: &T::AccountId,
 		borrower: &T::AccountId,
 		underlying_asset: CurrencyId,
@@ -798,7 +798,42 @@ impl<T: Config> Pallet<T> {
 		);
 
 		T::ControllerManager::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
-		repay_amount = Self::do_repay_fresh(who, borrower, underlying_asset, repay_amount, all_assets)?;
+
+		if !all_assets {
+			ensure!(!repay_amount.is_zero(), Error::<T>::ZeroBalanceTransaction);
+		}
+
+		// Fail if repay_borrow not allowed
+		ensure!(
+			T::ControllerManager::is_operation_allowed(underlying_asset, Operation::Repay),
+			Error::<T>::OperationPaused
+		);
+
+		T::MntManager::update_mnt_borrow_index(underlying_asset)?;
+		T::MntManager::distribute_borrower_mnt(underlying_asset, borrower, false)?;
+
+		// Fetch the amount the borrower owes, with accumulated interest
+		let account_borrows = T::ControllerManager::borrow_balance_stored(&borrower, underlying_asset)?;
+
+		if repay_amount.is_zero() {
+			repay_amount = account_borrows
+		}
+
+		ensure!(
+			repay_amount <= T::MultiCurrency::free_balance(underlying_asset, &who),
+			Error::<T>::NotEnoughUnderlyingAsset
+		);
+
+		T::ManagerLiquidityPools::update_state_on_repay(&borrower, underlying_asset, repay_amount, account_borrows)?;
+
+		// Transfer the repay_amount from the borrower's account to the protocol account.
+		T::MultiCurrency::transfer(
+			underlying_asset,
+			&who,
+			&T::ManagerLiquidityPools::pools_account_id(),
+			repay_amount,
+		)?;
+
 		Ok(repay_amount)
 	}
 
@@ -900,62 +935,6 @@ impl<T: Config> Pallet<T> {
 			Ok(())
 		})
 	}
-}
-
-// Public API
-impl<T: Config> Pallet<T> {
-	/// Borrows are repaid by another user (possibly the borrower).
-	///
-	/// - `who`: the account paying off the borrow.
-	/// - `borrower`: the account with the debt being payed off.
-	/// - `underlying_asset`: the currency ID of the underlying asset to repay.
-	/// - `repay_amount`: the amount of the underlying asset to repay.
-	///
-	/// Note: this function should be used after `accrue_interest_rate`.
-	pub fn do_repay_fresh(
-		who: &T::AccountId,
-		borrower: &T::AccountId,
-		underlying_asset: CurrencyId,
-		mut repay_amount: Balance,
-		all_assets: bool,
-	) -> BalanceResult {
-		if !all_assets {
-			ensure!(!repay_amount.is_zero(), Error::<T>::ZeroBalanceTransaction);
-		}
-
-		// Fail if repay_borrow not allowed
-		ensure!(
-			T::ControllerManager::is_operation_allowed(underlying_asset, Operation::Repay),
-			Error::<T>::OperationPaused
-		);
-
-		T::MntManager::update_mnt_borrow_index(underlying_asset)?;
-		T::MntManager::distribute_borrower_mnt(underlying_asset, borrower, false)?;
-
-		// Fetch the amount the borrower owes, with accumulated interest
-		let account_borrows = T::ControllerManager::borrow_balance_stored(&borrower, underlying_asset)?;
-
-		if repay_amount.is_zero() {
-			repay_amount = account_borrows
-		}
-
-		ensure!(
-			repay_amount <= T::MultiCurrency::free_balance(underlying_asset, &who),
-			Error::<T>::NotEnoughUnderlyingAsset
-		);
-
-		T::ManagerLiquidityPools::update_state_on_repay(&borrower, underlying_asset, repay_amount, account_borrows)?;
-
-		// Transfer the repay_amount from the borrower's account to the protocol account.
-		T::MultiCurrency::transfer(
-			underlying_asset,
-			&who,
-			&T::ManagerLiquidityPools::pools_account_id(),
-			repay_amount,
-		)?;
-
-		Ok(repay_amount)
-	}
 
 	/// Withdraws wrapped tokens from the borrower's account. Transfers the corresponding number
 	/// of underlying assets from the liquidity pool to the liquidation pool. Called only during
@@ -966,7 +945,7 @@ impl<T: Config> Pallet<T> {
 	/// - `seize_underlying`: the amount of the underlying asset to seize.
 	///
 	/// Note: this function should be used after `accrue_interest_rate`.
-	pub fn do_seize_fresh(
+	pub fn do_seize(
 		_borrower: &T::AccountId,
 		_underlying_asset: CurrencyId,
 		_seize_underlying: Balance,

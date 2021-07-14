@@ -406,15 +406,14 @@ impl<T: Config> Pallet<T> {
 			)
 	}
 
-	///
+	/// Performs repay of loans and seizes the borrower's collaterals.
 	fn do_liquidate(borrower: &T::AccountId, liquidation_amounts: LiquidationAmounts) -> DispatchResult {
 		let liquidation_pool_account_id = T::LiquidationPoolsManager::pools_account_id();
 		liquidation_amounts
 			.borrower_loans_to_repay_underlying
 			.into_iter()
 			.try_for_each(|(pool_id, repay_underlying)| -> DispatchResult {
-				<T as module::Config>::ControllerManager::accrue_interest_rate(pool_id)?;
-				<MinterestProtocol<T>>::do_repay_fresh(
+				<MinterestProtocol<T>>::do_repay(
 					&liquidation_pool_account_id,
 					&borrower,
 					pool_id,
@@ -427,7 +426,7 @@ impl<T: Config> Pallet<T> {
 			.borrower_supplies_to_seize_underlying
 			.into_iter()
 			.try_for_each(|(pool_id, seize_underlying)| -> DispatchResult {
-				<MinterestProtocol<T>>::do_seize_fresh(&borrower, pool_id, seize_underlying)?;
+				<MinterestProtocol<T>>::do_seize(&borrower, pool_id, seize_underlying)?;
 				Ok(())
 			})
 	}
