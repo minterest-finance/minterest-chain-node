@@ -23,7 +23,7 @@ use minterest_primitives::constants::fee::WeightToFee;
 pub use minterest_primitives::{
 	constants::{
 		currency::DOLLARS,
-		liquidation::{PARTIAL_LIQUIDATION_MAX_ATTEMPTS, PARTIAL_LIQUIDATION_MIN_SUM},
+		liquidation::{MAX_LIQUIDATION_FEE, PARTIAL_LIQUIDATION_MAX_ATTEMPTS, PARTIAL_LIQUIDATION_MIN_SUM},
 		time::{BLOCKS_PER_YEAR, DAYS, SLOT_DURATION},
 		INITIAL_EXCHANGE_RATE, MAX_BORROW_CAP, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION,
 	},
@@ -444,6 +444,7 @@ impl minterest_model::Config for Runtime {
 parameter_types! {
 	pub const PartialLiquidationMinSum: Balance = PARTIAL_LIQUIDATION_MIN_SUM;
 	pub const PartialLiquidationMaxAttempts: u8 = PARTIAL_LIQUIDATION_MAX_ATTEMPTS;
+	pub const MaxLiquidationFee: Rate = MAX_LIQUIDATION_FEE;
 }
 
 impl risk_manager::Config for Runtime {
@@ -451,6 +452,7 @@ impl risk_manager::Config for Runtime {
 	type UserCollateral = LiquidityPools;
 	type PartialLiquidationMinSum = PartialLiquidationMinSum;
 	type PartialLiquidationMaxAttempts = PartialLiquidationMaxAttempts;
+	type MaxLiquidationFee = MaxLiquidationFee;
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 }
 

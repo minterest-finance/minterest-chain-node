@@ -385,10 +385,10 @@ fn minterest_genesis(
 		},
 		risk_manager: RiskManagerConfig {
 			liquidation_fee: vec![
-				(DOT, FixedU128::saturating_from_rational(105, 100)),
-				(ETH, FixedU128::saturating_from_rational(105, 100)),
-				(BTC, FixedU128::saturating_from_rational(105, 100)),
-				(KSM, FixedU128::saturating_from_rational(105, 100)),
+				(DOT, FixedU128::saturating_from_rational(5, 100)),
+				(ETH, FixedU128::saturating_from_rational(5, 100)),
+				(BTC, FixedU128::saturating_from_rational(5, 100)),
+				(KSM, FixedU128::saturating_from_rational(5, 100)),
 			],
 			liquidation_threshold: FixedU128::saturating_from_rational(103, 100),
 			_phantom: Default::default(),

@@ -9,13 +9,11 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use frame_support::{pallet_prelude::*, transactional};
-use minterest_primitives::{CurrencyId, Operation, Rate};
+use frame_system::pallet_prelude::OriginFor;
+use minterest_primitives::{Balance, CurrencyId, Operation, Rate};
 pub use module::*;
 use pallet_traits::{RiskManagerStorageProvider, UserCollateral, UserLiquidationAttemptsManager};
-use sp_runtime::{
-	traits::{One, Zero},
-	FixedPointNumber,
-};
+use sp_runtime::traits::{One, Zero};
 #[cfg(feature = "std")]
 use sp_std::str;
 
@@ -27,8 +25,6 @@ mod tests;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use frame_system::pallet_prelude::OriginFor;
-	use minterest_primitives::{Balance, Rate};
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -46,6 +42,10 @@ pub mod module {
 		/// The maximum number of partial liquidations a user has. After reaching this parameter,
 		/// a complete liquidation occurs.
 		type PartialLiquidationMaxAttempts: Get<u8>;
+
+		#[pallet::constant]
+		/// The maximum liquidation fee.
+		type MaxLiquidationFee: Get<Rate>;
 
 		/// The origin which may update risk manager parameters. Root or
 		/// Half Minterest Council can always do this.
@@ -179,7 +179,7 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 	/// Checks if liquidation_fee <= 0.5
 	fn is_valid_liquidation_fee(liquidation_fee: Rate) -> bool {
-		liquidation_fee <= Rate::saturating_from_rational(5, 10)
+		liquidation_fee <= T::MaxLiquidationFee::get()
 	}
 }
 
