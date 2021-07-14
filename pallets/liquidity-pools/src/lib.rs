@@ -74,8 +74,6 @@ type RateResult = result::Result<Rate, DispatchError>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 
 #[cfg(test)]
-mod mock;
-#[cfg(test)]
 mod tests;
 
 #[frame_support::pallet]
@@ -191,7 +189,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// returns `exchange_rate = (pool_supply_underlying + pool_borrow_underlying -
 	/// - pool_protocol_interest) / pool_supply_wrap`.
-	fn calculate_exchange_rate(
+	pub fn calculate_exchange_rate(
 		pool_supply_underlying: Balance,
 		pool_supply_wrap: Balance,
 		pool_protocol_interest: Balance,

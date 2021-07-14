@@ -932,6 +932,7 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 name = "controller"
 version = "0.6.2"
 dependencies = [
+ "controller",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "liquidity-pools",
@@ -3760,6 +3761,7 @@ version = "0.5.0"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
+ "liquidity-pools",
  "minterest-primitives",
  "orml-currencies",
  "orml-tokens",
@@ -3773,6 +3775,7 @@ dependencies = [
  "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
+ "test-engine",
  "test-helper",
 ]
 

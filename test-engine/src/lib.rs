@@ -1,4 +1,4 @@
-pub use controller::{ControllerData, PauseKeeper, *};
+pub use controller::{ControllerData, PauseKeeper};
 use frame_support::{
 	construct_runtime, ord_parameter_types,
 	pallet_prelude::{GenesisBuild, TransactionPriority},
@@ -8,7 +8,8 @@ use frame_support::{
 };
 pub use frame_system::{offchain::SendTransactionTypes, EnsureSignedBy};
 use liquidation_pools::LiquidationPoolData;
-use liquidity_pools::{Pool, PoolUserData};
+
+pub use liquidity_pools::{Pool, PoolUserData};
 use minterest_model::MinterestModelData;
 pub use test_helper::*;
 
@@ -207,9 +208,9 @@ impl ExtBuilderNew {
 		self.pools.push((
 			pool_id,
 			Pool {
-				borrowed: Balance::zero(),
-				borrow_index: Rate::one(),
-				protocol_interest: Balance::zero(),
+				borrowed: Balance::default(),
+				borrow_index: Rate::default(),
+				protocol_interest: Balance::default(),
 			},
 		));
 		self
