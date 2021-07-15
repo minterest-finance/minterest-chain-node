@@ -1,197 +1,197 @@
 {
-  "CUSTOM_TYPES": {
-    "Address": "MultiAddress",
-    "TokenSymbol": {
-      "_enum": {
-        "MNT": 0,
-        "DOT": 1,
-        "MDOT": 2,
-        "KSM": 3,
-        "MKSM": 4,
-        "BTC": 5,
-        "MBTC": 6,
-        "ETH": 7,
-        "METH": 8
-      }
+    "CUSTOM_TYPES": {
+        "Address": "MultiAddress",
+        "TokenSymbol": {
+            "_enum": {
+              "MNT": 0,
+              "DOT": 1,
+              "MDOT": 2,
+              "KSM": 3,
+              "MKSM": 4,
+              "BTC": 5,
+              "MBTC": 6,
+              "ETH": 7,
+              "METH": 8
+            }
+        },
+        "CurrencyType": {
+            "_enum": [
+              "Native",
+              "UnderlyingAsset",
+              "WrappedToken"
+            ]
+        },
+        "CurrencyId": {
+            "_enum": {
+              "Native": "TokenSymbol",
+              "UnderlyingAsset": "TokenSymbol",
+              "WrappedToken": "TokenSymbol"
+            }
+        },
+        "Operation": {
+            "_enum": [
+              "Deposit",
+              "Redeem",
+              "Borrow",
+              "Repay",
+              "Transfer"
+            ]
+        },
+        "PoolInitData": {
+            "kink": "Rate",
+            "base_rate_per_block": "Rate",
+            "multiplier_per_block": "Rate",
+            "jump_multiplier_per_block": "Rate",
+            "protocol_interest_factor": "Rate",
+            "max_borrow_rate": "Rate",
+            "collateral_factor": "Rate",
+            "protocol_interest_threshold": "Balance",
+            "deviation_threshold": "Rate",
+            "balance_ratio": "Rate",
+            "max_attempts": "u8",
+            "min_partial_liquidation_sum": "Balance",
+            "liquidation_threshold": "Rate",
+            "liquidation_fee": "Rate"
+        },
+        "Pool": {
+            "borrowed": "Balance",
+            "borrow_index": "Rate",
+            "protocol_interest": "Balance"
+        },
+        "LiquidationPoolData": {
+            "deviation_threshold": "Rate",
+            "balance_ratio": "Rate",
+            "max_ideal_balance": "Option<Balance>"
+        },
+        "PoolUserData": {
+            "borrowed": "Balance",
+            "interest_index": "Rate",
+            "is_collateral": "bool"
+        },
+        "CurrencyIdOf": "CurrencyId",
+        "Amount": "i128",
+        "AmountOf": "Amount",
+        "Rate": "FixedU128",
+        "Price": "FixedU128",
+        "Interest": "FixedI128",
+        "ControllerData": {
+            "last_interest_accrued_block": "BlockNumber",
+            "protocol_interest_factor": "Rate",
+            "max_borrow_rate": "Rate",
+            "collateral_factor": "Rate",
+            "borrow_cap": "Option<Balance>",
+            "protocol_interest_threshold": "Balance"
+        },
+        "PauseKeeper": {
+            "deposit_paused": "bool",
+            "redeem_paused": "bool",
+            "borrow_paused": "bool",
+            "repay_paused": "bool",
+            "transfer_paused": "bool"
+        },
+        "MinterestModelData": {
+            "kink": "Rate",
+            "base_rate_per_block": "Rate",
+            "multiplier_per_block": "Rate",
+            "jump_multiplier_per_block": "Rate"
+        },
+        "PoolState": {
+            "exchange_rate": "Rate",
+            "borrow_rate": "Rate",
+            "supply_rate": "Rate"
+        },
+        "UserPoolBalanceData": {
+            "total_supply": "Balance",
+            "total_borrowed": "Balance"
+        },
+        "MntState": {
+            "mnt_distribution_index": "Rate",
+            "index_updated_at_block": "BlockNumber"
+        },
+        "MntPoolState": {
+            "supply_state": "MntState",
+            "borrow_state": "MntState"
+        },
+        "HypotheticalLiquidityData": {
+            "liquidity": "Amount"
+        },
+        "BalanceInfo": {
+            "amount": "Balance"
+        },
+        "ProtocolTotalValue": {
+            "pool_total_supply_in_usd": "Balance",
+            "pool_total_borrow_in_usd": "Balance",
+            "tvl_in_usd": "Balance",
+            "pool_total_protocol_interest_in_usd": "Balance"
+        },
+        "UserData": {
+            "total_collateral_in_usd": "Balance",
+            "total_supply_in_usd": "Balance",
+            "total_borrow_in_usd": "Balance",
+            "total_supply_apy": "Rate",
+            "total_borrow_apy": "Rate",
+            "net_apy": "Rate"
+        },
+        "MntBalanceInfo": {
+            "amount": "Balance"
+        },
+        "OracleKey": "CurrencyId",
+        "OracleValue": "Price",
+        "DataProviderId": {
+            "_enum": [
+              "Aggregated",
+              "Minterest"
+            ]
+        },
+        "TimestampedValue": {
+            "value": "OracleValue",
+            "timestamp": "Moment"
+        },
+        "TimestampedValueOf": "TimestampedValue",
+        "BalanceLock": {
+            "id": "LockIdentifier",
+            "amount": "Balance",
+            "reasons": "Reasons"
+        },
+        "VestingBucket": {
+            "_enum": [
+              "Community",
+              "PrivateSale",
+              "PublicSale",
+              "MarketMaking",
+              "StrategicPartners",
+              "Marketing",
+              "Ecosystem",
+              "Team"
+            ]
+        },
+        "VestingSchedule": {
+            "bucket": "VestingBucket",
+            "start": "BlockNumber",
+            "period": "BlockNumber",
+            "periodCount": "u32",
+            "perPeriod": "Rate"
+        },
+        "VestingScheduleOf": "VestingSchedule",
+        "AccountInfo": {
+            "nonce": "Index",
+            "consumers": "RefCount",
+            "providers": "RefCount",
+            "sufficients": "RefCount",
+            "data": "SubstrateAccountData"
+        },
+        "SubstrateAccountData": {
+            "free": "Balance",
+            "reserved": "Balance",
+            "misc_frozen": "Balance",
+            "fee_frozen": "Balance"
+        },
+        "OrmlAccountData": {
+            "free": "Balance",
+            "reserved": "Balance",
+            "frozen": "Balance"
+        },
+        "AccountData": "OrmlAccountData"
     },
-    "CurrencyType": {
-      "_enum": [
-        "Native",
-        "UnderlyingAsset",
-        "WrappedToken"
-      ]
-    },
-    "CurrencyId": {
-      "_enum": {
-        "Native": "TokenSymbol",
-        "UnderlyingAsset": "TokenSymbol",
-        "WrappedToken": "TokenSymbol"
-      }
-    },
-    "Operation": {
-      "_enum": [
-        "Deposit",
-        "Redeem",
-        "Borrow",
-        "Repay",
-        "Transfer"
-      ]
-    },
-    "PoolInitData": {
-      "kink": "Rate",
-      "base_rate_per_block": "Rate",
-      "multiplier_per_block": "Rate",
-      "jump_multiplier_per_block": "Rate",
-      "protocol_interest_factor": "Rate",
-      "max_borrow_rate": "Rate",
-      "collateral_factor": "Rate",
-      "protocol_interest_threshold": "Balance",
-      "deviation_threshold": "Rate",
-      "balance_ratio": "Rate",
-      "max_attempts": "u8",
-      "min_partial_liquidation_sum": "Balance",
-      "liquidation_threshold": "Rate",
-      "liquidation_fee": "Rate"
-    },
-    "Pool": {
-      "borrowed": "Balance",
-      "borrow_index": "Rate",
-      "protocol_interest": "Balance"
-    },
-    "LiquidationPoolData": {
-      "deviation_threshold": "Rate",
-      "balance_ratio": "Rate",
-      "max_ideal_balance": "Option<Balance>"
-    },
-    "PoolUserData": {
-      "borrowed": "Balance",
-      "interest_index": "Rate",
-      "is_collateral": "bool"
-    },
-    "CurrencyIdOf": "CurrencyId",
-    "Amount": "i128",
-    "AmountOf": "Amount",
-    "Rate": "FixedU128",
-    "Price": "FixedU128",
-    "Interest": "FixedI128",
-    "ControllerData": {
-      "last_interest_accrued_block": "BlockNumber",
-      "protocol_interest_factor": "Rate",
-      "max_borrow_rate": "Rate",
-      "collateral_factor": "Rate",
-      "borrow_cap": "Option<Balance>",
-      "protocol_interest_threshold": "Balance"
-    },
-    "PauseKeeper": {
-      "deposit_paused": "bool",
-      "redeem_paused": "bool",
-      "borrow_paused": "bool",
-      "repay_paused": "bool",
-      "transfer_paused": "bool"
-    },
-    "MinterestModelData": {
-      "kink": "Rate",
-      "base_rate_per_block": "Rate",
-      "multiplier_per_block": "Rate",
-      "jump_multiplier_per_block": "Rate"
-    },
-    "PoolState": {
-      "exchange_rate": "Rate",
-      "borrow_rate": "Rate",
-      "supply_rate": "Rate"
-    },
-    "UserPoolBalanceData": {
-      "total_supply": "Balance",
-      "total_borrowed": "Balance"
-    },
-    "MntState": {
-      "mnt_distribution_index": "Rate",
-      "index_updated_at_block": "BlockNumber"
-    },
-    "MntPoolState": {
-      "supply_state": "MntState",
-      "borrow_state": "MntState"
-    },
-    "HypotheticalLiquidityData": {
-      "liquidity": "Amount"
-    },
-    "BalanceInfo": {
-      "amount": "Balance"
-    },
-    "ProtocolTotalValue": {
-      "pool_total_supply_in_usd": "Balance",
-      "pool_total_borrow_in_usd": "Balance",
-      "tvl_in_usd": "Balance",
-      "pool_total_protocol_interest_in_usd": "Balance"
-    },
-    "UserData": {
-      "total_collateral_in_usd": "Balance",
-      "total_supply_in_usd": "Balance",
-      "total_borrow_in_usd": "Balance",
-      "total_supply_apy": "Rate",
-      "total_borrow_apy": "Rate",
-      "net_apy": "Rate"
-    },
-    "MntBalanceInfo": {
-      "amount": "Balance"
-    },
-    "OracleKey": "CurrencyId",
-    "OracleValue": "Price",
-    "DataProviderId": {
-      "_enum": [
-        "Aggregated",
-        "Minterest"
-      ]
-    },
-    "TimestampedValue": {
-      "value": "OracleValue",
-      "timestamp": "Moment"
-    },
-    "TimestampedValueOf": "TimestampedValue",
-    "BalanceLock": {
-      "id": "LockIdentifier",
-      "amount": "Balance",
-      "reasons": "Reasons"
-    },
-    "VestingBucket": {
-      "_enum": [
-        "Community",
-        "PrivateSale",
-        "PublicSale",
-        "MarketMaking",
-        "StrategicPartners",
-        "Marketing",
-        "Ecosystem",
-        "Team"
-      ]
-    },
-    "VestingSchedule": {
-      "bucket": "VestingBucket",
-      "start": "BlockNumber",
-      "period": "BlockNumber",
-      "periodCount": "u32",
-      "perPeriod": "Rate"
-    },
-    "VestingScheduleOf": "VestingSchedule",
-    "AccountInfo": {
-      "nonce": "Index",
-      "consumers": "RefCount",
-      "providers": "RefCount",
-      "sufficients": "RefCount",
-      "data": "SubstrateAccountData"
-    },
-    "SubstrateAccountData": {
-      "free": "Balance",
-      "reserved": "Balance",
-      "misc_frozen": "Balance",
-      "fee_frozen": "Balance"
-    },
-    "OrmlAccountData": {
-      "free": "Balance",
-      "reserved": "Balance",
-      "frozen": "Balance"
-    },
-    "AccountData": "OrmlAccountData"
-  },
-  "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
+    "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
 }

@@ -181,6 +181,17 @@ impl<T: Config> Pallet<T> {
 	fn is_valid_liquidation_fee(liquidation_fee: Rate) -> bool {
 		liquidation_fee <= T::MaxLiquidationFee::get()
 	}
+
+	/// Increases the parameter liquidation_attempts by one for user.
+	#[allow(dead_code)] // FIXME
+	fn user_liquidation_attempts_increase_by_one(who: &T::AccountId) {
+		UserLiquidationAttempts::<T>::mutate(who, |p| *p += u8::one())
+	}
+
+	/// Resets the parameter liquidation_attempts equal to zero for user.
+	fn user_liquidation_attempts_reset_to_zero(who: &T::AccountId) {
+		UserLiquidationAttempts::<T>::mutate(who, |p| *p = u8::zero())
+	}
 }
 
 impl<T: Config> RiskManagerStorageProvider for Pallet<T> {
@@ -204,16 +215,9 @@ impl<T: Config> RiskManagerStorageProvider for Pallet<T> {
 }
 
 impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
+	/// Gets user liquidation attempts.
 	fn get_user_liquidation_attempts(who: &T::AccountId) -> u8 {
 		Self::user_liquidation_attempts(who)
-	}
-
-	fn increase_by_one(who: &T::AccountId) {
-		UserLiquidationAttempts::<T>::mutate(who, |p| *p += u8::one())
-	}
-
-	fn reset_to_zero(who: &T::AccountId) {
-		UserLiquidationAttempts::<T>::mutate(&who, |p| *p = u8::zero())
 	}
 
 	/// Mutates user liquidation attempts depending on user operation.
@@ -222,8 +226,11 @@ impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 		if operation == Operation::Deposit && T::UserCollateral::is_pool_collateral(&who, pool_id) {
 			let user_liquidation_attempts = Self::get_user_liquidation_attempts(&who);
 			if !user_liquidation_attempts.is_zero() {
-				Self::reset_to_zero(&who);
+				Self::user_liquidation_attempts_reset_to_zero(&who);
 			}
+		// Fixme: After implementation of liquidation fix this case and cover with tests
+		} else if operation == Operation::Repay {
+			Self::user_liquidation_attempts_increase_by_one(&who);
 		}
 	}
 }
