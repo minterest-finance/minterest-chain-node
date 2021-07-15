@@ -2,8 +2,7 @@
 use controller::{Error, Event};
 use frame_support::{assert_err, assert_noop, assert_ok};
 pub use minterest_primitives::{Balance, CurrencyId, Interest, Operation, Rate};
-use pallet_traits::ControllerManager;
-use pallet_traits::UserStorageProvider;
+use pallet_traits::{ControllerManager, UserCollateral};
 use sp_runtime::DispatchError::BadOrigin;
 use sp_runtime::{
 	traits::{One, Zero},
@@ -36,7 +35,6 @@ impl ControllerPresets for ExtBuilderNew {
 				Balance::zero(), // borrowed
 				Rate::zero(),    // interest_index
 				false,           // is_collateral
-				0,               // liquidation_attempts
 			)
 			.set_controller_data(
 				DOT,                                     // currency_id
@@ -64,7 +62,6 @@ impl ControllerPresets for ExtBuilderNew {
 				Balance::zero(), // borrowed
 				Rate::zero(),    // interest_index
 				false,           // is_collateral
-				0,               // liquidation_attempts
 			)
 			.set_pool_balance(ETH, dollars(20_u128))
 			.set_controller_data(
