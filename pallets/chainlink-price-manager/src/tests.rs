@@ -41,12 +41,12 @@ fn create_feed_should_work() {
 		assert!(System::events().iter().any(|record| record.event == feed_created));
 
 		let round_id = 1;
-		ChainlinkFeed::submit(Origin::signed(oracle1), feed_id, round_id, 42).unwrap();
-		ChainlinkFeed::submit(Origin::signed(oracle2), feed_id, round_id, 42).unwrap();
+		ChainlinkPriceManager::submit(Origin::signed(oracle1), BTC, round_id, 42).unwrap();
+		ChainlinkPriceManager::submit(Origin::signed(oracle2), BTC, round_id, 42).unwrap();
 		let feed_result = ChainlinkFeed::feed(feed_id.into()).unwrap();
 		let RoundData { answer, .. } = feed_result.latest_data();
 		assert_eq!(answer, 0);
-		ChainlinkFeed::submit(Origin::signed(oracle3), feed_id, round_id, 42).unwrap();
+		ChainlinkPriceManager::submit(Origin::signed(oracle3), BTC, round_id, 42).unwrap();
 
 		// The value is returned only when 3 oracles are subbmited, because min_submissions == 3
 		let feed_result = ChainlinkFeed::feed(feed_id.into()).unwrap();

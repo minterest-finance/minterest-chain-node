@@ -9,7 +9,7 @@
 use frame_support::{log, pallet_prelude::*, transactional};
 use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
 use frame_system::pallet_prelude::*;
-use minterest_primitives::{currency::TokenSymbol, BlockNumber, CurrencyId, Price};
+use minterest_primitives::{currency::*, BlockNumber, CurrencyId, Price};
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData, RoundId};
 use sp_runtime::traits::{Bounded, One, Zero};
 use sp_runtime::FixedU128;
@@ -22,8 +22,6 @@ mod tests;
 pub use module::*;
 
 type ChainlinkFeedPallet<T> = pallet_chainlink_feed::Pallet<T>;
-
-pub const ETH: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::ETH);
 
 #[frame_support::pallet]
 pub mod module {
@@ -75,7 +73,7 @@ pub mod module {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn offchain_worker(now: T::BlockNumber) {
-			let bn: T::BlockNumber = (5_u32).into();
+			let bn: T::BlockNumber = (3_u32).into();
 			if (now % bn).is_zero() {
 				let feed_id = MainFeedKeeper::<T>::get(ETH);
 				// TODO produce Event if get_underlying_price isn't possible
@@ -86,10 +84,14 @@ pub mod module {
 				let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id.unwrap()).unwrap();
 				log::info!("This mambo number {:?}", now);
 				log::info!("Last round_id is: {:?}", feed_result.latest_round());
-				let call = Call::<T>::initiate_new_round(feed_id.unwrap(), feed_result.latest_round());
+				let call =
+					Call::<T>::initiate_new_round(feed_id.unwrap(), feed_result.latest_round().saturating_add(1));
 				SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).unwrap();
 			}
 			log::info!("ETH price is: {:?}", Self::get_underlying_price(ETH));
+			log::info!("DOT price is: {:?}", Self::get_underlying_price(DOT));
+			log::info!("KSM price is: {:?}", Self::get_underlying_price(KSM));
+			log::info!("BTC price is: {:?}", Self::get_underlying_price(BTC));
 		}
 	}
 
@@ -97,7 +99,11 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(10_000)]
 		#[transactional]
-		pub fn initiate_new_round(origin: OriginFor<T>, feed_id: T::FeedId, new_round: RoundId) -> DispatchResultWithPostInfo {
+		pub fn initiate_new_round(
+			origin: OriginFor<T>,
+			feed_id: T::FeedId,
+			new_round: RoundId,
+		) -> DispatchResultWithPostInfo {
 			Self::deposit_event(Event::InitiateNewRound(feed_id, new_round));
 			Ok(().into())
 		}
@@ -106,11 +112,16 @@ pub mod module {
 		#[transactional]
 		pub fn submit(
 			origin: OriginFor<T>,
-			#[pallet::compact] feed_id: T::FeedId,
+			currency_id: CurrencyId,
 			#[pallet::compact] round_id: RoundId,
 			#[pallet::compact] submission: T::Value,
 		) -> DispatchResultWithPostInfo {
-			<ChainlinkFeedPallet<T>>::submit(origin, feed_id, round_id, submission)
+			let feed_id = MainFeedKeeper::<T>::get(currency_id);
+			if feed_id == None {
+				return Ok(().into());
+			}
+
+			<ChainlinkFeedPallet<T>>::submit(origin, feed_id.unwrap(), round_id, submission)
 		}
 
 		#[pallet::weight(10_000)]
@@ -207,12 +218,14 @@ impl<T: Config> ValidateUnsigned for Pallet<T> {
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		match call {
-			Call::initiate_new_round(feed_id, round_id) => ValidTransaction::with_tag_prefix("ChainlinkPriceManagerWorker")
-				.priority(T::UnsignedPriority::get())
-				.and_provides((<frame_system::Pallet<T>>::block_number(), feed_id, round_id))
-				.longevity(64_u64)
-				.propagate(true)
-				.build(),
+			Call::initiate_new_round(feed_id, round_id) => {
+				ValidTransaction::with_tag_prefix("ChainlinkPriceManagerWorker")
+					.priority(T::UnsignedPriority::get())
+					.and_provides((<frame_system::Pallet<T>>::block_number(), feed_id, round_id))
+					.longevity(64_u64)
+					.propagate(true)
+					.build()
+			}
 			_ => InvalidTransaction::Call.into(),
 		}
 	}
