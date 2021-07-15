@@ -349,7 +349,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			.checked_mul(block_delta_as_u128)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let pool_token_supply_wrapped = T::MultiCurrency::total_issuance(wrapped_asset_id);
+		let pool_supply_wrapped = T::MultiCurrency::total_issuance(wrapped_asset_id);
 
 		let ratio = match pool_token_supply_wrapped.cmp(&Balance::zero()) {
 			Ordering::Greater => {
