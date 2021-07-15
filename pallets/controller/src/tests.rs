@@ -478,7 +478,10 @@ fn get_all_users_with_unsafe_loan_should_work() {
 		.pool_user_data(ETH, CHARLIE, ONE_HUNDRED, Rate::default(), true)
 		.build()
 		.execute_with(|| {
-			assert_eq!(Controller::get_all_users_with_unsafe_loan().unwrap(), BTreeSet::new());
+			assert_eq!(
+				Controller::get_all_users_with_insolvent_loan().unwrap(),
+				BTreeSet::new()
+			);
 		});
 }
 

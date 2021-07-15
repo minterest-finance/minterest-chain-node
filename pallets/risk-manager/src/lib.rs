@@ -467,7 +467,6 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Increases the parameter liquidation_attempts by one for user.
-	#[allow(dead_code)] // FIXME
 	fn user_liquidation_attempts_increase_by_one(who: &T::AccountId) {
 		UserLiquidationAttempts::<T>::mutate(who, |p| *p += u8::one())
 	}
@@ -513,7 +512,7 @@ impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 			if operation == Operation::Deposit && T::UserCollateral::is_pool_collateral(&who, pool_id) {
 				let user_liquidation_attempts = Self::get_user_liquidation_attempts(&who);
 				if !user_liquidation_attempts.is_zero() {
-					Self::reset_to_zero(&who);
+					Self::user_liquidation_attempts_reset_to_zero(&who);
 				}
 			}
 		// Fixme: After implementation of liquidation fix this case and cover with tests
