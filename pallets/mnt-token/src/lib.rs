@@ -230,8 +230,8 @@ pub mod module {
 				T::LiquidityPoolsManager::pool_exists(&currency_id),
 				Error::<T>::PoolNotFound
 			);
-			Self::pool_update_mnt_supply_index(currency_id)?;
-			Self::pool_update_mnt_borrow_index(currency_id)?;
+			Self::update_pool_mnt_supply_index(currency_id)?;
+			Self::update_pool_mnt_borrow_index(currency_id)?;
 
 			// New speed is zero. Disable distribution.
 			if speed.is_zero() {
@@ -301,9 +301,9 @@ impl<T: Config> Pallet<T> {
 		let accrued_mnt = MntSpeedStorage::<T>::iter().try_fold(
 			Balance::zero(),
 			|current_accrued, (pool_id, _)| -> BalanceResult {
-				Self::pool_update_mnt_borrow_index(pool_id)?;
+				Self::update_pool_mnt_borrow_index(pool_id)?;
 				let accrued_borrow_mnt = Self::distribute_borrower_mnt(pool_id, account_id, true)?;
-				Self::pool_update_mnt_supply_index(pool_id)?;
+				Self::update_pool_mnt_supply_index(pool_id)?;
 				let accrued_supply_mnt = Self::distribute_supplier_mnt(pool_id, account_id, true)?;
 				Ok(current_accrued + accrued_borrow_mnt + accrued_supply_mnt)
 			},
@@ -317,7 +317,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 	/// Do nothing in case if distribution is off or index have already been updated in this block.
 	///
 	/// - `pool_id`: id of the pool to update index
-	fn pool_update_mnt_supply_index(pool_id: CurrencyId) -> DispatchResult {
+	fn update_pool_mnt_supply_index(pool_id: CurrencyId) -> DispatchResult {
 		// block_delta = current_block_number - supply_state.index_updated_at_block
 		// mnt_accrued = block_delta * mnt_speed
 		// ratio = mnt_accrued / mtoken.total_supply()
@@ -372,7 +372,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 	/// Do nothing in case if distribution is off or index have already been updated in this block.
 	///
 	/// - `pool_id`: id of the pool to update index
-	fn pool_update_mnt_borrow_index(pool_id: CurrencyId) -> DispatchResult {
+	fn update_pool_mnt_borrow_index(pool_id: CurrencyId) -> DispatchResult {
 		// block_delta = current_block_number - borrow_state.index_updated_at_block
 		// mnt_accrued = delta_blocks * mnt_speed
 		// borrow_amount - mtoken.total_borrows() / liquidity_pool_borrow_index
@@ -425,7 +425,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		Ok(())
 	}
 
-	/// Distribute mnt token to supplier. It should be called after `pool_update_mnt_borrow_index`
+	/// Distribute mnt token to supplier. It should be called after `update_pool_mnt_borrow_index`
 	///
 	/// - `pool_id`: id of the pool user supplied to
 	/// - `supplier`: The AccountId of the supplier to distribute MNT to.
@@ -449,7 +449,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 
 		// We use total_balance (not free balance). Because sum of balances should be equal to
 		// total_issuance. Otherwise, calculations will not be correct.
-		// (see pool_token_supply_wrapped in pool_update_mnt_supply_index)
+		// (see pool_token_supply_wrapped in update_pool_mnt_supply_index)
 		let supplier_balance = Rate::from_inner(T::MultiCurrency::total_balance(wrapped_asset_id, supplier));
 
 		let supplier_delta = delta_index

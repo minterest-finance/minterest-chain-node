@@ -210,12 +210,12 @@ pub trait MntManager<AccountId> {
 	/// Update MNT supply index for a pool.
 	///
 	/// - `underlying_asset`: The pool which supply index to update.
-	fn pool_update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult;
+	fn update_pool_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult;
 
 	/// Update MNT borrow index for a pool.
 	///
 	/// - `underlying_asset`: The pool which borrow index to update.
-	fn pool_update_mnt_borrow_index(underlying_id: CurrencyId) -> DispatchResult;
+	fn update_pool_mnt_borrow_index(underlying_id: CurrencyId) -> DispatchResult;
 
 	/// Distribute MNT token to supplier. It should be called after update_mnt_supply_index.
 	///

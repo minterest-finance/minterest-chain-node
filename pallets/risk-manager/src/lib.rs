@@ -570,7 +570,7 @@ impl<T: Config> Pallet<T> {
 				let seize_tokens =
 					T::LiquidityPoolsManager::usd_to_wrapped(seize_amount, exchange_rate, price_collateral)?;
 
-				<T as module::Config>::MntManager::pool_update_mnt_supply_index(collateral_pool_id)?;
+				<T as module::Config>::MntManager::update_pool_mnt_supply_index(collateral_pool_id)?;
 				<T as module::Config>::MntManager::distribute_supplier_mnt(collateral_pool_id, &borrower, false)?;
 
 				// Check if there are enough collateral wrapped tokens to withdraw seize_tokens.

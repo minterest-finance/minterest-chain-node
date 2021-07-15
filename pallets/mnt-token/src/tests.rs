@@ -26,7 +26,7 @@ fn check_borrower(
 	expected_mnt_balance: Balance,
 	expected_mnt_in_storage: Balance,
 ) {
-	assert_ok!(MntToken::pool_update_mnt_borrow_index(pool_id));
+	assert_ok!(MntToken::update_pool_mnt_borrow_index(pool_id));
 	assert_ok!(MntToken::distribute_borrower_mnt(pool_id, &borrower, false));
 
 	let pool_state = MntToken::mnt_pool_state_storage(pool_id).borrow_state;
@@ -44,7 +44,7 @@ fn check_supplier_accrued(
 	expected_mnt_balance: Balance,
 	expected_mnt_in_storage: Balance,
 ) {
-	assert_ok!(MntToken::pool_update_mnt_supply_index(pool_id));
+	assert_ok!(MntToken::update_pool_mnt_supply_index(pool_id));
 	assert_ok!(MntToken::distribute_supplier_mnt(pool_id, &supplier, false));
 	assert_eq!(get_mnt_account_balance(supplier), expected_mnt_balance);
 	assert_eq!(MntToken::mnt_accrued_storage(supplier), expected_mnt_in_storage);
@@ -74,7 +74,7 @@ fn distribute_mnt_to_borrower_with_threshold() {
 
 			let dot_speed = 10 * DOLLARS;
 			assert_eq!(MntToken::mnt_speed_storage(DOT), dot_speed);
-			assert_ok!(MntToken::pool_update_mnt_borrow_index(DOT));
+			assert_ok!(MntToken::update_pool_mnt_borrow_index(DOT));
 			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &ALICE, false));
 			check_borrower(DOT, ALICE, 0, 0);
 
@@ -195,16 +195,16 @@ fn distribute_mnt_to_borrower_from_different_pools() {
 		.execute_with(|| {
 			// First interaction with protocol for distributors.
 			// This is a starting point to earn MNT token
-			assert_ok!(MntToken::pool_update_mnt_borrow_index(DOT));
-			assert_ok!(MntToken::pool_update_mnt_borrow_index(KSM));
+			assert_ok!(MntToken::update_pool_mnt_borrow_index(DOT));
+			assert_ok!(MntToken::update_pool_mnt_borrow_index(KSM));
 			assert_ok!(MntToken::distribute_borrower_mnt(KSM, &ALICE, false));
 			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &ALICE, false));
 
 			System::set_block_number(2);
 
 			// Move flywheel
-			assert_ok!(MntToken::pool_update_mnt_borrow_index(DOT));
-			assert_ok!(MntToken::pool_update_mnt_borrow_index(KSM));
+			assert_ok!(MntToken::update_pool_mnt_borrow_index(DOT));
+			assert_ok!(MntToken::update_pool_mnt_borrow_index(KSM));
 			assert_ok!(MntToken::distribute_borrower_mnt(KSM, &ALICE, false));
 			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &ALICE, false));
 
@@ -269,7 +269,7 @@ fn distribute_borrowers_mnt() {
 			First interaction with protocol for distributors.
 			This is started point to earn MNT token
 			 */
-			assert_ok!(MntToken::pool_update_mnt_borrow_index(DOT));
+			assert_ok!(MntToken::update_pool_mnt_borrow_index(DOT));
 			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &ALICE, false));
 			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &BOB, false));
 
@@ -308,7 +308,7 @@ fn distribute_borrower_mnt() {
 			let dot_speed = 12 * DOLLARS;
 			// First interaction with protocol for distributors.
 			// This is a starting point to earn MNT token
-			assert_ok!(MntToken::pool_update_mnt_borrow_index(DOT));
+			assert_ok!(MntToken::update_pool_mnt_borrow_index(DOT));
 			assert_ok!(MntToken::distribute_borrower_mnt(DOT, &ALICE, false));
 
 			System::set_block_number(2);
@@ -329,7 +329,7 @@ fn distribute_borrower_mnt() {
 }
 
 #[test]
-fn test_pool_update_mnt_borrow_index() {
+fn test_update_pool_mnt_borrow_index() {
 	// TODO: check later
 	ExtBuilder::default()
 		.enable_minting_for_all_pools(10 * DOLLARS)
@@ -343,7 +343,7 @@ fn test_pool_update_mnt_borrow_index() {
 			System::set_block_number(1);
 
 			let check_borrow_index = |underlying_id: CurrencyId, pool_mnt_speed: Balance, total_borrow: Balance| {
-				MntToken::pool_update_mnt_borrow_index(underlying_id).unwrap();
+				MntToken::update_pool_mnt_borrow_index(underlying_id).unwrap();
 				// 1.5 current borrow_index. I use 15 in this function, that`s why I make total_borrow * 10
 				let borrow_total_amount = Rate::saturating_from_rational(total_borrow * 10, 15);
 
@@ -360,7 +360,7 @@ fn test_pool_update_mnt_borrow_index() {
 }
 
 #[test]
-fn test_pool_update_mnt_borrow_index_simple() {
+fn test_update_pool_mnt_borrow_index_simple() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools(1 * DOLLARS)
 		// total borrows needs to calculate mnt_speeds
@@ -387,7 +387,7 @@ fn test_pool_update_mnt_borrow_index_simple() {
 			*ratio is amount of MNT tokens for 1 borrowed token
 			*/
 
-			MntToken::pool_update_mnt_borrow_index(DOT).unwrap();
+			MntToken::update_pool_mnt_borrow_index(DOT).unwrap();
 			let pool_state = MntToken::mnt_pool_state_storage(DOT);
 			assert_eq!(
 				pool_state.borrow_state.mnt_distribution_index,
@@ -431,7 +431,7 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 			Currencies::deposit(MDOT, &BOB, bob_balance).unwrap();
 
 			let move_flywheel = || {
-				MntToken::pool_update_mnt_supply_index(DOT).unwrap();
+				MntToken::update_pool_mnt_supply_index(DOT).unwrap();
 				MntToken::distribute_supplier_mnt(DOT, &ALICE, false).unwrap();
 				MntToken::distribute_supplier_mnt(DOT, &BOB, false).unwrap();
 			};
@@ -483,7 +483,7 @@ fn test_distribute_mnt_tokens_to_suppliers() {
 }
 
 #[test]
-fn test_pool_update_mnt_supply_index() {
+fn test_update_pool_mnt_supply_index() {
 	ExtBuilder::default()
 		.enable_minting_for_all_pools(2 * DOLLARS)
 		// total borrows needs to calculate mnt_speeds
@@ -509,7 +509,7 @@ fn test_pool_update_mnt_supply_index() {
 			Currencies::deposit(MBTC, &ALICE, mbtc_total_issuance).unwrap();
 
 			let check_supply_index = |underlying_id: CurrencyId, mnt_speed: Balance, total_issuance: Balance| {
-				MntToken::pool_update_mnt_supply_index(underlying_id).unwrap();
+				MntToken::update_pool_mnt_supply_index(underlying_id).unwrap();
 				let pool_state = MntToken::mnt_pool_state_storage(underlying_id);
 				assert_eq!(
 					pool_state.supply_state.mnt_distribution_index,
@@ -525,7 +525,7 @@ fn test_pool_update_mnt_supply_index() {
 }
 
 #[test]
-fn test_pool_update_mnt_supply_index_simple() {
+fn test_update_pool_mnt_supply_index_simple() {
 	ExtBuilder::default()
 		// total_borrow shouldn't be zero at least for one market to calculate mnt speeds
 		.pool_borrow_underlying(ETH, 150_000 * DOLLARS)
@@ -540,7 +540,7 @@ fn test_pool_update_mnt_supply_index_simple() {
 			assert_ok!(MntToken::set_speed(admin_origin(), ETH, 10 * DOLLARS));
 
 			System::set_block_number(2);
-			MntToken::pool_update_mnt_supply_index(ETH).unwrap();
+			MntToken::update_pool_mnt_supply_index(ETH).unwrap();
 			let pool_state = MntToken::mnt_pool_state_storage(ETH);
 			// block_delta = current_block(2) - supply_state.block_number(1) = 1
 			// mnt_accrued = block_delta(1) * eth_speed(10) = 10
@@ -640,8 +640,8 @@ fn test_minting_enable_disable() {
 
 			System::set_block_number(15);
 
-			assert_ok!(MntToken::pool_update_mnt_supply_index(DOT));
-			assert_ok!(MntToken::pool_update_mnt_borrow_index(DOT));
+			assert_ok!(MntToken::update_pool_mnt_supply_index(DOT));
+			assert_ok!(MntToken::update_pool_mnt_borrow_index(DOT));
 			// Check that indices hadn't been updated while distribution is off
 			check_mnt_storage(
 				DOT,
