@@ -2,11 +2,38 @@
 //!
 //! ## Overview
 //!
-//! TODO: add comments
+//! This pallet provides the liquidation functionality. In the Minterest protocol, liquidation
+//! is based on the principle of “all loans - all collaterals”. Liquidation pools act as
+//! a liquidator. The protocol provides two types of liquidation: partial and complete.
+//! In case of the partial liquidation, the balance is withdrawn from the user's borrows and
+//! collaterals in order to make the user's loan to a safe state. In case of complete liquidation,
+//! the user's entire borrow is written off, and all the user's collateral is withdrawn.
+//!
+//! Each block is run off-chain worker that checks the loans of all users for insolvency.
+//! An insolvent loan is a loan where the user's total borrow is greater than the user's
+//! total collateral. The working time of this OCW is limited. If the worker discovers an
+//! insolvent loan, then he starts the liquidation process.
+//!
+//! ## Interface
+//!
+//! -`UserLiquidationAttemptsManager`: provides functionality to manage the number of attempts to
+//! partially liquidation a user's loan.
+//! -`RiskManagerStorageProvider`: creates storage records for risk-manager pallet. This is a part
+//! of a pool creation flow.
+//!
+//! ### Dispatchable Functions (extrinsics)
+//!
+//! - `set_liquidation_fee` - setter for parameter `liquidation_fee`. The dispatch origin of this
+//! call must be 'RiskManagerUpdateOrigin'.
+//! - `set_liquidation_threshold` - setter for parameter `liquidation_threshold`. The dispatch
+//! origin of this call must be 'RiskManagerUpdateOrigin'.
+//! - `liquidate` - Liquidate insolvent loan.  The dispatch origin of this call must be
+//! _None_. Called from OCW.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
+#![allow(clippy::redundant_clone)]
 
 use frame_support::{log, pallet_prelude::*, transactional};
 use frame_system::{
@@ -205,7 +232,7 @@ pub mod module {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		/// Runs after every block. Start offchain worker to check insolvent loans and
+		/// Runs after every block. Offchain worker checks insolvent loans and
 		/// submit unsigned tx to trigger liquidation.
 		fn offchain_worker(now: T::BlockNumber) {
 			if let Err(e) = Self::_offchain_worker() {
@@ -277,7 +304,18 @@ pub mod module {
 			Ok(().into())
 		}
 
-		/// TODO: implement
+		/// Liquidate insolvent loan. Calls internal functions from minterest-protocol pallet"
+		/// `do_repay` and `do_seize`, these functions within themselves call `accrue_interest_rate`.
+		/// Before calling the extrinsic, it is necessary to perform all checks and math
+		/// calculations of the user's borrows and collaterals.
+		///
+		/// The dispatch origin of this call must be _None_.
+		///
+		/// - `borrower`: AccountId of the borrower whose loan is being liquidated.
+		/// - `liquidation_amounts`: contains a vectors with user's borrows to be paid from the
+		/// liquidation pools instead of the borrower, and a vector with user's supplies to be
+		/// withdrawn from the borrower and sent to the liquidation pools. Balances are calculated
+		/// in underlying assets.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn liquidate(
@@ -297,65 +335,59 @@ pub mod module {
 impl<T: Config> Pallet<T> {
 	/// Checks if the node is a validator. The worker is launched every block. The worker's working
 	/// time is limited in time. Each next worker starts checking user loans from the beginning.
-	/// Calls a processing insolvent loans function.
+	/// Calls a processing insolvent loan function.
 	fn _offchain_worker() -> Result<(), OffchainErr> {
 		// Check if we are a potential validator
 		if !sp_io::offchain::is_validator() {
 			return Err(OffchainErr::NotValidator);
 		}
 
-		let mut borrower_iterator = <T as module::Config>::ControllerManager::get_all_users_with_insolvent_loan()
+		let mut borrower_iterator = T::ControllerManager::get_all_users_with_insolvent_loan()
 			.map_err(|_| OffchainErr::CheckFail)?
 			.into_iter();
 
-		//TODO: offchain worker locks
+		// TODO: offchain worker locks
 
 		for borrower in borrower_iterator.next() {
 			Self::process_insolvent_loan(borrower)?;
-			//TODO: offchain worker guard try extend
+			// TODO: offchain worker guard try extend
 		}
 
 		Ok(())
 	}
 
 	/// Handles the user's loan. Selects one of the required types of liquidation (Partial,
-	/// Complete or Forgivable Complete) and calls extrinsic `liquidate()`.
+	/// Complete or Forgivable Complete) and calls extrinsic `liquidate()`. This function within
+	/// itself call `accrue_interest_rate`.
 	///
 	/// -`borrower`: AccountId of the borrower whose loan is being processed.
 	fn process_insolvent_loan(borrower: T::AccountId) -> Result<(), OffchainErr> {
 		let user_loan_state = Self::get_user_loan_state(&borrower).map_err(|_| OffchainErr::CheckFail)?;
-		let liquidation_mode = Self::choose_liquidation_mode(
-			&borrower,
-			user_loan_state.total_borrow_usd(),
-			user_loan_state.total_supply_usd(),
-		);
+		let liquidation_mode = Self::choose_liquidation_mode(&borrower, &user_loan_state);
 		let liquidation_amounts =
 			match liquidation_mode {
-				LiquidationMode::Partial => Self::calculate_partial_liquidation(&borrower, user_loan_state)
+				LiquidationMode::Partial => Self::calculate_partial_liquidation(&borrower, &user_loan_state)
 					.map_err(|_| OffchainErr::CheckFail)?,
-				LiquidationMode::Complete => Self::calculate_complete_liquidation(&borrower, user_loan_state)
+				LiquidationMode::Complete => Self::calculate_complete_liquidation(&borrower, &user_loan_state)
 					.map_err(|_| OffchainErr::CheckFail)?,
 				LiquidationMode::ForgivableComplete => {
-					Self::calculate_forgivable_complete_liquidation(&borrower, user_loan_state)
+					Self::calculate_forgivable_complete_liquidation(&borrower, &user_loan_state)
 						.map_err(|_| OffchainErr::CheckFail)?
 				}
 			};
 		// call to change the offchain worker local storage
 		Self::do_liquidate(&borrower, liquidation_amounts.clone()).map_err(|_| OffchainErr::CheckFail)?;
-
 		Self::submit_unsigned_liquidation(&borrower, liquidation_amounts);
-		<Self as UserLiquidationAttemptsManager<T::AccountId>>::mutate_depending_operation(
-			None,
-			&borrower,
-			Operation::Repay,
-		);
 		Ok(())
 	}
 
 	/// Submits an unsigned liquidation transaction to the blockchain.
 	///
 	/// -`borrower`: AccountId of the borrower whose loan is being processed.
-	/// -`user_loan_state`:
+	/// - `liquidation_amounts`: contains a vectors with user's borrows to be paid from the
+	/// liquidation pools instead of the borrower, and a vector with user's supplies to be
+	/// withdrawn from the borrower and sent to the liquidation pools. Balances are calculated
+	/// in underlying assets.
 	fn submit_unsigned_liquidation(borrower: &T::AccountId, liquidation_amounts: LiquidationAmounts) {
 		let who = T::Lookup::unlookup(borrower.clone());
 		let call = Call::<T>::liquidate(who.clone(), liquidation_amounts);
@@ -368,12 +400,15 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	/// Selects the liquidation mode for the user's loan.
-	fn choose_liquidation_mode(
-		borrower: &T::AccountId,
-		borrower_total_supply_usd: Balance,
-		borrower_total_borrow_usd: Balance,
-	) -> LiquidationMode {
+	/// Selects the liquidation mode for the user's loan. The choice of the liquidation mode is
+	/// made based on the parameters of the current number of user's liquidation attempts and
+	/// the current state of the user's loan.
+	///
+	/// -`borrower`: user for which the liquidation mode is chosen.
+	/// -`user_loan_state`: contains the current state of the borrower's loan.
+	fn choose_liquidation_mode(borrower: &T::AccountId, user_loan_state: &UserLoanState) -> LiquidationMode {
+		let (borrower_total_borrow_usd, borrower_total_supply_usd) =
+			(user_loan_state.total_borrow_usd(), user_loan_state.total_supply_usd());
 		let user_liquidation_attempts = Self::get_user_liquidation_attempts(&borrower);
 		if borrower_total_borrow_usd >= T::PartialLiquidationMinSum::get()
 			&& user_liquidation_attempts < T::PartialLiquidationMaxAttempts::get()
@@ -389,6 +424,8 @@ impl<T: Config> Pallet<T> {
 	/// Calculates the state of the user's loan. Considers supply only for those pools that are
 	/// enabled as collateral.
 	/// Returns user supplies and user borrows for each pool.
+	///
+	/// -`who`: AccountId of the user whose loan state is being calculated.
 	fn get_user_loan_state(who: &T::AccountId) -> Result<UserLoanState, DispatchError> {
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.into_iter()
@@ -400,14 +437,14 @@ impl<T: Config> Pallet<T> {
 						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
 					let user_borrow_underlying =
-						<T as module::Config>::ControllerManager::get_user_borrow_underlying_balance(who, pool_id)?;
+						T::ControllerManager::get_user_borrow_underlying_balance(who, pool_id)?;
 					let user_borrow_usd =
 						T::LiquidityPoolsManager::underlying_to_usd(user_borrow_underlying, oracle_price)?;
 					acc_user_state.loans.push((pool_id, user_borrow_usd));
 
 					if T::LiquidityPoolsManager::is_pool_collateral(&who, pool_id) {
 						let user_supply_underlying =
-							<T as module::Config>::ControllerManager::get_user_supply_underlying_balance(who, pool_id)?;
+							T::ControllerManager::get_user_supply_underlying_balance(who, pool_id)?;
 						let user_supply_usd =
 							T::LiquidityPoolsManager::underlying_to_usd(user_supply_underlying, oracle_price)?;
 						acc_user_state.supplies.push((pool_id, user_supply_usd));
@@ -417,7 +454,15 @@ impl<T: Config> Pallet<T> {
 			)
 	}
 
-	/// Performs repay of loans and seizes the borrower's collaterals.
+	/// Calls internal functions from minterest-protocol pallet `do_repay` and `do_seize`, these
+	/// functions within themselves call `accrue_interest_rate`. Also calls
+	/// `mutate_depending_operation` for mutate user liquidation attempts.
+	///
+	/// - `borrower`: AccountId of the borrower whose loan is being liquidated.
+	/// - `liquidation_amounts`: contains a vectors with user's borrows to be paid from the
+	/// liquidation pools instead of the borrower, and a vector with user's supplies to be
+	/// withdrawn from the borrower and sent to the liquidation pools. Balances are calculated
+	/// in underlying assets.
 	fn do_liquidate(borrower: &T::AccountId, liquidation_amounts: LiquidationAmounts) -> DispatchResult {
 		let liquidation_pool_account_id = T::LiquidationPoolsManager::pools_account_id();
 		liquidation_amounts
@@ -439,7 +484,13 @@ impl<T: Config> Pallet<T> {
 			.try_for_each(|(pool_id, seize_underlying)| -> DispatchResult {
 				T::MinterestProtocolManager::do_seize(&borrower, pool_id, seize_underlying)?;
 				Ok(())
-			})
+			})?;
+		<Self as UserLiquidationAttemptsManager<T::AccountId>>::mutate_depending_operation(
+			None,
+			&borrower,
+			Operation::Repay,
+		);
+		Ok(())
 	}
 
 	/// TODO: implement
@@ -447,7 +498,7 @@ impl<T: Config> Pallet<T> {
 	/// Должна вызываться на свежем храгилище, после вызова accrue_interest.
 	fn calculate_partial_liquidation(
 		_borrower: &T::AccountId,
-		_borrower_loan_state: UserLoanState,
+		_borrower_loan_state: &UserLoanState,
 	) -> Result<LiquidationAmounts, DispatchError> {
 		todo!()
 	}
@@ -457,7 +508,7 @@ impl<T: Config> Pallet<T> {
 	/// Должна вызываться на свежем храгилище, после вызова accrue_interest.
 	fn calculate_complete_liquidation(
 		_borrower: &T::AccountId,
-		_borrower_loan_state: UserLoanState,
+		_borrower_loan_state: &UserLoanState,
 	) -> Result<LiquidationAmounts, DispatchError> {
 		todo!()
 	}
@@ -467,7 +518,7 @@ impl<T: Config> Pallet<T> {
 	/// Должна вызываться на свежем храгилище, после вызова accrue_interest.
 	fn calculate_forgivable_complete_liquidation(
 		_borrower: &T::AccountId,
-		_borrower_loan_state: UserLoanState,
+		_borrower_loan_state: &UserLoanState,
 	) -> Result<LiquidationAmounts, DispatchError> {
 		todo!()
 	}

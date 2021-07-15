@@ -197,7 +197,7 @@ pub trait ControllerManager<AccountId> {
 	/// Return minimum protocol interest needed to transfer it to liquidation pool
 	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance;
 
-	/// For all active pools in the protocol, it checks all users: calls accrue_interest_rate,
+	/// For all active pools in the protocol, it checks all users: calls `accrue_interest_rate`,
 	/// and then get_hypothetical_account_liquidity. If the user has a shortfall, then writes it
 	/// to the vector.
 	/// Returns: the vector of all users with an insolvent loan.
