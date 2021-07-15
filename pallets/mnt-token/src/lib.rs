@@ -351,9 +351,9 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 
 		let pool_supply_wrapped = T::MultiCurrency::total_issuance(wrapped_asset_id);
 
-		let ratio = match pool_token_supply_wrapped.cmp(&Balance::zero()) {
+		let ratio = match pool_supply_wrapped.cmp(&Balance::zero()) {
 			Ordering::Greater => {
-				Rate::checked_from_rational(mnt_accrued, pool_token_supply_wrapped).ok_or(Error::<T>::NumOverflow)?
+				Rate::checked_from_rational(mnt_accrued, pool_supply_wrapped).ok_or(Error::<T>::NumOverflow)?
 			}
 			_ => Rate::zero(),
 		};
@@ -449,7 +449,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 
 		// We use total_balance (not free balance). Because sum of balances should be equal to
 		// total_issuance. Otherwise, calculations will not be correct.
-		// (see pool_token_supply_wrapped in update_pool_mnt_supply_index)
+		// (see pool_supply_wrapped in update_pool_mnt_supply_index)
 		let supplier_balance = Rate::from_inner(T::MultiCurrency::total_balance(wrapped_asset_id, supplier));
 
 		let supplier_delta = delta_index
@@ -499,7 +499,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 
 		let user_borrow_underlying = T::ControllerManager::borrow_balance_stored(&borrower, pool_id)?;
 		let pool_borrow_index = T::LiquidityPoolsManager::get_pool_borrow_index(pool_id);
-		let borrower_amount = Price::from_inner(borrow_balance)
+		let borrower_amount = Price::from_inner(user_borrow_underlying)
 			.checked_div(&pool_borrow_index)
 			.ok_or(Error::<T>::NumOverflow)?;
 
