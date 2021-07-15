@@ -1,14 +1,16 @@
-#![cfg(test)]
-
-use super::*;
-use mock::*;
-
+//! Tests for the liquidity-pools module.
 use frame_support::{assert_err, assert_noop, assert_ok};
+pub use liquidity_pools::Error;
+use pallet_traits::{
+	Borrowing, CurrencyConverter, LiquidityPoolStorageProvider, PoolsManager, PricesManager, UserStorageProvider,
+};
 use sp_arithmetic::FixedPointNumber;
+use sp_runtime::traits::{One, Zero};
+use test_engine::*;
 
 #[test]
 fn set_pool_data_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilderNew::default().build().execute_with(|| {
 		TestPools::set_pool_data(
 			DOT,
 			Pool {
@@ -17,36 +19,36 @@ fn set_pool_data_should_work() {
 				protocol_interest: ONE_HUNDRED,
 			},
 		);
-		assert_eq!(<Pools<Test>>::get(DOT).borrowed, ONE_HUNDRED);
+		assert_eq!(TestPools::get_pool_data(DOT).borrowed, ONE_HUNDRED);
 		assert_eq!(
-			<Pools<Test>>::get(DOT).borrow_index,
+			TestPools::get_pool_data(DOT).borrow_index,
 			Rate::saturating_from_rational(125, 100)
 		);
-		assert_eq!(<Pools<Test>>::get(DOT).protocol_interest, ONE_HUNDRED);
+		assert_eq!(TestPools::get_pool_data(DOT).protocol_interest, ONE_HUNDRED);
 	});
 }
 
 #[test]
 fn set_pool_borrow_underlying_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilderNew::default().build().execute_with(|| {
 		// Set pool_borrowed eq 100 DOT
 		TestPools::set_pool_borrow_underlying(DOT, ONE_HUNDRED);
-		assert_eq!(<Pools<Test>>::get(DOT).borrowed, ONE_HUNDRED);
+		assert_eq!(TestPools::get_pool_data(DOT).borrowed, ONE_HUNDRED);
 	});
 }
 
 #[test]
 fn set_pool_protocol_interest_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilderNew::default().build().execute_with(|| {
 		// Set pool_protocol_interest eq 100 DOT.
 		TestPools::set_pool_protocol_interest(DOT, ONE_HUNDRED);
-		assert_eq!(<Pools<Test>>::get(DOT).protocol_interest, ONE_HUNDRED);
+		assert_eq!(TestPools::get_pool_data(DOT).protocol_interest, ONE_HUNDRED);
 	});
 }
 
 #[test]
 fn set_user_borrow_and_interest_index_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilderNew::default().build().execute_with(|| {
 		// Set user_borrowed eq 100 DOT and user_interest_index eq 0.33.
 		TestPools::set_user_borrow_and_interest_index(
 			&ALICE,
@@ -54,9 +56,9 @@ fn set_user_borrow_and_interest_index_should_work() {
 			ONE_HUNDRED,
 			Rate::saturating_from_rational(33, 100),
 		);
-		assert_eq!(<PoolUserParams<Test>>::get(DOT, ALICE).borrowed, ONE_HUNDRED);
+		assert_eq!(TestPools::get_user_data(DOT, &ALICE).borrowed, ONE_HUNDRED);
 		assert_eq!(
-			<PoolUserParams<Test>>::get(DOT, ALICE).interest_index,
+			TestPools::pool_user_data(DOT, ALICE).interest_index,
 			Rate::saturating_from_rational(33, 100)
 		);
 	});
@@ -64,28 +66,28 @@ fn set_user_borrow_and_interest_index_should_work() {
 
 #[test]
 fn enable_is_collateral_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilderNew::default().build().execute_with(|| {
 		// Alice enable as collateral DOT pool.
 		TestPools::enable_is_collateral(&ALICE, DOT);
 
-		assert!(<PoolUserParams<Test>>::get(DOT, ALICE).is_collateral);
+		assert!(TestPools::pool_user_data(DOT, ALICE).is_collateral);
 	});
 }
 
 #[test]
 fn enable_is_collateral_internal_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilderNew::default().build().execute_with(|| {
 		// Alice disable collateral DOT pool.
 		TestPools::disable_is_collateral(&ALICE, DOT);
 
-		assert!(!<PoolUserParams<Test>>::get(DOT, ALICE).is_collateral);
+		assert!(!TestPools::pool_user_data(DOT, ALICE).is_collateral);
 	});
 }
 
 #[test]
 fn get_pool_available_liquidity_should_work() {
-	ExtBuilder::default()
-		.pool_balance(DOT, TEN_THOUSAND)
+	ExtBuilderNew::default()
+		.set_pool_balance(DOT, TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_pool_available_liquidity(DOT), TEN_THOUSAND);
@@ -94,12 +96,12 @@ fn get_pool_available_liquidity_should_work() {
 
 #[test]
 fn get_pool_data_should_work() {
-	ExtBuilder::default()
-		.pool_with_params(
-			DOT,
-			TEN_THOUSAND,
-			Rate::saturating_from_rational(125, 100),
-			TEN_THOUSAND,
+	ExtBuilderNew::default()
+		.init_pool(
+			DOT,                                      // pool_id
+			TEN_THOUSAND,                             // borrowed
+			Rate::saturating_from_rational(125, 100), // borrow_index
+			TEN_THOUSAND,                             // protocol_interest
 		)
 		.build()
 		.execute_with(|| {
@@ -116,8 +118,8 @@ fn get_pool_data_should_work() {
 
 #[test]
 fn get_pool_borrow_underlying_should_work() {
-	ExtBuilder::default()
-		.pool_with_params(DOT, TEN_THOUSAND, Rate::default(), Balance::default())
+	ExtBuilderNew::default()
+		.init_pool(DOT, TEN_THOUSAND, Rate::default(), Balance::default())
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_pool_borrow_underlying(DOT), TEN_THOUSAND);
@@ -126,8 +128,8 @@ fn get_pool_borrow_underlying_should_work() {
 
 #[test]
 fn get_pool_protocol_interest_should_work() {
-	ExtBuilder::default()
-		.pool_with_params(DOT, Balance::default(), Rate::default(), TEN_THOUSAND)
+	ExtBuilderNew::default()
+		.init_pool(DOT, Balance::default(), Rate::default(), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_pool_protocol_interest(DOT), TEN_THOUSAND);
@@ -136,8 +138,8 @@ fn get_pool_protocol_interest_should_work() {
 
 #[test]
 fn get_pool_borrow_index_should_work() {
-	ExtBuilder::default()
-		.pool_with_params(
+	ExtBuilderNew::default()
+		.init_pool(
 			DOT,
 			Balance::default(),
 			Rate::saturating_from_rational(125, 100),
@@ -154,8 +156,14 @@ fn get_pool_borrow_index_should_work() {
 
 #[test]
 fn get_user_borrow_balance_should_work() {
-	ExtBuilder::default()
-		.pool_user_data_with_params(DOT, ALICE, ONE_HUNDRED, Rate::default(), true)
+	ExtBuilderNew::default()
+		.set_pool_user_data(
+			DOT,             // pool_id
+			ALICE,           // user
+			ONE_HUNDRED,     // borrowed
+			Rate::default(), // interest_index
+			true,            // is_collateral
+		)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_user_borrow_balance(&ALICE, DOT), ONE_HUNDRED);
@@ -164,8 +172,14 @@ fn get_user_borrow_balance_should_work() {
 
 #[test]
 fn check_user_available_is_collateral_should_work() {
-	ExtBuilder::default()
-		.pool_user_data_with_params(DOT, ALICE, Balance::default(), Rate::default(), false)
+	ExtBuilderNew::default()
+		.set_pool_user_data(
+			DOT,                // pool_id
+			ALICE,              // user
+			Balance::default(), // borrowed
+			Rate::default(),    // interest_index
+			false,              // is_collateral
+		)
 		.build()
 		.execute_with(|| {
 			// collateral parameter is set to false
@@ -180,17 +194,20 @@ fn check_user_available_is_collateral_should_work() {
 
 #[test]
 fn pool_should_exists() {
-	ExtBuilder::default().pool_mock(DOT).build().execute_with(|| {
-		assert_eq!(TestPools::pool_exists(&DOT), true);
-		assert_eq!(TestPools::pool_exists(&MDOT), false);
-	});
+	ExtBuilderNew::default()
+		.init_pool_default(DOT)
+		.build()
+		.execute_with(|| {
+			assert_eq!(TestPools::pool_exists(&DOT), true);
+			assert_eq!(TestPools::pool_exists(&MDOT), false);
+		});
 }
 
 #[test]
 fn update_state_on_borrow_should_work() {
-	ExtBuilder::default()
-		.user_balance(ALICE, DOT, ONE_HUNDRED)
-		.pool_mock(DOT)
+	ExtBuilderNew::default()
+		.set_user_balance(ALICE, DOT, ONE_HUNDRED)
+		.init_pool_default(DOT)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_user_borrow_index(&ALICE, DOT), Rate::from_inner(0));
@@ -201,7 +218,9 @@ fn update_state_on_borrow_should_work() {
 			assert_eq!(TestPools::get_user_borrow_balance(&ALICE, DOT), 60);
 			assert_eq!(TestPools::get_user_borrow_index(&ALICE, DOT), Rate::default());
 
-			Pools::<Test>::mutate(DOT, |pool| pool.borrow_index = Rate::saturating_from_rational(1, 5));
+			let mut dot_pool_data = TestPools::get_pool_data(DOT);
+			dot_pool_data.borrow_index = Rate::saturating_from_rational(1, 5);
+			TestPools::set_pool_data(DOT, dot_pool_data);
 
 			// ALice borrow 30 DOT
 			assert_ok!(TestPools::update_state_on_borrow(&ALICE, DOT, 30, 60));
@@ -215,15 +234,15 @@ fn update_state_on_borrow_should_work() {
 			// Overflow in calculation: account_borrow_new = 90 + max_value()
 			assert_noop!(
 				TestPools::update_state_on_borrow(&ALICE, DOT, Balance::max_value(), 90),
-				Error::<Test>::BorrowBalanceOverflow
+				Error::<TestRuntime>::BorrowBalanceOverflow
 			);
 		});
 }
 
 #[test]
 fn update_state_on_repay_should_work() {
-	ExtBuilder::default()
-		.user_balance(ALICE, DOT, ONE_HUNDRED)
+	ExtBuilderNew::default()
+		.set_user_balance(ALICE, DOT, ONE_HUNDRED)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_user_borrow_index(&ALICE, DOT), Rate::from_inner(0));
@@ -242,20 +261,37 @@ fn update_state_on_repay_should_work() {
 
 			assert_noop!(
 				TestPools::update_state_on_repay(&ALICE, DOT, 100, 20),
-				Error::<Test>::RepayAmountTooBig
+				Error::<TestRuntime>::RepayAmountTooBig
 			);
 		});
 }
 
 #[test]
+fn get_user_liquidation_attempts_should_work() {
+	ExtBuilderNew::default()
+		.set_pool_user_data(
+			DOT,             // pool_id
+			ALICE,           // user
+			ONE_HUNDRED,     // borrowed
+			Rate::default(), // interest_index
+			true,            // is_collateral
+			12,              // liquidation_attempts
+		)
+		.build()
+		.execute_with(|| {
+			assert_eq!(TestPools::get_user_liquidation_attempts(&ALICE, DOT), 12);
+		});
+}
+
+#[test]
 fn get_pool_members_with_loans_should_work() {
-	ExtBuilder::default()
-		.pool_user_data_with_params(DOT, ALICE, ONE_HUNDRED, Rate::default(), true)
-		.pool_user_data_with_params(DOT, BOB, 0, Rate::default(), true)
-		.pool_user_data_with_params(DOT, CHARLIE, 100, Rate::default(), true)
-		.pool_user_data_with_params(BTC, ALICE, 0, Rate::default(), true)
-		.pool_user_data_with_params(BTC, BOB, 0, Rate::default(), true)
-		.pool_user_data_with_params(BTC, CHARLIE, ONE_HUNDRED, Rate::default(), true)
+	ExtBuilderNew::default()
+		.set_pool_user_data(DOT, ALICE, ONE_HUNDRED, Rate::default(), true)
+		.set_pool_user_data(DOT, BOB, 0, Rate::default(), true)
+		.set_pool_user_data(DOT, CHARLIE, 100, Rate::default(), true)
+		.set_pool_user_data(BTC, ALICE, 0, Rate::default(), true)
+		.set_pool_user_data(BTC, BOB, 0, Rate::default(), true)
+		.set_pool_user_data(BTC, CHARLIE, ONE_HUNDRED, Rate::default(), true)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_pool_members_with_loans(DOT), Ok(vec![CHARLIE, ALICE]));
@@ -265,20 +301,20 @@ fn get_pool_members_with_loans_should_work() {
 
 #[test]
 fn check_user_has_collateral_should_work() {
-	ExtBuilder::default()
-		.pool_mock(DOT)
-		.pool_mock(BTC)
-		.pool_mock(ETH)
-		.pool_user_data_with_params(DOT, ALICE, Balance::zero(), Rate::default(), true)
-		.pool_user_data_with_params(BTC, ALICE, Balance::zero(), Rate::default(), true)
-		.pool_user_data_with_params(ETH, ALICE, Balance::zero(), Rate::default(), true)
-		.pool_user_data_with_params(DOT, BOB, Balance::zero(), Rate::default(), true)
-		.pool_user_data_with_params(BTC, CHARLIE, Balance::zero(), Rate::default(), false)
-		.user_balance(ALICE, MDOT, Balance::zero())
-		.user_balance(ALICE, MBTC, Balance::zero())
-		.user_balance(ALICE, METH, TEN_THOUSAND)
-		.user_balance(BOB, MDOT, Balance::zero())
-		.user_balance(CHARLIE, MBTC, TEN_THOUSAND)
+	ExtBuilderNew::default()
+		.init_pool_default(DOT)
+		.init_pool_default(BTC)
+		.init_pool_default(ETH)
+		.set_pool_user_data(DOT, ALICE, Balance::zero(), Rate::default(), true)
+		.set_pool_user_data(BTC, ALICE, Balance::zero(), Rate::default(), true)
+		.set_pool_user_data(ETH, ALICE, Balance::zero(), Rate::default(), true)
+		.set_pool_user_data(DOT, BOB, Balance::zero(), Rate::default(), true)
+		.set_pool_user_data(BTC, CHARLIE, Balance::zero(), Rate::default(), false)
+		.set_user_balance(ALICE, MDOT, Balance::zero())
+		.set_user_balance(ALICE, MBTC, Balance::zero())
+		.set_user_balance(ALICE, METH, TEN_THOUSAND)
+		.set_user_balance(BOB, MDOT, Balance::zero())
+		.set_user_balance(CHARLIE, MBTC, TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::check_user_has_collateral(&ALICE), true);
@@ -289,7 +325,7 @@ fn check_user_has_collateral_should_work() {
 
 #[test]
 fn calculate_exchange_rate_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilderNew::default().build().execute_with(|| {
 		// exchange_rate = (102 - 2 + 20) / 100 = 1.2
 		assert_eq!(
 			TestPools::calculate_exchange_rate(102, 100, 2, 20),
@@ -304,37 +340,57 @@ fn calculate_exchange_rate_should_work() {
 		// Overflow in calculation: pool_supply_underlying + pool_borrow_underlying
 		assert_noop!(
 			TestPools::calculate_exchange_rate(Balance::max_value(), 100, 100, 100),
-			Error::<Test>::ExchangeRateCalculationError
+			Error::<TestRuntime>::ExchangeRateCalculationError
 		);
 
 		// Overflow in calculation: pool_supply_underlying + pool_borrow_underlying -
 		// - pool_protocol_interest
 		assert_noop!(
 			TestPools::calculate_exchange_rate(100, 100, Balance::max_value(), 100),
-			Error::<Test>::ExchangeRateCalculationError
+			Error::<TestRuntime>::ExchangeRateCalculationError
 		);
 	});
 }
 
 #[test]
 fn get_user_collateral_pools_should_work() {
-	ExtBuilder::default()
-		.pool_balance(KSM, 1 * TEN_THOUSAND)
-		.pool_balance(DOT, 3 * TEN_THOUSAND)
-		.pool_balance(ETH, 2 * TEN_THOUSAND)
-		.pool_balance(BTC, 4 * TEN_THOUSAND)
-		.pool_borrow_underlying(KSM, ONE_HUNDRED)
-		.pool_borrow_underlying(DOT, ONE_HUNDRED)
-		.pool_borrow_underlying(ETH, ONE_HUNDRED)
-		.pool_borrow_underlying(BTC, ONE_HUNDRED)
-		.pool_user_data_with_params(KSM, ALICE, Balance::zero(), Rate::default(), true)
-		.pool_user_data_with_params(DOT, ALICE, Balance::zero(), Rate::default(), true)
-		.pool_user_data_with_params(ETH, ALICE, Balance::zero(), Rate::default(), true)
-		.pool_user_data_with_params(BTC, ALICE, Balance::zero(), Rate::default(), false)
-		.user_balance(ALICE, MKSM, Balance::zero())
-		.user_balance(ALICE, MDOT, TEN_THOUSAND)
-		.user_balance(ALICE, METH, TEN_THOUSAND)
-		.user_balance(ALICE, MBTC, TEN_THOUSAND)
+	ExtBuilderNew::default()
+		.init_pool(
+			KSM,             // pool_id
+			ONE_HUNDRED,     // borrowed
+			Rate::one(),     // borrow_index
+			Balance::zero(), // protocol_interest
+		)
+		.init_pool(
+			DOT,             // pool_id
+			ONE_HUNDRED,     // borrowed
+			Rate::one(),     // borrow_index
+			Balance::zero(), // protocol_interest
+		)
+		.init_pool(
+			ETH,             // pool_id
+			ONE_HUNDRED,     // borrowed
+			Rate::one(),     // borrow_index
+			Balance::zero(), // protocol_interest
+		)
+		.init_pool(
+			BTC,             // pool_id
+			ONE_HUNDRED,     // borrowed
+			Rate::one(),     // borrow_index
+			Balance::zero(), // protocol_interest
+		)
+		.set_pool_balance(KSM, 1 * TEN_THOUSAND)
+		.set_pool_balance(DOT, 3 * TEN_THOUSAND)
+		.set_pool_balance(ETH, 2 * TEN_THOUSAND)
+		.set_pool_balance(BTC, 4 * TEN_THOUSAND)
+		.set_pool_user_data(KSM, ALICE, Balance::zero(), Rate::default(), true)
+		.set_pool_user_data(DOT, ALICE, Balance::zero(), Rate::default(), true)
+		.set_pool_user_data(ETH, ALICE, Balance::zero(), Rate::default(), true)
+		.set_pool_user_data(BTC, ALICE, Balance::zero(), Rate::default(), false)
+		.set_user_balance(ALICE, MKSM, Balance::zero())
+		.set_user_balance(ALICE, MDOT, TEN_THOUSAND)
+		.set_user_balance(ALICE, METH, TEN_THOUSAND)
+		.set_user_balance(ALICE, MBTC, TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_user_collateral_pools(&ALICE), Ok(vec![DOT, ETH]));
@@ -342,17 +398,34 @@ fn get_user_collateral_pools_should_work() {
 		});
 }
 
+#[test]
+fn increase_and_reset_user_liquidation_attempts_should_work() {
+	ExtBuilderNew::default().build().execute_with(|| {
+		TestPools::increase_user_liquidation_attempts(DOT, &ALICE);
+		assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, u8::one());
+		TestPools::increase_user_liquidation_attempts(DOT, &ALICE);
+		assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, 2_u8);
+		TestPools::reset_user_liquidation_attempts(DOT, &ALICE);
+		assert_eq!(TestPools::pool_user_data(DOT, ALICE).liquidation_attempts, u8::zero());
+	})
+}
+
 // Currency converter tests
 #[test]
 fn get_exchange_rate_should_work() {
-	ExtBuilder::default()
-		.pool_balance(DOT, dollars(100_u128))
-		.user_balance(ALICE, MDOT, dollars(125_u128))
-		.pool_borrow_underlying(DOT, dollars(300_u128))
+	ExtBuilderNew::default()
+		.init_pool(
+			DOT,               // pool_id
+			dollars(300_u128), // borrowed
+			Rate::one(),       // borrow_index
+			Balance::zero(),   // protocol_interest
+		)
+		.set_pool_balance(DOT, dollars(100_u128))
+		.set_user_balance(ALICE, MDOT, dollars(125_u128))
 		.build()
 		.execute_with(|| {
 			// Pool needs to be created first
-			assert_noop!(TestPools::get_exchange_rate(ETH), Error::<Test>::PoolNotFound);
+			assert_noop!(TestPools::get_exchange_rate(ETH), Error::<TestRuntime>::PoolNotFound);
 			// exchange_rate = (100 - 0 + 300) / 125 = 3.2
 			assert_eq!(
 				TestPools::get_exchange_rate(DOT),
@@ -363,12 +436,20 @@ fn get_exchange_rate_should_work() {
 
 #[test]
 fn underlying_to_wrapped_and_usd_should_work() {
-	ExtBuilder::default()
-		.user_balance(ALICE, DOT, ONE_HUNDRED)
-		.user_balance(ALICE, MDOT, ONE_HUNDRED)
-		.pool_borrow_underlying(DOT, dollars(40))
+	ExtBuilderNew::default()
+		.init_pool(
+			DOT,             // pool_id
+			dollars(40),     // borrowed
+			Rate::one(),     // borrow_index
+			Balance::zero(), // protocol_interest
+		)
+		.set_user_balance(ALICE, DOT, ONE_HUNDRED)
+		.set_user_balance(ALICE, MDOT, ONE_HUNDRED)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all assets.
+			MockPriceSource::set_underlying_price(Some(Price::from_inner(2 * DOLLARS)));
+
 			// exchange_rate = 40 / 100 = 0.4
 			let exchange_rate = TestPools::get_exchange_rate(DOT).unwrap();
 			assert_eq!(TestPools::underlying_to_wrapped(10, exchange_rate), Ok(25));
@@ -377,11 +458,11 @@ fn underlying_to_wrapped_and_usd_should_work() {
 			// when exchange_rate < 1
 			assert_err!(
 				TestPools::underlying_to_wrapped(Balance::max_value(), exchange_rate),
-				Error::<Test>::ConversionError
+				Error::<TestRuntime>::ConversionError
 			);
 
 			// oracle_price = 2 USD.
-			let oracle_price = <Test as Config>::PriceSource::get_underlying_price(DOT).unwrap();
+			let oracle_price = MockPriceSource::get_underlying_price(DOT).unwrap();
 			assert_eq!(TestPools::underlying_to_usd(10, oracle_price), Ok(20));
 
 			assert_eq!(TestPools::usd_to_underlying(20, oracle_price), Ok(10));
@@ -390,16 +471,28 @@ fn underlying_to_wrapped_and_usd_should_work() {
 
 #[test]
 fn wrapped_to_underlying_and_usd_should_work() {
-	ExtBuilder::default()
-		.pool_with_params(DOT, Balance::zero(), Rate::zero(), Balance::zero())
-		.pool_with_params(BTC, Balance::zero(), Rate::zero(), Balance::zero())
-		.user_balance(ALICE, DOT, ONE_HUNDRED)
-		.user_balance(ALICE, MDOT, ONE_HUNDRED)
-		.user_balance(ALICE, MBTC, 1)
-		.pool_balance(BTC, ONE_HUNDRED)
-		.pool_borrow_underlying(DOT, dollars(40))
+	ExtBuilderNew::default()
+		.init_pool(
+			BTC,             // pool_id
+			Balance::zero(), // borrowed
+			Rate::zero(),    // borrow_index
+			Balance::zero(), // protocol_interest
+		)
+		.init_pool(
+			DOT,             // pool_id
+			dollars(40),     // borrowed
+			Rate::one(),     // borrow_index
+			Balance::zero(), // protocol_interest
+		)
+		.set_user_balance(ALICE, DOT, ONE_HUNDRED)
+		.set_user_balance(ALICE, MDOT, ONE_HUNDRED)
+		.set_user_balance(ALICE, MBTC, 1)
+		.set_pool_balance(BTC, ONE_HUNDRED)
 		.build()
 		.execute_with(|| {
+			// Set price = 2.00 USD for all assets.
+			MockPriceSource::set_underlying_price(Some(Price::from_inner(2 * DOLLARS)));
+
 			let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
 			// underlying_amount = 10 * 0.4 = 4
 			assert_eq!(TestPools::wrapped_to_underlying(10, exchange_rate_dot), Ok(4));
@@ -408,11 +501,11 @@ fn wrapped_to_underlying_and_usd_should_work() {
 			let exchange_rate_btc = TestPools::get_exchange_rate(BTC).unwrap();
 			assert_err!(
 				TestPools::wrapped_to_underlying(Balance::max_value(), exchange_rate_btc),
-				Error::<Test>::ConversionError
+				Error::<TestRuntime>::ConversionError
 			);
 
 			// oracle_price = 2 USD.
-			let oracle_price = <Test as Config>::PriceSource::get_underlying_price(DOT).unwrap();
+			let oracle_price = MockPriceSource::get_underlying_price(DOT).unwrap();
 			assert_eq!(TestPools::wrapped_to_usd(10, exchange_rate_dot, oracle_price), Ok(8));
 
 			// wrapped_amount = 20 / 2 / 0.4 = 25

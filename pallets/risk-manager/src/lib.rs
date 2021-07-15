@@ -1,4 +1,4 @@
-//! # Risk Manager Pallet
+//! # Risk Manager Module
 //!
 //! ## Overview
 //!

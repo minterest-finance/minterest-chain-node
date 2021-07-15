@@ -125,7 +125,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Gets current the total amount of cash the dex has.
-	fn get_dex_available_liquidity(dex_id: CurrencyId) -> Balance {
+	pub fn get_dex_available_liquidity(dex_id: CurrencyId) -> Balance {
 		let module_account_id = Self::dex_account_id();
 		T::MultiCurrency::free_balance(dex_id, &module_account_id)
 	}
