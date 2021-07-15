@@ -184,19 +184,20 @@ pub mod module {
 	/// The additional collateral which is taken from borrowers as a penalty for being liquidated.
 	/// Sets for each liquidity pool separately.
 	#[pallet::storage]
-	#[pallet::getter(fn liquidation_fee)]
-	pub(crate) type LiquidationFee<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Rate, ValueQuery>;
+	#[pallet::getter(fn liquidation_fee_storage)]
+	pub(crate) type LiquidationFeeStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Rate, ValueQuery>;
 
 	/// Step used in liquidation to protect the user from micro liquidations. One value for
 	/// the entire protocol.
 	#[pallet::storage]
-	#[pallet::getter(fn liquidation_threshold)]
-	pub(crate) type LiquidationThreshold<T: Config> = StorageValue<_, Rate, ValueQuery>;
+	#[pallet::getter(fn liquidation_threshold_storage)]
+	pub(crate) type LiquidationThresholdStorage<T: Config> = StorageValue<_, Rate, ValueQuery>;
 
 	/// Counter of the number of partial liquidations at the user.
 	#[pallet::storage]
-	#[pallet::getter(fn user_liquidation_attempts)]
-	pub(crate) type UserLiquidationAttempts<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, u8, ValueQuery>;
+	#[pallet::getter(fn user_liquidation_attempts_storage)]
+	pub(crate) type UserLiquidationAttemptsStorage<T: Config> =
+		StorageMap<_, Twox64Concat, T::AccountId, u8, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -221,9 +222,9 @@ pub mod module {
 		fn build(&self) {
 			self.liquidation_fee.iter().for_each(|(pool_id, liquidation_fee)| {
 				Pallet::<T>::is_valid_liquidation_fee(*liquidation_fee);
-				LiquidationFee::<T>::insert(pool_id, liquidation_fee)
+				LiquidationFeeStorage::<T>::insert(pool_id, liquidation_fee)
 			});
-			LiquidationThreshold::<T>::put(self.liquidation_threshold);
+			LiquidationThresholdStorage::<T>::put(self.liquidation_threshold);
 		}
 	}
 
@@ -276,7 +277,7 @@ pub mod module {
 				Self::is_valid_liquidation_fee(liquidation_fee),
 				Error::<T>::InvalidLiquidationFeeValue
 			);
-			LiquidationFee::<T>::insert(pool_id, liquidation_fee);
+			LiquidationFeeStorage::<T>::insert(pool_id, liquidation_fee);
 			Self::deposit_event(Event::LiquidationFeeUpdated(pool_id, liquidation_fee));
 			Ok(().into())
 		}
@@ -299,15 +300,15 @@ pub mod module {
 				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
-			LiquidationThreshold::<T>::put(threshold);
+			LiquidationThresholdStorage::<T>::put(threshold);
 			Self::deposit_event(Event::LiquidationThresholdUpdated(threshold));
 			Ok(().into())
 		}
 
-		/// Liquidate insolvent loan. Calls internal functions from minterest-protocol pallet"
-		/// `do_repay` and `do_seize`, these functions within themselves call `accrue_interest_rate`.
-		/// Before calling the extrinsic, it is necessary to perform all checks and math
-		/// calculations of the user's borrows and collaterals.
+		/// Liquidate insolvent loan. Calls internal functions from minterest-protocol pallet
+		/// `do_repay` and `do_seize`, these functions within themselves call
+		/// `accrue_interest_rate`. Before calling the extrinsic, it is necessary to perform all
+		/// checks and math calculations of the user's borrows and collaterals.
 		///
 		/// The dispatch origin of this call must be _None_.
 		///
@@ -348,7 +349,7 @@ impl<T: Config> Pallet<T> {
 
 		// TODO: offchain worker locks
 
-		for borrower in borrower_iterator.next() {
+		for borrower in borrower_iterator {
 			Self::process_insolvent_loan(borrower)?;
 			// TODO: offchain worker guard try extend
 		}
@@ -400,6 +401,7 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
+	// TODO: Raw implementation. Cover with unit-tests.
 	/// Selects the liquidation mode for the user's loan. The choice of the liquidation mode is
 	/// made based on the parameters of the current number of user's liquidation attempts and
 	/// the current state of the user's loan.
@@ -421,6 +423,7 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
+	// TODO: Raw implementation. Cover with unit-tests.
 	/// Calculates the state of the user's loan. Considers supply only for those pools that are
 	/// enabled as collateral.
 	/// Returns user supplies and user borrows for each pool.
@@ -493,9 +496,14 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	/// TODO: implement
+	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
+	/// for partial liquidation.
 	///
-	/// Должна вызываться на свежем храгилище, после вызова accrue_interest.
+	/// Returns: vectors with user's borrows to be paid from the liquidation pools instead of
+	/// the borrower, and a vector with user's supplies to be withdrawn from the borrower and sent
+	/// to the liquidation pools. Balances are calculated in underlying assets.
+	///
+	/// Note: this function should be used after `accrue_interest_rate`.
 	fn calculate_partial_liquidation(
 		_borrower: &T::AccountId,
 		_borrower_loan_state: &UserLoanState,
@@ -503,9 +511,14 @@ impl<T: Config> Pallet<T> {
 		todo!()
 	}
 
-	/// TODO: implement
+	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
+	/// for complete liquidation.
 	///
-	/// Должна вызываться на свежем храгилище, после вызова accrue_interest.
+	/// Returns: vectors with user's borrows to be paid from the liquidation pools instead of
+	/// the borrower, and a vector with user's supplies to be withdrawn from the borrower and sent
+	/// to the liquidation pools. Balances are calculated in underlying assets.
+	///
+	/// Note: this function should be used after `accrue_interest_rate`.
 	fn calculate_complete_liquidation(
 		_borrower: &T::AccountId,
 		_borrower_loan_state: &UserLoanState,
@@ -513,9 +526,15 @@ impl<T: Config> Pallet<T> {
 		todo!()
 	}
 
-	/// TODO: implement
+	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
+	/// for "forgivable" complete liquidation. This function is called when user_total_borrow is
+	/// greater than user_total_supply.
 	///
-	/// Должна вызываться на свежем храгилище, после вызова accrue_interest.
+	/// Returns: vectors with user's borrows to be paid from the liquidation pools instead of
+	/// the borrower, and a vector with user's supplies to be withdrawn from the borrower and sent
+	/// to the liquidation pools. Balances are calculated in underlying assets.
+	///
+	/// Note: this function should be used after `accrue_interest_rate`.
 	fn calculate_forgivable_complete_liquidation(
 		_borrower: &T::AccountId,
 		_borrower_loan_state: &UserLoanState,
@@ -530,39 +549,39 @@ impl<T: Config> Pallet<T> {
 
 	/// Increases the parameter liquidation_attempts by one for user.
 	fn user_liquidation_attempts_increase_by_one(who: &T::AccountId) {
-		UserLiquidationAttempts::<T>::mutate(who, |p| *p += u8::one())
+		UserLiquidationAttemptsStorage::<T>::mutate(who, |p| *p += u8::one())
 	}
 
 	/// Resets the parameter liquidation_attempts equal to zero for user.
 	fn user_liquidation_attempts_reset_to_zero(who: &T::AccountId) {
-		UserLiquidationAttempts::<T>::mutate(who, |p| *p = u8::zero())
+		UserLiquidationAttemptsStorage::<T>::mutate(who, |p| *p = u8::zero())
 	}
 }
 
 impl<T: Config> RiskManagerStorageProvider for Pallet<T> {
 	fn create_pool(pool_id: CurrencyId, liquidation_threshold: Rate, liquidation_fee: Rate) -> DispatchResult {
 		ensure!(
-			!LiquidationFee::<T>::contains_key(pool_id),
+			!LiquidationFeeStorage::<T>::contains_key(pool_id),
 			Error::<T>::RiskManagerParamsAlreadyCreated
 		);
 		ensure!(
 			Self::is_valid_liquidation_fee(liquidation_fee),
 			Error::<T>::InvalidLiquidationFeeValue
 		);
-		LiquidationFee::<T>::insert(pool_id, liquidation_fee);
-		LiquidationThreshold::<T>::put(liquidation_threshold);
+		LiquidationFeeStorage::<T>::insert(pool_id, liquidation_fee);
+		LiquidationThresholdStorage::<T>::put(liquidation_threshold);
 		Ok(())
 	}
 
 	fn remove_pool(pool_id: CurrencyId) {
-		LiquidationFee::<T>::remove(pool_id)
+		LiquidationFeeStorage::<T>::remove(pool_id)
 	}
 }
 
 impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 	/// Gets user liquidation attempts.
 	fn get_user_liquidation_attempts(who: &T::AccountId) -> u8 {
-		Self::user_liquidation_attempts(who)
+		Self::user_liquidation_attempts_storage(who)
 	}
 
 	/// Mutates user liquidation attempts depending on user operation.

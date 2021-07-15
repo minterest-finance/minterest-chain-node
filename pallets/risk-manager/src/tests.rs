@@ -47,7 +47,7 @@ fn set_liquidation_fee_should_work() {
 			Rate::saturating_from_rational(3, 10)
 		));
 		assert_eq!(
-			TestRiskManager::liquidation_fee(DOT),
+			TestRiskManager::liquidation_fee_storage(DOT),
 			Rate::saturating_from_rational(3, 10)
 		);
 		let expected_event = Event::TestRiskManager(crate::Event::LiquidationFeeUpdated(
@@ -85,7 +85,7 @@ fn set_threshold_should_work() {
 			DOT,
 			Rate::one()
 		));
-		assert_eq!(TestRiskManager::liquidation_threshold(), Rate::one());
+		assert_eq!(TestRiskManager::liquidation_threshold_storage(), Rate::one());
 		let expected_event = Event::TestRiskManager(crate::Event::LiquidationThresholdUpdated(Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 

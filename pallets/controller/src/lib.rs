@@ -877,34 +877,31 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		Self::controller_params(pool_id).protocol_interest_threshold
 	}
 
-	/// TODO: cover with unit-tests.
-	/// Calls accrue_interest.
+	/// TODO: Raw implementation. Cover with unit-tests.
+	/// Calculates and gets all insolvent loans of users in the protocol. Calls a function
+	/// internally `accrue_interest_rate`. To determine that the loan is insolvent calls
+	/// the function `get_hypothetical_account_liquidity`, if the shortfall is greater than zero,
+	/// then such a loan is insolvent.
+	///
+	/// Returns: returns a unique collection of users with insolvent loan (as a btree set).
 	fn get_all_users_with_insolvent_loan() -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.into_iter()
 			.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
 			.try_fold(
 				BTreeSet::new(),
-				|acc, pool_id| -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
+				|protocol_users_with_shortfall, pool_id| -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
 					let pool_users = T::LiquidityPoolsManager::get_pool_members_with_loans(pool_id)?;
 					Self::accrue_interest_rate(pool_id)?;
-					let pool_users_with_loan = pool_users
+					let pool_users_with_shortfall = pool_users
 						.into_iter()
 						.filter(|user| {
-							if let Ok((_, shortfall)) = Self::get_hypothetical_account_liquidity(
-								&user,
-								pool_id,
-								Balance::zero(),
-								Balance::zero(),
-							) {
-								!shortfall.is_zero()
-							} else {
-								false
-							}
+							Self::get_hypothetical_account_liquidity(&user, pool_id, Balance::zero(), Balance::zero())
+								.map_or(false, |(_, shortfall)| !shortfall.is_zero())
 						})
 						.collect::<BTreeSet<T::AccountId>>();
-					acc.union(&pool_users_with_loan);
-					Ok(acc)
+					protocol_users_with_shortfall.union(&pool_users_with_shortfall);
+					Ok(protocol_users_with_shortfall)
 				},
 			)
 	}
