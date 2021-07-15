@@ -51,6 +51,7 @@ fn set_liquidation_fee_should_work() {
 			Rate::saturating_from_rational(3, 10)
 		);
 		let expected_event = Event::TestRiskManager(crate::Event::LiquidationFeeUpdated(
+			DOT,
 			Rate::saturating_from_rational(3, 10),
 		));
 		assert!(System::events().iter().any(|record| record.event == expected_event));

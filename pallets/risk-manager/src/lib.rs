@@ -54,13 +54,14 @@ pub struct LiquidationAmounts {
 /// Contains information about the current state of the borrower's loan.
 #[derive(Encode, Decode, RuntimeDebug, Clone, PartialOrd, PartialEq)]
 pub struct UserLoanState {
-	/// Vector of user currencies and loans
+	/// Vector of user loans. Contains information about the CurrencyId and the amount of loan.
 	loans: Vec<(CurrencyId, Balance)>,
-	/// Vector of user currencies and supplies
+	/// Vector of user supplies. Contains information about the CurrencyId and the amount of supply.
 	supplies: Vec<(CurrencyId, Balance)>,
 }
 
 impl UserLoanState {
+	/// Constructor.
 	fn new() -> Self {
 		Self {
 			loans: Vec::new(),
@@ -68,10 +69,12 @@ impl UserLoanState {
 		}
 	}
 
+	/// Returns user_total_borrow_usd.
 	fn total_borrow_usd(&self) -> Balance {
 		self.loans.iter().map(|(_, v)| v).sum()
 	}
 
+	/// Returns user_total_supply_usd.
 	fn total_supply_usd(&self) -> Balance {
 		self.supplies.iter().map(|(_, v)| v).sum()
 	}
@@ -145,18 +148,20 @@ pub mod module {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Liquidation fee has been successfully changed: \[liquidation_fee\]
-		LiquidationFeeUpdated(Rate),
+		/// Liquidation fee has been successfully changed: \[pool_id, liquidation_fee\]
+		LiquidationFeeUpdated(CurrencyId, Rate),
 		/// Liquidation threshold has been successfully changed: \[threshold\]
 		LiquidationThresholdUpdated(Rate),
 	}
 
 	/// The additional collateral which is taken from borrowers as a penalty for being liquidated.
+	/// Sets for each liquidity pool separately.
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_fee)]
 	pub(crate) type LiquidationFee<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Rate, ValueQuery>;
 
-	/// Step used in liquidation to protect the user from micro liquidations.
+	/// Step used in liquidation to protect the user from micro liquidations. One value for
+	/// the entire protocol.
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_threshold)]
 	pub(crate) type LiquidationThreshold<T: Config> = StorageValue<_, Rate, ValueQuery>;
@@ -200,7 +205,7 @@ pub mod module {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		/// Runs after every block. Start offchain worker to check unsafe loan and
+		/// Runs after every block. Start offchain worker to check insolvent loans and
 		/// submit unsigned tx to trigger liquidation.
 		fn offchain_worker(now: T::BlockNumber) {
 			if let Err(e) = Self::_offchain_worker() {
@@ -222,7 +227,7 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Set Liquidation fee that covers liquidation costs.
+		/// Set liquidation fee that covers liquidation costs.
 		///
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `liquidation_fee`: new liquidation fee value.
@@ -245,7 +250,7 @@ pub mod module {
 				Error::<T>::InvalidLiquidationFeeValue
 			);
 			LiquidationFee::<T>::insert(pool_id, liquidation_fee);
-			Self::deposit_event(Event::LiquidationFeeUpdated(liquidation_fee));
+			Self::deposit_event(Event::LiquidationFeeUpdated(pool_id, liquidation_fee));
 			Ok(().into())
 		}
 
@@ -337,8 +342,13 @@ impl<T: Config> Pallet<T> {
 			};
 		// call to change the offchain worker local storage
 		Self::do_liquidate(&borrower, liquidation_amounts.clone()).map_err(|_| OffchainErr::CheckFail)?;
+
 		Self::submit_unsigned_liquidation(&borrower, liquidation_amounts);
-		Self::mutate_depending_operation(None, &borrower, Operation::Repay);
+		<Self as UserLiquidationAttemptsManager<T::AccountId>>::mutate_depending_operation(
+			None,
+			&borrower,
+			Operation::Repay,
+		);
 		Ok(())
 	}
 
