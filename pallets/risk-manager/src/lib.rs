@@ -310,7 +310,7 @@ impl<T: Config> Pallet<T> {
 
 		//TODO: offchain worker locks
 
-		while let Some(borrower) = borrower_iterator.next() {
+		for borrower in borrower_iterator.next() {
 			Self::process_insolvent_loan(borrower)?;
 			//TODO: offchain worker guard try extend
 		}

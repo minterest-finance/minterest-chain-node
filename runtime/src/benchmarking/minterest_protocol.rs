@@ -90,7 +90,7 @@ runtime_benchmarks! {
 		set_balance(DOT, &lender, 50_000 * DOLLARS)?;
 
 		// Set liquidation_attempts grater than zero to reset them.
-		RiskManager::mutate_depending_operation(DOT, &lender, Operation::Repay);
+		RiskManager::mutate_depending_operation(Some(DOT), &lender, Operation::Repay);
 
 		System::set_block_number(10);
 
