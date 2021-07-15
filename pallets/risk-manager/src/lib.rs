@@ -478,35 +478,18 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config> RiskManager for Pallet<T> {
-	/// This is a part of a pool creation flow
-	/// Creates storage records for RiskManagerParams
-	fn create_pool(
-		currency_id: CurrencyId,
-		max_attempts: u8,
-		min_partial_liquidation_sum: Balance,
-		threshold: Rate,
-		liquidation_fee: Rate,
-	) -> DispatchResult {
+impl<T: Config> RiskManagerStorageProvider for Pallet<T> {
+	fn create_pool(pool_id: CurrencyId, liquidation_threshold: Rate, liquidation_fee: Rate) -> DispatchResult {
 		ensure!(
-			!RiskManagerParams::<T>::contains_key(currency_id),
-			Error::<T>::PoolAlreadyCreated
+			!LiquidationFee::<T>::contains_key(pool_id),
+			Error::<T>::RiskManagerParamsAlreadyCreated
 		);
 		ensure!(
 			Self::is_valid_liquidation_fee(liquidation_fee),
-			Error::<T>::InvalidLiquidationIncentiveValue
+			Error::<T>::InvalidLiquidationFeeValue
 		);
-
-		RiskManagerParams::<T>::insert(
-			currency_id,
-			RiskManagerData {
-				max_attempts,
-				min_partial_liquidation_sum,
-				threshold,
-				liquidation_fee,
-			},
-		);
-
+		LiquidationFee::<T>::insert(pool_id, liquidation_fee);
+		LiquidationThreshold::<T>::put(liquidation_threshold);
 		Ok(())
 	}
 

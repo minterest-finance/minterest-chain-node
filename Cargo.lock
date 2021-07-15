@@ -932,6 +932,7 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 name = "controller"
 version = "0.6.2"
 dependencies = [
+ "controller",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "liquidity-pools",
@@ -949,6 +950,7 @@ dependencies = [
  "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
+ "test-engine",
  "test-helper",
 ]
 
@@ -3759,6 +3761,7 @@ version = "0.5.0"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
+ "liquidity-pools",
  "minterest-primitives",
  "orml-currencies",
  "orml-tokens",
@@ -3772,6 +3775,7 @@ dependencies = [
  "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
+ "test-engine",
  "test-helper",
 ]
 
@@ -8791,6 +8795,40 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dfed899f0eb03f32ee8c6a0aabdb8a7949659e3466561fc0adf54e26d88c5f4"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "test-engine"
+version = "0.0.1"
+dependencies = [
+ "controller",
+ "dex",
+ "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
+ "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
+ "liquidation-pools",
+ "liquidity-pools",
+ "minterest-model",
+ "minterest-primitives",
+ "minterest-protocol",
+ "mnt-token",
+ "module-prices",
+ "module-vesting",
+ "orml-currencies",
+ "orml-oracle 0.4.1-dev",
+ "orml-tokens",
+ "orml-traits 0.4.1-dev",
+ "pallet-balances",
+ "pallet-traits",
+ "parity-scale-codec",
+ "prices-rpc-runtime-api",
+ "risk-manager",
+ "serde",
+ "sp-core 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
+ "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
+ "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
+ "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
+ "test-helper",
+ "whitelist-module",
 ]
 
 [[package]]
