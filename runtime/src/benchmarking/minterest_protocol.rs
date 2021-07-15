@@ -9,6 +9,7 @@ use crate::{
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
 use liquidity_pools::Pool;
+use minterest_primitives::Operation;
 use minterest_protocol::PoolInitData;
 use orml_benchmarking::runtime_benchmarks;
 use orml_traits::MultiCurrency;
@@ -89,7 +90,7 @@ runtime_benchmarks! {
 		set_balance(DOT, &lender, 50_000 * DOLLARS)?;
 
 		// Set liquidation_attempts grater than zero to reset them.
-		RiskManager::increase_by_one(&lender);
+		RiskManager::mutate_depending_operation(DOT, &lender, Operation::Repay);
 
 		System::set_block_number(10);
 

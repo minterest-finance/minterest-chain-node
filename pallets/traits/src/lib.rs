@@ -420,12 +420,6 @@ pub trait UserLiquidationAttemptsManager<AccountId> {
 	/// Gets user liquidation attempts.
 	fn get_user_liquidation_attempts(who: &AccountId) -> u8;
 
-	/// Increases the parameter liquidation_attempts by one for user.
-	fn increase_by_one(who: &AccountId);
-
-	/// Resets the parameter liquidation_attempts equal to zero for user.
-	fn reset_to_zero(who: &AccountId);
-
 	/// Mutates user liquidation attempts depending on user operation.
 	/// If the user makes a deposit to the collateral pool, then attempts are set to zero.
 	fn mutate_depending_operation(pool_id: Option<CurrencyId>, who: &AccountId, operation: Operation);
