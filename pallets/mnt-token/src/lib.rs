@@ -497,7 +497,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			return Ok(Balance::zero());
 		}
 
-		let borrow_balance = T::ControllerManager::borrow_balance_stored(&borrower, pool_id)?;
+		let user_borrow_underlying = T::ControllerManager::borrow_balance_stored(&borrower, pool_id)?;
 		let pool_borrow_index = T::LiquidityPoolsManager::get_pool_borrow_index(pool_id);
 		let borrower_amount = Price::from_inner(borrow_balance)
 			.checked_div(&pool_borrow_index)
