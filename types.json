@@ -3,38 +3,38 @@
         "Address": "MultiAddress",
         "TokenSymbol": {
             "_enum": {
-              "MNT": 0,
-              "DOT": 1,
-              "MDOT": 2,
-              "KSM": 3,
-              "MKSM": 4,
-              "BTC": 5,
-              "MBTC": 6,
-              "ETH": 7,
-              "METH": 8
+                "MNT": 0,
+                "DOT": 1,
+                "MDOT": 2,
+                "KSM": 3,
+                "MKSM": 4,
+                "BTC": 5,
+                "MBTC": 6,
+                "ETH": 7,
+                "METH": 8
             }
         },
         "CurrencyType": {
             "_enum": [
-              "Native",
-              "UnderlyingAsset",
-              "WrappedToken"
+                "Native",
+                "UnderlyingAsset",
+                "WrappedToken"
             ]
         },
         "CurrencyId": {
             "_enum": {
-              "Native": "TokenSymbol",
-              "UnderlyingAsset": "TokenSymbol",
-              "WrappedToken": "TokenSymbol"
+                "Native": "TokenSymbol",
+                "UnderlyingAsset": "TokenSymbol",
+                "WrappedToken": "TokenSymbol"
             }
         },
         "Operation": {
             "_enum": [
-              "Deposit",
-              "Redeem",
-              "Borrow",
-              "Repay",
-              "Transfer"
+                "Deposit",
+                "Redeem",
+                "Borrow",
+                "Repay",
+                "Transfer"
             ]
         },
         "PoolInitData": {
@@ -50,7 +50,7 @@
             "balance_ratio": "Rate",
             "max_attempts": "u8",
             "min_partial_liquidation_sum": "Balance",
-            "liquidation_threshold": "Rate",
+            "threshold": "Rate",
             "liquidation_fee": "Rate"
         },
         "Pool": {
@@ -139,8 +139,8 @@
         "OracleValue": "Price",
         "DataProviderId": {
             "_enum": [
-              "Aggregated",
-              "Minterest"
+                "Aggregated",
+                "Minterest"
             ]
         },
         "TimestampedValue": {
@@ -155,14 +155,14 @@
         },
         "VestingBucket": {
             "_enum": [
-              "Community",
-              "PrivateSale",
-              "PublicSale",
-              "MarketMaking",
-              "StrategicPartners",
-              "Marketing",
-              "Ecosystem",
-              "Team"
+                "Community",
+                "PrivateSale",
+                "PublicSale",
+                "MarketMaking",
+                "StrategicPartners",
+                "Marketing",
+                "Ecosystem",
+                "Team"
             ]
         },
         "VestingSchedule": {
