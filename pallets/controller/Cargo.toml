@@ -33,7 +33,9 @@ orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-modul
 liquidity-pools = { path = "../liquidity-pools" }
 minterest-model = { path = "../minterest-model" }
 test-helper = { path = "../../test-helper" }
+test-engine = { path = "../../test-engine" }
 mnt-token = { path = "../mnt-token" }
+controller = { path = "../controller"}
 
 [features]
 default = ["std"]
