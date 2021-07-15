@@ -343,7 +343,7 @@ impl<T: Config> Pallet<T> {
 			return Err(OffchainErr::NotValidator);
 		}
 
-		let mut borrower_iterator = T::ControllerManager::get_all_users_with_insolvent_loan()
+		let borrower_iterator = T::ControllerManager::get_all_users_with_insolvent_loan()
 			.map_err(|_| OffchainErr::CheckFail)?
 			.into_iter();
 
