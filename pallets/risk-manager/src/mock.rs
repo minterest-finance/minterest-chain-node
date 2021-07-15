@@ -18,17 +18,6 @@ pub use test_helper::*;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-/// An extrinsic type used for tests.
-pub type Extrinsic = TestXt<Call, ()>;
-
-impl<LocalCall> SendTransactionTypes<LocalCall> for Test
-where
-	Call: From<LocalCall>,
-{
-	type OverarchingCall = Call;
-	type Extrinsic = Extrinsic;
-}
-
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -45,6 +34,10 @@ frame_support::construct_runtime!(
 		TestController: controller::{Pallet, Storage, Call, Event, Config<T>},
 		TestMinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
 		TestMntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
+		TestMinterestProtocol: minterest_protocol::{Pallet, Storage, Call, Event<T>},
+		TestLiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, Config<T>},
+		TestWhitelist: whitelist_module::{Pallet, Storage, Call, Event<T>, Config<T>},
+		TestDex: dex::{Pallet, Storage, Call, Event<T>},
 	}
 );
 
@@ -73,6 +66,10 @@ mock_impl_risk_manager_config!(Test, ZeroAdmin);
 mock_impl_controller_config!(Test, ZeroAdmin);
 mock_impl_minterest_model_config!(Test, ZeroAdmin);
 mock_impl_mnt_token_config!(Test, ZeroAdmin);
+mock_impl_minterest_protocol_config!(Test, ZeroAdmin);
+mock_impl_liquidation_pools_config!(Test);
+mock_impl_whitelist_module_config!(Test, ZeroAdmin);
+mock_impl_dex_config!(Test);
 
 pub struct MockPriceSource;
 

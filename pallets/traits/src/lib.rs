@@ -435,3 +435,31 @@ pub trait RiskManagerStorageProvider {
 	/// risk-manager pallet.
 	fn remove_pool(pool_id: CurrencyId);
 }
+
+/// An abstraction of minterest-protocol basic functionalities.
+pub trait MinterestProtocolManager<AccountId> {
+	/// Borrows are repaid by another user (possibly the borrower).
+	///
+	/// - `who`: the account paying off the borrow.
+	/// - `borrower`: the account with the debt being payed off.
+	/// - `underlying_asset`: the currency ID of the underlying asset to repay.
+	/// - `repay_amount`: the amount of the underlying asset to repay.
+	fn do_repay(
+		who: &AccountId,
+		borrower: &AccountId,
+		underlying_asset: CurrencyId,
+		repay_amount: Balance,
+		all_assets: bool,
+	) -> Result<Balance, DispatchError>;
+
+	/// Withdraws wrapped tokens from the borrower's account. Transfers the corresponding number
+	/// of underlying assets from the liquidity pool to the liquidation pool. Called only during
+	/// the liquidation process.
+	///
+	/// - `borrower`: borrower's account being liquidated.
+	/// - `underlying_asset`: the currency ID of the underlying asset to seize.
+	/// - `seize_underlying`: the amount of the underlying asset to seize.
+	///
+	/// Note: this function should be used after `accrue_interest_rate`.
+	fn do_seize(borrower: &AccountId, underlying_asset: CurrencyId, seize_underlying: Balance) -> DispatchResult;
+}

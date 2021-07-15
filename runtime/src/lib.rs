@@ -461,6 +461,7 @@ impl risk_manager::Config for Runtime {
 	type ControllerManager = Controller;
 	type LiquidityPoolsManager = LiquidityPools;
 	type LiquidationPoolsManager = LiquidationPools;
+	type MinterestProtocolManager = MinterestProtocol;
 }
 
 parameter_types! {

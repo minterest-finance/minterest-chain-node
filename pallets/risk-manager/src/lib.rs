@@ -20,8 +20,8 @@ use minterest_primitives::{
 };
 pub use module::*;
 use pallet_traits::{
-	ControllerManager, CurrencyConverter, LiquidityPoolStorageProvider, PoolsManager, PricesManager,
-	RiskManagerStorageProvider, UserCollateral, UserLiquidationAttemptsManager,
+	ControllerManager, CurrencyConverter, LiquidityPoolStorageProvider, MinterestProtocolManager, PoolsManager,
+	PricesManager, RiskManagerStorageProvider, UserCollateral, UserLiquidationAttemptsManager,
 };
 use sp_runtime::traits::{One, StaticLookup, Zero};
 #[cfg(feature = "std")]
@@ -77,14 +77,12 @@ impl UserLoanState {
 	}
 }
 
-type MinterestProtocol<T> = minterest_protocol::Pallet<T>;
-
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + minterest_protocol::Config + SendTransactionTypes<Call<Self>> {
+	pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// A configuration for base priority of unsigned transactions.
@@ -127,6 +125,9 @@ pub mod module {
 
 		/// Provides the basic liquidation pools functionality.
 		type LiquidationPoolsManager: PoolsManager<Self::AccountId>;
+
+		/// Provides the basic minterest protocol functionality.
+		type MinterestProtocolManager: MinterestProtocolManager<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -413,7 +414,7 @@ impl<T: Config> Pallet<T> {
 			.borrower_loans_to_repay_underlying
 			.into_iter()
 			.try_for_each(|(pool_id, repay_underlying)| -> DispatchResult {
-				<MinterestProtocol<T>>::do_repay(
+				T::MinterestProtocolManager::do_repay(
 					&liquidation_pool_account_id,
 					&borrower,
 					pool_id,
@@ -426,7 +427,7 @@ impl<T: Config> Pallet<T> {
 			.borrower_supplies_to_seize_underlying
 			.into_iter()
 			.try_for_each(|(pool_id, seize_underlying)| -> DispatchResult {
-				<MinterestProtocol<T>>::do_seize(&borrower, pool_id, seize_underlying)?;
+				T::MinterestProtocolManager::do_seize(&borrower, pool_id, seize_underlying)?;
 				Ok(())
 			})
 	}

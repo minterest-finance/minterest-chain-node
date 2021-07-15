@@ -278,12 +278,15 @@ macro_rules! mock_impl_risk_manager_config {
 		impl risk_manager::Config for $target {
 			type Event = Event;
 			type UnsignedPriority = RiskManagerPriority;
+			type PriceSource = MockPriceSource;
 			type UserCollateral = liquidity_pools::Pallet<$target>;
 			type PartialLiquidationMinSum = PartialLiquidationMinSum;
 			type PartialLiquidationMaxAttempts = PartialLiquidationMaxAttempts;
 			type MaxLiquidationFee = MaxLiquidationFee;
 			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
 			type ControllerManager = controller::Pallet<$target>;
+			type LiquidityPoolsManager = liquidity_pools::Pallet<$target>;
+			type LiquidationPoolsManager = liquidation_pools::Pallet<$target>;
 		}
 	};
 }
