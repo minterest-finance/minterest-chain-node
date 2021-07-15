@@ -28,7 +28,8 @@ use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, Balance, Cur
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	Borrowing, CurrencyConverter, LiquidityPoolStorageProvider, PoolsManager, PricesManager, UserStorageProvider,
+	Borrowing, CurrencyConverter, LiquidityPoolStorageProvider, PoolsManager, PricesManager, UserCollateral,
+	UserStorageProvider,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -65,9 +66,6 @@ pub struct PoolUserData {
 
 	/// Whether or not pool liquidity is used as a collateral.
 	pub is_collateral: bool,
-
-	/// Number of partial liquidations for debt
-	pub liquidation_attempts: u8,
 }
 
 type RateResult = result::Result<Rate, DispatchError>;
@@ -241,74 +239,6 @@ impl<T: Config> UserStorageProvider<T::AccountId, PoolUserData> for Pallet<T> {
 
 	fn get_user_borrow_balance(who: &T::AccountId, pool_id: CurrencyId) -> Balance {
 		Self::pool_user_data(pool_id, who).borrowed
-	}
-
-	fn get_user_liquidation_attempts(who: &T::AccountId, pool_id: CurrencyId) -> u8 {
-		Self::pool_user_data(pool_id, who).liquidation_attempts
-	}
-
-	fn get_user_collateral_pools(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
-		let mut pools: Vec<(CurrencyId, Balance)> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.iter()
-			.filter(|&underlying_id| Self::pool_exists(underlying_id) && Self::is_pool_collateral(&who, *underlying_id))
-			.filter_map(|&pool_id| {
-				let wrapped_id = pool_id.wrapped_asset()?;
-
-				// We calculate the value of the user's wrapped tokens in USD.
-				let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id, &who);
-				if user_supply_wrap.is_zero() {
-					return None;
-				}
-				let exchange_rate = Self::get_exchange_rate(pool_id).ok()?;
-				let oracle_price = T::PriceSource::get_underlying_price(pool_id)?;
-				let user_supply_in_usd = Self::wrapped_to_usd(user_supply_wrap, exchange_rate, oracle_price).ok()?;
-
-				Some((pool_id, user_supply_in_usd))
-			})
-			.collect();
-
-		// Sorted array of pools in descending order.
-		pools.sort_by(|x, y| y.1.cmp(&x.1));
-
-		Ok(pools.iter().map(|pool| pool.0).collect::<Vec<CurrencyId>>())
-	}
-
-	fn is_pool_collateral(who: &T::AccountId, pool_id: CurrencyId) -> bool {
-		Self::pool_user_data(pool_id, who).is_collateral
-	}
-
-	fn check_user_has_collateral(who: &T::AccountId) -> bool {
-		for &pool_id in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.iter()
-			.filter(|&underlying_id| Self::pool_exists(underlying_id) && Self::is_pool_collateral(&who, *underlying_id))
-		{
-			if let Some(wrapped_id) = pool_id.wrapped_asset() {
-				if !T::MultiCurrency::free_balance(wrapped_id, &who).is_zero() {
-					return true;
-				}
-			}
-		}
-		false
-	}
-
-	fn increase_user_liquidation_attempts(pool_id: CurrencyId, who: &T::AccountId) {
-		PoolUserParams::<T>::mutate(pool_id, &who, |p| {
-			p.liquidation_attempts += u8::one();
-		})
-	}
-
-	fn reset_user_liquidation_attempts(pool_id: CurrencyId, who: &T::AccountId) {
-		PoolUserParams::<T>::mutate(pool_id, &who, |p| {
-			p.liquidation_attempts = u8::zero();
-		})
-	}
-
-	fn enable_is_collateral(who: &T::AccountId, pool_id: CurrencyId) {
-		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = true)
-	}
-
-	fn disable_is_collateral(who: &T::AccountId, pool_id: CurrencyId) {
-		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = false);
 	}
 }
 
@@ -534,5 +464,59 @@ impl<T: Config> CurrencyConverter for Pallet<T> {
 		let underlying_amount = Self::usd_to_underlying(usd_amount, oracle_price)?;
 		let wrapped_amount = Self::underlying_to_wrapped(underlying_amount, exchange_rate)?;
 		Ok(wrapped_amount)
+	}
+}
+
+impl<T: Config> UserCollateral<T::AccountId> for Pallet<T> {
+	fn get_user_collateral_pools(who: &T::AccountId) -> result::Result<Vec<CurrencyId>, DispatchError> {
+		let mut pools: Vec<(CurrencyId, Balance)> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.iter()
+			.filter(|&underlying_id| Self::pool_exists(underlying_id) && Self::is_pool_collateral(&who, *underlying_id))
+			.filter_map(|&pool_id| {
+				let wrapped_id = pool_id.wrapped_asset()?;
+
+				// We calculate the value of the user's wrapped tokens in USD.
+				let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id, &who);
+				if user_supply_wrap.is_zero() {
+					return None;
+				}
+				let exchange_rate = Self::get_exchange_rate(pool_id).ok()?;
+				let oracle_price = T::PriceSource::get_underlying_price(pool_id)?;
+				let user_supply_in_usd = Self::wrapped_to_usd(user_supply_wrap, exchange_rate, oracle_price).ok()?;
+
+				Some((pool_id, user_supply_in_usd))
+			})
+			.collect();
+
+		// Sorted array of pools in descending order.
+		pools.sort_by(|x, y| y.1.cmp(&x.1));
+
+		Ok(pools.iter().map(|pool| pool.0).collect::<Vec<CurrencyId>>())
+	}
+
+	fn is_pool_collateral(who: &T::AccountId, pool_id: CurrencyId) -> bool {
+		Self::pool_user_data(pool_id, who).is_collateral
+	}
+
+	fn check_user_has_collateral(who: &T::AccountId) -> bool {
+		for &pool_id in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.iter()
+			.filter(|&underlying_id| Self::pool_exists(underlying_id) && Self::is_pool_collateral(&who, *underlying_id))
+		{
+			if let Some(wrapped_id) = pool_id.wrapped_asset() {
+				if !T::MultiCurrency::free_balance(wrapped_id, &who).is_zero() {
+					return true;
+				}
+			}
+		}
+		false
+	}
+
+	fn enable_is_collateral(who: &T::AccountId, pool_id: CurrencyId) {
+		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = true)
+	}
+
+	fn disable_is_collateral(who: &T::AccountId, pool_id: CurrencyId) {
+		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = false);
 	}
 }

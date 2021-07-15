@@ -15,8 +15,8 @@ pub mod time {
 	pub const HOURS: BlockNumber = MINUTES * 60;
 	pub const DAYS: BlockNumber = HOURS * 24;
 
-	pub const BLOCKS_PER_YEAR: u128 = 365 * DAYS as u128;
 	// BLOCKS_PER_YEAR has to be 5256000
+	pub const BLOCKS_PER_YEAR: u128 = 365 * DAYS as u128;
 }
 
 pub mod currency {
@@ -25,6 +25,22 @@ pub mod currency {
 	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 	pub const CENTS: Balance = DOLLARS / 100;
 	pub const MILLICENTS: Balance = CENTS / 1000;
+}
+
+pub mod liquidation {
+	use crate::constants::currency::DOLLARS;
+	use crate::{Balance, Rate};
+
+	/// Minimal sum for partial liquidation.
+	/// Loans with amount below this parameter will be liquidate in full.
+	pub const PARTIAL_LIQUIDATION_MIN_SUM: Balance = 100_000 * DOLLARS;
+
+	/// The maximum number of partial liquidations a user has. After reaching this parameter,
+	/// a complete liquidation occurs.
+	pub const PARTIAL_LIQUIDATION_MAX_ATTEMPTS: u8 = 3_u8;
+
+	/// Maximum liquidation fee = 0.5 (50%)
+	pub const MAX_LIQUIDATION_FEE: Rate = Rate::from_inner(500_000_000_000_000_000);
 }
 
 pub mod fee {

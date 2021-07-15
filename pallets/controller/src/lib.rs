@@ -25,7 +25,7 @@ pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
 	ControllerManager, CurrencyConverter, LiquidityPoolStorageProvider, MinterestModelManager, MntManager,
-	PoolsManager, PricesManager, UserStorageProvider,
+	PoolsManager, PricesManager, UserCollateral, UserStorageProvider,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -131,7 +131,8 @@ pub mod module {
 		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, Pool>
 			+ PoolsManager<Self::AccountId>
 			+ CurrencyConverter
-			+ UserStorageProvider<Self::AccountId, PoolUserData>;
+			+ UserStorageProvider<Self::AccountId, PoolUserData>
+			+ UserCollateral<Self::AccountId>;
 
 		/// Provides the basic minterest model functionality.
 		type MinterestModelManager: MinterestModelManager;

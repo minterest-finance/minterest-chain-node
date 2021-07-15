@@ -65,7 +65,7 @@ pub trait LiquidityPoolStorageProvider<AccountId, Pool> {
 
 	/// This is a part of a pool creation flow.
 	/// Creates storage records for LiquidityPool.
-	fn create_pool(currency_id: CurrencyId) -> DispatchResult;
+	fn create_pool(pool_id: CurrencyId) -> DispatchResult;
 
 	/// Removes pool data.
 	fn remove_pool_data(pool_id: CurrencyId);
@@ -93,10 +93,10 @@ pub trait UserStorageProvider<AccountId, PoolUserData> {
 
 	/// Gets total user borrowing.
 	fn get_user_borrow_balance(who: &AccountId, pool_id: CurrencyId) -> Balance;
+}
 
-	/// Gets user liquidation attempts.
-	fn get_user_liquidation_attempts(who: &AccountId, pool_id: CurrencyId) -> u8;
-
+/// Provides functionality for working with a user's collateral pools.
+pub trait UserCollateral<AccountId> {
 	/// Returns an array of collateral pools for the user.
 	/// The array is sorted in descending order by the number of wrapped tokens in USD.
 	///
@@ -109,14 +109,6 @@ pub trait UserStorageProvider<AccountId, PoolUserData> {
 	/// Checks if the user has the collateral.
 	fn check_user_has_collateral(who: &AccountId) -> bool;
 
-	/// Increases the parameter liquidation_attempts by one for user. Used in case of partial
-	/// liquidation.
-	fn increase_user_liquidation_attempts(pool_id: CurrencyId, who: &AccountId);
-
-	/// Resets the parameter liquidation_attempts equal to zero for user. Used in case of complete
-	/// liquidation.
-	fn reset_user_liquidation_attempts(pool_id: CurrencyId, who: &AccountId);
-
 	/// Sets the parameter `is_collateral` to `true`.
 	fn enable_is_collateral(who: &AccountId, pool_id: CurrencyId);
 
@@ -128,7 +120,7 @@ pub trait UserStorageProvider<AccountId, PoolUserData> {
 pub trait LiquidationPoolsManager<AccountId>: PoolsManager<AccountId> {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for LiquidationPoolsData
-	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult;
+	fn create_pool(pool_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult;
 }
 
 /// An abstraction of prices basic functionalities.
@@ -170,7 +162,7 @@ pub trait ControllerManager<AccountId> {
 	/// Creates storage records for ControllerParams and PauseKeepers
 	/// All operations are unpaused after this function call
 	fn create_pool(
-		currency_id: CurrencyId,
+		pool_id: CurrencyId,
 		protocol_interest_factor: Rate,
 		max_borrow_rate: Rate,
 		collateral_factor: Rate,
@@ -249,25 +241,12 @@ pub trait MntManager<AccountId> {
 	fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Price, Price), DispatchError>;
 }
 
-/// An abstraction of risk-manager basic functionalities.
-pub trait RiskManager {
-	/// This is a part of a pool creation flow
-	/// Creates storage records for RiskManagerParams
-	fn create_pool(
-		currency_id: CurrencyId,
-		max_attempts: u8,
-		min_partial_liquidation_sum: Balance,
-		threshold: Rate,
-		liquidation_fee: Rate,
-	) -> DispatchResult;
-}
-
 /// An abstraction of minterest-model basic functionalities.
 pub trait MinterestModelManager {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for MinterestModelParams
 	fn create_pool(
-		currency_id: CurrencyId,
+		pool_id: CurrencyId,
 		kink: Rate,
 		base_rate_per_block: Rate,
 		multiplier_per_block: Rate,
@@ -371,4 +350,26 @@ pub trait CurrencyConverter {
 	///
 	/// Returns `usd_amount / oracle_price / exchange_rate `
 	fn usd_to_wrapped(usd_amount: Balance, exchange_rate: Rate, oracle_price: Price) -> Result<Balance, DispatchError>;
+}
+
+/// Provides functionality to manage the number of attempts to partially liquidation a user's loan.
+pub trait UserLiquidationAttemptsManager<AccountId> {
+	/// Gets user liquidation attempts.
+	fn get_user_liquidation_attempts(who: &AccountId) -> u8;
+
+	/// Mutates user liquidation attempts depending on user operation.
+	/// If the user makes a deposit to the collateral pool, then attempts are set to zero.
+	/// TODO: a liquidation handler will be added in the future
+	fn mutate_depending_operation(pool_id: CurrencyId, who: &AccountId, operation: Operation);
+}
+
+/// Creates storage records for risk-manager pallet. This is a part of a pool creation flow.
+pub trait RiskManagerStorageProvider {
+	/// Creates storage records for risk-manager pallet: `liquidation_fee`
+	/// and `liquidation_threshold`
+	fn create_pool(pool_id: CurrencyId, liquidation_threshold: Rate, liquidation_fee: Rate) -> DispatchResult;
+
+	/// Removes parameter values `liquidation_fee` and `liquidation_threshold` in the
+	/// risk-manager pallet.
+	fn remove_pool(pool_id: CurrencyId);
 }

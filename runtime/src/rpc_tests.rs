@@ -16,9 +16,8 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Interest, Operation, Price};
 use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
 use orml_traits::MultiCurrency;
-use pallet_traits::{LiquidityPoolStorageProvider, PoolsManager, PricesManager, UserStorageProvider};
+use pallet_traits::{LiquidityPoolStorageProvider, PoolsManager, PricesManager, UserCollateral};
 use prices_rpc_runtime_api::runtime_decl_for_PricesRuntimeApi::PricesRuntimeApi;
-use risk_manager::RiskManagerData;
 use sp_runtime::{
 	traits::{One, Zero},
 	DispatchResult, FixedPointNumber,
@@ -41,6 +40,8 @@ struct ExtBuilder {
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	minted_pools: Vec<(CurrencyId, Balance)>,
+	liquidation_fee: Vec<(CurrencyId, Rate)>,
+	liquidation_threshold: Rate,
 }
 
 impl Default for ExtBuilder {
@@ -72,6 +73,13 @@ impl Default for ExtBuilder {
 				(ETH, 2 * DOLLARS),
 				(BTC, 2 * DOLLARS),
 			],
+			liquidation_fee: vec![
+				(DOT, Rate::saturating_from_rational(5, 100)),
+				(ETH, Rate::saturating_from_rational(5, 100)),
+				(BTC, Rate::saturating_from_rational(5, 100)),
+				(KSM, Rate::saturating_from_rational(5, 100)),
+			],
+			liquidation_threshold: Rate::saturating_from_rational(3, 100),
 		}
 	}
 }
@@ -235,35 +243,8 @@ impl ExtBuilder {
 		.unwrap();
 
 		risk_manager::GenesisConfig::<Runtime> {
-			risk_manager_params: vec![
-				(
-					DOT,
-					RiskManagerData {
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100_000 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
-					},
-				),
-				(
-					ETH,
-					RiskManagerData {
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100_000 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
-					},
-				),
-				(
-					BTC,
-					RiskManagerData {
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100_000 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
-					},
-				),
-			],
+			liquidation_fee: self.liquidation_fee,
+			liquidation_threshold: self.liquidation_threshold,
 			_phantom: Default::default(),
 		}
 		.assimilate_storage(&mut t)

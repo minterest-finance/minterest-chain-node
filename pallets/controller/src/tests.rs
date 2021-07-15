@@ -2,8 +2,7 @@
 use controller::{Error, Event};
 use frame_support::{assert_err, assert_noop, assert_ok};
 pub use minterest_primitives::{Balance, CurrencyId, Interest, Operation, Rate};
-use pallet_traits::ControllerManager;
-use pallet_traits::UserStorageProvider;
+use pallet_traits::{ControllerManager, UserCollateral};
 use sp_runtime::DispatchError::BadOrigin;
 use sp_runtime::{
 	traits::{One, Zero},
@@ -36,7 +35,6 @@ impl ControllerPresets for ExtBuilderNew {
 				Balance::zero(), // borrowed
 				Rate::zero(),    // interest_index
 				false,           // is_collateral
-				0,               // liquidation_attempts
 			)
 			.set_controller_data(
 				DOT,                                     // currency_id
@@ -64,7 +62,6 @@ impl ControllerPresets for ExtBuilderNew {
 				Balance::zero(), // borrowed
 				Rate::zero(),    // interest_index
 				false,           // is_collateral
-				0,               // liquidation_attempts
 			)
 			.set_pool_balance(ETH, dollars(20_u128))
 			.set_controller_data(
@@ -285,7 +282,6 @@ fn borrow_balance_stored_with_zero_balance_should_work() {
 			Balance::zero(), // borrowed
 			Rate::zero(),    // interest_index
 			true,            // is_collateral
-			0,               // liquidation_attempts
 		)
 		.build()
 		.execute_with(|| {
@@ -309,7 +305,6 @@ fn borrow_balance_stored_should_work() {
 			100,                                  // borrowed
 			Rate::saturating_from_rational(4, 1), // interest_index
 			true,                                 // is_collateral
-			0,                                    // liquidation_attempts
 		)
 		.build()
 		.execute_with(|| {
@@ -333,7 +328,6 @@ fn borrow_balance_stored_fails_if_num_overflow() {
 			Balance::max_value(),                 // borrowed
 			Rate::saturating_from_rational(2, 1), // interest_index
 			true,                                 // is_collateral
-			0,                                    // liquidation_attempts
 		)
 		.init_pool(
 			BTC,                                  // pool_id
@@ -347,7 +341,6 @@ fn borrow_balance_stored_fails_if_num_overflow() {
 			100,          // borrowed
 			Rate::zero(), // interest_index
 			true,         // is_collateral
-			0,            // liquidation_attempts
 		)
 		.build()
 		.execute_with(|| {
@@ -411,7 +404,6 @@ fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work(
 			Balance::zero(), // borrowed
 			Rate::zero(),    // interest_index
 			true,            // is_collateral
-			0,               // liquidation_attempts
 		)
 		.set_pool_user_data(
 			BTC,             // pool_id
@@ -419,7 +411,6 @@ fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work(
 			Balance::zero(), // borrowed
 			Rate::zero(),    // interest_index
 			false,           // is_collateral
-			0,               // liquidation_attempts
 		)
 		.set_controller_data(
 			DOT,                                     // currency_id
@@ -529,7 +520,6 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 			30,          // borrowed
 			Rate::one(), // interest_index
 			false,       // is_collateral
-			0,           // liquidation_attempts
 		)
 		.set_controller_data(
 			DOT,                                     // currency_id

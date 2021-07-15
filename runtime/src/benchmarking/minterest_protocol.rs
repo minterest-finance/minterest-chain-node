@@ -3,16 +3,19 @@ use super::utils::{
 };
 use crate::{
 	AccountId, Balance, Currencies, EnabledUnderlyingAssetsIds, EnabledWrappedTokensId, LiquidityPools,
-	LiquidityPoolsPalletId, MinterestProtocol, MntTokenPalletId, Origin, Rate, Runtime, System, Whitelist, BTC,
-	DOLLARS, DOT, ETH, KSM, MBTC, MDOT, MNT,
+	LiquidityPoolsPalletId, MinterestProtocol, MntTokenPalletId, Origin, Rate, RiskManager, Runtime, System, Whitelist,
+	BTC, DOLLARS, DOT, ETH, KSM, MBTC, MDOT, MNT,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
 use liquidity_pools::Pool;
+use minterest_primitives::Operation;
 use minterest_protocol::PoolInitData;
 use orml_benchmarking::runtime_benchmarks;
 use orml_traits::MultiCurrency;
-use pallet_traits::{LiquidityPoolStorageProvider, UserStorageProvider};
+use pallet_traits::{
+	LiquidityPoolStorageProvider, RiskManagerStorageProvider, UserLiquidationAttemptsManager, UserStorageProvider,
+};
 use sp_runtime::{
 	traits::{AccountIdConversion, One, Zero},
 	FixedPointNumber,
@@ -54,11 +57,11 @@ runtime_benchmarks! {
 	{ Runtime, minterest_protocol }
 
 	create_pool {
+		RiskManager::remove_pool(DOT);
 		LiquidityPools::remove_pool_data(DOT);
 		liquidation_pools::LiquidationPoolsData::<Runtime>::remove(DOT);
 		controller::ControllerParams::<Runtime>::remove(DOT);
 		minterest_model::MinterestModelParams::<Runtime>::remove(DOT);
-		risk_manager::RiskManagerParams::<Runtime>::remove(DOT);
 	}: _(
 		RawOrigin::Root,
 		DOT,
@@ -70,13 +73,11 @@ runtime_benchmarks! {
 			protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 			max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 			collateral_factor: Rate::saturating_from_rational(9, 10),
-			protocol_interest_threshold: 100000,
+			protocol_interest_threshold: 100_000,
 			deviation_threshold: Rate::saturating_from_rational(5, 100),
 			balance_ratio: Rate::saturating_from_rational(2, 10),
-			max_attempts: 3,
-			min_partial_liquidation_sum: 100,
-			threshold: Rate::saturating_from_rational(103, 100),
-			liquidation_fee: Rate::saturating_from_rational(105, 100),
+			liquidation_threshold: Rate::saturating_from_rational(3, 100),
+			liquidation_fee: Rate::saturating_from_rational(5, 100),
 		}
 	)
 
@@ -89,7 +90,7 @@ runtime_benchmarks! {
 		set_balance(DOT, &lender, 50_000 * DOLLARS)?;
 
 		// Set liquidation_attempts grater than zero to reset them.
-		LiquidityPools::increase_user_liquidation_attempts(DOT, &lender);
+		RiskManager::mutate_depending_operation(DOT, &lender, Operation::Repay);
 
 		System::set_block_number(10);
 
