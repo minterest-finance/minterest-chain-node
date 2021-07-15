@@ -34,6 +34,7 @@ controller = { path = "../controller" }
 minterest-model = { path = "../minterest-model" }
 dex = { path = "../dex" }
 mnt-token = { path = "../mnt-token" }
+risk-manager = { path = "../risk-manager" }
 test-helper = { path = "../../test-helper" }
 whitelist-module = { path = "../whitelist" }
 

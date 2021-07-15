@@ -19,12 +19,15 @@
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
 use liquidity_pools::{Pool, PoolUserData};
-use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, Operation, Rate};
+use minterest_primitives::{
+	currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, Operation, Operation::Deposit, Rate,
+};
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
 	Borrowing, ControllerManager, CurrencyConverter, LiquidationPoolsManager, LiquidityPoolStorageProvider,
-	MinterestModelManager, MntManager, PoolsManager, RiskManager, UserStorageProvider, WhitelistManager,
+	MinterestModelManager, MntManager, PoolsManager, RiskManagerStorageProvider, UserCollateral,
+	UserLiquidationAttemptsManager, UserStorageProvider, WhitelistManager,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -62,9 +65,7 @@ pub struct PoolInitData {
 	pub deviation_threshold: Rate,
 	pub balance_ratio: Rate,
 	// Risk manager storage data
-	pub max_attempts: u8,
-	pub min_partial_liquidation_sum: Balance,
-	pub threshold: Rate,
+	pub liquidation_threshold: Rate,
 	pub liquidation_fee: Rate,
 }
 
@@ -88,7 +89,8 @@ pub mod module {
 			+ PoolsManager<Self::AccountId>
 			+ CurrencyConverter
 			+ Borrowing<Self::AccountId>
-			+ UserStorageProvider<Self::AccountId, PoolUserData>;
+			+ UserStorageProvider<Self::AccountId, PoolUserData>
+			+ UserCollateral<Self::AccountId>;
 
 		/// Provides MNT token distribution functionality.
 		type MntManager: MntManager<Self::AccountId>;
@@ -100,17 +102,21 @@ pub mod module {
 		type ControllerManager: ControllerManager<Self::AccountId>;
 
 		/// Public API of risk manager pallet.
-		type RiskManagerAPI: RiskManager;
-
-		/// Public API of risk manager pallet.
 		type MinterestModelManager: MinterestModelManager;
 
 		/// The origin which may create pools. Root or
 		/// Half Minterest Council can always do this.
 		type CreatePoolOrigin: EnsureOrigin<Self::Origin>;
 
+		/// Provides functionality to manage the number of attempts to partially
+		/// liquidation a user's loan.
+		type UserLiquidationAttempts: UserLiquidationAttemptsManager<Self::AccountId>;
+
 		/// Public API of whitelist module.
 		type WhitelistManager: WhitelistManager<Self::AccountId>;
+
+		/// Public API of controller pallet.
+		type RiskManager: RiskManagerStorageProvider;
 	}
 
 	#[pallet::error]
@@ -572,14 +578,7 @@ impl<T: Config> Pallet<T> {
 			pool_data.protocol_interest_threshold,
 		)?;
 		T::ManagerLiquidationPools::create_pool(pool_id, pool_data.deviation_threshold, pool_data.balance_ratio)?;
-		T::RiskManagerAPI::create_pool(
-			pool_id,
-			pool_data.max_attempts,
-			pool_data.min_partial_liquidation_sum,
-			pool_data.threshold,
-			pool_data.liquidation_fee,
-		)?;
-
+		T::RiskManager::create_pool(pool_id, pool_data.liquidation_threshold, pool_data.liquidation_fee)?;
 		Ok(())
 	}
 
@@ -642,13 +641,7 @@ impl<T: Config> Pallet<T> {
 		)?;
 
 		T::MultiCurrency::deposit(wrapped_id, &who, deposit_wrapped_amount)?;
-
-		// Reset liquidation_attempts if it's greater than zero.
-		let mut pool_params = T::ManagerLiquidityPools::get_user_data(underlying_asset, &who);
-		if !pool_params.liquidation_attempts.is_zero() {
-			pool_params.liquidation_attempts = u8::zero();
-			T::ManagerLiquidityPools::set_user_data(&who, underlying_asset, pool_params);
-		}
+		T::UserLiquidationAttempts::mutate_depending_operation(underlying_asset, &who, Deposit);
 
 		Ok((deposit_underlying_amount, wrapped_id, deposit_wrapped_amount))
 	}

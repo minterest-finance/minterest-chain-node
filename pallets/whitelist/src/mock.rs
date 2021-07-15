@@ -9,7 +9,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use test_helper::{mock_impl_balances_config, mock_impl_system_config, mock_impl_whitelist_module_config};
+pub use test_helper::*;
 
 pub type AccountId = u64;
 
@@ -35,17 +35,6 @@ mock_impl_whitelist_module_config!(Test, ZeroAdmin);
 
 ord_parameter_types! {
 	pub const ZeroAdmin: AccountId = 0;
-}
-
-pub const ADMIN: AccountId = 0;
-pub const ALICE: AccountId = 1;
-pub const BOB: AccountId = 2;
-pub const CHARLIE: AccountId = 3;
-pub fn admin() -> Origin {
-	Origin::signed(ADMIN)
-}
-pub fn alice() -> Origin {
-	Origin::signed(ALICE)
 }
 
 #[derive(Default)]

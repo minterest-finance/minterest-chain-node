@@ -256,9 +256,10 @@ macro_rules! mock_impl_minterest_protocol_config {
 			type MntManager = mnt_token::Pallet<$target>;
 			type ProtocolWeightInfo = ();
 			type ControllerManager = controller::Pallet<$target>;
-			type RiskManagerAPI = TestRiskManager;
 			type MinterestModelManager = TestMinterestModel;
 			type CreatePoolOrigin = EnsureSignedBy<$acc, AccountId>;
+			type UserLiquidationAttempts = risk_manager::Pallet<$target>;
+			type RiskManager = risk_manager::Pallet<$target>;
 			type WhitelistManager = whitelist_module::Pallet<$target>;
 		}
 	};
@@ -268,21 +269,18 @@ macro_rules! mock_impl_minterest_protocol_config {
 macro_rules! mock_impl_risk_manager_config {
 	($target:ty, $acc:ident) => {
 		parameter_types! {
-			pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
-			pub const MaxDurationMs: u64 = 1000;
+			pub const PartialLiquidationMinSum: Balance = 100_000 * DOLLARS;
+			pub const PartialLiquidationMaxAttempts: u8 = 3_u8;
+			pub const MaxLiquidationFee: Rate = Rate::from_inner(500_000_000_000_000_000);
 		}
 
 		impl risk_manager::Config for $target {
 			type Event = Event;
-			type PriceSource = MockPriceSource;
-			type UnsignedPriority = RiskManagerPriority;
-			type LiquidationPoolsManager = liquidation_pools::Pallet<$target>;
-			type LiquidityPoolsManager = liquidity_pools::Pallet<$target>;
-			type MntManager = mnt_token::Pallet<$target>;
+			type UserCollateral = liquidity_pools::Pallet<$target>;
+			type PartialLiquidationMinSum = PartialLiquidationMinSum;
+			type PartialLiquidationMaxAttempts = PartialLiquidationMaxAttempts;
+			type MaxLiquidationFee = MaxLiquidationFee;
 			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
-			type RiskManagerWeightInfo = ();
-			type ControllerManager = controller::Pallet<$target>;
-			type OffchainWorkerMaxDurationMs = MaxDurationMs;
 		}
 	};
 }
