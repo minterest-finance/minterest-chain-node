@@ -17,11 +17,12 @@ pub use minterest_primitives::{
 	currency::CurrencyType::{UnderlyingAsset, WrappedToken},
 	Balance, CurrencyId, Price, Rate,
 };
-use orml_traits::parameter_type_with_key;
+use orml_traits::{parameter_type_with_key, DataFeeder, DataProvider};
 use pallet_traits::{PoolsManager, PricesManager};
 use sp_runtime::{
 	testing::{Header, TestXt, H256},
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One, Zero},
+	FixedPointNumber,
 };
 use sp_std::{cell::RefCell, marker::PhantomData};
 
@@ -50,6 +51,7 @@ construct_runtime!(
 		TestMntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 		TestRiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>},
 		TestWhitelist: whitelist_module::{Pallet, Storage, Call, Event<T>, Config<T>},
+		TestPrices: module_prices::{Pallet, Storage, Call, Event<T>},
 	}
 );
 
@@ -104,7 +106,7 @@ mock_impl_mnt_token_config!(TestRuntime, OneAlice);
 mock_impl_risk_manager_config!(TestRuntime, OneAlice);
 mock_impl_whitelist_module_config!(TestRuntime, OneAlice);
 mock_impl_minterest_protocol_config!(TestRuntime, OneAlice);
-
+mock_impl_prices_module_config!(TestRuntime, OneAlice);
 // -----------------------------------------------------------------------------------------
 // 										PRICE SOURCE
 // -----------------------------------------------------------------------------------------
@@ -127,6 +129,28 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 }
 
 // -----------------------------------------------------------------------------------------
+// 										DATA PROVIDER
+// -----------------------------------------------------------------------------------------
+pub struct MockDataProvider;
+impl DataProvider<CurrencyId, Price> for MockDataProvider {
+	fn get(currency_id: &CurrencyId) -> Option<Price> {
+		match currency_id {
+			&MNT => Some(Price::zero()),
+			&BTC => Some(Price::saturating_from_integer(48_000)),
+			&DOT => Some(Price::saturating_from_integer(40)),
+			&ETH => Some(Price::saturating_from_integer(1_500)),
+			&KSM => Some(Price::saturating_from_integer(250)),
+			_ => None,
+		}
+	}
+}
+
+impl DataFeeder<CurrencyId, Price, AccountId> for MockDataProvider {
+	fn feed_value(_: AccountId, _: CurrencyId, _: Price) -> sp_runtime::DispatchResult {
+		Ok(())
+	}
+}
+// -----------------------------------------------------------------------------------------
 // 									EXTERNALITY BUILDER
 // -----------------------------------------------------------------------------------------
 /// ExtBuilder declaration.
@@ -142,6 +166,7 @@ pub struct ExtBuilderNew {
 	pub controller_params: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
 	pub pause_keepers: Vec<(CurrencyId, PauseKeeper)>,
 	pub minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
+	pub locked_price: Vec<(CurrencyId, Price)>,
 }
 
 /// Default values for ExtBuilder.
@@ -158,6 +183,7 @@ impl Default for ExtBuilderNew {
 			controller_params: Vec::new(),
 			pause_keepers: vec![],
 			minterest_model_params: vec![],
+			locked_price: vec![],
 		}
 	}
 }
@@ -412,6 +438,14 @@ impl ExtBuilderNew {
 		self
 	}
 
+	/// Set locked price for the currency
+	/// - `currency_id` : currency identifier
+	/// - `price`: locked price
+	pub fn set_locked_price(mut self, currency_id: CurrencyId, price: Price) -> Self {
+		self.locked_price.push((currency_id, price));
+		self
+	}
+
 	/// Builds GenesisConfig for all pallets from ExtBuilder data
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()
@@ -471,6 +505,13 @@ impl ExtBuilderNew {
 
 		minterest_model::GenesisConfig::<TestRuntime> {
 			minterest_model_params: self.minterest_model_params,
+			_phantom: Default::default(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		module_prices::GenesisConfig::<TestRuntime> {
+			locked_price: self.locked_price,
 			_phantom: Default::default(),
 		}
 		.assimilate_storage(&mut t)

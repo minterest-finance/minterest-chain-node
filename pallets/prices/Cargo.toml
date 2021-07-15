@@ -24,6 +24,8 @@ pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "p
 
 minterest-primitives = { path = "../../primitives" }
 test-helper = { path = "../../test-helper" }
+test-engine = { path = "../../test-engine" }
+module-prices = {path = "../prices"}
 
 [features]
 default = ["std"]

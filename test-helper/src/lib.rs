@@ -341,3 +341,15 @@ macro_rules! mock_impl_whitelist_module_config {
 		}
 	};
 }
+
+#[macro_export]
+macro_rules! mock_impl_prices_module_config {
+	($target:ty, $acc:ident) => {
+		impl module_prices::Config for $target {
+			type Event = Event;
+			type Source = MockDataProvider;
+			type LockOrigin = EnsureSignedBy<$acc, AccountId>;
+			type WeightInfo = ();
+		}
+	};
+}
