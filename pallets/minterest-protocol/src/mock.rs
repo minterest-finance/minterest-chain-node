@@ -10,14 +10,13 @@ use minterest_model::MinterestModelData;
 pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
-use pallet_traits::{PricesManager, RiskManagerStorageProvider, UserLiquidationAttemptsManager};
+use pallet_traits::PricesManager;
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One},
 	FixedPointNumber,
 };
-use sp_std::cell::RefCell;
 pub use test_helper::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -76,10 +75,6 @@ mock_impl_mnt_token_config!(Test, OneAlice);
 mock_impl_balances_config!(Test);
 mock_impl_whitelist_module_config!(Test, OneAlice);
 mock_impl_risk_manager_config!(Test, OneAlice);
-
-thread_local! {
-	static USER_LIQUIDATION_ATTEMPTS: RefCell<u8> = RefCell::new();
-}
 
 pub struct MockPriceSource;
 impl PricesManager<CurrencyId> for MockPriceSource {

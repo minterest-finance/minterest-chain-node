@@ -287,6 +287,7 @@ macro_rules! mock_impl_risk_manager_config {
 			type ControllerManager = controller::Pallet<$target>;
 			type LiquidityPoolsManager = liquidity_pools::Pallet<$target>;
 			type LiquidationPoolsManager = liquidation_pools::Pallet<$target>;
+			type MinterestProtocolManager = minterest_protocol::Pallet<$target>;
 		}
 	};
 }
