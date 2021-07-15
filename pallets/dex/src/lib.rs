@@ -15,7 +15,6 @@ use orml_traits::MultiCurrency;
 use pallet_traits::DEXManager;
 use sp_runtime::traits::{AccountIdConversion, Zero};
 
-mod mock;
 mod tests;
 
 #[frame_support::pallet]
