@@ -605,10 +605,10 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 		});
 }
 
-#[test]
-fn get_all_users_with_insolvent_loan_should_work() {
-	ExtBuilderNew::default()
-}
+// #[test]
+// fn get_all_users_with_insolvent_loan_should_work() {
+// 	ExtBuilderNew::default()
+// }
 
 #[test]
 fn get_pool_exchange_borrow_and_supply_rates_less_than_kink() {

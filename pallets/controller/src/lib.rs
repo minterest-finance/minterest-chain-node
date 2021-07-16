@@ -879,7 +879,6 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		Self::controller_params(pool_id).protocol_interest_threshold
 	}
 
-	/// TODO: Raw implementation. Cover with unit-tests.
 	/// Calculates and gets all insolvent loans of users in the protocol. Calls a function
 	/// internally `accrue_interest_rate`. To determine that the loan is insolvent calls
 	/// the function `get_hypothetical_account_liquidity`, if the shortfall is greater than zero,
@@ -896,15 +895,18 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 				 pool_id|
 				 -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
 					Self::accrue_interest_rate(pool_id)?;
-					let pool_users_with_loan = T::LiquidityPoolsManager::get_pool_members_with_loans(pool_id)
+					// get all users with loan from particular liquidity pools.
+					let pool_users_with_loan = T::LiquidityPoolsManager::get_pool_members_with_loan(pool_id)
 						.into_iter()
 						.collect::<BTreeSet<T::AccountId>>();
+					// collecting a unique collection of all users in the protocol with loan
 					protocol_users_with_loan.union(&pool_users_with_loan);
 					Ok(protocol_users_with_loan)
 				},
 			)?
 			.into_iter()
 			.filter(|user| {
+				// leave in the collection only users with shortfall
 				Self::get_hypothetical_account_liquidity(&user, None, Balance::zero(), Balance::zero())
 					.map_or(false, |(_, shortfall)| !shortfall.is_zero())
 			})

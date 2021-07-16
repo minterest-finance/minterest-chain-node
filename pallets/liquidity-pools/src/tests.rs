@@ -278,8 +278,8 @@ fn get_pool_members_with_loan_should_work() {
 		.set_pool_user_data(BTC, CHARLIE, ONE_HUNDRED, Rate::default(), true)
 		.build()
 		.execute_with(|| {
-			assert_eq!(TestPools::get_pool_members_with_loans(DOT), vec![CHARLIE, ALICE]);
-			assert_eq!(TestPools::get_pool_members_with_loans(BTC), vec![CHARLIE]);
+			assert_eq!(TestPools::get_pool_members_with_loan(DOT), vec![CHARLIE, ALICE]);
+			assert_eq!(TestPools::get_pool_members_with_loan(BTC), vec![CHARLIE]);
 		});
 }
 
