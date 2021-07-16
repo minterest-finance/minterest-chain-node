@@ -265,12 +265,12 @@ pub trait MntManager<AccountId> {
 	/// Update MNT supply index for a pool.
 	///
 	/// - `underlying_asset`: The pool which supply index to update.
-	fn update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult;
+	fn update_pool_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult;
 
 	/// Update MNT borrow index for a pool.
 	///
 	/// - `underlying_asset`: The pool which borrow index to update.
-	fn update_mnt_borrow_index(underlying_id: CurrencyId) -> DispatchResult;
+	fn update_pool_mnt_borrow_index(underlying_id: CurrencyId) -> DispatchResult;
 
 	/// Distribute MNT token to supplier. It should be called after update_mnt_supply_index.
 	///
@@ -301,7 +301,7 @@ pub trait MntManager<AccountId> {
 	/// - `pool_id` - the pool to calculate rates
 	///
 	/// returns (`borrow_apy`, `supply_apy`): - percentage yield per block
-	fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Price, Price), DispatchError>;
+	fn get_pool_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Price, Price), DispatchError>;
 }
 
 /// An abstraction of minterest-model basic functionalities.
