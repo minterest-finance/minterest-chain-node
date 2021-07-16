@@ -531,7 +531,7 @@ pub mod module {
 			// Check if the user will have enough collateral if he removes one of the collaterals.
 			let (_, shortfall) = T::ControllerManager::get_hypothetical_account_liquidity(
 				&sender,
-				pool_id,
+				Some(pool_id),
 				user_supply_underlying,
 				Balance::zero(),
 			)

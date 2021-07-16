@@ -662,7 +662,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	///          hypothetical account shortfall below collateral requirements).
 	fn get_hypothetical_account_liquidity(
 		account: &T::AccountId,
-		underlying_to_borrow: CurrencyId,
+		underlying_to_borrow: Option<CurrencyId>,
 		redeem_amount: Balance,
 		borrow_amount: Balance,
 	) -> LiquidityResult {
@@ -707,20 +707,22 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 					.map_err(|_| Error::<T>::BalanceOverflow)?;
 
 			// Calculate effects of interacting with Underlying Asset Modify.
-			if underlying_to_borrow == underlying_asset {
-				// redeem effect
-				if redeem_amount > 0 {
-					// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
-					sum_borrow_plus_effects =
-						sum_with_mult_result(sum_borrow_plus_effects, redeem_amount, tokens_to_denom)
-							.map_err(|_| Error::<T>::BalanceOverflow)?;
-				};
-				// borrow effect
-				if borrow_amount > 0 {
-					// sum_borrow_plus_effects += oracle_price * borrow_amount
-					sum_borrow_plus_effects =
-						sum_with_mult_result(sum_borrow_plus_effects, borrow_amount, oracle_price)
-							.map_err(|_| Error::<T>::BalanceOverflow)?;
+			if let Some(underlying_to_borrow) = underlying_to_borrow {
+				if underlying_to_borrow == underlying_asset {
+					// redeem effect
+					if redeem_amount > 0 {
+						// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
+						sum_borrow_plus_effects =
+							sum_with_mult_result(sum_borrow_plus_effects, redeem_amount, tokens_to_denom)
+								.map_err(|_| Error::<T>::BalanceOverflow)?;
+					};
+					// borrow effect
+					if borrow_amount > 0 {
+						// sum_borrow_plus_effects += oracle_price * borrow_amount
+						sum_borrow_plus_effects =
+							sum_with_mult_result(sum_borrow_plus_effects, borrow_amount, oracle_price)
+								.map_err(|_| Error::<T>::BalanceOverflow)?;
+					}
 				}
 			}
 		}
@@ -845,7 +847,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	fn redeem_allowed(underlying_asset: CurrencyId, redeemer: &T::AccountId, redeem_amount: Balance) -> DispatchResult {
 		if T::LiquidityPoolsManager::is_pool_collateral(&redeemer, underlying_asset) {
 			let (_, shortfall) =
-				Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset, redeem_amount, 0)
+				Self::get_hypothetical_account_liquidity(&redeemer, Some(underlying_asset), redeem_amount, 0)
 					.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 
 			ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
@@ -864,7 +866,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		let borrow_cap_reached = Self::is_borrow_cap_reached(underlying_asset, borrow_amount)?;
 		ensure!(!borrow_cap_reached, Error::<T>::BorrowCapReached);
 
-		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, underlying_asset, 0, borrow_amount)
+		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, Some(underlying_asset), 0, borrow_amount)
 			.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 
 		ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
@@ -885,25 +887,29 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	///
 	/// Returns: returns a unique collection of users with insolvent loan (as a btree set).
 	fn get_all_users_with_insolvent_loan() -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
-		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+		let protocol_users_with_insolvent_loan = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.into_iter()
 			.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
 			.try_fold(
 				BTreeSet::new(),
-				|protocol_users_with_shortfall, pool_id| -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
-					let pool_users = T::LiquidityPoolsManager::get_pool_members_with_loans(pool_id)?;
+				|protocol_users_with_loan: BTreeSet<T::AccountId>,
+				 pool_id|
+				 -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
 					Self::accrue_interest_rate(pool_id)?;
-					let pool_users_with_shortfall = pool_users
+					let pool_users_with_loan = T::LiquidityPoolsManager::get_pool_members_with_loans(pool_id)
 						.into_iter()
-						.filter(|user| {
-							Self::get_hypothetical_account_liquidity(&user, pool_id, Balance::zero(), Balance::zero())
-								.map_or(false, |(_, shortfall)| !shortfall.is_zero())
-						})
 						.collect::<BTreeSet<T::AccountId>>();
-					protocol_users_with_shortfall.union(&pool_users_with_shortfall);
-					Ok(protocol_users_with_shortfall)
+					protocol_users_with_loan.union(&pool_users_with_loan);
+					Ok(protocol_users_with_loan)
 				},
-			)
+			)?
+			.into_iter()
+			.filter(|user| {
+				Self::get_hypothetical_account_liquidity(&user, None, Balance::zero(), Balance::zero())
+					.map_or(false, |(_, shortfall)| !shortfall.is_zero())
+			})
+			.collect::<BTreeSet<T::AccountId>>();
+		Ok(protocol_users_with_insolvent_loan)
 	}
 
 	// RPC methods

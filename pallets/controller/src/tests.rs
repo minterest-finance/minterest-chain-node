@@ -429,19 +429,19 @@ fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work(
 			// Checking the function when called from redeem.
 			// The function should return the shortfall to a large zero.
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 5, 0),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 5, 0),
 				Ok((0, 9))
 			);
 			// Checking the function when called from borrow.
 			// The function should return the shortfall to a large zero.
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 0, 10),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 0, 10),
 				Ok((0, 20))
 			);
 			// Checking scenario: the user tries to take a borrow in a currency which is not
 			// pool as available for collateral, and he fails.
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&BOB, BTC, 0, 10),
+				TestController::get_hypothetical_account_liquidity(&BOB, Some(BTC), 0, 10),
 				Ok((0, 20))
 			);
 		});
@@ -459,15 +459,15 @@ fn get_hypothetical_account_liquidity_one_currency_from_redeem_should_work() {
 			// Checking the function when called from redeem.
 			// collateral parameter is set to false, user can't redeem.
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 5, 0),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 5, 0),
 				Ok((0, 9))
 			);
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 60, 0),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 60, 0),
 				Ok((0, 108))
 			);
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 200, 0),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 200, 0),
 				Ok((0, 360))
 			);
 		});
@@ -486,15 +486,15 @@ fn get_hypothetical_account_liquidity_two_currencies_from_redeem_should_work() {
 			// Checking the function when called from redeem.
 			// collateral parameter is set to false, user can't redeem.
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, ETH, 15, 0),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(ETH), 15, 0),
 				Ok((0, 27))
 			);
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, ETH, 80, 0),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(ETH), 80, 0),
 				Ok((0, 144))
 			);
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, ETH, 100, 0),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(ETH), 100, 0),
 				Ok((0, 180))
 			);
 		});
@@ -538,7 +538,7 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 			// Checking the function when called from borrow.
 			// collateral parameter for DOT and ETH pool is set to false. User can't borrow.
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 0, 30),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 0, 30),
 				Ok((0, 120))
 			);
 
@@ -546,11 +546,11 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 			TestPools::enable_is_collateral(&ALICE, DOT);
 
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 0, 50),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 0, 50),
 				Ok((2, 0))
 			);
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 0, 100),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 0, 100),
 				Ok((0, 98))
 			);
 		});
@@ -603,6 +603,11 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 				Rate::from_inner(3200001458000012737)
 			);
 		});
+}
+
+#[test]
+fn get_all_users_with_insolvent_loan_should_work() {
+	ExtBuilderNew::default()
 }
 
 #[test]

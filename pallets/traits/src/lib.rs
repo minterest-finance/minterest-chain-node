@@ -48,7 +48,7 @@ pub trait LiquidityPoolStorageProvider<AccountId, Pool> {
 	fn get_pool_data(pool_id: CurrencyId) -> Pool;
 
 	/// Get list of users with active loan positions for a particular pool.
-	fn get_pool_members_with_loans(underlying_asset: CurrencyId) -> Result<Vec<AccountId>, DispatchError>;
+	fn get_pool_members_with_loans(underlying_asset: CurrencyId) -> Vec<AccountId>;
 
 	/// Gets total amount borrowed from the pool.
 	fn get_pool_borrow_underlying(pool_id: CurrencyId) -> Balance;
@@ -175,7 +175,7 @@ pub trait ControllerManager<AccountId> {
 	/// Determine what the account liquidity would be if the given amounts were redeemed/borrowed.
 	fn get_hypothetical_account_liquidity(
 		account: &AccountId,
-		underlying_to_borrow: CurrencyId,
+		underlying_to_borrow: Option<CurrencyId>,
 		redeem_amount: Balance,
 		borrow_amount: Balance,
 	) -> Result<(Balance, Balance), DispatchError>;
