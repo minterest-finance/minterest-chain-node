@@ -368,8 +368,8 @@ fn get_user_underlying_balance_per_asset_rpc(account_id: AccountId, pool_id: Cur
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_underlying_balance_per_asset(account_id, pool_id)
 }
 
-fn get_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
-	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_unclaimed_mnt_balance(account_id)
+fn get_user_total_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
+	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_user_total_unclaimed_mnt_balance(account_id)
 		.unwrap()
 		.amount
 }
@@ -434,8 +434,8 @@ fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 	Prices::unlock_price(origin_root(), currency_id)
 }
 
-fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> (Rate, Rate) {
-	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_mnt_borrow_and_supply_rates(pool_id).unwrap()
+fn get_pool_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> (Rate, Rate) {
+	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_pool_mnt_borrow_and_supply_rates(pool_id).unwrap()
 }
 
 fn get_user_total_supply_borrow_and_net_apy_rpc(account_id: AccountId) -> Option<(Interest, Interest, Interest)> {
@@ -1480,7 +1480,7 @@ fn get_all_freshest_prices_rpc_should_work() {
 }
 
 #[test]
-fn get_unclaimed_mnt_balance_should_work() {
+fn get_user_total_unclaimed_mnt_balance_should_work() {
 	ExtBuilder::default()
 		.mnt_account_balance(1_000_000 * DOLLARS)
 		.enable_minting_for_all_pools(10 * DOLLARS)
@@ -1509,7 +1509,10 @@ fn get_unclaimed_mnt_balance_should_work() {
 			// Calculation of the balance of Alice in MNT tokens (only supply distribution):
 			// supplier_mnt_accrued = previous_balance + speed_DOT * block_delta * alice_supply / total_supply;
 			// supplier_mnt_accrued = 0 + 10 * 5 * 50 / 150 = 16.66 MNT;
-			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 16_666_666_464_166_653_690);
+			assert_eq!(
+				get_user_total_unclaimed_mnt_balance_rpc(ALICE::get()),
+				16_666_666_464_166_653_690
+			);
 
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 10_000 * DOLLARS));
 
@@ -1518,34 +1521,43 @@ fn get_unclaimed_mnt_balance_should_work() {
 			// Calculation of the balance of Alice in MNT tokens (only supply distribution):
 			// supplier_mnt_accrued = previous_balance + speed_DOT * block_delta * alice_supply / total_supply;
 			// supplier_mnt_accrued = 0 + 10 * 5 * 60 / 160 = 18.75 MNT;
-			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 18_749_999_777_636_673_218);
+			assert_eq!(
+				get_user_total_unclaimed_mnt_balance_rpc(ALICE::get()),
+				18_749_999_777_636_673_218
+			);
 			assert_eq!(
 				Currencies::free_balance(MNT, &ALICE::get()),
 				100_035_416_666_241_803_326_908
 			);
 			// In the test environment, the test storage changes.
-			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
+			assert_eq!(get_user_total_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
 
 			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 20_000 * DOLLARS));
 
 			run_to_block(30);
 
-			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 66_071_426_707_059_137_419);
+			assert_eq!(
+				get_user_total_unclaimed_mnt_balance_rpc(ALICE::get()),
+				66_071_426_707_059_137_419
+			);
 			// In the test environment, the test storage changes.
-			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
+			assert_eq!(get_user_total_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
 
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 10_000 * DOLLARS));
 
 			run_to_block(40);
 
-			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 69_747_897_200_110_984_655);
+			assert_eq!(
+				get_user_total_unclaimed_mnt_balance_rpc(ALICE::get()),
+				69_747_897_200_110_984_655
+			);
 			// In the test environment, the test storage changes.
-			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
+			assert_eq!(get_user_total_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
 		})
 }
 
 #[test]
-fn get_mnt_borrow_and_supply_rates_should_work() {
+fn get_pool_mnt_borrow_and_supply_rates_should_work() {
 	ExtBuilder::default()
 		.mnt_enabled_pools(vec![
 			(DOT, (5 * DOLLARS) / 2),
@@ -1573,9 +1585,9 @@ fn get_mnt_borrow_and_supply_rates_should_work() {
 			assert_ok!(MinterestProtocol::borrow(bob(), ETH, 10_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::borrow(alice(), BTC, 5_000 * DOLLARS));
 
-			assert_eq!(MntToken::mnt_speeds(DOT), 2_500_000_000_000_000_000);
-			assert_eq!(MntToken::mnt_speeds(ETH), 5_000_000_000_000_000_000);
-			assert_eq!(MntToken::mnt_speeds(BTC), 2_500_000_000_000_000_000);
+			assert_eq!(MntToken::mnt_speed_storage(DOT), 2_500_000_000_000_000_000);
+			assert_eq!(MntToken::mnt_speed_storage(ETH), 5_000_000_000_000_000_000);
+			assert_eq!(MntToken::mnt_speed_storage(BTC), 2_500_000_000_000_000_000);
 
 			// Borrow and Supply rates per block
 			// Prices: DOT[0] = 2 USD, ETH[1] = 2 USD, BTC[3] = 2 USD, MNT[4] = 4 USD
@@ -1588,21 +1600,21 @@ fn get_mnt_borrow_and_supply_rates_should_work() {
 			// ETH: 5 * 4 / (15000 * 2) = 0.00066
 			// BTC: 2.5 * 4 / (25000 * 2) = 0.0002
 			assert_eq!(
-				get_mnt_borrow_and_supply_rates(DOT),
+				get_pool_mnt_borrow_and_supply_rates(DOT),
 				(
 					Rate::saturating_from_rational(1, 1000),
 					Rate::saturating_from_rational(5, 10000)
 				)
 			);
 			assert_eq!(
-				get_mnt_borrow_and_supply_rates(ETH),
+				get_pool_mnt_borrow_and_supply_rates(ETH),
 				(
 					Rate::saturating_from_rational(1, 1000),
 					Rate::from_inner(666_666_666_666_666)
 				)
 			);
 			assert_eq!(
-				get_mnt_borrow_and_supply_rates(BTC),
+				get_pool_mnt_borrow_and_supply_rates(BTC),
 				(
 					Rate::saturating_from_rational(1, 1000),
 					Rate::saturating_from_rational(2, 10000)
@@ -1612,7 +1624,7 @@ fn get_mnt_borrow_and_supply_rates_should_work() {
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), KSM, 10_000 * DOLLARS));
 			run_to_block(7);
 			assert_eq!(
-				get_mnt_borrow_and_supply_rates(KSM),
+				get_pool_mnt_borrow_and_supply_rates(KSM),
 				(Rate::saturating_from_integer(0), Rate::saturating_from_integer(0))
 			);
 		});
@@ -1768,8 +1780,8 @@ fn get_user_total_supply_borrow_and_net_apy_should_work() {
 			// Sum = 2360 + 6048 = 8408 $
 			// sum_borrow_apy = 8408/260_000 = 3.23 %
 
-			assert_eq!(MntToken::mnt_speeds(DOT), 5 * DOLLARS);
-			assert_eq!(MntToken::mnt_speeds(ETH), 5 * DOLLARS);
+			assert_eq!(MntToken::mnt_speed_storage(DOT), 5 * DOLLARS);
+			assert_eq!(MntToken::mnt_speed_storage(ETH), 5 * DOLLARS);
 
 			// MNT rates for the pool:
 			// mnt_borrow_rate = mnt_speed * mnt_price / (pool_borrow * currency_price)
@@ -1780,7 +1792,7 @@ fn get_user_total_supply_borrow_and_net_apy_should_work() {
 			// DOT mnt borrow:  5 * 4 / (50_000 * 2)  = 0.0002
 			// DOT mnt supply:  5 * 4 / (100_000 * 2) = 0.0001
 			assert_eq!(
-				get_mnt_borrow_and_supply_rates(DOT),
+				get_pool_mnt_borrow_and_supply_rates(DOT),
 				(
 					Rate::from_inner(200_000_000_000_000),
 					Rate::from_inner(100_000_000_000_000)
@@ -1790,7 +1802,7 @@ fn get_user_total_supply_borrow_and_net_apy_should_work() {
 			// ETH mnt borrow:  5 * 4 / (80_000 * 2) = 0.000125
 			// ETH mnt supply:  5 * 4 / (100_000 * 2) = 0.0001
 			assert_eq!(
-				get_mnt_borrow_and_supply_rates(ETH),
+				get_pool_mnt_borrow_and_supply_rates(ETH),
 				(Rate::from_inner(125000000000000), Rate::from_inner(100000000000000))
 			);
 

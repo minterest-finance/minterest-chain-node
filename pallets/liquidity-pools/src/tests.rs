@@ -268,7 +268,7 @@ fn update_state_on_repay_should_work() {
 }
 
 #[test]
-fn get_pool_members_with_loans_should_work() {
+fn get_pool_members_with_loan_should_work() {
 	ExtBuilderNew::default()
 		.set_pool_user_data(DOT, ALICE, ONE_HUNDRED, Rate::default(), true)
 		.set_pool_user_data(DOT, BOB, 0, Rate::default(), true)

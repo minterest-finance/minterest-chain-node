@@ -1422,6 +1422,7 @@ dependencies = [
 name = "dex"
 version = "0.6.2"
 dependencies = [
+ "dex",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "liquidation-pools",
@@ -1438,6 +1439,7 @@ dependencies = [
  "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
+ "test-engine",
  "test-helper",
 ]
 

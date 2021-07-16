@@ -143,37 +143,38 @@ pub mod module {
 
 	/// The threshold above which the flywheel transfers MNT
 	#[pallet::storage]
-	#[pallet::getter(fn mnt_claim_threshold)]
-	pub(crate) type MntClaimThreshold<T: Config> = StorageValue<_, Balance, ValueQuery>;
+	#[pallet::getter(fn mnt_claim_threshold_storage)]
+	pub(crate) type MntClaimThresholdStorage<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
 	/// MNT minting speed for each pool
 	/// Doubling this number shows how much MNT goes to all suppliers and borrowers of a particular
 	/// pool.
 	#[pallet::storage]
-	#[pallet::getter(fn mnt_speeds)]
-	pub type MntSpeeds<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Balance, ValueQuery>;
+	#[pallet::getter(fn mnt_speed_storage)]
+	pub type MntSpeedStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Balance, ValueQuery>;
 
 	/// Index + block_number need for generating and distributing new MNT tokens for pool
 	#[pallet::storage]
-	#[pallet::getter(fn mnt_pools_state)]
-	pub(crate) type MntPoolsState<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, MntPoolState<T>, ValueQuery>;
+	#[pallet::getter(fn mnt_pool_state_storage)]
+	pub(crate) type MntPoolStateStorage<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyId, MntPoolState<T>, ValueQuery>;
 
 	/// Use for accruing MNT tokens for supplier
 	#[pallet::storage]
-	#[pallet::getter(fn mnt_supplier_index)]
-	pub(crate) type MntSupplierIndex<T: Config> =
+	#[pallet::getter(fn mnt_supplier_index_storage)]
+	pub(crate) type MntSupplierIndexStorage<T: Config> =
 		StorageDoubleMap<_, Twox64Concat, CurrencyId, Twox64Concat, T::AccountId, Rate, OptionQuery>;
 
 	/// Use for accruing MNT tokens for borrower
 	#[pallet::storage]
-	#[pallet::getter(fn mnt_borrower_index)]
-	pub(crate) type MntBorrowerIndex<T: Config> =
+	#[pallet::getter(fn mnt_borrower_index_storage)]
+	pub(crate) type MntBorrowerIndexStorage<T: Config> =
 		StorageDoubleMap<_, Twox64Concat, CurrencyId, Twox64Concat, T::AccountId, Rate, ValueQuery>;
 
 	/// Place where accrued MNT tokens are kept for each user
 	#[pallet::storage]
-	#[pallet::getter(fn mnt_accrued)]
-	pub(crate) type MntAccrued<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Balance, ValueQuery>;
+	#[pallet::getter(fn mnt_accrued_storage)]
+	pub(crate) type MntAccruedStorage<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Balance, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -196,10 +197,10 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			MntClaimThreshold::<T>::put(&self.mnt_claim_threshold);
+			MntClaimThresholdStorage::<T>::put(&self.mnt_claim_threshold);
 			for (currency_id, speed) in &self.minted_pools {
-				MntSpeeds::<T>::insert(currency_id, speed);
-				MntPoolsState::<T>::insert(currency_id, MntPoolState::new());
+				MntSpeedStorage::<T>::insert(currency_id, speed);
+				MntPoolStateStorage::<T>::insert(currency_id, MntPoolState::new());
 			}
 		}
 	}
@@ -229,27 +230,27 @@ pub mod module {
 				T::LiquidityPoolsManager::pool_exists(&currency_id),
 				Error::<T>::PoolNotFound
 			);
-			Self::update_mnt_supply_index(currency_id)?;
-			Self::update_mnt_borrow_index(currency_id)?;
+			Self::update_pool_mnt_supply_index(currency_id)?;
+			Self::update_pool_mnt_borrow_index(currency_id)?;
 
 			// New speed is zero. Disable distribution.
 			if speed.is_zero() {
 				ensure!(
-					MntSpeeds::<T>::contains_key(currency_id),
+					MntSpeedStorage::<T>::contains_key(currency_id),
 					Error::<T>::MntMintingNotEnabled
 				);
-				MntSpeeds::<T>::remove(currency_id);
+				MntSpeedStorage::<T>::remove(currency_id);
 			} else {
 				// Distribution is currently off.
 				// Update 'index_updated_at_block' and leave indices unchanged.
-				if !MntSpeeds::<T>::contains_key(currency_id) {
+				if !MntSpeedStorage::<T>::contains_key(currency_id) {
 					let current_block = frame_system::Pallet::<T>::block_number();
-					MntPoolsState::<T>::mutate(currency_id, |pool_state| {
+					MntPoolStateStorage::<T>::mutate(currency_id, |pool_state| {
 						pool_state.borrow_state.index_updated_at_block = current_block;
 						pool_state.supply_state.index_updated_at_block = current_block;
 					});
 				}
-				MntSpeeds::<T>::insert(currency_id, speed);
+				MntSpeedStorage::<T>::insert(currency_id, speed);
 			}
 			Self::deposit_event(Event::MntSpeedChanged(currency_id, speed));
 			Ok(().into())
@@ -258,7 +259,7 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
-	/// Gets module account id.
+	/// Gets pallet account id.
 	pub fn get_account_id() -> T::AccountId {
 		T::MntTokenAccountId::get()
 	}
@@ -270,22 +271,22 @@ impl<T: Config> Pallet<T> {
 	/// - `user_accrued`: The total amount of accrued tokens.
 	/// - `distribute_all`: boolean, distribute all or part of accrued MNT tokens.
 	fn transfer_mnt(user: &T::AccountId, user_accrued: Balance, distribute_all: bool) -> DispatchResult {
-		//TODO: Need to discuss what we should do.
+		// TODO: Need to discuss what we should do.
 		// Error/Event/save money to MntAccrued/stop producing mnt tokens
 
 		let threshold = match distribute_all {
 			true => Balance::zero(),
-			false => MntClaimThreshold::<T>::get(),
+			false => MntClaimThresholdStorage::<T>::get(),
 		};
 
 		if user_accrued >= threshold && user_accrued > 0 {
 			let mnt_treasury_balance = T::MultiCurrency::free_balance(MNT, &Self::get_account_id());
 			if user_accrued <= mnt_treasury_balance {
 				T::MultiCurrency::transfer(MNT, &Self::get_account_id(), &user, user_accrued)?;
-				MntAccrued::<T>::remove(user); // set to 0
+				MntAccruedStorage::<T>::remove(user); // set to 0
 			}
 		} else {
-			MntAccrued::<T>::insert(user, user_accrued);
+			MntAccruedStorage::<T>::insert(user, user_accrued);
 		}
 		Ok(())
 	}
@@ -294,15 +295,19 @@ impl<T: Config> Pallet<T> {
 // RPC methods
 impl<T: Config> Pallet<T> {
 	/// Gets MNT accrued but not yet transferred to user.
-	pub fn get_unclaimed_mnt_balance(account_id: &T::AccountId) -> BalanceResult {
-		let accrued_mnt =
-			MntSpeeds::<T>::iter().try_fold(Balance::zero(), |current_accrued, (pool_id, _)| -> BalanceResult {
-				Self::update_mnt_borrow_index(pool_id)?;
+	///
+	/// - `user`: user id.
+	pub fn get_user_total_unclaimed_mnt_balance(account_id: &T::AccountId) -> BalanceResult {
+		let accrued_mnt = MntSpeedStorage::<T>::iter().try_fold(
+			Balance::zero(),
+			|current_accrued, (pool_id, _)| -> BalanceResult {
+				Self::update_pool_mnt_borrow_index(pool_id)?;
 				let accrued_borrow_mnt = Self::distribute_borrower_mnt(pool_id, account_id, true)?;
-				Self::update_mnt_supply_index(pool_id)?;
+				Self::update_pool_mnt_supply_index(pool_id)?;
 				let accrued_supply_mnt = Self::distribute_supplier_mnt(pool_id, account_id, true)?;
 				Ok(current_accrued + accrued_borrow_mnt + accrued_supply_mnt)
-			})?;
+			},
+		)?;
 		Ok(accrued_mnt)
 	}
 }
@@ -310,21 +315,23 @@ impl<T: Config> Pallet<T> {
 impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 	/// Update mnt supply index for pool
 	/// Do nothing in case if distribution is off or index have already been updated in this block.
-	fn update_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult {
+	///
+	/// - `pool_id`: id of the pool to update index
+	fn update_pool_mnt_supply_index(pool_id: CurrencyId) -> DispatchResult {
 		// block_delta = current_block_number - supply_state.index_updated_at_block
 		// mnt_accrued = block_delta * mnt_speed
 		// ratio = mnt_accrued / mtoken.total_supply()
 		// supply_state.mnt_distribution_index += ratio
 		// supply_state.index_updated_at_block = current_block_number
 
-		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
+		let mnt_speed = MntSpeedStorage::<T>::get(pool_id);
 		if mnt_speed.is_zero() {
 			// Distribution is off
 			return Ok(());
 		}
 
 		let current_block = frame_system::Pallet::<T>::block_number();
-		let mut pool_state = MntPoolsState::<T>::get(underlying_id);
+		let mut pool_state = MntPoolStateStorage::<T>::get(pool_id);
 		let block_delta = current_block
 			.checked_sub(&pool_state.supply_state.index_updated_at_block)
 			.ok_or(Error::<T>::NumOverflow)?;
@@ -334,9 +341,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			return Ok(());
 		}
 
-		let wrapped_asset_id = underlying_id
-			.wrapped_asset()
-			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+		let wrapped_asset_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
 		let block_delta_as_u128 = TryInto::<u128>::try_into(block_delta).or(Err(Error::<T>::InternalError))?;
 
@@ -344,11 +349,11 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			.checked_mul(block_delta_as_u128)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let total_tokens_supply = T::MultiCurrency::total_issuance(wrapped_asset_id);
+		let pool_supply_wrapped = T::MultiCurrency::total_issuance(wrapped_asset_id);
 
-		let ratio = match total_tokens_supply.cmp(&Balance::zero()) {
+		let ratio = match pool_supply_wrapped.cmp(&Balance::zero()) {
 			Ordering::Greater => {
-				Rate::checked_from_rational(mnt_accrued, total_tokens_supply).ok_or(Error::<T>::NumOverflow)?
+				Rate::checked_from_rational(mnt_accrued, pool_supply_wrapped).ok_or(Error::<T>::NumOverflow)?
 			}
 			_ => Rate::zero(),
 		};
@@ -359,13 +364,15 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			.checked_add(&ratio)
 			.ok_or(Error::<T>::NumOverflow)?;
 		pool_state.supply_state.index_updated_at_block = current_block;
-		MntPoolsState::<T>::insert(underlying_id, pool_state);
+		MntPoolStateStorage::<T>::insert(pool_id, pool_state);
 		Ok(())
 	}
 
 	/// Update mnt borrow index for pool
 	/// Do nothing in case if distribution is off or index have already been updated in this block.
-	fn update_mnt_borrow_index(underlying_id: CurrencyId) -> DispatchResult {
+	///
+	/// - `pool_id`: id of the pool to update index
+	fn update_pool_mnt_borrow_index(pool_id: CurrencyId) -> DispatchResult {
 		// block_delta = current_block_number - borrow_state.index_updated_at_block
 		// mnt_accrued = delta_blocks * mnt_speed
 		// borrow_amount - mtoken.total_borrows() / liquidity_pool_borrow_index
@@ -373,14 +380,14 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		// borrow_state.mnt_distribution_index(for current pool) += ratio
 		// borrow_state.index_updated_at_block = current_block_number
 
-		let mnt_speed = MntSpeeds::<T>::get(underlying_id);
+		let mnt_speed = MntSpeedStorage::<T>::get(pool_id);
 		if mnt_speed.is_zero() {
 			// Distribution is off
 			return Ok(());
 		}
 
 		let current_block = frame_system::Pallet::<T>::block_number();
-		let mut pool_state = MntPoolsState::<T>::get(underlying_id);
+		let mut pool_state = MntPoolStateStorage::<T>::get(pool_id);
 		let block_delta = current_block
 			.checked_sub(&pool_state.borrow_state.index_updated_at_block)
 			.ok_or(Error::<T>::NumOverflow)?;
@@ -397,8 +404,8 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		let net_pool_borrow_underlying =
-			Rate::from_inner(T::LiquidityPoolsManager::get_pool_borrow_underlying(underlying_id))
-				.checked_div(&T::LiquidityPoolsManager::get_pool_borrow_index(underlying_id))
+			Rate::from_inner(T::LiquidityPoolsManager::get_pool_borrow_underlying(pool_id))
+				.checked_div(&T::LiquidityPoolsManager::get_pool_borrow_index(pool_id))
 				.ok_or(Error::<T>::NumOverflow)?;
 
 		let ratio = match net_pool_borrow_underlying.cmp(&Rate::zero()) {
@@ -414,54 +421,52 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			.checked_add(&ratio)
 			.ok_or(Error::<T>::NumOverflow)?;
 		pool_state.borrow_state.index_updated_at_block = current_block;
-		MntPoolsState::<T>::insert(underlying_id, pool_state);
+		MntPoolStateStorage::<T>::insert(pool_id, pool_state);
 		Ok(())
 	}
 
-	/// Distribute mnt token to supplier. It should be called after update_mnt_supply_index
-	fn distribute_supplier_mnt(
-		underlying_id: CurrencyId,
-		supplier: &T::AccountId,
-		distribute_all: bool,
-	) -> BalanceResult {
-		// delta_index = mnt_distribution_index - mnt_supplier_index
+	/// Distribute mnt token to supplier. It should be called after `update_pool_mnt_borrow_index`
+	///
+	/// - `pool_id`: id of the pool user supplied to
+	/// - `supplier`: The AccountId of the supplier to distribute MNT to.
+	/// - `distribute_all`:  boolean, distribute all or part of accrued MNT tokens.
+	fn distribute_supplier_mnt(pool_id: CurrencyId, supplier: &T::AccountId, distribute_all: bool) -> BalanceResult {
+		// delta_index = mnt_distribution_index - mnt_supplier_index_storage
 		// supplier_delta = supplier_mtoken_balance * delta_index
 		// supplier_mnt_balance += supplier_delta
-		// mnt_supplier_index = mnt_distribution_index
-		let supply_index = MntPoolsState::<T>::get(underlying_id)
+		// mnt_supplier_index_storage = mnt_distribution_index
+		let supply_index = MntPoolStateStorage::<T>::get(pool_id)
 			.supply_state
 			.mnt_distribution_index;
 
-		let supplier_index = MntSupplierIndex::<T>::get(underlying_id, supplier).unwrap_or_else(Rate::one);
+		let supplier_index = MntSupplierIndexStorage::<T>::get(pool_id, supplier).unwrap_or_else(Rate::one);
 
 		let delta_index = supply_index
 			.checked_sub(&supplier_index)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let wrapped_asset_id = underlying_id
-			.wrapped_asset()
-			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+		let wrapped_asset_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
 		// We use total_balance (not free balance). Because sum of balances should be equal to
 		// total_issuance. Otherwise, calculations will not be correct.
-		// (see total_tokens_supply in update_mnt_supply_index)
+		// (see pool_supply_wrapped in update_pool_mnt_supply_index)
 		let supplier_balance = Rate::from_inner(T::MultiCurrency::total_balance(wrapped_asset_id, supplier));
 
 		let supplier_delta = delta_index
 			.checked_mul(&supplier_balance)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let mut supplier_mnt_accrued = MntAccrued::<T>::get(supplier);
+		let mut supplier_mnt_accrued = MntAccruedStorage::<T>::get(supplier);
 
 		supplier_mnt_accrued = supplier_mnt_accrued
 			.checked_add(supplier_delta.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		MntSupplierIndex::<T>::insert(underlying_id, supplier, supply_index);
+		MntSupplierIndexStorage::<T>::insert(pool_id, supplier, supply_index);
 		Self::transfer_mnt(supplier, supplier_mnt_accrued, distribute_all)?;
 
 		Self::deposit_event(Event::MntDistributedToSupplier(
-			underlying_id,
+			pool_id,
 			supplier.clone(),
 			supplier_delta.into_inner(),
 			supply_index,
@@ -473,31 +478,28 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 	/// Distribute MNT token to borrower. It should be called after update_mnt_borrow_index.
 	/// Borrowers will not begin to accrue tokens till the first interaction with the protocol.
 	///
-	/// - `underlying_id`: The pool in which the borrower is acting;
+	/// - `pool_id`: The pool in which the borrower is acting;
 	/// - `borrower`: The AccountId of the borrower to distribute MNT to.
-	fn distribute_borrower_mnt(
-		underlying_id: CurrencyId,
-		borrower: &T::AccountId,
-		distribute_all: bool,
-	) -> BalanceResult {
+	/// - `distribute_all`:  boolean, distribute all or part of accrued MNT tokens.
+	fn distribute_borrower_mnt(pool_id: CurrencyId, borrower: &T::AccountId, distribute_all: bool) -> BalanceResult {
 		// borrower_amount = account_borrow_balance / liquidity_pool_borrow_index
 		// delta_index = mnt_distribution_index(for current pool) - borrower_index
 		// borrower_delta = borrower_amount * delta_index
 		// borrower_accrued += borrower_delta
 		// borrower_index = mnt_distribution_index(for current pool)
 
-		let borrower_index = MntBorrowerIndex::<T>::get(underlying_id, borrower);
-		let pool_borrow_state = MntPoolsState::<T>::get(underlying_id).borrow_state;
+		let borrower_index = MntBorrowerIndexStorage::<T>::get(pool_id, borrower);
+		let pool_borrow_state = MntPoolStateStorage::<T>::get(pool_id).borrow_state;
 		// Update borrower index
-		MntBorrowerIndex::<T>::insert(underlying_id, borrower, pool_borrow_state.mnt_distribution_index);
+		MntBorrowerIndexStorage::<T>::insert(pool_id, borrower, pool_borrow_state.mnt_distribution_index);
 		if borrower_index.is_zero() {
 			// This is first interaction with protocol
 			return Ok(Balance::zero());
 		}
 
-		let borrow_balance = T::ControllerManager::borrow_balance_stored(&borrower, underlying_id)?;
-		let pool_borrow_index = T::LiquidityPoolsManager::get_pool_borrow_index(underlying_id);
-		let borrower_amount = Price::from_inner(borrow_balance)
+		let user_borrow_underlying = T::ControllerManager::borrow_balance_stored(&borrower, pool_id)?;
+		let pool_borrow_index = T::LiquidityPoolsManager::get_pool_borrow_index(pool_id);
+		let borrower_amount = Price::from_inner(user_borrow_underlying)
 			.checked_div(&pool_borrow_index)
 			.ok_or(Error::<T>::NumOverflow)?;
 
@@ -514,7 +516,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			.checked_mul(&delta_index)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let mut borrower_mnt_accrued = MntAccrued::<T>::get(borrower);
+		let mut borrower_mnt_accrued = MntAccruedStorage::<T>::get(borrower);
 		borrower_mnt_accrued = borrower_mnt_accrued
 			.checked_add(borrower_delta.into_inner())
 			.ok_or(Error::<T>::NumOverflow)?;
@@ -522,7 +524,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		Self::transfer_mnt(borrower, borrower_mnt_accrued, distribute_all)?;
 
 		Self::deposit_event(Event::MntDistributedToBorrower(
-			underlying_id,
+			pool_id,
 			borrower.clone(),
 			borrower_delta.into_inner(),
 			pool_borrow_state.mnt_distribution_index,
@@ -532,7 +534,11 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 
 	/// Return MNT Borrow Rate and MNT Supply Rate values per block for current pool.
 	/// - `pool_id` - the pool to calculate rates
-	fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Rate, Rate), DispatchError> {
+	///
+	/// Return:
+	/// - `(pool_borrow_rate: Rate, pool_supply_rate: Rate)`: mnt borrow and supply rates for the
+	///   pool
+	fn get_pool_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Rate, Rate), DispatchError> {
 		/*
 		borrow_rate = mnt_speed * mnt_price / pool_borrow_in_usd
 		supply_rate = mnt_speed * mnt_price / pool_tvl_in_usd
@@ -548,12 +554,13 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
 		let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id)?;
 		let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
-		let pool_supply_wrap = T::MultiCurrency::total_issuance(wrapped_id);
+		let pool_supply_wrapped = T::MultiCurrency::total_issuance(wrapped_id);
 
 		let pool_borrow_in_usd = T::LiquidityPoolsManager::underlying_to_usd(pool_borrow_underlying, oracle_price)?;
-		let pool_tvl_in_usd = T::LiquidityPoolsManager::wrapped_to_usd(pool_supply_wrap, exchange_rate, oracle_price)?;
+		let pool_tvl_in_usd =
+			T::LiquidityPoolsManager::wrapped_to_usd(pool_supply_wrapped, exchange_rate, oracle_price)?;
 
-		let mnt_speed = MntSpeeds::<T>::get(pool_id);
+		let mnt_speed = MntSpeedStorage::<T>::get(pool_id);
 		let rate_calculation = |x: Balance| {
 			FixedU128::from_inner(mnt_speed)
 				.checked_mul(&mnt_price)
@@ -561,9 +568,9 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 				.ok_or(Error::<T>::NumOverflow)
 		};
 
-		let borrow_rate: Rate = rate_calculation(pool_borrow_in_usd)?;
-		let supply_rate: Rate = rate_calculation(pool_tvl_in_usd)?;
+		let pool_borrow_rate: Rate = rate_calculation(pool_borrow_in_usd)?;
+		let pool_supply_rate: Rate = rate_calculation(pool_tvl_in_usd)?;
 
-		Ok((borrow_rate, supply_rate))
+		Ok((pool_borrow_rate, pool_supply_rate))
 	}
 }

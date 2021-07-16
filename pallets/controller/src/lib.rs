@@ -1175,7 +1175,8 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 					let (_, borrow_rate, supply_rate) =
 						Self::get_pool_exchange_borrow_and_supply_rates(pool_id).ok_or(Error::<T>::NumOverflow)?;
 
-					let (mnt_borrow_rate, mnt_supply_rate) = T::MntManager::get_mnt_borrow_and_supply_rates(pool_id)?;
+					let (mnt_borrow_rate, mnt_supply_rate) =
+						T::MntManager::get_pool_mnt_borrow_and_supply_rates(pool_id)?;
 
 					let calculate_interest = |amount: Balance, rate: Balance| {
 						Interest::from_inner(amount as i128)

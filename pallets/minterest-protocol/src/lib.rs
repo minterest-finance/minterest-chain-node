@@ -616,7 +616,7 @@ impl<T: Config> Pallet<T> {
 
 		T::ControllerManager::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
-		T::MntManager::update_mnt_supply_index(underlying_asset)?;
+		T::MntManager::update_pool_mnt_supply_index(underlying_asset)?;
 		T::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
 
 		// Fail if deposit not allowed
@@ -707,7 +707,7 @@ impl<T: Config> Pallet<T> {
 		);
 		T::ControllerManager::redeem_allowed(underlying_asset, &who, wrapped_amount)?;
 
-		T::MntManager::update_mnt_supply_index(underlying_asset)?;
+		T::MntManager::update_pool_mnt_supply_index(underlying_asset)?;
 		T::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
 
 		T::MultiCurrency::withdraw(wrapped_id, &who, wrapped_amount)?;
@@ -756,7 +756,7 @@ impl<T: Config> Pallet<T> {
 		);
 		T::ControllerManager::borrow_allowed(underlying_asset, &who, borrow_amount)?;
 
-		T::MntManager::update_mnt_borrow_index(underlying_asset)?;
+		T::MntManager::update_pool_mnt_borrow_index(underlying_asset)?;
 		T::MntManager::distribute_borrower_mnt(underlying_asset, who, false)?;
 
 		// Fetch the amount the borrower owes, with accumulated interest.
@@ -808,7 +808,7 @@ impl<T: Config> Pallet<T> {
 		// Fail if transfer_amount is not available for redeem
 		T::ControllerManager::redeem_allowed(underlying_asset, &who, transfer_amount)?;
 
-		T::MntManager::update_mnt_supply_index(underlying_asset)?;
+		T::MntManager::update_pool_mnt_supply_index(underlying_asset)?;
 		T::MntManager::distribute_supplier_mnt(underlying_asset, who, false)?;
 		T::MntManager::distribute_supplier_mnt(underlying_asset, receiver, false)?;
 
@@ -866,9 +866,9 @@ impl<T: Config> Pallet<T> {
 				Error::<T>::PoolNotFound
 			);
 
-			T::MntManager::update_mnt_borrow_index(pool_id)?;
+			T::MntManager::update_pool_mnt_borrow_index(pool_id)?;
 			T::MntManager::distribute_borrower_mnt(pool_id, holder, true)?;
-			T::MntManager::update_mnt_supply_index(pool_id)?;
+			T::MntManager::update_pool_mnt_supply_index(pool_id)?;
 			T::MntManager::distribute_supplier_mnt(pool_id, holder, true)?;
 			Ok(())
 		})
@@ -906,7 +906,7 @@ impl<T: Config> MinterestProtocolManager<T::AccountId> for Pallet<T> {
 			Error::<T>::OperationPaused
 		);
 
-		T::MntManager::update_mnt_borrow_index(underlying_asset)?;
+		T::MntManager::update_pool_mnt_borrow_index(underlying_asset)?;
 		T::MntManager::distribute_borrower_mnt(underlying_asset, borrower, false)?;
 
 		// Fetch the amount the borrower owes, with accumulated interest
