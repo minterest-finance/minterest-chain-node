@@ -837,12 +837,12 @@ impl_runtime_apis! {
 	}
 
 	impl mnt_token_rpc_runtime_api::MntTokenRuntimeApi<Block, AccountId> for Runtime {
-		fn get_unclaimed_mnt_balance(account_id: AccountId) -> Option<MntBalanceInfo> {
-				Some(MntBalanceInfo{amount: MntToken::get_unclaimed_mnt_balance(&account_id).ok()?})
+		fn get_user_total_unclaimed_mnt_balance(account_id: AccountId) -> Option<MntBalanceInfo> {
+				Some(MntBalanceInfo{amount: MntToken::get_user_total_unclaimed_mnt_balance(&account_id).ok()?})
 		}
 
-		fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
-			MntToken::get_mnt_borrow_and_supply_rates(pool_id).ok()
+		fn get_pool_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
+			MntToken::get_pool_mnt_borrow_and_supply_rates(pool_id).ok()
 		}
 	}
 
