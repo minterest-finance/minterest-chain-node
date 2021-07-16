@@ -886,32 +886,30 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	///
 	/// Returns: returns a unique collection of users with insolvent loan (as a btree set).
 	fn get_all_users_with_insolvent_loan() -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
-		let protocol_users_with_insolvent_loan = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.into_iter()
 			.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
 			.try_fold(
-				BTreeSet::new(),
-				|protocol_users_with_loan: BTreeSet<T::AccountId>,
-				 pool_id|
-				 -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
+				<Vec<T::AccountId>>::new(),
+				|mut protocol_users_with_loan, pool_id| -> result::Result<Vec<T::AccountId>, DispatchError> {
 					Self::accrue_interest_rate(pool_id)?;
 					// get all users with loan from particular liquidity pools.
-					let pool_users_with_loan = T::LiquidityPoolsManager::get_pool_members_with_loan(pool_id)
-						.into_iter()
-						.collect::<BTreeSet<T::AccountId>>();
-					// collecting a unique collection of all users in the protocol with loan
-					protocol_users_with_loan.union(&pool_users_with_loan);
+					let pool_users_with_loan = T::LiquidityPoolsManager::get_pool_members_with_loan(pool_id);
+					protocol_users_with_loan.extend_from_slice(&pool_users_with_loan);
 					Ok(protocol_users_with_loan)
 				},
-			)?
-			.into_iter()
-			.filter(|user| {
-				// leave in the collection only users with shortfall
-				Self::get_hypothetical_account_liquidity(&user, None, Balance::zero(), Balance::zero())
-					.map_or(false, |(_, shortfall)| !shortfall.is_zero())
+			)
+			.map(|protocol_users_with_loan| {
+				protocol_users_with_loan
+					.into_iter()
+					//FIXME : bug here
+					.filter(|user| {
+						// leave in the collection only users with shortfall
+						Self::get_hypothetical_account_liquidity(&user, None, Balance::zero(), Balance::zero())
+							.map_or(false, |(_, shortfall)| !shortfall.is_zero())
+					})
+					.collect::<BTreeSet<T::AccountId>>()
 			})
-			.collect::<BTreeSet<T::AccountId>>();
-		Ok(protocol_users_with_insolvent_loan)
 	}
 
 	// RPC methods

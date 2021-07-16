@@ -8,8 +8,8 @@ use sp_runtime::{
 	traits::{One, Zero},
 	FixedPointNumber,
 };
+use std::collections::BTreeSet;
 pub use test_engine::*;
-pub use test_helper::*;
 
 // Presets for controller testing
 #[cfg(test)]
@@ -605,10 +605,79 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 		});
 }
 
-// #[test]
-// fn get_all_users_with_insolvent_loan_should_work() {
-// 	ExtBuilderNew::default()
-// }
+// ALice: 	300 DOT collateral;	400 ETH borrow;		600 BTC collateral. 	-- solvent
+// Bob:		500 DOT borrow;		250 ETH borrow;		750 BTC collateral.		-- insolvent
+// Charlie:	300 DOT borrow;		900 ETH supply;		3000 BTC collateral.	-- insolvent
+#[test]
+fn get_all_users_with_insolvent_loan_should_work() {
+	ExtBuilderNew::default()
+		.init_pool(
+			DOT,               // pool_id
+			dollars(800_u128), // borrowed
+			Rate::one(),       // borrow_index
+			Balance::zero(),   // protocol_interest
+		)
+		.init_pool(
+			ETH,               // pool_id
+			dollars(650_u128), // borrowed
+			Rate::one(),       // borrow_index
+			Balance::zero(),   // protocol_interest
+		)
+		.init_pool(
+			BTC,               // pool_id
+			dollars(650_u128), // borrowed
+			Rate::one(),       // borrow_index
+			Balance::zero(),   // protocol_interest
+		)
+		.set_pool_user_data(DOT, ALICE, Balance::zero(), Rate::one(), true)
+		.set_pool_user_data(ETH, ALICE, dollars(400_u128), Rate::one(), false)
+		.set_pool_user_data(BTC, ALICE, Balance::zero(), Rate::one(), true)
+		.set_pool_user_data(DOT, BOB, dollars(500_u128), Rate::one(), false)
+		.set_pool_user_data(ETH, BOB, dollars(250_u128), Rate::one(), false)
+		.set_pool_user_data(BTC, BOB, Balance::zero(), Rate::one(), true)
+		.set_pool_user_data(DOT, CHARLIE, dollars(300_u128), Rate::one(), false)
+		.set_pool_user_data(ETH, CHARLIE, Balance::zero(), Rate::one(), false)
+		.set_pool_user_data(BTC, CHARLIE, Balance::zero(), Rate::one(), true)
+		.set_user_balance(ALICE, MDOT, dollars(300_u128))
+		.set_user_balance(ALICE, MBTC, dollars(600_u128))
+		.set_user_balance(BOB, MBTC, dollars(750_u128))
+		.set_user_balance(CHARLIE, METH, dollars(900_u128))
+		.set_user_balance(CHARLIE, MBTC, dollars(300_u128))
+		.set_controller_data(
+			DOT,                                     // currency_id
+			0,                                       // last_interest_accrued_block
+			Rate::saturating_from_rational(1, 10),   // protocol_interest_factor
+			Rate::saturating_from_rational(5, 1000), // max_borrow_rate
+			Rate::saturating_from_rational(9, 10),   //collateral_factor
+			None,                                    // borrow_cap
+			PROTOCOL_INTEREST_TRANSFER_THRESHOLD,    // protocol_interest_threshold
+		)
+		.set_controller_data(
+			ETH,                                     // currency_id
+			0,                                       // last_interest_accrued_block
+			Rate::saturating_from_rational(1, 10),   // protocol_interest_factor
+			Rate::saturating_from_rational(5, 1000), // max_borrow_rate
+			Rate::saturating_from_rational(9, 10),   //collateral_factor
+			None,                                    // borrow_cap
+			PROTOCOL_INTEREST_TRANSFER_THRESHOLD,    // protocol_interest_threshold
+		)
+		.set_controller_data(
+			BTC,                                     // currency_id
+			0,                                       // last_interest_accrued_block
+			Rate::saturating_from_rational(1, 10),   // protocol_interest_factor
+			Rate::saturating_from_rational(5, 1000), // max_borrow_rate
+			Rate::saturating_from_rational(9, 10),   //collateral_factor
+			None,                                    // borrow_cap
+			PROTOCOL_INTEREST_TRANSFER_THRESHOLD,    // protocol_interest_threshold
+		)
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				TestController::get_all_users_with_insolvent_loan().unwrap(),
+				vec![BOB, CHARLIE].into_iter().collect::<BTreeSet<AccountId>>()
+			);
+		});
+}
 
 #[test]
 fn get_pool_exchange_borrow_and_supply_rates_less_than_kink() {
