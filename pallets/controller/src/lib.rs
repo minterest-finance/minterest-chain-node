@@ -891,7 +891,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			.try_fold(
 				BTreeSet::new(),
 				|protocol_users_with_shortfall, pool_id| -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
-					let pool_users = T::LiquidityPoolsManager::get_pool_members_with_loans(pool_id)?;
+					let pool_users = T::LiquidityPoolsManager::get_pool_members_with_loan(pool_id)?;
 					Self::accrue_interest_rate(pool_id)?;
 					let pool_users_with_shortfall = pool_users
 						.into_iter()
@@ -1169,7 +1169,8 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 					let (_, borrow_rate, supply_rate) =
 						Self::get_pool_exchange_borrow_and_supply_rates(pool_id).ok_or(Error::<T>::NumOverflow)?;
 
-					let (mnt_borrow_rate, mnt_supply_rate) = T::MntManager::get_mnt_borrow_and_supply_rates(pool_id)?;
+					let (mnt_borrow_rate, mnt_supply_rate) =
+						T::MntManager::get_pool_mnt_borrow_and_supply_rates(pool_id)?;
 
 					let calculate_interest = |amount: Balance, rate: Balance| {
 						Interest::from_inner(amount as i128)

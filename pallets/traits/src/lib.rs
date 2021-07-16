@@ -48,7 +48,7 @@ pub trait LiquidityPoolStorageProvider<AccountId, Pool> {
 	fn get_pool_data(pool_id: CurrencyId) -> Pool;
 
 	/// Get list of users with active loan positions for a particular pool.
-	fn get_pool_members_with_loans(underlying_asset: CurrencyId) -> Result<Vec<AccountId>, DispatchError>;
+	fn get_pool_members_with_loan(underlying_asset: CurrencyId) -> Result<Vec<AccountId>, DispatchError>;
 
 	/// Gets total amount borrowed from the pool.
 	fn get_pool_borrow_underlying(pool_id: CurrencyId) -> Balance;

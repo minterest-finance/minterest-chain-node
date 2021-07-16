@@ -345,7 +345,7 @@ impl<T: Config> LiquidityPoolStorageProvider<T::AccountId, Pool> for Pallet<T> {
 		Self::pools(pool_id)
 	}
 
-	fn get_pool_members_with_loans(underlying_asset: CurrencyId) -> result::Result<Vec<T::AccountId>, DispatchError> {
+	fn get_pool_members_with_loan(underlying_asset: CurrencyId) -> result::Result<Vec<T::AccountId>, DispatchError> {
 		let user_vec: Vec<T::AccountId> = PoolUserParams::<T>::iter_prefix(underlying_asset)
 			.filter(|(_, pool_user_data)| !pool_user_data.borrowed.is_zero())
 			.map(|(account, _)| account)
