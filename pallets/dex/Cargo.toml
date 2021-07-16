@@ -29,6 +29,8 @@ minterest-primitives = { path = "../../primitives" }
 liquidity-pools = { path = "../liquidity-pools" }
 liquidation-pools = { path = "../liquidation-pools" }
 test-helper = { path = "../../test-helper" }
+test-engine = { path = "../../test-engine" }
+dex = {path = "../dex"}
 
 [features]
 default = ["std"]
