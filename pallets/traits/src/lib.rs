@@ -194,6 +194,12 @@ pub trait ControllerManager<AccountId> {
 	/// Return minimum protocol interest needed to transfer it to liquidation pool
 	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance;
 
+	/// Calculates the amount of collateral based on the parameters pool_id and the supply amount.
+	/// Reads the collateral factor value from storage.
+	///
+	/// Returns: `collateral_amount = supply_amount * collateral_factor`.
+	fn calculate_collateral(pool_id: CurrencyId, supply_amount: Balance) -> Result<Balance, DispatchError>;
+
 	/// For all active pools in the protocol, it checks all users: calls `accrue_interest_rate`,
 	/// and then get_hypothetical_account_liquidity. If the user has a shortfall, then writes it
 	/// to the vector.

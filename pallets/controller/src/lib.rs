@@ -863,8 +863,8 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	///
 	/// Return Ok if the borrow is allowed.
 	fn borrow_allowed(underlying_asset: CurrencyId, who: &T::AccountId, borrow_amount: Balance) -> DispatchResult {
-		let borrow_cap_reached = Self::is_borrow_cap_reached(underlying_asset, borrow_amount)?;
-		ensure!(!borrow_cap_reached, Error::<T>::BorrowCapReached);
+		let is_borrow_cap_reached = Self::is_borrow_cap_reached(underlying_asset, borrow_amount)?;
+		ensure!(!is_borrow_cap_reached, Error::<T>::BorrowCapReached);
 
 		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, Some(underlying_asset), 0, borrow_amount)
 			.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
@@ -877,6 +877,19 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	/// Return minimum protocol interest needed to transfer it to liquidation pool
 	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance {
 		Self::controller_params(pool_id).protocol_interest_threshold
+	}
+
+	/// Calculates the amount of collateral based on the parameters pool_id and the supply amount.
+	/// Reads the collateral factor value from storage.
+	///
+	/// Returns: `collateral_amount = supply_amount * collateral_factor`.
+	fn calculate_collateral(pool_id: CurrencyId, supply_amount: Balance) -> Result<Balance, DispatchError> {
+		let collateral_factor = ControllerParams::<T>::get(pool_id).collateral_factor;
+		let collateral_amount = Rate::from_inner(supply_amount)
+			.checked_mul(&collateral_factor)
+			.map(|x| x.into_inner())
+			.ok_or(Error::<T>::NumOverflow)?;
+		Ok(collateral_amount)
 	}
 
 	/// Calculates and gets all insolvent loans of users in the protocol. Calls a function
@@ -902,7 +915,6 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			.map(|protocol_users_with_loan| {
 				protocol_users_with_loan
 					.into_iter()
-					//FIXME : bug here
 					.filter(|user| {
 						// leave in the collection only users with shortfall
 						Self::get_hypothetical_account_liquidity(&user, None, Balance::zero(), Balance::zero())

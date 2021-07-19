@@ -88,7 +88,10 @@ pub struct UserLoanState<T> {
 	/// Vector of user borrows. Contains information about the CurrencyId and the amount of borrow.
 	borrows: Vec<(CurrencyId, Balance)>,
 	/// Vector of user supplies. Contains information about the CurrencyId and the amount of supply.
+	/// Considers supply only for those pools that are enabled as collateral.
 	supplies: Vec<(CurrencyId, Balance)>,
+	/// Vector of user collaterals. `collateral_amount = supply_amount - collateral_factor`
+	collaterals: Vec<(CurrencyId, Balance)>,
 	_phantom: sp_std::marker::PhantomData<T>,
 }
 
@@ -98,12 +101,14 @@ impl<T: Config> UserLoanState<T> {
 		Self {
 			borrows: Vec::new(),
 			supplies: Vec::new(),
+			collaterals: Vec::new(),
 			_phantom: Default::default(),
 		}
 	}
 
 	/// Calculates user_total_borrow_usd.
-	fn total_borrow_usd(&self) -> Result<Balance, DispatchError> {
+	/// Returns: `user_total_borrow_usd = Sum(user_borrow_usd)`.
+	fn total_borrow(&self) -> Result<Balance, DispatchError> {
 		self.borrows
 			.iter()
 			.try_fold(Balance::zero(), |acc, (_, borrow_amount)| {
@@ -112,8 +117,9 @@ impl<T: Config> UserLoanState<T> {
 			})
 	}
 
-	/// Calculates user_total_supply_usd.
-	fn total_supply_usd(&self) -> Result<Balance, DispatchError> {
+	/// Calculates user_total_supply.
+	/// Returns: `user_total_supply = Sum(user_supply)`.
+	fn total_supply(&self) -> Result<Balance, DispatchError> {
 		self.supplies
 			.iter()
 			.try_fold(Balance::zero(), |acc, (_, supply_amount)| {
@@ -122,8 +128,9 @@ impl<T: Config> UserLoanState<T> {
 			})
 	}
 
-	/// Calculates user_total_seize_usd.
-	fn total_seize_usd(&self) -> Result<Balance, DispatchError> {
+	/// Calculates user_total_seize.
+	/// Returns: `user_total_seize = sum(user_borrow * liquidation_fee)`.
+	fn total_seize(&self) -> Result<Balance, DispatchError> {
 		self.borrows.iter().try_fold(
 			Balance::zero(),
 			|acc, (pool_id, borrow_usd)| -> Result<Balance, DispatchError> {
@@ -132,6 +139,17 @@ impl<T: Config> UserLoanState<T> {
 				Ok(acc)
 			},
 		)
+	}
+
+	/// Calculates user_total_collateral.
+	/// /// Returns: `user_total_collateral = Sum(user_collateral)`.
+	fn total_collateral(&self) -> Result<Balance, DispatchError> {
+		self.collaterals
+			.iter()
+			.try_fold(Balance::zero(), |acc, (_, collateral_amount)| {
+				acc.checked_add(*collateral_amount).ok_or(Error::<T>::NumOverflow)?;
+				Ok(acc)
+			})
 	}
 }
 
@@ -200,6 +218,8 @@ pub mod module {
 		InvalidFeedPrice,
 		/// Number overflow in calculation.
 		NumOverflow,
+		/// User's loan is solvent.
+		SolventUserLoan,
 	}
 
 	#[pallet::event]
@@ -444,10 +464,20 @@ impl<T: Config> Pallet<T> {
 		borrower: &T::AccountId,
 		user_loan_state: &UserLoanState<T>,
 	) -> Result<LiquidationMode, DispatchError> {
-		let (borrower_total_borrow_usd, borrower_total_supply_usd, borrower_total_seize_usd) = (
-			user_loan_state.total_borrow_usd()?,
-			user_loan_state.total_supply_usd()?,
-			user_loan_state.total_seize_usd()?,
+		let (
+			borrower_total_borrow_usd,
+			borrower_total_supply_usd,
+			borrower_total_seize_usd,
+			borrower_total_collateral_usd,
+		) = (
+			user_loan_state.total_borrow()?,
+			user_loan_state.total_supply()?,
+			user_loan_state.total_seize()?,
+			user_loan_state.total_collateral()?,
+		);
+		ensure!(
+			borrower_total_borrow_usd <= borrower_total_collateral_usd,
+			Error::<T>::SolventUserLoan
 		);
 		let user_liquidation_attempts = Self::get_user_liquidation_attempts(&borrower);
 
@@ -485,12 +515,13 @@ impl<T: Config> Pallet<T> {
 					acc_user_state.borrows.push((pool_id, user_borrow_usd));
 
 					if T::LiquidityPoolsManager::is_pool_collateral(&who, pool_id) {
-						let collateral_factor = T::ControllerManager::get
 						let user_supply_underlying =
 							T::ControllerManager::get_user_supply_underlying_balance(who, pool_id)?;
 						let user_supply_usd =
 							T::LiquidityPoolsManager::underlying_to_usd(user_supply_underlying, oracle_price)?;
+						let user_collateral_usd = T::ControllerManager::calculate_collateral(pool_id, user_supply_usd)?;
 						acc_user_state.supplies.push((pool_id, user_supply_usd));
+						acc_user_state.collaterals.push((pool_id, user_collateral_usd));
 					}
 					Ok(acc_user_state)
 				},
