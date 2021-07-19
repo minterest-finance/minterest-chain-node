@@ -30,7 +30,7 @@ use pallet_traits::{
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
+	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Saturating, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, FixedU128, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, collections::btree_set::BTreeSet, convert::TryInto, prelude::Vec, result};
@@ -882,14 +882,13 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	/// Calculates the amount of collateral based on the parameters pool_id and the supply amount.
 	/// Reads the collateral factor value from storage.
 	///
+	/// Cannot overflow, because the collateral factor is always less than one.
 	/// Returns: `collateral_amount = supply_amount * collateral_factor`.
-	fn calculate_collateral(pool_id: CurrencyId, supply_amount: Balance) -> Result<Balance, DispatchError> {
+	fn calculate_collateral(pool_id: CurrencyId, supply_amount: Balance) -> Balance {
 		let collateral_factor = ControllerParams::<T>::get(pool_id).collateral_factor;
-		let collateral_amount = Rate::from_inner(supply_amount)
-			.checked_mul(&collateral_factor)
-			.map(|x| x.into_inner())
-			.ok_or(Error::<T>::NumOverflow)?;
-		Ok(collateral_amount)
+		Rate::from_inner(supply_amount)
+			.saturating_mul(collateral_factor)
+			.into_inner()
 	}
 
 	/// Calculates and gets all insolvent loans of users in the protocol. Calls a function

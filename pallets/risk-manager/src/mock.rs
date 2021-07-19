@@ -87,6 +87,7 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 pub struct ExternalityBuilder {
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
+	liquidation_fee: Vec<(CurrencyId, Rate)>,
 }
 
 impl ExternalityBuilder {
@@ -110,6 +111,14 @@ impl ExternalityBuilder {
 		self
 	}
 
+	pub fn set_liquidation_fees(mut self, liquidation_fees: Vec<(CurrencyId, Rate)>) -> Self {
+		// self.liquidation_fee.extend_from_slice(&liquidation_fees);
+		liquidation_fees
+			.into_iter()
+			.for_each(|(pool_id, liquidation_fee)| self.liquidation_fee.push((pool_id, liquidation_fee)));
+		self
+	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
@@ -120,7 +129,15 @@ impl ExternalityBuilder {
 		.assimilate_storage(&mut storage)
 		.unwrap();
 
-		let mut ext: sp_io::TestExternalities = storage.into();
+		risk_manager::GenesisConfig::<Test> {
+			liquidation_fee: vec![],
+			liquidation_threshold: Default::default(),
+			_phantom: Default::default(),
+		}
+		.assimilate_storage(&mut storage)
+		.unwrap();
+
+		let mut ext = sp_io::TestExternalities::new(storage);
 		ext.execute_with(|| System::set_block_number(1));
 		ext
 	}

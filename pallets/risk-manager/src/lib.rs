@@ -519,7 +519,7 @@ impl<T: Config> Pallet<T> {
 							T::ControllerManager::get_user_supply_underlying_balance(who, pool_id)?;
 						let user_supply_usd =
 							T::LiquidityPoolsManager::underlying_to_usd(user_supply_underlying, oracle_price)?;
-						let user_collateral_usd = T::ControllerManager::calculate_collateral(pool_id, user_supply_usd)?;
+						let user_collateral_usd = T::ControllerManager::calculate_collateral(pool_id, user_supply_usd);
 						acc_user_state.supplies.push((pool_id, user_supply_usd));
 						acc_user_state.collaterals.push((pool_id, user_collateral_usd));
 					}
@@ -633,7 +633,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// Returns: `seize_amount = borrow_amount * (1 + liquidation_fee)`.
 	fn calculate_seize_amount(pool_id: CurrencyId, borrow_amount: Balance) -> Result<Balance, DispatchError> {
-		let liquidation_fee = LiquidationFeeStorage::<T>::get(pool_id);
+		let liquidation_fee = Self::liquidation_fee_storage(pool_id);
 		let seize_amount = Rate::one()
 			.checked_add(&liquidation_fee)
 			.and_then(|v| v.checked_mul(&Rate::from_inner(borrow_amount)))

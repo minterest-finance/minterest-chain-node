@@ -104,6 +104,25 @@ fn set_threshold_should_work() {
 }
 
 #[test]
+fn calculate_seize_amount_should_work() {
+	ExternalityBuilder::default()
+		.set_liquidation_fees(vec![
+			(DOT, Rate::saturating_from_rational(5, 100)),
+			(ETH, Rate::saturating_from_rational(15, 100)),
+		])
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				TestRiskManager::calculate_seize_amount(DOT, dollars(100_u128)).unwrap(),
+				dollars(105_u128)
+			);
+			assert_eq!(
+				TestRiskManager::calculate_seize_amount(ETH, dollars(100_u128)).unwrap(),
+				dollars(115_u128)
+			);
+		})
+}
+#[test]
 fn choose_liquidation_mode_should_work() {
 	ExternalityBuilder::default().build().execute_with(|| {
 		let borrows_N1 = vec![()];

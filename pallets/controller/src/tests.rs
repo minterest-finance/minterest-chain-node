@@ -830,6 +830,27 @@ fn is_operation_allowed_should_work() {
 		});
 }
 
+#[test]
+fn calculate_collateral_should_work() {
+	ExtBuilderNew::default()
+		.set_controller_data(
+			DOT,                                     // currency_id
+			0,                                       // last_interest_accrued_block
+			Rate::saturating_from_rational(1, 10),   // protocol_interest_factor
+			Rate::saturating_from_rational(5, 1000), // max_borrow_rate
+			Rate::saturating_from_rational(9, 10),   //collateral_factor
+			None,                                    // borrow_cap
+			PROTOCOL_INTEREST_TRANSFER_THRESHOLD,    // protocol_interest_threshold
+		)
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				TestController::calculate_collateral(DOT, dollars(100_u128)),
+				dollars(90_u128)
+			);
+		});
+}
+
 /* ----------------------------------------------------------------------------------------- */
 
 // Admin functions

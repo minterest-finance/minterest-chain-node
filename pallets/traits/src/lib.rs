@@ -198,7 +198,7 @@ pub trait ControllerManager<AccountId> {
 	/// Reads the collateral factor value from storage.
 	///
 	/// Returns: `collateral_amount = supply_amount * collateral_factor`.
-	fn calculate_collateral(pool_id: CurrencyId, supply_amount: Balance) -> Result<Balance, DispatchError>;
+	fn calculate_collateral(pool_id: CurrencyId, supply_amount: Balance) -> Balance;
 
 	/// For all active pools in the protocol, it checks all users: calls `accrue_interest_rate`,
 	/// and then get_hypothetical_account_liquidity. If the user has a shortfall, then writes it
