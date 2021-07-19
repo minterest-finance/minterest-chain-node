@@ -35,6 +35,7 @@
 #![allow(clippy::upper_case_acronyms)]
 #![allow(clippy::redundant_clone)]
 
+use crate::liquidation::UserLoanState;
 use frame_support::{log, pallet_prelude::*, transactional};
 use frame_system::{
 	ensure_none,
@@ -83,72 +84,103 @@ pub struct LiquidationAmounts {
 	borrower_supplies_to_seize_underlying: Vec<(CurrencyId, Balance)>,
 }
 
-/// Contains information about the current state of the borrower's loan.
-#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, PartialOrd, Ord)]
-pub struct UserLoanState<T> {
-	/// Vector of user borrows. Contains information about the CurrencyId and the amount of borrow.
-	borrows: Vec<(CurrencyId, Balance)>,
-	/// Vector of user supplies. Contains information about the CurrencyId and the amount of supply.
-	/// Considers supply only for those pools that are enabled as collateral.
-	supplies: Vec<(CurrencyId, Balance)>,
-	_phantom: sp_std::marker::PhantomData<T>,
-}
+pub mod liquidation {
+	use super::*;
 
-impl<T: Config> UserLoanState<T> {
-	/// Constructor.
-	fn new() -> Self {
-		Self {
-			borrows: Vec::new(),
-			supplies: Vec::new(),
-			_phantom: Default::default(),
+	/// Contains information about the current state of the borrower's loan.
+	#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, PartialOrd, Ord)]
+	pub struct UserLoanState<T> {
+		/// Vector of user borrows. Contains information about the CurrencyId and the amount of borrow.
+		borrows: Vec<(CurrencyId, Balance)>,
+		/// Vector of user supplies. Contains information about the CurrencyId and the amount of supply.
+		/// Considers supply only for those pools that are enabled as collateral.
+		supplies: Vec<(CurrencyId, Balance)>,
+		_phantom: sp_std::marker::PhantomData<T>,
+	}
+
+	impl<T: Config> UserLoanState<T> {
+		/// Constructor.
+		pub fn new() -> Self {
+			Self {
+				borrows: Vec::new(),
+				supplies: Vec::new(),
+				_phantom: Default::default(),
+			}
 		}
-	}
 
-	/// Calculates user_total_borrow_usd.
-	/// Returns: `user_total_borrow_usd = Sum(user_borrow_usd)`.
-	fn total_borrow(&self) -> Result<Balance, DispatchError> {
-		self.borrows
-			.iter()
-			.try_fold(Balance::zero(), |acc, (_, borrow_amount)| {
-				acc.checked_add(*borrow_amount).ok_or(Error::<T>::NumOverflow)?;
-				Ok(acc)
-			})
-	}
+		pub fn create_user_loan_state(who: &T::AccountId) -> Result<Self, DispatchError> {
+			let mut user_loan_state = UserLoanState::new();
+			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+				.into_iter()
+				.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
+				.try_for_each(|pool_id| -> DispatchResult {
+					let oracle_price =
+						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
-	/// Calculates user_total_supply.
-	/// Returns: `user_total_supply = Sum(user_supply)`.
-	fn total_supply(&self) -> Result<Balance, DispatchError> {
-		self.supplies
-			.iter()
-			.try_fold(Balance::zero(), |acc, (_, supply_amount)| {
-				acc.checked_add(*supply_amount).ok_or(Error::<T>::NumOverflow)?;
-				Ok(acc)
-			})
-	}
+					let user_borrow_underlying =
+						T::ControllerManager::get_user_borrow_underlying_balance(who, pool_id)?;
+					let user_borrow_usd =
+						T::LiquidityPoolsManager::underlying_to_usd(user_borrow_underlying, oracle_price)?;
+					user_loan_state.borrows.push((pool_id, user_borrow_usd));
 
-	/// Calculates user_total_seize.
-	/// Returns: `user_total_seize = sum(user_borrow * liquidation_fee)`.
-	fn total_seize(&self) -> Result<Balance, DispatchError> {
-		self.borrows.iter().try_fold(
-			Balance::zero(),
-			|acc, (pool_id, borrow_usd)| -> Result<Balance, DispatchError> {
-				let seize_usd = Pallet::<T>::calculate_seize_amount(*pool_id, *borrow_usd)?;
-				acc.checked_add(seize_usd).ok_or(Error::<T>::NumOverflow)?;
-				Ok(acc)
-			},
-		)
-	}
+					if T::LiquidityPoolsManager::is_pool_collateral(&who, pool_id) {
+						let user_supply_underlying =
+							T::ControllerManager::get_user_supply_underlying_balance(who, pool_id)?;
+						let user_supply_usd =
+							T::LiquidityPoolsManager::underlying_to_usd(user_supply_underlying, oracle_price)?;
+						user_loan_state.supplies.push((pool_id, user_supply_usd));
+					}
+					Ok(())
+				});
+			help
+		}
 
-	/// Calculates user_total_collateral.
-	/// Returns: `user_total_collateral = Sum(user_supply * pool_collateral_factor)`.
-	fn total_collateral(&self) -> Result<Balance, DispatchError> {
-		self.supplies
-			.iter()
-			.try_fold(Balance::zero(), |acc, (pool_id, supply_amount)| {
-				let collateral_amount = T::ControllerManager::calculate_collateral(*pool_id, *supply_amount);
-				acc.checked_add(collateral_amount).ok_or(Error::<T>::NumOverflow)?;
-				Ok(acc)
-			})
+		/// Calculates user_total_borrow_usd.
+		/// Returns: `user_total_borrow_usd = Sum(user_borrow_usd)`.
+		pub fn total_borrow(&self) -> Result<Balance, DispatchError> {
+			self.borrows
+				.iter()
+				.try_fold(Balance::zero(), |acc, (_, borrow_amount)| {
+					acc.checked_add(*borrow_amount).ok_or(Error::<T>::NumOverflow)?;
+					Ok(acc)
+				})
+		}
+
+		/// Calculates user_total_supply.
+		/// Returns: `user_total_supply = Sum(user_supply)`.
+		pub fn total_supply(&self) -> Result<Balance, DispatchError> {
+			self.supplies
+				.iter()
+				.try_fold(Balance::zero(), |acc, (_, supply_amount)| {
+					acc.checked_add(*supply_amount).ok_or(Error::<T>::NumOverflow)?;
+					Ok(acc)
+				})
+		}
+
+		/// Calculates user_total_seize.
+		/// Returns: `user_total_seize = sum(user_borrow * liquidation_fee)`.
+		pub fn total_seize(&self) -> Result<Balance, DispatchError> {
+			self.borrows.iter().try_fold(
+				Balance::zero(),
+				|acc, (pool_id, borrow_usd)| -> Result<Balance, DispatchError> {
+					let seize_usd = Pallet::<T>::calculate_seize_amount(*pool_id, *borrow_usd)?;
+					acc.checked_add(seize_usd).ok_or(Error::<T>::NumOverflow)?;
+					Ok(acc)
+				},
+			)
+		}
+
+		/// Calculates user_total_collateral.
+		/// Returns: `user_total_collateral = Sum(user_supply * pool_collateral_factor)`.
+		pub fn total_collateral(&self) -> Result<Balance, DispatchError> {
+			self.supplies
+				.iter()
+				.try_fold(Balance::zero(), |acc, (pool_id, supply_amount)| {
+					let collateral_amount = T::ControllerManager::calculate_collateral(*pool_id, *supply_amount);
+					acc.checked_add(collateral_amount).ok_or(Error::<T>::NumOverflow)?;
+					Ok(acc)
+				})
+		}
 	}
 }
 
@@ -491,39 +523,39 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	// TODO: Raw implementation. Cover with unit-tests.
-	/// Calculates the state of the user's loan. Considers supply only for those pools that are
-	/// enabled as collateral.
-	/// Returns user supplies and user borrows for each pool.
-	///
-	/// -`who`: AccountId of the user whose loan state is being calculated.
-	fn get_user_loan_state(who: &T::AccountId) -> Result<UserLoanState<T>, DispatchError> {
-		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.into_iter()
-			.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
-			.try_fold(
-				UserLoanState::new(),
-				|mut acc_user_state, pool_id| -> Result<UserLoanState<T>, DispatchError> {
-					let oracle_price =
-						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-
-					let user_borrow_underlying =
-						T::ControllerManager::get_user_borrow_underlying_balance(who, pool_id)?;
-					let user_borrow_usd =
-						T::LiquidityPoolsManager::underlying_to_usd(user_borrow_underlying, oracle_price)?;
-					acc_user_state.borrows.push((pool_id, user_borrow_usd));
-
-					if T::LiquidityPoolsManager::is_pool_collateral(&who, pool_id) {
-						let user_supply_underlying =
-							T::ControllerManager::get_user_supply_underlying_balance(who, pool_id)?;
-						let user_supply_usd =
-							T::LiquidityPoolsManager::underlying_to_usd(user_supply_underlying, oracle_price)?;
-						acc_user_state.supplies.push((pool_id, user_supply_usd));
-					}
-					Ok(acc_user_state)
-				},
-			)
-	}
+	// // TODO: Raw implementation. Cover with unit-tests.
+	// /// Calculates the state of the user's loan. Considers supply only for those pools that are
+	// /// enabled as collateral.
+	// /// Returns user supplies and user borrows for each pool.
+	// ///
+	// /// -`who`: AccountId of the user whose loan state is being calculated.
+	// fn get_user_loan_state(who: &T::AccountId) -> Result<UserLoanState<T>, DispatchError> {
+	// 	CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+	// 		.into_iter()
+	// 		.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
+	// 		.try_fold(
+	// 			UserLoanState::new(),
+	// 			|mut acc_user_state, pool_id| -> Result<UserLoanState<T>, DispatchError> {
+	// 				let oracle_price =
+	// 					T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+	//
+	// 				let user_borrow_underlying =
+	// 					T::ControllerManager::get_user_borrow_underlying_balance(who, pool_id)?;
+	// 				let user_borrow_usd =
+	// 					T::LiquidityPoolsManager::underlying_to_usd(user_borrow_underlying, oracle_price)?;
+	// 				acc_user_state.borrows.push((pool_id, user_borrow_usd));
+	//
+	// 				if T::LiquidityPoolsManager::is_pool_collateral(&who, pool_id) {
+	// 					let user_supply_underlying =
+	// 						T::ControllerManager::get_user_supply_underlying_balance(who, pool_id)?;
+	// 					let user_supply_usd =
+	// 						T::LiquidityPoolsManager::underlying_to_usd(user_supply_underlying, oracle_price)?;
+	// 					acc_user_state.supplies.push((pool_id, user_supply_usd));
+	// 				}
+	// 				Ok(acc_user_state)
+	// 			},
+	// 		)
+	// }
 
 	/// Calls internal functions from minterest-protocol pallet `do_repay` and `do_seize`, these
 	/// functions within themselves call `accrue_interest_rate`. Also calls
