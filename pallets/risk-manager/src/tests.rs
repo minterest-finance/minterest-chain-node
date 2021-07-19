@@ -102,3 +102,33 @@ fn set_threshold_should_work() {
 		);
 	});
 }
+
+#[test]
+fn choose_liquidation_mode_should_work() {
+	ExternalityBuilder::default().build().execute_with(|| {
+		let borrows_N1 = vec![()];
+		let loan_state_N1 = UserLoanState::<Test>::new();
+
+		// Can be set to 1.0
+		assert_ok!(TestRiskManager::set_liquidation_threshold(
+			admin_origin(),
+			DOT,
+			Rate::one()
+		));
+		assert_eq!(TestRiskManager::liquidation_threshold_storage(), Rate::one());
+		let expected_event = Event::TestRiskManager(crate::Event::LiquidationThresholdUpdated(Rate::one()));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+
+		// The dispatch origin of this call must be Administrator.
+		assert_noop!(
+			TestRiskManager::set_liquidation_threshold(alice_origin(), DOT, Rate::one()),
+			BadOrigin
+		);
+
+		// MDOT is wrong CurrencyId for underlying assets.
+		assert_noop!(
+			TestRiskManager::set_liquidation_threshold(admin_origin(), MDOT, Rate::one()),
+			Error::<Test>::NotValidUnderlyingAssetId
+		);
+	});
+}

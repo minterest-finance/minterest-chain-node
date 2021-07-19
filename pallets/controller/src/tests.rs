@@ -607,7 +607,7 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 
 // ALice: 	300 DOT collateral;	400 ETH borrow;		600 BTC collateral. 	-- solvent
 // Bob:		500 DOT borrow;		250 ETH borrow;		750 BTC collateral.		-- insolvent
-// Charlie:	300 DOT borrow;		900 ETH supply;		3000 BTC collateral.	-- insolvent
+// Charlie:	300 DOT borrow;		900 ETH supply;		300 BTC collateral.	-- insolvent
 #[test]
 fn get_all_users_with_insolvent_loan_should_work() {
 	ExtBuilderNew::default()
