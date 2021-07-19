@@ -4662,7 +4662,7 @@ dependencies = [
 [[package]]
 name = "orml-benchmarking"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#8b11c6ed3d1bf6ac651a782f830df8cb2306641e"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
 dependencies = [
  "frame-benchmarking",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
@@ -4680,7 +4680,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#8b11c6ed3d1bf6ac651a782f830df8cb2306641e"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
@@ -4715,7 +4715,7 @@ dependencies = [
 [[package]]
 name = "orml-oracle"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#8b11c6ed3d1bf6ac651a782f830df8cb2306641e"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
@@ -4732,7 +4732,7 @@ dependencies = [
 [[package]]
 name = "orml-oracle-rpc"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#8b11c6ed3d1bf6ac651a782f830df8cb2306641e"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -4747,7 +4747,7 @@ dependencies = [
 [[package]]
 name = "orml-oracle-rpc-runtime-api"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#8b11c6ed3d1bf6ac651a782f830df8cb2306641e"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -4757,7 +4757,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#8b11c6ed3d1bf6ac651a782f830df8cb2306641e"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
@@ -4790,7 +4790,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#8b11c6ed3d1bf6ac651a782f830df8cb2306641e"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "impl-trait-for-tuples 0.2.1",
@@ -4822,7 +4822,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#8b11c6ed3d1bf6ac651a782f830df8cb2306641e"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "parity-scale-codec",

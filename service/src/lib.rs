@@ -250,9 +250,8 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
 			sync_oracle: network.clone(),
 			justification_sync_link: network.clone(),
 			block_proposal_slot_portion: SlotProportion::new(2f32 / 3f32),
-			// max_block_proposal_slot_portion: None,
+			max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
 			telemetry: telemetry.as_ref().map(|x| x.handle()),
-			max_block_proposal_slot_portion: None,
 		})?;
 
 		// the AURA authoring task is considered essential, i.e. if it
