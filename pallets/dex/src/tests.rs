@@ -2,19 +2,20 @@
 
 #![cfg(test)]
 
-use dex::{Error, Event};
+use super::*;
+use crate::mock::{Event, *};
 use frame_support::assert_err;
 use orml_traits::MultiCurrency;
 use pallet_traits::{DEXManager, PoolsManager};
-use test_engine::*;
+
 
 #[test]
 fn swap_with_exact_target_should_work() {
-	ExtBuilderNew::default()
-		.set_liquidation_pool_balance(DOT, 300_000 * DOLLARS)
-		.set_liquidation_pool_balance(ETH, 400_000 * DOLLARS)
-		.set_dex_balance(DOT, 500_000 * DOLLARS)
-		.set_dex_balance(ETH, 500_000 * DOLLARS)
+	ExtBuilder::default()
+		.set_liquidation_pool_balance(TestLiquidationPools::pools_account_id(), DOT, 300_000 * DOLLARS)
+		.set_liquidation_pool_balance(TestLiquidationPools::pools_account_id(), ETH, 400_000 * DOLLARS)
+		.set_dex_balance(TestDex::dex_account_id(), DOT, 500_000 * DOLLARS)
+		.set_dex_balance(TestDex::dex_account_id(), ETH, 500_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			assert_eq!(
@@ -50,11 +51,11 @@ fn swap_with_exact_target_should_work() {
 
 #[test]
 fn do_swap_with_exact_target_should_work() {
-	ExtBuilderNew::default()
-		.set_liquidation_pool_balance(DOT, 300_000 * DOLLARS)
-		.set_liquidation_pool_balance(ETH, 400_000 * DOLLARS)
-		.set_dex_balance(DOT, 50_000 * DOLLARS)
-		.set_dex_balance(ETH, 50_000 * DOLLARS)
+	ExtBuilder::default()
+		.set_liquidation_pool_balance(TestLiquidationPools::pools_account_id(), DOT, 300_000 * DOLLARS)
+		.set_liquidation_pool_balance(TestLiquidationPools::pools_account_id(), ETH, 400_000 * DOLLARS)
+		.set_dex_balance(TestDex::dex_account_id(), DOT, 50_000 * DOLLARS)
+		.set_dex_balance(TestDex::dex_account_id(), ETH, 50_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			assert_eq!(
@@ -67,7 +68,7 @@ fn do_swap_with_exact_target_should_work() {
 				),
 				Ok(10_000 * DOLLARS)
 			);
-			let expected_event = test_engine::Event::TestDex(Event::Swap(
+			let expected_event = Event::TestDex(crate::Event::Swap(
 				TestLiquidationPools::pools_account_id(),
 				DOT,
 				ETH,

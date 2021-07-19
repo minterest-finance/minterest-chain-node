@@ -74,6 +74,9 @@ type BalanceResult = result::Result<Balance, DispatchError>;
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod mock;
+
 #[frame_support::pallet]
 pub mod module {
 	use super::*;

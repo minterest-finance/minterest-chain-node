@@ -1,14 +1,15 @@
 //! Tests for the controller module.
-use controller::{Error, Event};
+use super::*;
+use crate::mock::{Event, *};
 use frame_support::{assert_err, assert_noop, assert_ok};
 pub use minterest_primitives::{Balance, CurrencyId, Interest, Operation, Rate};
+use pallet_traits::PoolsManager;
 use pallet_traits::{ControllerManager, UserCollateral};
 use sp_runtime::DispatchError::BadOrigin;
 use sp_runtime::{
 	traits::{One, Zero},
 	FixedPointNumber,
 };
-pub use test_engine::*;
 pub use test_helper::*;
 
 // Presets for controller testing
@@ -18,11 +19,11 @@ pub trait ControllerPresets {
 	fn preset_alice_deposit_20_eth(self) -> Self;
 }
 
-impl ControllerPresets for ExtBuilderNew {
+impl ControllerPresets for ExtBuilder {
 	fn preset_alice_deposit_60_dot(self) -> Self {
 		self.set_user_balance(ALICE, DOT, dollars(40_u128))
 			.set_user_balance(ALICE, MDOT, dollars(60_u128))
-			.set_pool_balance(DOT, dollars(60_u128))
+			.set_pool_balance(TestPools::pools_account_id(), DOT, dollars(60_u128))
 			.init_pool(
 				DOT,                                  // pool_id
 				Balance::zero(),                      // borrowed
@@ -63,7 +64,7 @@ impl ControllerPresets for ExtBuilderNew {
 				Rate::zero(),    // interest_index
 				false,           // is_collateral
 			)
-			.set_pool_balance(ETH, dollars(20_u128))
+			.set_pool_balance(TestPools::pools_account_id(), ETH, dollars(20_u128))
 			.set_controller_data(
 				ETH,                                     // currency_id
 				0,                                       // last_interest_accrued_block
@@ -78,7 +79,7 @@ impl ControllerPresets for ExtBuilderNew {
 
 #[test]
 fn operations_are_paused_by_default() {
-	ExtBuilderNew::default().build().execute_with(|| {
+	ExtBuilder::default().build().execute_with(|| {
 		// All operations are paused when nothing is in storage
 		assert_eq!(TestController::pause_keepers(KSM), PauseKeeper::all_paused());
 	});
@@ -86,7 +87,7 @@ fn operations_are_paused_by_default() {
 
 #[test]
 fn protocol_operations_not_working_for_nonexisting_pool() {
-	ExtBuilderNew::default().build().execute_with(|| {
+	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
 			TestController::pause_operation(alice_origin(), ETH, Operation::Deposit),
 			Error::<TestRuntime>::PoolNotFound
@@ -126,7 +127,7 @@ fn protocol_operations_not_working_for_nonexisting_pool() {
 
 #[test]
 fn accrue_interest_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.set_minterest_model_params(
 			DOT,                                                // currency_id
 			Rate::saturating_from_rational(8, 10),              // kink
@@ -150,7 +151,7 @@ fn accrue_interest_should_work() {
 			PROTOCOL_INTEREST_TRANSFER_THRESHOLD,    // protocol_interest_threshold
 		)
 		.set_pause_keeper(DOT, false)
-		.set_pool_balance(DOT, dollars(20_u128))
+		.set_pool_balance(TestPools::pools_account_id(), DOT, dollars(20_u128))
 		.init_pool(
 			BTC,                                  // currency_id
 			Balance::zero(),                      // total_borrowed
@@ -182,7 +183,7 @@ fn accrue_interest_should_work() {
 
 #[test]
 fn accrue_interest_should_not_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.set_minterest_model_params(
 			DOT,                                                // currency_id
 			Rate::saturating_from_rational(8, 10),              // kink
@@ -205,7 +206,7 @@ fn accrue_interest_should_not_work() {
 			None,                                    // borrow_cap
 			PROTOCOL_INTEREST_TRANSFER_THRESHOLD,    // protocol_interest_threshold
 		)
-		.set_pool_balance(DOT, dollars(20_u128))
+		.set_pool_balance(TestPools::pools_account_id(), DOT, dollars(20_u128))
 		.build()
 		.execute_with(|| {
 			System::set_block_number(1);
@@ -238,7 +239,7 @@ fn accrue_interest_should_not_work() {
 
 #[test]
 fn calculate_block_delta_should_work() {
-	ExtBuilderNew::default().build().execute_with(|| {
+	ExtBuilder::default().build().execute_with(|| {
 		// block_delta = 10 - 5 = 5
 		assert_eq!(TestController::calculate_block_delta(10, 5), Ok(5));
 
@@ -252,7 +253,7 @@ fn calculate_block_delta_should_work() {
 
 #[test]
 fn calculate_interest_factor_should_work() {
-	ExtBuilderNew::default().build().execute_with(|| {
+	ExtBuilder::default().build().execute_with(|| {
 		// interest_factor = 0.1 * 25 = 2.5
 		assert_eq!(
 			TestController::calculate_interest_factor(Rate::saturating_from_rational(1, 10), 25),
@@ -269,7 +270,7 @@ fn calculate_interest_factor_should_work() {
 
 #[test]
 fn borrow_balance_stored_with_zero_balance_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.init_pool(
 			DOT,                                  // pool_id
 			Balance::zero(),                      // borrowed
@@ -292,7 +293,7 @@ fn borrow_balance_stored_with_zero_balance_should_work() {
 
 #[test]
 fn borrow_balance_stored_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.init_pool(
 			DOT,                                  // pool_id
 			Balance::zero(),                      // borrowed
@@ -315,7 +316,7 @@ fn borrow_balance_stored_should_work() {
 
 #[test]
 fn borrow_balance_stored_fails_if_num_overflow() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.init_pool(
 			DOT,                                  // pool_id
 			Balance::zero(),                      // borrowed
@@ -353,7 +354,7 @@ fn borrow_balance_stored_fails_if_num_overflow() {
 
 #[test]
 fn calculate_utilization_rate_should_work() {
-	ExtBuilderNew::default().build().execute_with(|| {
+	ExtBuilder::default().build().execute_with(|| {
 		// if current_pool_borrow_underlying == 0 then return Ok(0)
 		assert_eq!(TestController::calculate_utilization_rate(100, 0, 60), Ok(Rate::zero()));
 		// utilization_rate = 80 / (22 + 80 - 2) = 0.8
@@ -385,7 +386,7 @@ fn calculate_utilization_rate_should_work() {
 
 #[test]
 fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.init_pool(
 			DOT,                                  // pool_id
 			Balance::zero(),                      // borrowed
@@ -449,7 +450,7 @@ fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work(
 
 #[test]
 fn get_hypothetical_account_liquidity_one_currency_from_redeem_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.preset_alice_deposit_60_dot()
 		.build()
 		.execute_with(|| {
@@ -475,7 +476,7 @@ fn get_hypothetical_account_liquidity_one_currency_from_redeem_should_work() {
 
 #[test]
 fn get_hypothetical_account_liquidity_two_currencies_from_redeem_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.preset_alice_deposit_60_dot()
 		.preset_alice_deposit_20_eth()
 		.build()
@@ -502,12 +503,12 @@ fn get_hypothetical_account_liquidity_two_currencies_from_redeem_should_work() {
 
 #[test]
 fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.preset_alice_deposit_20_eth()
 		// ALICE deposit 60 DOT and borrow 30 DOT
 		.set_user_balance(ALICE, DOT, 70)
 		.set_user_balance(ALICE, MDOT, 60)
-		.set_pool_balance(DOT, 60)
+		.set_pool_balance(TestPools::pools_account_id(), DOT, 60)
 		.init_pool(
 			DOT,             // pool_id
 			30,              // borrowed
@@ -558,7 +559,7 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 
 #[test]
 fn get_liquidity_pool_exchange_rate_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.set_minterest_model_params(
 			DOT,                                                // currency_id
 			Rate::saturating_from_rational(8, 10),              // kink
@@ -572,7 +573,7 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 			Rate::one(),       // borrow_index
 			Balance::zero(),   // protocol_interest
 		)
-		.set_pool_balance(DOT, dollars(100_u128))
+		.set_pool_balance(TestPools::pools_account_id(), DOT, dollars(100_u128))
 		.set_user_balance(ALICE, MDOT, dollars(125_u128))
 		.set_controller_data(
 			DOT,                                     // currency_id
@@ -607,7 +608,7 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 
 #[test]
 fn get_pool_exchange_borrow_and_supply_rates_less_than_kink() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.set_minterest_model_params(
 			DOT,                                                // currency_id
 			Rate::saturating_from_rational(8, 10),              // kink
@@ -621,7 +622,7 @@ fn get_pool_exchange_borrow_and_supply_rates_less_than_kink() {
 			Rate::one(),       // borrow_index
 			Balance::zero(),   // protocol_interest
 		)
-		.set_pool_balance(DOT, dollars(100_u128))
+		.set_pool_balance(TestPools::pools_account_id(), DOT, dollars(100_u128))
 		.set_controller_data(
 			DOT,                                     // currency_id
 			0,                                       // last_interest_accrued_block
@@ -647,7 +648,7 @@ fn get_pool_exchange_borrow_and_supply_rates_less_than_kink() {
 
 #[test]
 fn get_pool_exchange_borrow_and_supply_rates_above_kink() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.set_minterest_model_params(
 			DOT,                                                // currency_id
 			Rate::saturating_from_rational(8, 10),              // kink
@@ -661,7 +662,7 @@ fn get_pool_exchange_borrow_and_supply_rates_above_kink() {
 			Rate::one(),       // borrow_index
 			Balance::zero(),   // protocol_interest
 		)
-		.set_pool_balance(DOT, dollars(100_u128))
+		.set_pool_balance(TestPools::pools_account_id(), DOT, dollars(100_u128))
 		.set_controller_data(
 			DOT,                                     // currency_id
 			0,                                       // last_interest_accrued_block
@@ -689,7 +690,7 @@ fn get_pool_exchange_borrow_and_supply_rates_above_kink() {
 
 #[test]
 fn redeem_allowed_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.preset_alice_deposit_60_dot()
 		.build()
 		.execute_with(|| {
@@ -707,7 +708,7 @@ fn redeem_allowed_should_work() {
 
 #[test]
 fn borrow_allowed_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.preset_alice_deposit_60_dot()
 		.build()
 		.execute_with(|| {
@@ -731,7 +732,7 @@ fn borrow_allowed_should_work() {
 
 #[test]
 fn is_operation_allowed_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.init_pool(
 			DOT,                                  // pool_id
 			Balance::zero(),                      // borrowed
@@ -762,7 +763,7 @@ fn is_operation_allowed_should_work() {
 
 #[test]
 fn set_protocol_interest_factor_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.init_pool(
 			DOT,                                  // pool_id
 			Balance::zero(),                      // borrowed
@@ -777,7 +778,7 @@ fn set_protocol_interest_factor_should_work() {
 				DOT,
 				Rate::saturating_from_integer(2)
 			));
-			let expected_event = test_engine::Event::TestController(Event::InterestFactorChanged);
+			let expected_event = Event::TestController(crate::Event::InterestFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
 				TestController::controller_params(DOT).protocol_interest_factor,
@@ -790,7 +791,7 @@ fn set_protocol_interest_factor_should_work() {
 				DOT,
 				Rate::zero()
 			));
-			let expected_event = test_engine::Event::TestController(Event::InterestFactorChanged);
+			let expected_event = Event::TestController(crate::Event::InterestFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
 				TestController::controller_params(DOT).protocol_interest_factor,
@@ -812,7 +813,7 @@ fn set_protocol_interest_factor_should_work() {
 
 #[test]
 fn set_max_borrow_rate_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.init_pool(
 			DOT,                                  // pool_id
 			Balance::zero(),                      // borrowed
@@ -827,7 +828,7 @@ fn set_max_borrow_rate_should_work() {
 				DOT,
 				Rate::saturating_from_integer(2)
 			));
-			let expected_event = test_engine::Event::TestController(Event::MaxBorrowRateChanged);
+			let expected_event = Event::TestController(crate::Event::MaxBorrowRateChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
 				TestController::controller_params(DOT).max_borrow_rate,
@@ -855,7 +856,7 @@ fn set_max_borrow_rate_should_work() {
 
 #[test]
 fn set_collateral_factor_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.init_pool(
 			DOT,                                  // pool_id
 			Balance::zero(),                      // borrowed
@@ -870,7 +871,7 @@ fn set_collateral_factor_should_work() {
 				DOT,
 				Rate::saturating_from_rational(1, 2)
 			));
-			let expected_event = test_engine::Event::TestController(Event::CollateralFactorChanged);
+			let expected_event = Event::TestController(crate::Event::CollateralFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
 				TestController::controller_params(DOT).collateral_factor,
@@ -905,7 +906,7 @@ fn set_collateral_factor_should_work() {
 
 #[test]
 fn pause_operation_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.init_pool(
 			DOT,                                  // pool_id
 			Balance::zero(),                      // borrowed
@@ -922,19 +923,19 @@ fn pause_operation_should_work() {
 			assert!(!TestController::pause_keepers(&DOT).transfer_paused);
 
 			assert_ok!(TestController::pause_operation(alice_origin(), DOT, Operation::Deposit));
-			let expected_event = test_engine::Event::TestController(Event::OperationIsPaused(DOT, Operation::Deposit));
+			let expected_event = Event::TestController(crate::Event::OperationIsPaused(DOT, Operation::Deposit));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::pause_operation(alice_origin(), DOT, Operation::Redeem));
-			let expected_event = test_engine::Event::TestController(Event::OperationIsPaused(DOT, Operation::Redeem));
+			let expected_event = Event::TestController(crate::Event::OperationIsPaused(DOT, Operation::Redeem));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::pause_operation(alice_origin(), DOT, Operation::Borrow));
-			let expected_event = test_engine::Event::TestController(Event::OperationIsPaused(DOT, Operation::Borrow));
+			let expected_event = Event::TestController(crate::Event::OperationIsPaused(DOT, Operation::Borrow));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::pause_operation(alice_origin(), DOT, Operation::Repay));
-			let expected_event = test_engine::Event::TestController(Event::OperationIsPaused(DOT, Operation::Repay));
+			let expected_event = Event::TestController(crate::Event::OperationIsPaused(DOT, Operation::Repay));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::pause_operation(
@@ -942,7 +943,7 @@ fn pause_operation_should_work() {
 				DOT,
 				Operation::Transfer
 			));
-			let expected_event = test_engine::Event::TestController(Event::OperationIsPaused(DOT, Operation::Transfer));
+			let expected_event = Event::TestController(crate::Event::OperationIsPaused(DOT, Operation::Transfer));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert!(TestController::pause_keepers(&DOT).deposit_paused);
@@ -964,7 +965,7 @@ fn pause_operation_should_work() {
 
 #[test]
 fn resume_operation_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.init_pool(
 			DOT,                                  // pool_id
 			Balance::zero(),                      // borrowed
@@ -991,20 +992,19 @@ fn resume_operation_should_work() {
 				KSM,
 				Operation::Deposit
 			));
-			let expected_event =
-				test_engine::Event::TestController(Event::OperationIsUnPaused(KSM, Operation::Deposit));
+			let expected_event = Event::TestController(crate::Event::OperationIsUnPaused(KSM, Operation::Deposit));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::resume_operation(alice_origin(), KSM, Operation::Redeem));
-			let expected_event = test_engine::Event::TestController(Event::OperationIsUnPaused(KSM, Operation::Redeem));
+			let expected_event = Event::TestController(crate::Event::OperationIsUnPaused(KSM, Operation::Redeem));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::resume_operation(alice_origin(), KSM, Operation::Borrow));
-			let expected_event = test_engine::Event::TestController(Event::OperationIsUnPaused(KSM, Operation::Borrow));
+			let expected_event = Event::TestController(crate::Event::OperationIsUnPaused(KSM, Operation::Borrow));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::resume_operation(alice_origin(), KSM, Operation::Repay));
-			let expected_event = test_engine::Event::TestController(Event::OperationIsUnPaused(KSM, Operation::Repay));
+			let expected_event = Event::TestController(crate::Event::OperationIsUnPaused(KSM, Operation::Repay));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_ok!(TestController::resume_operation(
@@ -1012,8 +1012,7 @@ fn resume_operation_should_work() {
 				KSM,
 				Operation::Transfer
 			));
-			let expected_event =
-				test_engine::Event::TestController(Event::OperationIsUnPaused(KSM, Operation::Transfer));
+			let expected_event = Event::TestController(crate::Event::OperationIsUnPaused(KSM, Operation::Transfer));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert!(!TestController::pause_keepers(&KSM).deposit_paused);
@@ -1035,7 +1034,7 @@ fn resume_operation_should_work() {
 
 #[test]
 fn set_borrow_cap_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.init_pool(
 			DOT,                                  // pool_id
 			Balance::zero(),                      // borrowed
@@ -1053,12 +1052,12 @@ fn set_borrow_cap_should_work() {
 
 			// ALICE set borrow cap to 10.
 			assert_ok!(TestController::set_borrow_cap(alice_origin(), DOT, Some(dollars(10))));
-			let expected_event = test_engine::Event::TestController(Event::BorrowCapChanged(DOT, Some(dollars(10))));
+			let expected_event = Event::TestController(crate::Event::BorrowCapChanged(DOT, Some(dollars(10))));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// ALICE is able to change borrow cap to 9999
 			assert_ok!(TestController::set_borrow_cap(alice_origin(), DOT, Some(9999_u128)));
-			let expected_event = test_engine::Event::TestController(Event::BorrowCapChanged(DOT, Some(9999_u128)));
+			let expected_event = Event::TestController(crate::Event::BorrowCapChanged(DOT, Some(9999_u128)));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// Unable to set borrow cap greater than MAX_BORROW_CAP.
@@ -1069,14 +1068,14 @@ fn set_borrow_cap_should_work() {
 
 			// Alice is able to set zero borrow cap.
 			assert_ok!(TestController::set_borrow_cap(alice_origin(), DOT, Some(0_u128)));
-			let expected_event = test_engine::Event::TestController(Event::BorrowCapChanged(DOT, Some(0_u128)));
+			let expected_event = Event::TestController(crate::Event::BorrowCapChanged(DOT, Some(0_u128)));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 		});
 }
 
 #[test]
 fn set_protocol_interest_threshold_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.init_pool(
 			DOT,                                  // pool_id
 			Balance::zero(),                      // borrowed
@@ -1098,8 +1097,7 @@ fn set_protocol_interest_threshold_should_work() {
 				DOT,
 				10_u128
 			));
-			let expected_event =
-				test_engine::Event::TestController(Event::ProtocolInterestThresholdChanged(DOT, 10_u128));
+			let expected_event = Event::TestController(crate::Event::ProtocolInterestThresholdChanged(DOT, 10_u128));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// Alice is able to set zero protocol interest threshold.
@@ -1108,8 +1106,7 @@ fn set_protocol_interest_threshold_should_work() {
 				DOT,
 				0_u128
 			));
-			let expected_event =
-				test_engine::Event::TestController(Event::ProtocolInterestThresholdChanged(DOT, 0_u128));
+			let expected_event = Event::TestController(crate::Event::ProtocolInterestThresholdChanged(DOT, 0_u128));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 		});
 }
