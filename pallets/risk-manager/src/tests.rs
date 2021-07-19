@@ -122,32 +122,33 @@ fn calculate_seize_amount_should_work() {
 			);
 		})
 }
+
 #[test]
 fn choose_liquidation_mode_should_work() {
-	ExternalityBuilder::default().build().execute_with(|| {
-		let borrows_N1 = vec![()];
-		let loan_state_N1 = UserLoanState::<Test>::new();
+	ExternalityBuilder::default()
+		.set_liquidation_fees(vec![
+			(DOT, Rate::saturating_from_rational(5, 100)),
+			(ETH, Rate::saturating_from_rational(10, 100)),
+			(BTC, Rate::saturating_from_rational(15, 100)),
+		])
+		.set_controller_data_mock(vec![DOT, ETH, BTC])
+		.build()
+		.execute_with(|| {
+			let make_up_user_loan_state =
+				|supplies: &Vec<(CurrencyId, Balance)>, borrows: &Vec<(CurrencyId, Balance)>| -> UserLoanState<Test> {
+					let mut user_loan_state = UserLoanState::<Test>::new();
+					user_loan_state.supplies.extend_from_slice(&supplies);
+					user_loan_state.borrows.extend_from_slice(&borrows);
+					user_loan_state
+				};
 
-		// Can be set to 1.0
-		assert_ok!(TestRiskManager::set_liquidation_threshold(
-			admin_origin(),
-			DOT,
-			Rate::one()
-		));
-		assert_eq!(TestRiskManager::liquidation_threshold_storage(), Rate::one());
-		let expected_event = Event::TestRiskManager(crate::Event::LiquidationThresholdUpdated(Rate::one()));
-		assert!(System::events().iter().any(|record| record.event == expected_event));
+			let supplies = vec![(DOT, dollars(300)), (ETH, dollars(650)), (BTC, dollars(50))];
+			let solvent_borrows = vec![(DOT, dollars(200)), (ETH, dollars(400))];
 
-		// The dispatch origin of this call must be Administrator.
-		assert_noop!(
-			TestRiskManager::set_liquidation_threshold(alice_origin(), DOT, Rate::one()),
-			BadOrigin
-		);
-
-		// MDOT is wrong CurrencyId for underlying assets.
-		assert_noop!(
-			TestRiskManager::set_liquidation_threshold(admin_origin(), MDOT, Rate::one()),
-			Error::<Test>::NotValidUnderlyingAssetId
-		);
-	});
+			let solvent_borrow_state = make_up_user_loan_state(&supplies, &solvent_borrows);
+			assert_noop!(
+				TestRiskManager::choose_liquidation_mode(&ALICE, &solvent_borrow_state),
+				Error::<Test>::SolventUserLoan
+			);
+		});
 }

@@ -1,6 +1,7 @@
 /// Mocks for the RiskManager pallet.
 use super::*;
 use crate as risk_manager;
+use controller::{ControllerData, PauseKeeper};
 use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
@@ -87,7 +88,9 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 pub struct ExternalityBuilder {
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
+	controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
 	liquidation_fee: Vec<(CurrencyId, Rate)>,
+	liquidation_threshold: Rate,
 }
 
 impl ExternalityBuilder {
@@ -112,10 +115,24 @@ impl ExternalityBuilder {
 	}
 
 	pub fn set_liquidation_fees(mut self, liquidation_fees: Vec<(CurrencyId, Rate)>) -> Self {
-		// self.liquidation_fee.extend_from_slice(&liquidation_fees);
-		liquidation_fees
-			.into_iter()
-			.for_each(|(pool_id, liquidation_fee)| self.liquidation_fee.push((pool_id, liquidation_fee)));
+		self.liquidation_fee.extend_from_slice(&liquidation_fees);
+		self
+	}
+
+	pub fn set_controller_data_mock(mut self, pools: Vec<CurrencyId>) -> Self {
+		pools.into_iter().for_each(|pool_id| {
+			self.controller_data.push((
+				pool_id,
+				ControllerData {
+					last_interest_accrued_block: 0,
+					protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+					borrow_cap: None,
+					protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+				},
+			))
+		});
 		self
 	}
 
@@ -130,9 +147,21 @@ impl ExternalityBuilder {
 		.unwrap();
 
 		risk_manager::GenesisConfig::<Test> {
-			liquidation_fee: vec![],
-			liquidation_threshold: Default::default(),
+			liquidation_fee: self.liquidation_fee,
+			liquidation_threshold: self.liquidation_threshold,
 			_phantom: Default::default(),
+		}
+		.assimilate_storage(&mut storage)
+		.unwrap();
+
+		controller::GenesisConfig::<Test> {
+			controller_params: self.controller_data,
+			pause_keepers: vec![
+				(ETH, PauseKeeper::all_unpaused()),
+				(DOT, PauseKeeper::all_unpaused()),
+				(KSM, PauseKeeper::all_unpaused()),
+				(BTC, PauseKeeper::all_unpaused()),
+			],
 		}
 		.assimilate_storage(&mut storage)
 		.unwrap();

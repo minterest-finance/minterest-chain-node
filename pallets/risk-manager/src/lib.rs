@@ -65,6 +65,7 @@ mod mock;
 mod tests;
 
 /// Types of liquidation of user loans.
+#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, PartialOrd, Ord)]
 enum LiquidationMode {
 	Partial,
 	Complete,
@@ -83,15 +84,13 @@ pub struct LiquidationAmounts {
 }
 
 /// Contains information about the current state of the borrower's loan.
-#[derive(Encode, Decode, RuntimeDebug, Clone, PartialOrd, PartialEq)]
+#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, PartialOrd, Ord)]
 pub struct UserLoanState<T> {
 	/// Vector of user borrows. Contains information about the CurrencyId and the amount of borrow.
 	borrows: Vec<(CurrencyId, Balance)>,
 	/// Vector of user supplies. Contains information about the CurrencyId and the amount of supply.
 	/// Considers supply only for those pools that are enabled as collateral.
 	supplies: Vec<(CurrencyId, Balance)>,
-	/// Vector of user collaterals. `collateral_amount = supply_amount - collateral_factor`
-	collaterals: Vec<(CurrencyId, Balance)>,
 	_phantom: sp_std::marker::PhantomData<T>,
 }
 
@@ -101,7 +100,6 @@ impl<T: Config> UserLoanState<T> {
 		Self {
 			borrows: Vec::new(),
 			supplies: Vec::new(),
-			collaterals: Vec::new(),
 			_phantom: Default::default(),
 		}
 	}
@@ -142,12 +140,13 @@ impl<T: Config> UserLoanState<T> {
 	}
 
 	/// Calculates user_total_collateral.
-	/// /// Returns: `user_total_collateral = Sum(user_collateral)`.
+	/// Returns: `user_total_collateral = Sum(user_supply * pool_collateral_factor)`.
 	fn total_collateral(&self) -> Result<Balance, DispatchError> {
-		self.collaterals
+		self.supplies
 			.iter()
-			.try_fold(Balance::zero(), |acc, (_, collateral_amount)| {
-				acc.checked_add(*collateral_amount).ok_or(Error::<T>::NumOverflow)?;
+			.try_fold(Balance::zero(), |acc, (pool_id, supply_amount)| {
+				let collateral_amount = T::ControllerManager::calculate_collateral(*pool_id, *supply_amount);
+				acc.checked_add(collateral_amount).ok_or(Error::<T>::NumOverflow)?;
 				Ok(acc)
 			})
 	}
@@ -519,9 +518,7 @@ impl<T: Config> Pallet<T> {
 							T::ControllerManager::get_user_supply_underlying_balance(who, pool_id)?;
 						let user_supply_usd =
 							T::LiquidityPoolsManager::underlying_to_usd(user_supply_underlying, oracle_price)?;
-						let user_collateral_usd = T::ControllerManager::calculate_collateral(pool_id, user_supply_usd);
 						acc_user_state.supplies.push((pool_id, user_supply_usd));
-						acc_user_state.collaterals.push((pool_id, user_collateral_usd));
 					}
 					Ok(acc_user_state)
 				},
