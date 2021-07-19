@@ -1,3 +1,5 @@
+
+use serde::{Deserialize, Serialize};
 use controller::{ControllerData, PauseKeeper};
 use hex_literal::hex;
 use liquidation_pools::LiquidationPoolData;
@@ -5,25 +7,24 @@ use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use minterest_primitives::currency::GetDecimals;
 use minterest_primitives::{VestingBucket, VestingScheduleJson};
-use node_minterest_runtime::{
-	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, ExistentialDeposit,
-	GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
-	MinterestModelConfig, MntTokenConfig, MntTokenPalletId, OperatorMembershipMinterestConfig, PricesConfig,
-	RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, VestingConfig, WhitelistConfig, BTC, DOLLARS,
-	DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
+use parachain_runtime::{
+	get_all_modules_accounts, AccountId, Balance, ExistentialDeposit,
+	GenesisConfig, MntTokenPalletId, Signature, BTC, DOLLARS,
+	DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION,
 };
+use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
-use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::{
 	traits::{AccountIdConversion, IdentifyAccount, One, Verify, Zero},
 	FixedPointNumber, FixedU128,
 };
 use sp_std::collections::btree_map::BTreeMap;
 use std::collections::{HashMap, HashSet};
+use cumulus_primitives_core::ParaId;
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -35,13 +36,30 @@ const INITIAL_TREASURY: u128 = 5_000_000 * DOLLARS;
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
+pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
 /// Generate a crypto pair from seed.
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
 	TPublic::Pair::from_string(&format!("//{}", seed), None)
 		.expect("static values are valid; qed")
 		.public()
+}
+
+/// The extensions for the [`ChainSpec`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
+#[serde(deny_unknown_fields)]
+pub struct Extensions {
+	/// The relay chain of the Parachain.
+	pub relay_chain: String,
+	/// The id of the Parachain.
+	pub para_id: u32,
+}
+
+impl Extensions {
+	/// Try to get the extension from the given `ChainSpec`.
+	pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
+		sc_chain_spec::get_extension(chain_spec.extensions())
+	}
 }
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -55,39 +73,35 @@ where
 }
 
 /// Generate an Aura authority key.
-pub fn authority_keys_from_seed(seed: &str) -> (AuraId, GrandpaId) {
-	(get_from_seed::<AuraId>(seed), get_from_seed::<GrandpaId>(seed))
+pub fn authority_keys_from_seed(seed: &str) -> AuraId {
+	get_from_seed::<AuraId>(seed)
 }
 
-pub fn development_config() -> Result<ChainSpec, String> {
-	let mut properties = Map::new();
-	properties.insert("tokenDecimals".into(), 18.into());
-
-	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
-
-	Ok(ChainSpec::from_genesis(
-		// Name
-		"Development",
-		// ID
-		"dev",
-		ChainType::Development,
+pub fn get_chain_spec(id: ParaId) -> ChainSpec {
+	ChainSpec::from_genesis(
+		"Local Testnet",
+		"local_testnet",
+		ChainType::Local,
 		move || {
 			testnet_genesis(
-				wasm_binary,
-				// Initial PoA authorities
-				vec![authority_keys_from_seed("Alice")],
-				// Sudo account
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				// Pre-funded accounts
+				vec![
+					get_from_seed::<AuraId>("Alice"),
+					get_from_seed::<AuraId>("Bob"),
+				],
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Charlie"),
 					get_account_id_from_seed::<sr25519::Public>("Dave"),
 					get_account_id_from_seed::<sr25519::Public>("Eve"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 					// Eugene
 					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
 					// Marina
@@ -100,113 +114,32 @@ pub fn development_config() -> Result<ChainSpec, String> {
 					hex!["38099e3930713a1fdae1419be266ea78ff353752a83033acbe215e190cb0cf2b"].into(),
 					hex!["267e9faef0221b88501b0b943222b3d9f052e8308de28bc86f10780e8f9c5b0a"].into(),
 				],
-				true,
+				id,
 			)
 		},
-		// Bootnodes
 		vec![],
-		// Telemetry
 		None,
-		// Protocol ID
 		None,
-		// Properties
-		Some(properties),
-		// Extensions
-		None,
-	))
-}
-
-pub fn local_testnet_config() -> Result<ChainSpec, String> {
-	let mut properties = Map::new();
-	properties.insert("tokenDecimals".into(), 18.into());
-
-	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
-
-	Ok(ChainSpec::from_genesis(
-		// Name
-		"Local Testnet",
-		// ID
-		"local_testnet",
-		ChainType::Local,
-		move || {
-			minterest_genesis(
-				wasm_binary,
-				// Initial PoA authorities
-				vec![authority_keys_from_seed("Alice"), authority_keys_from_seed("Bob")],
-				// Sudo account
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				// Pre-funded accounts
-				vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
-				true,
-			)
+		Some({
+			let mut properties = Map::new();
+			properties.insert("tokenDecimals".into(), 18.into());
+			properties
+		}),
+		Extensions {
+			relay_chain: "rococo".into(),
+			para_id: id.into(),
 		},
-		// Bootnodes
-		vec![],
-		// Telemetry
-		None,
-		// Protocol ID
-		None,
-		// Properties
-		Some(properties),
-		// Extensions
-		None,
-	))
-}
-
-pub fn minterest_turbo_testnet_config() -> Result<ChainSpec, String> {
-	let mut properties = Map::new();
-	properties.insert("tokenDecimals".into(), 18.into());
-
-	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
-
-	Ok(ChainSpec::from_genesis(
-		"Minterest Turbo",
-		"turbo-latest",
-		ChainType::Live,
-		move || {
-			minterest_genesis(
-				wasm_binary,
-				// Initial PoA authorities
-				vec![authority_keys_from_seed("Alice")],
-				// Sudo account
-				// 5ER9G3d2V4EEq8VjEbjkGbMdgprvtCntTYu9itCRJNHTkWYX
-				hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
-				// Pre-funded accounts
-				vec![
-					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-				],
-				true,
-			)
-		},
-		// Bootnodes
-		vec![],
-		// Telemetry
-		Some(
-			TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
-				.expect("Staging telemetry url is valid; qed"),
-		),
-		// Protocol ID
-		Some("turbo-latest"),
-		// Properties
-		Some(properties),
-		// Extensions
-		Default::default(),
-	))
+	)
 }
 
 /// Configure initial storage state for FRAME pallets.
 /// This initial storage state is used in `local_testnet_config` and
 /// `minterest_turbo_testnet_config`.
 fn minterest_genesis(
-	wasm_binary: &[u8],
-	initial_authorities: Vec<(AuraId, GrandpaId)>,
+	initial_authorities: Vec<AuraId>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
-	_enable_println: bool,
+	para_id: ParaId,
 ) -> GenesisConfig {
 	// Reading the initial allocations from the file.
 	let allocated_accounts_json = &include_bytes!("../../resources/dev-minterest-allocation-MNT.json")[..];
@@ -232,26 +165,29 @@ fn minterest_genesis(
 	let whitelist_members: Vec<AccountId> = serde_json::from_slice(white_list_members_json).unwrap();
 
 	GenesisConfig {
-		system: SystemConfig {
-			// Add Wasm runtime to storage.
-			code: wasm_binary.to_vec(),
+		system: parachain_runtime::SystemConfig {
+			code: parachain_runtime::WASM_BINARY
+				.expect("WASM binary was not build, please build it!")
+				.to_vec(),
 			changes_trie_config: Default::default(),
 		},
-		balances: BalancesConfig {
+		balances: parachain_runtime::BalancesConfig {
 			balances: initial_allocations,
 		},
-		aura: AuraConfig {
-			authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
+		parachain_info: parachain_runtime::ParachainInfoConfig {
+			parachain_id: para_id
 		},
-		grandpa: GrandpaConfig {
-			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
+		aura: parachain_runtime::AuraConfig {
+			authorities: initial_authorities.iter().map(|x| (x.clone())).collect(),
 		},
-		sudo: SudoConfig {
+		sudo: parachain_runtime::SudoConfig {
 			// Assign network admin rights.
 			key: root_key.clone(),
 		},
-		tokens: TokensConfig { balances: vec![] },
-		liquidity_pools: LiquidityPoolsConfig {
+		tokens: parachain_runtime::TokensConfig {
+			balances: vec![]
+		},
+		liquidity_pools: parachain_runtime::LiquidityPoolsConfig {
 			pools: vec![
 				(
 					ETH,
@@ -288,7 +224,7 @@ fn minterest_genesis(
 			],
 			pool_user_data: vec![],
 		},
-		controller: ControllerConfig {
+		controller: parachain_runtime::ControllerConfig {
 			controller_params: vec![
 				(
 					ETH,
@@ -342,7 +278,7 @@ fn minterest_genesis(
 				(BTC, PauseKeeper::all_unpaused()),
 			],
 		},
-		minterest_model: MinterestModelConfig {
+		minterest_model: parachain_runtime::MinterestModelConfig {
 			minterest_model_params: vec![
 				(
 					ETH,
@@ -383,7 +319,7 @@ fn minterest_genesis(
 			],
 			_phantom: Default::default(),
 		},
-		risk_manager: RiskManagerConfig {
+		risk_manager: parachain_runtime::RiskManagerConfig {
 			liquidation_fee: vec![
 				(DOT, FixedU128::saturating_from_rational(5, 100)),
 				(ETH, FixedU128::saturating_from_rational(5, 100)),
@@ -393,7 +329,7 @@ fn minterest_genesis(
 			liquidation_threshold: FixedU128::saturating_from_rational(103, 100),
 			_phantom: Default::default(),
 		},
-		liquidation_pools: LiquidationPoolsConfig {
+		liquidation_pools: parachain_runtime::LiquidationPoolsConfig {
 			phantom: Default::default(),
 			liquidation_pools: vec![
 				(
@@ -430,7 +366,7 @@ fn minterest_genesis(
 				),
 			],
 		},
-		prices: PricesConfig {
+		prices: parachain_runtime::PricesConfig {
 			locked_price: vec![
 				(DOT, FixedU128::saturating_from_integer(2)),
 				(KSM, FixedU128::saturating_from_integer(2)),
@@ -441,15 +377,15 @@ fn minterest_genesis(
 			_phantom: Default::default(),
 		},
 		minterest_council: Default::default(),
-		minterest_council_membership: MinterestCouncilMembershipConfig {
+		minterest_council_membership: parachain_runtime::MinterestCouncilMembershipConfig {
 			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		},
-		operator_membership_minterest: OperatorMembershipMinterestConfig {
+		operator_membership_minterest:parachain_runtime:: OperatorMembershipMinterestConfig {
 			members: vec![root_key],
 			phantom: Default::default(),
 		},
-		mnt_token: MntTokenConfig {
+		mnt_token: parachain_runtime::MntTokenConfig {
 			mnt_claim_threshold: 0, // disable by default
 			minted_pools: vec![
 				(DOT, (237977549 * DOLLARS) / 1_000_000_000),
@@ -459,30 +395,32 @@ fn minterest_genesis(
 			],
 			_phantom: Default::default(),
 		},
-		vesting: VestingConfig { vesting: vesting_list },
-		whitelist: WhitelistConfig {
+		vesting: parachain_runtime::VestingConfig { vesting: vesting_list },
+		whitelist: parachain_runtime::WhitelistConfig {
 			members: whitelist_members,
 			whitelist_mode: false,
 		},
+		aura_ext: Default::default(),
+		parachain_system: Default::default(),
 	}
 }
 
 /// Configure initial storage state for FRAME pallets.
 /// This initial storage state is used in `development_config`.
 fn testnet_genesis(
-	wasm_binary: &[u8],
-	initial_authorities: Vec<(AuraId, GrandpaId)>,
 	root_key: AccountId,
+	initial_authorities: Vec<AuraId>,
 	endowed_accounts: Vec<AccountId>,
-	_enable_println: bool,
+	para_id: ParaId,
 ) -> GenesisConfig {
 	GenesisConfig {
-		system: SystemConfig {
-			// Add Wasm runtime to storage.
-			code: wasm_binary.to_vec(),
+		system: parachain_runtime::SystemConfig {
+			code: parachain_runtime::WASM_BINARY
+				.expect("WASM binary was not build, please build it!")
+				.to_vec(),
 			changes_trie_config: Default::default(),
 		},
-		balances: BalancesConfig {
+		balances: parachain_runtime::BalancesConfig {
 			// Configure endowed accounts with initial balance of INITIAL_BALANCE.
 			balances: endowed_accounts
 				.iter()
@@ -495,17 +433,17 @@ fn testnet_genesis(
 				)
 				.collect(),
 		},
-		aura: AuraConfig {
-			authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
+		parachain_info: parachain_runtime::ParachainInfoConfig {
+			parachain_id: para_id
 		},
-		grandpa: GrandpaConfig {
-			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
+		aura: parachain_runtime::AuraConfig {
+			authorities: initial_authorities.iter().map(|x| (x.clone())).collect(),
 		},
-		sudo: SudoConfig {
+		sudo: parachain_runtime::SudoConfig {
 			// Assign network admin rights.
 			key: root_key.clone(),
 		},
-		tokens: TokensConfig {
+		tokens: parachain_runtime::TokensConfig {
 			balances: endowed_accounts
 				.iter()
 				.chain(get_all_modules_accounts()[1..3].iter()) // liquidation_pools + DEXes
@@ -519,7 +457,7 @@ fn testnet_genesis(
 				})
 				.collect(),
 		},
-		liquidity_pools: LiquidityPoolsConfig {
+		liquidity_pools: parachain_runtime::LiquidityPoolsConfig {
 			pools: vec![
 				(
 					ETH,
@@ -556,7 +494,7 @@ fn testnet_genesis(
 			],
 			pool_user_data: vec![],
 		},
-		controller: ControllerConfig {
+		controller: parachain_runtime::ControllerConfig {
 			controller_params: vec![
 				(
 					ETH,
@@ -610,7 +548,7 @@ fn testnet_genesis(
 				(BTC, PauseKeeper::all_unpaused()),
 			],
 		},
-		minterest_model: MinterestModelConfig {
+		minterest_model: parachain_runtime::MinterestModelConfig {
 			minterest_model_params: vec![
 				(
 					ETH,
@@ -651,7 +589,7 @@ fn testnet_genesis(
 			],
 			_phantom: Default::default(),
 		},
-		risk_manager: RiskManagerConfig {
+		risk_manager: parachain_runtime::RiskManagerConfig {
 			liquidation_fee: vec![
 				(DOT, FixedU128::saturating_from_rational(5, 100)), // 5%
 				(ETH, FixedU128::saturating_from_rational(5, 100)), // 5%
@@ -661,7 +599,7 @@ fn testnet_genesis(
 			liquidation_threshold: FixedU128::saturating_from_rational(3, 100), // 3%
 			_phantom: Default::default(),
 		},
-		liquidation_pools: LiquidationPoolsConfig {
+		liquidation_pools: parachain_runtime::LiquidationPoolsConfig {
 			phantom: Default::default(),
 			liquidation_pools: vec![
 				(
@@ -698,7 +636,7 @@ fn testnet_genesis(
 				),
 			],
 		},
-		prices: PricesConfig {
+		prices: parachain_runtime::PricesConfig {
 			locked_price: vec![
 				(DOT, FixedU128::saturating_from_integer(2)),
 				(KSM, FixedU128::saturating_from_integer(2)),
@@ -709,15 +647,15 @@ fn testnet_genesis(
 			_phantom: Default::default(),
 		},
 		minterest_council: Default::default(),
-		minterest_council_membership: MinterestCouncilMembershipConfig {
+		minterest_council_membership: parachain_runtime::MinterestCouncilMembershipConfig {
 			members: vec![root_key],
 			phantom: Default::default(),
 		},
-		operator_membership_minterest: OperatorMembershipMinterestConfig {
+		operator_membership_minterest: parachain_runtime::OperatorMembershipMinterestConfig {
 			members: endowed_accounts.clone(),
 			phantom: Default::default(),
 		},
-		mnt_token: MntTokenConfig {
+		mnt_token: parachain_runtime::MntTokenConfig {
 			mnt_claim_threshold: 0, // disable by default
 			minted_pools: vec![
 				(DOT, 2 * DOLLARS),
@@ -727,11 +665,13 @@ fn testnet_genesis(
 			],
 			_phantom: Default::default(),
 		},
-		vesting: VestingConfig { vesting: vec![] },
-		whitelist: WhitelistConfig {
+		vesting: parachain_runtime::VestingConfig { vesting: vec![] },
+		whitelist: parachain_runtime::WhitelistConfig {
 			members: endowed_accounts,
 			whitelist_mode: false,
 		},
+		aura_ext: Default::default(),
+		parachain_system: Default::default(),
 	}
 }
 

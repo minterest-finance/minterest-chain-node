@@ -35,7 +35,7 @@ members = [
     "rpc",
     "primitives",
     "service",
-    "runtime",
+    "runtime/parachain",
     "test-helper",
     "pallets/liquidity-pools",
     "pallets/minterest-model",
@@ -48,4 +48,3 @@ members = [
     "pallets/dex",
     "pallets/whitelist"
 ]
-
