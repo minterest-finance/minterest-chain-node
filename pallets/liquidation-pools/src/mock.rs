@@ -139,25 +139,25 @@ impl Default for ExternalityBuilder {
 				(
 					DOT,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					ETH,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					BTC,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 			],
@@ -209,9 +209,9 @@ impl ExternalityBuilder {
 		self.liquidity_pools.push((
 			pool_id,
 			Pool {
-				total_borrowed: Balance::zero(),
+				borrowed: Balance::zero(),
 				borrow_index: Rate::one(),
-				total_protocol_interest: Balance::zero(),
+				protocol_interest: Balance::zero(),
 			},
 		));
 		self

@@ -70,6 +70,25 @@ pub mod module {
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
 
+	#[pallet::validate_unsigned]
+	impl<T: Config> ValidateUnsigned for Pallet<T> {
+		type Call = Call<T>;
+
+		fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
+			match call {
+				Call::initiate_new_round(feed_id, round_id) => {
+					ValidTransaction::with_tag_prefix("ChainlinkPriceManagerWorker")
+						.priority(T::UnsignedPriority::get())
+						.and_provides((<frame_system::Pallet<T>>::block_number(), feed_id, round_id))
+						.longevity(64_u64)
+						.propagate(true)
+						.build()
+				}
+				_ => InvalidTransaction::Call.into(),
+			}
+		}
+	}
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn offchain_worker(now: T::BlockNumber) {
@@ -210,23 +229,5 @@ impl<T: Config> Pallet<T> {
 		let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id.unwrap().into()).unwrap();
 		let RoundData { answer, .. } = feed_result.latest_data();
 		Some(answer)
-	}
-}
-
-impl<T: Config> ValidateUnsigned for Pallet<T> {
-	type Call = Call<T>;
-
-	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
-		match call {
-			Call::initiate_new_round(feed_id, round_id) => {
-				ValidTransaction::with_tag_prefix("ChainlinkPriceManagerWorker")
-					.priority(T::UnsignedPriority::get())
-					.and_provides((<frame_system::Pallet<T>>::block_number(), feed_id, round_id))
-					.longevity(64_u64)
-					.propagate(true)
-					.build()
-			}
-			_ => InvalidTransaction::Call.into(),
-		}
 	}
 }

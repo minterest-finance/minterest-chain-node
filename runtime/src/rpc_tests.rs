@@ -16,9 +16,8 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Interest, Operation, Price};
 use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
 use orml_traits::MultiCurrency;
-use pallet_traits::{PoolsManager, PricesManager};
+use pallet_traits::{LiquidityPoolStorageProvider, PoolsManager, PricesManager, UserCollateral};
 use prices_rpc_runtime_api::runtime_decl_for_PricesRuntimeApi::PricesRuntimeApi;
-use risk_manager::RiskManagerData;
 use sp_runtime::{
 	traits::{One, Zero},
 	DispatchResult, FixedPointNumber,
@@ -41,6 +40,8 @@ struct ExtBuilder {
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	minted_pools: Vec<(CurrencyId, Balance)>,
+	liquidation_fee: Vec<(CurrencyId, Rate)>,
+	liquidation_threshold: Rate,
 }
 
 impl Default for ExtBuilder {
@@ -72,6 +73,13 @@ impl Default for ExtBuilder {
 				(ETH, 2 * DOLLARS),
 				(BTC, 2 * DOLLARS),
 			],
+			liquidation_fee: vec![
+				(DOT, Rate::saturating_from_rational(5, 100)),
+				(ETH, Rate::saturating_from_rational(5, 100)),
+				(BTC, Rate::saturating_from_rational(5, 100)),
+				(KSM, Rate::saturating_from_rational(5, 100)),
+			],
+			liquidation_threshold: Rate::saturating_from_rational(3, 100),
 		}
 	}
 }
@@ -91,9 +99,9 @@ impl ExtBuilder {
 		self.pools.push((
 			pool_id,
 			Pool {
-				total_borrowed: Balance::zero(),
+				borrowed: Balance::zero(),
 				borrow_index: Rate::one(),
-				total_protocol_interest: Balance::zero(),
+				protocol_interest: Balance::zero(),
 			},
 		));
 		self
@@ -139,7 +147,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		controller::GenesisConfig::<Runtime> {
-			controller_dates: vec![
+			controller_params: vec![
 				(
 					DOT,
 					ControllerData {
@@ -235,35 +243,8 @@ impl ExtBuilder {
 		.unwrap();
 
 		risk_manager::GenesisConfig::<Runtime> {
-			risk_manager_params: vec![
-				(
-					DOT,
-					RiskManagerData {
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100_000 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
-					},
-				),
-				(
-					ETH,
-					RiskManagerData {
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100_000 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
-					},
-				),
-				(
-					BTC,
-					RiskManagerData {
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100_000 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
-					},
-				),
-			],
+			liquidation_fee: self.liquidation_fee,
+			liquidation_threshold: self.liquidation_threshold,
 			_phantom: Default::default(),
 		}
 		.assimilate_storage(&mut t)
@@ -357,8 +338,8 @@ fn get_utilization_rate_rpc(pool_id: CurrencyId) -> Option<Rate> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_utilization_rate(pool_id)
 }
 
-fn get_user_total_supply_and_borrowed_balance_in_usd_rpc(account_id: AccountId) -> Option<UserPoolBalanceData> {
-	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_total_supply_and_borrowed_balance_in_usd(account_id)
+fn get_user_total_supply_and_borrow_balance_in_usd_rpc(account_id: AccountId) -> Option<UserPoolBalanceData> {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_total_supply_and_borrow_balance_in_usd(account_id)
 }
 
 fn get_hypothetical_account_liquidity_rpc(account_id: AccountId) -> Option<HypotheticalLiquidityData> {
@@ -387,8 +368,8 @@ fn get_user_underlying_balance_per_asset_rpc(account_id: AccountId, pool_id: Cur
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_underlying_balance_per_asset(account_id, pool_id)
 }
 
-fn get_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
-	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_unclaimed_mnt_balance(account_id)
+fn get_user_total_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
+	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_user_total_unclaimed_mnt_balance(account_id)
 		.unwrap()
 		.amount
 }
@@ -453,8 +434,8 @@ fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
 	Prices::unlock_price(origin_root(), currency_id)
 }
 
-fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> (Rate, Rate) {
-	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_mnt_borrow_and_supply_rates(pool_id).unwrap()
+fn get_pool_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> (Rate, Rate) {
+	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_pool_mnt_borrow_and_supply_rates(pool_id).unwrap()
 }
 
 fn get_user_total_supply_borrow_and_net_apy_rpc(account_id: AccountId) -> Option<(Interest, Interest, Interest)> {
@@ -887,7 +868,7 @@ fn test_get_protocol_total_value_rpc() {
 			assert_ok!(MinterestProtocol::redeem(bob(), DOT));
 			assert_ok!(MinterestProtocol::redeem(alice(), DOT));
 
-			let dot_pool_protocol_interest = LiquidityPools::pools(DOT).total_protocol_interest;
+			let dot_pool_protocol_interest = LiquidityPools::get_pool_protocol_interest(DOT);
 			assert_eq!(dot_pool_protocol_interest, 294_000_000_000_000);
 
 			// pool_total_supply: 170 ETH * 3 + dot_pool_protocol_interest * 2 = (170 * 3) + (0.000294 * 2)
@@ -1008,14 +989,14 @@ fn test_user_balances_using_rpc() {
 			assert_ok!(set_oracle_price_for_all_pools(2));
 
 			assert_eq!(
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(ALICE::get()),
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(ALICE::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(0),
 					total_borrowed: dollars(0)
 				})
 			);
 			assert_eq!(
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()),
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(0),
 					total_borrowed: dollars(0)
@@ -1026,14 +1007,14 @@ fn test_user_balances_using_rpc() {
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), ETH, dollars(70_000)));
 
 			assert_eq!(
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(ALICE::get()),
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(ALICE::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(0),
 					total_borrowed: dollars(0)
 				})
 			);
 			assert_eq!(
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()),
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(240_000),
 					total_borrowed: dollars(0)
@@ -1052,7 +1033,7 @@ fn test_user_balances_using_rpc() {
 
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(50_000)));
 			assert_eq!(
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()),
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(240_000),
 					total_borrowed: dollars(100_000)
@@ -1067,7 +1048,7 @@ fn test_user_balances_using_rpc() {
 
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(30_000)));
 			assert_eq!(
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()),
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
 					total_supply: dollars(240_000),
 					total_borrowed: dollars(40_000)
@@ -1081,7 +1062,7 @@ fn test_user_balances_using_rpc() {
 			);
 
 			System::set_block_number(30);
-			let account_data = get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+			let account_data = get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 			assert!(account_data.total_supply > dollars(240_000));
 			assert!(account_data.total_borrowed > dollars(40_000));
 			assert!(get_user_borrow_per_asset_rpc(BOB::get(), DOT).unwrap().amount > dollars(20_000));
@@ -1137,8 +1118,8 @@ fn test_get_hypothetical_account_liquidity_rpc() {
 		});
 }
 
-/// Test that free balance has increased by a (total_supply - total_borrowed) after repay all and
-/// redeem
+/// Test that free balance has increased by a (user_total_supply - user_total_borrowed) after repay
+/// all and redeem.
 #[test]
 fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 	ExtBuilder::default()
@@ -1159,7 +1140,7 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 			System::set_block_number(200);
 
 			let account_data_before_repay_all =
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
@@ -1178,10 +1159,10 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 		})
 }
 
-/// Test that difference between total_borrowed returned by RPC before and after repay is equal to
-/// repay amount
+/// Test that difference between user_total_borrowed returned by RPC before and after repay is equal
+/// to repay amount.
 #[test]
-fn test_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc() {
+fn test_user_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc() {
 	ExtBuilder::default()
 		.pool_initial(DOT)
 		.pool_initial(ETH)
@@ -1198,16 +1179,16 @@ fn test_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc
 			System::set_block_number(150);
 
 			let account_data_before_repay =
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(10_000)));
 			let account_data_after_repay =
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
-				LiquidityPools::pool_user_data(DOT, BOB::get()).total_borrowed,
+				LiquidityPools::pool_user_data(DOT, BOB::get()).borrowed,
 				(Rate::from_inner(account_data_after_repay.total_borrowed) / oracle_price).into_inner()
 			);
 			assert_eq!(
@@ -1219,10 +1200,10 @@ fn test_total_borrowed_difference_is_ok_before_and_after_repay_using_balance_rpc
 		})
 }
 
-/// Test that difference between total_borrowed returned by RPC before and after borrow is equal to
-/// borrow amount
+/// Test that difference between user_total_borrowed returned by RPC before and after borrow is
+/// equal to borrow amount.
 #[test]
-fn test_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rpc() {
+fn test_user_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rpc() {
 	ExtBuilder::default()
 		.pool_initial(DOT)
 		.pool_initial(ETH)
@@ -1237,16 +1218,16 @@ fn test_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rp
 			System::set_block_number(100);
 
 			let account_data_before_borrow =
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(30_000)));
 			let account_data_after_borrow =
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
-				LiquidityPools::pool_user_data(DOT, BOB::get()).total_borrowed,
+				LiquidityPools::pool_user_data(DOT, BOB::get()).borrowed,
 				(Rate::from_inner(account_data_after_borrow.total_borrowed) / oracle_price).into_inner()
 			);
 			assert_eq!(
@@ -1262,7 +1243,7 @@ fn test_total_borrowed_difference_is_ok_before_and_after_borrow_using_balance_rp
 /// Test that difference between total_supply returned by RPC before and after deposit_underlying is
 /// equal to deposit amount
 #[test]
-fn test_total_borrowed_difference_is_ok_before_and_after_deposit_using_balance_rpc() {
+fn test_user_total_borrowed_difference_is_ok_before_and_after_deposit_using_balance_rpc() {
 	ExtBuilder::default()
 		.pool_initial(DOT)
 		.pool_initial(ETH)
@@ -1277,13 +1258,13 @@ fn test_total_borrowed_difference_is_ok_before_and_after_deposit_using_balance_r
 			System::set_block_number(100);
 
 			let account_data_before_deposit =
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), DOT, dollars(30_000)));
 			let account_data_after_deposit =
-				get_user_total_supply_and_borrowed_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
+				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
 				dollars(30_000),
@@ -1360,11 +1341,11 @@ fn get_user_total_collateral_rpc_should_work() {
 
 			assert_eq!(
 				get_user_total_collateral_rpc(ALICE::get()),
-				90_000_047_628_000_000_000_000
+				90_000_047_628_021_069_720_000
 			);
 			assert_eq!(
 				get_user_total_collateral_rpc(BOB::get()),
-				180_000_095_256_000_000_000_000
+				180_000_095_256_042_139_440_000
 			);
 
 			run_to_block(500);
@@ -1378,7 +1359,7 @@ fn get_user_total_collateral_rpc_should_work() {
 
 			run_to_block(600);
 
-			let expected_bob_collateral = 180_000_238_140_000_000_000_000 + dollars(90_000);
+			let expected_bob_collateral = 180_000_238_140_252_836_910_000 + dollars(90_000);
 
 			assert_eq!(get_user_total_collateral_rpc(ALICE::get()), Balance::zero());
 			assert_eq!(get_user_total_collateral_rpc(BOB::get()), expected_bob_collateral);
@@ -1499,7 +1480,7 @@ fn get_all_freshest_prices_rpc_should_work() {
 }
 
 #[test]
-fn get_unclaimed_mnt_balance_should_work() {
+fn get_user_total_unclaimed_mnt_balance_should_work() {
 	ExtBuilder::default()
 		.mnt_account_balance(1_000_000 * DOLLARS)
 		.enable_minting_for_all_pools(10 * DOLLARS)
@@ -1528,7 +1509,10 @@ fn get_unclaimed_mnt_balance_should_work() {
 			// Calculation of the balance of Alice in MNT tokens (only supply distribution):
 			// supplier_mnt_accrued = previous_balance + speed_DOT * block_delta * alice_supply / total_supply;
 			// supplier_mnt_accrued = 0 + 10 * 5 * 50 / 150 = 16.66 MNT;
-			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 16_666_666_464_166_653_690);
+			assert_eq!(
+				get_user_total_unclaimed_mnt_balance_rpc(ALICE::get()),
+				16_666_666_464_166_653_690
+			);
 
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 10_000 * DOLLARS));
 
@@ -1537,34 +1521,43 @@ fn get_unclaimed_mnt_balance_should_work() {
 			// Calculation of the balance of Alice in MNT tokens (only supply distribution):
 			// supplier_mnt_accrued = previous_balance + speed_DOT * block_delta * alice_supply / total_supply;
 			// supplier_mnt_accrued = 0 + 10 * 5 * 60 / 160 = 18.75 MNT;
-			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 18_749_999_777_636_673_218);
+			assert_eq!(
+				get_user_total_unclaimed_mnt_balance_rpc(ALICE::get()),
+				18_749_999_777_636_673_218
+			);
 			assert_eq!(
 				Currencies::free_balance(MNT, &ALICE::get()),
 				100_035_416_666_241_803_326_908
 			);
 			// In the test environment, the test storage changes.
-			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
+			assert_eq!(get_user_total_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
 
 			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 20_000 * DOLLARS));
 
 			run_to_block(30);
 
-			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 66_071_426_707_059_137_419);
+			assert_eq!(
+				get_user_total_unclaimed_mnt_balance_rpc(ALICE::get()),
+				66_071_426_707_059_137_419
+			);
 			// In the test environment, the test storage changes.
-			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
+			assert_eq!(get_user_total_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
 
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 10_000 * DOLLARS));
 
 			run_to_block(40);
 
-			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), 69_747_897_200_110_984_655);
+			assert_eq!(
+				get_user_total_unclaimed_mnt_balance_rpc(ALICE::get()),
+				69_747_897_200_110_984_655
+			);
 			// In the test environment, the test storage changes.
-			assert_eq!(get_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
+			assert_eq!(get_user_total_unclaimed_mnt_balance_rpc(ALICE::get()), Balance::zero());
 		})
 }
 
 #[test]
-fn get_mnt_borrow_and_supply_rates_should_work() {
+fn get_pool_mnt_borrow_and_supply_rates_should_work() {
 	ExtBuilder::default()
 		.mnt_enabled_pools(vec![
 			(DOT, (5 * DOLLARS) / 2),
@@ -1584,18 +1577,17 @@ fn get_mnt_borrow_and_supply_rates_should_work() {
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 15_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::deposit_underlying(bob(), BTC, 25_000 * DOLLARS));
 
-			LiquidityPools::enable_is_collateral_internal(&ALICE::get(), DOT);
-			LiquidityPools::enable_is_collateral_internal(&ALICE::get(), ETH);
-			LiquidityPools::enable_is_collateral_internal(&BOB::get(), BTC);
+			LiquidityPools::enable_is_collateral(&ALICE::get(), DOT);
+			LiquidityPools::enable_is_collateral(&ALICE::get(), ETH);
+			LiquidityPools::enable_is_collateral(&BOB::get(), BTC);
 
 			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 5_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::borrow(bob(), ETH, 10_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::borrow(alice(), BTC, 5_000 * DOLLARS));
 
-			run_to_block(5);
-			assert_eq!(MntToken::mnt_speeds(DOT), 2_500_000_000_000_000_000);
-			assert_eq!(MntToken::mnt_speeds(ETH), 5_000_000_000_000_000_000);
-			assert_eq!(MntToken::mnt_speeds(BTC), 2_500_000_000_000_000_000);
+			assert_eq!(MntToken::mnt_speed_storage(DOT), 2_500_000_000_000_000_000);
+			assert_eq!(MntToken::mnt_speed_storage(ETH), 5_000_000_000_000_000_000);
+			assert_eq!(MntToken::mnt_speed_storage(BTC), 2_500_000_000_000_000_000);
 
 			// Borrow and Supply rates per block
 			// Prices: DOT[0] = 2 USD, ETH[1] = 2 USD, BTC[3] = 2 USD, MNT[4] = 4 USD
@@ -1608,21 +1600,21 @@ fn get_mnt_borrow_and_supply_rates_should_work() {
 			// ETH: 5 * 4 / (15000 * 2) = 0.00066
 			// BTC: 2.5 * 4 / (25000 * 2) = 0.0002
 			assert_eq!(
-				get_mnt_borrow_and_supply_rates(DOT),
+				get_pool_mnt_borrow_and_supply_rates(DOT),
 				(
 					Rate::saturating_from_rational(1, 1000),
 					Rate::saturating_from_rational(5, 10000)
 				)
 			);
 			assert_eq!(
-				get_mnt_borrow_and_supply_rates(ETH),
+				get_pool_mnt_borrow_and_supply_rates(ETH),
 				(
 					Rate::saturating_from_rational(1, 1000),
 					Rate::from_inner(666_666_666_666_666)
 				)
 			);
 			assert_eq!(
-				get_mnt_borrow_and_supply_rates(BTC),
+				get_pool_mnt_borrow_and_supply_rates(BTC),
 				(
 					Rate::saturating_from_rational(1, 1000),
 					Rate::saturating_from_rational(2, 10000)
@@ -1632,7 +1624,7 @@ fn get_mnt_borrow_and_supply_rates_should_work() {
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), KSM, 10_000 * DOLLARS));
 			run_to_block(7);
 			assert_eq!(
-				get_mnt_borrow_and_supply_rates(KSM),
+				get_pool_mnt_borrow_and_supply_rates(KSM),
 				(Rate::saturating_from_integer(0), Rate::saturating_from_integer(0))
 			);
 		});
@@ -1698,7 +1690,7 @@ fn protocol_interest_transfer_should_work() {
 			System::set_block_number(20);
 
 			assert_ok!(MinterestProtocol::borrow(bob(), DOT, dollars(100_000)));
-			assert_eq!(LiquidityPools::pools(DOT).total_protocol_interest, Balance::zero());
+			assert_eq!(LiquidityPools::get_pool_protocol_interest(DOT), Balance::zero());
 
 			System::set_block_number(1000);
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(10_000)));
@@ -1706,7 +1698,7 @@ fn protocol_interest_transfer_should_work() {
 			MinterestProtocol::on_finalize(1000);
 			// Not reached threshold, pool balances should stay the same
 			assert_eq!(
-				LiquidityPools::pools(DOT).total_protocol_interest,
+				LiquidityPools::get_pool_protocol_interest(DOT),
 				441_000_000_000_000_000u128
 			);
 
@@ -1715,20 +1707,17 @@ fn protocol_interest_transfer_should_work() {
 			assert_ok!(MinterestProtocol::repay(bob(), DOT, dollars(20_000)));
 			assert_eq!(pool_balance(DOT), dollars(80_000));
 
-			let total_protocol_interest: Balance = 3_645_120_550_951_706_945_733;
-			assert_eq!(
-				LiquidityPools::pools(DOT).total_protocol_interest,
-				total_protocol_interest
-			);
+			let pool_protocol_interest: Balance = 3_645_120_550_951_706_945_733;
+			assert_eq!(LiquidityPools::get_pool_protocol_interest(DOT), pool_protocol_interest);
 
 			let liquidity_pool_dot_balance = LiquidityPools::get_pool_available_liquidity(DOT);
 			let liquidation_pool_dot_balance = LiquidationPools::get_pool_available_liquidity(DOT);
 
-			// Threshold is reached. Transfer total_protocol_interest to liquidation pool
+			// Threshold is reached. Transfer pool_protocol_interest to liquidation pool
 			MinterestProtocol::on_finalize(10000000);
 
-			let transferred_to_liquidation_pool = total_protocol_interest;
-			assert_eq!(LiquidityPools::pools(DOT).total_protocol_interest, Balance::zero());
+			let transferred_to_liquidation_pool = pool_protocol_interest;
+			assert_eq!(LiquidityPools::get_pool_protocol_interest(DOT), Balance::zero());
 			assert_eq!(
 				LiquidityPools::get_pool_available_liquidity(DOT),
 				liquidity_pool_dot_balance - transferred_to_liquidation_pool
@@ -1791,8 +1780,8 @@ fn get_user_total_supply_borrow_and_net_apy_should_work() {
 			// Sum = 2360 + 6048 = 8408 $
 			// sum_borrow_apy = 8408/260_000 = 3.23 %
 
-			assert_eq!(MntToken::mnt_speeds(DOT), 5 * DOLLARS);
-			assert_eq!(MntToken::mnt_speeds(ETH), 5 * DOLLARS);
+			assert_eq!(MntToken::mnt_speed_storage(DOT), 5 * DOLLARS);
+			assert_eq!(MntToken::mnt_speed_storage(ETH), 5 * DOLLARS);
 
 			// MNT rates for the pool:
 			// mnt_borrow_rate = mnt_speed * mnt_price / (pool_borrow * currency_price)
@@ -1803,7 +1792,7 @@ fn get_user_total_supply_borrow_and_net_apy_should_work() {
 			// DOT mnt borrow:  5 * 4 / (50_000 * 2)  = 0.0002
 			// DOT mnt supply:  5 * 4 / (100_000 * 2) = 0.0001
 			assert_eq!(
-				get_mnt_borrow_and_supply_rates(DOT),
+				get_pool_mnt_borrow_and_supply_rates(DOT),
 				(
 					Rate::from_inner(200_000_000_000_000),
 					Rate::from_inner(100_000_000_000_000)
@@ -1813,7 +1802,7 @@ fn get_user_total_supply_borrow_and_net_apy_should_work() {
 			// ETH mnt borrow:  5 * 4 / (80_000 * 2) = 0.000125
 			// ETH mnt supply:  5 * 4 / (100_000 * 2) = 0.0001
 			assert_eq!(
-				get_mnt_borrow_and_supply_rates(ETH),
+				get_pool_mnt_borrow_and_supply_rates(ETH),
 				(Rate::from_inner(125000000000000), Rate::from_inner(100000000000000))
 			);
 

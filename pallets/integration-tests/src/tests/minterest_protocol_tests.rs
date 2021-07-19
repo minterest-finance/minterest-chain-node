@@ -12,7 +12,7 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -31,8 +31,9 @@ mod tests {
 				));
 
 				// Calculate expected amount of wrapped tokens for Alice
+				let exchange_rate = TestPools::get_exchange_rate(DOT).unwrap();
 				let alice_expected_amount_wrapped_tokens =
-					TestPools::convert_to_wrapped(DOT, alice_deposited_amount).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount, exchange_rate).unwrap();
 
 				// Checking pool available liquidity increased by 60 000
 				assert_eq!(
@@ -61,8 +62,9 @@ mod tests {
 				));
 
 				// Calculate expected amount of wrapped tokens for Bob
+				let exchange_rate = TestPools::get_exchange_rate(DOT).unwrap();
 				let bob_expected_amount_wrapped_tokens =
-					TestPools::convert_to_wrapped(DOT, bob_deposited_amount).unwrap();
+					TestPools::underlying_to_wrapped(bob_deposited_amount, exchange_rate).unwrap();
 
 				// Checking pool available liquidity increased by 60 000
 				assert_eq!(
@@ -91,7 +93,7 @@ mod tests {
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, MDOT, DOLLARS)
 			.pool_balance(DOT, 5)
-			.pool_total_borrowed(DOT, 5)
+			.pool_borrow_underlying(DOT, 5)
 			.build()
 			.execute_with(|| {
 				// Alice try to deposit ONE_HUNDRED to DOT pool
@@ -125,8 +127,8 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
-			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -179,14 +181,15 @@ mod tests {
 					Currencies::free_balance(ETH, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_eth
 				);
+				let exchange_rate = TestPools::get_exchange_rate(DOT).unwrap();
 				let expected_amount_wrapped_tokens_in_dot =
-					TestPools::convert_to_wrapped(DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_dot, exchange_rate).unwrap();
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
 				);
 				let expected_amount_wrapped_tokens_in_eth =
-					TestPools::convert_to_wrapped(ETH, alice_deposited_amount_in_eth).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_eth, exchange_rate).unwrap();
 				assert_eq!(
 					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth
@@ -194,11 +197,11 @@ mod tests {
 
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(DOT, ALICE).total_borrowed,
+					TestPools::pool_user_data(DOT, ALICE).borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
-				assert_eq!(TestPools::pools(DOT).total_borrowed, alice_borrowed_amount_in_dot);
+				assert_eq!(TestPools::pools(DOT).borrowed, alice_borrowed_amount_in_dot);
 
 				System::set_block_number(4);
 
@@ -241,21 +244,23 @@ mod tests {
 				);
 
 				assert_eq!(Currencies::free_balance(MDOT, &ALICE), 0);
+				let exchange_rate_eth = TestPools::get_exchange_rate(ETH).unwrap();
 				let expected_amount_wrapped_tokens_in_eth_summary = expected_amount_wrapped_tokens_in_eth
-					+ TestPools::convert_to_wrapped(ETH, alice_deposited_amount_in_eth_secondary).unwrap();
+					+ TestPools::underlying_to_wrapped(alice_deposited_amount_in_eth_secondary, exchange_rate_eth)
+						.unwrap();
 				assert_eq!(
 					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth_summary
 				);
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(DOT, ALICE).total_borrowed,
+					TestPools::pool_user_data(DOT, ALICE).borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
 				let expected_borrow_interest_accumulated = 421875000000000;
 				assert_eq!(
-					TestPools::pools(DOT).total_borrowed,
+					TestPools::pools(DOT).borrowed,
 					alice_borrowed_amount_in_dot + expected_borrow_interest_accumulated
 				);
 
@@ -288,7 +293,7 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.pool_balance(DOT, Balance::zero())
 			.build()
 			.execute_with(|| {
@@ -329,11 +334,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// // Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(3);
 
@@ -353,11 +358,11 @@ mod tests {
 
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
 			});
 	}
 
@@ -382,8 +387,8 @@ mod tests {
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
-			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -435,11 +440,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				// Alice try to redeem all DOTs
 				assert_noop!(
@@ -460,9 +465,10 @@ mod tests {
 				System::set_block_number(6);
 
 				// Alice redeem all DOTs
+				let exchange_rate = TestPools::get_exchange_rate(DOT).unwrap();
 				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(MDOT, &ALICE);
 				let alice_redeemed_amount_in_dot =
-					TestPools::convert_from_wrapped(MDOT, alice_current_balance_amount_in_m_dot).unwrap();
+					TestPools::wrapped_to_underlying(alice_current_balance_amount_in_m_dot, exchange_rate).unwrap();
 				assert_ok!(MinterestProtocol::redeem_underlying(
 					Origin::signed(ALICE),
 					DOT,
@@ -486,11 +492,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(7);
 
@@ -524,8 +530,8 @@ mod tests {
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(BOB, BTC, ONE_HUNDRED_THOUSAND)
 			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false, 0)
-			.pool_user_data(BTC, BOB, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false)
+			.pool_user_data(BTC, BOB, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -578,8 +584,9 @@ mod tests {
 				// Alice redeem all DOTs.
 				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(MDOT, &ALICE);
 				// Expected exchange rate 1000000006581250024
+				let exchange_rate = TestPools::get_exchange_rate(DOT).unwrap();
 				let alice_redeemed_amount_in_dot =
-					TestPools::convert_from_wrapped(MDOT, alice_current_balance_amount_in_m_dot).unwrap();
+					TestPools::wrapped_to_underlying(alice_current_balance_amount_in_m_dot, exchange_rate).unwrap();
 				assert_ok!(MinterestProtocol::redeem_underlying(
 					Origin::signed(ALICE),
 					DOT,
@@ -630,8 +637,8 @@ mod tests {
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(BOB, DOT, 100_000_000 * DOLLARS)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
-			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -684,14 +691,16 @@ mod tests {
 					Currencies::free_balance(ETH, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_eth
 				);
+				let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
 				let expected_amount_wrapped_tokens_in_dot =
-					TestPools::convert_to_wrapped(DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_dot, exchange_rate_dot).unwrap();
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
 				);
+				let exchange_rate_eth = TestPools::get_exchange_rate(ETH).unwrap();
 				let expected_amount_wrapped_tokens_in_eth =
-					TestPools::convert_to_wrapped(DOT, alice_deposited_amount_in_eth).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_eth, exchange_rate_eth).unwrap();
 				assert_eq!(
 					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth
@@ -699,11 +708,11 @@ mod tests {
 
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(DOT, ALICE).total_borrowed,
+					TestPools::pool_user_data(DOT, ALICE).borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
-				assert_eq!(TestPools::pools(DOT).total_borrowed, alice_borrowed_amount_in_dot);
+				assert_eq!(TestPools::pools(DOT).borrowed, alice_borrowed_amount_in_dot);
 
 				System::set_block_number(4);
 
@@ -750,8 +759,10 @@ mod tests {
 				);
 
 				assert_eq!(Currencies::free_balance(MDOT, &ALICE), 0);
+				let exchange_rate_eth = TestPools::get_exchange_rate(ETH).unwrap();
 				let expected_amount_wrapped_tokens_in_eth_summary = expected_amount_wrapped_tokens_in_eth
-					+ TestPools::convert_to_wrapped(ETH, alice_deposited_amount_in_eth_secondary).unwrap();
+					+ TestPools::underlying_to_wrapped(alice_deposited_amount_in_eth_secondary, exchange_rate_eth)
+						.unwrap();
 				assert_eq!(
 					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth_summary
@@ -760,12 +771,12 @@ mod tests {
 				// Checking total borrow for Alice DOT pool
 				let expected_amount_accumulated_in_dot = 413602942444485;
 				assert_eq!(
-					TestPools::pool_user_data(DOT, ALICE).total_borrowed,
+					TestPools::pool_user_data(DOT, ALICE).borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
 				assert_eq!(
-					TestPools::pools(DOT).total_borrowed,
+					TestPools::pools(DOT).borrowed,
 					alice_borrowed_amount_in_dot + expected_amount_accumulated_in_dot
 				);
 
@@ -794,7 +805,7 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -834,11 +845,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// // Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(3);
 
@@ -858,11 +869,11 @@ mod tests {
 
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
 			});
 	}
 
@@ -887,8 +898,8 @@ mod tests {
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
-			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -938,11 +949,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(4);
 
@@ -966,8 +977,9 @@ mod tests {
 
 				// Alice redeem all DOTs
 				let alice_current_balance_amount_in_m_dot = Currencies::free_balance(MDOT, &ALICE);
+				let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
 				let alice_redeemed_amount_in_dot =
-					TestPools::convert_from_wrapped(MDOT, alice_current_balance_amount_in_m_dot).unwrap();
+					TestPools::wrapped_to_underlying(alice_current_balance_amount_in_m_dot, exchange_rate_dot).unwrap();
 				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), DOT));
 
 				// Checking free balance DOT && ETH && BTC for user.
@@ -982,11 +994,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(7);
 
@@ -1015,9 +1027,9 @@ mod tests {
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(BOB, BTC, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false, 0)
-			.pool_user_data(DOT, BOB, Balance::zero(), Rate::zero(), false, 0)
-			.pool_user_data(BTC, BOB, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false)
+			.pool_user_data(DOT, BOB, Balance::zero(), Rate::zero(), false)
+			.pool_user_data(BTC, BOB, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance in pool
@@ -1069,8 +1081,9 @@ mod tests {
 
 				assert_ok!(MinterestProtocol::redeem(Origin::signed(ALICE), DOT));
 
+				let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
 				let alice_redeemed_amount_in_dot =
-					TestPools::convert_from_wrapped(MDOT, alice_current_balance_amount_in_m_dot).unwrap();
+					TestPools::wrapped_to_underlying(alice_current_balance_amount_in_m_dot, exchange_rate_dot).unwrap();
 
 				// Checking pool available liquidity.
 				assert_eq!(
@@ -1105,7 +1118,7 @@ mod tests {
 			.pool_initial(DOT)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -1142,7 +1155,7 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -1198,7 +1211,7 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -1253,7 +1266,7 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -1299,11 +1312,8 @@ mod tests {
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount
 				);
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount);
-				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount);
-				assert_eq!(
-					TestPools::pool_user_data(ETH, &ALICE).total_borrowed,
-					alice_borrowed_amount
-				);
+				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount);
+				assert_eq!(TestPools::pool_user_data(ETH, &ALICE).borrowed, alice_borrowed_amount);
 			});
 	}
 
@@ -1328,8 +1338,8 @@ mod tests {
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
-			.pool_user_data(DOT, BOB, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+			.pool_user_data(DOT, BOB, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				// Set initial balance
@@ -1420,8 +1430,8 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
-			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -1472,14 +1482,16 @@ mod tests {
 					Currencies::free_balance(ETH, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_eth
 				);
+				let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
 				let expected_amount_wrapped_tokens_in_dot =
-					TestPools::convert_to_wrapped(DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_dot, exchange_rate_dot).unwrap();
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
 				);
+				let exchange_rate_eth = TestPools::get_exchange_rate(ETH).unwrap();
 				let expected_amount_wrapped_tokens_in_eth =
-					TestPools::convert_to_wrapped(ETH, alice_deposited_amount_in_eth).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_eth, exchange_rate_eth).unwrap();
 				assert_eq!(
 					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth
@@ -1487,11 +1499,11 @@ mod tests {
 
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(DOT, ALICE).total_borrowed,
+					TestPools::pool_user_data(DOT, ALICE).borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
-				assert_eq!(TestPools::pools(DOT).total_borrowed, alice_borrowed_amount_in_dot);
+				assert_eq!(TestPools::pools(DOT).borrowed, alice_borrowed_amount_in_dot);
 
 				System::set_block_number(4);
 
@@ -1537,19 +1549,21 @@ mod tests {
 					Currencies::free_balance(ETH, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_eth - alice_deposited_amount_in_eth_secondary
 				);
+				let exchange_rate_eth = TestPools::get_exchange_rate(ETH).unwrap();
 				let expected_amount_wrapped_tokens_in_eth_summary = expected_amount_wrapped_tokens_in_eth
-					+ TestPools::convert_to_wrapped(ETH, alice_deposited_amount_in_eth_secondary).unwrap();
+					+ TestPools::underlying_to_wrapped(alice_deposited_amount_in_eth_secondary, exchange_rate_eth)
+						.unwrap();
 				assert_eq!(
 					Currencies::free_balance(METH, &ALICE),
 					expected_amount_wrapped_tokens_in_eth_summary
 				);
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(DOT, ALICE).total_borrowed,
+					TestPools::pool_user_data(DOT, ALICE).borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
-				assert_eq!(TestPools::pools(DOT).total_borrowed, alice_borrowed_amount_in_dot);
+				assert_eq!(TestPools::pools(DOT).borrowed, alice_borrowed_amount_in_dot);
 
 				System::set_block_number(7);
 
@@ -1581,7 +1595,7 @@ mod tests {
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -1613,8 +1627,9 @@ mod tests {
 				));
 
 				// Checking free balance DOT/MDOT && ETH for user.
+				let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
 				let expected_amount_wrapped_tokens_in_dot =
-					TestPools::convert_to_wrapped(DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_dot, exchange_rate_dot).unwrap();
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
@@ -1626,11 +1641,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// // Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(3);
 
@@ -1659,11 +1674,11 @@ mod tests {
 
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
 			});
 	}
 
@@ -1689,8 +1704,8 @@ mod tests {
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND)
-			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true, 0)
-			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), true, 0)
+			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -1729,8 +1744,9 @@ mod tests {
 				System::set_block_number(4);
 
 				// Checking free balance DOT/MDOT && ETH && BTC for user.
+				let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
 				let expected_amount_wrapped_tokens_in_dot =
-					TestPools::convert_to_wrapped(DOT, alice_deposited_amount_in_dot).unwrap();
+					TestPools::underlying_to_wrapped(alice_deposited_amount_in_dot, exchange_rate_dot).unwrap();
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ALICE),
 					expected_amount_wrapped_tokens_in_dot
@@ -1746,11 +1762,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				// Alice try to transfer all MDOTs
 				assert_noop!(
@@ -1819,18 +1835,19 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).total_borrowed,
+					TestPools::pool_user_data(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).total_borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(7);
 
+				let exchange_rate_btc = TestPools::get_exchange_rate(BTC).unwrap();
 				let total_alice_deposited_amount_in_btc =
 					alice_deposited_amount_in_btc + alice_deposited_amount_in_btc_secondary;
 				let expected_amount_wrapped_tokens_in_btc =
-					TestPools::convert_to_wrapped(BTC, total_alice_deposited_amount_in_btc).unwrap();
+					TestPools::underlying_to_wrapped(total_alice_deposited_amount_in_btc, exchange_rate_btc).unwrap();
 				// Alice try to transfer all MBTC.
 				assert_noop!(
 					MinterestProtocol::transfer_wrapped(

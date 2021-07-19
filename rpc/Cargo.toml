@@ -6,14 +6,14 @@ edition = "2018"
 
 [dependencies]
 jsonrpc-core = "15.0.0"
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
-sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
-sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
-sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
-sc-rpc-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
-pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
-substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
-sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sc-rpc-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 
 orml-oracle-rpc = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 

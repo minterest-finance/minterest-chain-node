@@ -33,7 +33,7 @@ pub mod currency_mock {
 	pub const ONE_HUNDRED_THOUSAND: Balance = 100_000 * DOLLARS;
 	pub const ONE_MILL: Balance = 1_000_000 * DOLLARS;
 
-	pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000_000_000_000_000_000_000;
+	pub const PROTOCOL_INTEREST_TRANSFER_THRESHOLD: Balance = 1_000 * DOLLARS;
 }
 
 pub mod users_mock {
@@ -200,6 +200,8 @@ macro_rules! mock_impl_controller_config {
 
 		impl controller::Config for $target {
 			type Event = Event;
+			type MultiCurrency = orml_currencies::Pallet<$target>;
+			type PriceSource = MockPriceSource;
 			type LiquidityPoolsManager = liquidity_pools::Pallet<$target>;
 			type MinterestModelManager = minterest_model::Pallet<$target>;
 			type MaxBorrowCap = MaxBorrowCap;
@@ -248,15 +250,16 @@ macro_rules! mock_impl_minterest_protocol_config {
 	($target:ty, $acc:ident) => {
 		impl minterest_protocol::Config for $target {
 			type Event = Event;
-			type Borrowing = liquidity_pools::Pallet<$target>;
+			type MultiCurrency = orml_currencies::Pallet<$target>;
 			type ManagerLiquidationPools = liquidation_pools::Pallet<$target>;
 			type ManagerLiquidityPools = liquidity_pools::Pallet<$target>;
 			type MntManager = mnt_token::Pallet<$target>;
 			type ProtocolWeightInfo = ();
 			type ControllerManager = controller::Pallet<$target>;
-			type RiskManagerAPI = TestRiskManager;
-			type MinterestModelAPI = TestMinterestModel;
+			type MinterestModelManager = TestMinterestModel;
 			type CreatePoolOrigin = EnsureSignedBy<$acc, AccountId>;
+			type UserLiquidationAttempts = risk_manager::Pallet<$target>;
+			type RiskManager = risk_manager::Pallet<$target>;
 			type WhitelistManager = whitelist_module::Pallet<$target>;
 		}
 	};
@@ -266,20 +269,18 @@ macro_rules! mock_impl_minterest_protocol_config {
 macro_rules! mock_impl_risk_manager_config {
 	($target:ty, $acc:ident) => {
 		parameter_types! {
-			pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
-			pub const MaxDurationMs: u64 = 1000;
+			pub const PartialLiquidationMinSum: Balance = 100_000 * DOLLARS;
+			pub const PartialLiquidationMaxAttempts: u8 = 3_u8;
+			pub const MaxLiquidationFee: Rate = Rate::from_inner(500_000_000_000_000_000);
 		}
 
 		impl risk_manager::Config for $target {
 			type Event = Event;
-			type UnsignedPriority = RiskManagerPriority;
-			type LiquidationPoolsManager = liquidation_pools::Pallet<$target>;
-			type LiquidityPoolsManager = liquidity_pools::Pallet<$target>;
-			type MntManager = mnt_token::Pallet<$target>;
+			type UserCollateral = liquidity_pools::Pallet<$target>;
+			type PartialLiquidationMinSum = PartialLiquidationMinSum;
+			type PartialLiquidationMaxAttempts = PartialLiquidationMaxAttempts;
+			type MaxLiquidationFee = MaxLiquidationFee;
 			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
-			type RiskManagerWeightInfo = ();
-			type ControllerManager = controller::Pallet<$target>;
-			type OffchainWorkerMaxDurationMs = MaxDurationMs;
 		}
 	};
 }
@@ -335,6 +336,18 @@ macro_rules! mock_impl_whitelist_module_config {
 			type MaxMembers = MaxMembersWhitelistMode;
 			type WhitelistOrigin = EnsureSignedBy<$acc, AccountId>;
 			type WhitelistWeightInfo = ();
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! mock_impl_prices_module_config {
+	($target:ty, $acc:ident) => {
+		impl module_prices::Config for $target {
+			type Event = Event;
+			type Source = MockDataProvider;
+			type LockOrigin = EnsureSignedBy<$acc, AccountId>;
+			type WeightInfo = ();
 		}
 	};
 }

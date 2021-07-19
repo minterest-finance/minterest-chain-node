@@ -1,18 +1,20 @@
 #![allow(unused_imports)]
 
 use crate::{
-	AccountId, Balance, Currencies, CurrencyId, MinterestProtocol, MntTokenPalletId, Origin, Rate, Runtime, Vec,
-	Whitelist, BTC, DOLLARS, DOT, ETH, KSM, MNT,
+	AccountId, Balance, Currencies, CurrencyId, LiquidityPools, MinterestProtocol, MntTokenPalletId, Origin, Rate,
+	Runtime, Vec, Whitelist, BTC, DOLLARS, DOT, ETH, KSM, MNT,
 };
 
 use frame_benchmarking::account;
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
-use frame_system::pallet_prelude::OriginFor;
-use frame_system::RawOrigin;
+use frame_system::{pallet_prelude::OriginFor, RawOrigin};
 use liquidity_pools::Pool;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::{AccountIdConversion, One, StaticLookup};
-use sp_runtime::FixedPointNumber;
+use pallet_traits::LiquidityPoolStorageProvider;
+use sp_runtime::{
+	traits::{AccountIdConversion, One, StaticLookup, Zero},
+	FixedPointNumber,
+};
 
 pub const SEED: u32 = 0;
 
@@ -41,12 +43,12 @@ pub fn enable_whitelist_mode_and_add_member(who: &AccountId) -> DispatchResultWi
 
 pub(crate) fn create_pools(pools: &Vec<CurrencyId>) {
 	pools.into_iter().for_each(|pool_id| {
-		liquidity_pools::Pools::<Runtime>::insert(
-			pool_id,
+		LiquidityPools::set_pool_data(
+			*pool_id,
 			Pool {
-				total_borrowed: 0,
+				borrowed: Balance::zero(),
 				borrow_index: Rate::one(),
-				total_protocol_interest: 0,
+				protocol_interest: Balance::zero(),
 			},
 		);
 	});
@@ -68,16 +70,15 @@ pub(crate) fn prepare_for_mnt_distribution(pools: Vec<CurrencyId>) -> Result<(),
 #[cfg(test)]
 pub mod tests {
 	use super::*;
-	use crate::constants::currency::DOLLARS;
-	use crate::constants::PROTOCOL_INTEREST_TRANSFER_THRESHOLD;
 	use controller::{ControllerData, PauseKeeper};
 	use frame_support::traits::GenesisBuild;
 	use liquidity_pools::Pool;
 	use minterest_model::MinterestModelData;
-	use minterest_primitives::{Balance, Rate};
-	use risk_manager::RiskManagerData;
-	use sp_runtime::traits::Zero;
-	use sp_runtime::FixedU128;
+	use minterest_primitives::{
+		constants::{currency::DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD},
+		{Balance, Rate},
+	};
+	use sp_runtime::{traits::Zero, FixedU128};
 
 	// This GenesisConfig is a copy of testnet_genesis.
 	pub fn test_externalities() -> sp_io::TestExternalities {
@@ -89,33 +90,33 @@ pub mod tests {
 				(
 					ETH,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					DOT,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					KSM,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 				(
 					BTC,
 					Pool {
-						total_borrowed: Balance::zero(),
+						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
-						total_protocol_interest: Balance::zero(),
+						protocol_interest: Balance::zero(),
 					},
 				),
 			],
@@ -125,7 +126,7 @@ pub mod tests {
 		.unwrap();
 
 		controller::GenesisConfig::<Runtime> {
-			controller_dates: vec![
+			controller_params: vec![
 				(
 					ETH,
 					ControllerData {
@@ -226,44 +227,13 @@ pub mod tests {
 		.unwrap();
 
 		risk_manager::GenesisConfig::<Runtime> {
-			risk_manager_params: vec![
-				(
-					ETH,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: Rate::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
-					},
-				),
-				(
-					DOT,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 100_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: Rate::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
-					},
-				),
-				(
-					KSM,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: Rate::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
-					},
-				),
-				(
-					BTC,
-					RiskManagerData {
-						max_attempts: 2,
-						min_partial_liquidation_sum: 200_000 * DOLLARS, // In USD. FIXME: temporary value.
-						threshold: Rate::saturating_from_rational(103, 100), // 3%
-						liquidation_fee: Rate::saturating_from_rational(105, 100), // 5%
-					},
-				),
+			liquidation_fee: vec![
+				(DOT, FixedU128::saturating_from_rational(5, 100)), // 5%
+				(ETH, FixedU128::saturating_from_rational(5, 100)), // 5%
+				(BTC, FixedU128::saturating_from_rational(5, 100)), // 5%
+				(KSM, FixedU128::saturating_from_rational(5, 100)), // 5%
 			],
+			liquidation_threshold: FixedU128::saturating_from_rational(3, 100), // 3%
 			_phantom: Default::default(),
 		}
 		.assimilate_storage(&mut storage)

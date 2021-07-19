@@ -9,6 +9,7 @@ use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use minterest_primitives::Rate;
+use pallet_traits::UserCollateral;
 use sp_runtime::{traits::One, FixedPointNumber};
 
 fn dollars<T: Into<u128>>(d: T) -> Balance {
@@ -38,9 +39,9 @@ fn create_pool_should_work() {
 			assert_eq!(
 				TestPools::get_pool_data(DOT),
 				Pool {
-					total_borrowed: Balance::zero(),
+					borrowed: Balance::zero(),
 					borrow_index: Rate::one(),
-					total_protocol_interest: Balance::zero(),
+					protocol_interest: Balance::zero(),
 				},
 			);
 			assert_eq!(
@@ -53,7 +54,7 @@ fn create_pool_should_work() {
 				},
 			);
 			assert_eq!(
-				Controller::controller_dates(DOT),
+				Controller::controller_params(DOT),
 				ControllerData {
 					last_interest_accrued_block: 1,
 					protocol_interest_factor: Rate::saturating_from_rational(1, 10),
@@ -117,10 +118,8 @@ fn create_pool_should_not_work_when_minterest_model_storage_has_data() {
 						protocol_interest_threshold: 100000,
 						deviation_threshold: Rate::saturating_from_rational(5, 100),
 						balance_ratio: Rate::saturating_from_rational(2, 10),
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
+						liquidation_threshold: Rate::saturating_from_rational(3, 100),
+						liquidation_fee: Rate::saturating_from_rational(5, 100),
 					},
 				),
 				minterest_model::Error::<Test>::PoolAlreadyCreated,
@@ -136,62 +135,62 @@ fn protocol_operations_not_working_for_nonexisting_pool() {
 		.execute_with(|| {
 			assert_noop!(
 				TestMinterestProtocol::deposit_underlying(alice_origin(), ETH, dollars(60_u128)),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::redeem(alice_origin(), ETH),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::redeem_underlying(alice_origin(), ETH, dollars(60_u128)),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::redeem_wrapped(alice_origin(), METH, dollars(60_u128)),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::borrow(alice_origin(), ETH, dollars(60_u128)),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::repay(alice_origin(), ETH, Balance::zero()),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::repay_all(alice_origin(), ETH),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::repay_on_behalf(bob_origin(), ETH, ALICE, dollars(10_u128)),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::enable_is_collateral(alice_origin(), ETH),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::disable_is_collateral(alice_origin(), ETH),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::transfer_wrapped(alice_origin(), BOB, METH, dollars(10_u128)),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 
 			assert_noop!(
 				TestMinterestProtocol::claim_mnt(alice_origin(), vec![DOT, ETH]),
-				liquidity_pools::Error::<Test>::PoolNotFound
+				crate::Error::<Test>::PoolNotFound
 			);
 		});
 }
@@ -221,10 +220,7 @@ fn deposit_underlying_should_work() {
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// Check liquidation_attempts has been reset.
-			assert_eq!(
-				LiquidityPools::<Test>::pool_user_data(DOT, ALICE).liquidation_attempts,
-				u8::zero()
-			);
+			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), u8::zero());
 
 			// MDOT pool does not exist.
 			assert_noop!(
@@ -892,7 +888,7 @@ fn enable_is_collateral_should_work() {
 			assert_ok!(TestMinterestProtocol::enable_is_collateral(alice_origin(), ETH));
 			let expected_event = Event::TestMinterestProtocol(crate::Event::PoolEnabledIsCollateral(ALICE, ETH));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
-			assert!(TestPools::check_user_available_collateral(&ALICE, ETH));
+			assert!(TestPools::is_pool_collateral(&ALICE, ETH));
 
 			// ETH pool is already collateral.
 			assert_noop!(
@@ -943,7 +939,7 @@ fn disable_is_collateral_should_work() {
 			assert_ok!(TestMinterestProtocol::disable_is_collateral(alice_origin(), ETH));
 			let expected_event = Event::TestMinterestProtocol(crate::Event::PoolDisabledIsCollateral(ALICE, ETH));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
-			assert!(!TestPools::check_user_available_collateral(&ALICE, ETH));
+			assert!(!TestPools::is_pool_collateral(&ALICE, ETH));
 
 			assert_noop!(
 				TestMinterestProtocol::disable_is_collateral(alice_origin(), ETH),
@@ -1160,12 +1156,12 @@ fn partial_protocol_interest_transfer_should_work() {
 		)
 		.build()
 		.execute_with(|| {
-			assert_eq!(TestPools::pools(DOT).total_protocol_interest, dollars(11_000u128));
+			assert_eq!(TestPools::pools(DOT).protocol_interest, dollars(11_000u128));
 			assert_eq!(TestPools::get_pool_available_liquidity(DOT), dollars(10_000u128));
 
 			TestMinterestProtocol::on_finalize(1);
 
 			// Not all protocol interest transferred because of insufficient liquidity
-			assert_eq!(TestPools::pools(DOT).total_protocol_interest, dollars(1_000u128));
+			assert_eq!(TestPools::pools(DOT).protocol_interest, dollars(1_000u128));
 		});
 }

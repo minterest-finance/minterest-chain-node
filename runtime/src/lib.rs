@@ -18,20 +18,27 @@ mod weights_test;
 pub use controller_rpc_runtime_api::{
 	BalanceInfo, HypotheticalLiquidityData, PoolState, ProtocolTotalValue, UserData, UserPoolBalanceData,
 };
+use frame_system::{EnsureOneOf, EnsureRoot};
 use minterest_primitives::constants::fee::WeightToFee;
 pub use minterest_primitives::{
+	constants::{
+		currency::DOLLARS,
+		liquidation::{MAX_LIQUIDATION_FEE, PARTIAL_LIQUIDATION_MAX_ATTEMPTS, PARTIAL_LIQUIDATION_MIN_SUM},
+		time::{BLOCKS_PER_YEAR, DAYS, SLOT_DURATION},
+		INITIAL_EXCHANGE_RATE, MAX_BORROW_CAP, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION,
+	},
 	currency::{
 		CurrencyType::{UnderlyingAsset, WrappedToken},
 		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
 	},
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index,
-	Interest, Moment, Operation, Price, Rate, Signature,
+	Interest, Moment, Operation, Price, Rate, Signature, VestingBucket,
 };
 pub use mnt_token_rpc_runtime_api::MntBalanceInfo;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
 use pallet_grandpa::{fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
-use pallet_traits::{ControllerManager, LiquidityPoolsManager, MntManager};
+use pallet_traits::{ControllerManager, LiquidityPoolStorageProvider, MntManager, PricesManager, WhitelistManager};
 use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -67,13 +74,6 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill, Perquintill};
 
-use frame_system::{EnsureOneOf, EnsureRoot};
-pub use minterest_primitives::{
-	constants::{currency::*, time::*, *},
-	currency::*,
-	*,
-};
-use pallet_traits::{PricesManager, WhitelistManager};
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -348,15 +348,16 @@ impl pallet_membership::Config<OperatorMembershipInstanceMinterest> for Runtime 
 
 impl minterest_protocol::Config for Runtime {
 	type Event = Event;
-	type Borrowing = LiquidityPools;
+	type MultiCurrency = Currencies;
 	type ManagerLiquidationPools = LiquidationPools;
 	type ManagerLiquidityPools = LiquidityPools;
 	type MntManager = MntToken;
 	type ProtocolWeightInfo = weights::minterest_protocol::WeightInfo<Runtime>;
 	type ControllerManager = Controller;
-	type RiskManagerAPI = RiskManager;
-	type MinterestModelAPI = MinterestModel;
+	type MinterestModelManager = MinterestModel;
 	type CreatePoolOrigin = EnsureRootOrHalfMinterestCouncil;
+	type UserLiquidationAttempts = RiskManager;
+	type RiskManager = RiskManager;
 	type WhitelistManager = Whitelist;
 }
 
@@ -414,6 +415,8 @@ parameter_types! {
 
 impl controller::Config for Runtime {
 	type Event = Event;
+	type MultiCurrency = Currencies;
+	type PriceSource = Prices;
 	type LiquidityPoolsManager = LiquidityPools;
 	type MinterestModelManager = MinterestModel;
 	type MaxBorrowCap = MaxBorrowCap;
@@ -441,22 +444,19 @@ impl minterest_model::Config for Runtime {
 }
 
 parameter_types! {
-	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
-	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
 	pub const ChainlinkManagerPriority: TransactionPriority = TransactionPriority::max_value() - 2;
-	pub const RiskManagerWorkerMaxDurationMs: u64 = 2000;
+	pub const PartialLiquidationMinSum: Balance = PARTIAL_LIQUIDATION_MIN_SUM;
+	pub const PartialLiquidationMaxAttempts: u8 = PARTIAL_LIQUIDATION_MAX_ATTEMPTS;
+	pub const MaxLiquidationFee: Rate = MAX_LIQUIDATION_FEE;
 }
 
 impl risk_manager::Config for Runtime {
 	type Event = Event;
-	type UnsignedPriority = RiskManagerPriority;
-	type LiquidationPoolsManager = LiquidationPools;
-	type LiquidityPoolsManager = LiquidityPools;
-	type MntManager = MntToken;
+	type UserCollateral = LiquidityPools;
+	type PartialLiquidationMinSum = PartialLiquidationMinSum;
+	type PartialLiquidationMaxAttempts = PartialLiquidationMaxAttempts;
+	type MaxLiquidationFee = MaxLiquidationFee;
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
-	type RiskManagerWeightInfo = weights::risk_manager::WeightInfo<Runtime>;
-	type ControllerManager = Controller;
-	type OffchainWorkerMaxDurationMs = RiskManagerWorkerMaxDurationMs;
 }
 
 parameter_types! {
@@ -484,6 +484,7 @@ where
 
 parameter_types! {
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
+	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
 }
 
 impl liquidation_pools::Config for Runtime {
@@ -637,7 +638,7 @@ construct_runtime!(
 		Prices: module_prices::{Pallet, Storage, Call, Event<T>, Config<T>},
 
 		ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Config<T>, Storage, Event<T>},
-		ChainlinkPriceManager: chainlink_price_manager::{Pallet, Call, Storage, Event<T>, ValidateUnsigned},
+		ChainlinkPriceManager: chainlink_price_manager::{Pallet, Call, Storage, Event<T>},
 
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -647,7 +648,7 @@ construct_runtime!(
 		LiquidityPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
 		Controller: controller::{Pallet, Storage, Call, Event, Config<T>},
 		MinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
-		RiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
+		RiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>},
 		LiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		MntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Pallet, Storage, Call, Event<T>},
@@ -731,8 +732,9 @@ impl_runtime_apis! {
 		fn validate_transaction(
 			source: TransactionSource,
 			tx: <Block as BlockT>::Extrinsic,
+			block_hash: <Block as BlockT>::Hash,
 		) -> TransactionValidity {
-			Executive::validate_transaction(source, tx)
+			Executive::validate_transaction(source, tx, block_hash)
 		}
 	}
 
@@ -831,8 +833,8 @@ impl_runtime_apis! {
 			Controller::get_utilization_rate(pool_id)
 		}
 
-		fn get_user_total_supply_and_borrowed_balance_in_usd(account_id: AccountId) -> Option<UserPoolBalanceData> {
-			let (total_supply, total_borrowed) = Controller::get_user_total_supply_and_borrowed_balance_in_usd(&account_id).ok()?;
+		fn get_user_total_supply_and_borrow_balance_in_usd(account_id: AccountId) -> Option<UserPoolBalanceData> {
+			let (total_supply, total_borrowed) = Controller::get_user_total_supply_and_borrow_balance_in_usd(&account_id).ok()?;
 
 			Some(UserPoolBalanceData {total_supply, total_borrowed})
 		}
@@ -859,11 +861,11 @@ impl_runtime_apis! {
 		}
 
 		fn get_user_borrow_per_asset(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
-				Some(BalanceInfo{amount: Controller::get_user_borrow_per_asset(&account_id, underlying_asset_id).ok()?})
+				Some(BalanceInfo{amount: Controller::get_user_borrow_underlying_balance(&account_id, underlying_asset_id).ok()?})
 		}
 
 		fn get_user_underlying_balance_per_asset(account_id: AccountId, pool_id: CurrencyId) -> Option<BalanceInfo> {
-				Some(BalanceInfo{amount: Controller::get_user_underlying_balance_per_asset(&account_id, pool_id).ok()?})
+				Some(BalanceInfo{amount: Controller::get_user_supply_underlying_balance(&account_id, pool_id).ok()?})
 		}
 
 		fn pool_exists(underlying_asset_id: CurrencyId) -> bool {
@@ -876,12 +878,12 @@ impl_runtime_apis! {
 	}
 
 	impl mnt_token_rpc_runtime_api::MntTokenRuntimeApi<Block, AccountId> for Runtime {
-		fn get_unclaimed_mnt_balance(account_id: AccountId) -> Option<MntBalanceInfo> {
-				Some(MntBalanceInfo{amount: MntToken::get_unclaimed_mnt_balance(&account_id).ok()?})
+		fn get_user_total_unclaimed_mnt_balance(account_id: AccountId) -> Option<MntBalanceInfo> {
+				Some(MntBalanceInfo{amount: MntToken::get_user_total_unclaimed_mnt_balance(&account_id).ok()?})
 		}
 
-		fn get_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
-			MntToken::get_mnt_borrow_and_supply_rates(pool_id).ok()
+		fn get_pool_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
+			MntToken::get_pool_mnt_borrow_and_supply_rates(pool_id).ok()
 		}
 	}
 
@@ -920,7 +922,7 @@ impl_runtime_apis! {
 		fn  get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 				.into_iter()
-				.map(|currency_id| (currency_id, Prices::locked_price(currency_id)))
+				.map(|currency_id| (currency_id, Prices::locked_price_storage(currency_id)))
 				.collect()
 		}
 
@@ -956,7 +958,6 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, controller, benchmarking::controller);
 			add_benchmark!(params, batches, minterest_model, benchmarking::minterest_model);
 			add_benchmark!(params, batches, module_prices, benchmarking::prices);
-			add_benchmark!(params, batches, risk_manager, benchmarking::risk_manager);
 			add_benchmark!(params, batches, liquidation_pools, benchmarking::liquidation_pools);
 			add_benchmark!(params, batches, minterest_protocol, benchmarking::minterest_protocol);
 			add_benchmark!(params, batches, mnt_token, benchmarking::mnt_token);

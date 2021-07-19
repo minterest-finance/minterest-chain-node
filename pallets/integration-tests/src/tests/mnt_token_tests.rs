@@ -5,9 +5,9 @@ mod tests {
 	use crate::tests::*;
 
 	fn test_mnt_speeds(speed_dot: Balance, speed_eth: Balance, speed_btc: Balance) {
-		assert_eq!(TestMntToken::mnt_speeds(DOT), speed_dot);
-		assert_eq!(TestMntToken::mnt_speeds(ETH), speed_eth);
-		assert_eq!(TestMntToken::mnt_speeds(BTC), speed_btc);
+		assert_eq!(TestMntToken::mnt_speed_storage(DOT), speed_dot);
+		assert_eq!(TestMntToken::mnt_speed_storage(ETH), speed_eth);
+		assert_eq!(TestMntToken::mnt_speed_storage(BTC), speed_btc);
 	}
 
 	// This scenario works with two users and three pools.
@@ -48,10 +48,10 @@ mod tests {
 			.mnt_claim_threshold(dollars(100))
 			.build()
 			.execute_with(|| {
-				assert!(mnt_token::MntSpeeds::<Test>::contains_key(DOT));
-				assert!(mnt_token::MntSpeeds::<Test>::contains_key(ETH));
-				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(BTC));
-				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(KSM));
+				assert!(mnt_token::MntSpeedStorage::<Test>::contains_key(DOT));
+				assert!(mnt_token::MntSpeedStorage::<Test>::contains_key(ETH));
+				assert!(!mnt_token::MntSpeedStorage::<Test>::contains_key(BTC));
+				assert!(!mnt_token::MntSpeedStorage::<Test>::contains_key(KSM));
 				// Set initial state of pools for distribution MNT tokens.
 				vec![DOT, ETH, BTC].into_iter().for_each(|pool_id| {
 					assert_ok!(MinterestProtocol::deposit_underlying(
@@ -82,7 +82,7 @@ mod tests {
 				// Accrued MNT tokens are equal to zero, since distribution occurs only at
 				// the moment of repeated user interaction with the protocol
 				// (deposit, redeem, borrow, repay, transfer, claim).
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued_storage(ALICE), Balance::zero());
 				assert_eq!(Tokens::free_balance(MNT, &ALICE), Balance::zero());
 
 				// BOB deposits ETH.
@@ -92,15 +92,15 @@ mod tests {
 					ETH,
 					ONE_HUNDRED_THOUSAND
 				));
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), 0);
-				assert_eq!(TestMntToken::mnt_accrued(BOB), 0);
+				assert_eq!(TestMntToken::mnt_accrued_storage(ALICE), 0);
+				assert_eq!(TestMntToken::mnt_accrued_storage(BOB), 0);
 
 				System::set_block_number(30);
 
 				// Alice started taking part in ETH pool distribution at block 20 as a borrower
 				// mnt_balance = 0.1(eth_speed) * 10(delta_blocks) * 50(borrowed) / 100(total_borrow) = 0.5 MNT
 				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![ETH]));
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued_storage(ALICE), Balance::zero());
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), 499_999_978_624_951_827);
 
 				// Alice started taking part in DOT pool distribution at block 10 as a supplier
@@ -117,8 +117,8 @@ mod tests {
 				assert_ok!(MinterestProtocol::borrow(bob_origin(), DOT, 20_000 * DOLLARS));
 				// At this moment Alice starts receiving (btc_speed * 3/8) MNT per block as a borrower
 				assert_ok!(MinterestProtocol::borrow(alice_origin(), BTC, 30_000 * DOLLARS));
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
-				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued_storage(ALICE), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued_storage(BOB), Balance::zero());
 
 				assert_ok!(TestMntToken::set_speed(admin_origin(), BTC, 2 * DOLLARS));
 				test_mnt_speeds(
@@ -126,15 +126,15 @@ mod tests {
 					100_000_000_000_000_000,
 					2_000_000_000_000_000_000,
 				);
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
-				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued_storage(ALICE), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued_storage(BOB), Balance::zero());
 
 				// At this point Alice stops being a borrower, but still has unclaimed tokens for 10 blocks since
-				// the last ETH claim mnt_accrued = 0.1(eth_speed) * 10(delta_blocks) * 50(borrowed) /
+				// the last ETH claim mnt_accrued_storage = 0.1(eth_speed) * 10(delta_blocks) * 50(borrowed) /
 				// 100(total_borrow) = 0.5 MNT
 				assert_ok!(MinterestProtocol::repay_all(alice_origin(), ETH));
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), 499_999_978_624_951_827);
-				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued_storage(ALICE), 499_999_978_624_951_827);
+				assert_eq!(TestMntToken::mnt_accrued_storage(BOB), Balance::zero());
 
 				// At this point Alice and Bob start receiving rewards as a suppliers -
 				// (dot_speed * 0.25) per block each
@@ -147,7 +147,7 @@ mod tests {
 				// Alice should receive tokens as a supplier for a 10 blocks since the last claim
 				// mnt_accrued = 0.5 MNT + 0.1(dot_speed) * 10(delta_blocks) * 100(supply) / 200(total supply) = 1
 				// MNT
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), 999_999_974_068_651_910);
+				assert_eq!(TestMntToken::mnt_accrued_storage(ALICE), 999_999_974_068_651_910);
 
 				System::set_block_number(50);
 
@@ -157,13 +157,13 @@ mod tests {
 				// 0.285714286 + 0.25 = 0.535714286
 				assert_ok!(MinterestProtocol::claim_mnt(bob_origin(), vec![DOT]));
 				assert_eq!(Currencies::free_balance(MNT, &BOB), 535_714_265_951_558_142);
-				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued_storage(BOB), Balance::zero());
 
 				// Alice started taking part in BTC pool distribution at block 40 as a borrower
 				// mnt_accrued = 1 MNT + 2(btc_speed) * 10(delta_blocks) * 30(borrowed) / 80(total_borrow) = 8.5 MNT
 				assert_ok!(MinterestProtocol::repay_all(alice_origin(), BTC));
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), 8_499_999_151_412_486_286);
-				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued_storage(ALICE), 8_499_999_151_412_486_286);
+				assert_eq!(TestMntToken::mnt_accrued_storage(BOB), Balance::zero());
 
 				// Alice stops being a supplier but still has unclaimed tokens for 10 blocks since the last action
 				// on DOT pool mnt_accrued = 8.5 MNT + 0.1(dot_speed) * 10(delta_blocks) * 50(supply) / 200(total
@@ -172,8 +172,8 @@ mod tests {
 
 				System::set_block_number(100);
 
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), 8_749_999_144_578_086_369);
-				assert_eq!(TestMntToken::mnt_accrued(BOB), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued_storage(ALICE), 8_749_999_144_578_086_369);
+				assert_eq!(TestMntToken::mnt_accrued_storage(BOB), Balance::zero());
 
 				// mnt_balance = 1.5 (already claimed) + 8.75 (accrued) = 10.25 MNT
 				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![DOT]));
@@ -246,6 +246,13 @@ mod tests {
 					},
 				),
 			])
+			.set_risk_manager_params(
+				vec![
+					(DOT, Rate::saturating_from_rational(5, 100)),
+					(ETH, Rate::saturating_from_rational(5, 100)),
+				],
+				Rate::saturating_from_rational(3, 100),
+			)
 			.pool_initial(DOT)
 			.pool_initial(ETH)
 			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
@@ -262,10 +269,10 @@ mod tests {
 			.mnt_claim_threshold(dollars(100))
 			.build()
 			.execute_with(|| {
-				assert!(mnt_token::MntSpeeds::<Test>::contains_key(DOT));
-				assert!(mnt_token::MntSpeeds::<Test>::contains_key(ETH));
-				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(BTC));
-				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(KSM));
+				assert!(mnt_token::MntSpeedStorage::<Test>::contains_key(DOT));
+				assert!(mnt_token::MntSpeedStorage::<Test>::contains_key(ETH));
+				assert!(!mnt_token::MntSpeedStorage::<Test>::contains_key(BTC));
+				assert!(!mnt_token::MntSpeedStorage::<Test>::contains_key(KSM));
 				// Set initial state of pools for distribution MNT tokens.
 				vec![DOT, ETH].into_iter().for_each(|pool_id| {
 					assert_ok!(MinterestProtocol::deposit_underlying(
@@ -294,7 +301,7 @@ mod tests {
 				// Accrued MNT tokens are equal to zero, since distribution occurs only at
 				// the moment of repeated user interaction with the protocol
 				// (deposit, redeem, borrow, repay, transfer, claim).
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued_storage(ALICE), Balance::zero());
 				assert_eq!(Tokens::free_balance(MNT, &ALICE), Balance::zero());
 
 				System::set_block_number(30);
@@ -314,10 +321,8 @@ mod tests {
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 						deviation_threshold: Rate::saturating_from_rational(1, 10),
 						balance_ratio: Rate::saturating_from_rational(2, 10),
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
+						liquidation_threshold: Rate::saturating_from_rational(3, 100),
+						liquidation_fee: Rate::saturating_from_rational(5, 100),
 					},
 				));
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -331,7 +336,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::borrow(alice_origin(), BTC, 30_000 * DOLLARS));
 
 				System::set_block_number(70);
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued_storage(ALICE), Balance::zero());
 
 				assert_ok!(TestMntToken::set_speed(admin_origin(), BTC, 2 * DOLLARS));
 				test_mnt_speeds(
@@ -339,12 +344,12 @@ mod tests {
 					100_000_000_000_000_000,
 					2_000_000_000_000_000_000,
 				);
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued_storage(ALICE), Balance::zero());
 
 				assert_ok!(MinterestProtocol::repay_all(alice_origin(), ETH));
 
 				System::set_block_number(80);
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), 2_499_999_893_124_959_137);
+				assert_eq!(TestMntToken::mnt_accrued_storage(ALICE), 2_499_999_893_124_959_137);
 
 				// Alice is able to claim rewards from all three pools
 				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![DOT, ETH]));
@@ -393,6 +398,13 @@ mod tests {
 					jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
 				},
 			)])
+			.set_risk_manager_params(
+				vec![
+					(DOT, Rate::saturating_from_rational(5, 100)),
+					(ETH, Rate::saturating_from_rational(5, 100)),
+				],
+				Rate::saturating_from_rational(3, 100),
+			)
 			.pool_initial(ETH)
 			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
 			.user_balance(ADMIN, BTC, ONE_HUNDRED_THOUSAND)
@@ -402,10 +414,10 @@ mod tests {
 			.mnt_account_balance(ONE_HUNDRED_THOUSAND)
 			.build()
 			.execute_with(|| {
-				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(DOT));
-				assert!(mnt_token::MntSpeeds::<Test>::contains_key(ETH));
-				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(BTC));
-				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(KSM));
+				assert!(!mnt_token::MntSpeedStorage::<Test>::contains_key(DOT));
+				assert!(mnt_token::MntSpeedStorage::<Test>::contains_key(ETH));
+				assert!(!mnt_token::MntSpeedStorage::<Test>::contains_key(BTC));
+				assert!(!mnt_token::MntSpeedStorage::<Test>::contains_key(KSM));
 				// Set initial state of pools for distribution MNT tokens.
 				System::set_block_number(10);
 				// Alice starts taking part in the distribution (ETH) from block 10
@@ -420,7 +432,7 @@ mod tests {
 				// Accrued MNT tokens are equal to zero, since distribution occurs only at
 				// the moment of repeated user interaction with the protocol
 				// (deposit, redeem, borrow, repay, transfer, claim).
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued_storage(ALICE), Balance::zero());
 				assert_eq!(Currencies::free_balance(MNT, &ALICE), Balance::zero());
 
 				System::set_block_number(20);
@@ -456,10 +468,8 @@ mod tests {
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 						deviation_threshold: Rate::saturating_from_rational(1, 10),
 						balance_ratio: Rate::saturating_from_rational(2, 10),
-						max_attempts: 3,
-						min_partial_liquidation_sum: 100 * DOLLARS,
-						threshold: Rate::saturating_from_rational(103, 100),
-						liquidation_fee: Rate::saturating_from_rational(105, 100),
+						liquidation_threshold: Rate::saturating_from_rational(3, 100),
+						liquidation_fee: Rate::saturating_from_rational(5, 100),
 					},
 				));
 				assert_ok!(MinterestProtocol::deposit_underlying(
@@ -511,10 +521,10 @@ mod tests {
 			.mnt_account_balance(ONE_HUNDRED_THOUSAND)
 			.build()
 			.execute_with(|| {
-				assert!(mnt_token::MntSpeeds::<Test>::contains_key(DOT));
-				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(ETH));
-				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(BTC));
-				assert!(!mnt_token::MntSpeeds::<Test>::contains_key(KSM));
+				assert!(mnt_token::MntSpeedStorage::<Test>::contains_key(DOT));
+				assert!(!mnt_token::MntSpeedStorage::<Test>::contains_key(ETH));
+				assert!(!mnt_token::MntSpeedStorage::<Test>::contains_key(BTC));
+				assert!(!mnt_token::MntSpeedStorage::<Test>::contains_key(KSM));
 				// Initialize distribution of MNT tokens.
 				assert_ok!(MinterestProtocol::deposit_underlying(
 					admin_origin(),
@@ -540,7 +550,7 @@ mod tests {
 				// Accrued MNT tokens are equal to zero, since distribution occurs only at
 				// the moment of repeated user interaction with the protocol
 				// (deposit, redeem, borrow, repay, transfer, claim).
-				assert_eq!(TestMntToken::mnt_accrued(ALICE), Balance::zero());
+				assert_eq!(TestMntToken::mnt_accrued_storage(ALICE), Balance::zero());
 				assert_eq!(Tokens::free_balance(MNT, &ALICE), Balance::zero());
 
 				// Alice started taking part in DOT pool distribution at block 10 as a supplier

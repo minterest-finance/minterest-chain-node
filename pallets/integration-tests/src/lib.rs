@@ -22,8 +22,7 @@ mod tests {
 	use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 	use minterest_protocol::{Error as MinterestProtocolError, PoolInitData};
 	use orml_traits::{parameter_type_with_key, MultiCurrency};
-	use pallet_traits::{PoolsManager, PricesManager};
-	use risk_manager::RiskManagerData;
+	use pallet_traits::{CurrencyConverter, PoolsManager, PricesManager};
 	use sp_core::H256;
 	use sp_runtime::{
 		testing::{Header, TestXt},
@@ -36,7 +35,6 @@ mod tests {
 	use test_helper::*;
 
 	mod controller_tests;
-	mod liquidation_tests;
 	mod liquidity_pools_tests;
 	mod minterest_model_tests;
 	mod minterest_protocol_tests;
@@ -141,7 +139,8 @@ mod tests {
 		controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
 		minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
 		mnt_claim_threshold: Balance,
-		risk_manager_params: Vec<(CurrencyId, RiskManagerData)>,
+		liquidation_fee: Vec<(CurrencyId, Rate)>,
+		liquidation_threshold: Rate,
 	}
 
 	impl Default for ExtBuilder {
@@ -216,12 +215,28 @@ mod tests {
 					),
 				],
 				mnt_claim_threshold: 0, // disable by default
-				risk_manager_params: vec![],
+				liquidation_fee: vec![
+					(DOT, Rate::saturating_from_rational(5, 100)),
+					(ETH, Rate::saturating_from_rational(5, 100)),
+					(BTC, Rate::saturating_from_rational(5, 100)),
+					(KSM, Rate::saturating_from_rational(5, 100)),
+				],
+				liquidation_threshold: Rate::saturating_from_rational(3, 100),
 			}
 		}
 	}
 
 	impl ExtBuilder {
+		pub fn set_risk_manager_params(
+			mut self,
+			liquidation_fee: Vec<(CurrencyId, Rate)>,
+			liquidation_threshold: Rate,
+		) -> Self {
+			self.liquidation_fee = liquidation_fee;
+			self.liquidation_threshold = liquidation_threshold;
+			self
+		}
+
 		pub fn set_controller_data(mut self, pools: Vec<(CurrencyId, ControllerData<BlockNumber>)>) -> Self {
 			self.controller_data = pools;
 			self
@@ -248,19 +263,13 @@ mod tests {
 			self
 		}
 
-		pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-			self.endowed_accounts
-				.push((TestLiquidationPools::pools_account_id(), currency_id, balance));
-			self
-		}
-
-		pub fn pool_total_borrowed(mut self, pool_id: CurrencyId, total_borrowed: Balance) -> Self {
+		pub fn pool_borrow_underlying(mut self, pool_id: CurrencyId, borrowed: Balance) -> Self {
 			self.pools.push((
 				pool_id,
 				Pool {
-					total_borrowed,
+					borrowed,
 					borrow_index: Rate::one(),
-					total_protocol_interest: Balance::zero(),
+					protocol_interest: Balance::zero(),
 				},
 			));
 			self
@@ -270,19 +279,17 @@ mod tests {
 			mut self,
 			pool_id: CurrencyId,
 			user: AccountId,
-			total_borrowed: Balance,
+			borrowed: Balance,
 			interest_index: Rate,
 			is_collateral: bool,
-			liquidation_attempts: u8,
 		) -> Self {
 			self.pool_user_data.push((
 				pool_id,
 				user,
 				PoolUserData {
-					total_borrowed,
+					borrowed,
 					interest_index,
 					is_collateral,
-					liquidation_attempts,
 				},
 			));
 			self
@@ -292,9 +299,9 @@ mod tests {
 			self.pools.push((
 				pool_id,
 				Pool {
-					total_borrowed: Balance::zero(),
+					borrowed: Balance::zero(),
 					borrow_index: Rate::one(),
-					total_protocol_interest: Balance::zero(),
+					protocol_interest: Balance::zero(),
 				},
 			));
 			self
@@ -308,19 +315,6 @@ mod tests {
 
 		pub fn mnt_claim_threshold(mut self, threshold: Balance) -> Self {
 			self.mnt_claim_threshold = threshold;
-			self
-		}
-
-		pub fn risk_manager_params_default(mut self, pool_id: CurrencyId) -> Self {
-			self.risk_manager_params.push((
-				pool_id,
-				RiskManagerData {
-					max_attempts: 3,
-					min_partial_liquidation_sum: 100_000 * DOLLARS,
-					threshold: Rate::saturating_from_rational(103, 100),
-					liquidation_fee: Rate::saturating_from_rational(105, 100),
-				},
-			));
 			self
 		}
 
@@ -350,7 +344,7 @@ mod tests {
 			.unwrap();
 
 			controller::GenesisConfig::<Test> {
-				controller_dates: self.controller_data,
+				controller_params: self.controller_data,
 				pause_keepers: vec![
 					(ETH, PauseKeeper::all_unpaused()),
 					(DOT, PauseKeeper::all_unpaused()),
@@ -376,7 +370,8 @@ mod tests {
 			.unwrap();
 
 			risk_manager::GenesisConfig::<Test> {
-				risk_manager_params: self.risk_manager_params,
+				liquidation_fee: self.liquidation_fee,
+				liquidation_threshold: self.liquidation_threshold,
 				_phantom: Default::default(),
 			}
 			.assimilate_storage(&mut t)
@@ -394,11 +389,5 @@ mod tests {
 			ext.execute_with(|| System::set_block_number(1));
 			ext
 		}
-	}
-
-	pub(crate) fn set_prices_for_assets(prices: Vec<(CurrencyId, Price)>) {
-		prices.into_iter().for_each(|(currency_id, price)| {
-			MockPriceSource::set_underlying_price(currency_id, price);
-		});
 	}
 }

@@ -1,0 +1,52 @@
+[package]
+name = "test-engine"
+version = "0.0.1"
+authors = ["Minterest developers"]
+edition = "2018"
+
+[dependencies]
+serde = { version = "1.0.101", optional = true }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
+frame-support = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+frame-system = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
+
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
+
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+
+# local dependencies
+mnt-token = { path = "../pallets/mnt-token", default-features = false }
+minterest-protocol = { path = "../pallets/minterest-protocol", default-features = false }
+minterest-primitives = { path = "../primitives", default-features = false }
+minterest-model = { path = "../pallets/minterest-model", default-features = false }
+liquidity-pools = { path = "../pallets/liquidity-pools", default-features = false }
+pallet-traits = { path = "../pallets/traits", default-features = false }
+controller = { path = "../pallets/controller", default-features = false }
+module-prices = { path = "../pallets/prices", default-features = false }
+prices-rpc-runtime-api = { path = "../pallets/prices/rpc/runtime-api", default-features = false }
+risk-manager = { path = "../pallets/risk-manager", default-features = false }
+liquidation-pools = { path = "../pallets/liquidation-pools", default-features = false }
+dex = { path = "../pallets/dex", default-features = false }
+module-vesting = { path = "../pallets/vesting", default-features = false }
+whitelist-module = { path = "../pallets/whitelist" , default-features = false}
+test-helper = { path = "../test-helper" , default-features = false}
+# ORML dependencies
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
+orml-oracle = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "minterest-primitives/std",
+    "serde",
+    'codec/std',
+    'frame-support/std',
+    'frame-system/std',
+    "sp-runtime/std",
+    "sp-std/std",
+]
