@@ -18,39 +18,40 @@ use std::sync::Arc;
 pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// Returns total values of supply, borrow, locked and protocol_interest.
 	///
-	///  - `&self` :  Self reference
-	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///  - `&self`: Self reference
+	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - pool_total_supply_in_usd: total available liquidity in the protocol in usd.
-	/// - pool_total_borrow_in_usd: total borrowed including interest in the protocol in usd.
-	/// - tvl_in_usd: total value of locked money in protocol in usd.
-	/// - pool_total_protocol_interest_in_usd: total protocol interest for all pools in usd.
+	/// - [`pool_total_supply_in_usd`](`ProtocolTotalValue::pool_total_supply_in_usd`): total available liquidity in the protocol in usd.
+	/// - [`pool_total_borrow_in_usd`](`ProtocolTotalValue::pool_total_borrow_in_usd`): total borrowed including interest in the protocol in usd.
+	/// - [`tvl_in_usd`](`ProtocolTotalValue::tvl_in_usd`): total value of locked money in protocol in usd.
+	/// - [`pool_total_protocol_interest_in_usd`](`ProtocolTotalValue::pool_total_protocol_interest_in_usd`): total protocol interest for all pools in usd.
 	#[rpc(name = "controller_protocolTotalValues")]
 	fn get_protocol_total_values(&self, at: Option<BlockHash>) -> Result<Option<ProtocolTotalValue>>;
 
 	/// Returns current Liquidity Pool State.
 	///
-	///  - `&self` :  Self reference
+	///  - `&self`: Self reference
 	///  - `pool_id`: current pool id.
-	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
+	///
+	///	is equal to:
+	/// `exchange_rate = (pool_supply_underlying + pool_borrow_underlying - pool_protocol_interest) /
+	/// pool_supply;`
 	///
 	/// Return:
-	/// - exchange_rate: the Exchange Rate between an mToken and the underlying asset.
-	///	is equal to:
-	/// exchange_rate = (pool_supply_underlying + pool_borrow_underlying - pool_protocol_interest) /
-	/// pool_supply;
-	/// - borrow_rate: Borrow Interest Rate
-	/// - supply_rate: current Supply Interest Rate.
-	/// 	The supply rate is derived from the borrow_rate and the amount of Total Borrowed.
+	/// - [`exchange_rate`](`PoolState::exchange_rate`): the Exchange Rate between an mToken and the underlying asset.
+	/// - [`borrow_rate`](`PoolState::borrow_rate`): Borrow Interest Rate
+	/// - [`supply_rate`](`PoolState::supply_rate`): current Supply Interest Rate.
+	///  The supply rate is derived from the borrow_rate and the amount of Total Borrowed.
 	#[rpc(name = "controller_liquidityPoolState")]
 	fn liquidity_pool_state(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<PoolState>>;
 
 	/// Returns utilization rate based on pool parameters calculated for current block.
 	///
-	///  - `&self` :  Self reference
+	///  - `&self`: Self reference
 	///  - `pool_id`: target pool id.
-	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
 	/// - utilization_rate: current utilization rate of a pool.
@@ -59,24 +60,24 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 
 	/// Returns total supply and total borrowed balance in usd.
 	///
-	///  - `&self` :  Self reference
+	///  - `&self`: Self reference
 	///  - `account_id`: current account id.
-	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - total_supply: total balance that user has in all pools converted to usd
-	/// - total_borrowed: total borrowed tokens from all pools converted to usd.
+	/// - [`total_supply`](`UserPoolBalanceData::total_supply`): total balance that user has in all pools converted to usd
+	/// - [`total_borrowed`](`UserPoolBalanceData::total_borrowed`): total borrowed tokens from all pools converted to usd.
 	#[rpc(name = "controller_userBalanceInfo")]
 	fn get_user_balance(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<UserPoolBalanceData>>;
 
 	/// Returns account liquidity in usd.
 	///
-	///  - `&self` :  Self reference
+	///  - `&self`: Self reference
 	///  - `account_id`: current account id.
-	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - liquidity: account liquidity in usd.
+	/// - [`liquidity`](`HypotheticalLiquidityData::liquidity`): account liquidity in usd.
 	/// Positive amount if user has collateral greater than borrowed, otherwise negative.
 	#[rpc(name = "controller_accountLiquidity")]
 	fn get_hypothetical_account_liquidity(
@@ -87,35 +88,35 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 
 	/// Checks whether the caller is a member of the MinterestCouncil.
 	///
-	///  - `&self` :  Self reference
+	///  - `&self`: Self reference
 	///  - `account_id`: current account id.
-	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return
-	/// - is_admin: true / false
+	/// - `is_admin`: true / false
 	#[rpc(name = "controller_isAdmin")]
 	fn is_admin(&self, caller: AccountId, at: Option<BlockHash>) -> Result<Option<bool>>;
 
 	/// Returns account total collateral in usd.
 	///
-	///  - `&self` :  Self reference
+	///  - `&self`: Self reference
 	///  - `account_id`: current account id.
-	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - amount: account total collateral converted to usd.
+	/// - [`amount`](`BalanceInfo::amount`): account total collateral converted to usd.
 	#[rpc(name = "controller_accountCollateral")]
 	fn get_user_total_collateral(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
 
 	/// Returns actual borrow balance for user per asset based on fresh latest indexes.
 	///
-	///  - `&self` :  Self reference
+	///  - `&self`: Self reference
 	///  - `account_id`: current account id.
 	///  - `underlying_asset_id`: current asset id
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - amount: account total borrow per asset.
+	/// - [`amount`](`BalanceInfo::amount`): account total borrow per asset.
 	#[rpc(name = "controller_getUserBorrowPerAsset")]
 	fn get_user_borrow_per_asset(
 		&self,
@@ -125,6 +126,14 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	) -> Result<Option<BalanceInfo>>;
 
 	/// Returns user underlying asset balance for the pool
+	///
+	///  - `&self`: Self reference
+	///  - `account_id`: current account id.
+	///  - `pool_id`: target pool id.
+	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///
+	///  Return:
+	///  - [`amount`](`BalanceInfo::amount`): account supply underlying assets balance in liquidity pool.
 	#[rpc(name = "controller_getUserUnderlyingBalancePerAsset")]
 	fn get_user_underlying_balance_per_asset(
 		&self,
@@ -135,9 +144,9 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 
 	/// Checks whether the pool is created in storage.
 	///
-	///  - `&self` :  Self reference
+	///  - `&self`: Self reference
 	///  - `underlying_asset_id`: current asset id
-	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
 	/// - is_created: true / false
@@ -146,11 +155,17 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 
 	/// Return borrow APY, supply APY and Net APY for current user
 	///
-	///  - `&self` :  Self reference
+	///  - `&self`: Self reference
 	///  - `account_id`: current account id.
-	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
+	///
 	/// Return:
-	/// - (supply_apy, borrow_apy, net_apy)
+	///
+	/// (supply_apy,borrow_apy,net_apy)
+	///
+	/// - [`supply_apy`](`minterest_primitives::Interest`):  supply APY
+	/// - [`borrow_apy`](`minterest_primitives::Interest`): borrow APY
+	/// - [`net_apy`](`minterest_primitives::Interest`):  net APY
 	#[rpc(name = "controller_getUserTotalSupplyBorrowAndNetApy")]
 	fn get_user_total_supply_borrow_and_net_apy(
 		&self,
@@ -164,9 +179,14 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `&self` :  Self reference
 	///  - `account_id`: current account id.
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///
 	/// Returns:
-	/// - (user_total_collateral, user_total_supply_in_usd, user_total_borrow_in_usd,
-	///   user_total_supply_apy, user_total_borrow_apy, user_net_apy)
+	/// - [`total_collateral_in_usd`](`UserData::total_collateral_in_usd`): account total collateral converted to usd.
+	/// - [`total_supply_in_usd`](`UserData::total_supply_in_usd`): account total supply converted to usd.
+	/// - [`total_borrow_in_usd`](`UserData::total_borrow_in_usd`): account total borrow converted to usd.
+	/// - [`total_supply_apy`](`UserData::total_supply_apy`): account total supply APY
+	/// - [`total_borrow_apy`](`UserData::total_borrow_apy`): account total borrow APY
+	/// - [`net_apy`](`UserData::net_apy`): account net APY
 	#[rpc(name = "controller_getUserData")]
 	fn get_user_data(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<UserData>>;
 }

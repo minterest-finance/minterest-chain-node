@@ -859,13 +859,31 @@ impl_runtime_apis! {
 		CurrencyId,
 		TimeStampedPrice,
 	> for Runtime {
+
+	    /// Return USD exchange rate for the underlying asset
+		///
+		///  - [`provider_id`](`minterest_primitives::DataProviderId`):  provider type
+	    ///  - [`key`](`minterest_primitives::CurrencyId`): currency type
+	    ///
+	    /// Returns:
+	    ///
+	    /// - [`Price`](`minterest_primitives::Price`):  price of a currency in USD
+	    /// - [`Moment`](`minterest_primitives::Moment`):  time stamp at the time of the call.
 		fn get_value(provider_id: DataProviderId, key: CurrencyId) -> Option<TimeStampedPrice> {
 			match provider_id {
 				DataProviderId::Minterest => MinterestOracle::get_no_op(&key),
 				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_no_op(&key)
 			}
 		}
-
+        /// Return USD exchange rate for all underlying assets
+		///
+		///  - [`provider_id`](`minterest_primitives::DataProviderId`):  provider type
+	    ///
+	    /// Returns:
+	    ///
+	    /// - [`CurrencyId`](`minterest_primitives::CurrencyId`): currency type
+	    /// - [`Price`](`minterest_primitives::Price`):  price of a currency in USD
+	    /// - [`Moment`](`minterest_primitives::Moment`):  time stamp at the time of the call.
 		fn get_all_values(provider_id: DataProviderId) -> Vec<(CurrencyId, Option<TimeStampedPrice>)> {
 			match provider_id {
 				DataProviderId::Minterest => MinterestOracle::get_all_values(),

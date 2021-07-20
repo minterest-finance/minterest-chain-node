@@ -19,11 +19,14 @@ use std::sync::Arc;
 /// Base trait for RPC interface of mnt-token
 pub trait MntTokenRpcApi<BlockHash, AccountId> {
 	/// Gets MNT accrued but not yet transferred to user
+	///
 	///  - `&self` :  Self reference
 	///  - `account_id`: user account id.
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///
 	/// Return:
-	/// - amount: the MNT accrued but not yet transferred to each user.
+	///
+	/// - [`amount`](`MntBalanceInfo::amount`): the MNT accrued but not yet transferred to each user.
 	#[rpc(name = "mntToken_getUserTotalUnclaimedMntBalance")]
 	fn get_user_total_unclaimed_mnt_balance(
 		&self,
@@ -32,11 +35,17 @@ pub trait MntTokenRpcApi<BlockHash, AccountId> {
 	) -> Result<Option<MntBalanceInfo>>;
 
 	/// Return MNT Borrow Rate and MNT Supply Rate values per block for current pool.
+	///
 	///  - `&self` :  Self reference
 	///  - `pool_id`: current pool id.
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///
 	/// Return:
-	/// - (borrow_rate, supply_rate): MNT Borrow Rate and MNT Supply Rate values
+	///
+	///   (borrow_rate, supply_rate)
+	///
+	/// - [`borrow_rate`](`Rate`): MNT Borrow Rate value
+	/// - [`supply_rate`](`Rate`): MNT Supply Rate value
 	#[rpc(name = "mntToken_getPoolMntBorrowAndSupplyRates")]
 	fn get_pool_mnt_borrow_and_supply_rates(
 		&self,

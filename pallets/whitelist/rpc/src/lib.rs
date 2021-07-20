@@ -19,6 +19,7 @@ pub trait WhitelistRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return
+	///
 	/// - is_admin: true / false
 	#[rpc(name = "whitelist_isWhitelistMember")]
 	fn is_whitelist_member(&self, who: AccountId, at: Option<BlockHash>) -> Result<bool>;
