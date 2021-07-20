@@ -595,6 +595,21 @@ impl<T: Config> Pallet<T> {
 			)
 	}
 
+	/// Calculate user total borrow in usd based on fresh exchange rate and
+	/// latest oracle price
+	///
+	/// - `who`: the AccountId whose borrow should be calculated.
+	pub fn get_user_total_borrow(who: &T::AccountId) -> BalanceResult {
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.into_iter()
+			.filter(|asset| T::LiquidityPoolsManager::pool_exists(asset))
+			.try_fold(0u128, |acc, asset| {
+				let balance = Self::get_user_borrow_underlying_balance(who, asset)?;
+				Ok(acc.saturating_add(balance))
+			})
+	}
+
+
 	/// Calculate user total collateral in usd based on collateral factor, fresh exchange rate and
 	/// latest oracle price. Collateral is calculated for the current block.
 	///
