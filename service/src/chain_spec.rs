@@ -91,7 +91,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 					// Eugene
 					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
 					// Marina
-					hex!["ec1686827c6d2bf042501bccaebd8383c6a9ca892c8e63faaa620e549696eb01"].into(),
+					hex!["567983d191ec6de996ed8546fc9ef65ce698e3c15f19de1c4011436096b8a915"].into(),
 					// Julia
 					hex!["cedd4c175ec803c5d3f5b2d3e9e63c8ec73aff05414acd0981f60ae24079bc44"].into(),
 					// Polina
