@@ -96,16 +96,24 @@ pub struct ExternalityBuilder {
 }
 
 impl ExternalityBuilder {
-	// TODO: add comments
-	pub fn deposit_underlying(self, who: AccountId, pool_id: CurrencyId, amount: Balance) -> Self {
-		self.init_pool(pool_id, Balance::zero(), Rate::one(), Balance::zero())
-			.set_pool_user_data(pool_id, who, Balance::zero(), Rate::one(), false)
-			.set_controller_data_mock(vec![pool_id])
-			.set_user_balance(who, pool_id.wrapped_asset().unwrap(), amount)
-			.set_pool_balance(pool_id, amount)
+	/// Simulates extrinsic `deposit_underlying()` in genesis block.
+	///
+	///-`who`: the user who performs the operation.
+	///-`underlying_asset`: CurrencyId of underlying assets to be transferred into the protocol.
+	///-`underlying_amount`: The amount of the asset to be supplied, in units of the underlying
+	/// asset.
+	pub fn deposit_underlying(self, who: AccountId, underlying_asset: CurrencyId, underlying_amount: Balance) -> Self {
+		self.init_pool(underlying_asset, Balance::zero(), Rate::one(), Balance::zero())
+			.set_pool_user_data(underlying_asset, who, Balance::zero(), Rate::one(), false)
+			.set_controller_data_mock(vec![underlying_asset])
+			.set_user_balance(who, underlying_asset.wrapped_asset().unwrap(), underlying_amount)
+			.set_pool_balance(underlying_asset, underlying_amount)
 	}
 
-	// TODO: add comments
+	/// Simulates extrinsic `enable_is_collateral()` in genesis block.
+	///
+	///-`who`: the user who performs the operation.
+	///-`pool_id`: CurrencyId of liquidity pool to be enabled as collateral.
 	pub fn enable_as_collateral(mut self, who: AccountId, pool_id: CurrencyId) -> Self {
 		self.pool_user_data = self
 			.pool_user_data
@@ -120,16 +128,22 @@ impl ExternalityBuilder {
 		self
 	}
 
-	//TODO: add comments
-	// use only after deposit (does not set up controller params)
-	pub fn borrow_underlying(self, who: AccountId, pool_id: CurrencyId, amount: Balance) -> Self {
-		self.init_pool(pool_id, amount, Rate::one(), Balance::zero())
-			.set_pool_user_data(pool_id, who, amount, Rate::one(), false)
-			.set_user_balance(who, pool_id, amount)
-			.set_pool_balance(pool_id, Balance::zero())
+	/// Simulates extrinsic `borrow()` in genesis block.
+	///
+	///-`who`: the user who performs the operation.
+	/// - `underlying_asset`: The currency ID of the underlying asset to be borrowed.
+	/// - `underlying_amount`: The amount of the underlying asset to be borrowed.
+	///
+	/// Note: use only after `deposit_underlying` (does not set up controller params).
+	pub fn borrow_underlying(self, who: AccountId, underlying_asset: CurrencyId, borrow_amount: Balance) -> Self {
+		self.init_pool(underlying_asset, borrow_amount, Rate::one(), Balance::zero())
+			.set_pool_user_data(underlying_asset, who, borrow_amount, Rate::one(), false)
+			.set_user_balance(who, underlying_asset, borrow_amount)
+			.set_pool_balance(underlying_asset, Balance::zero())
 	}
 
-	// TODO: add comments
+	/// Merges duplicate balances in `endowed_accounts` in a genesis block.
+	/// Merges duplicate borrows amount `pool_data` and `pool_user_data` in a genesis block.
 	pub fn merge_duplicates(mut self) -> Self {
 		self.endowed_accounts = self
 			.endowed_accounts
@@ -151,35 +165,74 @@ impl ExternalityBuilder {
 			.into_iter()
 			.map(|((account_id, pool_id), amount)| (account_id, pool_id, amount))
 			.collect::<Vec<(AccountId, CurrencyId, Balance)>>();
+		self.pool_user_data = self
+			.pool_user_data
+			.iter()
+			.fold(
+				BTreeMap::<(CurrencyId, AccountId), PoolUserData>::new(),
+				|mut acc, (pool_id, account_id, pool_user_data)| {
+					// merge duplicated accounts
+					if let Some(user_data) = acc.get_mut(&(*pool_id, *account_id)) {
+						user_data.borrowed = user_data
+							.borrowed
+							.checked_add(pool_user_data.borrowed)
+							.expect("balance cannot overflow when building genesis");
+					} else {
+						acc.insert((*pool_id, account_id.clone()), pool_user_data.clone());
+					}
+					acc
+				},
+			)
+			.into_iter()
+			.map(|((pool_id, account_id), pool_user_data)| (pool_id, account_id, pool_user_data))
+			.collect::<Vec<(CurrencyId, AccountId, PoolUserData)>>();
+		self.pools = self
+			.pools
+			.iter()
+			.fold(BTreeMap::<CurrencyId, Pool>::new(), |mut acc, (pool_id, pool_data)| {
+				// merge duplicated accounts
+				if let Some(pool) = acc.get_mut(pool_id) {
+					pool.borrowed = pool
+						.borrowed
+						.checked_add(pool_data.borrowed)
+						.expect("balance cannot overflow when building genesis");
+				} else {
+					acc.insert(*pool_id, pool_data.clone());
+				}
+				acc
+			})
+			.into_iter()
+			.map(|(pool_id, pool)| (pool_id, pool))
+			.collect::<Vec<(CurrencyId, Pool)>>();
 		self
 	}
 
-	/// Set balance for the particular user
-	/// - 'user': id of users account
-	/// - 'currency_id': currency
-	/// - 'balance': balance value to set
+	/// Set balance for the particular user.
+	/// - 'user': id of users account.
+	/// - 'currency_id': currency.
+	/// - 'balance': balance value to set.
 	pub fn set_user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts.push((user, currency_id, balance));
 		self
 	}
 
-	/// Set balance for the particular pool
-	/// - 'currency_id': pool id
-	/// - 'balance': balance value to set
+	/// Set balance for the particular pool.
+	/// - 'currency_id': pool id.
+	/// - 'balance': balance value to set.
 	pub fn set_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((TestPools::pools_account_id(), currency_id, balance));
 		self
 	}
 
-	/// Set user data for particular pool
-	/// - 'pool_id': pool id
-	/// - 'user': user id
-	/// - 'borrowed': total balance (with accrued interest), after applying the most recent
+	/// Set user data for particular pool.
+	/// - 'pool_id': pool id.
+	/// - 'user': user id.
+	/// - 'borrowed': total balance (with accrued interest), after applying the most recent.
 	///   balance-changing action.
-	/// - 'interest_index': global borrow_index as of the most recent balance-changing action
-	/// - 'is_collateral': can pool be used as collateral for the current user
-	/// - 'liquidation_attempts': number of partial liquidations for debt
+	/// - 'interest_index': global borrow_index as of the most recent balance-changing action.
+	/// - 'is_collateral': can pool be used as collateral for the current user.
+	/// - 'liquidation_attempts': number of partial liquidations for debt.
 	pub fn set_pool_user_data(
 		mut self,
 		pool_id: CurrencyId,
@@ -200,11 +253,11 @@ impl ExternalityBuilder {
 		self
 	}
 
-	/// Initialize pool
-	/// - 'pool_id': pool currency / id
-	/// - 'borrowed': value of currency borrowed from the pool_id
-	/// - 'borrow_index': index, describing change of borrow interest rate
-	/// - 'protocol_interest': interest of the protocol
+	/// Initialize pool.
+	/// - 'pool_id': pool currency / id.
+	/// - 'borrowed': value of currency borrowed from the pool_id.
+	/// - 'borrow_index': index, describing change of borrow interest rate.
+	/// - 'protocol_interest': interest of the protocol.
 	pub fn init_pool(
 		mut self,
 		pool_id: CurrencyId,

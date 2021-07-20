@@ -41,7 +41,7 @@ use sp_std::{result, vec::Vec};
 
 /// Pool metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default, Clone)]
 pub struct Pool {
 	/// The amount of underlying currently loaned out by the pool, and the amount upon which
 	/// interest is accumulated to suppliers of the pool.
@@ -55,7 +55,7 @@ pub struct Pool {
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default, Clone)]
 pub struct PoolUserData {
 	/// Total balance (with accrued interest), after applying the most
 	/// recent balance-changing action.
