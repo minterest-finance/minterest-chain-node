@@ -14,6 +14,7 @@ use sp_runtime::{
 	testing::{Header, TestXt},
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 };
+use sp_std::collections::btree_map::BTreeMap;
 pub use test_helper::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -86,6 +87,7 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 
 #[derive(Default)]
 pub struct ExternalityBuilder {
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
@@ -94,7 +96,91 @@ pub struct ExternalityBuilder {
 }
 
 impl ExternalityBuilder {
-	pub fn pool_user_data(
+	// TODO: add comments
+	pub fn deposit_underlying(self, who: AccountId, pool_id: CurrencyId, amount: Balance) -> Self {
+		self.init_pool(pool_id, Balance::zero(), Rate::one(), Balance::zero())
+			.set_pool_user_data(pool_id, who, Balance::zero(), Rate::one(), false)
+			.set_controller_data_mock(vec![pool_id])
+			.set_user_balance(who, pool_id.wrapped_asset().unwrap(), amount)
+			.set_pool_balance(pool_id, amount)
+	}
+
+	// TODO: add comments
+	pub fn enable_as_collateral(mut self, who: AccountId, pool_id: CurrencyId) -> Self {
+		self.pool_user_data = self
+			.pool_user_data
+			.into_iter()
+			.map(|(p, w, mut pool_user_data)| {
+				if p == pool_id && w == who {
+					pool_user_data.is_collateral = true
+				}
+				(p, w, pool_user_data)
+			})
+			.collect::<Vec<(CurrencyId, AccountId, PoolUserData)>>();
+		self
+	}
+
+	//TODO: add comments
+	// use only after deposit (does not set up controller params)
+	pub fn borrow_underlying(self, who: AccountId, pool_id: CurrencyId, amount: Balance) -> Self {
+		self.init_pool(pool_id, amount, Rate::one(), Balance::zero())
+			.set_pool_user_data(pool_id, who, amount, Rate::one(), false)
+			.set_user_balance(who, pool_id, amount)
+			.set_pool_balance(pool_id, Balance::zero())
+	}
+
+	// TODO: add comments
+	pub fn merge_duplicates(mut self) -> Self {
+		self.endowed_accounts = self
+			.endowed_accounts
+			.iter()
+			.fold(
+				BTreeMap::<(AccountId, CurrencyId), Balance>::new(),
+				|mut acc, (account_id, pool_id, amount)| {
+					// merge duplicated accounts
+					if let Some(balance) = acc.get_mut(&(*account_id, *pool_id)) {
+						*balance = balance
+							.checked_add(*amount)
+							.expect("balance cannot overflow when building genesis");
+					} else {
+						acc.insert((account_id.clone(), *pool_id), *amount);
+					}
+					acc
+				},
+			)
+			.into_iter()
+			.map(|((account_id, pool_id), amount)| (account_id, pool_id, amount))
+			.collect::<Vec<(AccountId, CurrencyId, Balance)>>();
+		self
+	}
+
+	/// Set balance for the particular user
+	/// - 'user': id of users account
+	/// - 'currency_id': currency
+	/// - 'balance': balance value to set
+	pub fn set_user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts.push((user, currency_id, balance));
+		self
+	}
+
+	/// Set balance for the particular pool
+	/// - 'currency_id': pool id
+	/// - 'balance': balance value to set
+	pub fn set_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.endowed_accounts
+			.push((TestPools::pools_account_id(), currency_id, balance));
+		self
+	}
+
+	/// Set user data for particular pool
+	/// - 'pool_id': pool id
+	/// - 'user': user id
+	/// - 'borrowed': total balance (with accrued interest), after applying the most recent
+	///   balance-changing action.
+	/// - 'interest_index': global borrow_index as of the most recent balance-changing action
+	/// - 'is_collateral': can pool be used as collateral for the current user
+	/// - 'liquidation_attempts': number of partial liquidations for debt
+	pub fn set_pool_user_data(
 		mut self,
 		pool_id: CurrencyId,
 		user: AccountId,
@@ -109,6 +195,29 @@ impl ExternalityBuilder {
 				borrowed,
 				interest_index,
 				is_collateral,
+			},
+		));
+		self
+	}
+
+	/// Initialize pool
+	/// - 'pool_id': pool currency / id
+	/// - 'borrowed': value of currency borrowed from the pool_id
+	/// - 'borrow_index': index, describing change of borrow interest rate
+	/// - 'protocol_interest': interest of the protocol
+	pub fn init_pool(
+		mut self,
+		pool_id: CurrencyId,
+		borrowed: Balance,
+		borrow_index: Rate,
+		protocol_interest: Balance,
+	) -> Self {
+		self.pools.push((
+			pool_id,
+			Pool {
+				borrowed,
+				borrow_index,
+				protocol_interest,
 			},
 		));
 		self
@@ -138,6 +247,12 @@ impl ExternalityBuilder {
 
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+		orml_tokens::GenesisConfig::<Test> {
+			balances: self.endowed_accounts,
+		}
+		.assimilate_storage(&mut storage)
+		.unwrap();
 
 		liquidity_pools::GenesisConfig::<Test> {
 			pools: self.pools,
