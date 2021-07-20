@@ -881,7 +881,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	/// Calculates and gets all insolvent loans of users in the protocol. Calls a function
 	/// internally `accrue_interest_rate`. To determine that the loan is insolvent calls
 	/// the function `get_hypothetical_account_liquidity`, if the shortfall is greater than zero,
-	/// then such a loan is insolvent.
+	/// then such loan is insolvent.
 	///
 	/// Returns: returns a unique collection of users with insolvent loan (as a btree set).
 	fn get_all_users_with_insolvent_loan() -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
