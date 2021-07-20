@@ -49,6 +49,7 @@ members = [
     "pallets/whitelist",
     "pallets/chainlink-price-manager",
 ]
+
 [patch."https://github.com/paritytech/substrate"]
 frame-benchmarking = { git = "https://github.com/paritytech//substrate", rev = "1b758b2a8d151d97d2242260c465b6df9cb8a7a4" }
 frame-benchmarking-cli = { git = "https://github.com/paritytech//substrate", rev = "1b758b2a8d151d97d2242260c465b6df9cb8a7a4" }

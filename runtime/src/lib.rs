@@ -638,7 +638,7 @@ construct_runtime!(
 		Prices: module_prices::{Pallet, Storage, Call, Event<T>, Config<T>},
 
 		ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Config<T>, Storage, Event<T>},
-		ChainlinkPriceManager: chainlink_price_manager::{Pallet, Call, Storage, Event<T>},
+		ChainlinkPriceManager: chainlink_price_manager::{Pallet, Call, Storage, Event<T>, ValidateUnsigned},
 
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
