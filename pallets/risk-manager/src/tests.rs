@@ -1,13 +1,17 @@
 //! Tests for the risk-manager pallet.
 use super::*;
+use crate::mock::{Event, *};
 use frame_support::{assert_noop, assert_ok};
 use minterest_primitives::Operation::Deposit;
-use mock::{Event, *};
-use sp_runtime::{traits::BadOrigin, FixedPointNumber};
+use pallet_traits::UserLiquidationAttemptsManager;
+use sp_runtime::{
+	traits::{BadOrigin, One, Zero},
+	FixedPointNumber,
+};
 
 #[test]
 fn user_liquidation_attempts_should_work() {
-	ExternalityBuilder::default().build().execute_with(|| {
+	ExtBuilder::default().build().execute_with(|| {
 		TestRiskManager::user_liquidation_attempts_increase_by_one(&ALICE);
 		assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), u8::one());
 		TestRiskManager::user_liquidation_attempts_increase_by_one(&ALICE);
@@ -19,8 +23,8 @@ fn user_liquidation_attempts_should_work() {
 
 #[test]
 fn mutate_depending_operation_should_work() {
-	ExternalityBuilder::default()
-		.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
+	ExtBuilder::default()
+		.set_pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), u8::zero());
@@ -39,15 +43,15 @@ fn mutate_depending_operation_should_work() {
 
 #[test]
 fn set_liquidation_fee_should_work() {
-	ExternalityBuilder::default().build().execute_with(|| {
+	ExtBuilder::default().build().execute_with(|| {
 		// Can be set to 0..
-		assert_ok!(TestRiskManager::set_liquidation_fee(
+		assert_ok!(TestRiskManager::set_pool_liquidation_fee(
 			admin_origin(),
 			DOT,
 			Rate::saturating_from_rational(3, 10)
 		));
 		assert_eq!(
-			TestRiskManager::liquidation_fee(DOT),
+			TestRiskManager::liquidation_fee_storage(DOT),
 			Rate::saturating_from_rational(3, 10)
 		);
 		let expected_event = Event::TestRiskManager(crate::Event::LiquidationFeeUpdated(
@@ -57,47 +61,47 @@ fn set_liquidation_fee_should_work() {
 
 		// Can not be set to 1.0
 		assert_noop!(
-			TestRiskManager::set_liquidation_fee(admin_origin(), DOT, Rate::one()),
-			Error::<Test>::InvalidLiquidationFeeValue
+			TestRiskManager::set_pool_liquidation_fee(admin_origin(), DOT, Rate::one()),
+			Error::<TestRuntime>::InvalidLiquidationFeeValue
 		);
 
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
-			TestRiskManager::set_liquidation_fee(alice_origin(), DOT, Rate::one()),
+			TestRiskManager::set_pool_liquidation_fee(alice_origin(), DOT, Rate::one()),
 			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestRiskManager::set_liquidation_fee(admin_origin(), MDOT, Rate::one()),
-			Error::<Test>::NotValidUnderlyingAssetId
+			TestRiskManager::set_pool_liquidation_fee(admin_origin(), MDOT, Rate::one()),
+			Error::<TestRuntime>::NotValidUnderlyingAssetId
 		);
 	});
 }
 
 #[test]
 fn set_threshold_should_work() {
-	ExternalityBuilder::default().build().execute_with(|| {
+	ExtBuilder::default().build().execute_with(|| {
 		// Can be set to 1.0
-		assert_ok!(TestRiskManager::set_liquidation_threshold(
+		assert_ok!(TestRiskManager::set_pool_liquidation_threshold(
 			admin_origin(),
 			DOT,
 			Rate::one()
 		));
-		assert_eq!(TestRiskManager::liquidation_threshold(), Rate::one());
+		assert_eq!(TestRiskManager::liquidation_threshold_storage(), Rate::one());
 		let expected_event = Event::TestRiskManager(crate::Event::LiquidationThresholdUpdated(Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
-			TestRiskManager::set_liquidation_threshold(alice_origin(), DOT, Rate::one()),
+			TestRiskManager::set_pool_liquidation_threshold(alice_origin(), DOT, Rate::one()),
 			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestRiskManager::set_liquidation_threshold(admin_origin(), MDOT, Rate::one()),
-			Error::<Test>::NotValidUnderlyingAssetId
+			TestRiskManager::set_pool_liquidation_threshold(admin_origin(), MDOT, Rate::one()),
+			Error::<TestRuntime>::NotValidUnderlyingAssetId
 		);
 	});
 }

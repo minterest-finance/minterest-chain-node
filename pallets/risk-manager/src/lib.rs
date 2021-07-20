@@ -18,9 +18,10 @@ use sp_runtime::traits::{One, Zero};
 use sp_std::str;
 
 #[cfg(test)]
-mod mock;
-#[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod mock;
 
 #[frame_support::pallet]
 pub mod module {
@@ -73,18 +74,19 @@ pub mod module {
 
 	/// The additional collateral which is taken from borrowers as a penalty for being liquidated.
 	#[pallet::storage]
-	#[pallet::getter(fn liquidation_fee)]
-	pub(crate) type LiquidationFee<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Rate, ValueQuery>;
+	#[pallet::getter(fn liquidation_fee_storage)]
+	pub(crate) type LiquidationFeeStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Rate, ValueQuery>;
 
 	/// Step used in liquidation to protect the user from micro liquidations.
 	#[pallet::storage]
-	#[pallet::getter(fn liquidation_threshold)]
-	pub(crate) type LiquidationThreshold<T: Config> = StorageValue<_, Rate, ValueQuery>;
+	#[pallet::getter(fn liquidation_threshold_storage)]
+	pub(crate) type LiquidationThresholdStorage<T: Config> = StorageValue<_, Rate, ValueQuery>;
 
 	/// Counter of the number of partial liquidations at the user.
 	#[pallet::storage]
-	#[pallet::getter(fn user_liquidation_attempts)]
-	pub(crate) type UserLiquidationAttempts<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, u8, ValueQuery>;
+	#[pallet::getter(fn user_liquidation_attempt_storage)]
+	pub(crate) type UserLiquidationAttemptStorage<T: Config> =
+		StorageMap<_, Twox64Concat, T::AccountId, u8, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -109,9 +111,9 @@ pub mod module {
 		fn build(&self) {
 			self.liquidation_fee.iter().for_each(|(pool_id, liquidation_fee)| {
 				Pallet::<T>::is_valid_liquidation_fee(*liquidation_fee);
-				LiquidationFee::<T>::insert(pool_id, liquidation_fee)
+				LiquidationFeeStorage::<T>::insert(pool_id, liquidation_fee)
 			});
-			LiquidationThreshold::<T>::put(self.liquidation_threshold);
+			LiquidationThresholdStorage::<T>::put(self.liquidation_threshold);
 		}
 	}
 
@@ -131,7 +133,7 @@ pub mod module {
 		/// The dispatch origin of this call must be 'RiskManagerUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_liquidation_fee(
+		pub fn set_pool_liquidation_fee(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			liquidation_fee: Rate,
@@ -145,7 +147,7 @@ pub mod module {
 				Self::is_valid_liquidation_fee(liquidation_fee),
 				Error::<T>::InvalidLiquidationFeeValue
 			);
-			LiquidationFee::<T>::insert(pool_id, liquidation_fee);
+			LiquidationFeeStorage::<T>::insert(pool_id, liquidation_fee);
 			Self::deposit_event(Event::LiquidationFeeUpdated(liquidation_fee));
 			Ok(().into())
 		}
@@ -158,7 +160,7 @@ pub mod module {
 		/// The dispatch origin of this call must be 'RiskManagerUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_liquidation_threshold(
+		pub fn set_pool_liquidation_threshold(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			threshold: Rate,
@@ -168,7 +170,7 @@ pub mod module {
 				pool_id.is_supported_underlying_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
-			LiquidationThreshold::<T>::put(threshold);
+			LiquidationThresholdStorage::<T>::put(threshold);
 			Self::deposit_event(Event::LiquidationThresholdUpdated(threshold));
 			Ok(().into())
 		}
@@ -185,39 +187,39 @@ impl<T: Config> Pallet<T> {
 	/// Increases the parameter liquidation_attempts by one for user.
 	#[allow(dead_code)] // FIXME
 	fn user_liquidation_attempts_increase_by_one(who: &T::AccountId) {
-		UserLiquidationAttempts::<T>::mutate(who, |p| *p += u8::one())
+		UserLiquidationAttemptStorage::<T>::mutate(who, |p| *p += u8::one())
 	}
 
 	/// Resets the parameter liquidation_attempts equal to zero for user.
 	fn user_liquidation_attempts_reset_to_zero(who: &T::AccountId) {
-		UserLiquidationAttempts::<T>::mutate(who, |p| *p = u8::zero())
+		UserLiquidationAttemptStorage::<T>::mutate(who, |p| *p = u8::zero())
 	}
 }
 
 impl<T: Config> RiskManagerStorageProvider for Pallet<T> {
 	fn create_pool(pool_id: CurrencyId, liquidation_threshold: Rate, liquidation_fee: Rate) -> DispatchResult {
 		ensure!(
-			!LiquidationFee::<T>::contains_key(pool_id),
+			!LiquidationFeeStorage::<T>::contains_key(pool_id),
 			Error::<T>::RiskManagerParamsAlreadyCreated
 		);
 		ensure!(
 			Self::is_valid_liquidation_fee(liquidation_fee),
 			Error::<T>::InvalidLiquidationFeeValue
 		);
-		LiquidationFee::<T>::insert(pool_id, liquidation_fee);
-		LiquidationThreshold::<T>::put(liquidation_threshold);
+		LiquidationFeeStorage::<T>::insert(pool_id, liquidation_fee);
+		LiquidationThresholdStorage::<T>::put(liquidation_threshold);
 		Ok(())
 	}
 
 	fn remove_pool(pool_id: CurrencyId) {
-		LiquidationFee::<T>::remove(pool_id)
+		LiquidationFeeStorage::<T>::remove(pool_id)
 	}
 }
 
 impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 	/// Gets user liquidation attempts.
 	fn get_user_liquidation_attempts(who: &T::AccountId) -> u8 {
-		Self::user_liquidation_attempts(who)
+		Self::user_liquidation_attempt_storage(who)
 	}
 
 	/// Mutates user liquidation attempts depending on user operation.
