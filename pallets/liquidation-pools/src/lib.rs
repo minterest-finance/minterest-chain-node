@@ -375,6 +375,28 @@ pub mod module {
 			Ok(().into())
 		}
 	}
+
+	#[pallet::validate_unsigned]
+	impl<T: Config> ValidateUnsigned for Pallet<T> {
+		type Call = Call<T>;
+
+		fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
+			match call {
+				Call::balance_liquidation_pools(
+					_supply_pool_id,
+					_target_pool_id,
+					_max_supply_amount,
+					_target_amount,
+				) => ValidTransaction::with_tag_prefix("LiquidationPoolsOffchainWorker")
+					.priority(T::UnsignedPriority::get())
+					.and_provides(<frame_system::Pallet<T>>::block_number())
+					.longevity(64_u64)
+					.propagate(true)
+					.build(),
+				_ => InvalidTransaction::Call.into(),
+			}
+		}
+	}
 }
 
 /// Used in the liquidation pools balancing algorithm.
@@ -661,23 +683,5 @@ impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
 			},
 		);
 		Ok(())
-	}
-}
-
-impl<T: Config> ValidateUnsigned for Pallet<T> {
-	type Call = Call<T>;
-
-	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
-		match call {
-			Call::balance_liquidation_pools(_supply_pool_id, _target_pool_id, _max_supply_amount, _target_amount) => {
-				ValidTransaction::with_tag_prefix("LiquidationPoolsOffchainWorker")
-					.priority(T::UnsignedPriority::get())
-					.and_provides(<frame_system::Pallet<T>>::block_number())
-					.longevity(64_u64)
-					.propagate(true)
-					.build()
-			}
-			_ => InvalidTransaction::Call.into(),
-		}
 	}
 }
