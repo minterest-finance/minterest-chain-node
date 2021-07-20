@@ -8,16 +8,16 @@ use frame_support::{construct_runtime, ord_parameter_types, parameter_types};
 use frame_system::offchain::SendTransactionTypes;
 use frame_system::EnsureSignedBy;
 pub use minterest_primitives::{
-    currency::CurrencyType::{UnderlyingAsset, WrappedToken},
-    currency::DOT,
+	currency::CurrencyType::{UnderlyingAsset, WrappedToken},
+	currency::DOT,
 };
 pub(crate) use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
 pub(crate) use pallet_traits::PricesManager;
 use sp_core::H256;
 use sp_runtime::{
-    testing::{Header, TestXt},
-    traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One},
+	testing::{Header, TestXt},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, One},
 };
 use sp_std::cell::RefCell;
 
@@ -92,15 +92,15 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 // 									EXTBUILDER
 // -----------------------------------------------------------------------------------------
 pub struct ExtBuilder {
-    endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 }
 
 impl Default for ExtBuilder {
-    fn default() -> Self {
-        Self {
-            endowed_accounts: vec![],
-        }
-    }
+	fn default() -> Self {
+		Self {
+			endowed_accounts: vec![],
+		}
+	}
 }
 
 impl ExtBuilder {
@@ -130,18 +130,18 @@ impl ExtBuilder {
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default()
-            .build_storage::<TestRuntime>()
-            .unwrap();
+		let mut t = frame_system::GenesisConfig::default()
+			.build_storage::<TestRuntime>()
+			.unwrap();
 
-        orml_tokens::GenesisConfig::<TestRuntime> {
-            balances: self.endowed_accounts,
-        }
-            .assimilate_storage(&mut t)
-            .unwrap();
+		orml_tokens::GenesisConfig::<TestRuntime> {
+			balances: self.endowed_accounts,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
 
-        let mut ext = sp_io::TestExternalities::new(t);
-        ext.execute_with(|| System::set_block_number(1));
-        ext
-    }
+		let mut ext = sp_io::TestExternalities::new(t);
+		ext.execute_with(|| System::set_block_number(1));
+		ext
+	}
 }

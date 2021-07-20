@@ -1,7 +1,7 @@
 //! Unit tests for the prices module.
 
 use super::*;
-use crate::mock::{Event,*};
+use crate::mock::{Event, *};
 use frame_support::{assert_noop, assert_ok};
 use minterest_primitives::Price;
 use pallet_traits::PricesManager;
@@ -9,7 +9,6 @@ use sp_runtime::{
 	traits::{BadOrigin, Zero},
 	FixedPointNumber,
 };
-
 
 #[test]
 fn get_underlying_price_should_work() {
@@ -55,8 +54,7 @@ fn lock_price_call_should_work() {
 		System::set_block_number(1);
 		assert_ok!(TestPrices::lock_price(alice_origin(), BTC));
 
-		let lock_price_event =
-			Event::TestPrices(crate::Event::LockPrice(BTC, Price::saturating_from_integer(48000)));
+		let lock_price_event = Event::TestPrices(crate::Event::LockPrice(BTC, Price::saturating_from_integer(48000)));
 		assert!(System::events().iter().any(|record| record.event == lock_price_event));
 		assert_eq!(
 			TestPrices::locked_price_storage(BTC),

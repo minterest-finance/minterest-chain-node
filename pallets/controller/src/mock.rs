@@ -1,6 +1,9 @@
 use super::*;
 use crate as controller;
-use frame_support::{sp_io::TestExternalities,construct_runtime, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId};
+use frame_support::{
+	construct_runtime, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, sp_io::TestExternalities,
+	PalletId,
+};
 use frame_system::EnsureSignedBy;
 use minterest_model::MinterestModelData;
 pub(crate) use minterest_primitives::Price;

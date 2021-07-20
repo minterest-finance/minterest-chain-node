@@ -8,7 +8,6 @@ use frame_support::assert_err;
 use orml_traits::MultiCurrency;
 use pallet_traits::{DEXManager, PoolsManager};
 
-
 #[test]
 fn swap_with_exact_target_should_work() {
 	ExtBuilder::default()

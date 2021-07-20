@@ -16,9 +16,9 @@ use pallet_traits::DEXManager;
 use sp_runtime::traits::{AccountIdConversion, Zero};
 
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod mock;
+#[cfg(test)]
+mod tests;
 
 #[frame_support::pallet]
 pub mod module {

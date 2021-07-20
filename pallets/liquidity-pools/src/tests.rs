@@ -196,13 +196,10 @@ fn check_user_available_is_collateral_should_work() {
 
 #[test]
 fn pool_should_exists() {
-	ExtBuilder::default()
-		.init_pool_default(DOT)
-		.build()
-		.execute_with(|| {
-			assert_eq!(TestPools::pool_exists(&DOT), true);
-			assert_eq!(TestPools::pool_exists(&MDOT), false);
-		});
+	ExtBuilder::default().init_pool_default(DOT).build().execute_with(|| {
+		assert_eq!(TestPools::pool_exists(&DOT), true);
+		assert_eq!(TestPools::pool_exists(&MDOT), false);
+	});
 }
 
 #[test]
