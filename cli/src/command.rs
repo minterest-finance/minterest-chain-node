@@ -15,10 +15,7 @@
 // along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::cli::{Cli, RelayChainCli, Subcommand};
-use service::{
-	chain_spec, new_partial,
-	RococoParachainRuntimeExecutor, Block,
-};
+use service::{Block, ParachainRuntimeExecutor, StandaloneRuntimeExecutor, chain_spec, new_partial};
 use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
@@ -35,12 +32,30 @@ use std::{io::Write, net::SocketAddr};
 
 const DEFAULT_PARA_ID: u32 = 2000;
 
+trait IdentifyChain {
+	fn is_standalone(&self) -> bool;
+}
+
+impl IdentifyChain for dyn sc_service::ChainSpec {
+	fn is_standalone(&self) -> bool {
+		self.id().starts_with("dev") || self.id().starts_with("standalone")
+	}
+}
+
+impl<T: sc_service::ChainSpec + 'static> IdentifyChain for T {
+	fn is_standalone(&self) -> bool {
+		<dyn sc_service::ChainSpec>::is_standalone(self)
+	}
+}
+
 fn load_spec(
 	id: &str,
 	para_id: ParaId,
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	Ok(match id {
-		"" => Box::new(service::chain_spec::get_chain_spec(para_id)),
+		"" => Box::new(service::chain_spec::get_parachain_spec(para_id)),
+		"dev" | "standalone" => Box::new(service::chain_spec::get_standalone_dev_spec()),
+		"standalone-local" => Box::new(service::chain_spec::get_standalone_local_spec()),
 		path => {
 			let chain_spec = chain_spec::ChainSpec::from_json_file(path.into())?;
 			Box::new(chain_spec)
@@ -78,7 +93,11 @@ impl SubstrateCli for Cli {
 	}
 
 	fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		&parachain_runtime::VERSION
+		if chain_spec.is_standalone() {
+			&standalone_runtime::VERSION
+		} else {
+			&parachain_runtime::VERSION
+		}
 	}
 }
 
@@ -140,11 +159,12 @@ macro_rules! construct_async_run {
 		runner.async_run(|$config| {
 			let $components = new_partial::<
 				parachain_runtime::RuntimeApi,
-				RococoParachainRuntimeExecutor,
+				ParachainRuntimeExecutor,
 				_
 			>(
 				&$config,
 				service::rococo_parachain_build_import_queue,
+				false,
 			)?;
 			let task_manager = $components.task_manager;
 			{ $( $code )* }.map(|v| (v, task_manager))
@@ -251,27 +271,27 @@ pub fn run() -> Result<()> {
 			Ok(())
 		}
 		Some(Subcommand::Benchmark(cmd)) => {
-			// if cfg!(feature = "runtime-benchmarks") {
-			// 	let runner = cli.create_runner(cmd)?;
-			// 	if runner.config().chain_spec.is_statemine() {
-			// 		runner.sync_run(|config| cmd.run::<Block, StatemineRuntimeExecutor>(config))
-			// 	} else if runner.config().chain_spec.is_westmint() {
-			// 		runner.sync_run(|config| cmd.run::<Block, WestmintRuntimeExecutor>(config))
-			// 	} else if runner.config().chain_spec.is_statemint() {
-			// 		runner.sync_run(|config| cmd.run::<Block, StatemintRuntimeExecutor>(config))
-			// 	} else {
-			// 		Err("Chain doesn't support benchmarking".into())
-			// 	}
-			// } else {
+			if cfg!(feature = "runtime-benchmarks") {
+				let runner = cli.create_runner(cmd)?;
+				if runner.config().chain_spec.is_standalone() {
+					runner.sync_run(|config| cmd.run::<Block, StandaloneRuntimeExecutor>(config))
+				} else {
+					Err("Chain doesn't support benchmarking".into())
+				}
+			} else {
 				Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`."
 					.into())
-			// }
+			}
 		}
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 
 			runner.run_node_until_exit(|config| async move {
+				if config.chain_spec.is_standalone() {
+					return service::start_standalone_node(config).map_err(Into::into);
+				}
+
 				let para_id =
 					chain_spec::Extensions::try_get(&*config.chain_spec).map(|e| e.para_id);
 
@@ -308,7 +328,7 @@ pub fn run() -> Result<()> {
 					}
 				);
 
-				service::start_rococo_parachain_node(config, polkadot_config, id)
+				service::start_parachain_node(config, polkadot_config, id)
 					.await
 					.map(|r| r.0)
 					.map_err(Into::into)

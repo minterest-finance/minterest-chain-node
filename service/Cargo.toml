@@ -80,8 +80,9 @@ module-vesting = { path = "../pallets/vesting" }
 minterest-primitives = { path = "../primitives" }
 
 parachain-runtime = { path = "../runtime/parachain" }
+standalone-runtime = { path = "../runtime/standalone" }
 
 [features]
 default = ["std"]
 std = []
-runtime-benchmarks = ["parachain-runtime/runtime-benchmarks"]
+runtime-benchmarks = ["standalone-runtime/runtime-benchmarks"]

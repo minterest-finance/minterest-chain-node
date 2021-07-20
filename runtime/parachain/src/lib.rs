@@ -9,11 +9,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-mod benchmarking;
-// #[cfg(test)]
-// mod rpc_tests;
 mod weights;
-// mod weights_test;
 
 pub use controller_rpc_runtime_api::{
 	BalanceInfo, HypotheticalLiquidityData, PoolState, ProtocolTotalValue, UserData, UserPoolBalanceData,
@@ -48,7 +44,7 @@ use sp_core::{
 };
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, One, Zero},
+	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, One, Zero},
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchResult, FixedPointNumber,
 };
@@ -56,19 +52,6 @@ use sp_std::{cmp::Ordering, convert::TryFrom, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-
-// XCM imports
-// use pallet_xcm::{EnsureXcm, IsMajorityOfBody, XcmPassthrough};
-// use polkadot_parachain::primitives::Sibling;
-// use xcm::v0::{BodyId, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId, Xcm};
-// use xcm_builder::{
-// 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-// 	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset,
-// 	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
-// 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-// 	SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
-// };
-// use xcm_executor::{Config, XcmExecutor};
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -208,12 +191,9 @@ impl frame_system::Config for Runtime {
 	type SystemWeightInfo = ();
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
-	/// What to do if the user wants the code set to something. Just use `()` unless you are in
-	/// cumulus.
-	/// TODO MIN-293
+	/// What to do if the user wants the code set to something.
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 }
-
 
 const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND * 2;
 
@@ -607,6 +587,7 @@ construct_runtime!(
 		Vesting: module_vesting::{Pallet, Storage, Call, Event<T>, Config<T>},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
 
+		// Parachain
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>},
 		ParachainInfo: parachain_info::{Pallet, Storage, Config},
 
@@ -615,12 +596,12 @@ construct_runtime!(
 		MinterestCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
 
 		// Oracle and Prices
+		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		MinterestOracle: orml_oracle::<Instance1>::{Pallet, Storage, Call, Event<T>},
 		Prices: module_prices::{Pallet, Storage, Call, Event<T>, Config<T>},
-
-		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
 
+		// Consensus
 		Aura: pallet_aura::{Pallet, Config<T>},
 		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
 
@@ -883,44 +864,6 @@ impl_runtime_apis! {
 
 		fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
 			Prices::get_all_freshest_prices()
-		}
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	impl frame_benchmarking::Benchmark<Block> for Runtime {
-		fn dispatch_benchmark(
-			config: frame_benchmarking::BenchmarkConfig
-		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
-			use orml_benchmarking::add_benchmark;
-
-			let whitelist: Vec<TrackedStorageKey> = vec![
-				// Block Number
-				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac").to_vec().into(),
-				// Total Issuance
-				hex_literal::hex!("c2261276cc9d1f8598ea4b6a74b15c2f57c875e4cff74148e4628f264b974c80").to_vec().into(),
-				// Execution Phase
-				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7ff553b5a9862a516939d82b3d3d8661a").to_vec().into(),
-				// Event Count
-				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef70a98fdbe9ce6c55837576c60c7af3850").to_vec().into(),
-				// System Events
-				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7").to_vec().into(),
-			];
-
-			let mut batches = Vec::<BenchmarkBatch>::new();
-			let params = (&config, &whitelist);
-
-			add_benchmark!(params, batches, controller, benchmarking::controller);
-			add_benchmark!(params, batches, minterest_model, benchmarking::minterest_model);
-			add_benchmark!(params, batches, module_prices, benchmarking::prices);
-			add_benchmark!(params, batches, liquidation_pools, benchmarking::liquidation_pools);
-			add_benchmark!(params, batches, minterest_protocol, benchmarking::minterest_protocol);
-			add_benchmark!(params, batches, mnt_token, benchmarking::mnt_token);
-			add_benchmark!(params, batches, module_vesting, benchmarking::vesting);
-			add_benchmark!(params, batches, whitelist_module, benchmarking::whitelist);
-
-			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
-			Ok(batches)
 		}
 	}
 

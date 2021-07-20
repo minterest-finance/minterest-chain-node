@@ -18,7 +18,7 @@ use cumulus_client_consensus_aura::{
 	build_aura_consensus, BuildAuraConsensusParams, SlotProportion,
 };
 use cumulus_client_consensus_common::{
-	ParachainConsensus, ParachainCandidate, ParachainBlockImport,
+	ParachainConsensus,
 };
 use cumulus_client_network::build_block_announce_validator;
 use cumulus_client_service::{
@@ -27,18 +27,21 @@ use cumulus_client_service::{
 use cumulus_primitives_core::{
 	ParaId, relay_chain::v1::{Hash as PHash, PersistedValidationData},
 };
+use cumulus_primitives_parachain_inherent::MockValidationDataInherentDataProvider;
 
 use sc_client_api::ExecutorProvider;
 use sc_executor::native_executor_instance;
 use sc_network::NetworkService;
-use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
+use sc_service::{error::Error as ServiceError, Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::{ConstructRuntimeApi, ApiExt};
+use sc_consensus::LongestChain;
 use sp_consensus::{
 	BlockImportParams, BlockOrigin, SlotData,
 	import_queue::{BasicQueue, CacheKeyId, Verifier as VerifierT},
 };
-use sp_consensus_aura::{sr25519::AuthorityId as AuraId, AuraApi};
+use sc_consensus_aura::{ImportQueueParams, StartAuraParams};
+use sp_consensus_aura::{sr25519::AuthorityId as AuraId, sr25519::AuthorityPair as AuraPair, AuraApi};
 use sp_keystore::SyncCryptoStorePtr;
 use sp_runtime::{traits::{BlakeTwo256, Header as HeaderT}, generic::BlockId};
 use std::sync::Arc;
@@ -54,11 +57,20 @@ type Header = sp_runtime::generic::Header<BlockNumber, sp_runtime::traits::Blake
 pub type Block = sp_runtime::generic::Block<Header, sp_runtime::OpaqueExtrinsic>;
 type Hash = sp_core::H256;
 
-// Native executor instance.
+/// Maybe Standalone full select chain.
+type MaybeFullSelectChain = Option<LongestChain<TFullBackend<Block>, Block>>;
+
 native_executor_instance!(
-	pub RococoParachainRuntimeExecutor,
+	pub ParachainRuntimeExecutor,
 	parachain_runtime::api::dispatch,
 	parachain_runtime::native_version,
+);
+
+native_executor_instance!(
+	pub StandaloneRuntimeExecutor,
+	standalone_runtime::api::dispatch,
+	standalone_runtime::native_version,
+	frame_benchmarking::benchmarking::HostFunctions,
 );
 
 /// Starts a `ServiceBuilder` for a full service.
@@ -68,11 +80,12 @@ native_executor_instance!(
 pub fn new_partial<RuntimeApi, Executor, BIQ>(
 	config: &Configuration,
 	build_import_queue: BIQ,
+	standalone: bool,
 ) -> Result<
 	PartialComponents<
 		TFullClient<Block, RuntimeApi, Executor>,
 		TFullBackend<Block>,
-		(),
+		MaybeFullSelectChain,
 		sp_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
 		sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>,
 		(Option<Telemetry>, Option<TelemetryWorkerHandle>),
@@ -144,6 +157,12 @@ where
 		&task_manager,
 	)?;
 
+	let select_chain = if standalone {
+		Some(LongestChain::new(backend.clone()))
+	} else {
+		None
+	};
+
 	let params = PartialComponents {
 		backend,
 		client,
@@ -151,7 +170,7 @@ where
 		keystore_container,
 		task_manager,
 		transaction_pool,
-		select_chain: (),
+		select_chain,
 		other: (telemetry, telemetry_worker_handle),
 	};
 
@@ -162,7 +181,7 @@ where
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
-async fn start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
+async fn start_parachain_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	id: ParaId,
@@ -218,7 +237,7 @@ where
 
 	let parachain_config = prepare_node_config(parachain_config);
 
-	let params = new_partial::<RuntimeApi, Executor, BIQ>(&parachain_config, build_import_queue)?;
+	let params = new_partial::<RuntimeApi, Executor, BIQ>(&parachain_config, build_import_queue, false)?;
 	let (mut telemetry, telemetry_worker_handle) = params.other;
 
 	let relay_chain_full_node = cumulus_client_service::build_polkadot_full_node(
@@ -327,7 +346,7 @@ where
 /// Build the import queue for the rococo parachain runtime.
 pub fn rococo_parachain_build_import_queue(
 	client: Arc<
-		TFullClient<Block, parachain_runtime::RuntimeApi, RococoParachainRuntimeExecutor>,
+		TFullClient<Block, parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>,
 	>,
 	config: &Configuration,
 	telemetry: Option<TelemetryHandle>,
@@ -335,7 +354,7 @@ pub fn rococo_parachain_build_import_queue(
 ) -> Result<
 	sp_consensus::DefaultImportQueue<
 		Block,
-		TFullClient<Block, parachain_runtime::RuntimeApi, RococoParachainRuntimeExecutor>,
+		TFullClient<Block, parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>,
 	>,
 	sc_service::Error,
 > {
@@ -368,18 +387,18 @@ pub fn rococo_parachain_build_import_queue(
 }
 
 /// Start a rococo parachain node.
-pub async fn start_rococo_parachain_node(
+pub async fn start_parachain_node(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
-	id: ParaId,
+	para_id: ParaId,
 ) -> sc_service::error::Result<(
 	TaskManager,
-	Arc<TFullClient<Block, parachain_runtime::RuntimeApi, RococoParachainRuntimeExecutor>>,
+	Arc<TFullClient<Block, parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>>,
 )> {
-	start_node_impl::<parachain_runtime::RuntimeApi, RococoParachainRuntimeExecutor, _, _, _>(
+	start_parachain_node_impl::<parachain_runtime::RuntimeApi, ParachainRuntimeExecutor, _, _, _>(
 		parachain_config,
 		polkadot_config,
-		id,
+		para_id,
 		|_| Default::default(),
 		rococo_parachain_build_import_queue,
 		|client,
@@ -423,7 +442,7 @@ pub async fn start_rococo_parachain_node(
 						&relay_chain_client,
 						&*relay_chain_backend,
 						&validation_data,
-						id,
+						para_id,
 					);
 					async move {
 						let time = sp_timestamp::InherentDataProvider::from_system_time();
@@ -460,4 +479,185 @@ pub async fn start_rococo_parachain_node(
 		},
 	)
 	.await
+}
+
+/// Build the import queue for the rococo parachain runtime.
+pub fn standalone_build_import_queue(
+	client: Arc<
+		TFullClient<Block, standalone_runtime::RuntimeApi, StandaloneRuntimeExecutor>,
+	>,
+	config: &Configuration,
+	telemetry: Option<TelemetryHandle>,
+	task_manager: &TaskManager,
+) -> Result<
+	sp_consensus::DefaultImportQueue<
+		Block,
+		TFullClient<Block, standalone_runtime::RuntimeApi, StandaloneRuntimeExecutor>,
+	>,
+	sc_service::Error,
+> {
+	let slot_duration = sc_consensus_aura::slot_duration(&*client)?.slot_duration();
+
+	sc_consensus_aura::import_queue::<AuraPair, _, _, _, _, _, _>(ImportQueueParams {
+		block_import: client.clone(),
+		justification_import: None,
+		client: client.clone(),
+		create_inherent_data_providers: move |_, ()| async move {
+			let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+
+			let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
+				*timestamp,
+				slot_duration,
+			);
+
+			Ok((timestamp, slot))
+		},
+		spawner: &task_manager.spawn_essential_handle(),
+		registry: config.prometheus_registry().clone(),
+		can_author_with: sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone()),
+		check_for_equivocation: Default::default(),
+		telemetry,
+	})
+	.map_err(Into::into)
+}
+
+pub fn start_standalone_node(mut config: Configuration) -> Result<TaskManager, ServiceError> {
+	let sc_service::PartialComponents {
+		client,
+		backend,
+		mut task_manager,
+		import_queue,
+		mut keystore_container,
+		select_chain: maybe_select_chain,
+		transaction_pool,
+		other: (mut telemetry, _),
+	} = new_partial(&config, standalone_build_import_queue, true)?;
+
+	// if let Some(url) = &config.keystore_remote {
+	// 	match remote_keystore(url) {
+	// 		Ok(k) => keystore_container.set_remote_keystore(k),
+	// 		Err(e) => {
+	// 			return Err(ServiceError::Other(format!(
+	// 				"Error hooking up remote keystore for {}: {}",
+	// 				url, e
+	// 			)))
+	// 		}
+	// 	};
+	// }
+
+	let (network, system_rpc_tx, network_starter) = sc_service::build_network(sc_service::BuildNetworkParams {
+		config: &config,
+		client: client.clone(),
+		transaction_pool: transaction_pool.clone(),
+		spawn_handle: task_manager.spawn_handle(),
+		import_queue,
+		on_demand: None,
+		block_announce_validator_builder: None,
+	})?;
+
+	if config.offchain_worker.enabled {
+		sc_service::build_offchain_workers(&config, task_manager.spawn_handle(), client.clone(), network.clone());
+	}
+
+	let role = config.role.clone();
+	let force_authoring = config.force_authoring;
+	let backoff_authoring_blocks: Option<()> = None;
+	let name = config.network.node_name.clone();
+	let enable_grandpa = !config.disable_grandpa;
+	let prometheus_registry = config.prometheus_registry().cloned();
+
+	let rpc_extensions_builder = {
+		let client = client.clone();
+		let pool = transaction_pool.clone();
+
+		Box::new(move |deny_unsafe, _| {
+			let deps = minterest_rpc::FullDeps {
+				client: client.clone(),
+				pool: pool.clone(),
+				deny_unsafe,
+			};
+
+			minterest_rpc::create_full(deps)
+		})
+	};
+
+	let _rpc_handlers = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
+		network: network.clone(),
+		client: client.clone(),
+		keystore: keystore_container.sync_keystore(),
+		task_manager: &mut task_manager,
+		transaction_pool: transaction_pool.clone(),
+		rpc_extensions_builder,
+		on_demand: None,
+		remote_blockchain: None,
+		backend,
+		system_rpc_tx,
+		config,
+		telemetry: telemetry.as_mut(),
+	})?;
+
+	let select_chain = maybe_select_chain.expect("In Standalone mode `new_partial` will return some `select_chain`");
+
+	if role.is_authority() {
+		let proposer_factory = sc_basic_authorship::ProposerFactory::new(
+			task_manager.spawn_handle(),
+			client.clone(),
+			transaction_pool,
+			prometheus_registry.as_ref(),
+			telemetry.as_ref().map(|x| x.handle()),
+		);
+
+		let can_author_with = sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone());
+
+		let slot_duration = sc_consensus_aura::slot_duration(&*client)?;
+		let raw_slot_duration = slot_duration.slot_duration();
+
+		let aura = sc_consensus_aura::start_aura::<AuraPair, _, _, _, _, _, _, _, _, _, _, _>(StartAuraParams {
+			slot_duration,
+			client: client.clone(),
+			select_chain,
+			block_import: client.clone(),
+			proposer_factory,
+			create_inherent_data_providers: move |_, ()| async move {
+				let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+
+				let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
+					*timestamp,
+					raw_slot_duration,
+				);
+				let inherent_data = MockValidationDataInherentDataProvider {
+					current_para_block: 0,
+					relay_offset: 1000,
+					relay_blocks_per_para_block: 2,
+				};
+
+				Ok((timestamp, slot, inherent_data))
+			},
+			force_authoring,
+			backoff_authoring_blocks,
+			keystore: keystore_container.sync_keystore(),
+			can_author_with,
+			sync_oracle: network.clone(),
+			justification_sync_link: network.clone(),
+			block_proposal_slot_portion: SlotProportion::new(2f32 / 3f32),
+			max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
+			telemetry: telemetry.as_ref().map(|x| x.handle()),
+		})?;
+
+		// the AURA authoring task is considered essential, i.e. if it
+		// fails we take down the service with it.
+		task_manager.spawn_essential_handle().spawn_blocking("aura", aura);
+	}
+
+	// if the node isn't actively participating in consensus then it doesn't
+	// need a keystore, regardless of which protocol we use below.
+	let keystore = if role.is_authority() {
+		Some(keystore_container.sync_keystore())
+	} else {
+		None
+	};
+
+	network_starter.start_network();
+
+	Ok(task_manager)
 }

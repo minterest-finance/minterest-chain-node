@@ -9,7 +9,7 @@ use minterest_primitives::currency::GetDecimals;
 use minterest_primitives::{VestingBucket, VestingScheduleJson};
 use parachain_runtime::{
 	get_all_modules_accounts, AccountId, Balance, ExistentialDeposit,
-	GenesisConfig, MntTokenPalletId, Signature, BTC, DOLLARS,
+	MntTokenPalletId, Signature, BTC, DOLLARS,
 	DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION,
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -36,7 +36,8 @@ const INITIAL_TREASURY: u128 = 5_000_000 * DOLLARS;
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<parachain_runtime::GenesisConfig, Extensions>;
+pub type StandaloneChainSpec = sc_service::GenericChainSpec<standalone_runtime::GenesisConfig, Extensions>;
 
 /// Generate a crypto pair from seed.
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -77,13 +78,13 @@ pub fn authority_keys_from_seed(seed: &str) -> AuraId {
 	get_from_seed::<AuraId>(seed)
 }
 
-pub fn get_chain_spec(id: ParaId) -> ChainSpec {
+pub fn get_parachain_spec(id: ParaId) -> ChainSpec {
 	ChainSpec::from_genesis(
 		"Local Testnet",
 		"local_testnet",
 		ChainType::Local,
 		move || {
-			testnet_genesis(
+			minterest_genesis(
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				vec![
 					get_from_seed::<AuraId>("Alice"),
@@ -126,8 +127,111 @@ pub fn get_chain_spec(id: ParaId) -> ChainSpec {
 			properties
 		}),
 		Extensions {
-			relay_chain: "rococo".into(),
+			relay_chain: "rococo-local".into(),
 			para_id: id.into(),
+		},
+	)
+}
+
+pub fn get_standalone_dev_spec() -> StandaloneChainSpec {
+	StandaloneChainSpec::from_genesis(
+		"Standalone Development",
+		"dev",
+		ChainType::Development,
+		move || {
+			standalone_dev_genesis(
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				vec![
+					get_from_seed::<AuraId>("Alice"),
+				],
+				vec![
+					get_account_id_from_seed::<sr25519::Public>("Alice"),
+					get_account_id_from_seed::<sr25519::Public>("Bob"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie"),
+					get_account_id_from_seed::<sr25519::Public>("Dave"),
+					get_account_id_from_seed::<sr25519::Public>("Eve"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+					// Eugene
+					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
+					// Marina
+					hex!["ec1686827c6d2bf042501bccaebd8383c6a9ca892c8e63faaa620e549696eb01"].into(),
+					// Julia
+					hex!["cedd4c175ec803c5d3f5b2d3e9e63c8ec73aff05414acd0981f60ae24079bc44"].into(),
+					// Polina
+					hex!["2e314191e6f8a49b0fdd374dd243b20cc8b1f32a44ba512692ad5e8c5d251c7f"].into(),
+					hex!["6ae90e9d3f0b4f1161a12024b46c7b44030bedbc4772260f1836262b37806d15"].into(),
+					hex!["38099e3930713a1fdae1419be266ea78ff353752a83033acbe215e190cb0cf2b"].into(),
+					hex!["267e9faef0221b88501b0b943222b3d9f052e8308de28bc86f10780e8f9c5b0a"].into(),
+				],
+			)
+		},
+		vec![],
+		None,
+		None,
+		Some({
+			let mut properties = Map::new();
+			properties.insert("tokenDecimals".into(), 18.into());
+			properties
+		}),
+		Extensions {
+			relay_chain: "rococo-local".into(),
+			para_id: 2000,
+		},
+	)
+}
+
+pub fn get_standalone_local_spec() -> StandaloneChainSpec {
+	StandaloneChainSpec::from_genesis(
+		"Standalone Local",
+		"standalone-local",
+		ChainType::Local,
+		move || {
+			standalone_dev_genesis(
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				vec![
+					get_from_seed::<AuraId>("Alice"),
+					get_from_seed::<AuraId>("Bob"),
+				],
+				vec![
+					get_account_id_from_seed::<sr25519::Public>("Alice"),
+					get_account_id_from_seed::<sr25519::Public>("Bob"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie"),
+					get_account_id_from_seed::<sr25519::Public>("Dave"),
+					get_account_id_from_seed::<sr25519::Public>("Eve"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+					// Eugene
+					hex!["680ee3a95d0b19619d9483fdee34f5d0016fbadd7145d016464f6bfbb993b46b"].into(),
+					// Marina
+					hex!["ec1686827c6d2bf042501bccaebd8383c6a9ca892c8e63faaa620e549696eb01"].into(),
+					// Julia
+					hex!["cedd4c175ec803c5d3f5b2d3e9e63c8ec73aff05414acd0981f60ae24079bc44"].into(),
+					// Polina
+					hex!["2e314191e6f8a49b0fdd374dd243b20cc8b1f32a44ba512692ad5e8c5d251c7f"].into(),
+					hex!["6ae90e9d3f0b4f1161a12024b46c7b44030bedbc4772260f1836262b37806d15"].into(),
+					hex!["38099e3930713a1fdae1419be266ea78ff353752a83033acbe215e190cb0cf2b"].into(),
+					hex!["267e9faef0221b88501b0b943222b3d9f052e8308de28bc86f10780e8f9c5b0a"].into(),
+				],
+			)
+		},
+		vec![],
+		None,
+		None,
+		Some({
+			let mut properties = Map::new();
+			properties.insert("tokenDecimals".into(), 18.into());
+			properties
+		}),
+		Extensions {
+			relay_chain: "rococo-local".into(),
+			para_id: 2000,
 		},
 	)
 }
@@ -136,11 +240,11 @@ pub fn get_chain_spec(id: ParaId) -> ChainSpec {
 /// This initial storage state is used in `local_testnet_config` and
 /// `minterest_turbo_testnet_config`.
 fn minterest_genesis(
-	initial_authorities: Vec<AuraId>,
 	root_key: AccountId,
+	initial_authorities: Vec<AuraId>,
 	endowed_accounts: Vec<AccountId>,
 	para_id: ParaId,
-) -> GenesisConfig {
+) -> parachain_runtime::GenesisConfig {
 	// Reading the initial allocations from the file.
 	let allocated_accounts_json = &include_bytes!("../../resources/dev-minterest-allocation-MNT.json")[..];
 	let allocated_list_parsed: HashMap<VestingBucket, Vec<VestingScheduleJson<AccountId, Balance>>> =
@@ -164,7 +268,7 @@ fn minterest_genesis(
 	let white_list_members_json = &include_bytes!("../../resources/whitelist-members.json")[..];
 	let whitelist_members: Vec<AccountId> = serde_json::from_slice(white_list_members_json).unwrap();
 
-	GenesisConfig {
+	parachain_runtime::GenesisConfig {
 		system: parachain_runtime::SystemConfig {
 			code: parachain_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
@@ -405,22 +509,19 @@ fn minterest_genesis(
 	}
 }
 
-/// Configure initial storage state for FRAME pallets.
-/// This initial storage state is used in `development_config`.
-fn testnet_genesis(
+fn standalone_dev_genesis(
 	root_key: AccountId,
 	initial_authorities: Vec<AuraId>,
 	endowed_accounts: Vec<AccountId>,
-	para_id: ParaId,
-) -> GenesisConfig {
-	GenesisConfig {
-		system: parachain_runtime::SystemConfig {
-			code: parachain_runtime::WASM_BINARY
+) -> standalone_runtime::GenesisConfig {
+	standalone_runtime::GenesisConfig {
+		system: standalone_runtime::SystemConfig {
+			code: standalone_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
 			changes_trie_config: Default::default(),
 		},
-		balances: parachain_runtime::BalancesConfig {
+		balances: standalone_runtime::BalancesConfig {
 			// Configure endowed accounts with initial balance of INITIAL_BALANCE.
 			balances: endowed_accounts
 				.iter()
@@ -433,17 +534,14 @@ fn testnet_genesis(
 				)
 				.collect(),
 		},
-		parachain_info: parachain_runtime::ParachainInfoConfig {
-			parachain_id: para_id
-		},
-		aura: parachain_runtime::AuraConfig {
+		aura: standalone_runtime::AuraConfig {
 			authorities: initial_authorities.iter().map(|x| (x.clone())).collect(),
 		},
-		sudo: parachain_runtime::SudoConfig {
+		sudo: standalone_runtime::SudoConfig {
 			// Assign network admin rights.
 			key: root_key.clone(),
 		},
-		tokens: parachain_runtime::TokensConfig {
+		tokens: standalone_runtime::TokensConfig {
 			balances: endowed_accounts
 				.iter()
 				.chain(get_all_modules_accounts()[1..3].iter()) // liquidation_pools + DEXes
@@ -457,7 +555,7 @@ fn testnet_genesis(
 				})
 				.collect(),
 		},
-		liquidity_pools: parachain_runtime::LiquidityPoolsConfig {
+		liquidity_pools: standalone_runtime::LiquidityPoolsConfig {
 			pools: vec![
 				(
 					ETH,
@@ -494,7 +592,7 @@ fn testnet_genesis(
 			],
 			pool_user_data: vec![],
 		},
-		controller: parachain_runtime::ControllerConfig {
+		controller: standalone_runtime::ControllerConfig {
 			controller_params: vec![
 				(
 					ETH,
@@ -548,7 +646,7 @@ fn testnet_genesis(
 				(BTC, PauseKeeper::all_unpaused()),
 			],
 		},
-		minterest_model: parachain_runtime::MinterestModelConfig {
+		minterest_model: standalone_runtime::MinterestModelConfig {
 			minterest_model_params: vec![
 				(
 					ETH,
@@ -589,7 +687,7 @@ fn testnet_genesis(
 			],
 			_phantom: Default::default(),
 		},
-		risk_manager: parachain_runtime::RiskManagerConfig {
+		risk_manager: standalone_runtime::RiskManagerConfig {
 			liquidation_fee: vec![
 				(DOT, FixedU128::saturating_from_rational(5, 100)), // 5%
 				(ETH, FixedU128::saturating_from_rational(5, 100)), // 5%
@@ -599,7 +697,7 @@ fn testnet_genesis(
 			liquidation_threshold: FixedU128::saturating_from_rational(3, 100), // 3%
 			_phantom: Default::default(),
 		},
-		liquidation_pools: parachain_runtime::LiquidationPoolsConfig {
+		liquidation_pools: standalone_runtime::LiquidationPoolsConfig {
 			phantom: Default::default(),
 			liquidation_pools: vec![
 				(
@@ -636,7 +734,7 @@ fn testnet_genesis(
 				),
 			],
 		},
-		prices: parachain_runtime::PricesConfig {
+		prices: standalone_runtime::PricesConfig {
 			locked_price: vec![
 				(DOT, FixedU128::saturating_from_integer(2)),
 				(KSM, FixedU128::saturating_from_integer(2)),
@@ -647,15 +745,15 @@ fn testnet_genesis(
 			_phantom: Default::default(),
 		},
 		minterest_council: Default::default(),
-		minterest_council_membership: parachain_runtime::MinterestCouncilMembershipConfig {
+		minterest_council_membership: standalone_runtime::MinterestCouncilMembershipConfig {
 			members: vec![root_key],
 			phantom: Default::default(),
 		},
-		operator_membership_minterest: parachain_runtime::OperatorMembershipMinterestConfig {
+		operator_membership_minterest: standalone_runtime::OperatorMembershipMinterestConfig {
 			members: endowed_accounts.clone(),
 			phantom: Default::default(),
 		},
-		mnt_token: parachain_runtime::MntTokenConfig {
+		mnt_token: standalone_runtime::MntTokenConfig {
 			mnt_claim_threshold: 0, // disable by default
 			minted_pools: vec![
 				(DOT, 2 * DOLLARS),
@@ -665,13 +763,14 @@ fn testnet_genesis(
 			],
 			_phantom: Default::default(),
 		},
-		vesting: parachain_runtime::VestingConfig { vesting: vec![] },
-		whitelist: parachain_runtime::WhitelistConfig {
+		vesting: standalone_runtime::VestingConfig { vesting: vec![] },
+		whitelist: standalone_runtime::WhitelistConfig {
 			members: endowed_accounts,
 			whitelist_mode: false,
 		},
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
+		parachain_info: Default::default(),
 	}
 }
 

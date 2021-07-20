@@ -36,6 +36,7 @@ members = [
     "primitives",
     "service",
     "runtime/parachain",
+    "runtime/standalone",
     "test-helper",
     "pallets/liquidity-pools",
     "pallets/minterest-model",

@@ -48,7 +48,7 @@ use sp_core::{
 };
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, One, Zero},
+	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, One, Zero},
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchResult, FixedPointNumber,
 };
@@ -195,15 +195,36 @@ impl frame_system::Config for Runtime {
 	type SystemWeightInfo = ();
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
-	/// What to do if the user wants the code set to something. Just use `()` unless you are in
-	/// cumulus.
-	/// TODO MIN-293
-	type OnSetCode = ();
+	/// What to do if the user wants the code set to something.
+	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 }
+
+const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND * 2;
+
+parameter_types! {
+	// pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
+	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
+}
+
+impl cumulus_pallet_parachain_system::Config for Runtime {
+	type Event = Event;
+	type OnValidationData = ();
+	type SelfParaId = parachain_info::Pallet<Runtime>;
+	type OutboundXcmpMessageSource = ();
+	type DmpMessageHandler = ();
+	type ReservedDmpWeight = ReservedDmpWeight;
+	type XcmpMessageHandler = ();
+	type ReservedXcmpWeight = ();
+}
+
+impl parachain_info::Config for Runtime {}
+
 
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
 }
+
+impl cumulus_pallet_aura_ext::Config for Runtime {}
 
 parameter_types! {
 	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
@@ -570,19 +591,23 @@ construct_runtime!(
 		Vesting: module_vesting::{Pallet, Storage, Call, Event<T>, Config<T>},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
 
-		// Consensus & Staking
-		Aura: pallet_aura::{Pallet, Config<T>},
+		// Parachain
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>},
+		ParachainInfo: parachain_info::{Pallet, Storage, Config},
 
 		// Governance
 		MinterestCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		MinterestCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
 
 		// Oracle and Prices
+		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		MinterestOracle: orml_oracle::<Instance1>::{Pallet, Storage, Call, Event<T>},
 		Prices: module_prices::{Pallet, Storage, Call, Event<T>, Config<T>},
-
-		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
+
+		// Consensus
+		Aura: pallet_aura::{Pallet, Config<T>},
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
 
 		// Minterest pallets
 		MinterestProtocol: minterest_protocol::{Pallet, Call, Event<T>},
@@ -594,6 +619,7 @@ construct_runtime!(
 		MntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Pallet, Storage, Call, Event<T>},
 		Whitelist: whitelist_module::{Pallet, Storage, Call, Event<T>, Config<T>},
+
 		// Dev
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
 	}
@@ -846,6 +872,12 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
+		fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
+			ParachainSystem::collect_collation_info()
+		}
+	}
+
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
 		fn dispatch_benchmark(
@@ -882,5 +914,27 @@ impl_runtime_apis! {
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
 		}
+	}
+}
+
+struct CheckInherents;
+
+impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
+	fn check_inherents(
+		block: &Block,
+		relay_state_proof: &cumulus_pallet_parachain_system::RelayChainStateProof,
+	) -> sp_inherents::CheckInherentsResult {
+		let relay_chain_slot = relay_state_proof
+			.read_slot()
+			.expect("Could not read the relay chain slot from the proof");
+
+		let inherent_data = cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
+			relay_chain_slot,
+			sp_std::time::Duration::from_secs(6),
+		)
+		.create_inherent_data()
+		.expect("Could not create the timestamp inherent data");
+
+		inherent_data.check_extrinsics(&block)
 	}
 }
