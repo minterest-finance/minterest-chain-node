@@ -173,13 +173,12 @@ impl ExtBuilder {
 	// - 'protocol_interest_factor': defines the portion of borrower interest that is converted
 	// into protocol interest.
 	// - 'max_borrow_rate': maximum borrow rate.
-	// - 'collateral_factor': this multiplier represents which share of the supplied value can be
-	//   used as a collateral for loans. For instance, 0.9 allows 90% of total pool value to be
-	//   used as a collateral. Must be between 0 and 1.
-	// - 'borrow_cap': maximum total borrow amount per pool in usd. No value means infinite borrow
-	//   cap.
-	// - protocol_interest_threshold': minimum protocol interest needed to transfer it to
-	//   liquidation pool
+	// - 'collateral_factor': this multiplier represents which share of the supplied value can be used
+	//   as a collateral for loans. For instance, 0.9 allows 90% of total pool value to be used as a
+	//   collateral. Must be between 0 and 1.
+	// - 'borrow_cap': maximum total borrow amount per pool in usd. No value means infinite borrow cap.
+	// - protocol_interest_threshold': minimum protocol interest needed to transfer it to liquidation
+	//   pool
 	pub fn set_controller_data(
 		mut self,
 		currency_id: CurrencyId,
@@ -222,10 +221,10 @@ impl ExtBuilder {
 	// Set minterest model parameters
 	// - 'currency_id': currency identifier
 	// - 'kink': the utilization point at which the jump multiplier is applied
-	// - 'base_rate_per_block': the base interest rate which is the y-intercept when utilization
-	//   rate is 0
-	// - 'multiplier_per_block': the multiplier of utilization rate that gives the slope of the
-	//   interest rate
+	// - 'base_rate_per_block': the base interest rate which is the y-intercept when utilization rate is
+	//   0
+	// - 'multiplier_per_block': the multiplier of utilization rate that gives the slope of the interest
+	//   rate
 	// - 'jump_multiplier_per_block': the multiplier of utilization rate after hitting a specified
 	//   utilization point - kink
 	pub fn set_minterest_model_params(
