@@ -57,16 +57,16 @@ mod tests {
 	}
 
 	#[test]
-	fn test_set_multiplier_per_block() {
+	fn test_set_pool_multiplier_per_block() {
 		test_externalities().execute_with(|| {
-			assert_ok!(test_benchmark_set_multiplier());
+			assert_ok!(test_benchmark_set_pool_multiplier());
 		})
 	}
 
 	#[test]
 	fn test_set_kink() {
 		test_externalities().execute_with(|| {
-			assert_ok!(test_benchmark_set_multiplier());
+			assert_ok!(test_benchmark_set_pool_multiplier());
 		})
 	}
 }
