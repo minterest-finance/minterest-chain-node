@@ -330,6 +330,25 @@ pub mod module {
 			Ok(().into())
 		}
 	}
+
+	#[pallet::validate_unsigned]
+	impl<T: Config> ValidateUnsigned for Pallet<T> {
+		type Call = Call<T>;
+
+		fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
+			match call {
+				Call::liquidate(who, _borrower_loan_state) => {
+					ValidTransaction::with_tag_prefix("RiskManagerOffchainWorker")
+						.priority(T::UnsignedPriority::get())
+						.and_provides((<frame_system::Pallet<T>>::block_number(), who))
+						.longevity(64_u64)
+						.propagate(true)
+						.build()
+				}
+				_ => InvalidTransaction::Call.into(),
+			}
+		}
+	}
 }
 
 // Private functions
@@ -599,24 +618,6 @@ impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 		// Fixme: After implementation of liquidation fix this case and cover with tests
 		} else if operation == Operation::Repay {
 			Self::user_liquidation_attempts_increase_by_one(&who);
-		}
-	}
-}
-
-impl<T: Config> ValidateUnsigned for Pallet<T> {
-	type Call = Call<T>;
-
-	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
-		match call {
-			Call::liquidate(who, _borrower_loan_state) => {
-				ValidTransaction::with_tag_prefix("RiskManagerOffchainWorker")
-					.priority(T::UnsignedPriority::get())
-					.and_provides((<frame_system::Pallet<T>>::block_number(), who))
-					.longevity(64_u64)
-					.propagate(true)
-					.build()
-			}
-			_ => InvalidTransaction::Call.into(),
 		}
 	}
 }
