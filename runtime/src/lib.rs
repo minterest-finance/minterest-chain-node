@@ -860,7 +860,7 @@ impl_runtime_apis! {
 		TimeStampedPrice,
 	> for Runtime {
 
-	    /// Return USD exchange rate for the underlying asset
+	    /// Returns the USD exchange rate for the selected underlying asset
 		///
 		///  - [`provider_id`](`minterest_primitives::DataProviderId`):  provider type
 	    ///  - [`key`](`minterest_primitives::CurrencyId`): currency type
@@ -875,7 +875,7 @@ impl_runtime_apis! {
 				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_no_op(&key)
 			}
 		}
-        /// Return USD exchange rate for all underlying assets
+        /// Return the USD exchange rate for all underlying assets
 		///
 		///  - [`provider_id`](`minterest_primitives::DataProviderId`):  provider type
 	    ///

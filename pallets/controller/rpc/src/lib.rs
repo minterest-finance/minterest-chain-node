@@ -116,7 +116,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - [`amount`](`BalanceInfo::amount`): account total borrow per asset.
+	/// - [`amount`](`BalanceInfo::amount`): aaccount total borrow per asset (tokens amount).
 	#[rpc(name = "controller_getUserBorrowPerAsset")]
 	fn get_user_borrow_per_asset(
 		&self,
@@ -133,7 +133,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	///  Return:
-	///  - [`amount`](`BalanceInfo::amount`): account supply underlying assets balance in liquidity pool.
+	///  - [`amount`](`BalanceInfo::amount`): user balance converted to underlying asset.
 	#[rpc(name = "controller_getUserUnderlyingBalancePerAsset")]
 	fn get_user_underlying_balance_per_asset(
 		&self,
@@ -163,9 +163,9 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///
 	/// (supply_apy,borrow_apy,net_apy)
 	///
-	/// - [`supply_apy`](`minterest_primitives::Interest`):  supply APY
-	/// - [`borrow_apy`](`minterest_primitives::Interest`): borrow APY
-	/// - [`net_apy`](`minterest_primitives::Interest`):  net APY
+	/// - [`supply_apy`](`minterest_primitives::Interest`): supply APY value for the user.
+	/// - [`borrow_apy`](`minterest_primitives::Interest`): borrow APY value for the user.
+	/// - [`net_apy`](`minterest_primitives::Interest`): net APY value for the user.
 	#[rpc(name = "controller_getUserTotalSupplyBorrowAndNetApy")]
 	fn get_user_total_supply_borrow_and_net_apy(
 		&self,
@@ -181,12 +181,12 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Returns:
-	/// - [`total_collateral_in_usd`](`UserData::total_collateral_in_usd`): account total collateral converted to usd.
-	/// - [`total_supply_in_usd`](`UserData::total_supply_in_usd`): account total supply converted to usd.
-	/// - [`total_borrow_in_usd`](`UserData::total_borrow_in_usd`): account total borrow converted to usd.
-	/// - [`total_supply_apy`](`UserData::total_supply_apy`): account total supply APY
-	/// - [`total_borrow_apy`](`UserData::total_borrow_apy`): account total borrow APY
-	/// - [`net_apy`](`UserData::net_apy`): account net APY
+	/// - [`total_collateral_in_usd`](`UserData::total_collateral_in_usd`): user total collateral in usd.
+	/// - [`total_supply_in_usd`](`UserData::total_supply_in_usd`): user total supplied to the protocol in usd.
+	/// - [`total_borrow_in_usd`](`UserData::total_borrow_in_usd`): user total borrowed including interest in usd.
+	/// - [`total_supply_apy`](`UserData::total_supply_apy`): user total supply apy value.
+	/// - [`total_borrow_apy`](`UserData::total_borrow_apy`): user total borrow apy value.
+	/// - [`net_apy`](`UserData::net_apy`): user net APY value.
 	#[rpc(name = "controller_getUserData")]
 	fn get_user_data(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<UserData>>;
 }
