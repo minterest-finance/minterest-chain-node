@@ -10,8 +10,8 @@ jsonrpc-core = "15.0.0"
 jsonrpc-core-client = "15.0.0"
 jsonrpc-derive = "15.0.0"
 
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
-sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
 
 whitelist-rpc-runtime-api = { path = "runtime-api" }
