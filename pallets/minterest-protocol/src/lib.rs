@@ -18,7 +18,7 @@
 
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
-use liquidity_pools::{Pool, PoolUserData};
+use liquidity_pools::{PoolData, PoolUserData};
 use minterest_primitives::{
 	currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, Operation, Operation::Deposit, Rate,
 };
@@ -85,7 +85,7 @@ pub mod module {
 		type ManagerLiquidationPools: LiquidationPoolsManager<Self::AccountId>;
 
 		/// The basic liquidity pools.
-		type ManagerLiquidityPools: LiquidityPoolStorageProvider<Self::AccountId, Pool>
+		type ManagerLiquidityPools: LiquidityPoolStorageProvider<Self::AccountId, PoolData>
 			+ PoolsManager<Self::AccountId>
 			+ CurrencyConverter
 			+ Borrowing<Self::AccountId>

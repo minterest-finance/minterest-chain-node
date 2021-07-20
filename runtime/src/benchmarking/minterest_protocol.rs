@@ -190,7 +190,7 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(borrower.clone()), DOT, 10_000 * DOLLARS)
 	verify {
-		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).borrowed, 180_000_000_600_000);
+		assert_eq!(LiquidityPools::pool_user_data_storage(DOT, borrower.clone()).borrowed, 180_000_000_600_000);
 		assert_eq!(Currencies::free_balance(MNT, &borrower), 9_999_999_954_999_990_405)
 	}
 
@@ -210,7 +210,7 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
 	verify {
-		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).borrowed, Balance::zero());
+		assert_eq!(LiquidityPools::pool_user_data_storage(DOT, borrower.clone()).borrowed, Balance::zero());
 		assert_eq!(Currencies::free_balance(MNT, &borrower), 9_999_999_954_999_990_405)
 	}
 
@@ -233,7 +233,7 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(lender.clone()), DOT, borrower.clone(), 10_000 * DOLLARS)
 	verify {
-		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).borrowed, 180_000_000_600_000);
+		assert_eq!(LiquidityPools::pool_user_data_storage(DOT, borrower.clone()).borrowed, 180_000_000_600_000);
 		assert_eq!(Currencies::free_balance(MNT, &borrower), 9_999_999_954_999_990_405);
 		assert_eq!(Currencies::free_balance(MNT, &lender), Balance::zero());
 	}
@@ -265,7 +265,7 @@ runtime_benchmarks! {
 
 		enable_whitelist_mode_and_add_member(&borrower)?;
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
-	verify  { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).is_collateral, true) }
+	verify  { assert_eq!(LiquidityPools::pool_user_data_storage(DOT, borrower).is_collateral, true) }
 
 	disable_is_collateral {
 		let borrower: AccountId = account("borrower", 0, SEED);
@@ -274,7 +274,7 @@ runtime_benchmarks! {
 
 		enable_whitelist_mode_and_add_member(&borrower)?;
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
-	verify  { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).is_collateral, false) }
+	verify  { assert_eq!(LiquidityPools::pool_user_data_storage(DOT, borrower).is_collateral, false) }
 
 	claim_mnt {
 		let lender: AccountId = account("lender", 0, SEED);

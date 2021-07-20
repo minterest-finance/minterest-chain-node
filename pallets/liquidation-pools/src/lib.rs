@@ -16,7 +16,7 @@ use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 	pallet_prelude::*,
 };
-use liquidity_pools::Pool;
+use liquidity_pools::PoolData;
 use minterest_primitives::{
 	arithmetic::sum_with_mult_result, currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, OffchainErr, Rate,
 };
@@ -91,7 +91,7 @@ pub mod module {
 		type PriceSource: PricesManager<CurrencyId>;
 
 		/// The basic liquidity pools manager.
-		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, Pool>
+		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, PoolData>
 			+ CurrencyConverter
 			+ PoolsManager<Self::AccountId>;
 

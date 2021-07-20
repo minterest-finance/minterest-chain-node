@@ -9,7 +9,7 @@ use frame_support::{
 pub use frame_system::{offchain::SendTransactionTypes, EnsureSignedBy};
 use liquidation_pools::LiquidationPoolData;
 
-pub use liquidity_pools::{Pool, PoolUserData};
+pub use liquidity_pools::{PoolData, PoolUserData};
 use minterest_model::MinterestModelData;
 pub use test_helper::*;
 
@@ -158,7 +158,7 @@ impl DataFeeder<CurrencyId, Price, AccountId> for MockDataProvider {
 //TODO: Rename to ExtBuilder after full tests rework
 pub struct ExtBuilderNew {
 	pub endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	pub pools: Vec<(CurrencyId, Pool)>,
+	pub pools: Vec<(CurrencyId, PoolData)>,
 	pub pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	pub liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
 	pub minted_pools: Vec<(CurrencyId, Balance)>,
@@ -233,7 +233,7 @@ impl ExtBuilderNew {
 	pub fn init_pool_default(mut self, pool_id: CurrencyId) -> Self {
 		self.pools.push((
 			pool_id,
-			Pool {
+			PoolData {
 				borrowed: Balance::default(),
 				borrow_index: Rate::default(),
 				protocol_interest: Balance::default(),
@@ -256,7 +256,7 @@ impl ExtBuilderNew {
 	) -> Self {
 		self.pools.push((
 			pool_id,
-			Pool {
+			PoolData {
 				borrowed,
 				borrow_index,
 				protocol_interest,

@@ -16,7 +16,7 @@ mod tests {
 		assert_noop, assert_ok, ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId,
 	};
 	use frame_system::{offchain::SendTransactionTypes, EnsureSignedBy};
-	use liquidity_pools::{Pool, PoolUserData};
+	use liquidity_pools::{PoolData, PoolUserData};
 	use minterest_model::MinterestModelData;
 	pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 	use minterest_primitives::{Balance, CurrencyId, Price, Rate};
@@ -133,7 +133,7 @@ mod tests {
 
 	pub struct ExtBuilder {
 		endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-		pools: Vec<(CurrencyId, Pool)>,
+		pools: Vec<(CurrencyId, PoolData)>,
 		pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 		minted_pools: Vec<(CurrencyId, Balance)>,
 		controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
@@ -266,7 +266,7 @@ mod tests {
 		pub fn pool_borrow_underlying(mut self, pool_id: CurrencyId, borrowed: Balance) -> Self {
 			self.pools.push((
 				pool_id,
-				Pool {
+				PoolData {
 					borrowed,
 					borrow_index: Rate::one(),
 					protocol_interest: Balance::zero(),
@@ -298,7 +298,7 @@ mod tests {
 		pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
 			self.pools.push((
 				pool_id,
-				Pool {
+				PoolData {
 					borrowed: Balance::zero(),
 					borrow_index: Rate::one(),
 					protocol_interest: Balance::zero(),

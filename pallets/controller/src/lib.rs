@@ -14,7 +14,7 @@
 use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
-use liquidity_pools::{Pool, PoolUserData};
+use liquidity_pools::{PoolData, PoolUserData};
 use minterest_primitives::{
 	arithmetic::sum_with_mult_result,
 	constants::time::BLOCKS_PER_YEAR,
@@ -128,7 +128,7 @@ pub mod module {
 		type PriceSource: PricesManager<CurrencyId>;
 
 		/// Provides the basic liquidity pools manager and liquidity pool functionality.
-		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, Pool>
+		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, PoolData>
 			+ PoolsManager<Self::AccountId>
 			+ CurrencyConverter
 			+ UserStorageProvider<Self::AccountId, PoolUserData>
@@ -1140,7 +1140,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		});
 		T::LiquidityPoolsManager::set_pool_data(
 			underlying_asset,
-			Pool {
+			PoolData {
 				borrowed: updated_pool_borrow_underlying,
 				borrow_index: updated_borrow_index,
 				protocol_interest: updated_pool_protocol_interest,
