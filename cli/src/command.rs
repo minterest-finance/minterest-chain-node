@@ -42,19 +42,13 @@ impl IdentifyChain for dyn sc_service::ChainSpec {
 	}
 }
 
-impl<T: sc_service::ChainSpec + 'static> IdentifyChain for T {
-	fn is_standalone(&self) -> bool {
-		<dyn sc_service::ChainSpec>::is_standalone(self)
-	}
-}
-
 fn load_spec(
 	id: &str,
 	para_id: ParaId,
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	Ok(match id {
 		"" => Box::new(service::chain_spec::get_parachain_spec(para_id)),
-		"dev" | "standalone" => Box::new(service::chain_spec::get_standalone_dev_spec()),
+		"dev" | "standalone-dev" => Box::new(service::chain_spec::get_standalone_dev_spec()),
 		"standalone-local" => Box::new(service::chain_spec::get_standalone_local_spec()),
 		path => {
 			let chain_spec = chain_spec::ChainSpec::from_json_file(path.into())?;

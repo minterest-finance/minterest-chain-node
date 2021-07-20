@@ -84,5 +84,8 @@ standalone-runtime = { path = "../runtime/standalone" }
 
 [features]
 default = ["std"]
-std = []
+std = [
+    "polkadot-service/rococo-native",
+    "polkadot-cli/rococo-native",
+]
 runtime-benchmarks = ["standalone-runtime/runtime-benchmarks"]

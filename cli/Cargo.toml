@@ -35,7 +35,11 @@ standalone-runtime = { path = "../runtime/standalone" }
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
 
 [features]
-default = ["wasmtime", "cli"]
+default = [
+    "wasmtime",
+    "cli",
+    "polkadot-cli/rococo-native",
+]
 wasmtime = [ "sc-cli/wasmtime" ]
 cli = [
     "service",

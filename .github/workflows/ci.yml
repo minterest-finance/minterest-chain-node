@@ -24,6 +24,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
+          args: --workspace --all-targets
 
   test:
     name: Test Suite
@@ -44,7 +45,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
             command: test
-            args: --features runtime-benchmarks -p node-minterest-runtime benchmarking
+            args: --features runtime-benchmarks -p standalone-runtime benchmarking
 
   fmt:
     name: Rustfmt
