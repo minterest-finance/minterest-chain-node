@@ -14,21 +14,21 @@ runtime_benchmarks! {
 		Rate::one()
 	)
 
-	set_base_rate {
+	set_pool_base_rate {
 	}: _(
 		RawOrigin::Root,
 		DOT,
 		Rate::one()
 	)
 
-	set_multiplier {
+	set_pool_multiplier {
 	}: _(
 		RawOrigin::Root,
 		DOT,
 		Rate::one()
 	)
 
-	set_kink {
+	set_pool_kink {
 	}: _(
 		RawOrigin::Root,
 		DOT,
