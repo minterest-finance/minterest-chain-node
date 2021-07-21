@@ -416,7 +416,13 @@ impl<T: Config> Pallet<T> {
 				T::MinterestProtocolManager::do_seize(&borrower, pool_id, seize_underlying)?;
 				Ok(())
 			})?;
-		<Self as UserLiquidationAttemptsManager<T::AccountId>>::mutate_attempts(None, &borrower, Operation::Repay);
+		// TODO: need liquidation mode here
+		<Self as UserLiquidationAttemptsManager<T::AccountId>>::mutate_attempts(
+			&borrower,
+			Operation::Repay,
+			None,
+			None,
+		);
 		Ok(())
 	}
 
@@ -457,15 +463,26 @@ impl<T: Config> RiskManagerStorageProvider for Pallet<T> {
 }
 
 impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
+	type LiquidationMode = LiquidationMode;
+
 	/// Gets user liquidation attempts.
 	fn get_user_liquidation_attempts(who: &T::AccountId) -> u8 {
 		Self::user_liquidation_attempts_storage(who)
 	}
 
+	// TODO: Raw implementation, cover with tests.
 	/// Mutates user liquidation attempts depending on user operation.
 	/// If the user makes a deposit to the collateral pool, then attempts are set to zero.
-	/// TODO: implement mutate in case of liquidation
-	fn mutate_attempts(pool_id: Option<CurrencyId>, who: &T::AccountId, operation: Operation) {
+	/// -`who`:
+	/// -`operation`:
+	/// -`pool_id`:
+	/// -`liquidation_mode`:
+	fn mutate_attempts(
+		who: &T::AccountId,
+		operation: Operation,
+		pool_id: Option<CurrencyId>,
+		liquidation_mode: Option<LiquidationMode>,
+	) {
 		// pool_id existence in case of a deposit operation
 		if let Some(pool_id) = pool_id {
 			if operation == Operation::Deposit && T::UserCollateral::is_pool_collateral(&who, pool_id) {
@@ -474,9 +491,14 @@ impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 					Self::user_liquidation_attempts_reset_to_zero(&who);
 				}
 			}
-		// Fixme: After implementation of liquidation fix this case and cover with tests
 		} else if operation == Operation::Repay {
-			Self::user_liquidation_attempts_increase_by_one(&who);
+			if let Some(mode) = liquidation_mode {
+				match mode {
+					LiquidationMode::Partial => Self::user_liquidation_attempts_increase_by_one(&who),
+					LiquidationMode::Complete => Self::user_liquidation_attempts_reset_to_zero(&who),
+					LiquidationMode::ForgivableComplete => Self::user_liquidation_attempts_reset_to_zero(&who),
+				}
+			}
 		}
 	}
 }

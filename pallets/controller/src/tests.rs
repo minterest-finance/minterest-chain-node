@@ -10,7 +10,6 @@ use sp_runtime::{
 	FixedPointNumber,
 };
 use std::collections::BTreeSet;
-pub use test_helper::*;
 
 // Presets for controller testing
 #[cfg(test)]
@@ -611,7 +610,7 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 // Charlie:	300 DOT borrow;		900 ETH supply;		300 BTC collateral.	-- insolvent
 #[test]
 fn get_all_users_with_insolvent_loan_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.init_pool(
 			DOT,               // pool_id
 			dollars(800_u128), // borrowed
@@ -833,7 +832,7 @@ fn is_operation_allowed_should_work() {
 
 #[test]
 fn calculate_collateral_should_work() {
-	ExtBuilderNew::default()
+	ExtBuilder::default()
 		.set_controller_data(
 			DOT,                                     // currency_id
 			0,                                       // last_interest_accrued_block

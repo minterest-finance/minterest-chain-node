@@ -420,12 +420,19 @@ pub trait CurrencyConverter {
 
 /// Provides functionality to manage the number of attempts to partially liquidation a user's loan.
 pub trait UserLiquidationAttemptsManager<AccountId> {
+	type LiquidationMode;
+
 	/// Gets user liquidation attempts.
 	fn get_user_liquidation_attempts(who: &AccountId) -> u8;
 
 	/// Mutates user liquidation attempts depending on user operation.
 	/// If the user makes a deposit to the collateral pool, then attempts are set to zero.
-	fn mutate_attempts(pool_id: Option<CurrencyId>, who: &AccountId, operation: Operation);
+	fn mutate_attempts(
+		who: &AccountId,
+		operation: Operation,
+		pool_id: Option<CurrencyId>,
+		liquidation_mode: Option<Self::LiquidationMode>,
+	);
 }
 
 /// Creates storage records for risk-manager pallet. This is a part of a pool creation flow.

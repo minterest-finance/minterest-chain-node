@@ -140,15 +140,16 @@ impl<T: Config> UserLoanState<T> {
 	///
 	/// Returns the `borrower` loan liquidation mode.
 	pub fn choose_liquidation_mode(&self) -> Result<LiquidationMode, DispatchError> {
+		let (user_total_borrow_usd, user_total_collateral_usd) = (self.total_borrow()?, self.total_collateral()?);
 		ensure!(
-			self.total_borrow()? > self.total_collateral()?,
+			user_total_borrow_usd > user_total_collateral_usd,
 			Error::<T>::SolventUserLoan
 		);
 		let user_liquidation_attempts = Pallet::<T>::get_user_liquidation_attempts(&self.user);
-
-		if self.total_seize()? > self.total_supply()? {
+		let (user_total_seize_usd, user_total_supply_usd) = (self.total_seize()?, self.total_supply()?);
+		if user_total_seize_usd > user_total_supply_usd {
 			Ok(LiquidationMode::ForgivableComplete)
-		} else if self.total_borrow()? <= T::PartialLiquidationMinSum::get()
+		} else if user_total_borrow_usd >= T::PartialLiquidationMinSum::get()
 			&& user_liquidation_attempts < T::PartialLiquidationMaxAttempts::get()
 		{
 			Ok(LiquidationMode::Partial)

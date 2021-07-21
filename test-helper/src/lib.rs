@@ -270,7 +270,7 @@ macro_rules! mock_impl_risk_manager_config {
 	($target:ty, $acc:ident) => {
 		parameter_types! {
 			pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
-			pub const PartialLiquidationMinSum: Balance = 100_000 * DOLLARS;
+			pub const PartialLiquidationMinSum: Balance = 10_000 * DOLLARS;
 			pub const PartialLiquidationMaxAttempts: u8 = 3_u8;
 			pub const MaxLiquidationFee: Rate = Rate::from_inner(500_000_000_000_000_000);
 		}
