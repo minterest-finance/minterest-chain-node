@@ -427,12 +427,12 @@ pub trait UserLiquidationAttemptsManager<AccountId> {
 
 	/// Mutates user liquidation attempts depending on user operation.
 	/// If the user makes a deposit to the collateral pool, then attempts are set to zero.
-	fn mutate_attempts(
+	fn try_mutate_attempts(
 		who: &AccountId,
 		operation: Operation,
 		pool_id: Option<CurrencyId>,
 		liquidation_mode: Option<Self::LiquidationMode>,
-	);
+	) -> DispatchResult;
 }
 
 /// Creates storage records for risk-manager pallet. This is a part of a pool creation flow.

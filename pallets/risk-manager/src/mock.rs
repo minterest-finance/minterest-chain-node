@@ -77,6 +77,13 @@ mock_impl_liquidation_pools_config!(TestRuntime);
 mock_impl_whitelist_module_config!(TestRuntime, ZeroAdmin);
 mock_impl_dex_config!(TestRuntime);
 
+pub struct MockPriceSource;
+impl MockPriceSource {
+	pub fn set_underlying_price(price: Option<Price>) {
+		UNDERLYING_PRICE.with(|v| *v.borrow_mut() = price);
+	}
+}
+
 // -----------------------------------------------------------------------------------------
 // 										PRICE SOURCE
 // -----------------------------------------------------------------------------------------

@@ -28,11 +28,11 @@ fn mutate_attempts_should_work() {
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 1_u8);
 
 			// ETH pool is disabled as collateral. Don't reset liquidation attempts.
-			TestRiskManager::mutate_attempts(&ALICE, Deposit, Some(ETH), None);
+			assert_ok!(TestRiskManager::try_mutate_attempts(&ALICE, Deposit, Some(ETH), None));
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 1_u8);
 
 			// DOT pool is enabled as collateral. Reset liquidation attempts to zero.
-			TestRiskManager::mutate_attempts(&ALICE, Deposit, Some(DOT), None);
+			assert_ok!(TestRiskManager::try_mutate_attempts(&ALICE, Deposit, Some(DOT), None));
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), u8::zero());
 		})
 }
@@ -209,13 +209,26 @@ fn choose_liquidation_mode_forgivable_less_min_sum() {
 		.execute_with(|| {
 			// alice_liquidation_attempts == 0:
 			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
-
+			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 0_u8);
 			assert_eq!(
 				alice_loan_state.choose_liquidation_mode().unwrap(),
 				LiquidationMode::ForgivableComplete
 			);
 
-			// TODO: play with user liquidation attempts
+			assert_ok!(TestRiskManager::try_mutate_attempts(
+				&ALICE,
+				Operation::Repay,
+				None,
+				Some(LiquidationMode::Partial)
+			));
+
+			// alice_liquidation_attempts == 1:
+			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 1_u8);
+			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
+			assert_eq!(
+				alice_loan_state.choose_liquidation_mode().unwrap(),
+				LiquidationMode::ForgivableComplete
+			);
 		});
 }
 
@@ -247,10 +260,26 @@ fn choose_liquidation_mode_forgivable_greater_min_sum() {
 		.merge_duplicates()
 		.build()
 		.execute_with(|| {
-			let alice_solvent_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
-
+			// alice_liquidation_attempts == 0:
+			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
+			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 0_u8);
 			assert_eq!(
-				alice_solvent_loan_state.choose_liquidation_mode().unwrap(),
+				alice_loan_state.choose_liquidation_mode().unwrap(),
+				LiquidationMode::ForgivableComplete
+			);
+
+			assert_ok!(TestRiskManager::try_mutate_attempts(
+				&ALICE,
+				Operation::Repay,
+				None,
+				Some(LiquidationMode::Partial)
+			));
+
+			// alice_liquidation_attempts == 1:
+			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 1_u8);
+			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
+			assert_eq!(
+				alice_loan_state.choose_liquidation_mode().unwrap(),
 				LiquidationMode::ForgivableComplete
 			);
 		});
@@ -261,7 +290,7 @@ fn choose_liquidation_mode_forgivable_greater_min_sum() {
 // Note: 	prices for all assets set equal $1.
 //			partial liquidation min sum = $10_000.
 // alice_total_supply = $1000, alice_total_collateral = $900, alice_total_borrow = $600.
-// alice_total_borrow=$600 < alice_total_collateral=$900 => solvent loan.
+// borrow=$600 < collateral=$900 => solvent loan.
 #[test]
 fn choose_liquidation_mode_solvent_should_work() {
 	ExtBuilder::default()
@@ -281,6 +310,24 @@ fn choose_liquidation_mode_solvent_should_work() {
 		.merge_duplicates()
 		.build()
 		.execute_with(|| {
+			// alice_liquidation_attempts == 0:
+			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 0_u8);
+			let alice_solvent_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
+
+			assert_noop!(
+				alice_solvent_loan_state.choose_liquidation_mode(),
+				Error::<TestRuntime>::SolventUserLoan
+			);
+
+			assert_ok!(TestRiskManager::try_mutate_attempts(
+				&ALICE,
+				Operation::Repay,
+				None,
+				Some(LiquidationMode::Partial)
+			));
+
+			// alice_liquidation_attempts == 1:
+			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 1_u8);
 			let alice_solvent_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
 
 			assert_noop!(
@@ -290,76 +337,76 @@ fn choose_liquidation_mode_solvent_should_work() {
 		});
 }
 
-// Bob   supply: --- DOT; --- ETH; 500 BTC - for liquidity in the BTC pool.
-// Alice supply: 300 DOT; 650 ETH; 50 BTC. - all enabled as collateral
-// Alice borrow: 200 DOT; 400 ETH; 310 BTC.
-// Note: 	prices for all assets set equal $1.
-//			partial liquidation min sum = $10_000.
+// // Bob   supply: --- DOT; --- ETH; 500 BTC - for liquidity in the BTC pool.
+// // Alice supply: 300 DOT; 650 ETH; 50 BTC. - all enabled as collateral
+// // Alice borrow: 200 DOT; 400 ETH; 310 BTC.
+// // Note: 	prices for all assets set equal $1.
+// //			partial liquidation min sum = $10_000.
+// //
+// // alice_total_supply = $1000, alice_total_collateral = $900, alice_total_borrow = $910.
+// // borrow=$910 > collateral=$900 && borrow=$910 < min_sum=$10_000 && att=0 => partial.
+// #[test]
+// fn choose_liquidation_mode_partial_should_work() {
+// 	ExtBuilder::default()
+// 		.set_liquidation_fees(vec![
+// 			(DOT, Rate::saturating_from_rational(5, 100)),
+// 			(ETH, Rate::saturating_from_rational(5, 100)),
+// 			(BTC, Rate::saturating_from_rational(5, 100)),
+// 		])
+// 		.deposit_underlying(BOB, BTC, dollars(500))
+// 		.deposit_underlying(ALICE, DOT, dollars(300))
+// 		.deposit_underlying(ALICE, ETH, dollars(650))
+// 		.deposit_underlying(ALICE, BTC, dollars(50))
+// 		.enable_as_collateral(ALICE, DOT)
+// 		.enable_as_collateral(ALICE, ETH)
+// 		.enable_as_collateral(ALICE, BTC)
+// 		.borrow_underlying(ALICE, DOT, dollars(200))
+// 		.borrow_underlying(ALICE, ETH, dollars(400))
+// 		.borrow_underlying(ALICE, BTC, dollars(310))
+// 		.merge_duplicates()
+// 		.build()
+// 		.execute_with(|| {
+// 			let alice_solvent_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
 //
-// alice_total_supply = $1000, alice_total_collateral = $900, alice_total_borrow = $910.
-// borrow=$910 > collateral=$900 && borrow=$910 < min_sum=$10_000 && att=0 => partial.
-#[test]
-fn choose_liquidation_mode_partial_should_work() {
-	ExtBuilder::default()
-		.set_liquidation_fees(vec![
-			(DOT, Rate::saturating_from_rational(5, 100)),
-			(ETH, Rate::saturating_from_rational(5, 100)),
-			(BTC, Rate::saturating_from_rational(5, 100)),
-		])
-		.deposit_underlying(BOB, BTC, dollars(500))
-		.deposit_underlying(ALICE, DOT, dollars(300))
-		.deposit_underlying(ALICE, ETH, dollars(650))
-		.deposit_underlying(ALICE, BTC, dollars(50))
-		.enable_as_collateral(ALICE, DOT)
-		.enable_as_collateral(ALICE, ETH)
-		.enable_as_collateral(ALICE, BTC)
-		.borrow_underlying(ALICE, DOT, dollars(200))
-		.borrow_underlying(ALICE, ETH, dollars(400))
-		.borrow_underlying(ALICE, BTC, dollars(310))
-		.merge_duplicates()
-		.build()
-		.execute_with(|| {
-			let alice_solvent_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
-
-			assert_eq!(
-				alice_solvent_loan_state.choose_liquidation_mode().unwrap(),
-				LiquidationMode::Partial
-			);
-		});
-}
-
-// Bob   supply: --- DOT; --- ETH; 500 BTC - for liquidity in the BTC pool.
-// Alice supply: 300 DOT; 650 ETH; 50 BTC. - all enabled as collateral
-// Alice borrow: 200 DOT; 400 ETH; 350 BTC.
-// Note: 	prices for all assets set equal $1.
-//			partial liquidation min sum = $10_000.
-// borrow=$910 > collateral=$900 && borrow=$910 < min_sum=$10_000 && att=0 => partial.
-#[test]
-fn choose_liquidation_mode_complete_should_work() {
-	ExtBuilder::default()
-		.set_liquidation_fees(vec![
-			(DOT, Rate::saturating_from_rational(5, 100)),
-			(ETH, Rate::saturating_from_rational(5, 100)),
-			(BTC, Rate::saturating_from_rational(5, 100)),
-		])
-		.deposit_underlying(BOB, BTC, dollars(500))
-		.deposit_underlying(ALICE, DOT, dollars(300))
-		.deposit_underlying(ALICE, ETH, dollars(650))
-		.deposit_underlying(ALICE, BTC, dollars(50))
-		.enable_as_collateral(ALICE, DOT)
-		.enable_as_collateral(ALICE, ETH)
-		.enable_as_collateral(ALICE, BTC)
-		.borrow_underlying(ALICE, DOT, dollars(200))
-		.borrow_underlying(ALICE, ETH, dollars(400))
-		.borrow_underlying(ALICE, BTC, dollars(350))
-		.merge_duplicates()
-		.build()
-		.execute_with(|| {
-			let alice_solvent_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
-
-			assert_eq!(
-				alice_solvent_loan_state.choose_liquidation_mode().unwrap(),
-				LiquidationMode::Complete
-			);
-		});
-}
+// 			assert_eq!(
+// 				alice_solvent_loan_state.choose_liquidation_mode().unwrap(),
+// 				LiquidationMode::Partial
+// 			);
+// 		});
+// }
+//
+// // Bob   supply: --- DOT; --- ETH; 500 BTC - for liquidity in the BTC pool.
+// // Alice supply: 300 DOT; 650 ETH; 50 BTC. - all enabled as collateral
+// // Alice borrow: 200 DOT; 400 ETH; 350 BTC.
+// // Note: 	prices for all assets set equal $1.
+// //			partial liquidation min sum = $10_000.
+// // borrow=$910 > collateral=$900 && borrow=$910 < min_sum=$10_000 && att=0 => partial.
+// #[test]
+// fn choose_liquidation_mode_complete_should_work() {
+// 	ExtBuilder::default()
+// 		.set_liquidation_fees(vec![
+// 			(DOT, Rate::saturating_from_rational(5, 100)),
+// 			(ETH, Rate::saturating_from_rational(5, 100)),
+// 			(BTC, Rate::saturating_from_rational(5, 100)),
+// 		])
+// 		.deposit_underlying(BOB, BTC, dollars(500))
+// 		.deposit_underlying(ALICE, DOT, dollars(300))
+// 		.deposit_underlying(ALICE, ETH, dollars(650))
+// 		.deposit_underlying(ALICE, BTC, dollars(50))
+// 		.enable_as_collateral(ALICE, DOT)
+// 		.enable_as_collateral(ALICE, ETH)
+// 		.enable_as_collateral(ALICE, BTC)
+// 		.borrow_underlying(ALICE, DOT, dollars(200))
+// 		.borrow_underlying(ALICE, ETH, dollars(400))
+// 		.borrow_underlying(ALICE, BTC, dollars(350))
+// 		.merge_duplicates()
+// 		.build()
+// 		.execute_with(|| {
+// 			let alice_solvent_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
+//
+// 			assert_eq!(
+// 				alice_solvent_loan_state.choose_liquidation_mode().unwrap(),
+// 				LiquidationMode::Complete
+// 			);
+// 		});
+// }

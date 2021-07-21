@@ -130,6 +130,8 @@ pub mod module {
 		NumOverflow,
 		/// User's loan is solvent.
 		SolventUserLoan,
+		/// An error occurred while changing the number of user liquidation attempts.
+		ErrorChangingLiquidationAttempts,
 	}
 
 	#[pallet::event]
@@ -277,6 +279,7 @@ pub mod module {
 		/// liquidation pools instead of the borrower, and a vector with user's supplies to be
 		/// withdrawn from the borrower and sent to the liquidation pools. Balances are calculated
 		/// in underlying assets.
+		/// TODO: try to use the struct `UserLoanState` in the last parameter.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn liquidate(
@@ -417,12 +420,12 @@ impl<T: Config> Pallet<T> {
 				Ok(())
 			})?;
 		// TODO: need liquidation mode here
-		<Self as UserLiquidationAttemptsManager<T::AccountId>>::mutate_attempts(
+		<Self as UserLiquidationAttemptsManager<T::AccountId>>::try_mutate_attempts(
 			&borrower,
 			Operation::Repay,
 			None,
 			None,
-		);
+		)?;
 		Ok(())
 	}
 
@@ -470,35 +473,43 @@ impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 		Self::user_liquidation_attempts_storage(who)
 	}
 
-	// TODO: Raw implementation, cover with tests.
+	// TODO: Raw implementation, cover with tests. No need to review this function.
 	/// Mutates user liquidation attempts depending on user operation.
 	/// If the user makes a deposit to the collateral pool, then attempts are set to zero.
 	/// -`who`:
 	/// -`operation`:
 	/// -`pool_id`:
 	/// -`liquidation_mode`:
-	fn mutate_attempts(
+	fn try_mutate_attempts(
 		who: &T::AccountId,
 		operation: Operation,
 		pool_id: Option<CurrencyId>,
 		liquidation_mode: Option<LiquidationMode>,
-	) {
-		// pool_id existence in case of a deposit operation
-		if let Some(pool_id) = pool_id {
-			if operation == Operation::Deposit && T::UserCollateral::is_pool_collateral(&who, pool_id) {
-				let user_liquidation_attempts = Self::get_user_liquidation_attempts(&who);
-				if !user_liquidation_attempts.is_zero() {
-					Self::user_liquidation_attempts_reset_to_zero(&who);
+	) -> DispatchResult {
+		match operation {
+			Operation::Deposit => pool_id.map_or(Err(Error::<T>::ErrorChangingLiquidationAttempts), {
+				|pool_id| {
+					if T::UserCollateral::is_pool_collateral(&who, pool_id) {
+						let user_liquidation_attempts = Self::get_user_liquidation_attempts(&who);
+						if !user_liquidation_attempts.is_zero() {
+							Self::user_liquidation_attempts_reset_to_zero(&who);
+						}
+					}
+					Ok(())
 				}
-			}
-		} else if operation == Operation::Repay {
-			if let Some(mode) = liquidation_mode {
-				match mode {
-					LiquidationMode::Partial => Self::user_liquidation_attempts_increase_by_one(&who),
-					LiquidationMode::Complete => Self::user_liquidation_attempts_reset_to_zero(&who),
-					LiquidationMode::ForgivableComplete => Self::user_liquidation_attempts_reset_to_zero(&who),
+			}),
+			Operation::Repay => liquidation_mode.map_or(Err(Error::<T>::ErrorChangingLiquidationAttempts), {
+				|mode| {
+					match mode {
+						LiquidationMode::Partial => Self::user_liquidation_attempts_increase_by_one(&who),
+						LiquidationMode::Complete => Self::user_liquidation_attempts_reset_to_zero(&who),
+						LiquidationMode::ForgivableComplete => Self::user_liquidation_attempts_reset_to_zero(&who),
+					}
+					Ok(())
 				}
-			}
-		}
+			}),
+			_ => Err(Error::<T>::ErrorChangingLiquidationAttempts),
+		}?;
+		Ok(())
 	}
 }
