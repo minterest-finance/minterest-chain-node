@@ -387,7 +387,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Calls internal functions from minterest-protocol pallet `do_repay` and `do_seize`, these
 	/// functions within themselves call `accrue_interest_rate`. Also calls
-	/// `mutate_attemtps` for mutate user liquidation attempts.
+	/// `mutate_attempts` for mutate user liquidation attempts.
 	///
 	/// - `borrower`: AccountId of the borrower whose loan is being liquidated.
 	/// - `liquidation_amounts`: contains a vectors with user's borrows to be paid from the
@@ -416,7 +416,7 @@ impl<T: Config> Pallet<T> {
 				T::MinterestProtocolManager::do_seize(&borrower, pool_id, seize_underlying)?;
 				Ok(())
 			})?;
-		<Self as UserLiquidationAttemptsManager<T::AccountId>>::mutate_attemtps(None, &borrower, Operation::Repay);
+		<Self as UserLiquidationAttemptsManager<T::AccountId>>::mutate_attempts(None, &borrower, Operation::Repay);
 		Ok(())
 	}
 
