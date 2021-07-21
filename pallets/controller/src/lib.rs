@@ -33,11 +33,15 @@ use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, FixedU128, RuntimeDebug,
 };
-use sp_std::{cmp::Ordering, convert::TryInto, prelude::Vec, result};
+use sp_std::{cmp::Ordering, collections::btree_set::BTreeSet, convert::TryInto, prelude::Vec, result};
 pub use weights::WeightInfo;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod mock;
+
 pub mod weights;
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -458,334 +462,6 @@ pub mod module {
 	}
 }
 
-// RPC methods
-impl<T: Config> Pallet<T> {
-	/// Gets exchange, borrow interest rate and supply interest rate. The rates is calculated
-	/// for the current block.
-	pub fn get_pool_exchange_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate, Rate)> {
-		if !T::LiquidityPoolsManager::pool_exists(&pool_id) {
-			return None;
-		}
-		Self::accrue_interest_rate(pool_id).ok()?;
-		let pool_interest_factor: Rate = Self::controller_params(pool_id).protocol_interest_factor;
-		let utilization_rate: Rate = Self::get_utilization_rate(pool_id)?;
-		let exchange_rate: Rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id).ok()?;
-		let borrow_rate: Rate =
-			T::MinterestModelManager::calculate_borrow_interest_rate(pool_id, utilization_rate).ok()?;
-		// supply_interest_rate = utilization_rate * borrow_rate * (1 - protocol_interest_factor)
-		let supply_rate: Rate = Rate::one()
-			.checked_sub(&pool_interest_factor)
-			.and_then(|v| v.checked_mul(&borrow_rate))
-			.and_then(|v| v.checked_mul(&utilization_rate))
-			.ok_or(Error::<T>::NumOverflow)
-			.ok()?;
-
-		Some((exchange_rate, borrow_rate, supply_rate))
-	}
-
-	/// Gets current utilization rate of the pool. The rate is calculated for the current block.
-	pub fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate> {
-		Self::accrue_interest_rate(pool_id).ok()?;
-		let pool_supply_underlying = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
-		let pool_data = T::LiquidityPoolsManager::get_pool_data(pool_id);
-		Self::calculate_utilization_rate(pool_supply_underlying, pool_data.borrowed, pool_data.protocol_interest).ok()
-	}
-
-	/// Calculates user total supply and user total borrow balance in usd based on
-	/// pool_borrow, pool_protocol_interest, borrow_index values calculated for current block.
-	pub fn get_user_total_supply_and_borrow_balance_in_usd(
-		who: &T::AccountId,
-	) -> result::Result<(Balance, Balance), DispatchError> {
-		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.iter()
-			.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
-			.try_fold(
-				(Balance::zero(), Balance::zero()),
-				|(mut acc_user_total_supply_in_usd, mut acc_user_total_borrow_in_usd),
-				 &pool_id|
-				 -> result::Result<(Balance, Balance), DispatchError> {
-					let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::PoolNotFound)?;
-
-					// Check if user has / had borrow wrapped tokens in the pool
-					let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id, &who);
-					let has_user_supply_wrap_balance = !user_supply_wrap.is_zero();
-					let has_user_borrow_underlying_balance =
-						!T::LiquidityPoolsManager::get_user_borrow_balance(&who, pool_id).is_zero();
-					// Skip this pool if there is nothing to calculate
-					if !has_user_supply_wrap_balance && !has_user_borrow_underlying_balance {
-						return Ok((acc_user_total_supply_in_usd, acc_user_total_borrow_in_usd));
-					}
-					let oracle_price =
-						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-
-					Self::accrue_interest_rate(pool_id).ok();
-
-					if has_user_supply_wrap_balance {
-						let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id)?;
-						let user_supply_in_usd =
-							T::LiquidityPoolsManager::wrapped_to_usd(user_supply_wrap, exchange_rate, oracle_price)?;
-						acc_user_total_supply_in_usd += user_supply_in_usd
-					}
-					if has_user_borrow_underlying_balance {
-						let user_borrow_underlying = Self::borrow_balance_stored(&who, pool_id)?;
-						let user_borrow_in_usd =
-							T::LiquidityPoolsManager::underlying_to_usd(user_borrow_underlying, oracle_price)?;
-						acc_user_total_borrow_in_usd += user_borrow_in_usd
-					}
-					Ok((acc_user_total_supply_in_usd, acc_user_total_borrow_in_usd))
-				},
-			)
-	}
-
-	/// Calculates pool_total_supply, pool_total_borrow including interest, tvl (Total Value
-	/// Locked), pool_protocol_interest. All values are converted to USD.
-	/// pool_total_supply is calculated as: sum(pool_supply_usd)
-	/// where:
-	///     `pool_supply_usd` - current available liquidity in the n pool;
-	/// pool_total_borrow is calculated as: sum(fresh_pool_borrow_usd)
-	/// where:
-	///     `fresh_pool_borrow_usd` - freshest value of pool borrow in the n pool;
-	/// tvl is calculated as: sum(pool_supply_wrap * exchange_rate),
-	/// where:
-	///     `pool_supply_wrap` - total number of wrapped tokens in the n pool;
-	///     `exchange_rate` - exchange rate in the n pool;
-	/// pool_total_interest is calculated as: sum(fresh_pool_protocol_interest_usd)
-	/// where:
-	///     `fresh_pool_protocol_interest_usd` - freshest value of protocol interest in the n pool;
-	pub fn get_protocol_total_values() -> result::Result<(Balance, Balance, Balance, Balance), DispatchError> {
-		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.iter()
-			.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
-			.try_fold(
-				(Balance::zero(), Balance::zero(), Balance::zero(), Balance::zero()),
-				|(pool_total_supply_usd, pool_total_borrow_usd, tvl, pool_total_interest_usd),
-				 &pool_id|
-				 -> result::Result<(Balance, Balance, Balance, Balance), DispatchError> {
-					Self::accrue_interest_rate(pool_id).ok();
-					let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
-					let pool_supply_wrap = T::MultiCurrency::total_issuance(wrapped_id);
-					let pool_supply_underlying = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
-					let pool_data = T::LiquidityPoolsManager::get_pool_data(pool_id);
-					let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id)?;
-					let oracle_price =
-						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-
-					let pool_supply_in_usd =
-						T::LiquidityPoolsManager::underlying_to_usd(pool_supply_underlying, oracle_price)?;
-					let pool_tvl_in_usd =
-						T::LiquidityPoolsManager::wrapped_to_usd(pool_supply_wrap, exchange_rate, oracle_price)?;
-					let pool_borrow_in_usd =
-						T::LiquidityPoolsManager::underlying_to_usd(pool_data.borrowed, oracle_price)?;
-					let pool_protocol_interest_in_usd =
-						T::LiquidityPoolsManager::underlying_to_usd(pool_data.protocol_interest, oracle_price)?;
-
-					Ok((
-						pool_total_supply_usd
-							.checked_add(pool_supply_in_usd)
-							.ok_or(Error::<T>::BalanceOverflow)?,
-						pool_total_borrow_usd
-							.checked_add(pool_borrow_in_usd)
-							.ok_or(Error::<T>::BalanceOverflow)?,
-						tvl.checked_add(pool_tvl_in_usd).ok_or(Error::<T>::BalanceOverflow)?,
-						pool_total_interest_usd
-							.checked_add(pool_protocol_interest_in_usd)
-							.ok_or(Error::<T>::BalanceOverflow)?,
-					))
-				},
-			)
-	}
-
-	/// Calculate user total collateral in usd based on collateral factor, fresh exchange rate and
-	/// latest oracle price. Collateral is calculated for the current block.
-	///
-	/// - `who`: the AccountId whose collateral should be calculated.
-	pub fn get_user_total_collateral(who: T::AccountId) -> BalanceResult {
-		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.iter()
-			.filter(|&pool_id| T::LiquidityPoolsManager::is_pool_collateral(&who, *pool_id))
-			.try_fold(Balance::zero(), |acc, &pool_id| -> BalanceResult {
-				let user_supply_underlying = Self::get_user_supply_underlying_balance(&who, pool_id)?;
-				let pool_collateral_factor = Self::controller_params(pool_id).collateral_factor;
-				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-				let user_supply_usd =
-					T::LiquidityPoolsManager::underlying_to_usd(user_supply_underlying, oracle_price)?;
-				let user_collateral_in_usd = Rate::from_inner(user_supply_usd)
-					.checked_mul(&pool_collateral_factor)
-					.map(|x| x.into_inner())
-					.ok_or(Error::<T>::NumOverflow)?;
-				Ok(acc + user_collateral_in_usd)
-			})
-	}
-
-	/// Calculate actual borrow balance for user per asset based on fresh latest indexes.
-	///
-	/// - `who`: the AccountId whose balance should be calculated.
-	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
-	pub fn get_user_borrow_underlying_balance(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
-		ensure!(
-			T::LiquidityPoolsManager::pool_exists(&underlying_asset_id),
-			Error::<T>::PoolNotFound
-		);
-		ensure!(
-			underlying_asset_id.is_supported_underlying_asset(),
-			Error::<T>::NotValidUnderlyingAssetId
-		);
-		Self::accrue_interest_rate(underlying_asset_id)?;
-		Self::borrow_balance_stored(&who, underlying_asset_id)
-	}
-
-	/// Calculates user balance converted to underlying asset using exchange rate calculated for the
-	/// current block.
-	///
-	/// - `who`: the AccountId whose balance should be calculated.
-	/// - `pool_id` - ID of the pool to calculate balance for.
-	pub fn get_user_supply_underlying_balance(who: &T::AccountId, pool_id: CurrencyId) -> BalanceResult {
-		ensure!(
-			T::LiquidityPoolsManager::pool_exists(&pool_id),
-			Error::<T>::PoolNotFound
-		);
-		let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
-		let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
-		if user_balance_wrapped_tokens.is_zero() {
-			return Ok(Balance::zero());
-		}
-		Self::accrue_interest_rate(pool_id)?;
-		let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id)?;
-		let user_supply_underlying =
-			T::LiquidityPoolsManager::wrapped_to_underlying(user_balance_wrapped_tokens, exchange_rate)?;
-		Ok(user_supply_underlying)
-	}
-
-	/// Calculate total user's supply APY, borrow APY and Net APY.
-	///
-	/// - `who`: the AccountId whose APY should be calculated.
-	pub fn get_user_total_supply_borrow_and_net_apy(
-		who: T::AccountId,
-	) -> Result<(Interest, Interest, Interest), DispatchError> {
-		// Annual Percentage Yield (APY) calculation:
-		// user_supply_interest = user_supply_usd * supply_rate;
-		// user_borrow_interest = user_borrow_usd * borrow_rate;
-		// user_mnt_supply_interest = user_supply_usd * mnt_supply_rate;
-		// user_mnt_borrow_interest = user_borrow_usd * mnt_borrow_rate;
-
-		// user_total_net_interest = Σ(user_supply_interest) - Σ(user_borrow_interest) +
-		// + Σ(user_mnt_supply_interest) + Σ(user_mnt_borrow_interest);
-
-		// user_total_supply_APY = (Σ(user_supply_interest) / user_total_supply_usd) * BlocksPerYear
-		// user_total_borrow_APY = (Σ(user_borrow_interest) / user_total_borrow_usd) * BlocksPerYear
-
-		// user_total_net_APY:
-		// 	if user_total_net_interest > 0:
-		// 		(user_total_net_interest / user_total_supply_usd) * BlocksPerYear
-		// 	elif user_total_net_interest < 0:
-		// 		(user_total_net_interest / user_total_borrow_usd) * BlocksPerYear
-
-		let (
-			user_total_supply_interest,
-			user_total_borrow_interest,
-			user_total_mnt_supply_interest,
-			user_total_mnt_borrow_interest,
-			user_total_supply_usd,
-			user_total_borrow_usd,
-		) = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.into_iter()
-			.filter(|pool_id| T::LiquidityPoolsManager::pool_exists(pool_id))
-			.try_fold(
-				(
-					Interest::zero(),
-					Interest::zero(),
-					Interest::zero(),
-					Interest::zero(),
-					Balance::zero(),
-					Balance::zero(),
-				),
-				|(
-					acc_user_supply_interest,
-					acc_user_borrow_interest,
-					acc_user_mnt_supply_interest,
-					acc_user_mnt_borrow_interest,
-					user_total_supply_usd,
-					user_total_borrow_usd,
-				),
-				 pool_id|
-				 -> result::Result<(Interest, Interest, Interest, Interest, Balance, Balance), DispatchError> {
-					let user_supply_underlying = Self::get_user_supply_underlying_balance(&who, pool_id)?;
-					let user_borrow_underlying = Self::get_user_borrow_underlying_balance(&who, pool_id)?;
-					let oracle_price =
-						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-					let user_supply_in_usd =
-						T::LiquidityPoolsManager::underlying_to_usd(user_supply_underlying, oracle_price)?;
-					let user_borrow_in_usd =
-						T::LiquidityPoolsManager::underlying_to_usd(user_borrow_underlying, oracle_price)?;
-
-					let (_, borrow_rate, supply_rate) =
-						Self::get_pool_exchange_borrow_and_supply_rates(pool_id).ok_or(Error::<T>::NumOverflow)?;
-
-					let (mnt_borrow_rate, mnt_supply_rate) =
-						T::MntManager::get_pool_mnt_borrow_and_supply_rates(pool_id)?;
-
-					let calculate_interest = |amount: Balance, rate: Balance| {
-						Interest::from_inner(amount as i128)
-							.checked_mul(&Interest::from_inner(rate as i128))
-							.ok_or(Error::<T>::NumOverflow)
-					};
-
-					let user_supply_interest = calculate_interest(user_supply_in_usd, supply_rate.into_inner())?;
-					let user_borrow_interest = calculate_interest(user_borrow_in_usd, borrow_rate.into_inner())?;
-					let user_mnt_supply_interest =
-						calculate_interest(user_supply_in_usd, mnt_supply_rate.into_inner())?;
-					let user_mnt_borrow_interest =
-						calculate_interest(user_borrow_in_usd, mnt_borrow_rate.into_inner())?;
-
-					Ok((
-						acc_user_supply_interest
-							.checked_add(&user_supply_interest)
-							.ok_or(Error::<T>::BalanceOverflow)?,
-						acc_user_borrow_interest
-							.checked_add(&user_borrow_interest)
-							.ok_or(Error::<T>::BalanceOverflow)?,
-						acc_user_mnt_supply_interest
-							.checked_add(&user_mnt_supply_interest)
-							.ok_or(Error::<T>::BalanceOverflow)?,
-						acc_user_mnt_borrow_interest
-							.checked_add(&user_mnt_borrow_interest)
-							.ok_or(Error::<T>::BalanceOverflow)?,
-						user_total_supply_usd
-							.checked_add(user_supply_in_usd)
-							.ok_or(Error::<T>::BalanceOverflow)?,
-						user_total_borrow_usd
-							.checked_add(user_borrow_in_usd)
-							.ok_or(Error::<T>::BalanceOverflow)?,
-					))
-				},
-			)?;
-
-		let user_net_interest = user_total_supply_interest
-			.checked_sub(&user_total_borrow_interest)
-			.and_then(|v| v.checked_add(&user_total_mnt_supply_interest))
-			.and_then(|v| v.checked_add(&user_total_mnt_borrow_interest))
-			.ok_or(Error::<T>::BalanceOverflow)?;
-
-		// Calculate APY given the amount of BlocksPerYear.
-		let calculate_apy = |interest: Interest, amount: Balance| {
-			interest
-				.checked_div(&Interest::from_inner(amount as i128))
-				.and_then(|v| v.checked_mul(&Interest::saturating_from_integer(BLOCKS_PER_YEAR)))
-				.ok_or(Error::<T>::NumOverflow)
-		};
-
-		let user_total_supply_apy = calculate_apy(user_total_supply_interest, user_total_supply_usd)?;
-		let user_total_borrow_apy = calculate_apy(user_total_borrow_interest, user_total_borrow_usd)?;
-
-		let user_net_apy = match user_net_interest.is_positive() {
-			true => calculate_apy(user_net_interest, user_total_supply_usd)?,
-			false => calculate_apy(user_net_interest, user_total_borrow_usd)?,
-		};
-
-		Ok((user_total_supply_apy, user_total_borrow_apy, user_net_apy))
-	}
-}
-
 // Private methods
 impl<T: Config> Pallet<T> {
 	/// Checks if borrow cap is reached.
@@ -848,7 +524,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// returns `utilization_rate = pool_borrow_underlying /
 	/// (pool_supply_underlying_balance + pool_borrow_underlying - pool_protocol_interest)`
-	pub fn calculate_utilization_rate(
+	fn calculate_utilization_rate(
 		pool_supply_underlying_balance: Balance,
 		pool_borrow_underlying: Balance,
 		pool_protocol_interest: Balance,
@@ -877,7 +553,7 @@ impl<T: Config> Pallet<T> {
 	/// - `accrual_block_number_previous`: Number of the last block with accruals.
 	///
 	/// returns `current_block_number - accrual_block_number_previous`
-	pub fn calculate_block_delta(
+	fn calculate_block_delta(
 		current_block_number: T::BlockNumber,
 		accrual_block_number_previous: T::BlockNumber,
 	) -> result::Result<T::BlockNumber, DispatchError> {
@@ -894,7 +570,7 @@ impl<T: Config> Pallet<T> {
 	/// - `block_delta`: The number of blocks elapsed since the last accrual.
 	///
 	/// returns `interest_factor = current_borrow_interest_rate * block_delta`.
-	pub fn calculate_interest_factor(current_borrow_interest_rate: Rate, block_delta: T::BlockNumber) -> RateResult {
+	fn calculate_interest_factor(current_borrow_interest_rate: Rate, block_delta: T::BlockNumber) -> RateResult {
 		let block_delta_as_usize = TryInto::<usize>::try_into(block_delta)
 			.ok()
 			.expect("blockchain will not exceed 2^32 blocks; qed");
@@ -1203,5 +879,361 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	/// Return minimum protocol interest needed to transfer it to liquidation pool
 	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance {
 		Self::controller_params(pool_id).protocol_interest_threshold
+	}
+
+	/// TODO: Raw implementation. Cover with unit-tests.
+	/// Calculates and gets all insolvent loans of users in the protocol. Calls a function
+	/// internally `accrue_interest_rate`. To determine that the loan is insolvent calls
+	/// the function `get_hypothetical_account_liquidity`, if the shortfall is greater than zero,
+	/// then such loan is insolvent.
+	///
+	/// Returns: returns a unique collection of users with insolvent loan (as a btree set).
+	fn get_all_users_with_insolvent_loan() -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.into_iter()
+			.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
+			.try_fold(
+				BTreeSet::new(),
+				|protocol_users_with_shortfall, pool_id| -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
+					let pool_users = T::LiquidityPoolsManager::get_pool_members_with_loan(pool_id)?;
+					Self::accrue_interest_rate(pool_id)?;
+					let pool_users_with_shortfall = pool_users
+						.into_iter()
+						.filter(|user| {
+							Self::get_hypothetical_account_liquidity(&user, pool_id, Balance::zero(), Balance::zero())
+								.map_or(false, |(_, shortfall)| !shortfall.is_zero())
+						})
+						.collect::<BTreeSet<T::AccountId>>();
+					protocol_users_with_shortfall.union(&pool_users_with_shortfall);
+					Ok(protocol_users_with_shortfall)
+				},
+			)
+	}
+
+	// RPC methods
+
+	/// Gets exchange, borrow interest rate and supply interest rate. The rates is calculated
+	/// for the current block.
+	fn get_pool_exchange_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate, Rate)> {
+		if !T::LiquidityPoolsManager::pool_exists(&pool_id) {
+			return None;
+		}
+		Self::accrue_interest_rate(pool_id).ok()?;
+		let pool_interest_factor: Rate = Self::controller_params(pool_id).protocol_interest_factor;
+		let utilization_rate: Rate = Self::get_utilization_rate(pool_id)?;
+		let exchange_rate: Rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id).ok()?;
+		let borrow_rate: Rate =
+			T::MinterestModelManager::calculate_borrow_interest_rate(pool_id, utilization_rate).ok()?;
+		// supply_interest_rate = utilization_rate * borrow_rate * (1 - protocol_interest_factor)
+		let supply_rate: Rate = Rate::one()
+			.checked_sub(&pool_interest_factor)
+			.and_then(|v| v.checked_mul(&borrow_rate))
+			.and_then(|v| v.checked_mul(&utilization_rate))
+			.ok_or(Error::<T>::NumOverflow)
+			.ok()?;
+
+		Some((exchange_rate, borrow_rate, supply_rate))
+	}
+
+	/// Gets current utilization rate of the pool. The rate is calculated for the current block.
+	fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate> {
+		Self::accrue_interest_rate(pool_id).ok()?;
+		let pool_supply_underlying = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
+		let pool_data = T::LiquidityPoolsManager::get_pool_data(pool_id);
+		Self::calculate_utilization_rate(pool_supply_underlying, pool_data.borrowed, pool_data.protocol_interest).ok()
+	}
+
+	/// Calculates user total supply and user total borrow balance in usd based on
+	/// pool_borrow, pool_protocol_interest, borrow_index values calculated for current block.
+	fn get_user_total_supply_and_borrow_balance_in_usd(
+		who: &T::AccountId,
+	) -> result::Result<(Balance, Balance), DispatchError> {
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.iter()
+			.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
+			.try_fold(
+				(Balance::zero(), Balance::zero()),
+				|(mut acc_user_total_supply_in_usd, mut acc_user_total_borrow_in_usd),
+				 &pool_id|
+				 -> result::Result<(Balance, Balance), DispatchError> {
+					let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::PoolNotFound)?;
+
+					// Check if user has / had borrow wrapped tokens in the pool
+					let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id, &who);
+					let has_user_supply_wrap_balance = !user_supply_wrap.is_zero();
+					let has_user_borrow_underlying_balance =
+						!T::LiquidityPoolsManager::get_user_borrow_balance(&who, pool_id).is_zero();
+					// Skip this pool if there is nothing to calculate
+					if !has_user_supply_wrap_balance && !has_user_borrow_underlying_balance {
+						return Ok((acc_user_total_supply_in_usd, acc_user_total_borrow_in_usd));
+					}
+					let oracle_price =
+						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+
+					Self::accrue_interest_rate(pool_id).ok();
+
+					if has_user_supply_wrap_balance {
+						let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id)?;
+						let user_supply_in_usd =
+							T::LiquidityPoolsManager::wrapped_to_usd(user_supply_wrap, exchange_rate, oracle_price)?;
+						acc_user_total_supply_in_usd += user_supply_in_usd
+					}
+					if has_user_borrow_underlying_balance {
+						let user_borrow_underlying = Self::borrow_balance_stored(&who, pool_id)?;
+						let user_borrow_in_usd =
+							T::LiquidityPoolsManager::underlying_to_usd(user_borrow_underlying, oracle_price)?;
+						acc_user_total_borrow_in_usd += user_borrow_in_usd
+					}
+					Ok((acc_user_total_supply_in_usd, acc_user_total_borrow_in_usd))
+				},
+			)
+	}
+
+	/// Calculates pool_total_supply, pool_total_borrow including interest, tvl (Total Value
+	/// Locked), pool_protocol_interest. All values are converted to USD.
+	/// pool_total_supply is calculated as: sum(pool_supply_usd)
+	/// where:
+	///     `pool_supply_usd` - current available liquidity in the n pool;
+	/// pool_total_borrow is calculated as: sum(fresh_pool_borrow_usd)
+	/// where:
+	///     `fresh_pool_borrow_usd` - freshest value of pool borrow in the n pool;
+	/// tvl is calculated as: sum(pool_supply_wrap * exchange_rate),
+	/// where:
+	///     `pool_supply_wrap` - total number of wrapped tokens in the n pool;
+	///     `exchange_rate` - exchange rate in the n pool;
+	/// pool_total_interest is calculated as: sum(fresh_pool_protocol_interest_usd)
+	/// where:
+	///     `fresh_pool_protocol_interest_usd` - freshest value of protocol interest in the n pool;
+	fn get_protocol_total_values() -> result::Result<(Balance, Balance, Balance, Balance), DispatchError> {
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.iter()
+			.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
+			.try_fold(
+				(Balance::zero(), Balance::zero(), Balance::zero(), Balance::zero()),
+				|(pool_total_supply_usd, pool_total_borrow_usd, tvl, pool_total_interest_usd),
+				 &pool_id|
+				 -> result::Result<(Balance, Balance, Balance, Balance), DispatchError> {
+					Self::accrue_interest_rate(pool_id).ok();
+					let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+					let pool_supply_wrap = T::MultiCurrency::total_issuance(wrapped_id);
+					let pool_supply_underlying = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
+					let pool_data = T::LiquidityPoolsManager::get_pool_data(pool_id);
+					let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id)?;
+					let oracle_price =
+						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+
+					let pool_supply_in_usd =
+						T::LiquidityPoolsManager::underlying_to_usd(pool_supply_underlying, oracle_price)?;
+					let pool_tvl_in_usd =
+						T::LiquidityPoolsManager::wrapped_to_usd(pool_supply_wrap, exchange_rate, oracle_price)?;
+					let pool_borrow_in_usd =
+						T::LiquidityPoolsManager::underlying_to_usd(pool_data.borrowed, oracle_price)?;
+					let pool_protocol_interest_in_usd =
+						T::LiquidityPoolsManager::underlying_to_usd(pool_data.protocol_interest, oracle_price)?;
+
+					Ok((
+						pool_total_supply_usd
+							.checked_add(pool_supply_in_usd)
+							.ok_or(Error::<T>::BalanceOverflow)?,
+						pool_total_borrow_usd
+							.checked_add(pool_borrow_in_usd)
+							.ok_or(Error::<T>::BalanceOverflow)?,
+						tvl.checked_add(pool_tvl_in_usd).ok_or(Error::<T>::BalanceOverflow)?,
+						pool_total_interest_usd
+							.checked_add(pool_protocol_interest_in_usd)
+							.ok_or(Error::<T>::BalanceOverflow)?,
+					))
+				},
+			)
+	}
+
+	/// Calculate user total collateral in usd based on collateral factor, fresh exchange rate and
+	/// latest oracle price. Collateral is calculated for the current block.
+	///
+	/// - `who`: the AccountId whose collateral should be calculated.
+	fn get_user_total_collateral(who: T::AccountId) -> BalanceResult {
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.iter()
+			.filter(|&pool_id| T::LiquidityPoolsManager::is_pool_collateral(&who, *pool_id))
+			.try_fold(Balance::zero(), |acc, &pool_id| -> BalanceResult {
+				let user_supply_underlying = Self::get_user_supply_underlying_balance(&who, pool_id)?;
+				let pool_collateral_factor = Self::controller_params(pool_id).collateral_factor;
+				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+				let user_supply_usd =
+					T::LiquidityPoolsManager::underlying_to_usd(user_supply_underlying, oracle_price)?;
+				let user_collateral_in_usd = Rate::from_inner(user_supply_usd)
+					.checked_mul(&pool_collateral_factor)
+					.map(|x| x.into_inner())
+					.ok_or(Error::<T>::NumOverflow)?;
+				Ok(acc + user_collateral_in_usd)
+			})
+	}
+
+	/// Calculate actual borrow balance for user per asset based on fresh latest indexes.
+	///
+	/// - `who`: the AccountId whose balance should be calculated.
+	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
+	fn get_user_borrow_underlying_balance(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
+		ensure!(
+			T::LiquidityPoolsManager::pool_exists(&underlying_asset_id),
+			Error::<T>::PoolNotFound
+		);
+		ensure!(
+			underlying_asset_id.is_supported_underlying_asset(),
+			Error::<T>::NotValidUnderlyingAssetId
+		);
+		Self::accrue_interest_rate(underlying_asset_id)?;
+		Self::borrow_balance_stored(&who, underlying_asset_id)
+	}
+
+	/// Calculates user balance converted to underlying asset using exchange rate calculated for the
+	/// current block.
+	///
+	/// - `who`: the AccountId whose balance should be calculated.
+	/// - `pool_id` - ID of the pool to calculate balance for.
+	fn get_user_supply_underlying_balance(who: &T::AccountId, pool_id: CurrencyId) -> BalanceResult {
+		ensure!(
+			T::LiquidityPoolsManager::pool_exists(&pool_id),
+			Error::<T>::PoolNotFound
+		);
+		let wrapped_id = pool_id.wrapped_asset().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+		let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id, &who);
+		if user_balance_wrapped_tokens.is_zero() {
+			return Ok(Balance::zero());
+		}
+		Self::accrue_interest_rate(pool_id)?;
+		let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id)?;
+		let user_supply_underlying =
+			T::LiquidityPoolsManager::wrapped_to_underlying(user_balance_wrapped_tokens, exchange_rate)?;
+		Ok(user_supply_underlying)
+	}
+
+	/// Calculate total user's supply APY, borrow APY and Net APY.
+	///
+	/// - `who`: the AccountId whose APY should be calculated.
+	fn get_user_total_supply_borrow_and_net_apy(
+		who: T::AccountId,
+	) -> Result<(Interest, Interest, Interest), DispatchError> {
+		// Annual Percentage Yield (APY) calculation:
+		// user_supply_interest = user_supply_usd * supply_rate;
+		// user_borrow_interest = user_borrow_usd * borrow_rate;
+		// user_mnt_supply_interest = user_supply_usd * mnt_supply_rate;
+		// user_mnt_borrow_interest = user_borrow_usd * mnt_borrow_rate;
+
+		// user_total_net_interest = Σ(user_supply_interest) - Σ(user_borrow_interest) +
+		// + Σ(user_mnt_supply_interest) + Σ(user_mnt_borrow_interest);
+
+		// user_total_supply_APY = (Σ(user_supply_interest) / user_total_supply_usd) * BlocksPerYear
+		// user_total_borrow_APY = (Σ(user_borrow_interest) / user_total_borrow_usd) * BlocksPerYear
+
+		// user_total_net_APY:
+		// 	if user_total_net_interest > 0:
+		// 		(user_total_net_interest / user_total_supply_usd) * BlocksPerYear
+		// 	elif user_total_net_interest < 0:
+		// 		(user_total_net_interest / user_total_borrow_usd) * BlocksPerYear
+
+		let (
+			user_total_supply_interest,
+			user_total_borrow_interest,
+			user_total_mnt_supply_interest,
+			user_total_mnt_borrow_interest,
+			user_total_supply_usd,
+			user_total_borrow_usd,
+		) = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.into_iter()
+			.filter(|pool_id| T::LiquidityPoolsManager::pool_exists(pool_id))
+			.try_fold(
+				(
+					Interest::zero(),
+					Interest::zero(),
+					Interest::zero(),
+					Interest::zero(),
+					Balance::zero(),
+					Balance::zero(),
+				),
+				|(
+					acc_user_supply_interest,
+					acc_user_borrow_interest,
+					acc_user_mnt_supply_interest,
+					acc_user_mnt_borrow_interest,
+					user_total_supply_usd,
+					user_total_borrow_usd,
+				),
+				 pool_id|
+				 -> result::Result<(Interest, Interest, Interest, Interest, Balance, Balance), DispatchError> {
+					let user_supply_underlying = Self::get_user_supply_underlying_balance(&who, pool_id)?;
+					let user_borrow_underlying = Self::get_user_borrow_underlying_balance(&who, pool_id)?;
+					let oracle_price =
+						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+					let user_supply_in_usd =
+						T::LiquidityPoolsManager::underlying_to_usd(user_supply_underlying, oracle_price)?;
+					let user_borrow_in_usd =
+						T::LiquidityPoolsManager::underlying_to_usd(user_borrow_underlying, oracle_price)?;
+
+					let (_, borrow_rate, supply_rate) =
+						Self::get_pool_exchange_borrow_and_supply_rates(pool_id).ok_or(Error::<T>::NumOverflow)?;
+
+					let (mnt_borrow_rate, mnt_supply_rate) =
+						T::MntManager::get_pool_mnt_borrow_and_supply_rates(pool_id)?;
+
+					let calculate_interest = |amount: Balance, rate: Balance| {
+						Interest::from_inner(amount as i128)
+							.checked_mul(&Interest::from_inner(rate as i128))
+							.ok_or(Error::<T>::NumOverflow)
+					};
+
+					let user_supply_interest = calculate_interest(user_supply_in_usd, supply_rate.into_inner())?;
+					let user_borrow_interest = calculate_interest(user_borrow_in_usd, borrow_rate.into_inner())?;
+					let user_mnt_supply_interest =
+						calculate_interest(user_supply_in_usd, mnt_supply_rate.into_inner())?;
+					let user_mnt_borrow_interest =
+						calculate_interest(user_borrow_in_usd, mnt_borrow_rate.into_inner())?;
+
+					Ok((
+						acc_user_supply_interest
+							.checked_add(&user_supply_interest)
+							.ok_or(Error::<T>::BalanceOverflow)?,
+						acc_user_borrow_interest
+							.checked_add(&user_borrow_interest)
+							.ok_or(Error::<T>::BalanceOverflow)?,
+						acc_user_mnt_supply_interest
+							.checked_add(&user_mnt_supply_interest)
+							.ok_or(Error::<T>::BalanceOverflow)?,
+						acc_user_mnt_borrow_interest
+							.checked_add(&user_mnt_borrow_interest)
+							.ok_or(Error::<T>::BalanceOverflow)?,
+						user_total_supply_usd
+							.checked_add(user_supply_in_usd)
+							.ok_or(Error::<T>::BalanceOverflow)?,
+						user_total_borrow_usd
+							.checked_add(user_borrow_in_usd)
+							.ok_or(Error::<T>::BalanceOverflow)?,
+					))
+				},
+			)?;
+
+		let user_net_interest = user_total_supply_interest
+			.checked_sub(&user_total_borrow_interest)
+			.and_then(|v| v.checked_add(&user_total_mnt_supply_interest))
+			.and_then(|v| v.checked_add(&user_total_mnt_borrow_interest))
+			.ok_or(Error::<T>::BalanceOverflow)?;
+
+		// Calculate APY given the amount of BlocksPerYear.
+		let calculate_apy = |interest: Interest, amount: Balance| {
+			interest
+				.checked_div(&Interest::from_inner(amount as i128))
+				.and_then(|v| v.checked_mul(&Interest::saturating_from_integer(BLOCKS_PER_YEAR)))
+				.ok_or(Error::<T>::NumOverflow)
+		};
+
+		let user_total_supply_apy = calculate_apy(user_total_supply_interest, user_total_supply_usd)?;
+		let user_total_borrow_apy = calculate_apy(user_total_borrow_interest, user_total_borrow_usd)?;
+
+		let user_net_apy = match user_net_interest.is_positive() {
+			true => calculate_apy(user_net_interest, user_total_supply_usd)?,
+			false => calculate_apy(user_net_interest, user_total_borrow_usd)?,
+		};
+
+		Ok((user_total_supply_apy, user_total_borrow_apy, user_net_apy))
 	}
 }

@@ -234,8 +234,8 @@ pub mod module {
 
 	/// Vesting schedules of an account.
 	#[pallet::storage]
-	#[pallet::getter(fn vesting_schedules)]
-	pub type VestingSchedules<T: Config> =
+	#[pallet::getter(fn vesting_schedule_storage)]
+	pub type VestingScheduleStorage<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, Vec<VestingScheduleOf<T>>, ValueQuery>;
 
 	#[pallet::genesis_config]
@@ -264,7 +264,7 @@ pub mod module {
 					let schedule = VestingSchedule::new(*bucket, *total);
 					Pallet::<T>::ensure_valid_vesting_schedule(&schedule).unwrap();
 					T::Currency::set_lock(VESTING_LOCK_ID, who, *total, WithdrawReasons::all());
-					VestingSchedules::<T>::insert(who, vec![schedule]);
+					VestingScheduleStorage::<T>::insert(who, vec![schedule]);
 				}
 			});
 		}
@@ -366,7 +366,7 @@ impl<T: Config> Pallet<T> {
 	/// Returns locked balance based on current block number.
 	fn locked_balance(who: &T::AccountId) -> Balance {
 		let now = <frame_system::Pallet<T>>::block_number();
-		<VestingSchedules<T>>::mutate_exists(who, |maybe_schedules| {
+		<VestingScheduleStorage<T>>::mutate_exists(who, |maybe_schedules| {
 			let total_locked = if let Some(schedules) = maybe_schedules {
 				let mut total: Balance = Zero::zero();
 				// leave only schedules with a locked balance
@@ -395,7 +395,7 @@ impl<T: Config> Pallet<T> {
 		let schedule_amount = Self::ensure_valid_vesting_schedule(&schedule)?;
 
 		ensure!(
-			<VestingSchedules<T>>::decode_len(to).unwrap_or(0) < T::MaxVestingSchedules::get() as usize,
+			<VestingScheduleStorage<T>>::decode_len(to).unwrap_or(0) < T::MaxVestingSchedules::get() as usize,
 			Error::<T>::TooManyVestingSchedules
 		);
 
@@ -405,7 +405,7 @@ impl<T: Config> Pallet<T> {
 
 		T::Currency::transfer(from, to, schedule_amount, ExistenceRequirement::AllowDeath)?;
 		T::Currency::set_lock(VESTING_LOCK_ID, to, total_locked, WithdrawReasons::all());
-		<VestingSchedules<T>>::append(to, schedule);
+		<VestingScheduleStorage<T>>::append(to, schedule);
 		Ok(())
 	}
 
@@ -417,7 +417,7 @@ impl<T: Config> Pallet<T> {
 		<T as frame_system::Config>::AccountId: From<[u8; 32]>,
 	{
 		let now = <frame_system::Pallet<T>>::block_number();
-		<VestingSchedules<T>>::try_mutate_exists(target, |maybe_schedules| -> DispatchResult {
+		<VestingScheduleStorage<T>>::try_mutate_exists(target, |maybe_schedules| -> DispatchResult {
 			// `total_locked` - the balance that needs to be locked for the user after deleting the schedule
 			// `total_removed` - the balance to be sent from the user account to the bucket account
 			let (mut total_locked, mut total_removed) = (Balance::zero(), Balance::zero());

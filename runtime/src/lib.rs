@@ -445,6 +445,8 @@ impl minterest_model::Config for Runtime {
 
 parameter_types! {
 	pub const ChainlinkManagerPriority: TransactionPriority = TransactionPriority::max_value() - 2;
+	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
+	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
 	pub const PartialLiquidationMinSum: Balance = PARTIAL_LIQUIDATION_MIN_SUM;
 	pub const PartialLiquidationMaxAttempts: u8 = PARTIAL_LIQUIDATION_MAX_ATTEMPTS;
 	pub const MaxLiquidationFee: Rate = MAX_LIQUIDATION_FEE;
@@ -452,11 +454,17 @@ parameter_types! {
 
 impl risk_manager::Config for Runtime {
 	type Event = Event;
+	type UnsignedPriority = RiskManagerPriority;
+	type PriceSource = Prices;
 	type UserCollateral = LiquidityPools;
 	type PartialLiquidationMinSum = PartialLiquidationMinSum;
 	type PartialLiquidationMaxAttempts = PartialLiquidationMaxAttempts;
 	type MaxLiquidationFee = MaxLiquidationFee;
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
+	type ControllerManager = Controller;
+	type LiquidityPoolsManager = LiquidityPools;
+	type LiquidationPoolsManager = LiquidationPools;
+	type MinterestProtocolManager = MinterestProtocol;
 }
 
 parameter_types! {
@@ -484,7 +492,6 @@ where
 
 parameter_types! {
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
-	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
 }
 
 impl liquidation_pools::Config for Runtime {
@@ -647,7 +654,7 @@ construct_runtime!(
 		LiquidityPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
 		Controller: controller::{Pallet, Storage, Call, Event, Config<T>},
 		MinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
-		RiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>},
+		RiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		MntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Pallet, Storage, Call, Event<T>},
