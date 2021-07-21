@@ -499,7 +499,9 @@ impl<T: Config> Pallet<T> {
 						// If the pool is not balanced:
 						// oversupply_usd = liquidation_pool_balance - pool_ideal_balance_usd
 						// shortfall_usd = pool_ideal_balance_usd - liquidation_pool_balance
-						let (oversupply_usd, shortfall_usd) = match liquidation_pool_supply_usd.cmp(&pool_ideal_balance_usd) {
+						let (oversupply_usd, shortfall_usd) = match liquidation_pool_supply_usd
+							.cmp(&pool_ideal_balance_usd)
+						{
 							Ordering::Greater => {
 								(liquidation_pool_supply_usd - pool_ideal_balance_usd, Balance::zero())
 							}
@@ -597,7 +599,9 @@ impl<T: Config> Pallet<T> {
 				.checked_sub(bite_usd)
 				.ok_or(Error::<T>::NotEnoughBalance)?;
 
-			sum_oversupply_usd = sum_oversupply_usd.checked_sub(bite_usd).ok_or(Error::<T>::NumOverflow)?;
+			sum_oversupply_usd = sum_oversupply_usd
+				.checked_sub(bite_usd)
+				.ok_or(Error::<T>::NumOverflow)?;
 			sum_shortfall_usd = sum_shortfall_usd.checked_sub(bite_usd).ok_or(Error::<T>::NumOverflow)?;
 		}
 
