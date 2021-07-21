@@ -170,7 +170,7 @@ fn set_pool_multiplier_should_work() {
 }
 
 #[test]
-fn set_jump_multiplier_should_work() {
+fn set_pool_jump_multiplier_should_work() {
 	ExtBuilder::default()
 		.set_minterest_model_params(
 			DOT,                                                // currency_id
@@ -182,7 +182,7 @@ fn set_jump_multiplier_should_work() {
 		.build()
 		.execute_with(|| {
 			// Set Jump multiplier per block equal to 2.0: (10_512_000 / 1) / 5_256_000
-			assert_ok!(TestMinterestModel::set_jump_multiplier(
+			assert_ok!(TestMinterestModel::set_pool_jump_multiplier(
 				alice_origin(),
 				DOT,
 				Rate::saturating_from_rational(10_512_000, 1)
@@ -195,7 +195,7 @@ fn set_jump_multiplier_should_work() {
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// Can be set to 0.0: (0 / 10) / 5_256_000
-			assert_ok!(TestMinterestModel::set_jump_multiplier(
+			assert_ok!(TestMinterestModel::set_pool_jump_multiplier(
 				alice_origin(),
 				DOT,
 				Rate::zero()
@@ -206,7 +206,7 @@ fn set_jump_multiplier_should_work() {
 			);
 
 			// Alice set Jump multiplier per block equal to 0,000_000_009: (47_304 / 1_000_000) / 5_256_000
-			assert_ok!(TestMinterestModel::set_jump_multiplier(
+			assert_ok!(TestMinterestModel::set_pool_jump_multiplier(
 				alice_origin(),
 				DOT,
 				Rate::saturating_from_rational(47_304, 1_000_000)
@@ -218,7 +218,7 @@ fn set_jump_multiplier_should_work() {
 
 			// The dispatch origin of this call must be Root or half MinterestCouncil.
 			assert_noop!(
-				TestMinterestModel::set_jump_multiplier(bob_origin(), DOT, Rate::from_inner(2)),
+				TestMinterestModel::set_pool_jump_multiplier(bob_origin(), DOT, Rate::from_inner(2)),
 				BadOrigin
 			);
 

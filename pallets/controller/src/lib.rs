@@ -923,7 +923,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		let utilization_rate: Rate = Self::get_utilization_rate(pool_id)?;
 		let exchange_rate: Rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id).ok()?;
 		let borrow_rate: Rate =
-			T::MinterestModelManager::calculate_borrow_interest_rate(pool_id, utilization_rate).ok()?;
+			T::MinterestModelManager::calculate_pool_borrow_interest_rate(pool_id, utilization_rate).ok()?;
 		// supply_interest_rate = utilization_rate * borrow_rate * (1 - protocol_interest_factor)
 		let supply_rate: Rate = Rate::one()
 			.checked_sub(&pool_interest_factor)

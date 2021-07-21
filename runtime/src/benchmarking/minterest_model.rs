@@ -7,7 +7,7 @@ use sp_runtime::traits::One;
 runtime_benchmarks! {
 	{ Runtime, minterest_model }
 
-	set_jump_multiplier {
+	set_pool_jump_multiplier {
 	}: _(
 		RawOrigin::Root,
 		DOT,
@@ -43,9 +43,9 @@ mod tests {
 	use frame_support::assert_ok;
 
 	#[test]
-	fn test_set_jump_multiplier_per_block() {
+	fn test_set_pool_jump_multiplier_per_block() {
 		test_externalities().execute_with(|| {
-			assert_ok!(test_benchmark_set_jump_multiplier());
+			assert_ok!(test_benchmark_set_pool_jump_multiplier());
 		})
 	}
 

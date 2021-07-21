@@ -178,7 +178,7 @@ pub mod module {
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_jump_multiplier(
+		pub fn set_pool_jump_multiplier(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			jump_multiplier_rate_per_year: Rate,
