@@ -15,7 +15,7 @@ use sp_runtime::{
 	testing::{Header, TestXt},
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 };
-use sp_std::collections::btree_map::BTreeMap;
+use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 pub use test_helper::*;
 
 // -----------------------------------------------------------------------------------------
@@ -68,7 +68,7 @@ mock_impl_balances_config!(TestRuntime);
 mock_impl_orml_tokens_config!(TestRuntime);
 mock_impl_orml_currencies_config!(TestRuntime);
 mock_impl_liquidity_pools_config!(TestRuntime);
-mock_impl_risk_manager_config!(TestRuntime, ZeroAdmin);
+mock_impl_risk_manager_config!(TestRuntime, ZeroAdmin, MinSumMock);
 mock_impl_controller_config!(TestRuntime, ZeroAdmin);
 mock_impl_minterest_model_config!(TestRuntime, ZeroAdmin);
 mock_impl_mnt_token_config!(TestRuntime, ZeroAdmin);
@@ -77,10 +77,20 @@ mock_impl_liquidation_pools_config!(TestRuntime);
 mock_impl_whitelist_module_config!(TestRuntime, ZeroAdmin);
 mock_impl_dex_config!(TestRuntime);
 
-pub struct MockPriceSource;
-impl MockPriceSource {
-	pub fn set_underlying_price(price: Option<Price>) {
-		UNDERLYING_PRICE.with(|v| *v.borrow_mut() = price);
+thread_local! {
+	static PARTIAL_LIQUIDATION_MIN_SUM: RefCell<Balance> = RefCell::new(10_000 * DOLLARS);
+}
+
+pub struct MinSumMock;
+impl MinSumMock {
+	pub fn set_partial_liquidation_min_sum(min_sum: Balance) {
+		PARTIAL_LIQUIDATION_MIN_SUM.with(|v| *v.borrow_mut() = min_sum);
+	}
+}
+
+impl Get<Balance> for MinSumMock {
+	fn get() -> Balance {
+		PARTIAL_LIQUIDATION_MIN_SUM.with(|v| *v.borrow_mut())
 	}
 }
 
