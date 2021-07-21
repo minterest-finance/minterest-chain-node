@@ -28,8 +28,6 @@ pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "p
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 test-helper = { path = "../../test-helper" }
-test-engine = { path = "../../test-engine" }
-liquidity-pools = { path = "../liquidity-pools"}
 
 [features]
 default = ["std"]

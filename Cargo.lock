@@ -932,7 +932,6 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 name = "controller"
 version = "0.6.2"
 dependencies = [
- "controller",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "liquidity-pools",
@@ -950,7 +949,6 @@ dependencies = [
  "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "test-engine",
  "test-helper",
 ]
 
@@ -1422,7 +1420,6 @@ dependencies = [
 name = "dex"
 version = "0.6.2"
 dependencies = [
- "dex",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "liquidation-pools",
@@ -1439,7 +1436,6 @@ dependencies = [
  "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "test-engine",
  "test-helper",
 ]
 
@@ -1686,9 +1682,9 @@ checksum = "4443176a9f2c162692bd3d352d745ef9413eec5782a80d8fd6f8a1ac692a07f7"
 
 [[package]]
 name = "fastrand"
-version = "1.4.1"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77b705829d1e87f762c2df6da140b26af5839e1033aa84aa5f56bb688e4e1bdb"
+checksum = "b394ed3d285a429378d3b384b9eb1285267e7df4b166df24b7a6939a04dc392e"
 dependencies = [
  "instant",
 ]
@@ -3763,7 +3759,6 @@ version = "0.5.0"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "liquidity-pools",
  "minterest-primitives",
  "orml-currencies",
  "orml-tokens",
@@ -3777,7 +3772,6 @@ dependencies = [
  "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "test-engine",
  "test-helper",
 ]
 
@@ -4293,7 +4287,6 @@ dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "minterest-primitives",
- "module-prices",
  "orml-traits 0.4.1-dev",
  "pallet-balances",
  "pallet-traits",
@@ -4303,7 +4296,6 @@ dependencies = [
  "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "test-engine",
  "test-helper",
 ]
 
@@ -4662,7 +4654,7 @@ dependencies = [
 [[package]]
 name = "orml-benchmarking"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "frame-benchmarking",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
@@ -4680,7 +4672,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
@@ -4715,7 +4707,7 @@ dependencies = [
 [[package]]
 name = "orml-oracle"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
@@ -4732,7 +4724,7 @@ dependencies = [
 [[package]]
 name = "orml-oracle-rpc"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -4747,7 +4739,7 @@ dependencies = [
 [[package]]
 name = "orml-oracle-rpc-runtime-api"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -4757,7 +4749,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
@@ -4790,7 +4782,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "impl-trait-for-tuples 0.2.1",
@@ -4822,7 +4814,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "parity-scale-codec",
@@ -6036,11 +6028,16 @@ dependencies = [
 name = "risk-manager"
 version = "0.6.0"
 dependencies = [
+ "controller",
+ "dex",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
+ "liquidation-pools",
  "liquidity-pools",
+ "minterest-model",
  "minterest-primitives",
  "minterest-protocol",
+ "mnt-token",
  "orml-currencies",
  "orml-tokens",
  "orml-traits 0.4.1-dev",
@@ -6054,6 +6051,7 @@ dependencies = [
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "test-helper",
+ "whitelist-module",
 ]
 
 [[package]]
@@ -8790,45 +8788,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "test-engine"
-version = "0.0.1"
+name = "test-helper"
+version = "0.6.2"
 dependencies = [
  "controller",
- "dex",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "liquidation-pools",
  "liquidity-pools",
  "minterest-model",
  "minterest-primitives",
  "minterest-protocol",
- "mnt-token",
- "module-prices",
- "module-vesting",
- "orml-currencies",
- "orml-oracle 0.4.1-dev",
- "orml-tokens",
- "orml-traits 0.4.1-dev",
- "pallet-balances",
- "pallet-traits",
- "parity-scale-codec",
- "prices-rpc-runtime-api",
- "risk-manager",
- "serde",
- "sp-core 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "test-helper",
- "whitelist-module",
-]
-
-[[package]]
-name = "test-helper"
-version = "0.6.2"
-dependencies = [
- "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "minterest-primitives",
 ]
 
 [[package]]

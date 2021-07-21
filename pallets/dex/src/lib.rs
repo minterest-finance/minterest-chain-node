@@ -15,6 +15,9 @@ use orml_traits::MultiCurrency;
 use pallet_traits::DEXManager;
 use sp_runtime::traits::{AccountIdConversion, Zero};
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
 mod tests;
 
 #[frame_support::pallet]
@@ -124,7 +127,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Gets current the total amount of cash the dex has.
-	pub fn get_dex_available_liquidity(dex_id: CurrencyId) -> Balance {
+	fn get_dex_available_liquidity(dex_id: CurrencyId) -> Balance {
 		let module_account_id = Self::dex_account_id();
 		T::MultiCurrency::free_balance(dex_id, &module_account_id)
 	}
