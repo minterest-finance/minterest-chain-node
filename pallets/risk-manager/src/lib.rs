@@ -481,7 +481,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Calls internal functions from minterest-protocol pallet `do_repay` and `do_seize`, these
 	/// functions within themselves call `accrue_interest_rate`. Also calls
-	/// `mutate_attemps` for mutate user liquidation attempts.
+	/// `mutate_attemtps` for mutate user liquidation attempts.
 	///
 	/// - `borrower`: AccountId of the borrower whose loan is being liquidated.
 	/// - `liquidation_amounts`: contains a vectors with user's borrows to be paid from the
@@ -510,7 +510,7 @@ impl<T: Config> Pallet<T> {
 				T::MinterestProtocolManager::do_seize(&borrower, pool_id, seize_underlying)?;
 				Ok(())
 			})?;
-		<Self as UserLiquidationAttemptsManager<T::AccountId>>::mutate_attemps(None, &borrower, Operation::Repay);
+		<Self as UserLiquidationAttemptsManager<T::AccountId>>::mutate_attemtps(None, &borrower, Operation::Repay);
 		Ok(())
 	}
 
@@ -605,7 +605,7 @@ impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 	/// Mutates user liquidation attempts depending on user operation.
 	/// If the user makes a deposit to the collateral pool, then attempts are set to zero.
 	/// TODO: implement mutate in case of liquidation
-	fn mutate_attemps(pool_id: Option<CurrencyId>, who: &T::AccountId, operation: Operation) {
+	fn mutate_attempts(pool_id: Option<CurrencyId>, who: &T::AccountId, operation: Operation) {
 		// pool_id existence in case of a deposit operation
 		if let Some(pool_id) = pool_id {
 			if operation == Operation::Deposit && T::UserCollateral::is_pool_collateral(&who, pool_id) {
