@@ -13,6 +13,7 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
+pallet-traits = { path = "../traits", default-features = false }
 
 pallet-chainlink-feed = { git = "https://github.com/smartcontractkit/chainlink-polkadot", default-features = false }
 
@@ -31,6 +32,8 @@ std = [
 	"sp-std/std",
 	"frame-support/std",
 	"frame-system/std",
+
+	"pallet-traits/std",
 
 	"pallet-chainlink-feed/std",
 ]

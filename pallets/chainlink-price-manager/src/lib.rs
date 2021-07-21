@@ -9,8 +9,9 @@
 use frame_support::{log, pallet_prelude::*, transactional, IterableStorageMap};
 use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
 use frame_system::pallet_prelude::*;
-use minterest_primitives::{currency::*, CurrencyId, OffchainErr};
+use minterest_primitives::{currency::*, CurrencyId, OffchainErr, Price};
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData, RoundId};
+use pallet_traits::PricesManager;
 use sp_runtime::traits::Zero;
 
 mod mock;
@@ -162,5 +163,24 @@ impl<T: Config> Pallet<T> {
 		let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id)?;
 		let RoundData { answer, .. } = feed_result.latest_data();
 		Some(answer)
+	}
+}
+
+impl<T: Config> PricesManager<CurrencyId> for Pallet<T>
+where
+	u128: From<<T as pallet_chainlink_feed::Config>::Value>,
+{
+	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
+		let feed_id = Self::get_feed_id(currency_id)?;
+		let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id)?;
+		let RoundData { answer, .. } = feed_result.latest_data();
+		Some(Price::from_inner(answer.into()))
+	}
+
+	fn lock_price(_currency_id: CurrencyId) {
+		unimplemented!()
+	}
+	fn unlock_price(_currency_id: CurrencyId) {
+		unimplemented!()
 	}
 }

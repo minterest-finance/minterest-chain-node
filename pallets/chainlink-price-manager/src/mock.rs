@@ -70,7 +70,6 @@ impl pallet_chainlink_feed::Config for Runtime {
 
 pub type TransactionPriority = u64;
 ord_parameter_types! {
-	pub const ZeroAdmin: AccountId = 0;
 	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value();
 
 }
@@ -89,7 +88,6 @@ where
 impl chainlink_price_adapter::Config for Runtime {
 	type Event = Event;
 	type PalletAccountId = ChainlinkPalletAccountId;
-	type UpdateOrigin = EnsureSignedBy<ZeroAdmin, AccountId>;
 	type UnsignedPriority = LiquidityPoolsPriority;
 }
 
@@ -106,7 +104,7 @@ pub fn test_externalities() -> sp_io::TestExternalities {
 
 	pallet_chainlink_feed::GenesisConfig::<Runtime> {
 		pallet_admin: Some(ADMIN),
-		feed_creators: vec![ChainlinkPriceManagerAccountId::get()],
+		feed_creators: vec![ALICE],
 	}
 	.assimilate_storage(&mut storage)
 	.unwrap();
