@@ -932,7 +932,6 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 name = "controller"
 version = "0.6.2"
 dependencies = [
- "controller",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "liquidity-pools",
@@ -950,7 +949,6 @@ dependencies = [
  "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "test-engine",
  "test-helper",
 ]
 
@@ -1422,7 +1420,6 @@ dependencies = [
 name = "dex"
 version = "0.6.2"
 dependencies = [
- "dex",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "liquidation-pools",
@@ -1439,7 +1436,6 @@ dependencies = [
  "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "test-engine",
  "test-helper",
 ]
 
@@ -3763,7 +3759,6 @@ version = "0.5.0"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "liquidity-pools",
  "minterest-primitives",
  "orml-currencies",
  "orml-tokens",
@@ -3777,7 +3772,6 @@ dependencies = [
  "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "test-engine",
  "test-helper",
 ]
 
@@ -4293,7 +4287,6 @@ dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "minterest-primitives",
- "module-prices",
  "orml-traits 0.4.1-dev",
  "pallet-balances",
  "pallet-traits",
@@ -4303,7 +4296,6 @@ dependencies = [
  "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "test-engine",
  "test-helper",
 ]
 
@@ -8790,45 +8782,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "test-engine"
-version = "0.0.1"
+name = "test-helper"
+version = "0.6.2"
 dependencies = [
  "controller",
- "dex",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "liquidation-pools",
  "liquidity-pools",
  "minterest-model",
  "minterest-primitives",
  "minterest-protocol",
- "mnt-token",
- "module-prices",
- "module-vesting",
- "orml-currencies",
- "orml-oracle 0.4.1-dev",
- "orml-tokens",
- "orml-traits 0.4.1-dev",
- "pallet-balances",
- "pallet-traits",
- "parity-scale-codec",
- "prices-rpc-runtime-api",
- "risk-manager",
- "serde",
- "sp-core 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "test-helper",
- "whitelist-module",
-]
-
-[[package]]
-name = "test-helper"
-version = "0.6.2"
-dependencies = [
- "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
- "minterest-primitives",
 ]
 
 [[package]]
