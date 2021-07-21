@@ -22,6 +22,9 @@ pub use module::*;
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod mock;
+
 pub mod weights;
 pub use weights::WeightInfo;
 
