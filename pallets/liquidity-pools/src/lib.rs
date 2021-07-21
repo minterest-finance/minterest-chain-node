@@ -134,7 +134,8 @@ pub mod module {
 	/// Return:
 	/// - `borrowed`: Pool Borrowed value of the underlying asset plus all the interest, that
 	/// should be paid back by borrowers on repay.
-	/// - `borrow_index`: Borrow Index accumulates the total earned interest since the opening of the pool.
+	/// - `borrow_index`: Borrow Index accumulates the total earned interest since the opening of
+	/// the pool.
 	/// Used to accrue interest when user repays a loan.
 	/// - `protocol_interest`: amount of protocol_interest of the underlying held in this pool.
 	#[pallet::storage]

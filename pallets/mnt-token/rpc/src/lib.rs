@@ -27,7 +27,8 @@ pub trait MntTokenRpcApi<BlockHash, AccountId> {
 	///
 	/// Return:
 	///
-	/// - [`amount`](`MntBalanceInfo::amount`): the MNT accrued but not yet transferred to each user.
+	/// - [`amount`](`MntBalanceInfo::amount`): the MNT accrued but not yet transferred to each
+	/// user.
 	#[rpc(name = "mntToken_getUserTotalUnclaimedMntBalance")]
 	fn get_user_total_unclaimed_mnt_balance(
 		&self,
