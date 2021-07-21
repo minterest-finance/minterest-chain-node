@@ -52,7 +52,7 @@ mod tests {
 	#[test]
 	fn test_set_base_rate_per_block() {
 		test_externalities().execute_with(|| {
-			assert_ok!(test_benchmark_set_base_rate());
+			assert_ok!(test_benchmark_set_pool_base_rate());
 		})
 	}
 
