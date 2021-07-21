@@ -126,7 +126,7 @@ sp_api::decl_runtime_apis! {
 
 		fn get_user_total_collateral(account_id: AccountId) -> Option<BalanceInfo>;
 
-		fn get_user_total_borrow(
+		fn get_user_total_borrow_usd(
 			account_id: AccountId,
 		) -> Option<BalanceInfo>;
 

@@ -107,21 +107,6 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	#[rpc(name = "controller_accountCollateral")]
 	fn get_user_total_collateral(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
 
-	/// Returns total borrow balance for user per all assets based on fresh latest indexes.
-	///
-	///  - `&self` :  Self reference
-	///  - `account_id`: current account id.
-	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
-	///
-	/// Return:
-	/// - amount: account total borrow.
-	#[rpc(name = "controller_getUserTotalBorrow")]
-	fn get_user_total_borrow(
-		&self,
-		account_id: AccountId,
-		at: Option<BlockHash>,
-	) -> Result<Option<BalanceInfo>>;
-
 	/// Returns actual borrow balance for user per asset based on fresh latest indexes.
 	///
 	///  - `&self` :  Self reference
@@ -184,6 +169,21 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///   user_total_supply_apy, user_total_borrow_apy, user_net_apy)
 	#[rpc(name = "controller_getUserData")]
 	fn get_user_data(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<UserData>>;
+	
+	/// Returns total borrow balance for user per all assets based on fresh latest indexes.
+	///
+	///  - `&self` :  Self reference
+	///  - `account_id`: current account id.
+	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///
+	/// Return:
+	/// - amount: account total borrow in usd.
+	#[rpc(name = "controller_getUserTotalBorrowToUsd")]
+	fn get_user_total_borrow_usd(
+		&self,
+		account_id: AccountId,
+		at: Option<BlockHash>,
+	) -> Result<Option<BalanceInfo>>;
 }
 
 /// A struct that implements the [`ControllerApi`].
@@ -336,7 +336,7 @@ where
 		})
 	}
 
-	fn get_user_total_borrow(
+	fn get_user_total_borrow_usd(
 		&self,
 		account_id: AccountId,
 		at: Option<<Block as BlockT>::Hash>,
@@ -346,7 +346,7 @@ where
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
  
-		api.get_user_total_borrow(&at, account_id)
+		api.get_user_total_borrow_usd(&at, account_id)
 		.map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
 			message: "Unable to get total user borrow.".into(),

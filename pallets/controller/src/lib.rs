@@ -599,7 +599,7 @@ impl<T: Config> Pallet<T> {
 	/// latest oracle price
 	///
 	/// - `who`: the AccountId whose borrow should be calculated.
-	pub fn get_user_total_borrow(who: &T::AccountId) -> BalanceResult {
+	pub fn get_user_total_borrow_usd(who: &T::AccountId) -> BalanceResult {
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.into_iter()
 			.filter(|asset| T::LiquidityPoolsManager::pool_exists(asset))

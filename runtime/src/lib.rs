@@ -820,8 +820,8 @@ impl_runtime_apis! {
 				Some(BalanceInfo{amount: Controller::get_user_total_collateral(account_id).ok()?})
 		}
 
-		fn get_user_total_borrow(account_id: AccountId) -> Option<BalanceInfo> {
-			Some(BalanceInfo{amount: Controller::get_user_total_borrow(&account_id).ok()?})
+		fn get_user_total_borrow_usd(account_id: AccountId) -> Option<BalanceInfo> {
+			Some(BalanceInfo{amount: Controller::get_user_total_borrow_usd(&account_id).ok()?})
 		}
 
 		fn get_user_borrow_per_asset(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
