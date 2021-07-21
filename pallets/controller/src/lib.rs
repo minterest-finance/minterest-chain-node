@@ -220,12 +220,32 @@ pub mod module {
 
 	/// Controller data information: `(timestamp, protocol_interest_factor, collateral_factor,
 	/// max_borrow_rate)`.
+	///
+	/// Return:
+	/// - `last_interest_accrued_block`: block number that interest was last accrued at
+	/// - `protocol_interest_factor`: defines the portion of borrower interest that is converted
+	/// into protocol interest
+	/// - `max_borrow_rate`:  Maximum Borrow Rate is used to block the protocol functioning,
+	/// if the rate goes higher than this value
+	/// - `collateral_factor`: Collateral factor determines how much a user can borrow based on
+	/// their collateral value
+	/// - `borrow_cap`: Borrow Cap determines a maximum amount of underlying assets which can be
+	/// borrowed from a pool.
+	/// This is option should not be used when the protocol is fully up and running on prod
+	/// - `protocol_interest_threshold`: Protocol interest threshold determines a minimum amount of
+	/// protocol interest needed to transfer it from liquidity to liquidation pool
 	#[pallet::storage]
 	#[pallet::getter(fn controller_params)]
 	pub type ControllerParams<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, ControllerData<T::BlockNumber>, ValueQuery>;
 
 	/// The Pause Guardian can pause certain actions as a safety mechanism.
+	///
+	/// Return:
+	/// - `deposit_paused`: is pause mint operation in the pool
+	/// - `redeem_paused`: is pause redeem operation in the pool
+	/// - `borrow_paused`: is pause borrow operation in the pool
+	/// - `repay_paused`: is pause repay operation in the pool
 	#[pallet::storage]
 	#[pallet::getter(fn pause_keepers)]
 	pub(crate) type PauseKeepers<T: Config> =

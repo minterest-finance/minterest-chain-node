@@ -148,6 +148,15 @@ pub mod module {
 		TransferToLiquidationPool(CurrencyId, Balance, T::AccountId),
 	}
 
+	/// Return parameters for liquidation pool configuration.
+	///
+	/// Return:
+	/// - `deviation_threshold`: Deviation Threshold represents how much current value in a pool
+	/// may differ from ideal value (defined by balance_ratio).
+	/// - `balance_ratio`: Balance Ratio represents the percentage of Working pool value to be
+	/// covered by value in Liquidation Pool.
+	/// - `max_ideal_balance`: Max Ideal Balance represents the ideal balance of Liquidation Pool
+	/// and is used to limit ideal balance during pool balancing.
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_pools_data)]
 	pub type LiquidationPoolsData<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, LiquidationPoolData, ValueQuery>;
@@ -319,10 +328,11 @@ pub mod module {
 		/// The dispatch origin of this call must be _None_.
 		///
 		/// Parameters:
-		/// - `supply_pool_id`: the Currency Id of the supply pool
-		/// - `target_pool_id`: the Currency Id of the target pool
-		/// - `max_supply_amount`: max supply amount
-		/// - `target_amount`: target amount
+		/// - `supply_pool_id`: the pool from which tokens are sent for sale on DEX
+		/// - `target_pool_id`: pool for which tokens are bought on DEX
+		/// - `max_supply_amount`: the maximum number of tokens for sale from the `supply_pool_id`
+		/// pool on DEX to buy `target_amount` of tokens
+		/// - `target_amount`: number of tokens to buy in `target_pool_id` on DEX
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::balance_liquidation_pools())]
 		#[transactional]
 		pub fn balance_liquidation_pools(

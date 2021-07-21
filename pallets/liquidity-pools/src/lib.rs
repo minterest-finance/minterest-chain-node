@@ -129,10 +129,26 @@ pub mod module {
 		PoolAlreadyCreated,
 	}
 
+	/// Return liquidity pools information: (borrowed, borrow_index, total_protocol_interest)
+	///
+	/// Return:
+	/// - `borrowed`: Pool Borrowed value of the underlying asset plus all the interest, that
+	/// should be paid back by borrowers on repay.
+	/// - `borrow_index`: Borrow Index accumulates the total earned interest since the opening of the pool.
+	/// Used to accrue interest when user repays a loan.
+	/// - `protocol_interest`: amount of protocol_interest of the underlying held in this pool.
 	#[pallet::storage]
 	#[pallet::getter(fn pools)]
 	pub(crate) type Pools<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Pool, ValueQuery>;
 
+	/// Return information about the user of the liquidity pool: (borrowed, interest_index,
+	/// is_collateral, liquidation_attempts)
+	///
+	/// Return:
+	/// - `borrowed`: User Borrow Underlying (with accrued interest), after applying the most
+	/// recent balance-changing action.
+	/// - `interest_index`: global borrow_index at the time of the last balance changing action.
+	/// - `is_collateral`: whether or not the pool can be used as a collateral by this user.
 	#[pallet::storage]
 	#[pallet::getter(fn pool_user_data)]
 	pub(crate) type PoolUserParams<T: Config> =

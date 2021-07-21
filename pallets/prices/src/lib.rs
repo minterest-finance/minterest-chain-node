@@ -63,7 +63,7 @@ pub mod module {
 		UnlockPrice(CurrencyId),
 	}
 
-	/// Mapping from currency id to it's locked price
+	/// mapping from currency id to it's locked(approved by Oracles pallet) price in USD.
 	#[pallet::storage]
 	#[pallet::getter(fn locked_price_storage)]
 	pub type LockedPriceStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Price, OptionQuery>;

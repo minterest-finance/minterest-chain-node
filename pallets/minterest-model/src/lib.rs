@@ -124,6 +124,14 @@ pub mod module {
 
 	/// The Minterest Model data information: `(kink, base_rate_per_block, multiplier_per_block,
 	/// jump_multiplier_per_block)`.
+	///
+	/// Return:
+	/// - `kink`: If Utilization Rate exceeds Kink, the protocol applies correction to Borrow Interest Rate
+	/// - `base_rate_per_block`: Base Interest Rate, which is the y-intercept when Utilization Rate is 0
+	/// - `multiplier_per_block`: Multiplier Per Block is a multiplier against Utilization Rate that
+	/// gives the slope of the interest rate
+	/// - `jump_multiplier_per_block`: Jump Multiplier Per Block is used to correct Borrow Interest
+	/// Rate after Utilization Rate hits Kink
 	#[pallet::storage]
 	#[pallet::getter(fn minterest_model_params)]
 	pub type MinterestModelParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, MinterestModelData, ValueQuery>;

@@ -212,10 +212,14 @@ pub mod module {
 		/// Parameters:
 		/// - `pool_id`: the CurrencyId of the underlying asset to create pool for;
 		/// - `pool_data`: data to initialize pool storage in all pallets
-		/// 	- [`Minterest Model:`](?search=MinterestModelData) kink, base_rate_per_block, multiplier_per_block, jump_multiplier_per_block
-		/// 	- [`Controller:`](?search=controller::ControllerData) protocol_interest_factor, max_borrow_rate, collateral_factor, protocol_interest_threshold
-		/// 	- [`Liquidation Pools:`](?search=liquidation_pools::LiquidationPoolData) deviation_threshold, balance_ratio
-		/// 	- [`Risk Manager:`](?search=risk_manager::module::Call) liquidation_threshold, liquidation_fee
+		/// 	- [`Minterest Model:`](?search=MinterestModelData) kink, base_rate_per_block,
+		/// multiplier_per_block, jump_multiplier_per_block
+		/// 	- [`Controller:`](?search=controller::ControllerData) protocol_interest_factor,
+		/// max_borrow_rate, collateral_factor, protocol_interest_threshold
+		/// 	- [`Liquidation Pools:`](?search=liquidation_pools::LiquidationPoolData) deviation_threshold,
+		/// balance_ratio
+		/// 	- [`Risk Manager:`](?search=risk_manager::module::Call) liquidation_threshold,
+		/// liquidation_fee
 		#[pallet::weight(T::ProtocolWeightInfo::create_pool())]
 		#[transactional]
 		pub fn create_pool(
