@@ -374,6 +374,12 @@ fn get_user_total_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
 		.amount
 }
 
+fn get_user_total_borrow_rpc(account_id: AccountId) -> Balance {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_total_borrow(account_id)
+		.unwrap()
+		.amount
+}
+
 fn pool_exists_rpc(underlying_asset_id: CurrencyId) -> bool {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::pool_exists(underlying_asset_id)
 }
@@ -1874,4 +1880,30 @@ fn get_user_data_rpc_should_work() {
 			})
 		);
 	})
+}
+
+#[test]
+fn get_user_total_borrow_rpc_should_work() {
+	ExtBuilder::default()
+		.mnt_account_balance(1_000_000 * DOLLARS)
+		.pool_initial(DOT)
+		.pool_initial(KSM)
+		.pool_initial(ETH)
+		.pool_initial(BTC)
+		//.enable_minting_for_all_pools(5 * DOLLARS)
+		.build()
+		.execute_with(|| {
+			assert_ok!(set_oracle_price_for_all_pools(2));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 100_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 100_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
+			assert_ok!(MinterestProtocol::borrow(alice(), ETH, 80_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 50_000 * DOLLARS));
+
+			assert_eq!(
+				get_user_total_borrow_rpc(ALICE::get()),
+				80_000 * DOLLARS + 50_000 * DOLLARS
+			);
+		})
 }
