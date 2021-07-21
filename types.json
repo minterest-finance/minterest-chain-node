@@ -68,6 +68,7 @@
         "interest_index": "Rate",
         "is_collateral": "bool"
       },
+      "Currency": "CurrencyId",
       "CurrencyIdOf": "CurrencyId",
       "Amount": "i128",
       "AmountOf": "Amount",
