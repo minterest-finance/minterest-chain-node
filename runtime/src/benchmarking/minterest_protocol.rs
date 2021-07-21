@@ -8,7 +8,7 @@ use crate::{
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
-use liquidity_pools::Pool;
+use liquidity_pools::PoolData;
 use minterest_primitives::Operation;
 use minterest_protocol::PoolInitData;
 use orml_benchmarking::runtime_benchmarks;
@@ -291,7 +291,7 @@ runtime_benchmarks! {
 		EnabledUnderlyingAssetsIds::get()
 			.into_iter()
 			.try_for_each(|pool_id| -> Result<(), &'static str> {
-				LiquidityPools::set_pool_data(pool_id, Pool {
+				LiquidityPools::set_pool_data(pool_id, PoolData {
 					borrowed: Balance::zero(),
 					borrow_index: Rate::one(),
 					protocol_interest: Balance::zero(),
