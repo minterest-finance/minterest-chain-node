@@ -177,6 +177,7 @@ where
 		Some(Price::from_inner(answer.into()))
 	}
 
+	// TODO These function will be removed from trait
 	fn lock_price(_currency_id: CurrencyId) {
 		unimplemented!()
 	}

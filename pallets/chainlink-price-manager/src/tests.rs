@@ -7,7 +7,7 @@ use minterest_primitives::CurrencyId;
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData};
 use pallet_traits::PricesManager;
 use sp_runtime::traits::AccountIdConversion;
-use sp_runtime::FixedU128;
+use sp_runtime::{FixedPointNumber, FixedU128};
 use test_helper::currency_mock::*;
 use test_helper::users_mock::*;
 
@@ -47,12 +47,12 @@ fn create_feed_should_work() {
 		assert!(System::events().iter().any(|record| record.event == feed_created));
 
 		let round_id = 1;
-		ChainlinkFeed::submit(Origin::signed(oracle1), 0_u32, round_id, 42).unwrap();
-		ChainlinkFeed::submit(Origin::signed(oracle2), 0_u32, round_id, 42).unwrap();
+		ChainlinkFeed::submit(Origin::signed(oracle1), 0_u32, round_id, 42 * DOLLARS).unwrap();
+		ChainlinkFeed::submit(Origin::signed(oracle2), 0_u32, round_id, 42 * DOLLARS).unwrap();
 		let feed_result = ChainlinkFeed::feed(feed_id.into()).unwrap();
 		let RoundData { answer, .. } = feed_result.latest_data();
 		assert_eq!(answer, 0);
-		ChainlinkFeed::submit(Origin::signed(oracle3), 0_u32, round_id, 42).unwrap();
+		ChainlinkFeed::submit(Origin::signed(oracle3), 0_u32, round_id, 42 * DOLLARS).unwrap();
 
 		// The value is returned only when 3 oracles are subbmited, because min_submissions == 3
 		let feed_result = ChainlinkFeed::feed(feed_id.into()).unwrap();
@@ -61,7 +61,7 @@ fn create_feed_should_work() {
 
 		assert_eq!(
 			ChainlinkPriceManager::get_underlying_price(BTC).unwrap(),
-			FixedU128::from_inner(42)
+			FixedU128::saturating_from_integer(42)
 		);
 		assert_eq!(ChainlinkPriceManager::get_underlying_price(DOT), None);
 	});
