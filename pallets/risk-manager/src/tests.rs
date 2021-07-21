@@ -7,7 +7,7 @@ use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 
 #[test]
 fn user_liquidation_attempts_should_work() {
-	ExternalityBuilder::default().build().execute_with(|| {
+	ExtBuilder::default().build().execute_with(|| {
 		TestRiskManager::user_liquidation_attempts_increase_by_one(&ALICE);
 		assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), u8::one());
 		TestRiskManager::user_liquidation_attempts_increase_by_one(&ALICE);
@@ -19,7 +19,7 @@ fn user_liquidation_attempts_should_work() {
 
 #[test]
 fn mutate_attempts_should_work() {
-	ExternalityBuilder::default()
+	ExtBuilder::default()
 		.set_pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 		.build()
 		.execute_with(|| {
@@ -39,7 +39,7 @@ fn mutate_attempts_should_work() {
 
 #[test]
 fn set_liquidation_fee_should_work() {
-	ExternalityBuilder::default().build().execute_with(|| {
+	ExtBuilder::default().build().execute_with(|| {
 		// Can be set to 0..
 		assert_ok!(TestRiskManager::set_liquidation_fee(
 			admin_origin(),
@@ -59,7 +59,7 @@ fn set_liquidation_fee_should_work() {
 		// Can not be set to 1.0
 		assert_noop!(
 			TestRiskManager::set_liquidation_fee(admin_origin(), DOT, Rate::one()),
-			Error::<Test>::InvalidLiquidationFeeValue
+			Error::<TestRuntime>::InvalidLiquidationFeeValue
 		);
 
 		// The dispatch origin of this call must be Administrator.
@@ -71,14 +71,14 @@ fn set_liquidation_fee_should_work() {
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
 			TestRiskManager::set_liquidation_fee(admin_origin(), MDOT, Rate::one()),
-			Error::<Test>::NotValidUnderlyingAssetId
+			Error::<TestRuntime>::NotValidUnderlyingAssetId
 		);
 	});
 }
 
 #[test]
 fn set_threshold_should_work() {
-	ExternalityBuilder::default().build().execute_with(|| {
+	ExtBuilder::default().build().execute_with(|| {
 		// Can be set to 1.0
 		assert_ok!(TestRiskManager::set_liquidation_threshold(
 			admin_origin(),
@@ -98,7 +98,7 @@ fn set_threshold_should_work() {
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
 			TestRiskManager::set_liquidation_threshold(admin_origin(), MDOT, Rate::one()),
-			Error::<Test>::NotValidUnderlyingAssetId
+			Error::<TestRuntime>::NotValidUnderlyingAssetId
 		);
 	});
 }
@@ -110,7 +110,7 @@ fn set_threshold_should_work() {
 // Note: prices for all assets set equal $1.
 #[test]
 fn build_user_loan_state_should_work() {
-	ExternalityBuilder::default()
+	ExtBuilder::default()
 		.set_liquidation_fees(vec![
 			(DOT, Rate::saturating_from_rational(5, 100)),
 			(ETH, Rate::saturating_from_rational(10, 100)),
@@ -125,7 +125,7 @@ fn build_user_loan_state_should_work() {
 		.merge_duplicates()
 		.build()
 		.execute_with(|| {
-			let alice_loan_state = UserLoanState::<Test>::build_user_loan_state(&ALICE).unwrap();
+			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
 
 			assert_eq!(alice_loan_state.get_user_supplies(), vec![(BTC, dollars(750))]);
 			assert_eq!(
@@ -143,7 +143,7 @@ fn build_user_loan_state_should_work() {
 
 			System::set_block_number(100);
 
-			let alice_loan_state_accrued = UserLoanState::<Test>::build_user_loan_state(&ALICE).unwrap();
+			let alice_loan_state_accrued = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
 
 			assert_eq!(alice_loan_state_accrued.get_user_supplies(), vec![(BTC, dollars(750))]);
 			assert_eq!(
@@ -159,7 +159,7 @@ fn build_user_loan_state_should_work() {
 
 #[test]
 fn calculate_seize_amount_should_work() {
-	ExternalityBuilder::default()
+	ExtBuilder::default()
 		.set_liquidation_fees(vec![
 			(DOT, Rate::saturating_from_rational(5, 100)),
 			(ETH, Rate::saturating_from_rational(15, 100)),
@@ -168,12 +168,12 @@ fn calculate_seize_amount_should_work() {
 		.execute_with(|| {
 			// seize_amount = $100 * 1.05 = $105.
 			assert_eq!(
-				UserLoanState::<Test>::calculate_seize_amount(DOT, dollars(100)).unwrap(),
+				UserLoanState::<TestRuntime>::calculate_seize_amount(DOT, dollars(100)).unwrap(),
 				dollars(105)
 			);
 			// seize_amount = $100 * 1.15 = $115.
 			assert_eq!(
-				UserLoanState::<Test>::calculate_seize_amount(ETH, dollars(100)).unwrap(),
+				UserLoanState::<TestRuntime>::calculate_seize_amount(ETH, dollars(100)).unwrap(),
 				dollars(115)
 			);
 		})
@@ -184,7 +184,7 @@ fn calculate_seize_amount_should_work() {
 // Note: prices for all assets set equal $1.
 #[test]
 fn choose_liquidation_mode_solvent_should_work() {
-	ExternalityBuilder::default()
+	ExtBuilder::default()
 		.set_liquidation_fees(vec![
 			(DOT, Rate::saturating_from_rational(5, 100)),
 			(ETH, Rate::saturating_from_rational(5, 100)),
@@ -201,11 +201,11 @@ fn choose_liquidation_mode_solvent_should_work() {
 		.merge_duplicates()
 		.build()
 		.execute_with(|| {
-			let alice_solvent_loan_state = UserLoanState::<Test>::build_user_loan_state(&ALICE).unwrap();
+			let alice_solvent_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
 
 			assert_noop!(
 				alice_solvent_loan_state.choose_liquidation_mode(),
-				Error::<Test>::SolventUserLoan
+				Error::<TestRuntime>::SolventUserLoan
 			);
 		});
 }

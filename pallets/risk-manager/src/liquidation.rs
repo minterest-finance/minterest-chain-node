@@ -1,7 +1,8 @@
 use super::*;
 
 /// Types of liquidation of user loans.
-enum LiquidationMode {
+#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, PartialOrd, Ord)]
+pub enum LiquidationMode {
 	/// Makes the user's loan solvent. A portion of the user's borrow is paid from the
 	/// liquidation pools, and a portion of the user's collateral is withdrawn and transferred to
 	/// the liquidation pools.

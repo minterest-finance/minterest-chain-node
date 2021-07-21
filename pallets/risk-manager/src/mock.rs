@@ -18,12 +18,15 @@ use sp_runtime::{
 use sp_std::collections::btree_map::BTreeMap;
 pub use test_helper::*;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
-type Block = frame_system::mocking::MockBlock<Test>;
+// -----------------------------------------------------------------------------------------
+// 									CONSTRUCT RUNTIME
+// -----------------------------------------------------------------------------------------
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
+type Block = frame_system::mocking::MockBlock<TestRuntime>;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-	pub enum Test where
+	pub enum TestRuntime where
 		Block = Block,
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
@@ -60,20 +63,23 @@ parameter_types! {
 	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
-mock_impl_system_config!(Test);
-mock_impl_balances_config!(Test);
-mock_impl_orml_tokens_config!(Test);
-mock_impl_orml_currencies_config!(Test);
-mock_impl_liquidity_pools_config!(Test);
-mock_impl_risk_manager_config!(Test, ZeroAdmin);
-mock_impl_controller_config!(Test, ZeroAdmin);
-mock_impl_minterest_model_config!(Test, ZeroAdmin);
-mock_impl_mnt_token_config!(Test, ZeroAdmin);
-mock_impl_minterest_protocol_config!(Test, ZeroAdmin);
-mock_impl_liquidation_pools_config!(Test);
-mock_impl_whitelist_module_config!(Test, ZeroAdmin);
-mock_impl_dex_config!(Test);
+mock_impl_system_config!(TestRuntime);
+mock_impl_balances_config!(TestRuntime);
+mock_impl_orml_tokens_config!(TestRuntime);
+mock_impl_orml_currencies_config!(TestRuntime);
+mock_impl_liquidity_pools_config!(TestRuntime);
+mock_impl_risk_manager_config!(TestRuntime, ZeroAdmin);
+mock_impl_controller_config!(TestRuntime, ZeroAdmin);
+mock_impl_minterest_model_config!(TestRuntime, ZeroAdmin);
+mock_impl_mnt_token_config!(TestRuntime, ZeroAdmin);
+mock_impl_minterest_protocol_config!(TestRuntime, ZeroAdmin);
+mock_impl_liquidation_pools_config!(TestRuntime);
+mock_impl_whitelist_module_config!(TestRuntime, ZeroAdmin);
+mock_impl_dex_config!(TestRuntime);
 
+// -----------------------------------------------------------------------------------------
+// 										PRICE SOURCE
+// -----------------------------------------------------------------------------------------
 pub struct MockPriceSource;
 
 impl PricesManager<CurrencyId> for MockPriceSource {
@@ -86,8 +92,11 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 	fn unlock_price(_currency_id: CurrencyId) {}
 }
 
+// -----------------------------------------------------------------------------------------
+// 										EXTBUILDER
+// -----------------------------------------------------------------------------------------
 #[derive(Default)]
-pub struct ExternalityBuilder {
+pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Amount)>,
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
@@ -97,7 +106,7 @@ pub struct ExternalityBuilder {
 	minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
 }
 
-impl ExternalityBuilder {
+impl ExtBuilder {
 	/// Simulates extrinsic `deposit_underlying()` in genesis block.
 	///
 	///-`who`: the user who performs the operation.
@@ -107,8 +116,8 @@ impl ExternalityBuilder {
 	pub fn deposit_underlying(self, who: AccountId, underlying_asset: CurrencyId, underlying_amount: Balance) -> Self {
 		self.init_pool(underlying_asset, Balance::zero(), Rate::one(), Balance::zero())
 			.set_pool_user_data(underlying_asset, who, Balance::zero(), Rate::one(), false)
-			.set_controller_data_mock(vec![underlying_asset])
-			.set_minterest_model_params_mock(vec![underlying_asset])
+			.set_init_controller_params(vec![underlying_asset])
+			.set_init_minterest_model_params(vec![underlying_asset])
 			.set_user_balance(who, underlying_asset.wrapped_asset().unwrap(), underlying_amount)
 			.set_pool_balance(underlying_asset, underlying_amount as Amount)
 	}
@@ -131,7 +140,6 @@ impl ExternalityBuilder {
 		self
 	}
 
-	// TODO: implement substract borrow amount
 	/// Simulates extrinsic `borrow()` in genesis block.
 	///
 	///-`who`: the user who performs the operation.
@@ -272,16 +280,11 @@ impl ExternalityBuilder {
 		self
 	}
 
-	/// Set minterest model parameters
-	/// - 'currency_id': currency identifier
-	/// - 'kink': the utilization point at which the jump multiplier is applied
-	/// - 'base_rate_per_block': the base interest rate which is the y-intercept when utilization
-	///   rate is 0
-	/// - 'multiplier_per_block': the multiplier of utilization rate that gives the slope of the
-	///   interest rate
-	/// - 'jump_multiplier_per_block': the multiplier of utilization rate after hitting a specified
-	///   utilization point - kink
-	pub fn set_minterest_model_params_mock(mut self, pools: Vec<CurrencyId>) -> Self {
+	/// Sets initial minterest model parameters.
+	/// `kink = 0.8`, `base_rate_per_block = 0`, `multiplier_per_block = 0.000000009`,
+	/// `jump_multiplier_per_block = 0.000000207`.
+	/// -`pools`: vector of initialized liquidity pools.
+	pub fn set_init_minterest_model_params(mut self, pools: Vec<CurrencyId>) -> Self {
 		pools.into_iter().for_each(|pool_id| {
 			self.minterest_model_params.push((
 				pool_id,
@@ -296,12 +299,16 @@ impl ExternalityBuilder {
 		self
 	}
 
+	/// Sets liquidation_fee
 	pub fn set_liquidation_fees(mut self, liquidation_fees: Vec<(CurrencyId, Rate)>) -> Self {
 		self.liquidation_fee.extend_from_slice(&liquidation_fees);
 		self
 	}
 
-	pub fn set_controller_data_mock(mut self, pools: Vec<CurrencyId>) -> Self {
+	/// Sets initial minterest model parameters.
+	/// `kink = 0.8`, `base_rate_per_block = 0`, `multiplier_per_block = 0.000000009`,
+	/// `jump_multiplier_per_block = 0.000000207`.
+	pub fn set_init_controller_params(mut self, pools: Vec<CurrencyId>) -> Self {
 		pools.into_iter().for_each(|pool_id| {
 			self.controller_data.push((
 				pool_id,
@@ -318,10 +325,13 @@ impl ExternalityBuilder {
 		self
 	}
 
+	// Build
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+		let mut storage = frame_system::GenesisConfig::default()
+			.build_storage::<TestRuntime>()
+			.unwrap();
 
-		orml_tokens::GenesisConfig::<Test> {
+		orml_tokens::GenesisConfig::<TestRuntime> {
 			balances: self
 				.endowed_accounts
 				.into_iter()
@@ -331,14 +341,14 @@ impl ExternalityBuilder {
 		.assimilate_storage(&mut storage)
 		.unwrap();
 
-		liquidity_pools::GenesisConfig::<Test> {
+		liquidity_pools::GenesisConfig::<TestRuntime> {
 			pools: self.pools,
 			pool_user_data: self.pool_user_data,
 		}
 		.assimilate_storage(&mut storage)
 		.unwrap();
 
-		risk_manager::GenesisConfig::<Test> {
+		risk_manager::GenesisConfig::<TestRuntime> {
 			liquidation_fee: self.liquidation_fee,
 			liquidation_threshold: self.liquidation_threshold,
 			_phantom: Default::default(),
@@ -346,7 +356,7 @@ impl ExternalityBuilder {
 		.assimilate_storage(&mut storage)
 		.unwrap();
 
-		controller::GenesisConfig::<Test> {
+		controller::GenesisConfig::<TestRuntime> {
 			controller_params: self.controller_data,
 			pause_keepers: vec![
 				(ETH, PauseKeeper::all_unpaused()),
@@ -358,7 +368,7 @@ impl ExternalityBuilder {
 		.assimilate_storage(&mut storage)
 		.unwrap();
 
-		minterest_model::GenesisConfig::<Test> {
+		minterest_model::GenesisConfig::<TestRuntime> {
 			minterest_model_params: self.minterest_model_params,
 			_phantom: Default::default(),
 		}
