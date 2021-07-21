@@ -796,8 +796,8 @@ impl_runtime_apis! {
 			Some(PoolState { exchange_rate, borrow_rate, supply_rate })
 		}
 
-		fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate> {
-			Controller::get_utilization_rate(pool_id)
+		fn get_pool_utilization_rate(pool_id: CurrencyId) -> Option<Rate> {
+			Controller::get_pool_utilization_rate(pool_id)
 		}
 
 		fn get_user_total_supply_and_borrow_balance_in_usd(account_id: AccountId) -> Option<UserPoolBalanceData> {

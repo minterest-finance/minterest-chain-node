@@ -334,8 +334,8 @@ fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::liquidity_pool_state(currency_id)
 }
 
-fn get_utilization_rate_rpc(pool_id: CurrencyId) -> Option<Rate> {
-	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_utilization_rate(pool_id)
+fn get_pool_utilization_rate_rpc(pool_id: CurrencyId) -> Option<Rate> {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_pool_utilization_rate(pool_id)
 }
 
 fn get_user_total_supply_and_borrow_balance_in_usd_rpc(account_id: AccountId) -> Option<UserPoolBalanceData> {
@@ -934,7 +934,7 @@ fn test_get_protocol_total_value_rpc() {
 }
 
 #[test]
-fn test_get_utilization_rate_rpc() {
+fn test_get_pool_utilization_rate_rpc() {
 	ExtBuilder::default()
 		.pool_initial(DOT)
 		.pool_initial(ETH)
@@ -953,8 +953,8 @@ fn test_get_utilization_rate_rpc() {
 			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
 			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
 			// No borrows -> utilization rates equal to 0
-			assert_eq!(get_utilization_rate_rpc(DOT), Some(Rate::zero()));
-			assert_eq!(get_utilization_rate_rpc(ETH), Some(Rate::zero()));
+			assert_eq!(get_pool_utilization_rate_rpc(DOT), Some(Rate::zero()));
+			assert_eq!(get_pool_utilization_rate_rpc(ETH), Some(Rate::zero()));
 
 			System::set_block_number(20);
 
@@ -962,18 +962,18 @@ fn test_get_utilization_rate_rpc() {
 			assert_eq!(pool_balance(DOT), dollars(80_000));
 			// 70 / (80 + 70) = 0.466666667
 			assert_eq!(
-				get_utilization_rate_rpc(DOT),
+				get_pool_utilization_rate_rpc(DOT),
 				Some(Rate::from_inner(466_666_666_666_666_667))
 			);
-			assert_eq!(get_utilization_rate_rpc(ETH), Some(Rate::zero()));
+			assert_eq!(get_pool_utilization_rate_rpc(ETH), Some(Rate::zero()));
 
 			System::set_block_number(100);
 			// Utilization rate grows with time as interest is accrued
 			assert_eq!(
-				get_utilization_rate_rpc(DOT),
+				get_pool_utilization_rate_rpc(DOT),
 				Some(Rate::from_inner(466_666_757_610_653_833))
 			);
-			assert_eq!(get_utilization_rate_rpc(ETH), Some(Rate::zero()));
+			assert_eq!(get_pool_utilization_rate_rpc(ETH), Some(Rate::zero()));
 		});
 }
 

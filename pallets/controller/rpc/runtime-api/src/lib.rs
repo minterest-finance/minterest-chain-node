@@ -116,7 +116,7 @@ sp_api::decl_runtime_apis! {
 
 		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState>;
 
-		fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate>;
+		fn get_pool_utilization_rate(pool_id: CurrencyId) -> Option<Rate>;
 
 		fn get_user_total_supply_and_borrow_balance_in_usd(account_id: AccountId) -> Option<UserPoolBalanceData>;
 
