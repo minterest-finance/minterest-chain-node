@@ -18,7 +18,7 @@ fn user_liquidation_attempts_should_work() {
 }
 
 #[test]
-fn mutate_attemtps_should_work() {
+fn mutate_attempts_should_work() {
 	ExternalityBuilder::default()
 		.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 		.build()
@@ -28,11 +28,11 @@ fn mutate_attemtps_should_work() {
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 1_u8);
 
 			// ETH pool is disabled as collateral. Don't reset liquidation attempts.
-			TestRiskManager::mutate_attemtps(Some(ETH), &ALICE, Deposit);
+			TestRiskManager::mutate_attempts(Some(ETH), &ALICE, Deposit);
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 1_u8);
 
 			// DOT pool is enabled as collateral. Reset liquidation attempts to zero.
-			TestRiskManager::mutate_attemtps(Some(DOT), &ALICE, Deposit);
+			TestRiskManager::mutate_attempts(Some(DOT), &ALICE, Deposit);
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), u8::zero());
 		})
 }
