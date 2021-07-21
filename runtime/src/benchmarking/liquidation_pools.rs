@@ -15,7 +15,7 @@ runtime_benchmarks! {
 	verify { assert_eq!(LiquidationPools::liquidation_pool_data_storage(DOT).balance_ratio, Rate::one()) }
 
 	set_max_ideal_balance {}: _(RawOrigin::Root, DOT,  Some(10u128.pow(18)))
-	verify { assert_eq!(LiquidationPools::liquidation_pool_data_storage(DOT).max_ideal_balance, Some(10u128.pow(18))) }
+	verify { assert_eq!(LiquidationPools::liquidation_pool_data_storage(DOT).max_ideal_balance_usd, Some(10u128.pow(18))) }
 
 	transfer_to_liquidation_pool {
 		let who: AccountId = account("alice", 0, 0);

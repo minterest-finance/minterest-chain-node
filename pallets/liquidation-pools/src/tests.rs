@@ -183,7 +183,7 @@ fn set_max_ideal_balance_should_work() {
 			Some(Balance::zero())
 		));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pool_data_storage(DOT).max_ideal_balance,
+			TestLiquidationPools::liquidation_pool_data_storage(DOT).max_ideal_balance_usd,
 			Some(Balance::zero())
 		);
 		let expected_event =
@@ -193,7 +193,7 @@ fn set_max_ideal_balance_should_work() {
 		// Can be set to None
 		assert_ok!(TestLiquidationPools::set_max_ideal_balance(admin(), DOT, None));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pool_data_storage(DOT).max_ideal_balance,
+			TestLiquidationPools::liquidation_pool_data_storage(DOT).max_ideal_balance_usd,
 			None
 		);
 		let expected_event = Event::TestLiquidationPools(crate::Event::MaxIdealBalanceChanged(DOT, None));
@@ -219,7 +219,7 @@ fn calculate_pool_ideal_balance_usd_should_work() {
 		.liquidity_pool_balance(DOT, 500_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			// Check that ideal balance is calculated correctly when max_ideal_balance is set to None
+			// Check that ideal balance is calculated correctly when max_ideal_balance_usd is set to None
 			// Liquidity pool value: 500_000
 			// Oracle price: 1.0
 			// Balance ratio: 0.2
@@ -234,7 +234,7 @@ fn calculate_pool_ideal_balance_usd_should_work() {
 				DOT,
 				Some(1_000 * DOLLARS)
 			));
-			// Check that ideal balance is calculated correctly when max_ideal_balance is set to 1_000
+			// Check that ideal balance is calculated correctly when max_ideal_balance_usd is set to 1_000
 			// Liquidity pool value: 500_000
 			// Oracle price: 1.0
 			// Balance ratio: 0.2
@@ -249,7 +249,7 @@ fn calculate_pool_ideal_balance_usd_should_work() {
 				DOT,
 				Some(1_000_000 * DOLLARS)
 			));
-			// Check that ideal balance is calculated correctly when max_ideal_balance is set to 1_000_000
+			// Check that ideal balance is calculated correctly when max_ideal_balance_usd is set to 1_000_000
 			// Liquidity pool value: 500_000
 			// Oracle price: 1.0
 			// Balance ratio: 0.2
@@ -347,12 +347,12 @@ fn collects_sales_list_should_work_2_2() {
 				Sales {
 					supply_pool_id: ETH,
 					target_pool_id: BTC,
-					amount: 7_000_000_000 * DOLLARS, // USD equivalent
+					amount_usd: 7_000_000_000 * DOLLARS, // USD equivalent
 				},
 				Sales {
 					supply_pool_id: ETH,
 					target_pool_id: DOT,
-					amount: 4_200_000 * DOLLARS, // USD equivalent
+					amount_usd: 4_200_000 * DOLLARS, // USD equivalent
 				},
 			];
 
@@ -403,12 +403,12 @@ fn balance_liquidation_pools_should_work() {
 				Sales {
 					supply_pool_id: DOT,
 					target_pool_id: BTC,
-					amount: 300_000 * DOLLARS, // USD equivalent
+					amount_usd: 300_000 * DOLLARS, // USD equivalent
 				},
 				Sales {
 					supply_pool_id: KSM,
 					target_pool_id: BTC,
-					amount: 200_000 * DOLLARS, // USD equivalent
+					amount_usd: 200_000 * DOLLARS, // USD equivalent
 				},
 			];
 
@@ -419,7 +419,7 @@ fn balance_liquidation_pools_should_work() {
 
 			expected_sales_list.iter().for_each(|sale| {
 				if let Some((max_supply_amount, target_amount)) =
-					TestLiquidationPools::get_amounts(sale.supply_pool_id, sale.target_pool_id, sale.amount).ok()
+					TestLiquidationPools::get_amounts(sale.supply_pool_id, sale.target_pool_id, sale.amount_usd).ok()
 				{
 					let _ = TestLiquidationPools::balance_liquidation_pools(
 						Origin::none(),
@@ -498,7 +498,7 @@ fn balance_liquidation_pools_two_pools_should_work_test() {
 			let expected_sales_list = vec![Sales {
 				supply_pool_id: DOT,
 				target_pool_id: ETH,
-				amount: 120_000 * DOLLARS, // USD equivalent
+				amount_usd: 120_000 * DOLLARS, // USD equivalent
 			}];
 
 			assert_eq!(
@@ -508,7 +508,7 @@ fn balance_liquidation_pools_two_pools_should_work_test() {
 
 			expected_sales_list.iter().for_each(|sale| {
 				if let Some((max_supply_amount, target_amount)) =
-					TestLiquidationPools::get_amounts(sale.supply_pool_id, sale.target_pool_id, sale.amount).ok()
+					TestLiquidationPools::get_amounts(sale.supply_pool_id, sale.target_pool_id, sale.amount_usd).ok()
 				{
 					let _ = TestLiquidationPools::balance_liquidation_pools(
 						Origin::none(),

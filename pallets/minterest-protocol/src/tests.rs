@@ -70,7 +70,7 @@ fn create_pool_should_work() {
 				LiquidationPoolData {
 					deviation_threshold: Rate::saturating_from_rational(5, 100),
 					balance_ratio: Rate::saturating_from_rational(2, 10),
-					max_ideal_balance: None,
+					max_ideal_balance_usd: None,
 				},
 			);
 

@@ -327,20 +327,20 @@ impl ExtBuilderNew {
 	/// - 'deviation_threshold': threshold
 	/// - 'balance_ratio': represents the percentage of working pool value to be covered by value in
 	///   Liquidation Poll.
-	/// - 'max_ideal_balance': maximum ideal balance during pool balancing
+	/// - 'max_ideal_balance_usd': maximum ideal balance during pool balancing
 	pub fn init_liquidation_pool(
 		mut self,
 		pool_id: CurrencyId,
 		deviation_threshold: Rate,
 		balance_ratio: Rate,
-		max_ideal_balance: Option<Balance>,
+		max_ideal_balance_usd: Option<Balance>,
 	) -> Self {
 		self.liquidation_pools.push((
 			pool_id,
 			LiquidationPoolData {
 				deviation_threshold,
 				balance_ratio,
-				max_ideal_balance,
+				max_ideal_balance_usd,
 			},
 		));
 		self
