@@ -80,7 +80,10 @@ pub mod module {
 	}
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T>
+	where
+		u128: From<<T as pallet_chainlink_feed::Config>::Value>,
+	{
 		fn offchain_worker(now: T::BlockNumber) {
 			if let Err(error) = Self::_offchain_worker(now) {
 				log::info!(
@@ -115,14 +118,18 @@ pub mod module {
 	}
 }
 
-impl<T: Config> Pallet<T> {
+impl<T: Config> Pallet<T>
+where
+	u128: From<<T as pallet_chainlink_feed::Config>::Value>,
+{
 	fn _offchain_worker(now: T::BlockNumber) -> Result<(), OffchainErr> {
+		// TODO implement extrinsic to set initiate round period instead hardcoded 3
 		let bn: T::BlockNumber = (3_u32).into();
 		if (now % bn).is_zero() {
 			let feed_id = Self::get_feed_id(ETH).ok_or(OffchainErr::CheckFail)?;
 
 			let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id).ok_or(OffchainErr::CheckFail)?;
-			log::info!("Last round_id is: {:?}", feed_result.latest_round());
+			log::info!("Last feed round_id: {:?}", feed_result.latest_round());
 
 			// TODO should we get latest_round for each pool and produce event pair?
 			let call = Call::<T>::initiate_new_round(feed_id, feed_result.latest_round().saturating_add(1));
@@ -156,13 +163,6 @@ impl<T: Config> Pallet<T> {
 			.find(|(_, v)| v.description == Self::convert_to_description(currency_id))?
 			.0,
 		)
-	}
-
-	pub fn get_underlying_price(currency_id: CurrencyId) -> Option<T::Value> {
-		let feed_id = Self::get_feed_id(currency_id)?;
-		let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id)?;
-		let RoundData { answer, .. } = feed_result.latest_data();
-		Some(answer)
 	}
 }
 

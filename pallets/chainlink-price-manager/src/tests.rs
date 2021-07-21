@@ -5,7 +5,9 @@
 use crate::mock::*;
 use minterest_primitives::CurrencyId;
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData};
+use pallet_traits::PricesManager;
 use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::FixedU128;
 use test_helper::currency_mock::*;
 use test_helper::users_mock::*;
 
@@ -57,7 +59,10 @@ fn create_feed_should_work() {
 		let RoundData { answer, .. } = feed_result.latest_data();
 		assert_eq!(answer, 42);
 
-		assert_eq!(ChainlinkPriceManager::get_underlying_price(BTC).unwrap(), 42);
+		assert_eq!(
+			ChainlinkPriceManager::get_underlying_price(BTC).unwrap(),
+			FixedU128::from_inner(42)
+		);
 		assert_eq!(ChainlinkPriceManager::get_underlying_price(DOT), None);
 	});
 }
