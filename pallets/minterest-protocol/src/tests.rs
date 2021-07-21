@@ -45,7 +45,7 @@ fn create_pool_should_work() {
 				},
 			);
 			assert_eq!(
-				TestMinterestModel::minterest_model_params(DOT),
+				TestMinterestModel::minterest_model_data_storage(DOT),
 				MinterestModelData {
 					kink: Rate::saturating_from_rational(2, 3),
 					base_rate_per_block: Rate::saturating_from_rational(1, 3),
