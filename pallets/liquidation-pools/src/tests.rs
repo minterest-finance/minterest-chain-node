@@ -89,7 +89,7 @@ fn set_deviation_threshold_should_work() {
 		// Can be set to 0.0
 		assert_ok!(TestLiquidationPools::set_deviation_threshold(admin(), DOT, 0));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pools_data(DOT).deviation_threshold,
+			TestLiquidationPools::liquidation_pool_data_storage(DOT).deviation_threshold,
 			Rate::zero()
 		);
 		let expected_event = Event::TestLiquidationPools(crate::Event::DeviationThresholdChanged(DOT, Rate::zero()));
@@ -102,7 +102,7 @@ fn set_deviation_threshold_should_work() {
 			1_000_000_000_000_000_000u128
 		));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pools_data(DOT).deviation_threshold,
+			TestLiquidationPools::liquidation_pool_data_storage(DOT).deviation_threshold,
 			Rate::one()
 		);
 		let expected_event = Event::TestLiquidationPools(crate::Event::DeviationThresholdChanged(DOT, Rate::one()));
@@ -134,7 +134,7 @@ fn set_balance_ratio_should_work() {
 		// Can be set to 0.0
 		assert_ok!(TestLiquidationPools::set_balance_ratio(admin(), DOT, 0));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pools_data(DOT).balance_ratio,
+			TestLiquidationPools::liquidation_pool_data_storage(DOT).balance_ratio,
 			Rate::zero()
 		);
 		let expected_event = Event::TestLiquidationPools(crate::Event::BalanceRatioChanged(DOT, Rate::zero()));
@@ -147,7 +147,7 @@ fn set_balance_ratio_should_work() {
 			1_000_000_000_000_000_000u128
 		));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pools_data(DOT).balance_ratio,
+			TestLiquidationPools::liquidation_pool_data_storage(DOT).balance_ratio,
 			Rate::one()
 		);
 		let expected_event = Event::TestLiquidationPools(crate::Event::BalanceRatioChanged(DOT, Rate::one()));
@@ -183,7 +183,7 @@ fn set_max_ideal_balance_should_work() {
 			Some(Balance::zero())
 		));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pools_data(DOT).max_ideal_balance,
+			TestLiquidationPools::liquidation_pool_data_storage(DOT).max_ideal_balance,
 			Some(Balance::zero())
 		);
 		let expected_event =
@@ -193,7 +193,7 @@ fn set_max_ideal_balance_should_work() {
 		// Can be set to None
 		assert_ok!(TestLiquidationPools::set_max_ideal_balance(admin(), DOT, None));
 		assert_eq!(
-			TestLiquidationPools::liquidation_pools_data(DOT).max_ideal_balance,
+			TestLiquidationPools::liquidation_pool_data_storage(DOT).max_ideal_balance,
 			None
 		);
 		let expected_event = Event::TestLiquidationPools(crate::Event::MaxIdealBalanceChanged(DOT, None));
@@ -214,7 +214,7 @@ fn set_max_ideal_balance_should_work() {
 }
 
 #[test]
-fn calculate_ideal_balance_should_work() {
+fn calculate_pool_ideal_balance_usd_should_work() {
 	ExternalityBuilder::default()
 		.liquidity_pool_balance(DOT, 500_000 * DOLLARS)
 		.build()
@@ -225,7 +225,7 @@ fn calculate_ideal_balance_should_work() {
 			// Balance ratio: 0.2
 			// Expected ideal balance: 100_000
 			assert_eq!(
-				TestLiquidationPools::calculate_ideal_balance(DOT),
+				TestLiquidationPools::calculate_pool_ideal_balance_usd(DOT),
 				Ok(100_000 * DOLLARS)
 			);
 
@@ -239,7 +239,10 @@ fn calculate_ideal_balance_should_work() {
 			// Oracle price: 1.0
 			// Balance ratio: 0.2
 			// Expected ideal balance: min(100_000, 1_000) = 1_000
-			assert_eq!(TestLiquidationPools::calculate_ideal_balance(DOT), Ok(1_000 * DOLLARS));
+			assert_eq!(
+				TestLiquidationPools::calculate_pool_ideal_balance_usd(DOT),
+				Ok(1_000 * DOLLARS)
+			);
 
 			assert_ok!(TestLiquidationPools::set_max_ideal_balance(
 				admin(),
@@ -252,7 +255,7 @@ fn calculate_ideal_balance_should_work() {
 			// Balance ratio: 0.2
 			// Expected ideal balance: min(100_000, 1_000_000) = 100_000
 			assert_eq!(
-				TestLiquidationPools::calculate_ideal_balance(DOT),
+				TestLiquidationPools::calculate_pool_ideal_balance_usd(DOT),
 				Ok(100_000 * DOLLARS)
 			);
 		});

@@ -66,7 +66,7 @@ fn create_pool_should_work() {
 			);
 			assert_eq!(Controller::pause_keepers(DOT), PauseKeeper::all_unpaused());
 			assert_eq!(
-				TestLiquidationPools::liquidation_pools_data(DOT),
+				TestLiquidationPools::liquidation_pool_data_storage(DOT),
 				LiquidationPoolData {
 					deviation_threshold: Rate::saturating_from_rational(5, 100),
 					balance_ratio: Rate::saturating_from_rational(2, 10),
