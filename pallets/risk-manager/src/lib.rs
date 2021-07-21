@@ -347,7 +347,10 @@ impl<T: Config> Pallet<T> {
 		let user_loan_state: UserLoanState<T> =
 			UserLoanState::build_user_loan_state(&borrower).map_err(|_| OffchainErr::CheckFail)?;
 		ensure!(borrower == *user_loan_state.get_user(), OffchainErr::CheckFail);
-		let liquidation_amounts = match user_loan_state.get_liquidation_mode() {
+		let liquidation_amounts = match user_loan_state
+			.choose_liquidation_mode()
+			.map_err(|_| OffchainErr::CheckFail)?
+		{
 			LiquidationMode::Partial => user_loan_state
 				.calculate_partial_liquidation()
 				.map_err(|_| OffchainErr::CheckFail)?,

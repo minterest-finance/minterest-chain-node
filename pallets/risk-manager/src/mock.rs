@@ -5,6 +5,7 @@ use controller::{ControllerData, PauseKeeper};
 use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{Pool, PoolUserData};
+use minterest_model::MinterestModelData;
 use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 pub use minterest_primitives::{Balance, Price, Rate};
 use orml_traits::parameter_type_with_key;
@@ -87,12 +88,13 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 
 #[derive(Default)]
 pub struct ExternalityBuilder {
-	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+	endowed_accounts: Vec<(AccountId, CurrencyId, Amount)>,
 	pools: Vec<(CurrencyId, Pool)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
 	liquidation_fee: Vec<(CurrencyId, Rate)>,
 	liquidation_threshold: Rate,
+	minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
 }
 
 impl ExternalityBuilder {
@@ -106,8 +108,9 @@ impl ExternalityBuilder {
 		self.init_pool(underlying_asset, Balance::zero(), Rate::one(), Balance::zero())
 			.set_pool_user_data(underlying_asset, who, Balance::zero(), Rate::one(), false)
 			.set_controller_data_mock(vec![underlying_asset])
+			.set_minterest_model_params_mock(vec![underlying_asset])
 			.set_user_balance(who, underlying_asset.wrapped_asset().unwrap(), underlying_amount)
-			.set_pool_balance(underlying_asset, underlying_amount)
+			.set_pool_balance(underlying_asset, underlying_amount as Amount)
 	}
 
 	/// Simulates extrinsic `enable_is_collateral()` in genesis block.
@@ -128,18 +131,19 @@ impl ExternalityBuilder {
 		self
 	}
 
+	// TODO: implement substract borrow amount
 	/// Simulates extrinsic `borrow()` in genesis block.
 	///
 	///-`who`: the user who performs the operation.
 	/// - `underlying_asset`: The currency ID of the underlying asset to be borrowed.
 	/// - `underlying_amount`: The amount of the underlying asset to be borrowed.
 	///
-	/// Note: use only after `deposit_underlying` (does not set up controller params).
+	/// Note: use only after `deposit_underlying`.
 	pub fn borrow_underlying(self, who: AccountId, underlying_asset: CurrencyId, borrow_amount: Balance) -> Self {
-		self.init_pool(underlying_asset, borrow_amount, Rate::one(), Balance::zero())
+		self.init_pool(underlying_asset, borrow_amount as Balance, Rate::one(), Balance::zero())
 			.set_pool_user_data(underlying_asset, who, borrow_amount, Rate::one(), false)
 			.set_user_balance(who, underlying_asset, borrow_amount)
-			.set_pool_balance(underlying_asset, Balance::zero())
+			.set_pool_balance(underlying_asset, (borrow_amount as Amount).saturating_neg())
 	}
 
 	/// Merges duplicate balances in `endowed_accounts` in a genesis block.
@@ -149,13 +153,10 @@ impl ExternalityBuilder {
 			.endowed_accounts
 			.iter()
 			.fold(
-				BTreeMap::<(AccountId, CurrencyId), Balance>::new(),
+				BTreeMap::<(AccountId, CurrencyId), Amount>::new(),
 				|mut acc, (account_id, pool_id, amount)| {
-					// merge duplicated accounts
 					if let Some(balance) = acc.get_mut(&(*account_id, *pool_id)) {
-						*balance = balance
-							.checked_add(*amount)
-							.expect("balance cannot overflow when building genesis");
+						*balance += amount;
 					} else {
 						acc.insert((account_id.clone(), *pool_id), *amount);
 					}
@@ -164,19 +165,15 @@ impl ExternalityBuilder {
 			)
 			.into_iter()
 			.map(|((account_id, pool_id), amount)| (account_id, pool_id, amount))
-			.collect::<Vec<(AccountId, CurrencyId, Balance)>>();
+			.collect::<Vec<(AccountId, CurrencyId, Amount)>>();
 		self.pool_user_data = self
 			.pool_user_data
 			.iter()
 			.fold(
 				BTreeMap::<(CurrencyId, AccountId), PoolUserData>::new(),
 				|mut acc, (pool_id, account_id, pool_user_data)| {
-					// merge duplicated accounts
 					if let Some(user_data) = acc.get_mut(&(*pool_id, *account_id)) {
-						user_data.borrowed = user_data
-							.borrowed
-							.checked_add(pool_user_data.borrowed)
-							.expect("balance cannot overflow when building genesis");
+						user_data.borrowed += pool_user_data.borrowed;
 					} else {
 						acc.insert((*pool_id, account_id.clone()), pool_user_data.clone());
 					}
@@ -192,10 +189,7 @@ impl ExternalityBuilder {
 			.fold(BTreeMap::<CurrencyId, Pool>::new(), |mut acc, (pool_id, pool_data)| {
 				// merge duplicated accounts
 				if let Some(pool) = acc.get_mut(pool_id) {
-					pool.borrowed = pool
-						.borrowed
-						.checked_add(pool_data.borrowed)
-						.expect("balance cannot overflow when building genesis");
+					pool.borrowed += pool_data.borrowed;
 				} else {
 					acc.insert(*pool_id, pool_data.clone());
 				}
@@ -212,14 +206,16 @@ impl ExternalityBuilder {
 	/// - 'currency_id': currency.
 	/// - 'balance': balance value to set.
 	pub fn set_user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
-		self.endowed_accounts.push((user, currency_id, balance));
+		self.endowed_accounts.push((user, currency_id, balance as Amount));
 		self
 	}
 
 	/// Set balance for the particular pool.
 	/// - 'currency_id': pool id.
-	/// - 'balance': balance value to set.
-	pub fn set_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+	/// - 'balance': balance value to set. This parameter has type `Amount`, because during
+	/// the borrow operation it is necessary to subtract the balance from the balance of
+	/// the liquidity pool.
+	pub fn set_pool_balance(mut self, currency_id: CurrencyId, balance: Amount) -> Self {
 		self.endowed_accounts
 			.push((TestPools::pools_account_id(), currency_id, balance));
 		self
@@ -276,6 +272,30 @@ impl ExternalityBuilder {
 		self
 	}
 
+	/// Set minterest model parameters
+	/// - 'currency_id': currency identifier
+	/// - 'kink': the utilization point at which the jump multiplier is applied
+	/// - 'base_rate_per_block': the base interest rate which is the y-intercept when utilization
+	///   rate is 0
+	/// - 'multiplier_per_block': the multiplier of utilization rate that gives the slope of the
+	///   interest rate
+	/// - 'jump_multiplier_per_block': the multiplier of utilization rate after hitting a specified
+	///   utilization point - kink
+	pub fn set_minterest_model_params_mock(mut self, pools: Vec<CurrencyId>) -> Self {
+		pools.into_iter().for_each(|pool_id| {
+			self.minterest_model_params.push((
+				pool_id,
+				MinterestModelData {
+					kink: Rate::saturating_from_rational(8, 10),
+					base_rate_per_block: Rate::zero(),
+					multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+					jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+				},
+			))
+		});
+		self
+	}
+
 	pub fn set_liquidation_fees(mut self, liquidation_fees: Vec<(CurrencyId, Rate)>) -> Self {
 		self.liquidation_fee.extend_from_slice(&liquidation_fees);
 		self
@@ -286,7 +306,7 @@ impl ExternalityBuilder {
 			self.controller_data.push((
 				pool_id,
 				ControllerData {
-					last_interest_accrued_block: 0,
+					last_interest_accrued_block: 1,
 					protocol_interest_factor: Rate::saturating_from_rational(1, 10),
 					max_borrow_rate: Rate::saturating_from_rational(5, 1000),
 					collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
@@ -302,7 +322,11 @@ impl ExternalityBuilder {
 		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 		orml_tokens::GenesisConfig::<Test> {
-			balances: self.endowed_accounts,
+			balances: self
+				.endowed_accounts
+				.into_iter()
+				.map(|(account_id, pool_id, amount)| (account_id, pool_id, amount as Balance))
+				.collect::<Vec<(AccountId, CurrencyId, Balance)>>(),
 		}
 		.assimilate_storage(&mut storage)
 		.unwrap();
@@ -330,6 +354,13 @@ impl ExternalityBuilder {
 				(KSM, PauseKeeper::all_unpaused()),
 				(BTC, PauseKeeper::all_unpaused()),
 			],
+		}
+		.assimilate_storage(&mut storage)
+		.unwrap();
+
+		minterest_model::GenesisConfig::<Test> {
+			minterest_model_params: self.minterest_model_params,
+			_phantom: Default::default(),
 		}
 		.assimilate_storage(&mut storage)
 		.unwrap();

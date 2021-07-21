@@ -135,7 +135,7 @@ impl<T: Config> UserLoanState<T> {
 	/// Returns the `borrower` loan liquidation mode.
 	pub fn choose_liquidation_mode(&self) -> Result<LiquidationMode, DispatchError> {
 		ensure!(
-			self.total_borrow()? <= self.total_collateral()?,
+			self.total_borrow()? > self.total_collateral()?,
 			Error::<T>::SolventUserLoan
 		);
 		let user_liquidation_attempts = Pallet::<T>::get_user_liquidation_attempts(&self.user);
@@ -149,11 +149,6 @@ impl<T: Config> UserLoanState<T> {
 		} else {
 			Ok(LiquidationMode::Complete)
 		}
-	}
-
-	/// TODO: implement
-	pub fn get_liquidation_mode(&self) -> LiquidationMode {
-		todo!()
 	}
 
 	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
