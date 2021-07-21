@@ -321,7 +321,7 @@ pub trait MinterestModelManager {
 	/// - `utilization_rate`: Current Utilization rate value.
 	///
 	/// returns `borrow_interest_rate`.
-	fn calculate_borrow_interest_rate(
+	fn calculate_pool_borrow_interest_rate(
 		underlying_asset: CurrencyId,
 		utilization_rate: Rate,
 	) -> Result<Rate, DispatchError>;
