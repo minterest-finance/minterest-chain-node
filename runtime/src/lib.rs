@@ -51,7 +51,7 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, One, Zero},
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchResult, FixedPointNumber,
+	ApplyExtrinsicResult, DispatchResult, FixedPointNumber, FixedU128,
 };
 use sp_std::{cmp::Ordering, convert::TryFrom, prelude::*};
 #[cfg(feature = "std")]
@@ -577,7 +577,6 @@ impl whitelist_module::Config for Runtime {
 
 impl chainlink_price_manager::Config for Runtime {
 	type Event = Event;
-	type UpdateOrigin = EnsureRootOrHalfMinterestCouncil;
 	type PalletAccountId = ChainlinkPriceManagerAccountId;
 	type UnsignedPriority = ChainlinkManagerPriority;
 }
@@ -595,7 +594,7 @@ parameter_types! {
 impl pallet_chainlink_feed::Config for Runtime {
 	type Event = Event;
 	type FeedId = u32;
-	type Value = u128;
+	type Value = Value;
 	type Currency = pallet_balances::Pallet<Runtime>;
 	type PalletId = ChainlinkFeedPalletId;
 

@@ -1704,9 +1704,9 @@ checksum = "4443176a9f2c162692bd3d352d745ef9413eec5782a80d8fd6f8a1ac692a07f7"
 
 [[package]]
 name = "fastrand"
-version = "1.4.1"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77b705829d1e87f762c2df6da140b26af5839e1033aa84aa5f56bb688e4e1bdb"
+checksum = "b394ed3d285a429378d3b384b9eb1285267e7df4b166df24b7a6939a04dc392e"
 dependencies = [
  "instant",
 ]
@@ -4682,7 +4682,7 @@ dependencies = [
 [[package]]
 name = "orml-benchmarking"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "frame-benchmarking",
  "frame-support 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
@@ -4700,7 +4700,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
  "frame-system 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
@@ -4735,7 +4735,7 @@ dependencies = [
 [[package]]
 name = "orml-oracle"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
  "frame-system 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
@@ -4752,7 +4752,7 @@ dependencies = [
 [[package]]
 name = "orml-oracle-rpc"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -4767,7 +4767,7 @@ dependencies = [
 [[package]]
 name = "orml-oracle-rpc-runtime-api"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -4777,7 +4777,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
  "frame-system 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
@@ -4810,7 +4810,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
  "impl-trait-for-tuples 0.2.1",
@@ -4842,7 +4842,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library#81511f1647e772175b11664d749ca8e299e58f57"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
  "parity-scale-codec",

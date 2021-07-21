@@ -4,6 +4,7 @@
 
 use crate as chainlink_price_adapter;
 use frame_support::{construct_runtime, ord_parameter_types, parameter_types, PalletId};
+use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
 use frame_system::EnsureSignedBy;
 use minterest_primitives::Balance;
 use sp_runtime::testing::Header;
@@ -12,7 +13,6 @@ use sp_runtime::testing::H256;
 use sp_runtime::traits::AccountIdConversion;
 use sp_runtime::traits::BlakeTwo256;
 use sp_runtime::traits::IdentityLookup;
-use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
 use test_helper::users_mock::*;
 use test_helper::*;
 

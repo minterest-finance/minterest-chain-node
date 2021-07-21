@@ -68,6 +68,7 @@
         "interest_index": "Rate",
         "is_collateral": "bool"
       },
+      "Currency": "CurrencyId",
       "CurrencyIdOf": "CurrencyId",
       "Amount": "i128",
       "AmountOf": "Amount",
@@ -191,7 +192,7 @@
         "reserved": "Balance",
         "frozen": "Balance"
       },
-      "AccountData": "OrmlAccountData"
+      "AccountData": "OrmlAccountData",
       "FeedId": "u32",
       "SubmissionBounds": "(u32, u32)",
       "RoundId": "u32"
