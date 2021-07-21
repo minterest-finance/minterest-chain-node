@@ -374,12 +374,6 @@ fn get_user_total_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
 		.amount
 }
 
-fn get_user_total_borrow_rpc(account_id: AccountId) -> Balance {
-	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_total_borrow(account_id)
-		.unwrap()
-		.amount
-}
-
 fn pool_exists_rpc(underlying_asset_id: CurrencyId) -> bool {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::pool_exists(underlying_asset_id)
 }
@@ -446,6 +440,12 @@ fn get_pool_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> (Rate, Rate) {
 
 fn get_user_total_supply_borrow_and_net_apy_rpc(account_id: AccountId) -> Option<(Interest, Interest, Interest)> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_total_supply_borrow_and_net_apy(account_id)
+}
+
+fn get_user_total_borrow_usd_rpc(account_id: AccountId) -> Balance {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_total_borrow_usd(account_id)
+		.unwrap()
+		.amount
 }
 
 fn run_to_block(n: u32) {
@@ -1883,14 +1883,12 @@ fn get_user_data_rpc_should_work() {
 }
 
 #[test]
-fn get_user_total_borrow_rpc_should_work() {
+fn get_user_total_borrow_usd_rpc_should_work() {
 	ExtBuilder::default()
-		.mnt_account_balance(1_000_000 * DOLLARS)
 		.pool_initial(DOT)
 		.pool_initial(KSM)
 		.pool_initial(ETH)
 		.pool_initial(BTC)
-		//.enable_minting_for_all_pools(5 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			assert_ok!(set_oracle_price_for_all_pools(2));
@@ -1901,9 +1899,57 @@ fn get_user_total_borrow_rpc_should_work() {
 			assert_ok!(MinterestProtocol::borrow(alice(), ETH, 80_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 50_000 * DOLLARS));
 
+			// in the block when borrow happens there should be no accrued dust
+			// total borrow should be equal to the borrowed value
 			assert_eq!(
-				get_user_total_borrow_rpc(ALICE::get()),
+				get_user_total_borrow_usd_rpc(ALICE::get()),
 				80_000 * DOLLARS + 50_000 * DOLLARS
+			);
+
+			System::set_block_number(21);
+			
+			// 20 blocks after there should be the borrowed value + some dust
+			// TODO: add formulas
+			assert_eq!(
+				get_user_total_borrow_usd_rpc(ALICE::get()),
+				130000016020000000000000u128
+			);
+		})
+}
+
+#[test]
+fn get_user_total_borrow_usd_rpc_without_borrowed_assets_should_work() {
+	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(ETH)
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				get_user_total_borrow_usd_rpc(ALICE::get()),
+				0
+			);
+
+			assert_ok!(set_oracle_price_for_all_pools(2));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 100_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 100_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
+			
+			assert_eq!(
+				get_user_total_borrow_usd_rpc(ALICE::get()),
+				0
+			);
+		})
+}
+
+#[test]
+fn get_user_total_borrow_usd_rpc_without_initialized_pools_should_return_zero() {
+	ExtBuilder::default()
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				get_user_total_borrow_usd_rpc(ALICE::get()),
+				0
 			);
 		})
 }
