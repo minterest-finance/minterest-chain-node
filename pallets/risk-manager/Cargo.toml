@@ -34,6 +34,13 @@ orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-modul
 
 minterest-primitives = { path = "../../primitives" }
 liquidity-pools = { path = "../liquidity-pools" }
+liquidation-pools = { path = "../liquidation-pools" }
+minterest-protocol = { path = "../minterest-protocol" }
+minterest-model = { path = "../minterest-model" }
+controller = { path = "../controller" }
+mnt-token = { path = "../mnt-token" }
+dex = { path = "../dex" }
+whitelist-module = { path = "../whitelist" }
 test-helper = { path = "../../test-helper" }
 
 [features]
