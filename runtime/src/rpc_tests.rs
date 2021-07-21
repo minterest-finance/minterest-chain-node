@@ -1907,7 +1907,7 @@ fn get_user_total_borrow_usd_rpc_should_work() {
 			);
 
 			System::set_block_number(21);
-			
+
 			// 20 blocks after there should be the borrowed value + some dust
 			// TODO: add formulas
 			assert_eq!(
@@ -1924,32 +1924,21 @@ fn get_user_total_borrow_usd_rpc_without_borrowed_assets_should_work() {
 		.pool_initial(ETH)
 		.build()
 		.execute_with(|| {
-			assert_eq!(
-				get_user_total_borrow_usd_rpc(ALICE::get()),
-				0
-			);
+			assert_eq!(get_user_total_borrow_usd_rpc(ALICE::get()), 0);
 
 			assert_ok!(set_oracle_price_for_all_pools(2));
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 100_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 100_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
 			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
-			
-			assert_eq!(
-				get_user_total_borrow_usd_rpc(ALICE::get()),
-				0
-			);
+
+			assert_eq!(get_user_total_borrow_usd_rpc(ALICE::get()), 0);
 		})
 }
 
 #[test]
 fn get_user_total_borrow_usd_rpc_without_initialized_pools_should_return_zero() {
-	ExtBuilder::default()
-		.build()
-		.execute_with(|| {
-			assert_eq!(
-				get_user_total_borrow_usd_rpc(ALICE::get()),
-				0
-			);
-		})
+	ExtBuilder::default().build().execute_with(|| {
+		assert_eq!(get_user_total_borrow_usd_rpc(ALICE::get()), 0);
+	})
 }

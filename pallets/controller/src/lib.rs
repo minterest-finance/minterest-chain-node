@@ -596,7 +596,7 @@ impl<T: Config> Pallet<T> {
 			None => true,
 		}
 	}
-		
+
 	/// Calculate user total borrow in usd based on fresh exchange rate and
 	/// latest oracle price
 	///

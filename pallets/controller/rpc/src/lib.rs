@@ -169,7 +169,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///   user_total_supply_apy, user_total_borrow_apy, user_net_apy)
 	#[rpc(name = "controller_getUserData")]
 	fn get_user_data(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<UserData>>;
-	
+
 	/// Returns total borrow balance for user per all assets based on fresh latest indexes.
 	///
 	///  - `&self` :  Self reference
@@ -179,11 +179,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// Return:
 	/// - amount: account total borrow in usd.
 	#[rpc(name = "controller_getUserTotalBorrowToUsd")]
-	fn get_user_total_borrow_usd(
-		&self,
-		account_id: AccountId,
-		at: Option<BlockHash>,
-	) -> Result<Option<BalanceInfo>>;
+	fn get_user_total_borrow_usd(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
 }
 
 /// A struct that implements the [`ControllerApi`].
@@ -400,7 +396,7 @@ where
 				data: Some(format!("{:?}", e).into()),
 			})
 	}
-	
+
 	fn get_user_total_borrow_usd(
 		&self,
 		account_id: AccountId,
@@ -410,9 +406,8 @@ where
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
- 
-		api.get_user_total_borrow_usd(&at, account_id)
-		.map_err(|e| RpcError {
+
+		api.get_user_total_borrow_usd(&at, account_id).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
 			message: "Unable to get total user borrow.".into(),
 			data: Some(format!("{:?}", e).into()),
