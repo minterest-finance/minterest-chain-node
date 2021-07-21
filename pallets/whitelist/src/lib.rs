@@ -145,6 +145,7 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		/// Add a new member to the whitelist.
 		///
+		/// Parameters:
 		/// - `new_account`: the account that is being added to the whitelist.
 		///
 		/// The dispatch origin of this call must be 'WhitelistOrigin'.
@@ -164,7 +165,9 @@ pub mod module {
 
 		/// Remove a member from the whitelist.
 		///
+		/// Parameters:
 		/// - `who`: the account that is being removed from the whitelist.
+		/// - `account_to_remove`: AccountId of the removed member.
 		///
 		/// The dispatch origin of this call must be 'WhitelistOrigin'.
 		#[pallet::weight(T::WhitelistWeightInfo::remove_member((<T as Config>::MaxMembers::get() / 2) as u32))]
@@ -185,6 +188,9 @@ pub mod module {
 		/// Enable / disable whitelist mode.
 		///
 		/// The dispatch origin of this call must be 'WhitelistOrigin'.
+		///
+		/// Parameters:
+		/// - `new_state`: new protocol mode.
 		#[pallet::weight(T::WhitelistWeightInfo::switch_whitelist_mode())]
 		#[transactional]
 		pub fn switch_whitelist_mode(origin: OriginFor<T>, new_state: bool) -> DispatchResultWithPostInfo {

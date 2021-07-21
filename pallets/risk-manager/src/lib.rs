@@ -317,6 +317,7 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be _None_.
 		///
+		/// Parameters:
 		/// - `borrower`: AccountId of the borrower whose loan is being liquidated.
 		/// - `liquidation_amounts`: contains a vectors with user's borrows to be paid from the
 		/// liquidation pools instead of the borrower, and a vector with user's supplies to be

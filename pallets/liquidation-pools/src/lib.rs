@@ -204,7 +204,9 @@ pub mod module {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Set new value of deviation threshold.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `threshold`: New value of deviation threshold.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -241,7 +243,9 @@ pub mod module {
 		}
 
 		/// Set new value of balance ratio.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `balance_ratio`: New value of balance ratio.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -278,7 +282,9 @@ pub mod module {
 		}
 
 		/// Set new value of maximum ideal balance.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `max_ideal_balance`: New value of maximum ideal balance.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -311,6 +317,12 @@ pub mod module {
 		/// Make balance the liquidation pools.
 		///
 		/// The dispatch origin of this call must be _None_.
+		///
+		/// Parameters:
+		/// - `supply_pool_id`: the Currency Id of the supply pool
+		/// - `target_pool_id`: the Currency Id of the target pool
+		/// - `max_supply_amount`: max supply amount
+		/// - `target_amount`: target amount
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::balance_liquidation_pools())]
 		#[transactional]
 		pub fn balance_liquidation_pools(
@@ -340,6 +352,8 @@ pub mod module {
 		}
 
 		/// Seed the liquidation pool
+		///
+		/// Parameters:
 		/// - `underlying_asset_id`: currency of transfer
 		/// - `underlying_amount`: amount to transfer to liquidation pool
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::transfer_to_liquidation_pool())]

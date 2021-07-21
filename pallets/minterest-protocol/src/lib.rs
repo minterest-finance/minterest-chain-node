@@ -215,7 +215,7 @@ pub mod module {
 		/// 	- [`Minterest Model:`](?search=MinterestModelData) kink, base_rate_per_block, multiplier_per_block, jump_multiplier_per_block
 		/// 	- [`Controller:`](?search=controller::ControllerData) protocol_interest_factor, max_borrow_rate, collateral_factor, protocol_interest_threshold
 		/// 	- [`Liquidation Pools:`](?search=liquidation_pools::LiquidationPoolData) deviation_threshold, balance_ratio
-		/// 	- [`Risk Manager:`](?search=risk_manager::module) max_attempts, min_partial_liquidation_sum, threshold, liquidation_fee
+		/// 	- [`Risk Manager:`](?search=risk_manager::module::Call) liquidation_threshold, liquidation_fee
 		#[pallet::weight(T::ProtocolWeightInfo::create_pool())]
 		#[transactional]
 		pub fn create_pool(
