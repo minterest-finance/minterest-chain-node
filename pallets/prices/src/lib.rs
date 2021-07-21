@@ -103,6 +103,7 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be `LockOrigin`.
 		///
+		/// Parameters:
 		/// - `currency_id`: currency type.
 		#[pallet::weight((T::WeightInfo::lock_price(), DispatchClass::Operational))]
 		#[transactional]
@@ -122,6 +123,7 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be `LockOrigin`.
 		///
+		/// Parameters:
 		/// - `currency_id`: currency type.
 		#[pallet::weight((T::WeightInfo::unlock_price(), DispatchClass::Operational))]
 		#[transactional]

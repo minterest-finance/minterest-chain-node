@@ -18,6 +18,7 @@ use std::sync::Arc;
 pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// Returns total values of supply, borrow, locked and protocol_interest.
 	///
+	/// Parameters:
 	///  - `&self`: Self reference
 	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
@@ -31,6 +32,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 
 	/// Returns current Liquidity Pool State.
 	///
+	/// Parameters:
 	///  - `&self`: Self reference
 	///  - `pool_id`: current pool id.
 	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
@@ -49,6 +51,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 
 	/// Returns utilization rate based on pool parameters calculated for current block.
 	///
+	/// Parameters:
 	///  - `&self`: Self reference
 	///  - `pool_id`: target pool id.
 	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
@@ -60,6 +63,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 
 	/// Returns total supply and total borrowed balance in usd.
 	///
+	/// Parameters:
 	///  - `&self`: Self reference
 	///  - `account_id`: current account id.
 	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
@@ -72,6 +76,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 
 	/// Returns account liquidity in usd.
 	///
+	/// Parameters:
 	///  - `&self`: Self reference
 	///  - `account_id`: current account id.
 	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
@@ -88,6 +93,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 
 	/// Checks whether the caller is a member of the MinterestCouncil.
 	///
+	/// Parameters:
 	///  - `&self`: Self reference
 	///  - `account_id`: current account id.
 	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
@@ -99,6 +105,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 
 	/// Returns account total collateral in usd.
 	///
+	/// Parameters:
 	///  - `&self`: Self reference
 	///  - `account_id`: current account id.
 	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
@@ -110,6 +117,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 
 	/// Returns actual borrow balance for user per asset based on fresh latest indexes.
 	///
+	/// Parameters:
 	///  - `&self`: Self reference
 	///  - `account_id`: current account id.
 	///  - `underlying_asset_id`: current asset id
@@ -127,6 +135,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 
 	/// Returns user underlying asset balance for the pool
 	///
+	/// Parameters:
 	///  - `&self`: Self reference
 	///  - `account_id`: current account id.
 	///  - `pool_id`: target pool id.
@@ -144,6 +153,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 
 	/// Checks whether the pool is created in storage.
 	///
+	/// Parameters:
 	///  - `&self`: Self reference
 	///  - `underlying_asset_id`: current asset id
 	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
@@ -155,6 +165,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 
 	/// Return borrow APY, supply APY and Net APY for current user
 	///
+	/// Parameters:
 	///  - `&self`: Self reference
 	///  - `account_id`: current account id.
 	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
@@ -176,6 +187,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	// TODO: Currently all parameters are stabbed to equal to one.
 	/// Return user's information which is required by WEB 2.0 part.
 	///
+	/// Parameters:
 	///  - `&self` :  Self reference
 	///  - `account_id`: current account id.
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.

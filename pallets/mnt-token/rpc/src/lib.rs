@@ -20,6 +20,7 @@ use std::sync::Arc;
 pub trait MntTokenRpcApi<BlockHash, AccountId> {
 	/// Gets MNT accrued but not yet transferred to user
 	///
+	/// Parameters:
 	///  - `&self` :  Self reference
 	///  - `account_id`: user account id.
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
@@ -36,6 +37,7 @@ pub trait MntTokenRpcApi<BlockHash, AccountId> {
 
 	/// Return MNT Borrow Rate and MNT Supply Rate values per block for current pool.
 	///
+	/// Parameters:
 	///  - `&self` :  Self reference
 	///  - `pool_id`: current pool id.
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.

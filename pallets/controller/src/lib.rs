@@ -269,6 +269,10 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		/// Pause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the operation is paused;
+		/// - `operation`: paused Operation.
+		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::pause_operation())]
 		#[transactional]
@@ -298,6 +302,10 @@ pub mod module {
 
 		/// Unpause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the operation is unpaused;
+		/// - `operation`: an Operation to enable.
+		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::resume_operation())]
 		#[transactional]
@@ -326,7 +334,9 @@ pub mod module {
 		}
 
 		/// Set interest factor.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `protocol_interest_factor`: new value for interest factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -350,7 +360,9 @@ pub mod module {
 		}
 
 		/// Set Maximum borrow rate.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `max_borrow_rate`: new value for maximum borrow rate.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -378,7 +390,9 @@ pub mod module {
 		}
 
 		/// Set Collateral factor.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `collateral_factor`: new value for collateral factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -407,6 +421,10 @@ pub mod module {
 
 		/// Set borrow cap.
 		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `borrow_cap`: new borrow_cap.
+		///
 		/// The dispatch origin of this call must be Administrator.
 		/// Borrow cap value must be in range 0..1_000_000_000_000_000_000_000_000
 		#[pallet::weight(T::ControllerWeightInfo::set_borrow_cap())]
@@ -430,6 +448,10 @@ pub mod module {
 		}
 
 		/// Set protocol interest threshold.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `protocol_interest_threshold`: new protocol_interest_threshold value.
 		///
 		/// The dispatch origin of this call must be Administrator.
 		#[pallet::weight(T::ControllerWeightInfo::set_protocol_interest_threshold())]

@@ -169,8 +169,10 @@ pub mod module {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Set JumpMultiplierPerBlock from JumpMultiplierPerYear.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `jump_multiplier_rate_per_year`: used to calculate multiplier per block.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `jump_multiplier_rate_per_year`:  new jump multiplier rate per year value.
 		///
 		/// `jump_multiplier_per_block = jump_multiplier_rate_per_year / blocks_per_year`
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
@@ -202,8 +204,10 @@ pub mod module {
 		}
 
 		/// Set BaseRatePerBlock from BaseRatePerYear.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `base_rate_per_year`: used to calculate rate per block.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `base_rate_per_year`: new base rate per year value.
 		///
 		/// `base_rate_per_block = base_rate_per_year / blocks_per_year`
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
@@ -242,8 +246,10 @@ pub mod module {
 		}
 
 		/// Set MultiplierPerBlock from MultiplierPerYear.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `multiplier_per_year`: used to calculate multiplier per block.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `multiplier_per_year`: new multiplier per year value.
 		///
 		/// `multiplier_per_block = multiplier_per_year / blocks_per_year`
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
@@ -281,7 +287,9 @@ pub mod module {
 		}
 
 		/// Set parameter `kink`.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `kink`: new kink value, must be less or equal to 1.
 		///
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.

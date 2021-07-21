@@ -14,6 +14,7 @@ pub use whitelist_rpc_runtime_api::WhitelistRuntimeApi;
 pub trait WhitelistRpcApi<BlockHash, AccountId> {
 	/// Checks whether the user is a member of the whitelist.
 	///
+	/// Parameters:
 	///  - `&self` :  Self reference
 	///  - `who`: checked account id.
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.

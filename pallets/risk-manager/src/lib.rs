@@ -125,6 +125,7 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		/// Set Liquidation fee that covers liquidation costs.
 		///
+		/// Parameters:
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `liquidation_fee`: new liquidation fee value.
 		///
@@ -152,6 +153,7 @@ pub mod module {
 
 		/// Set threshold which used in liquidation to protect the user from micro liquidations.
 		///
+		/// Parameters:
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `threshold`: new threshold.
 		///
