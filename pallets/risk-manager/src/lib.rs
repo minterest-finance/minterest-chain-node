@@ -51,9 +51,7 @@ use pallet_traits::{
 	PricesManager, RiskManagerStorageProvider, UserCollateral, UserLiquidationAttemptsManager,
 };
 use sp_runtime::traits::{One, StaticLookup, Zero};
-#[cfg(feature = "std")]
-use sp_std::str;
-use sp_std::vec::Vec;
+use sp_std::prelude::*;
 
 #[cfg(test)]
 mod mock;
@@ -62,8 +60,14 @@ mod tests;
 
 /// Types of liquidation of user loans.
 enum LiquidationMode {
+	/// Makes the user's loan solvent. A portion of the user's borrow is paid from the
+	/// liquidation pools, and a portion of the user's collateral is withdrawn and transferred to
+	/// the liquidation pools.
 	Partial,
+	/// All user borrow is paid from liquidation pools. The user's collateral required to cover
+	/// the borrow is withdrawn and transferred to liquidation pools.
 	Complete,
+	/// Occurs when the user's borrow exceeds his supply. This type refers to complete liquidation.
 	ForgivableComplete,
 }
 
@@ -88,7 +92,6 @@ pub struct UserLoanState {
 }
 
 impl UserLoanState {
-	/// Constructor.
 	fn new() -> Self {
 		Self {
 			loans: Vec::new(),
@@ -478,7 +481,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Calls internal functions from minterest-protocol pallet `do_repay` and `do_seize`, these
 	/// functions within themselves call `accrue_interest_rate`. Also calls
-	/// `mutate_depending_operation` for mutate user liquidation attempts.
+	/// `mutate_attemps` for mutate user liquidation attempts.
 	///
 	/// - `borrower`: AccountId of the borrower whose loan is being liquidated.
 	/// - `liquidation_amounts`: contains a vectors with user's borrows to be paid from the
@@ -507,11 +510,7 @@ impl<T: Config> Pallet<T> {
 				T::MinterestProtocolManager::do_seize(&borrower, pool_id, seize_underlying)?;
 				Ok(())
 			})?;
-		<Self as UserLiquidationAttemptsManager<T::AccountId>>::mutate_depending_operation(
-			None,
-			&borrower,
-			Operation::Repay,
-		);
+		<Self as UserLiquidationAttemptsManager<T::AccountId>>::mutate_attemps(None, &borrower, Operation::Repay);
 		Ok(())
 	}
 
@@ -606,7 +605,7 @@ impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 	/// Mutates user liquidation attempts depending on user operation.
 	/// If the user makes a deposit to the collateral pool, then attempts are set to zero.
 	/// TODO: implement mutate in case of liquidation
-	fn mutate_depending_operation(pool_id: Option<CurrencyId>, who: &T::AccountId, operation: Operation) {
+	fn mutate_attemps(pool_id: Option<CurrencyId>, who: &T::AccountId, operation: Operation) {
 		// pool_id existence in case of a deposit operation
 		if let Some(pool_id) = pool_id {
 			if operation == Operation::Deposit && T::UserCollateral::is_pool_collateral(&who, pool_id) {
