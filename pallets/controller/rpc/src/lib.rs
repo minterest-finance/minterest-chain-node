@@ -336,25 +336,6 @@ where
 		})
 	}
 
-	fn get_user_total_borrow_usd(
-		&self,
-		account_id: AccountId,
-		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<Option<BalanceInfo>> {
-		let api = self.client.runtime_api();
-		let at = BlockId::hash(at.unwrap_or_else(||
-			// If the block hash is not supplied assume the best block.
-			self.client.info().best_hash));
- 
-		api.get_user_total_borrow_usd(&at, account_id)
-		.map_err(|e| RpcError {
-			code: ErrorCode::ServerError(Error::RuntimeError.into()),
-			message: "Unable to get total user borrow.".into(),
-			data: Some(format!("{:?}", e).into()),
-		})
-	}
-
-
 	fn get_user_borrow_per_asset(
 		&self,
 		account_id: AccountId,
@@ -418,5 +399,23 @@ where
 				message: "Unable to get user's APY.".into(),
 				data: Some(format!("{:?}", e).into()),
 			})
+	}
+	
+	fn get_user_total_borrow_usd(
+		&self,
+		account_id: AccountId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<Option<BalanceInfo>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+ 
+		api.get_user_total_borrow_usd(&at, account_id)
+		.map_err(|e| RpcError {
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
+			message: "Unable to get total user borrow.".into(),
+			data: Some(format!("{:?}", e).into()),
+		})
 	}
 }

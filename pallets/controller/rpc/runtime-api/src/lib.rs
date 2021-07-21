@@ -126,10 +126,6 @@ sp_api::decl_runtime_apis! {
 
 		fn get_user_total_collateral(account_id: AccountId) -> Option<BalanceInfo>;
 
-		fn get_user_total_borrow_usd(
-			account_id: AccountId,
-		) -> Option<BalanceInfo>;
-
 		fn get_user_borrow_per_asset(
 			account_id: AccountId,
 			underlying_asset_id: CurrencyId,
@@ -143,5 +139,9 @@ sp_api::decl_runtime_apis! {
 		fn pool_exists(underlying_asset_id: CurrencyId) -> bool;
 
 		fn get_user_total_supply_borrow_and_net_apy(account_id: AccountId) -> Option<(Interest, Interest, Interest)>;
+		
+		fn get_user_total_borrow_usd(
+			account_id: AccountId,
+		) -> Option<BalanceInfo>;
 	}
 }
