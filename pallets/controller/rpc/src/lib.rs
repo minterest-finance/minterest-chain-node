@@ -118,11 +118,11 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - [`amount`](`BalanceInfo::amount`): account total collateral converted to usd.
+	/// - [`amount`](`BalanceInfo::amount`): user total collateral in all liquidity pools converted to usd.
 	#[rpc(name = "controller_accountCollateral")]
 	fn get_user_total_collateral(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
 
-	/// Returns actual borrow balance for user per asset based on fresh latest indexes.
+	/// Returns actual borrow underlying balance for user per asset based on fresh latest indexes.
 	///
 	/// Parameters:
 	///  - `&self`: Self reference
@@ -131,7 +131,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - [`amount`](`BalanceInfo::amount`): aaccount total borrow per asset (tokens amount).
+	/// - [`amount`](`BalanceInfo::amount`): user borrow underlying in a specific liquidity pool (underlying assets amount).
 	#[rpc(name = "controller_getUserBorrowPerAsset")]
 	fn get_user_borrow_per_asset(
 		&self,
@@ -140,7 +140,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 		at: Option<BlockHash>,
 	) -> Result<Option<BalanceInfo>>;
 
-	/// Returns user underlying asset balance for the pool
+	/// Returns actual supply underlying balance for user in specific liquidity pool based on fresh latest indexes.
 	///
 	/// Parameters:
 	///  - `&self`: Self reference
@@ -149,7 +149,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	///  Return:
-	///  - [`amount`](`BalanceInfo::amount`): user balance converted to underlying asset.
+	///  - [`amount`](`BalanceInfo::amount`): user supply underlying in a specific liquidity pool (underlying assets amount).
 	#[rpc(name = "controller_getUserUnderlyingBalancePerAsset")]
 	fn get_user_underlying_balance_per_asset(
 		&self,

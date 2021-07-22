@@ -129,7 +129,7 @@ pub mod module {
 		PoolAlreadyCreated,
 	}
 
-	/// Return liquidity pools information: (borrowed, borrow_index, total_protocol_interest)
+	/// Return liquidity pools information: (borrowed, borrow_index, protocol_interest)
 	///
 	/// Return:
 	/// - `borrowed`: Pool Borrowed value of the underlying asset plus all the interest, that
@@ -143,7 +143,7 @@ pub mod module {
 	pub(crate) type PoolDataStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, PoolData, ValueQuery>;
 
 	/// Return information about the user of the liquidity pool: (borrowed, interest_index,
-	/// is_collateral, liquidation_attempts)
+	/// is_collateral,)
 	///
 	/// Return:
 	/// - `borrowed`: User Borrow Underlying (with accrued interest), after applying the most
