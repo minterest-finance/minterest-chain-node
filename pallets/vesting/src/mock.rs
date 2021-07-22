@@ -16,7 +16,7 @@ pub type UncheckedExtrinsic = sp_runtime::generic::UncheckedExtrinsic<u32, Call,
 
 // Configure a mock runtime to test the pallet.
 construct_runtime!(
-	pub enum Runtime where
+	pub enum TestRuntime where
 		Block = Block,
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
@@ -44,10 +44,10 @@ ord_parameter_types! {
 	pub const BucketStrategicPartners: AccountId = VestingBucket::StrategicPartners.bucket_account_id().unwrap();
 }
 
-mock_impl_balances_config!(Runtime);
-mock_impl_system_config!(Runtime, AccountId);
+mock_impl_balances_config!(TestRuntime);
+mock_impl_system_config!(TestRuntime, AccountId);
 
-impl Config for Runtime {
+impl Config for TestRuntime {
 	type Event = Event;
 	type Currency = PalletBalances;
 	type MinVestedTransfer = MinVestedTransfer;
@@ -63,10 +63,10 @@ pub struct ExtBuilder;
 impl ExtBuilder {
 	pub fn build() -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()
-			.build_storage::<Runtime>()
+			.build_storage::<TestRuntime>()
 			.unwrap();
 
-		pallet_balances::GenesisConfig::<Runtime> {
+		pallet_balances::GenesisConfig::<TestRuntime> {
 			balances: vec![
 				(ALICE::get(), 100 * DOLLARS),
 				(CHARLIE::get(), 30 * DOLLARS),
@@ -78,7 +78,7 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		vesting::GenesisConfig::<Runtime> {
+		vesting::GenesisConfig::<TestRuntime> {
 			vesting: vec![(VestingBucket::PrivateSale, CHARLIE::get(), 20 * DOLLARS)], // bucket, who, amount
 		}
 		.assimilate_storage(&mut t)
