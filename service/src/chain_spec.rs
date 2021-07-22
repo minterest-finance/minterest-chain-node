@@ -18,6 +18,7 @@ use sc_telemetry::TelemetryEndpoints;
 use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
+use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::{
 	traits::{AccountIdConversion, IdentifyAccount, One, Verify, Zero},
 	FixedPointNumber, FixedU128,
@@ -142,7 +143,7 @@ pub fn get_standalone_dev_spec() -> StandaloneChainSpec {
 			standalone_dev_genesis(
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				vec![
-					get_from_seed::<AuraId>("Alice"),
+					(get_from_seed::<AuraId>("Alice"), get_from_seed::<GrandpaId>("Alice")),
 				],
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -191,8 +192,8 @@ pub fn get_standalone_local_spec() -> StandaloneChainSpec {
 			standalone_dev_genesis(
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				vec![
-					get_from_seed::<AuraId>("Alice"),
-					get_from_seed::<AuraId>("Bob"),
+					(get_from_seed::<AuraId>("Alice"), get_from_seed::<GrandpaId>("Alice")),
+					(get_from_seed::<AuraId>("Bob"), get_from_seed::<GrandpaId>("Bob")),
 				],
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -511,7 +512,7 @@ fn minterest_genesis(
 
 fn standalone_dev_genesis(
 	root_key: AccountId,
-	initial_authorities: Vec<AuraId>,
+	initial_authorities: Vec<(AuraId, GrandpaId)>,
 	endowed_accounts: Vec<AccountId>,
 ) -> standalone_runtime::GenesisConfig {
 	standalone_runtime::GenesisConfig {
@@ -535,7 +536,10 @@ fn standalone_dev_genesis(
 				.collect(),
 		},
 		aura: standalone_runtime::AuraConfig {
-			authorities: initial_authorities.iter().map(|x| (x.clone())).collect(),
+			authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
+		},
+		grandpa: standalone_runtime::GrandpaConfig {
+			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
 		},
 		sudo: standalone_runtime::SudoConfig {
 			// Assign network admin rights.

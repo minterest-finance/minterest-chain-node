@@ -157,7 +157,7 @@ macro_rules! construct_async_run {
 				_
 			>(
 				&$config,
-				service::rococo_parachain_build_import_queue,
+				service::parachain_build_import_queue,
 				false,
 			)?;
 			let task_manager = $components.task_manager;

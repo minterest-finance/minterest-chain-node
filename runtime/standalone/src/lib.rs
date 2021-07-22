@@ -37,6 +37,7 @@ pub use minterest_primitives::{
 pub use mnt_token_rpc_runtime_api::MntBalanceInfo;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
+use pallet_grandpa::{fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_traits::{ControllerManager, LiquidityPoolStorageProvider, MntManager, PricesManager, WhitelistManager};
 use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 use sp_api::impl_runtime_apis;
@@ -48,7 +49,7 @@ use sp_core::{
 };
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, One, Zero},
+	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, One, Zero},
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchResult, FixedPointNumber,
 };
@@ -92,6 +93,7 @@ pub mod opaque {
 	impl_opaque_keys! {
 		pub struct SessionKeys {
 			pub aura: Aura,
+			pub grandpa: Grandpa,
 		}
 	}
 }
@@ -225,6 +227,22 @@ impl pallet_aura::Config for Runtime {
 }
 
 impl cumulus_pallet_aura_ext::Config for Runtime {}
+
+impl pallet_grandpa::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+
+	type KeyOwnerProofSystem = ();
+
+	type KeyOwnerProof = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
+
+	type KeyOwnerIdentification =
+		<Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::IdentificationTuple;
+
+	type HandleEquivocation = ();
+
+	type WeightInfo = ();
+}
 
 parameter_types! {
 	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
@@ -608,6 +626,7 @@ construct_runtime!(
 		// Consensus
 		Aura: pallet_aura::{Pallet, Config<T>},
 		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
+		Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
 
 		// Minterest pallets
 		MinterestProtocol: minterest_protocol::{Pallet, Call, Event<T>},
@@ -730,6 +749,32 @@ impl_runtime_apis! {
 			encoded: Vec<u8>,
 		) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
 			opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
+		}
+	}
+
+	impl fg_primitives::GrandpaApi<Block> for Runtime {
+		fn grandpa_authorities() -> GrandpaAuthorityList {
+			Grandpa::grandpa_authorities()
+		}
+
+		fn submit_report_equivocation_unsigned_extrinsic(
+			_equivocation_proof: fg_primitives::EquivocationProof<
+				<Block as BlockT>::Hash,
+				NumberFor<Block>,
+			>,
+			_key_owner_proof: fg_primitives::OpaqueKeyOwnershipProof,
+		) -> Option<()> {
+			None
+		}
+
+		fn generate_key_ownership_proof(
+			_set_id: fg_primitives::SetId,
+			_authority_id: GrandpaId,
+		) -> Option<fg_primitives::OpaqueKeyOwnershipProof> {
+			// NOTE: this is the only implementation possible since we've
+			// defined our key owner proof type as a bottom type (i.e. a type
+			// with no values).
+			None
 		}
 	}
 

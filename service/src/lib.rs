@@ -32,6 +32,8 @@ use cumulus_primitives_parachain_inherent::MockValidationDataInherentDataProvide
 use sc_client_api::ExecutorProvider;
 use sc_executor::native_executor_instance;
 use sc_network::NetworkService;
+use sc_finality_grandpa::{SharedVoterState, AuthorityId as GrandpaId};
+use sc_keystore::LocalKeystore;
 use sc_service::{error::Error as ServiceError, Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::{ConstructRuntimeApi, ApiExt};
@@ -44,9 +46,10 @@ use sc_consensus_aura::{ImportQueueParams, StartAuraParams};
 use sp_consensus_aura::{sr25519::AuthorityId as AuraId, sr25519::AuthorityPair as AuraPair, AuraApi};
 use sp_keystore::SyncCryptoStorePtr;
 use sp_runtime::{traits::{BlakeTwo256, Header as HeaderT}, generic::BlockId};
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
 use futures::lock::Mutex;
+use futures::stream::StreamExt;
 
 pub use sc_executor::NativeExecutor;
 
@@ -57,8 +60,17 @@ type Header = sp_runtime::generic::Header<BlockNumber, sp_runtime::traits::Blake
 pub type Block = sp_runtime::generic::Block<Header, sp_runtime::OpaqueExtrinsic>;
 type Hash = sp_core::H256;
 
+type FullBackend = TFullBackend<Block>;
+
 /// Maybe Standalone full select chain.
-type MaybeFullSelectChain = Option<LongestChain<TFullBackend<Block>, Block>>;
+type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;
+// type MaybeGrandpaImport<RuntimeApi, Executor> = Option<
+// 	sc_finality_grandpa::GrandpaBlockImport<FullBackend, Block, TFullClient<Block, RuntimeApi, Executor>, LongestChain<FullBackend, Block>>,
+// >;
+type MaybeGrandpaImportLink<RuntimeApi, Executor> = Option<(
+	sc_finality_grandpa::GrandpaBlockImport<FullBackend, Block, TFullClient<Block, RuntimeApi, Executor>, LongestChain<FullBackend, Block>>,
+	sc_finality_grandpa::LinkHalf<Block, TFullClient<Block, RuntimeApi, Executor>, LongestChain<FullBackend, Block>>
+)>;
 
 native_executor_instance!(
 	pub ParachainRuntimeExecutor,
@@ -84,11 +96,11 @@ pub fn new_partial<RuntimeApi, Executor, BIQ>(
 ) -> Result<
 	PartialComponents<
 		TFullClient<Block, RuntimeApi, Executor>,
-		TFullBackend<Block>,
+		FullBackend,
 		MaybeFullSelectChain,
 		sp_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
 		sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>,
-		(Option<Telemetry>, Option<TelemetryWorkerHandle>),
+		(MaybeGrandpaImportLink<RuntimeApi, Executor>, Option<Telemetry>, Option<TelemetryWorkerHandle>),
 	>,
 	sc_service::Error,
 >
@@ -102,14 +114,15 @@ where
 		+ sp_session::SessionKeys<Block>
 		+ sp_api::ApiExt<
 			Block,
-			StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
+			StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
 		> + sp_offchain::OffchainWorkerApi<Block>
 		+ sp_block_builder::BlockBuilder<Block>,
-	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
+	sc_client_api::StateBackendFor<FullBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 	BIQ: FnOnce(
 		Arc<TFullClient<Block, RuntimeApi, Executor>>,
 		&Configuration,
+		&MaybeGrandpaImportLink<RuntimeApi, Executor>,
 		Option<TelemetryHandle>,
 		&TaskManager,
 	) -> Result<
@@ -150,18 +163,32 @@ where
 		client.clone(),
 	);
 
+	// let (select_chain, maybe_grandpa_import, maybe_grandpa_link) = if standalone {
+		let (select_chain, maybe_grandpa) = if standalone {
+		let select_chain = LongestChain::new(backend.clone());
+		let grandpa = sc_finality_grandpa::block_import(
+			client.clone(),
+			&(client.clone() as Arc<_>),
+			select_chain.clone(),
+			telemetry.as_ref().map(|x| x.handle()),
+		)?;
+		(Some(select_chain), Some(grandpa))
+	} else {
+		(None, None)
+	};
+
+	// let maybe_grandpa_clone = match maybe_grandpa {
+	// 	Some((grandpa_block_import, grandpa_link)) => Some((grandpa_block_import.clone(), grandpa_link.clone())),
+	// 	None => None,
+	// };
+
 	let import_queue = build_import_queue(
 		client.clone(),
 		config,
+		&maybe_grandpa,
 		telemetry.as_ref().map(|telemetry| telemetry.handle()),
 		&task_manager,
 	)?;
-
-	let select_chain = if standalone {
-		Some(LongestChain::new(backend.clone()))
-	} else {
-		None
-	};
 
 	let params = PartialComponents {
 		backend,
@@ -171,7 +198,7 @@ where
 		task_manager,
 		transaction_pool,
 		select_chain,
-		other: (telemetry, telemetry_worker_handle),
+		other: (maybe_grandpa, telemetry, telemetry_worker_handle),
 	};
 
 	Ok(params)
@@ -199,11 +226,11 @@ where
 		+ sp_session::SessionKeys<Block>
 		+ sp_api::ApiExt<
 			Block,
-			StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
+			StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
 		> + sp_offchain::OffchainWorkerApi<Block>
 		+ sp_block_builder::BlockBuilder<Block>
 		+ cumulus_primitives_core::CollectCollationInfo<Block>,
-	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
+	sc_client_api::StateBackendFor<FullBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 	RB: Fn(
 			Arc<TFullClient<Block, RuntimeApi, Executor>>,
@@ -213,6 +240,7 @@ where
 	BIQ: FnOnce(
 		Arc<TFullClient<Block, RuntimeApi, Executor>>,
 		&Configuration,
+		&MaybeGrandpaImportLink<RuntimeApi, Executor>,
 		Option<TelemetryHandle>,
 		&TaskManager,
 	) -> Result<
@@ -238,7 +266,7 @@ where
 	let parachain_config = prepare_node_config(parachain_config);
 
 	let params = new_partial::<RuntimeApi, Executor, BIQ>(&parachain_config, build_import_queue, false)?;
-	let (mut telemetry, telemetry_worker_handle) = params.other;
+	let (_, mut telemetry, telemetry_worker_handle) = params.other;
 
 	let relay_chain_full_node = cumulus_client_service::build_polkadot_full_node(
 		polkadot_config,
@@ -344,11 +372,12 @@ where
 }
 
 /// Build the import queue for the rococo parachain runtime.
-pub fn rococo_parachain_build_import_queue(
+pub fn parachain_build_import_queue(
 	client: Arc<
 		TFullClient<Block, parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>,
 	>,
 	config: &Configuration,
+	_maybe_grandpa: &MaybeGrandpaImportLink<parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>,
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 ) -> Result<
@@ -400,7 +429,7 @@ pub async fn start_parachain_node(
 		polkadot_config,
 		para_id,
 		|_| Default::default(),
-		rococo_parachain_build_import_queue,
+		parachain_build_import_queue,
 		|client,
 		 prometheus_registry,
 		 telemetry,
@@ -487,6 +516,7 @@ pub fn standalone_build_import_queue(
 		TFullClient<Block, standalone_runtime::RuntimeApi, StandaloneRuntimeExecutor>,
 	>,
 	config: &Configuration,
+	maybe_grandpa: &MaybeGrandpaImportLink<standalone_runtime::RuntimeApi, StandaloneRuntimeExecutor>,
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 ) -> Result<
@@ -498,9 +528,15 @@ pub fn standalone_build_import_queue(
 > {
 	let slot_duration = sc_consensus_aura::slot_duration(&*client)?.slot_duration();
 
+	let grandpa_block_import 
+		= maybe_grandpa
+			.as_ref()
+			.map(|g| g.0.clone())
+			.expect("In Standalone mode `maybe_grandpa` will have some value");
+
 	sc_consensus_aura::import_queue::<AuraPair, _, _, _, _, _, _>(ImportQueueParams {
-		block_import: client.clone(),
-		justification_import: None,
+		block_import: grandpa_block_import.clone(),
+		justification_import: Some(Box::new(grandpa_block_import)),
 		client: client.clone(),
 		create_inherent_data_providers: move |_, ()| async move {
 			let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
@@ -521,6 +557,13 @@ pub fn standalone_build_import_queue(
 	.map_err(Into::into)
 }
 
+fn remote_keystore(_url: &str) -> Result<Arc<LocalKeystore>, &'static str> {
+	// FIXME: actual keystore to be implemented here
+	//        must return a real type (NOT `LocalKeystore`) that
+	//        implements `CryptoStore` and `SyncCryptoStore`
+	Err("Remote Keystore not supported.")
+}
+
 pub fn start_standalone_node(mut config: Configuration) -> Result<TaskManager, ServiceError> {
 	let sc_service::PartialComponents {
 		client,
@@ -530,20 +573,27 @@ pub fn start_standalone_node(mut config: Configuration) -> Result<TaskManager, S
 		mut keystore_container,
 		select_chain: maybe_select_chain,
 		transaction_pool,
-		other: (mut telemetry, _),
+		other: (maybe_grandpa, mut telemetry, _),
 	} = new_partial(&config, standalone_build_import_queue, true)?;
 
-	// if let Some(url) = &config.keystore_remote {
-	// 	match remote_keystore(url) {
-	// 		Ok(k) => keystore_container.set_remote_keystore(k),
-	// 		Err(e) => {
-	// 			return Err(ServiceError::Other(format!(
-	// 				"Error hooking up remote keystore for {}: {}",
-	// 				url, e
-	// 			)))
-	// 		}
-	// 	};
-	// }
+	if let Some(url) = &config.keystore_remote {
+		match remote_keystore(url) {
+			Ok(k) => keystore_container.set_remote_keystore(k),
+			Err(e) => {
+				return Err(ServiceError::Other(format!(
+					"Error hooking up remote keystore for {}: {}",
+					url, e
+				)))
+			}
+		};
+	}
+
+	let (block_import, grandpa_link) = maybe_grandpa.expect("`maybe_grandpa` should be some on standalone");
+
+	config
+		.network
+		.extra_sets
+		.push(sc_finality_grandpa::grandpa_peers_set_config());
 
 	let (network, system_rpc_tx, network_starter) = sc_service::build_network(sc_service::BuildNetworkParams {
 		config: &config,
@@ -656,6 +706,41 @@ pub fn start_standalone_node(mut config: Configuration) -> Result<TaskManager, S
 	} else {
 		None
 	};
+
+	let grandpa_config = sc_finality_grandpa::Config {
+		// FIXME #1578 make this available through chainspec
+		gossip_duration: Duration::from_millis(333),
+		justification_period: 512,
+		name: Some(name),
+		observer_enabled: false,
+		keystore,
+		local_role: role,
+		telemetry: telemetry.as_ref().map(|x| x.handle()),
+	};
+
+	if enable_grandpa {
+		// start the full GRANDPA voter
+		// NOTE: non-authorities could run the GRANDPA observer protocol, but at
+		// this point the full voter should provide better guarantees of block
+		// and vote data availability than the observer. The observer has not
+		// been tested extensively yet and having most nodes in a network run it
+		// could lead to finality stalls.
+		let grandpa_config = sc_finality_grandpa::GrandpaParams {
+			config: grandpa_config,
+			link: grandpa_link,
+			network,
+			voting_rule: sc_finality_grandpa::VotingRulesBuilder::default().build(),
+			prometheus_registry,
+			shared_voter_state: SharedVoterState::empty(),
+			telemetry: telemetry.as_ref().map(|x| x.handle()),
+		};
+
+		// the GRANDPA voter task is considered infallible, i.e.
+		// if it fails we take down the service with it.
+		task_manager
+			.spawn_essential_handle()
+			.spawn_blocking("grandpa-voter", sc_finality_grandpa::run_grandpa_voter(grandpa_config)?);
+	}
 
 	network_starter.start_network();
 

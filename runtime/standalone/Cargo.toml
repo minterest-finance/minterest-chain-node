@@ -22,6 +22,7 @@ frame-system = { default-features = false, git = "https://github.com/paritytech/
 frame-system-benchmarking = { default-features = false, optional = true, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 frame-system-rpc-runtime-api = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 pallet-aura = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+pallet-grandpa = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 pallet-balances = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 pallet-membership = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 pallet-collective = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
@@ -124,6 +125,7 @@ std = [
     "frame-system/std",
     "frame-system-rpc-runtime-api/std",
     "pallet-aura/std",
+    "pallet-grandpa/std",
     "pallet-balances/std",
     "pallet-membership/std",
     "pallet-collective/std",

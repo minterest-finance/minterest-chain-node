@@ -31,6 +31,8 @@ sc-consensus = { git = "https://github.com/paritytech/substrate", branch = "polk
 sc-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 sc-consensus-manual-seal = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 sc-consensus-slots = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sc-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 sc-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 sc-basic-authorship = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 sc-network = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
