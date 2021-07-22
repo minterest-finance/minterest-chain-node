@@ -8,7 +8,7 @@ use crate::{
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
-use liquidity_pools::Pool;
+use liquidity_pools::PoolData;
 use minterest_primitives::Operation;
 use minterest_protocol::PoolInitData;
 use orml_benchmarking::runtime_benchmarks;
@@ -60,9 +60,9 @@ runtime_benchmarks! {
 	create_pool {
 		RiskManager::remove_pool(DOT);
 		LiquidityPools::remove_pool_data(DOT);
-		liquidation_pools::LiquidationPoolsData::<Runtime>::remove(DOT);
+		liquidation_pools::LiquidationPoolDataStorage::<Runtime>::remove(DOT);
 		controller::ControllerParams::<Runtime>::remove(DOT);
-		minterest_model::MinterestModelParams::<Runtime>::remove(DOT);
+		minterest_model::MinterestModelDataStorage::<Runtime>::remove(DOT);
 	}: _(
 		RawOrigin::Root,
 		DOT,
@@ -191,7 +191,7 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(borrower.clone()), DOT, 10_000 * DOLLARS)
 	verify {
-		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).borrowed, 180_000_000_600_000);
+		assert_eq!(LiquidityPools::pool_user_data_storage(DOT, borrower.clone()).borrowed, 180_000_000_600_000);
 		assert_eq!(Currencies::free_balance(MNT, &borrower), 9_999_999_954_999_990_405)
 	}
 
@@ -211,7 +211,7 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
 	verify {
-		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).borrowed, Balance::zero());
+		assert_eq!(LiquidityPools::pool_user_data_storage(DOT, borrower.clone()).borrowed, Balance::zero());
 		assert_eq!(Currencies::free_balance(MNT, &borrower), 9_999_999_954_999_990_405)
 	}
 
@@ -234,7 +234,7 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(lender.clone()), DOT, borrower.clone(), 10_000 * DOLLARS)
 	verify {
-		assert_eq!(LiquidityPools::pool_user_data(DOT, borrower.clone()).borrowed, 180_000_000_600_000);
+		assert_eq!(LiquidityPools::pool_user_data_storage(DOT, borrower.clone()).borrowed, 180_000_000_600_000);
 		assert_eq!(Currencies::free_balance(MNT, &borrower), 9_999_999_954_999_990_405);
 		assert_eq!(Currencies::free_balance(MNT, &lender), Balance::zero());
 	}
@@ -266,7 +266,7 @@ runtime_benchmarks! {
 
 		enable_whitelist_mode_and_add_member(&borrower)?;
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
-	verify  { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).is_collateral, true) }
+	verify  { assert_eq!(LiquidityPools::pool_user_data_storage(DOT, borrower).is_collateral, true) }
 
 	disable_is_collateral {
 		let borrower: AccountId = account("borrower", 0, SEED);
@@ -275,7 +275,7 @@ runtime_benchmarks! {
 
 		enable_whitelist_mode_and_add_member(&borrower)?;
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
-	verify  { assert_eq!(LiquidityPools::pool_user_data(DOT, borrower).is_collateral, false) }
+	verify  { assert_eq!(LiquidityPools::pool_user_data_storage(DOT, borrower).is_collateral, false) }
 
 	claim_mnt {
 		let lender: AccountId = account("lender", 0, SEED);
@@ -292,7 +292,7 @@ runtime_benchmarks! {
 		EnabledUnderlyingAssetsIds::get()
 			.into_iter()
 			.try_for_each(|pool_id| -> Result<(), &'static str> {
-				LiquidityPools::set_pool_data(pool_id, Pool {
+				LiquidityPools::set_pool_data(pool_id, PoolData {
 					borrowed: Balance::zero(),
 					borrow_index: Rate::one(),
 					protocol_interest: Balance::zero(),

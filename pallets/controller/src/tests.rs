@@ -163,7 +163,7 @@ fn accrue_interest_should_work() {
 
 			assert_ok!(TestController::accrue_interest_rate(DOT));
 			assert_eq!(TestController::controller_params(DOT).last_interest_accrued_block, 1);
-			assert_eq!(TestPools::pools(DOT).protocol_interest, 57_600_000_000);
+			assert_eq!(TestPools::pool_data_storage(DOT).protocol_interest, 57_600_000_000);
 			assert_eq!(
 				TestController::get_pool_exchange_borrow_and_supply_rates(DOT),
 				Some((
@@ -172,9 +172,9 @@ fn accrue_interest_should_work() {
 					Rate::from_inner(100_569_600_394)
 				))
 			);
-			assert_eq!(TestPools::pools(DOT).borrowed, 80_000_000_576_000_000_000);
+			assert_eq!(TestPools::pool_data_storage(DOT).borrowed, 80_000_000_576_000_000_000);
 			assert_eq!(
-				TestPools::pools(DOT).borrow_index,
+				TestPools::pool_data_storage(DOT).borrow_index,
 				Rate::from_inner(1_000_000_007_200_000_000)
 			);
 		});

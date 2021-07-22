@@ -4,7 +4,7 @@ use crate as risk_manager;
 use controller::{ControllerData, PauseKeeper};
 use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
-use liquidity_pools::{Pool, PoolUserData};
+use liquidity_pools::{PoolData, PoolUserData};
 use minterest_model::MinterestModelData;
 use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 pub use minterest_primitives::{Balance, Price, Rate};
@@ -115,7 +115,7 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 #[derive(Default)]
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Amount)>,
-	pools: Vec<(CurrencyId, Pool)>,
+	pools: Vec<(CurrencyId, PoolData)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
 	liquidation_fee: Vec<(CurrencyId, Rate)>,

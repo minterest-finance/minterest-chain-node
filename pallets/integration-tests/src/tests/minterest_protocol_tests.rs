@@ -197,11 +197,11 @@ mod tests {
 
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(DOT, ALICE).borrowed,
+					TestPools::pool_user_data_storage(DOT, ALICE).borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
-				assert_eq!(TestPools::pools(DOT).borrowed, alice_borrowed_amount_in_dot);
+				assert_eq!(TestPools::pool_data_storage(DOT).borrowed, alice_borrowed_amount_in_dot);
 
 				System::set_block_number(4);
 
@@ -254,13 +254,13 @@ mod tests {
 				);
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(DOT, ALICE).borrowed,
+					TestPools::pool_user_data_storage(DOT, ALICE).borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
 				let expected_borrow_interest_accumulated = 421875000000000;
 				assert_eq!(
-					TestPools::pools(DOT).borrowed,
+					TestPools::pool_data_storage(DOT).borrowed,
 					alice_borrowed_amount_in_dot + expected_borrow_interest_accumulated
 				);
 
@@ -334,11 +334,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).borrowed,
+					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// // Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pool_data_storage(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(3);
 
@@ -358,11 +358,11 @@ mod tests {
 
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).borrowed,
+					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pool_data_storage(ETH).borrowed, alice_borrowed_amount_in_eth);
 			});
 	}
 
@@ -440,11 +440,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).borrowed,
+					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pool_data_storage(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				// Alice try to redeem all DOTs
 				assert_noop!(
@@ -492,11 +492,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).borrowed,
+					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pool_data_storage(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(7);
 
@@ -708,11 +708,11 @@ mod tests {
 
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(DOT, ALICE).borrowed,
+					TestPools::pool_user_data_storage(DOT, ALICE).borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
-				assert_eq!(TestPools::pools(DOT).borrowed, alice_borrowed_amount_in_dot);
+				assert_eq!(TestPools::pool_data_storage(DOT).borrowed, alice_borrowed_amount_in_dot);
 
 				System::set_block_number(4);
 
@@ -771,12 +771,12 @@ mod tests {
 				// Checking total borrow for Alice DOT pool
 				let expected_amount_accumulated_in_dot = 413602942444485;
 				assert_eq!(
-					TestPools::pool_user_data(DOT, ALICE).borrowed,
+					TestPools::pool_user_data_storage(DOT, ALICE).borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
 				assert_eq!(
-					TestPools::pools(DOT).borrowed,
+					TestPools::pool_data_storage(DOT).borrowed,
 					alice_borrowed_amount_in_dot + expected_amount_accumulated_in_dot
 				);
 
@@ -845,11 +845,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).borrowed,
+					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// // Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pool_data_storage(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(3);
 
@@ -869,11 +869,11 @@ mod tests {
 
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).borrowed,
+					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pool_data_storage(ETH).borrowed, alice_borrowed_amount_in_eth);
 			});
 	}
 
@@ -949,11 +949,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).borrowed,
+					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pool_data_storage(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(4);
 
@@ -994,11 +994,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).borrowed,
+					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pool_data_storage(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(7);
 
@@ -1312,8 +1312,11 @@ mod tests {
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount
 				);
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount);
-				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount);
-				assert_eq!(TestPools::pool_user_data(ETH, &ALICE).borrowed, alice_borrowed_amount);
+				assert_eq!(TestPools::pool_data_storage(ETH).borrowed, alice_borrowed_amount);
+				assert_eq!(
+					TestPools::pool_user_data_storage(ETH, &ALICE).borrowed,
+					alice_borrowed_amount
+				);
 			});
 	}
 
@@ -1499,11 +1502,11 @@ mod tests {
 
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(DOT, ALICE).borrowed,
+					TestPools::pool_user_data_storage(DOT, ALICE).borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
-				assert_eq!(TestPools::pools(DOT).borrowed, alice_borrowed_amount_in_dot);
+				assert_eq!(TestPools::pool_data_storage(DOT).borrowed, alice_borrowed_amount_in_dot);
 
 				System::set_block_number(4);
 
@@ -1559,11 +1562,11 @@ mod tests {
 				);
 				// Checking total borrow for Alice DOT pool
 				assert_eq!(
-					TestPools::pool_user_data(DOT, ALICE).borrowed,
+					TestPools::pool_user_data_storage(DOT, ALICE).borrowed,
 					alice_borrowed_amount_in_dot
 				);
 				// Checking total borrow for DOT pool
-				assert_eq!(TestPools::pools(DOT).borrowed, alice_borrowed_amount_in_dot);
+				assert_eq!(TestPools::pool_data_storage(DOT).borrowed, alice_borrowed_amount_in_dot);
 
 				System::set_block_number(7);
 
@@ -1641,11 +1644,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).borrowed,
+					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// // Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pool_data_storage(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(3);
 
@@ -1674,11 +1677,11 @@ mod tests {
 
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).borrowed,
+					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pool_data_storage(ETH).borrowed, alice_borrowed_amount_in_eth);
 			});
 	}
 
@@ -1762,11 +1765,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).borrowed,
+					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pool_data_storage(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				// Alice try to transfer all MDOTs
 				assert_noop!(
@@ -1835,11 +1838,11 @@ mod tests {
 				assert_eq!(Currencies::free_balance(ETH, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
-					TestPools::pool_user_data(ETH, ALICE).borrowed,
+					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for ETH pool
-				assert_eq!(TestPools::pools(ETH).borrowed, alice_borrowed_amount_in_eth);
+				assert_eq!(TestPools::pool_data_storage(ETH).borrowed, alice_borrowed_amount_in_eth);
 
 				System::set_block_number(7);
 

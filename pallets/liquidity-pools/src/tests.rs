@@ -15,7 +15,7 @@ fn set_pool_data_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		TestPools::set_pool_data(
 			DOT,
-			Pool {
+			PoolData {
 				borrowed: ONE_HUNDRED,
 				borrow_index: Rate::saturating_from_rational(125, 100),
 				protocol_interest: ONE_HUNDRED,
@@ -60,7 +60,7 @@ fn set_user_borrow_and_interest_index_should_work() {
 		);
 		assert_eq!(TestPools::get_user_data(DOT, &ALICE).borrowed, ONE_HUNDRED);
 		assert_eq!(
-			TestPools::pool_user_data(DOT, ALICE).interest_index,
+			TestPools::pool_user_data_storage(DOT, ALICE).interest_index,
 			Rate::saturating_from_rational(33, 100)
 		);
 	});
@@ -72,7 +72,7 @@ fn enable_is_collateral_should_work() {
 		// Alice enable as collateral DOT pool.
 		TestPools::enable_is_collateral(&ALICE, DOT);
 
-		assert!(TestPools::pool_user_data(DOT, ALICE).is_collateral);
+		assert!(TestPools::pool_user_data_storage(DOT, ALICE).is_collateral);
 	});
 }
 
@@ -82,7 +82,7 @@ fn enable_is_collateral_internal_should_work() {
 		// Alice disable collateral DOT pool.
 		TestPools::disable_is_collateral(&ALICE, DOT);
 
-		assert!(!TestPools::pool_user_data(DOT, ALICE).is_collateral);
+		assert!(!TestPools::pool_user_data_storage(DOT, ALICE).is_collateral);
 	});
 }
 
@@ -109,7 +109,7 @@ fn get_pool_data_should_work() {
 		.execute_with(|| {
 			assert_eq!(
 				TestPools::get_pool_data(DOT),
-				Pool {
+				PoolData {
 					borrowed: TEN_THOUSAND,
 					borrow_index: Rate::saturating_from_rational(125, 100),
 					protocol_interest: TEN_THOUSAND,
