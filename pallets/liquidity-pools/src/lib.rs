@@ -216,10 +216,6 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> UserStorageProvider<T::AccountId, PoolUserData> for Pallet<T> {
-	fn set_user_data(who: &T::AccountId, pool_id: CurrencyId, pool_user_data: PoolUserData) {
-		PoolUserDataStorage::<T>::insert(pool_id, who, pool_user_data)
-	}
-
 	fn set_user_borrow_and_interest_index(
 		who: &T::AccountId,
 		pool_id: CurrencyId,

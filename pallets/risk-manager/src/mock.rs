@@ -211,18 +211,21 @@ impl ExtBuilder {
 		self.pools = self
 			.pools
 			.iter()
-			.fold(BTreeMap::<CurrencyId, Pool>::new(), |mut acc, (pool_id, pool_data)| {
-				// merge duplicated accounts
-				if let Some(pool) = acc.get_mut(pool_id) {
-					pool.borrowed += pool_data.borrowed;
-				} else {
-					acc.insert(*pool_id, pool_data.clone());
-				}
-				acc
-			})
+			.fold(
+				BTreeMap::<CurrencyId, PoolData>::new(),
+				|mut acc, (pool_id, pool_data)| {
+					// merge duplicated accounts
+					if let Some(pool) = acc.get_mut(pool_id) {
+						pool.borrowed += pool_data.borrowed;
+					} else {
+						acc.insert(*pool_id, pool_data.clone());
+					}
+					acc
+				},
+			)
 			.into_iter()
 			.map(|(pool_id, pool)| (pool_id, pool))
-			.collect::<Vec<(CurrencyId, Pool)>>();
+			.collect::<Vec<(CurrencyId, PoolData)>>();
 		self
 	}
 
@@ -288,7 +291,7 @@ impl ExtBuilder {
 	) -> Self {
 		self.pools.push((
 			pool_id,
-			Pool {
+			PoolData {
 				borrowed,
 				borrow_index,
 				protocol_interest,
