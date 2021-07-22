@@ -3,7 +3,6 @@ use super::*;
 use crate as liquidation_pools;
 use frame_support::{ord_parameter_types, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
-use liquidity_pools::Pool;
 use minterest_primitives::Price;
 pub use minterest_primitives::{currency::CurrencyType::WrappedToken, Balance, CurrencyId, Rate};
 use orml_traits::parameter_type_with_key;
@@ -127,7 +126,7 @@ pub fn admin() -> Origin {
 
 pub struct ExternalityBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	liquidity_pools: Vec<(CurrencyId, Pool)>,
+	liquidity_pools: Vec<(CurrencyId, PoolData)>,
 	liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
 }
 
@@ -138,7 +137,7 @@ impl Default for ExternalityBuilder {
 			liquidity_pools: vec![
 				(
 					DOT,
-					Pool {
+					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						protocol_interest: Balance::zero(),
@@ -146,7 +145,7 @@ impl Default for ExternalityBuilder {
 				),
 				(
 					ETH,
-					Pool {
+					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						protocol_interest: Balance::zero(),
@@ -154,7 +153,7 @@ impl Default for ExternalityBuilder {
 				),
 				(
 					BTC,
-					Pool {
+					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						protocol_interest: Balance::zero(),
@@ -208,7 +207,7 @@ impl ExternalityBuilder {
 	pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
 		self.liquidity_pools.push((
 			pool_id,
-			Pool {
+			PoolData {
 				borrowed: Balance::zero(),
 				borrow_index: Rate::one(),
 				protocol_interest: Balance::zero(),

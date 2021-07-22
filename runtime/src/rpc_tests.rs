@@ -11,7 +11,7 @@ use controller_rpc_runtime_api::{
 use frame_support::pallet_prelude::{DispatchResultWithPostInfo, PhantomData};
 use frame_support::{assert_noop, assert_ok, pallet_prelude::GenesisBuild, parameter_types, traits::OnFinalize};
 use liquidation_pools::LiquidationPoolData;
-use liquidity_pools::{Pool, PoolUserData};
+use liquidity_pools::{PoolData, PoolUserData};
 use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Interest, Operation, Price};
 use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
@@ -37,7 +37,7 @@ parameter_types! {
 
 struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	pools: Vec<(CurrencyId, Pool)>,
+	pools: Vec<(CurrencyId, PoolData)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	minted_pools: Vec<(CurrencyId, Balance)>,
 	liquidation_fee: Vec<(CurrencyId, Rate)>,
@@ -98,7 +98,7 @@ impl ExtBuilder {
 	pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
 		self.pools.push((
 			pool_id,
-			Pool {
+			PoolData {
 				borrowed: Balance::zero(),
 				borrow_index: Rate::one(),
 				protocol_interest: Balance::zero(),
@@ -1188,7 +1188,7 @@ fn test_user_total_borrowed_difference_is_ok_before_and_after_repay_using_balanc
 				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
-				LiquidityPools::pool_user_data(DOT, BOB::get()).borrowed,
+				LiquidityPools::pool_user_data_storage(DOT, BOB::get()).borrowed,
 				(Rate::from_inner(account_data_after_repay.total_borrowed) / oracle_price).into_inner()
 			);
 			assert_eq!(
@@ -1227,7 +1227,7 @@ fn test_user_total_borrowed_difference_is_ok_before_and_after_borrow_using_balan
 				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
-				LiquidityPools::pool_user_data(DOT, BOB::get()).borrowed,
+				LiquidityPools::pool_user_data_storage(DOT, BOB::get()).borrowed,
 				(Rate::from_inner(account_data_after_borrow.total_borrowed) / oracle_price).into_inner()
 			);
 			assert_eq!(

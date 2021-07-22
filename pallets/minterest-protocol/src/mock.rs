@@ -5,7 +5,7 @@ use crate as minterest_protocol;
 use controller::{ControllerData, PauseKeeper};
 use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
-use liquidity_pools::{Pool, PoolUserData};
+use liquidity_pools::{PoolData, PoolUserData};
 use minterest_model::MinterestModelData;
 pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
@@ -89,7 +89,7 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	pools: Vec<(CurrencyId, Pool)>,
+	pools: Vec<(CurrencyId, PoolData)>,
 	controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
 	minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
 }
@@ -187,7 +187,7 @@ impl ExtBuilder {
 	) -> Self {
 		self.pools.push((
 			pool_id,
-			Pool {
+			PoolData {
 				borrowed,
 				borrow_index,
 				protocol_interest,
