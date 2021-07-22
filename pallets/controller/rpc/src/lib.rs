@@ -66,7 +66,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	#[rpc(name = "controller_utilizationRate")]
 	fn get_utilization_rate(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<Rate>>;
 
-	/// Returns total supply and total borrowed balance in usd.
+	/// Returns user total supply and user total borrowed balance in usd.
 	///
 	/// Parameters:
 	///  - `&self`: Self reference
