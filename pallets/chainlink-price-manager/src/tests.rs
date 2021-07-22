@@ -29,7 +29,7 @@ fn create_feed_should_work() {
 			10,
 			(10, 1_000 * DOLLARS),
 			3,
-			5,
+			5, // min submissions
 			b"MIN-BTC".to_vec(),
 			2,
 			vec![
@@ -50,15 +50,14 @@ fn create_feed_should_work() {
 		ChainlinkFeed::submit(Origin::signed(oracle1), 0_u32, round_id, 42 * DOLLARS).unwrap();
 		ChainlinkFeed::submit(Origin::signed(oracle2), 0_u32, round_id, 42 * DOLLARS).unwrap();
 
-		// TODO here is returning 0. It isn't expected value
-		// assert_eq!(ChainlinkPriceManager::get_underlying_price(BTC), None);
+		// The value is returned only when 3 oracles are subbmited, because min_submissions == 3
+		assert_eq!(ChainlinkPriceManager::get_underlying_price(BTC), None);
 
 		let feed_result = ChainlinkFeed::feed(feed_id.into()).unwrap();
 		let RoundData { answer, .. } = feed_result.latest_data();
 		assert_eq!(answer, 0);
 		ChainlinkFeed::submit(Origin::signed(oracle3), 0_u32, round_id, 42 * DOLLARS).unwrap();
 
-		// The value is returned only when 3 oracles are subbmited, because min_submissions == 3
 		assert_eq!(
 			ChainlinkPriceManager::get_underlying_price(BTC).unwrap(),
 			FixedU128::saturating_from_integer(42)

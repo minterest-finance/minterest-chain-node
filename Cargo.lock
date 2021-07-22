@@ -848,7 +848,6 @@ dependencies = [
  "sp-core 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
  "sp-io 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
- "sp-std 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
  "test-helper",
 ]
 

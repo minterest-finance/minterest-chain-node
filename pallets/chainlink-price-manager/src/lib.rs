@@ -1,31 +1,42 @@
-//! # Example Module
+//! # Chainlink Price Manager
 //!
-//! A simple example of a FRAME pallet demonstrating
-//! concepts, APIs and structures common to most FRAME runtimes.
+//! Main oracle price manager that provide updated and reliable oracle prices.
+//!
+//! ## Interface
+//!
+//! -`PricesManager`: provides get_underlying_price interface.
+//!
+//! ### Dispatchable Functions (extrinsics)
+//!
+//! - `enable_feeding` - Enable providing oracle prices.
+//!
+//! - `disable_feeding` - Disable providing oracle prices.
+//! The get_underlying_price will return None.
+//!
+//!  TODO Pallet in development.
+//!  Implement provider types Chainlink and Minterest
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
 use frame_support::{log, pallet_prelude::*, transactional, IterableStorageMap};
-use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
-use frame_system::pallet_prelude::*;
-use minterest_primitives::{currency::*, CurrencyId, OffchainErr, Price};
+use frame_system::{
+	pallet_prelude::*,
+	offchain::{SendTransactionTypes, SubmitTransaction},
+};
+use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, currency::*, CurrencyId, OffchainErr, Price};
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData, RoundId};
 use pallet_traits::PricesManager;
 use sp_runtime::traits::Zero;
 
+#[cfg(test)]
 mod mock;
+#[cfg(test)]
 mod tests;
 
 pub use module::*;
 
 type ChainlinkFeedPallet<T> = pallet_chainlink_feed::Pallet<T>;
-
-// TODO should be implemented
-// enum ProviderType {
-// 	Chainlink,
-// 	Minterest,
-// }
 
 #[frame_support::pallet]
 pub mod module {
@@ -46,10 +57,7 @@ pub mod module {
 	}
 
 	#[pallet::error]
-	pub enum Error<T> {
-		/// Some wrong behavior
-		Wrong,
-	}
+	pub enum Error<T> {}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(fn deposit_event)]
@@ -104,6 +112,7 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Produces events to initiate a new round for oracles.
 		#[pallet::weight(10_000)]
 		#[transactional]
 		pub fn initiate_new_round(
@@ -115,6 +124,22 @@ pub mod module {
 			Self::deposit_event(Event::InitiateNewRound(feed_id, new_round));
 			Ok(().into())
 		}
+
+		#[pallet::weight(10_000)]
+		#[transactional]
+		pub fn enable_feeding(_origin: OriginFor<T>) -> DispatchResult {
+			// TODO make additional checks
+			// Check is all feed description are unique
+			// Check is all enabled currencies has feed
+			Ok(())
+		}
+
+		// TODO. Then get_underlying_price should always return None
+		#[pallet::weight(10_000)]
+		#[transactional]
+		pub fn disable_feeding(_origin: OriginFor<T>) -> DispatchResult {
+			Ok(())
+		}
 	}
 }
 
@@ -122,27 +147,57 @@ impl<T: Config> Pallet<T>
 where
 	u128: From<<T as pallet_chainlink_feed::Config>::Value>,
 {
+	// TODO rework it.
+	// This is temporary function. Shouldn't use in production but helpful in test project stage.
+	// If one of pool_id has lower RoundId that others we should syncronize it with others.
+	// This can happen if oracle hasn't enough time to submit all prices.
+	fn get_min_round_id() -> Result<RoundId, OffchainErr> {
+		let mut min_round_id: RoundId = RoundId::MAX;
+		for currency in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset) {
+			let feed_id = Self::get_feed_id(currency).ok_or(OffchainErr::ChainlinkFeedNotExists)?;
+			let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id)
+				.ok_or(OffchainErr::FailReceivingOraclePrice)?
+				.latest_round();
+			min_round_id = min_round_id.min(feed_result);
+		}
+		Ok(min_round_id)
+	}
+
+	// Print prices to node debug log
+	fn print_prices() {
+		for currency in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset) {
+			if let Some(price) = Self::get_underlying_price(currency) {
+				log::debug!("{:?} price is {:?}", currency, price);
+			} else {
+				log::warn!("Can't receive price for {:?}", currency);
+			}
+		}
+	}
+
 	fn _offchain_worker(now: T::BlockNumber) -> Result<(), OffchainErr> {
-		// TODO implement extrinsic to set initiate round period instead hardcoded 3
+		// TODO implement extrinsic to set initiate round period instead of hardcoded 3
 		let bn: T::BlockNumber = (3_u32).into();
 		if (now % bn).is_zero() {
+			// TODO should we get latest_round for each pool and produce event pair, or enough take
+			// only min round id?
+			let new_round_id = Self::get_min_round_id()?.saturating_add(1);
+			// Currently feed id is not play any role. See TODO above
 			let feed_id = Self::get_feed_id(ETH).ok_or(OffchainErr::CheckFail)?;
+			let call = Call::<T>::initiate_new_round(feed_id, new_round_id);
+			log::debug!("New round_id: {:?}", new_round_id);
 
-			let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id).ok_or(OffchainErr::CheckFail)?;
-			log::info!("Last feed round_id: {:?}", feed_result.latest_round());
-
-			// TODO should we get latest_round for each pool and produce event pair?
-			let call = Call::<T>::initiate_new_round(feed_id, feed_result.latest_round().saturating_add(1));
-			SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).unwrap();
+			if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
+				log::info!(
+					target: "ChainlinkPriceManager offchain worker",
+					"Initiate a new round is faled",
+				);
+			}
 		}
-		log::info!("ETH price is: {:?}", Self::get_underlying_price(ETH));
-		log::info!("DOT price is: {:?}", Self::get_underlying_price(DOT));
-		log::info!("KSM price is: {:?}", Self::get_underlying_price(KSM));
-		log::info!("BTC price is: {:?}", Self::get_underlying_price(BTC));
+		Self::print_prices();
 		Ok(())
 	}
 
-	// TODO This is temporary function. We need move this function as method to
+	// TODO This is temporary function. We need tom move this function as method to
 	// privitives/src/currency.rs. Also, add distingiush between chainlink provider and minterest
 	fn convert_to_description(currency_id: CurrencyId) -> &'static [u8] {
 		match currency_id {
@@ -154,6 +209,7 @@ where
 		}
 	}
 
+	// Looks for appropriate feed config with description and returns FeedId
 	pub fn get_feed_id(currency_id: CurrencyId) -> Option<T::FeedId> {
 		Some(
 			<pallet_chainlink_feed::Feeds<T> as IterableStorageMap<
@@ -173,7 +229,15 @@ where
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
 		let feed_id = Self::get_feed_id(currency_id)?;
 		let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id)?;
+		// TODO handle updated_at
 		let RoundData { answer, .. } = feed_result.latest_data();
+
+		// There is an issue that pallet-chainlink-feed can return Some(0)
+		// if feed was created but submit() extrinsic wasn't called
+		if answer.is_zero() {
+			return None;
+		}
+
 		Some(Price::from_inner(answer.into()))
 	}
 

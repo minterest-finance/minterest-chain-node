@@ -98,6 +98,8 @@ pub enum OffchainErr {
 	NotValidator,
 	CheckFail,
 	PoolsBalancingError,
+	FailReceivingOraclePrice,
+	ChainlinkFeedNotExists,
 }
 
 impl sp_std::fmt::Debug for OffchainErr {
@@ -107,6 +109,8 @@ impl sp_std::fmt::Debug for OffchainErr {
 			OffchainErr::NotValidator => write!(fmt, "Not validator"),
 			OffchainErr::CheckFail => write!(fmt, "Check fail"),
 			OffchainErr::PoolsBalancingError => write!(fmt, "Pools balancing error"),
+			OffchainErr::FailReceivingOraclePrice => write!(fmt, "Receiving oracle price is failed"),
+			OffchainErr::ChainlinkFeedNotExists => write!(fmt, "Can't retrieve feed for enabled currency"),
 		}
 	}
 }
