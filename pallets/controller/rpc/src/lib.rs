@@ -140,7 +140,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 		at: Option<BlockHash>,
 	) -> Result<Option<BalanceInfo>>;
 
-	/// Returns user underlying asset balance for the pool
+	/// Returns actual supply underlying balance for user in specific liquidity pool based on fresh latest indexes.
 	///
 	/// Parameters:
 	///  - `&self`: Self reference
