@@ -41,7 +41,7 @@ use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 	pallet_prelude::OriginFor,
 };
-use liquidity_pools::Pool;
+use liquidity_pools::PoolData;
 use minterest_primitives::{
 	currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, OffchainErr, Operation, Rate,
 };
@@ -152,7 +152,7 @@ pub mod module {
 		type ControllerManager: ControllerManager<Self::AccountId>;
 
 		/// Provides the basic liquidity pools functionality.
-		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, Pool>
+		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, PoolData>
 			+ CurrencyConverter
 			+ UserCollateral<Self::AccountId>;
 

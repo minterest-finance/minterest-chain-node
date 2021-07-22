@@ -53,7 +53,7 @@
         "threshold": "Rate",
         "liquidation_fee": "Rate"
       },
-      "Pool": {
+      "PoolData": {
         "borrowed": "Balance",
         "borrow_index": "Rate",
         "protocol_interest": "Balance"
@@ -61,7 +61,7 @@
       "LiquidationPoolData": {
         "deviation_threshold": "Rate",
         "balance_ratio": "Rate",
-        "max_ideal_balance": "Option<Balance>"
+        "max_ideal_balance_usd": "Option<Balance>"
       },
       "PoolUserData": {
         "borrowed": "Balance",

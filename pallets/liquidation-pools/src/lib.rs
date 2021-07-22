@@ -16,7 +16,7 @@ use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 	pallet_prelude::*,
 };
-use liquidity_pools::Pool;
+use liquidity_pools::PoolData;
 use minterest_primitives::{
 	arithmetic::sum_with_mult_result, currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, OffchainErr, Rate,
 };
@@ -56,7 +56,7 @@ pub struct LiquidationPoolData {
 	/// Liquidation Poll.
 	pub balance_ratio: Rate,
 	/// Maximum ideal balance during pool balancing
-	pub max_ideal_balance: Option<Balance>,
+	pub max_ideal_balance_usd: Option<Balance>,
 }
 
 type BalanceResult = sp_std::result::Result<Balance, DispatchError>;
@@ -91,7 +91,7 @@ pub mod module {
 		type PriceSource: PricesManager<CurrencyId>;
 
 		/// The basic liquidity pools manager.
-		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, Pool>
+		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, PoolData>
 			+ CurrencyConverter
 			+ PoolsManager<Self::AccountId>;
 
@@ -158,8 +158,9 @@ pub mod module {
 	/// - `max_ideal_balance`: Max Ideal Balance represents the ideal balance of Liquidation Pool
 	/// and is used to limit ideal balance during pool balancing.
 	#[pallet::storage]
-	#[pallet::getter(fn liquidation_pools_data)]
-	pub type LiquidationPoolsData<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, LiquidationPoolData, ValueQuery>;
+	#[pallet::getter(fn liquidation_pool_data_storage)]
+	pub type LiquidationPoolDataStorage<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyId, LiquidationPoolData, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -182,7 +183,7 @@ pub mod module {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			self.liquidation_pools.iter().for_each(|(currency_id, pool_data)| {
-				LiquidationPoolsData::<T>::insert(currency_id, LiquidationPoolData { ..*pool_data })
+				LiquidationPoolDataStorage::<T>::insert(currency_id, LiquidationPoolData { ..*pool_data })
 			});
 		}
 	}
@@ -244,7 +245,7 @@ pub mod module {
 			);
 
 			// Write new value into storage.
-			LiquidationPoolsData::<T>::mutate(pool_id, |x| x.deviation_threshold = new_deviation_threshold);
+			LiquidationPoolDataStorage::<T>::mutate(pool_id, |x| x.deviation_threshold = new_deviation_threshold);
 
 			Self::deposit_event(Event::DeviationThresholdChanged(pool_id, new_deviation_threshold));
 
@@ -283,7 +284,7 @@ pub mod module {
 			);
 
 			// Write new value into storage.
-			LiquidationPoolsData::<T>::mutate(pool_id, |x| x.balance_ratio = new_balance_ratio);
+			LiquidationPoolDataStorage::<T>::mutate(pool_id, |x| x.balance_ratio = new_balance_ratio);
 
 			Self::deposit_event(Event::BalanceRatioChanged(pool_id, new_balance_ratio));
 
@@ -302,7 +303,7 @@ pub mod module {
 		pub fn set_max_ideal_balance(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
-			max_ideal_balance: Option<Balance>,
+			max_ideal_balance_usd: Option<Balance>,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -316,9 +317,9 @@ pub mod module {
 			);
 
 			// Write new value into storage.
-			LiquidationPoolsData::<T>::mutate(pool_id, |x| x.max_ideal_balance = max_ideal_balance);
+			LiquidationPoolDataStorage::<T>::mutate(pool_id, |x| x.max_ideal_balance_usd = max_ideal_balance_usd);
 
-			Self::deposit_event(Event::MaxIdealBalanceChanged(pool_id, max_ideal_balance));
+			Self::deposit_event(Event::MaxIdealBalanceChanged(pool_id, max_ideal_balance_usd));
 
 			Ok(().into())
 		}
@@ -339,8 +340,8 @@ pub mod module {
 			origin: OriginFor<T>,
 			supply_pool_id: CurrencyId,
 			target_pool_id: CurrencyId,
-			max_supply_amount: Balance,
-			target_amount: Balance,
+			max_supply_amount_underlying: Balance,
+			target_amount_underlying: Balance,
 		) -> DispatchResultWithPostInfo {
 			let _ = ensure_none(origin)?;
 			ensure!(
@@ -354,8 +355,8 @@ pub mod module {
 				&module_id,
 				supply_pool_id,
 				target_pool_id,
-				max_supply_amount,
-				target_amount,
+				max_supply_amount_underlying,
+				target_amount_underlying,
 			)?;
 			Self::deposit_event(Event::LiquidationPoolsBalanced);
 			Ok(().into())
@@ -429,11 +430,11 @@ struct LiquidationInformation {
 	/// CurrencyId
 	pool_id: CurrencyId,
 	/// Pool current balance in USD.
-	balance: Balance,
+	balance_usd: Balance,
 	/// Pool balance above ideal value (USD).
-	oversupply: Balance,
+	oversupply_usd: Balance,
 	/// Pool balance below ideal value (USD).
-	shortfall: Balance,
+	shortfall_usd: Balance,
 }
 
 /// Information about the operations required for balancing Liquidation Pools.
@@ -443,8 +444,9 @@ pub struct Sales {
 	pub supply_pool_id: CurrencyId,
 	/// Liquidation pool CurrencyId with shortfall.
 	pub target_pool_id: CurrencyId,
-	/// The amount of underlying asset to transfer from the oversupply pool to the shortfall pool.
-	pub amount: Balance,
+	/// The amount of underlying asset in usd to transfer from the oversupply pool to the shortfall
+	/// pool.
+	pub amount_usd: Balance,
 }
 
 impl<T: Config> Pallet<T> {
@@ -468,13 +470,13 @@ impl<T: Config> Pallet<T> {
 		Self::collects_sales_list()?
 			.iter()
 			.try_for_each(|sale: &Sales| -> DispatchResult {
-				let (max_supply_amount, target_amount) =
-					Self::get_amounts(sale.supply_pool_id, sale.target_pool_id, sale.amount)?;
+				let (max_supply_amount_underlying, target_amount_underlying) =
+					Self::get_amounts(sale.supply_pool_id, sale.target_pool_id, sale.amount_usd)?;
 				Self::submit_unsigned_tx(
 					sale.supply_pool_id,
 					sale.target_pool_id,
-					max_supply_amount,
-					target_amount,
+					max_supply_amount_underlying,
+					target_amount_underlying,
 				);
 				Ok(())
 			})?;
@@ -484,11 +486,15 @@ impl<T: Config> Pallet<T> {
 	fn submit_unsigned_tx(
 		supply_pool_id: CurrencyId,
 		target_pool_id: CurrencyId,
-		max_supply_amount: Balance,
-		target_amount: Balance,
+		max_supply_amount_underlying: Balance,
+		target_amount_underlying: Balance,
 	) {
-		let call =
-			Call::<T>::balance_liquidation_pools(supply_pool_id, target_pool_id, max_supply_amount, target_amount);
+		let call = Call::<T>::balance_liquidation_pools(
+			supply_pool_id,
+			target_pool_id,
+			max_supply_amount_underlying,
+			target_amount_underlying,
+		);
 		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
 			log::info!(
 				target: "liquidation-pools offchain worker",
@@ -501,13 +507,13 @@ impl<T: Config> Pallet<T> {
 	/// Collects information about required transactions on DEX.
 	fn collects_sales_list() -> sp_std::result::Result<Vec<Sales>, DispatchError> {
 		// Collecting information about the current state of liquidation pools.
-		let (mut information_vec, mut sum_oversupply, mut sum_shortfall) =
+		let (mut information_vec, mut sum_oversupply_usd, mut sum_shortfall_usd) =
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 				.iter()
 				.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
 				.try_fold(
 					(Vec::<LiquidationInformation>::new(), Balance::zero(), Balance::zero()),
-					|(mut current_vec, mut current_sum_oversupply, mut current_sum_shortfall),
+					|(mut current_vec, mut current_sum_oversupply_usd, mut current_sum_shortfall_usd),
 					 pool_id|
 					 -> sp_std::result::Result<(Vec<LiquidationInformation>, Balance, Balance), DispatchError> {
 						let oracle_price =
@@ -517,34 +523,39 @@ impl<T: Config> Pallet<T> {
 							liquidation_pool_supply_underlying,
 							oracle_price,
 						)?;
-						let ideal_balance = Self::calculate_ideal_balance(*pool_id)?;
+						let pool_ideal_balance_usd = Self::calculate_pool_ideal_balance_usd(*pool_id)?;
 
 						// If the pool is not balanced:
-						// oversupply = liquidation_pool_balance - ideal_balance
-						// shortfall = ideal_balance - liquidation_pool_balance
-						let (oversupply, shortfall) = match liquidation_pool_supply_usd.cmp(&ideal_balance) {
-							Ordering::Greater => (liquidation_pool_supply_usd - ideal_balance, Balance::zero()),
-							Ordering::Less => (Balance::zero(), ideal_balance - liquidation_pool_supply_usd),
+						// oversupply_usd = liquidation_pool_balance - pool_ideal_balance_usd
+						// shortfall_usd = pool_ideal_balance_usd - liquidation_pool_balance
+						let (oversupply_usd, shortfall_usd) = match liquidation_pool_supply_usd
+							.cmp(&pool_ideal_balance_usd)
+						{
+							Ordering::Greater => {
+								(liquidation_pool_supply_usd - pool_ideal_balance_usd, Balance::zero())
+							}
+							Ordering::Less => (Balance::zero(), pool_ideal_balance_usd - liquidation_pool_supply_usd),
 							Ordering::Equal => (Balance::zero(), Balance::zero()),
 						};
 
 						current_vec.push(LiquidationInformation {
 							pool_id: *pool_id,
-							balance: liquidation_pool_supply_usd,
-							oversupply,
-							shortfall,
+							balance_usd: liquidation_pool_supply_usd,
+							oversupply_usd,
+							shortfall_usd,
 						});
 
 						// Calculate sum_extra and sum_shortfall for all pools.
-						let deviation_threshold = Self::liquidation_pools_data(*pool_id).deviation_threshold;
-						// right_border = ideal_balance + ideal_balance * deviation_threshold
-						let right_border = sum_with_mult_result(ideal_balance, ideal_balance, deviation_threshold)
-							.map_err(|_| Error::<T>::BalanceOverflow)?;
+						let deviation_threshold = Self::liquidation_pool_data_storage(*pool_id).deviation_threshold;
+						// right_border = pool_ideal_balance_usd + pool_ideal_balance_usd * deviation_threshold
+						let right_border =
+							sum_with_mult_result(pool_ideal_balance_usd, pool_ideal_balance_usd, deviation_threshold)
+								.map_err(|_| Error::<T>::BalanceOverflow)?;
 
-						// left_border = ideal_balance - ideal_balance * deviation_threshold
-						let left_border = ideal_balance
+						// left_border = pool_ideal_balance_usd - pool_ideal_balance_usd * deviation_threshold
+						let left_border = pool_ideal_balance_usd
 							.checked_sub(
-								Rate::from_inner(ideal_balance)
+								Rate::from_inner(pool_ideal_balance_usd)
 									.checked_mul(&deviation_threshold)
 									.map(|x| x.into_inner())
 									.ok_or(Error::<T>::NumOverflow)?,
@@ -552,73 +563,75 @@ impl<T: Config> Pallet<T> {
 							.ok_or(Error::<T>::NumOverflow)?;
 
 						if liquidation_pool_supply_usd > right_border {
-							current_sum_oversupply = current_sum_oversupply
-								.checked_add(oversupply)
+							current_sum_oversupply_usd = current_sum_oversupply_usd
+								.checked_add(oversupply_usd)
 								.ok_or(Error::<T>::BalanceOverflow)?;
 						}
 						if liquidation_pool_supply_usd < left_border {
-							current_sum_shortfall = current_sum_shortfall
-								.checked_add(shortfall)
+							current_sum_shortfall_usd = current_sum_shortfall_usd
+								.checked_add(shortfall_usd)
 								.ok_or(Error::<T>::BalanceOverflow)?;
 						}
 
-						Ok((current_vec, current_sum_oversupply, current_sum_shortfall))
+						Ok((current_vec, current_sum_oversupply_usd, current_sum_shortfall_usd))
 					},
 				)?;
 
 		// Contains information about the necessary transactions on the DEX.
 		let mut to_sell_list: Vec<Sales> = Vec::new();
 
-		while sum_shortfall > Balance::zero() && sum_oversupply > Balance::zero() {
+		while sum_shortfall_usd > Balance::zero() && sum_oversupply_usd > Balance::zero() {
 			// Find the pool with the maximum oversupply and the pool with the maximum shortfall.
-			let (max_oversupply_index, max_oversupply_pool_id, max_oversupply) = information_vec
+			let (max_oversupply_index, max_oversupply_pool_id, max_oversupply_usd) = information_vec
 				.iter()
 				.enumerate()
-				.max_by(|(_, a), (_, b)| a.oversupply.cmp(&b.oversupply))
-				.map(|(index, pool)| (index, pool.pool_id, pool.oversupply))
+				.max_by(|(_, a), (_, b)| a.oversupply_usd.cmp(&b.oversupply_usd))
+				.map(|(index, pool)| (index, pool.pool_id, pool.oversupply_usd))
 				.ok_or(Error::<T>::PoolNotFound)?;
 
-			let (max_shortfall_index, max_shortfall_pool_id, max_shortfall) = information_vec
+			let (max_shortfall_index, max_shortfall_pool_id, max_shortfall_usd) = information_vec
 				.iter()
 				.enumerate()
-				.max_by(|(_, a), (_, b)| a.shortfall.cmp(&b.shortfall))
-				.map(|(index, pool)| (index, pool.pool_id, pool.shortfall))
+				.max_by(|(_, a), (_, b)| a.shortfall_usd.cmp(&b.shortfall_usd))
+				.map(|(index, pool)| (index, pool.pool_id, pool.shortfall_usd))
 				.ok_or(Error::<T>::PoolNotFound)?;
 
 			// The number USD equivalent to be sent to the DEX will be equal to
-			// the minimum value between (max_shortfall, max_oversupply).
-			let bite_in_usd = max_oversupply.min(max_shortfall);
+			// the minimum value between (max_shortfall_usd, max_oversupply_usd).
+			let bite_usd = max_oversupply_usd.min(max_shortfall_usd);
 
 			// Add "sale" to the sales list.
 			to_sell_list.push(Sales {
 				supply_pool_id: max_oversupply_pool_id,
 				target_pool_id: max_shortfall_pool_id,
-				amount: bite_in_usd,
+				amount_usd: bite_usd,
 			});
 
 			// Updating the information vector.
 			let pool_with_max_oversupply = &mut information_vec[max_oversupply_index];
-			pool_with_max_oversupply.balance = pool_with_max_oversupply
-				.balance
-				.checked_sub(bite_in_usd)
+			pool_with_max_oversupply.balance_usd = pool_with_max_oversupply
+				.balance_usd
+				.checked_sub(bite_usd)
 				.ok_or(Error::<T>::NotEnoughBalance)?;
-			pool_with_max_oversupply.oversupply = pool_with_max_oversupply
-				.oversupply
-				.checked_sub(bite_in_usd)
+			pool_with_max_oversupply.oversupply_usd = pool_with_max_oversupply
+				.oversupply_usd
+				.checked_sub(bite_usd)
 				.ok_or(Error::<T>::NotEnoughBalance)?;
 
 			let pool_with_max_shortfall = &mut information_vec[max_shortfall_index];
-			pool_with_max_shortfall.balance = pool_with_max_shortfall
-				.balance
-				.checked_add(bite_in_usd)
+			pool_with_max_shortfall.balance_usd = pool_with_max_shortfall
+				.balance_usd
+				.checked_add(bite_usd)
 				.ok_or(Error::<T>::NotEnoughBalance)?;
-			pool_with_max_shortfall.shortfall = pool_with_max_shortfall
-				.shortfall
-				.checked_sub(bite_in_usd)
+			pool_with_max_shortfall.shortfall_usd = pool_with_max_shortfall
+				.shortfall_usd
+				.checked_sub(bite_usd)
 				.ok_or(Error::<T>::NotEnoughBalance)?;
 
-			sum_oversupply = sum_oversupply.checked_sub(bite_in_usd).ok_or(Error::<T>::NumOverflow)?;
-			sum_shortfall = sum_shortfall.checked_sub(bite_in_usd).ok_or(Error::<T>::NumOverflow)?;
+			sum_oversupply_usd = sum_oversupply_usd
+				.checked_sub(bite_usd)
+				.ok_or(Error::<T>::NumOverflow)?;
+			sum_shortfall_usd = sum_shortfall_usd.checked_sub(bite_usd).ok_or(Error::<T>::NumOverflow)?;
 		}
 
 		Ok(to_sell_list)
@@ -628,25 +641,26 @@ impl<T: Config> Pallet<T> {
 	fn get_amounts(
 		supply_pool_id: CurrencyId,
 		target_pool_id: CurrencyId,
-		amount: Balance,
+		amount_usd: Balance,
 	) -> sp_std::result::Result<(Balance, Balance), DispatchError> {
 		let supply_oracle_price =
 			T::PriceSource::get_underlying_price(supply_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 		let target_oracle_price =
 			T::PriceSource::get_underlying_price(target_pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-		let max_supply_amount = T::LiquidityPoolsManager::usd_to_underlying(amount, supply_oracle_price)?;
-		let target_amount = T::LiquidityPoolsManager::usd_to_underlying(amount, target_oracle_price)?;
-		Ok((max_supply_amount, target_amount))
+		let max_supply_amount_underlying =
+			T::LiquidityPoolsManager::usd_to_underlying(amount_usd, supply_oracle_price)?;
+		let target_amount_underlying = T::LiquidityPoolsManager::usd_to_underlying(amount_usd, target_oracle_price)?;
+		Ok((max_supply_amount_underlying, target_amount_underlying))
 	}
 
 	/// Calculates ideal balance for pool balancing
 	/// - `pool_id`: PoolID for which the ideal balance is calculated.
 	///
 	/// Returns minimum of (liquidity_pool_balance * balance_ratio * oracle_price) and
-	/// max_ideal_balance
-	fn calculate_ideal_balance(pool_id: CurrencyId) -> BalanceResult {
+	/// max_ideal_balance_usd
+	fn calculate_pool_ideal_balance_usd(pool_id: CurrencyId) -> BalanceResult {
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-		let balance_ratio = Self::liquidation_pools_data(pool_id).balance_ratio;
+		let balance_ratio = Self::liquidation_pool_data_storage(pool_id).balance_ratio;
 		// Liquidation pool ideal balance in USD: liquidity_pool_balance * balance_ratio * oracle_price
 		let ideal_balance_usd = Rate::from_inner(T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id))
 			.checked_mul(&balance_ratio)
@@ -654,8 +668,8 @@ impl<T: Config> Pallet<T> {
 			.map(|x| x.into_inner())
 			.ok_or(Error::<T>::BalanceOverflow)?;
 
-		match Self::liquidation_pools_data(pool_id).max_ideal_balance {
-			Some(max_ideal_balance) => Ok(ideal_balance_usd.min(max_ideal_balance)),
+		match Self::liquidation_pool_data_storage(pool_id).max_ideal_balance_usd {
+			Some(max_ideal_balance_usd) => Ok(ideal_balance_usd.min(max_ideal_balance_usd)),
 			None => Ok(ideal_balance_usd),
 		}
 	}
@@ -683,10 +697,10 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 
 impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
 	/// This is a part of a pool creation flow
-	/// Checks parameters validity and creates storage records for LiquidationPoolsData
+	/// Checks parameters validity and creates storage records for LiquidationPoolDataStorage
 	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult {
 		ensure!(
-			!LiquidationPoolsData::<T>::contains_key(currency_id),
+			!LiquidationPoolDataStorage::<T>::contains_key(currency_id),
 			Error::<T>::PoolAlreadyCreated
 		);
 		ensure!(
@@ -698,12 +712,12 @@ impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
 			Error::<T>::NotValidBalanceRatioValue
 		);
 
-		LiquidationPoolsData::<T>::insert(
+		LiquidationPoolDataStorage::<T>::insert(
 			currency_id,
 			LiquidationPoolData {
 				deviation_threshold,
 				balance_ratio,
-				max_ideal_balance: None,
+				max_ideal_balance_usd: None,
 			},
 		);
 		Ok(())

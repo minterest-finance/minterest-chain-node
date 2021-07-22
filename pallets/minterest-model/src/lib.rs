@@ -16,7 +16,8 @@
 //! ## Interface
 //!
 //! -`calculate_borrow_interest_rate`: calculates the current borrow rate per block;
-//! -`create_pool`: checks parameters validity and creates storage records for MinterestModelParams
+//! -`create_pool`: checks parameters validity and creates storage records for
+//! MinterestModelDataStorage
 //!
 //! ### Dispatchable Functions (extrinsics)
 //!
@@ -135,8 +136,9 @@ pub mod module {
 	/// - `jump_multiplier_per_block`: Jump Multiplier Per Block is used to correct Borrow Interest
 	/// Rate after Utilization Rate hits Kink
 	#[pallet::storage]
-	#[pallet::getter(fn minterest_model_params)]
-	pub type MinterestModelParams<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, MinterestModelData, ValueQuery>;
+	#[pallet::getter(fn minterest_model_data_storage)]
+	pub type MinterestModelDataStorage<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyId, MinterestModelData, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -160,7 +162,7 @@ pub mod module {
 			self.minterest_model_params
 				.iter()
 				.for_each(|(currency_id, minterest_model_data)| {
-					MinterestModelParams::<T>::insert(
+					MinterestModelDataStorage::<T>::insert(
 						currency_id,
 						MinterestModelData {
 							..*minterest_model_data
@@ -188,7 +190,7 @@ pub mod module {
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_jump_multiplier(
+		pub fn set_pool_jump_multiplier(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			jump_multiplier_rate_per_year: Rate,
@@ -206,7 +208,9 @@ pub mod module {
 				.ok_or(Error::<T>::NumOverflow)?;
 
 			// Write the previously calculated values into storage.
-			MinterestModelParams::<T>::mutate(pool_id, |r| r.jump_multiplier_per_block = new_jump_multiplier_per_block);
+			MinterestModelDataStorage::<T>::mutate(pool_id, |r| {
+				r.jump_multiplier_per_block = new_jump_multiplier_per_block
+			});
 
 			Self::deposit_event(Event::JumpMultiplierPerBlockChanged);
 
@@ -223,7 +227,7 @@ pub mod module {
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_base_rate(
+		pub fn set_pool_base_rate(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			base_rate_per_year: Rate,
@@ -242,13 +246,15 @@ pub mod module {
 			// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
 			if new_base_rate_per_block.is_zero() {
 				ensure!(
-					!Self::minterest_model_params(pool_id).multiplier_per_block.is_zero(),
+					!Self::minterest_model_data_storage(pool_id)
+						.multiplier_per_block
+						.is_zero(),
 					Error::<T>::BaseRatePerBlockCannotBeZero
 				);
 			}
 
 			// Write the previously calculated values into storage.
-			MinterestModelParams::<T>::mutate(pool_id, |r| r.base_rate_per_block = new_base_rate_per_block);
+			MinterestModelDataStorage::<T>::mutate(pool_id, |r| r.base_rate_per_block = new_base_rate_per_block);
 
 			Self::deposit_event(Event::BaseRatePerBlockChanged);
 
@@ -265,7 +271,7 @@ pub mod module {
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_multiplier(
+		pub fn set_pool_multiplier(
 			origin: OriginFor<T>,
 			pool_id: CurrencyId,
 			multiplier_per_year: Rate,
@@ -285,13 +291,13 @@ pub mod module {
 			ensure!(
 				Self::is_valid_base_rate_and_multiplier(
 					new_multiplier_per_block,
-					Self::minterest_model_params(pool_id).base_rate_per_block
+					Self::minterest_model_data_storage(pool_id).base_rate_per_block
 				),
 				Error::<T>::MultiplierPerBlockCannotBeZero
 			);
 
 			// Write the previously calculated values into storage.
-			MinterestModelParams::<T>::mutate(pool_id, |r| r.multiplier_per_block = new_multiplier_per_block);
+			MinterestModelDataStorage::<T>::mutate(pool_id, |r| r.multiplier_per_block = new_multiplier_per_block);
 			Self::deposit_event(Event::MultiplierPerBlockChanged);
 			Ok(().into())
 		}
@@ -305,7 +311,7 @@ pub mod module {
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_kink(origin: OriginFor<T>, pool_id: CurrencyId, kink: Rate) -> DispatchResultWithPostInfo {
+		pub fn set_pool_kink(origin: OriginFor<T>, pool_id: CurrencyId, kink: Rate) -> DispatchResultWithPostInfo {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
@@ -316,7 +322,7 @@ pub mod module {
 			ensure!(Self::is_valid_kink(kink), Error::<T>::KinkCannotBeMoreThanOne);
 
 			// Write the previously calculated values into storage.
-			MinterestModelParams::<T>::mutate(pool_id, |r| r.kink = kink);
+			MinterestModelDataStorage::<T>::mutate(pool_id, |r| r.kink = kink);
 			Self::deposit_event(Event::KinkChanged);
 
 			Ok(().into())
@@ -336,7 +342,7 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config> MinterestModelManager for Pallet<T> {
 	/// This is a part of a pool creation flow
-	/// Checks parameters validity and creates storage records for MinterestModelParams
+	/// Checks parameters validity and creates storage records for MinterestModelDataStorage
 	fn create_pool(
 		currency_id: CurrencyId,
 		kink: Rate,
@@ -345,19 +351,19 @@ impl<T: Config> MinterestModelManager for Pallet<T> {
 		jump_multiplier_per_block: Rate,
 	) -> DispatchResult {
 		ensure!(
-			!MinterestModelParams::<T>::contains_key(currency_id),
+			!MinterestModelDataStorage::<T>::contains_key(currency_id),
 			Error::<T>::PoolAlreadyCreated
 		);
 		ensure!(Self::is_valid_kink(kink), Error::<T>::KinkCannotBeMoreThanOne);
 		ensure!(
 			Self::is_valid_base_rate_and_multiplier(
 				multiplier_per_block,
-				Self::minterest_model_params(currency_id).base_rate_per_block
+				Self::minterest_model_data_storage(currency_id).base_rate_per_block
 			),
 			Error::<T>::MultiplierPerBlockCannotBeZero
 		);
 
-		MinterestModelParams::<T>::insert(
+		MinterestModelDataStorage::<T>::insert(
 			currency_id,
 			MinterestModelData {
 				kink,
@@ -376,13 +382,13 @@ impl<T: Config> MinterestModelManager for Pallet<T> {
 	/// - `utilization_rate`: current Utilization rate value.
 	///
 	/// returns `borrow_interest_rate`.
-	fn calculate_borrow_interest_rate(underlying_asset: CurrencyId, utilization_rate: Rate) -> RateResult {
+	fn calculate_pool_borrow_interest_rate(underlying_asset: CurrencyId, utilization_rate: Rate) -> RateResult {
 		let MinterestModelData {
 			kink,
 			base_rate_per_block,
 			multiplier_per_block,
 			jump_multiplier_per_block,
-		} = Self::minterest_model_params(underlying_asset);
+		} = Self::minterest_model_data_storage(underlying_asset);
 
 		// if utilization_rate > kink:
 		// normal_rate = kink * multiplier_per_block + base_rate_per_block
