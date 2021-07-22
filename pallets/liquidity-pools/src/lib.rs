@@ -129,7 +129,7 @@ pub mod module {
 		PoolAlreadyCreated,
 	}
 
-	/// Return liquidity pools information: (borrowed, borrow_index, total_protocol_interest)
+	/// Return liquidity pools information: (borrowed, borrow_index, protocol_interest)
 	///
 	/// Return:
 	/// - `borrowed`: Pool Borrowed value of the underlying asset plus all the interest, that
