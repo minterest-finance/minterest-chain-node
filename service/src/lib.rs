@@ -66,9 +66,7 @@ type FullBackend = TFullBackend<Block>;
 
 /// Maybe Standalone full select chain.
 type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;
-// type MaybeGrandpaImport<RuntimeApi, Executor> = Option<
-// 	sc_finality_grandpa::GrandpaBlockImport<FullBackend, Block, TFullClient<Block, RuntimeApi, Executor>, LongestChain<FullBackend, Block>>,
-// >;
+
 type MaybeGrandpaImportLink<RuntimeApi, Executor> = Option<(
 	sc_finality_grandpa::GrandpaBlockImport<
 		FullBackend,
@@ -168,7 +166,6 @@ where
 		client.clone(),
 	);
 
-	// let (select_chain, maybe_grandpa_import, maybe_grandpa_link) = if standalone {
 	let (select_chain, maybe_grandpa) = if standalone {
 		let select_chain = LongestChain::new(backend.clone());
 		let grandpa = sc_finality_grandpa::block_import(
@@ -181,11 +178,6 @@ where
 	} else {
 		(None, None)
 	};
-
-	// let maybe_grandpa_clone = match maybe_grandpa {
-	// 	Some((grandpa_block_import, grandpa_link)) => Some((grandpa_block_import.clone(), grandpa_link.clone())),
-	// 	None => None,
-	// };
 
 	let import_queue = build_import_queue(
 		client.clone(),
