@@ -14,42 +14,44 @@
 // You should have received a copy of the GNU General Public License
 // along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
-use cumulus_client_consensus_aura::{
-	build_aura_consensus, BuildAuraConsensusParams, SlotProportion,
-};
-use cumulus_client_consensus_common::{
-	ParachainConsensus,
-};
+use cumulus_client_consensus_aura::{build_aura_consensus, BuildAuraConsensusParams, SlotProportion};
+use cumulus_client_consensus_common::ParachainConsensus;
 use cumulus_client_network::build_block_announce_validator;
 use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::{
-	ParaId, relay_chain::v1::{Hash as PHash, PersistedValidationData},
+	relay_chain::v1::{Hash as PHash, PersistedValidationData},
+	ParaId,
 };
 use cumulus_primitives_parachain_inherent::MockValidationDataInherentDataProvider;
 
-use sc_client_api::ExecutorProvider;
-use sc_executor::native_executor_instance;
-use sc_network::NetworkService;
-use sc_finality_grandpa::{SharedVoterState, AuthorityId as GrandpaId};
-use sc_keystore::LocalKeystore;
-use sc_service::{error::Error as ServiceError, Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
-use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
-use sp_api::{ConstructRuntimeApi, ApiExt};
-use sc_consensus::LongestChain;
-use sp_consensus::{
-	BlockImportParams, BlockOrigin, SlotData,
-	import_queue::{BasicQueue, CacheKeyId, Verifier as VerifierT},
-};
-use sc_consensus_aura::{ImportQueueParams, StartAuraParams};
-use sp_consensus_aura::{sr25519::AuthorityId as AuraId, sr25519::AuthorityPair as AuraPair, AuraApi};
-use sp_keystore::SyncCryptoStorePtr;
-use sp_runtime::{traits::{BlakeTwo256, Header as HeaderT}, generic::BlockId};
-use std::{sync::Arc, time::Duration};
-use substrate_prometheus_endpoint::Registry;
 use futures::lock::Mutex;
 use futures::stream::StreamExt;
+use sc_client_api::ExecutorProvider;
+use sc_consensus::LongestChain;
+use sc_consensus_aura::{ImportQueueParams, StartAuraParams};
+use sc_executor::native_executor_instance;
+use sc_finality_grandpa::{AuthorityId as GrandpaId, SharedVoterState};
+use sc_keystore::LocalKeystore;
+use sc_network::NetworkService;
+use sc_service::{
+	error::Error as ServiceError, Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager,
+};
+use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
+use sp_api::{ApiExt, ConstructRuntimeApi};
+use sp_consensus::{
+	import_queue::{BasicQueue, CacheKeyId, Verifier as VerifierT},
+	BlockImportParams, BlockOrigin, SlotData,
+};
+use sp_consensus_aura::{sr25519::AuthorityId as AuraId, sr25519::AuthorityPair as AuraPair, AuraApi};
+use sp_keystore::SyncCryptoStorePtr;
+use sp_runtime::{
+	generic::BlockId,
+	traits::{BlakeTwo256, Header as HeaderT},
+};
+use std::{sync::Arc, time::Duration};
+use substrate_prometheus_endpoint::Registry;
 
 pub use sc_executor::NativeExecutor;
 
@@ -68,8 +70,13 @@ type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;
 // 	sc_finality_grandpa::GrandpaBlockImport<FullBackend, Block, TFullClient<Block, RuntimeApi, Executor>, LongestChain<FullBackend, Block>>,
 // >;
 type MaybeGrandpaImportLink<RuntimeApi, Executor> = Option<(
-	sc_finality_grandpa::GrandpaBlockImport<FullBackend, Block, TFullClient<Block, RuntimeApi, Executor>, LongestChain<FullBackend, Block>>,
-	sc_finality_grandpa::LinkHalf<Block, TFullClient<Block, RuntimeApi, Executor>, LongestChain<FullBackend, Block>>
+	sc_finality_grandpa::GrandpaBlockImport<
+		FullBackend,
+		Block,
+		TFullClient<Block, RuntimeApi, Executor>,
+		LongestChain<FullBackend, Block>,
+	>,
+	sc_finality_grandpa::LinkHalf<Block, TFullClient<Block, RuntimeApi, Executor>, LongestChain<FullBackend, Block>>,
 )>;
 
 native_executor_instance!(
@@ -100,22 +107,21 @@ pub fn new_partial<RuntimeApi, Executor, BIQ>(
 		MaybeFullSelectChain,
 		sp_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
 		sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>,
-		(MaybeGrandpaImportLink<RuntimeApi, Executor>, Option<Telemetry>, Option<TelemetryWorkerHandle>),
+		(
+			MaybeGrandpaImportLink<RuntimeApi, Executor>,
+			Option<Telemetry>,
+			Option<TelemetryWorkerHandle>,
+		),
 	>,
 	sc_service::Error,
 >
 where
-	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, Executor>>
-		+ Send
-		+ Sync
-		+ 'static,
+	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, Executor>> + Send + Sync + 'static,
 	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 		+ sp_api::Metadata<Block>
 		+ sp_session::SessionKeys<Block>
-		+ sp_api::ApiExt<
-			Block,
-			StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
-		> + sp_offchain::OffchainWorkerApi<Block>
+		+ sp_api::ApiExt<Block, StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+		+ sp_offchain::OffchainWorkerApi<Block>
 		+ sp_block_builder::BlockBuilder<Block>,
 	sc_client_api::StateBackendFor<FullBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
@@ -141,11 +147,10 @@ where
 		})
 		.transpose()?;
 
-	let (client, backend, keystore_container, task_manager) =
-		sc_service::new_full_parts::<Block, RuntimeApi, Executor>(
-			&config,
-			telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
-		)?;
+	let (client, backend, keystore_container, task_manager) = sc_service::new_full_parts::<Block, RuntimeApi, Executor>(
+		&config,
+		telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
+	)?;
 	let client = Arc::new(client);
 
 	let telemetry_worker_handle = telemetry.as_ref().map(|(worker, _)| worker.handle());
@@ -164,7 +169,7 @@ where
 	);
 
 	// let (select_chain, maybe_grandpa_import, maybe_grandpa_link) = if standalone {
-		let (select_chain, maybe_grandpa) = if standalone {
+	let (select_chain, maybe_grandpa) = if standalone {
 		let select_chain = LongestChain::new(backend.clone());
 		let grandpa = sc_finality_grandpa::block_import(
 			client.clone(),
@@ -217,26 +222,17 @@ async fn start_parachain_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
 	build_consensus: BIC,
 ) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)>
 where
-	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, Executor>>
-		+ Send
-		+ Sync
-		+ 'static,
+	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, Executor>> + Send + Sync + 'static,
 	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 		+ sp_api::Metadata<Block>
 		+ sp_session::SessionKeys<Block>
-		+ sp_api::ApiExt<
-			Block,
-			StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
-		> + sp_offchain::OffchainWorkerApi<Block>
+		+ sp_api::ApiExt<Block, StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+		+ sp_offchain::OffchainWorkerApi<Block>
 		+ sp_block_builder::BlockBuilder<Block>
 		+ cumulus_primitives_core::CollectCollationInfo<Block>,
 	sc_client_api::StateBackendFor<FullBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
-	RB: Fn(
-			Arc<TFullClient<Block, RuntimeApi, Executor>>,
-		) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
-		+ Send
-		+ 'static,
+	RB: Fn(Arc<TFullClient<Block, RuntimeApi, Executor>>) -> jsonrpc_core::IoHandler<sc_rpc::Metadata> + Send + 'static,
 	BIQ: FnOnce(
 		Arc<TFullClient<Block, RuntimeApi, Executor>>,
 		&Configuration,
@@ -268,14 +264,13 @@ where
 	let params = new_partial::<RuntimeApi, Executor, BIQ>(&parachain_config, build_import_queue, false)?;
 	let (_, mut telemetry, telemetry_worker_handle) = params.other;
 
-	let relay_chain_full_node = cumulus_client_service::build_polkadot_full_node(
-		polkadot_config,
-		telemetry_worker_handle,
-	)
-	.map_err(|e| match e {
-		polkadot_service::Error::Sub(x) => x,
-		s => format!("{}", s).into(),
-	})?;
+	let relay_chain_full_node =
+		cumulus_client_service::build_polkadot_full_node(polkadot_config, telemetry_worker_handle).map_err(
+			|e| match e {
+				polkadot_service::Error::Sub(x) => x,
+				s => format!("{}", s).into(),
+			},
+		)?;
 
 	let client = params.client.clone();
 	let backend = params.backend.clone();
@@ -292,16 +287,15 @@ where
 	let transaction_pool = params.transaction_pool.clone();
 	let mut task_manager = params.task_manager;
 	let import_queue = cumulus_client_service::SharedImportQueue::new(params.import_queue);
-	let (network, system_rpc_tx, start_network) =
-		sc_service::build_network(sc_service::BuildNetworkParams {
-			config: &parachain_config,
-			client: client.clone(),
-			transaction_pool: transaction_pool.clone(),
-			spawn_handle: task_manager.spawn_handle(),
-			import_queue: import_queue.clone(),
-			on_demand: None,
-			block_announce_validator_builder: Some(Box::new(|_| block_announce_validator)),
-		})?;
+	let (network, system_rpc_tx, start_network) = sc_service::build_network(sc_service::BuildNetworkParams {
+		config: &parachain_config,
+		client: client.clone(),
+		transaction_pool: transaction_pool.clone(),
+		spawn_handle: task_manager.spawn_handle(),
+		import_queue: import_queue.clone(),
+		on_demand: None,
+		block_announce_validator_builder: Some(Box::new(|_| block_announce_validator)),
+	})?;
 
 	let rpc_client = client.clone();
 	let rpc_extensions_builder = Box::new(move |_, _| rpc_ext_builder(rpc_client.clone()));
@@ -373,9 +367,7 @@ where
 
 /// Build the import queue for the rococo parachain runtime.
 pub fn parachain_build_import_queue(
-	client: Arc<
-		TFullClient<Block, parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>,
-	>,
+	client: Arc<TFullClient<Block, parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>>,
 	config: &Configuration,
 	_maybe_grandpa: &MaybeGrandpaImportLink<parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>,
 	telemetry: Option<TelemetryHandle>,
@@ -396,18 +388,15 @@ pub fn parachain_build_import_queue(
 			create_inherent_data_providers: move |_, _| async move {
 				let time = sp_timestamp::InherentDataProvider::from_system_time();
 
-				let slot =
-					sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
-						*time,
-						slot_duration.slot_duration(),
-					);
+				let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
+					*time,
+					slot_duration.slot_duration(),
+				);
 
 				Ok((time, slot))
 			},
 			registry: config.prometheus_registry().clone(),
-			can_author_with: sp_consensus::CanAuthorWithNativeVersion::new(
-				client.executor().clone(),
-			),
+			can_author_with: sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone()),
 			spawner: &task_manager.spawn_essential_handle(),
 			telemetry,
 		},
@@ -466,26 +455,23 @@ pub async fn start_parachain_node(
 				proposer_factory,
 				create_inherent_data_providers: move |_, (relay_parent, validation_data)| {
 					let parachain_inherent =
-					cumulus_primitives_parachain_inherent::ParachainInherentData::create_at_with_client(
-						relay_parent,
-						&relay_chain_client,
-						&*relay_chain_backend,
-						&validation_data,
-						para_id,
-					);
+						cumulus_primitives_parachain_inherent::ParachainInherentData::create_at_with_client(
+							relay_parent,
+							&relay_chain_client,
+							&*relay_chain_backend,
+							&validation_data,
+							para_id,
+						);
 					async move {
 						let time = sp_timestamp::InherentDataProvider::from_system_time();
 
-						let slot =
-						sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
+						let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
 							*time,
 							slot_duration.slot_duration(),
 						);
 
 						let parachain_inherent = parachain_inherent.ok_or_else(|| {
-							Box::<dyn std::error::Error + Send + Sync>::from(
-								"Failed to create parachain inherent",
-							)
+							Box::<dyn std::error::Error + Send + Sync>::from("Failed to create parachain inherent")
 						})?;
 						Ok((time, slot, parachain_inherent))
 					}
@@ -512,9 +498,7 @@ pub async fn start_parachain_node(
 
 /// Build the import queue for the rococo parachain runtime.
 pub fn standalone_build_import_queue(
-	client: Arc<
-		TFullClient<Block, standalone_runtime::RuntimeApi, StandaloneRuntimeExecutor>,
-	>,
+	client: Arc<TFullClient<Block, standalone_runtime::RuntimeApi, StandaloneRuntimeExecutor>>,
 	config: &Configuration,
 	maybe_grandpa: &MaybeGrandpaImportLink<standalone_runtime::RuntimeApi, StandaloneRuntimeExecutor>,
 	telemetry: Option<TelemetryHandle>,
@@ -528,11 +512,10 @@ pub fn standalone_build_import_queue(
 > {
 	let slot_duration = sc_consensus_aura::slot_duration(&*client)?.slot_duration();
 
-	let grandpa_block_import 
-		= maybe_grandpa
-			.as_ref()
-			.map(|g| g.0.clone())
-			.expect("In Standalone mode `maybe_grandpa` will have some value");
+	let grandpa_block_import = maybe_grandpa
+		.as_ref()
+		.map(|g| g.0.clone())
+		.expect("In Standalone mode `maybe_grandpa` will have some value");
 
 	sc_consensus_aura::import_queue::<AuraPair, _, _, _, _, _, _>(ImportQueueParams {
 		block_import: grandpa_block_import.clone(),

@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
-use service::chain_spec;
 use sc_cli;
+use service::chain_spec;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -132,10 +132,7 @@ impl RelayChainCli {
 	) -> Self {
 		let extension = chain_spec::Extensions::try_get(&*para_config.chain_spec);
 		let chain_id = extension.map(|e| e.relay_chain.clone());
-		let base_path = para_config
-			.base_path
-			.as_ref()
-			.map(|x| x.path().join("polkadot"));
+		let base_path = para_config.base_path.as_ref().map(|x| x.path().join("polkadot"));
 		Self {
 			base_path,
 			chain_id,

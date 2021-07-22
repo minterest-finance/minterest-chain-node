@@ -25,8 +25,7 @@ where
 	C: Send + Sync + 'static,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
-	C::Api:
-		orml_oracle_rpc::OracleRuntimeApi<Block, DataProviderId, CurrencyId, parachain_runtime::TimeStampedPrice>,
+	C::Api: orml_oracle_rpc::OracleRuntimeApi<Block, DataProviderId, CurrencyId, parachain_runtime::TimeStampedPrice>,
 	C::Api: controller_rpc::ControllerRuntimeApi<Block, AccountId>,
 	C::Api: prices_rpc::PricesRuntimeApi<Block>,
 	C::Api: mnt_token_rpc::MntTokenRuntimeApi<Block, AccountId>,

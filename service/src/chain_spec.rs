@@ -1,6 +1,5 @@
-
-use serde::{Deserialize, Serialize};
 use controller::{ControllerData, PauseKeeper};
+use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::Pool;
@@ -8,13 +7,13 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::currency::GetDecimals;
 use minterest_primitives::{VestingBucket, VestingScheduleJson};
 use parachain_runtime::{
-	get_all_modules_accounts, AccountId, Balance, ExistentialDeposit,
-	MntTokenPalletId, Signature, BTC, DOLLARS,
-	DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION,
+	get_all_modules_accounts, AccountId, Balance, ExistentialDeposit, MntTokenPalletId, Signature, BTC, DOLLARS, DOT,
+	ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION,
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
+use serde::{Deserialize, Serialize};
 use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
@@ -25,7 +24,6 @@ use sp_runtime::{
 };
 use sp_std::collections::btree_map::BTreeMap;
 use std::collections::{HashMap, HashSet};
-use cumulus_primitives_core::ParaId;
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -87,10 +85,7 @@ pub fn get_parachain_spec(id: ParaId) -> ChainSpec {
 		move || {
 			minterest_genesis(
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				vec![
-					get_from_seed::<AuraId>("Alice"),
-					get_from_seed::<AuraId>("Bob"),
-				],
+				vec![get_from_seed::<AuraId>("Alice"), get_from_seed::<AuraId>("Bob")],
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -142,9 +137,7 @@ pub fn get_standalone_dev_spec() -> StandaloneChainSpec {
 		move || {
 			standalone_dev_genesis(
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				vec![
-					(get_from_seed::<AuraId>("Alice"), get_from_seed::<GrandpaId>("Alice")),
-				],
+				vec![(get_from_seed::<AuraId>("Alice"), get_from_seed::<GrandpaId>("Alice"))],
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -279,9 +272,7 @@ fn minterest_genesis(
 		balances: parachain_runtime::BalancesConfig {
 			balances: initial_allocations,
 		},
-		parachain_info: parachain_runtime::ParachainInfoConfig {
-			parachain_id: para_id
-		},
+		parachain_info: parachain_runtime::ParachainInfoConfig { parachain_id: para_id },
 		aura: parachain_runtime::AuraConfig {
 			authorities: initial_authorities.iter().map(|x| (x.clone())).collect(),
 		},
@@ -289,9 +280,7 @@ fn minterest_genesis(
 			// Assign network admin rights.
 			key: root_key.clone(),
 		},
-		tokens: parachain_runtime::TokensConfig {
-			balances: vec![]
-		},
+		tokens: parachain_runtime::TokensConfig { balances: vec![] },
 		liquidity_pools: parachain_runtime::LiquidityPoolsConfig {
 			pools: vec![
 				(
@@ -486,7 +475,7 @@ fn minterest_genesis(
 			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		},
-		operator_membership_minterest:parachain_runtime:: OperatorMembershipMinterestConfig {
+		operator_membership_minterest: parachain_runtime::OperatorMembershipMinterestConfig {
 			members: vec![root_key],
 			phantom: Default::default(),
 		},
