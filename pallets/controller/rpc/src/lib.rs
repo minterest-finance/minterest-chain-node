@@ -76,7 +76,8 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// Return:
 	/// - [`total_supply`](`UserPoolBalanceData::total_supply`): total balance that user has in all
 	/// pools converted to usd
-	/// - [`total_borrowed`](`UserPoolBalanceData::total_borrowed`): user total borrowed underlying assets from all
+	/// - [`total_borrowed`](`UserPoolBalanceData::total_borrowed`): user total borrowed underlying
+	/// assets from all
 	/// pools converted to usd.
 	#[rpc(name = "controller_userBalanceInfo")]
 	fn get_user_balance(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<UserPoolBalanceData>>;
@@ -118,7 +119,8 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - [`amount`](`BalanceInfo::amount`): user total collateral in all liquidity pools converted to usd.
+	/// - [`amount`](`BalanceInfo::amount`): user total collateral in all liquidity pools converted
+	/// to usd.
 	#[rpc(name = "controller_accountCollateral")]
 	fn get_user_total_collateral(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
 
@@ -131,7 +133,8 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - [`amount`](`BalanceInfo::amount`): user borrow underlying in a specific liquidity pool (underlying assets amount).
+	/// - [`amount`](`BalanceInfo::amount`): user borrow underlying in a specific liquidity pool
+	/// (underlying assets amount).
 	#[rpc(name = "controller_getUserBorrowPerAsset")]
 	fn get_user_borrow_per_asset(
 		&self,
@@ -140,7 +143,8 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 		at: Option<BlockHash>,
 	) -> Result<Option<BalanceInfo>>;
 
-	/// Returns actual supply underlying balance for user in specific liquidity pool based on fresh latest indexes.
+	/// Returns actual supply underlying balance for user in specific liquidity pool based on fresh
+	/// latest indexes.
 	///
 	/// Parameters:
 	///  - `&self`: Self reference
@@ -149,7 +153,8 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	///  Return:
-	///  - [`amount`](`BalanceInfo::amount`): user supply underlying in a specific liquidity pool (underlying assets amount).
+	///  - [`amount`](`BalanceInfo::amount`): user supply underlying in a specific liquidity pool
+	/// (underlying assets amount).
 	#[rpc(name = "controller_getUserUnderlyingBalancePerAsset")]
 	fn get_user_underlying_balance_per_asset(
 		&self,

@@ -227,7 +227,8 @@ pub mod module {
 	/// into protocol interest
 	/// - `max_borrow_rate`:  Maximum Borrow Rate is used to block the protocol functioning,
 	/// if the rate goes higher than this value
-	/// - `collateral_factor`: multiplier, represents which share of the supplied value can be used as a collateral for loans.
+	/// - `collateral_factor`: multiplier, represents which share of the supplied value can be used
+	/// as a collateral for loans.
 	/// - `borrow_cap`: Borrow Cap determines a maximum amount of underlying assets which can be
 	/// borrowed from a pool.
 	/// This is option should not be used when the protocol is fully up and running on prod
