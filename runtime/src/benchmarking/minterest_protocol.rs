@@ -59,7 +59,7 @@ runtime_benchmarks! {
 	create_pool {
 		RiskManager::remove_pool(DOT);
 		LiquidityPools::remove_pool_data(DOT);
-		liquidation_pools::LiquidationPoolsData::<Runtime>::remove(DOT);
+		liquidation_pools::LiquidationPoolDataStorage::<Runtime>::remove(DOT);
 		controller::ControllerParams::<Runtime>::remove(DOT);
 		minterest_model::MinterestModelDataStorage::<Runtime>::remove(DOT);
 	}: _(
