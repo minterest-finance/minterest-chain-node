@@ -221,7 +221,7 @@ pub mod module {
 		///
 		/// Parameters:
 		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
-		/// - `base_rate_per_year`: new base rate per year value.
+		/// - `base_rate_per_year`: new base rate per year value. Used to calculate and set up base rate per block.
 		///
 		/// `base_rate_per_block = base_rate_per_year / blocks_per_year`
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
