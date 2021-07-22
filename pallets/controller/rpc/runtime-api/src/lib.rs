@@ -31,10 +31,10 @@ pub struct PoolState {
 pub struct UserPoolBalanceData {
 	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
 	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
-	pub total_supply: Balance,
+	pub total_supply_in_usd: Balance,
 	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
 	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
-	pub total_borrowed: Balance,
+	pub total_borrowed_in_usd: Balance,
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -42,7 +42,7 @@ pub struct UserPoolBalanceData {
 pub struct HypotheticalLiquidityData {
 	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
 	#[cfg_attr(feature = "std", serde(deserialize_with = "deserialize_from_string"))]
-	pub liquidity: Amount,
+	pub liquidity_in_usd: Amount,
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
