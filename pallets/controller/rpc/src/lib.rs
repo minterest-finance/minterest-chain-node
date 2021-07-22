@@ -76,7 +76,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// Return:
 	/// - [`total_supply`](`UserPoolBalanceData::total_supply`): total balance that user has in all
 	/// pools converted to usd
-	/// - [`total_borrowed`](`UserPoolBalanceData::total_borrowed`): total borrowed tokens from all
+	/// - [`total_borrowed`](`UserPoolBalanceData::total_borrowed`): user total borrowed underlying assets from all
 	/// pools converted to usd.
 	#[rpc(name = "controller_userBalanceInfo")]
 	fn get_user_balance(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<UserPoolBalanceData>>;
