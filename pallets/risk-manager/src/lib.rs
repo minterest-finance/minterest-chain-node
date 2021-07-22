@@ -279,7 +279,8 @@ pub mod module {
 		/// liquidation pools instead of the borrower, and a vector with user's supplies to be
 		/// withdrawn from the borrower and sent to the liquidation pools. Balances are calculated
 		/// in underlying assets.
-		/// TODO: try to use the struct `UserLoanState` in the last parameter.
+		///TODO: try to use the struct `UserLoanState` in the last parameter (add Debug constraint
+		/// to Config).
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn liquidate(
