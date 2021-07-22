@@ -122,7 +122,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	#[rpc(name = "controller_accountCollateral")]
 	fn get_user_total_collateral(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
 
-	/// Returns actual borrow balance for user per asset based on fresh latest indexes.
+	/// Returns actual borrow underlying balance for user per asset based on fresh latest indexes.
 	///
 	/// Parameters:
 	///  - `&self`: Self reference
