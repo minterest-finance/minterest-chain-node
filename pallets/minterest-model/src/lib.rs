@@ -265,7 +265,7 @@ pub mod module {
 		///
 		/// Parameters:
 		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
-		/// - `multiplier_per_year`: new multiplier per year value.
+		/// - `multiplier_per_year`: new multiplier per year value. Used to calculate and set up multiplier per block.
 		///
 		/// `multiplier_per_block = multiplier_per_year / blocks_per_year`
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
