@@ -53,7 +53,7 @@
         "threshold": "Rate",
         "liquidation_fee": "Rate"
       },
-      "Pool": {
+      "PoolData": {
         "borrowed": "Balance",
         "borrow_index": "Rate",
         "protocol_interest": "Balance"
