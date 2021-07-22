@@ -6,7 +6,6 @@ use mock::{Event, *};
 use controller::{ControllerData, PauseKeeper};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 use liquidation_pools::LiquidationPoolData;
-use liquidity_pools::Pool;
 use minterest_model::MinterestModelData;
 use minterest_primitives::Rate;
 use pallet_traits::UserCollateral;
@@ -38,14 +37,14 @@ fn create_pool_should_work() {
 
 			assert_eq!(
 				TestPools::get_pool_data(DOT),
-				Pool {
+				PoolData {
 					borrowed: Balance::zero(),
 					borrow_index: Rate::one(),
 					protocol_interest: Balance::zero(),
 				},
 			);
 			assert_eq!(
-				TestMinterestModel::minterest_model_params(DOT),
+				TestMinterestModel::minterest_model_data_storage(DOT),
 				MinterestModelData {
 					kink: Rate::saturating_from_rational(2, 3),
 					base_rate_per_block: Rate::saturating_from_rational(1, 3),
@@ -66,11 +65,11 @@ fn create_pool_should_work() {
 			);
 			assert_eq!(Controller::pause_keeper_storage(DOT), PauseKeeper::all_unpaused());
 			assert_eq!(
-				TestLiquidationPools::liquidation_pools_data(DOT),
+				TestLiquidationPools::liquidation_pool_data_storage(DOT),
 				LiquidationPoolData {
 					deviation_threshold: Rate::saturating_from_rational(5, 100),
 					balance_ratio: Rate::saturating_from_rational(2, 10),
-					max_ideal_balance: None,
+					max_ideal_balance_usd: None,
 				},
 			);
 
@@ -1156,12 +1155,12 @@ fn partial_protocol_interest_transfer_should_work() {
 		)
 		.build()
 		.execute_with(|| {
-			assert_eq!(TestPools::pools(DOT).protocol_interest, dollars(11_000u128));
+			assert_eq!(TestPools::pool_data_storage(DOT).protocol_interest, dollars(11_000u128));
 			assert_eq!(TestPools::get_pool_available_liquidity(DOT), dollars(10_000u128));
 
 			TestMinterestProtocol::on_finalize(1);
 
 			// Not all protocol interest transferred because of insufficient liquidity
-			assert_eq!(TestPools::pools(DOT).protocol_interest, dollars(1_000u128));
+			assert_eq!(TestPools::pool_data_storage(DOT).protocol_interest, dollars(1_000u128));
 		});
 }

@@ -8,7 +8,7 @@ use crate::{
 use frame_benchmarking::account;
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 use frame_system::{pallet_prelude::OriginFor, RawOrigin};
-use liquidity_pools::Pool;
+use liquidity_pools::PoolData;
 use orml_traits::MultiCurrency;
 use pallet_traits::LiquidityPoolStorageProvider;
 use sp_runtime::{
@@ -45,7 +45,7 @@ pub(crate) fn create_pools(pools: &Vec<CurrencyId>) {
 	pools.into_iter().for_each(|pool_id| {
 		LiquidityPools::set_pool_data(
 			*pool_id,
-			Pool {
+			PoolData {
 				borrowed: Balance::zero(),
 				borrow_index: Rate::one(),
 				protocol_interest: Balance::zero(),
@@ -72,7 +72,7 @@ pub mod tests {
 	use super::*;
 	use controller::{ControllerData, PauseKeeper};
 	use frame_support::traits::GenesisBuild;
-	use liquidity_pools::Pool;
+	use liquidity_pools::PoolData;
 	use minterest_model::MinterestModelData;
 	use minterest_primitives::{
 		constants::{currency::DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD},
@@ -89,7 +89,7 @@ pub mod tests {
 			pools: vec![
 				(
 					ETH,
-					Pool {
+					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						protocol_interest: Balance::zero(),
@@ -97,7 +97,7 @@ pub mod tests {
 				),
 				(
 					DOT,
-					Pool {
+					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						protocol_interest: Balance::zero(),
@@ -105,7 +105,7 @@ pub mod tests {
 				),
 				(
 					KSM,
-					Pool {
+					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						protocol_interest: Balance::zero(),
@@ -113,7 +113,7 @@ pub mod tests {
 				),
 				(
 					BTC,
-					Pool {
+					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						protocol_interest: Balance::zero(),
