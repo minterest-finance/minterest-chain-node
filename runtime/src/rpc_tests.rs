@@ -1914,11 +1914,10 @@ fn get_user_total_borrow_usd_rpc_should_work() {
 			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 50_000 * DOLLARS));
 
 			// in the block when borrow happens there should be no interest accumulated
-			// total borrow should be equal to the borrowed value
+			// total borrow should be equal to the sum of borrowed value times asset price in usd
 			assert_eq!(
 				get_user_total_borrow_usd_rpc(ALICE::get()),
-				130000000000000000000000
-				//80_000 * DOLLARS * eth_price + 50_000 * DOLLARS * dot_price
+				80_000 * DOLLARS * eth_price + 50_000 * DOLLARS * dot_price
 			);
 
 			System::set_block_number(21);
@@ -1927,7 +1926,7 @@ fn get_user_total_borrow_usd_rpc_should_work() {
 			// TODO: add formulas
 			assert_eq!(
 				get_user_total_borrow_usd_rpc(ALICE::get()),
-				130000016020000000000000u128
+				340000043560000000000000u128
 			);
 		})
 }
