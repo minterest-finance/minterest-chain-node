@@ -184,7 +184,7 @@ pub mod module {
 		///
 		/// Parameters:
 		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
-		/// - `jump_multiplier_rate_per_year`:  new jump multiplier rate per year value.
+		/// - `jump_multiplier_rate_per_year`:  new jump multiplier rate per year value. Used to calculate and set up multiplier per block.
 		///
 		/// `jump_multiplier_per_block = jump_multiplier_rate_per_year / blocks_per_year`
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
