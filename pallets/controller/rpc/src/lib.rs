@@ -149,7 +149,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	///  Return:
-	///  - [`amount`](`BalanceInfo::amount`): user balance converted to underlying asset.
+	///  - [`amount`](`BalanceInfo::amount`): user supply underlying in a specific liquidity pool (underlying assets amount).
 	#[rpc(name = "controller_getUserUnderlyingBalancePerAsset")]
 	fn get_user_underlying_balance_per_asset(
 		&self,
