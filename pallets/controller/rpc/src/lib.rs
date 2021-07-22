@@ -118,7 +118,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - [`amount`](`BalanceInfo::amount`): account total collateral converted to usd.
+	/// - [`amount`](`BalanceInfo::amount`): user total collateral in all liquidity pools converted to usd.
 	#[rpc(name = "controller_accountCollateral")]
 	fn get_user_total_collateral(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
 
