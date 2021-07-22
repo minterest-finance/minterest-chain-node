@@ -604,10 +604,10 @@ impl<T: Config> Pallet<T> {
 	pub fn get_user_total_borrow_usd(who: &T::AccountId) -> BalanceResult {
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.into_iter()
-			.filter(|asset| T::LiquidityPoolsManager::pool_exists(asset))
-			.try_fold(0u128, |acc, asset| {
-				let balance = Self::get_user_borrow_underlying_balance(who, asset)?;
-				Ok(acc.saturating_add(balance))
+			.filter(|pool_id| T::LiquidityPoolsManager::pool_exists(pool_id))
+			.try_fold(Balance::zero(), |acc, pool_id| {
+				let balance = Self::get_user_borrow_underlying_balance(who, pool_id)?;
+				Ok(acc.checked_add(balance).ok_or(Error::<T>::BalanceOverflow)?)
 			})
 	}
 }

@@ -1891,48 +1891,44 @@ fn get_user_total_borrow_usd_rpc_should_work() {
 		.pool_initial(BTC)
 		.build()
 		.execute_with(|| {
-			assert_ok!(set_oracle_price_for_all_pools(2));
+			let dot_price = 2;
+			let eth_price = 3;
+
+			assert_ok!(set_oracle_prices(vec![
+				(DOT, Price::saturating_from_integer(dot_price)),
+				(ETH, Price::saturating_from_integer(eth_price)),
+				(KSM, Price::saturating_from_integer(1)),
+				(BTC, Price::saturating_from_integer(1)),
+			]));
+
+			// use 4 pools but only two with actual assets on them
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 100_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 100_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
 			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
+
+			// no total borrow value for alice on fresh pool
+			assert_eq!(get_user_total_borrow_usd_rpc(ALICE::get()), 0);
+
 			assert_ok!(MinterestProtocol::borrow(alice(), ETH, 80_000 * DOLLARS));
 			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 50_000 * DOLLARS));
 
-			// in the block when borrow happens there should be no accrued dust
+			// in the block when borrow happens there should be no interest accumulated
 			// total borrow should be equal to the borrowed value
 			assert_eq!(
 				get_user_total_borrow_usd_rpc(ALICE::get()),
-				80_000 * DOLLARS + 50_000 * DOLLARS
+				130000000000000000000000
+				//80_000 * DOLLARS * eth_price + 50_000 * DOLLARS * dot_price
 			);
 
 			System::set_block_number(21);
 
-			// 20 blocks after there should be the borrowed value + some dust
+			// 20 blocks after there should be the borrowed value + some accumulated interest
 			// TODO: add formulas
 			assert_eq!(
 				get_user_total_borrow_usd_rpc(ALICE::get()),
 				130000016020000000000000u128
 			);
-		})
-}
-
-#[test]
-fn get_user_total_borrow_usd_rpc_without_borrowed_assets_should_work() {
-	ExtBuilder::default()
-		.pool_initial(DOT)
-		.pool_initial(ETH)
-		.build()
-		.execute_with(|| {
-			assert_eq!(get_user_total_borrow_usd_rpc(ALICE::get()), 0);
-
-			assert_ok!(set_oracle_price_for_all_pools(2));
-			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 100_000 * DOLLARS));
-			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 100_000 * DOLLARS));
-			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
-			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
-
-			assert_eq!(get_user_total_borrow_usd_rpc(ALICE::get()), 0);
 		})
 }
 
