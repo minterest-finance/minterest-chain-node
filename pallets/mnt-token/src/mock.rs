@@ -3,7 +3,7 @@
 use crate as mnt_token;
 use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::*, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
-use liquidity_pools::{Pool, PoolUserData};
+use liquidity_pools::{PoolData, PoolUserData};
 pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
@@ -79,7 +79,7 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	pools: Vec<(CurrencyId, Pool)>,
+	pools: Vec<(CurrencyId, PoolData)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	minted_pools: Vec<(CurrencyId, Balance)>,
 	mnt_claim_threshold: Balance,
@@ -118,7 +118,7 @@ impl ExtBuilder {
 	pub fn pool_borrow_underlying(mut self, pool_id: CurrencyId, pool_borrowed: Balance) -> Self {
 		self.pools.push((
 			pool_id,
-			Pool {
+			PoolData {
 				borrowed: pool_borrowed,
 				borrow_index: Rate::saturating_from_rational(15, 10),
 				protocol_interest: Balance::zero(),

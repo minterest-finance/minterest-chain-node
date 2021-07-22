@@ -3,7 +3,7 @@ use super::*;
 use crate as risk_manager;
 use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
-use liquidity_pools::{Pool, PoolUserData};
+use liquidity_pools::{PoolData, PoolUserData};
 use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
 pub use minterest_primitives::{Balance, Price, Rate};
 use orml_traits::parameter_type_with_key;
@@ -85,7 +85,7 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 
 #[derive(Default)]
 pub struct ExternalityBuilder {
-	pools: Vec<(CurrencyId, Pool)>,
+	pools: Vec<(CurrencyId, PoolData)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 }
 

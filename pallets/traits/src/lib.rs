@@ -34,9 +34,9 @@ pub trait PoolsManager<AccountId> {
 }
 
 /// Provides functionality for working with storage of liquidity pools.
-pub trait LiquidityPoolStorageProvider<AccountId, Pool> {
+pub trait LiquidityPoolStorageProvider<AccountId, PoolData> {
 	/// Sets pool data.
-	fn set_pool_data(pool_id: CurrencyId, pool_data: Pool);
+	fn set_pool_data(pool_id: CurrencyId, pool_data: PoolData);
 
 	/// Sets the total borrowed value in the pool.
 	fn set_pool_borrow_underlying(pool_id: CurrencyId, new_pool_borrows: Balance);
@@ -45,7 +45,7 @@ pub trait LiquidityPoolStorageProvider<AccountId, Pool> {
 	fn set_pool_protocol_interest(pool_id: CurrencyId, new_pool_protocol_interest: Balance);
 
 	/// Gets pool associated data.
-	fn get_pool_data(pool_id: CurrencyId) -> Pool;
+	fn get_pool_data(pool_id: CurrencyId) -> PoolData;
 
 	/// Get list of users with active loan positions for a particular pool.
 	fn get_pool_members_with_loan(underlying_asset: CurrencyId) -> Result<Vec<AccountId>, DispatchError>;
