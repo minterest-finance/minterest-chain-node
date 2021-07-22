@@ -195,6 +195,10 @@ impl frame_system::Config for Runtime {
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 }
 
+impl pallet_aura::Config for Runtime {
+	type AuthorityId = AuraId;
+}
+
 const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND * 2;
 
 parameter_types! {
@@ -214,11 +218,6 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 }
 
 impl parachain_info::Config for Runtime {}
-
-
-impl pallet_aura::Config for Runtime {
-	type AuthorityId = AuraId;
-}
 
 impl cumulus_pallet_aura_ext::Config for Runtime {}
 
@@ -441,6 +440,8 @@ impl minterest_model::Config for Runtime {
 }
 
 parameter_types! {
+	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
+	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
 	pub const PartialLiquidationMinSum: Balance = PARTIAL_LIQUIDATION_MIN_SUM;
 	pub const PartialLiquidationMaxAttempts: u8 = PARTIAL_LIQUIDATION_MAX_ATTEMPTS;
 	pub const MaxLiquidationFee: Rate = MAX_LIQUIDATION_FEE;
@@ -448,11 +449,17 @@ parameter_types! {
 
 impl risk_manager::Config for Runtime {
 	type Event = Event;
+	type UnsignedPriority = RiskManagerPriority;
+	type PriceSource = Prices;
 	type UserCollateral = LiquidityPools;
 	type PartialLiquidationMinSum = PartialLiquidationMinSum;
 	type PartialLiquidationMaxAttempts = PartialLiquidationMaxAttempts;
 	type MaxLiquidationFee = MaxLiquidationFee;
 	type RiskManagerUpdateOrigin = EnsureRootOrHalfMinterestCouncil;
+	type ControllerManager = Controller;
+	type LiquidityPoolsManager = LiquidityPools;
+	type LiquidationPoolsManager = LiquidationPools;
+	type MinterestProtocolManager = MinterestProtocol;
 }
 
 parameter_types! {
@@ -480,7 +487,6 @@ where
 
 parameter_types! {
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
-	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
 }
 
 impl liquidation_pools::Config for Runtime {
@@ -591,6 +597,10 @@ construct_runtime!(
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>},
 		ParachainInfo: parachain_info::{Pallet, Storage, Config},
 
+		// Consensus & Staking
+		Aura: pallet_aura::{Pallet, Config<T>},
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
+
 		// Governance
 		MinterestCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		MinterestCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -601,20 +611,17 @@ construct_runtime!(
 		Prices: module_prices::{Pallet, Storage, Call, Event<T>, Config<T>},
 		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
 
-		// Consensus
-		Aura: pallet_aura::{Pallet, Config<T>},
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
-
 		// Minterest pallets
 		MinterestProtocol: minterest_protocol::{Pallet, Call, Event<T>},
 		LiquidityPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
 		Controller: controller::{Pallet, Storage, Call, Event, Config<T>},
 		MinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
-		RiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>},
+		RiskManager: risk_manager::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		LiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		MntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Pallet, Storage, Call, Event<T>},
 		Whitelist: whitelist_module::{Pallet, Storage, Call, Event<T>, Config<T>},
+
 		// Dev
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
 	}
@@ -885,13 +892,12 @@ impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
 			.read_slot()
 			.expect("Could not read the relay chain slot from the proof");
 
-		let inherent_data =
-			cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
-				relay_chain_slot,
-				sp_std::time::Duration::from_secs(6),
-			)
-			.create_inherent_data()
-			.expect("Could not create the timestamp inherent data");
+		let inherent_data = cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
+			relay_chain_slot,
+			sp_std::time::Duration::from_secs(6),
+		)
+		.create_inherent_data()
+		.expect("Could not create the timestamp inherent data");
 
 		inherent_data.check_extrinsics(&block)
 	}
