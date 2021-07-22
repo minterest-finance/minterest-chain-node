@@ -131,7 +131,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - [`amount`](`BalanceInfo::amount`): aaccount total borrow per asset (tokens amount).
+	/// - [`amount`](`BalanceInfo::amount`): user borrow underlying in a specific liquidity pool (underlying assets amount).
 	#[rpc(name = "controller_getUserBorrowPerAsset")]
 	fn get_user_borrow_per_asset(
 		&self,
