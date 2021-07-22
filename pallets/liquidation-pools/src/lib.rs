@@ -440,7 +440,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Makes balancing of liquidation pools if it necessary.
-	pub fn pools_balancing() -> DispatchResult {
+	fn pools_balancing() -> DispatchResult {
 		// If balancing of pools isn't required then collects_sales_list returns empty list
 		// and next steps won't be processed.
 		Self::collects_sales_list()?
@@ -614,7 +614,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Temporary function
-	pub fn get_amounts(
+	fn get_amounts(
 		supply_pool_id: CurrencyId,
 		target_pool_id: CurrencyId,
 		amount_usd: Balance,
@@ -634,7 +634,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// Returns minimum of (liquidity_pool_balance * balance_ratio * oracle_price) and
 	/// max_ideal_balance_usd
-	pub fn calculate_pool_ideal_balance_usd(pool_id: CurrencyId) -> BalanceResult {
+	fn calculate_pool_ideal_balance_usd(pool_id: CurrencyId) -> BalanceResult {
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 		let balance_ratio = Self::liquidation_pool_data_storage(pool_id).balance_ratio;
 		// Liquidation pool ideal balance in USD: liquidity_pool_balance * balance_ratio * oracle_price

@@ -25,22 +25,22 @@ use sp_std::marker::PhantomData;
 /// Weight functions for minterest_model.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> minterest_model::WeightInfo for WeightInfo<T> {
-	fn set_jump_multiplier() -> Weight {
+	fn set_pool_jump_multiplier() -> Weight {
 		(23_283_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn set_base_rate() -> Weight {
+	fn set_pool_base_rate() -> Weight {
 		(22_968_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn set_multiplier() -> Weight {
+	fn set_pool_multiplier() -> Weight {
 		(26_744_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn set_kink() -> Weight {
+	fn set_pool_kink() -> Weight {
 		(22_948_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))

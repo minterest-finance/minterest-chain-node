@@ -61,7 +61,7 @@ runtime_benchmarks! {
 		LiquidityPools::remove_pool_data(DOT);
 		liquidation_pools::LiquidationPoolDataStorage::<Runtime>::remove(DOT);
 		controller::ControllerParams::<Runtime>::remove(DOT);
-		minterest_model::MinterestModelParams::<Runtime>::remove(DOT);
+		minterest_model::MinterestModelDataStorage::<Runtime>::remove(DOT);
 	}: _(
 		RawOrigin::Root,
 		DOT,
@@ -90,7 +90,7 @@ runtime_benchmarks! {
 		set_balance(DOT, &lender, 50_000 * DOLLARS)?;
 
 		// Set liquidation_attempts grater than zero to reset them.
-		RiskManager::mutate_depending_operation(DOT, &lender, Operation::Repay);
+		RiskManager::mutate_attempts(Some(DOT), &lender, Operation::Repay);
 
 		System::set_block_number(10);
 
