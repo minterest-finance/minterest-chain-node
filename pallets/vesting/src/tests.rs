@@ -26,7 +26,10 @@ fn vesting_from_chain_spec_works() {
 		));
 		assert_eq!(PalletBalances::usable_balance(CHARLIE::get()), 10 * DOLLARS);
 
-		assert_eq!(Vesting::vesting_schedules(&CHARLIE::get()), vec![private_sale_schedule]);
+		assert_eq!(
+			Vesting::vesting_schedule_storage(&CHARLIE::get()),
+			vec![private_sale_schedule]
+		);
 
 		// Set the block number equal to half a year and do claim().
 		System::set_block_number(BLOCKS_PER_YEAR as u64 / 2);
@@ -84,7 +87,10 @@ fn vested_transfer_works() {
 		));
 
 		// There are 1 active vesting schedule.
-		assert_eq!(Vesting::vesting_schedules(&BOB::get()), vec![team_schedule.clone()]);
+		assert_eq!(
+			Vesting::vesting_schedule_storage(&BOB::get()),
+			vec![team_schedule.clone()]
+		);
 
 		let vested_event = Event::Vesting(crate::Event::VestingScheduleAdded(BOB::get(), team_schedule));
 		assert!(System::events().iter().any(|record| record.event == vested_event));
@@ -128,7 +134,10 @@ fn add_new_vesting_schedule_merges_with_current_locked_balance_and_until() {
 			20 * DOLLARS
 		));
 		// There are 1 active vesting schedules for BOB.
-		assert_eq!(Vesting::vesting_schedules(&BOB::get()), vec![team_schedule.clone()]);
+		assert_eq!(
+			Vesting::vesting_schedule_storage(&BOB::get()),
+			vec![team_schedule.clone()]
+		);
 
 		// Set the block number equal to 2.5 years.
 		// Half of the vesting period for the bucket Team.
@@ -143,7 +152,7 @@ fn add_new_vesting_schedule_merges_with_current_locked_balance_and_until() {
 		));
 		// There are 2 active vesting schedules for BOB.
 		assert_eq!(
-			Vesting::vesting_schedules(&BOB::get()),
+			Vesting::vesting_schedule_storage(&BOB::get()),
 			vec![team_schedule.clone(), team_schedule_2.clone()]
 		);
 
@@ -193,7 +202,7 @@ fn vested_transfer_fails_if_transfer_err() {
 				1u64,
 				1001 * DOLLARS
 			),
-			pallet_balances::Error::<Runtime, _>::InsufficientBalance,
+			pallet_balances::Error::<TestRuntime, _>::InsufficientBalance,
 		);
 	});
 }
@@ -210,7 +219,7 @@ fn vested_transfer_fails_if_overflow() {
 				u64::MAX,
 				2 * DOLLARS
 			),
-			Error::<Runtime>::NumOverflow
+			Error::<TestRuntime>::NumOverflow
 		);
 	});
 }
@@ -255,14 +264,17 @@ fn vested_transfer_and_remove_fails_if_incorrect_bucket_type() {
 				0u64,
 				100 * DOLLARS
 			),
-			Error::<Runtime>::IncorrectVestingBucketType
+			Error::<TestRuntime>::IncorrectVestingBucketType
 		);
 		assert_noop!(
 			Vesting::remove_vesting_schedules(Origin::signed(ADMIN::get()), CHARLIE::get(), VestingBucket::PrivateSale),
-			Error::<Runtime>::IncorrectVestingBucketType
+			Error::<TestRuntime>::IncorrectVestingBucketType
 		);
 		// After a failed deletion, the schedule should remain on the account.
-		assert_eq!(Vesting::vesting_schedules(&CHARLIE::get()), vec![private_sale_schedule]);
+		assert_eq!(
+			Vesting::vesting_schedule_storage(&CHARLIE::get()),
+			vec![private_sale_schedule]
+		);
 		assert_eq!(
 			PalletBalances::locks(&CHARLIE::get())[0],
 			BalanceLock {
@@ -334,7 +346,7 @@ fn vested_transfer_check_for_min() {
 				1u64,
 				3 * DOLLARS
 			),
-			Error::<Runtime>::AmountLow
+			Error::<TestRuntime>::AmountLow
 		);
 	});
 }
@@ -374,7 +386,7 @@ fn multiple_vesting_schedule_claim_works() {
 
 		// There are 2 active vesting schedules for BOB.
 		assert_eq!(
-			Vesting::vesting_schedules(&BOB::get()),
+			Vesting::vesting_schedule_storage(&BOB::get()),
 			vec![marketing_schedule.clone(), strategic_partners_schedule.clone()]
 		);
 
@@ -394,7 +406,7 @@ fn multiple_vesting_schedule_claim_works() {
 
 		// There are 2 active vesting schedules for BOB.
 		assert_eq!(
-			Vesting::vesting_schedules(&BOB::get()),
+			Vesting::vesting_schedule_storage(&BOB::get()),
 			vec![marketing_schedule, strategic_partners_schedule.clone()]
 		);
 
@@ -404,7 +416,7 @@ fn multiple_vesting_schedule_claim_works() {
 		// Schedule from Marketing bucket is over.
 		assert_ok!(Vesting::claim(Origin::signed(BOB::get())));
 		assert_eq!(
-			Vesting::vesting_schedules(&BOB::get()),
+			Vesting::vesting_schedule_storage(&BOB::get()),
 			vec![strategic_partners_schedule]
 		);
 
@@ -421,7 +433,7 @@ fn multiple_vesting_schedule_claim_works() {
 		// (-2 and written due to math problems)
 		assert_eq!(PalletBalances::free_balance(BOB::get()), 50 * DOLLARS - 2);
 		assert_eq!(PalletBalances::usable_balance(BOB::get()), 50 * DOLLARS - 2);
-		assert_eq!(VestingSchedules::<Runtime>::contains_key(&BOB::get()), false);
+		assert_eq!(VestingScheduleStorage::<TestRuntime>::contains_key(&BOB::get()), false);
 		assert_eq!(PalletBalances::locks(&BOB::get()), vec![]);
 	});
 }
@@ -453,7 +465,7 @@ fn remove_vesting_schedule_should_work() {
 
 		// There are 2 active vesting schedules for CHARLIE.
 		assert_eq!(
-			Vesting::vesting_schedules(&CHARLIE::get()),
+			Vesting::vesting_schedule_storage(&CHARLIE::get()),
 			vec![private_sale_schedule.clone(), strategic_partners_schedule.clone()]
 		);
 
@@ -482,7 +494,7 @@ fn remove_vesting_schedule_should_work() {
 
 		// There are 2 active vesting schedules for CHARLIE.
 		assert_eq!(
-			Vesting::vesting_schedules(&CHARLIE::get()),
+			Vesting::vesting_schedule_storage(&CHARLIE::get()),
 			vec![private_sale_schedule.clone(), strategic_partners_schedule]
 		);
 
@@ -509,7 +521,10 @@ fn remove_vesting_schedule_should_work() {
 		);
 
 		// Strategic partners schedule is removed.
-		assert_eq!(Vesting::vesting_schedules(&CHARLIE::get()), vec![private_sale_schedule]);
+		assert_eq!(
+			Vesting::vesting_schedule_storage(&CHARLIE::get()),
+			vec![private_sale_schedule]
+		);
 
 		// CHARLIE doesn't have schedule from Strategic Partners vesting bucket.
 		assert_noop!(
@@ -518,7 +533,7 @@ fn remove_vesting_schedule_should_work() {
 				CHARLIE::get(),
 				VestingBucket::StrategicPartners,
 			),
-			Error::<Runtime>::UserDoesNotHaveSuchSchedule
+			Error::<TestRuntime>::UserDoesNotHaveSuchSchedule
 		);
 
 		// Strategic Partners vesting bucket balance equal: 60.0 MNT + 587.5 MNT = 647.5 MNT
@@ -564,7 +579,7 @@ fn remove_vesting_schedules_from_one_bucket_should_work() {
 
 		// There are 2 active vesting schedules for BOB.
 		assert_eq!(
-			Vesting::vesting_schedules(&BOB::get()),
+			Vesting::vesting_schedule_storage(&BOB::get()),
 			vec![team_schedule1.clone(), team_schedule2.clone()]
 		);
 
@@ -575,7 +590,7 @@ fn remove_vesting_schedules_from_one_bucket_should_work() {
 		));
 
 		// All schedules are removed.
-		assert_eq!(Vesting::vesting_schedules(&BOB::get()), vec![]);
+		assert_eq!(Vesting::vesting_schedule_storage(&BOB::get()), vec![]);
 	});
 }
 

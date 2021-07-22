@@ -18,7 +18,7 @@ fn user_liquidation_attempts_should_work() {
 }
 
 #[test]
-fn mutate_depending_operation_should_work() {
+fn mutate_attempts_should_work() {
 	ExternalityBuilder::default()
 		.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 		.build()
@@ -28,11 +28,11 @@ fn mutate_depending_operation_should_work() {
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 1_u8);
 
 			// ETH pool is disabled as collateral. Don't reset liquidation attempts.
-			TestRiskManager::mutate_depending_operation(ETH, &ALICE, Deposit);
+			TestRiskManager::mutate_attempts(Some(ETH), &ALICE, Deposit);
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 1_u8);
 
 			// DOT pool is enabled as collateral. Reset liquidation attempts to zero.
-			TestRiskManager::mutate_depending_operation(DOT, &ALICE, Deposit);
+			TestRiskManager::mutate_attempts(Some(DOT), &ALICE, Deposit);
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), u8::zero());
 		})
 }
@@ -47,10 +47,11 @@ fn set_liquidation_fee_should_work() {
 			Rate::saturating_from_rational(3, 10)
 		));
 		assert_eq!(
-			TestRiskManager::liquidation_fee(DOT),
+			TestRiskManager::liquidation_fee_storage(DOT),
 			Rate::saturating_from_rational(3, 10)
 		);
 		let expected_event = Event::TestRiskManager(crate::Event::LiquidationFeeUpdated(
+			DOT,
 			Rate::saturating_from_rational(3, 10),
 		));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
@@ -84,7 +85,7 @@ fn set_threshold_should_work() {
 			DOT,
 			Rate::one()
 		));
-		assert_eq!(TestRiskManager::liquidation_threshold(), Rate::one());
+		assert_eq!(TestRiskManager::liquidation_threshold_storage(), Rate::one());
 		let expected_event = Event::TestRiskManager(crate::Event::LiquidationThresholdUpdated(Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
 

@@ -74,6 +74,9 @@ type BalanceResult = result::Result<Balance, DispatchError>;
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod mock;
+
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
@@ -345,7 +348,7 @@ impl<T: Config> LiquidityPoolStorageProvider<T::AccountId, PoolData> for Pallet<
 		Self::pool_data_storage(pool_id)
 	}
 
-	fn get_pool_members_with_loans(underlying_asset: CurrencyId) -> result::Result<Vec<T::AccountId>, DispatchError> {
+	fn get_pool_members_with_loan(underlying_asset: CurrencyId) -> result::Result<Vec<T::AccountId>, DispatchError> {
 		let user_vec: Vec<T::AccountId> = PoolUserDataStorage::<T>::iter_prefix(underlying_asset)
 			.filter(|(_, pool_user_data)| !pool_user_data.borrowed.is_zero())
 			.map(|(account, _)| account)
