@@ -12,14 +12,11 @@ use sp_core::offchain::{
 	testing::{TestOffchainExt, TestTransactionPoolExt},
 	OffchainDbExt, OffchainWorkerExt, TransactionPoolExt,
 };
-use sp_runtime::traits::AccountIdConversion;
 use sp_runtime::{FixedPointNumber, FixedU128};
-use test_helper::currency_mock::*;
-use test_helper::users_mock::*;
+use test_helper::{currency_mock::*, users_mock::*};
 
 fn create_default_feeds() {
 	for currency in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset) {
-		let oracles_admin: AccountId = 999;
 		ChainlinkFeed::create_feed(
 			alice_origin(),
 			20,
@@ -29,7 +26,7 @@ fn create_default_feeds() {
 			5,
 			ChainlinkPriceManager::convert_to_description(currency).to_vec(),
 			0,
-			vec![(ORACLE, oracles_admin)],
+			vec![(ORACLE, ORACLES_ADMIN)],
 			None,
 			None,
 		)
@@ -87,6 +84,7 @@ fn get_min_round_id() {
 			42 * DOLLARS,
 		)
 		.unwrap();
+
 		ChainlinkFeed::submit(
 			Origin::signed(ORACLE),
 			ChainlinkPriceManager::get_feed_id(KSM).unwrap(),
@@ -94,8 +92,10 @@ fn get_min_round_id() {
 			42 * DOLLARS,
 		)
 		.unwrap();
+
 		// min_round_id still zero
 		assert_eq!(ChainlinkPriceManager::get_min_round_id().unwrap(), 0);
+
 		ChainlinkFeed::submit(
 			Origin::signed(ORACLE),
 			ChainlinkPriceManager::get_feed_id(DOT).unwrap(),
@@ -103,13 +103,13 @@ fn get_min_round_id() {
 			42 * DOLLARS,
 		)
 		.unwrap();
+
 		assert_eq!(ChainlinkPriceManager::get_min_round_id().unwrap(), 1);
 	});
 }
 
 #[test]
 fn get_feed_id() {
-	let oracles_admin: AccountId = 999;
 	let oracle: AccountId = 100;
 	test_externalities().execute_with(|| {
 		ChainlinkFeed::create_feed(
@@ -119,9 +119,9 @@ fn get_feed_id() {
 			(10, 1_000 * DOLLARS),
 			1,
 			5,
-			b"MIN-BTC".to_vec(),
+			ChainlinkPriceManager::convert_to_description(BTC).to_vec(),
 			0,
-			vec![(oracle, oracles_admin)],
+			vec![(oracle, ORACLES_ADMIN)],
 			None,
 			None,
 		)
@@ -133,7 +133,6 @@ fn get_feed_id() {
 
 #[test]
 fn create_feed_should_work() {
-	let oracles_admin: AccountId = 999;
 	let oracle1: AccountId = 100;
 	let oracle2: AccountId = 200;
 	let oracle3: AccountId = 300;
@@ -145,12 +144,12 @@ fn create_feed_should_work() {
 			(10, 1_000 * DOLLARS),
 			3, // min submissions
 			5,
-			b"MIN-BTC".to_vec(),
+			ChainlinkPriceManager::convert_to_description(BTC).to_vec(),
 			2,
 			vec![
-				(oracle1, oracles_admin),
-				(oracle2, oracles_admin),
-				(oracle3, oracles_admin),
+				(oracle1, ORACLES_ADMIN),
+				(oracle2, ORACLES_ADMIN),
+				(oracle3, ORACLES_ADMIN),
 			],
 			None,
 			None,

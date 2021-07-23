@@ -51,7 +51,7 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, One, Zero},
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchResult, FixedPointNumber, FixedU128,
+	ApplyExtrinsicResult, DispatchResult, FixedPointNumber,
 };
 use sp_std::{cmp::Ordering, convert::TryFrom, prelude::*};
 #[cfg(feature = "std")]

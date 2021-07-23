@@ -4,17 +4,12 @@
 
 use crate as chainlink_price_adapter;
 use frame_support::{construct_runtime, ord_parameter_types, parameter_types, PalletId};
-use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
-use frame_system::EnsureSignedBy;
-use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, CurrencyId};
-use minterest_primitives::{Balance, Price};
-use sp_runtime::testing::Header;
-use sp_runtime::testing::TestXt;
-use sp_runtime::testing::H256;
-use sp_runtime::traits::AccountIdConversion;
-use sp_runtime::traits::BlakeTwo256;
-use sp_runtime::traits::IdentityLookup;
-use test_helper::users_mock::*;
+use frame_system::offchain::SendTransactionTypes;
+use minterest_primitives::Balance;
+use sp_runtime::{
+	testing::{Header, TestXt, H256},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
+};
 use test_helper::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -46,6 +41,7 @@ parameter_types! {
 
 pub type FeedId = u32;
 const MIN_RESERVE: u128 = 100000;
+
 parameter_types! {
 	pub const StringLimit: u32 = 30;
 	pub const OracleCountLimit: u32 = 25;
@@ -91,7 +87,7 @@ impl chainlink_price_adapter::Config for Runtime {
 }
 
 pub const FEED_CREATOR: AccountId = ALICE;
-pub const ORACLE_ADMIN: AccountId = 1001;
+pub const ORACLES_ADMIN: AccountId = 1001;
 pub const ORACLE: AccountId = 1002;
 
 pub fn test_externalities() -> sp_io::TestExternalities {
