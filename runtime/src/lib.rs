@@ -586,6 +586,7 @@ impl chainlink_price_manager::Config for Runtime {
 	type Event = Event;
 	type PalletAccountId = ChainlinkPriceManagerAccountId;
 	type UnsignedPriority = ChainlinkManagerPriority;
+	type ChainlinkPriceManagerWeightInfo = weights::chainlink_price_manager::WeightInfo<Runtime>;
 }
 
 pub type FeedId = u32;
@@ -594,7 +595,7 @@ parameter_types! {
 	pub const StringLimit: u32 = 30;
 	pub const OracleCountLimit: u32 = 25;
 	pub const FeedLimit: FeedId = 100;
-	// TODO REVIEW
+	// TODO Review this parameter before production preperements
 	pub const MinimumReserve: Balance = ExistentialDeposit::get() * 1000;
 }
 
@@ -605,7 +606,7 @@ impl pallet_chainlink_feed::Config for Runtime {
 	type Currency = pallet_balances::Pallet<Runtime>;
 	type PalletId = ChainlinkFeedPalletId;
 
-	// TODO figure out about appropriate value
+	// TODO Review this parameter before production preperements
 	type MinimumReserve = MinimumReserve;
 	type StringLimit = StringLimit;
 	type OracleCountLimit = OracleCountLimit;
@@ -969,6 +970,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, mnt_token, benchmarking::mnt_token);
 			add_benchmark!(params, batches, module_vesting, benchmarking::vesting);
 			add_benchmark!(params, batches, whitelist_module, benchmarking::whitelist);
+			add_benchmark!(params, batches, chainlink_price_manager, benchmarking::chainlink_price_manager);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

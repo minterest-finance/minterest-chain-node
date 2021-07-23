@@ -28,11 +28,14 @@ use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, currency::*,
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData, RoundId};
 use pallet_traits::PricesManager;
 use sp_runtime::traits::Zero;
+pub use weights::WeightInfo;
 
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
+
+pub mod weights;
 
 pub use module::*;
 
@@ -54,6 +57,9 @@ pub mod module {
 		/// This is exposed so that it can be tuned for particular runtime, when
 		/// multiple pallets send unsigned transactions.
 		type UnsignedPriority: Get<TransactionPriority>;
+
+		/// Weight information for the extrinsics.
+		type ChainlinkPriceManagerWeightInfo: WeightInfo;
 	}
 
 	#[pallet::error]

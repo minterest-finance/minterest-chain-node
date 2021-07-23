@@ -84,6 +84,7 @@ impl chainlink_price_adapter::Config for Runtime {
 	type Event = Event;
 	type PalletAccountId = ChainlinkPalletAccountId;
 	type UnsignedPriority = LiquidityPoolsPriority;
+	type ChainlinkPriceManagerWeightInfo = ();
 }
 
 pub const FEED_CREATOR: AccountId = ALICE;
