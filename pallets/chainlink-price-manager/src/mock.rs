@@ -58,8 +58,6 @@ impl pallet_chainlink_feed::Config for Runtime {
 	type Value = u128;
 	type Currency = Balances;
 	type PalletId = ChainlinkFeedPalletId;
-
-	// TODO figure out about appropriate value
 	type MinimumReserve = MinimumReserve;
 	type StringLimit = StringLimit;
 	type OracleCountLimit = OracleCountLimit;

@@ -125,6 +125,7 @@ pub mod module {
 			Ok(().into())
 		}
 
+		/// Enables feeding. Start providing prices
 		#[pallet::weight(10_000)]
 		#[transactional]
 		pub fn enable_feeding(_origin: OriginFor<T>) -> DispatchResult {
@@ -182,7 +183,7 @@ where
 			// only min round id?
 			let new_round_id = Self::get_min_round_id()?.saturating_add(1);
 			// Currently feed id is not play any role. See TODO above
-			let feed_id = Self::get_feed_id(ETH).ok_or(OffchainErr::CheckFail)?;
+			let feed_id = Self::get_feed_id(ETH).ok_or(OffchainErr::ChainlinkFeedNotExists)?;
 			let call = Call::<T>::initiate_new_round(feed_id, new_round_id);
 			log::debug!("New round_id: {:?}", new_round_id);
 
@@ -205,11 +206,12 @@ where
 			DOT => b"MIN-DOT",
 			KSM => b"MIN-KSM",
 			BTC => b"MIN-BTC",
-			_ => b"We should never be here",
+			// This must be gone after implementing strict CurrencyId types
+			_ => b"Non-existent-feed",
 		}
 	}
 
-	// Looks for appropriate feed config with description and returns FeedId
+	/// Looks for appropriate feed config with description and returns FeedId
 	pub fn get_feed_id(currency_id: CurrencyId) -> Option<T::FeedId> {
 		Some(
 			<pallet_chainlink_feed::Feeds<T> as IterableStorageMap<
@@ -227,6 +229,7 @@ where
 	u128: From<<T as pallet_chainlink_feed::Config>::Value>,
 {
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
+		// TODO check is feeding enabled
 		let feed_id = Self::get_feed_id(currency_id)?;
 		let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id)?;
 		// TODO handle updated_at
