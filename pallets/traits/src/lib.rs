@@ -34,9 +34,9 @@ pub trait PoolsManager<AccountId> {
 }
 
 /// Provides functionality for working with storage of liquidity pools.
-pub trait LiquidityPoolStorageProvider<AccountId, Pool> {
+pub trait LiquidityPoolStorageProvider<AccountId, PoolData> {
 	/// Sets pool data.
-	fn set_pool_data(pool_id: CurrencyId, pool_data: Pool);
+	fn set_pool_data(pool_id: CurrencyId, pool_data: PoolData);
 
 	/// Sets the total borrowed value in the pool.
 	fn set_pool_borrow_underlying(pool_id: CurrencyId, new_pool_borrows: Balance);
@@ -45,7 +45,7 @@ pub trait LiquidityPoolStorageProvider<AccountId, Pool> {
 	fn set_pool_protocol_interest(pool_id: CurrencyId, new_pool_protocol_interest: Balance);
 
 	/// Gets pool associated data.
-	fn get_pool_data(pool_id: CurrencyId) -> Pool;
+	fn get_pool_data(pool_id: CurrencyId) -> PoolData;
 
 	/// Get list of users with active loan positions for a particular pool.
 	fn get_pool_members_with_loan(underlying_asset: CurrencyId) -> Result<Vec<AccountId>, DispatchError>;
@@ -170,7 +170,7 @@ pub trait ControllerManager<AccountId> {
 	) -> DispatchResult;
 
 	/// Return the borrow balance of account based on stored data.
-	fn borrow_balance_stored(who: &AccountId, underlying_asset_id: CurrencyId) -> Result<Balance, DispatchError>;
+	fn user_borrow_balance_stored(who: &AccountId, underlying_asset_id: CurrencyId) -> Result<Balance, DispatchError>;
 
 	/// Determine what the account liquidity would be if the given amounts were redeemed/borrowed.
 	fn get_hypothetical_account_liquidity(
@@ -208,7 +208,7 @@ pub trait ControllerManager<AccountId> {
 	fn get_pool_exchange_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate, Rate)>;
 
 	/// Gets current utilization rate of the pool. The rate is calculated for the current block.
-	fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate>;
+	fn get_pool_utilization_rate(pool_id: CurrencyId) -> Option<Rate>;
 
 	/// Calculates user total supply and user total borrow balance in usd based on
 	/// pool_borrow, pool_protocol_interest, borrow_index values calculated for current block.
@@ -321,7 +321,7 @@ pub trait MinterestModelManager {
 	/// - `utilization_rate`: Current Utilization rate value.
 	///
 	/// returns `borrow_interest_rate`.
-	fn calculate_borrow_interest_rate(
+	fn calculate_pool_borrow_interest_rate(
 		underlying_asset: CurrencyId,
 		utilization_rate: Rate,
 	) -> Result<Rate, DispatchError>;

@@ -11,7 +11,7 @@ use controller_rpc_runtime_api::{
 use frame_support::pallet_prelude::{DispatchResultWithPostInfo, PhantomData};
 use frame_support::{assert_noop, assert_ok, pallet_prelude::GenesisBuild, parameter_types, traits::OnFinalize};
 use liquidation_pools::LiquidationPoolData;
-use liquidity_pools::{Pool, PoolUserData};
+use liquidity_pools::{PoolData, PoolUserData};
 use minterest_model::MinterestModelData;
 use minterest_primitives::{CurrencyId, Interest, Operation, Price};
 use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
@@ -37,7 +37,7 @@ parameter_types! {
 
 struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	pools: Vec<(CurrencyId, Pool)>,
+	pools: Vec<(CurrencyId, PoolData)>,
 	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	minted_pools: Vec<(CurrencyId, Balance)>,
 	liquidation_fee: Vec<(CurrencyId, Rate)>,
@@ -98,7 +98,7 @@ impl ExtBuilder {
 	pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
 		self.pools.push((
 			pool_id,
-			Pool {
+			PoolData {
 				borrowed: Balance::zero(),
 				borrow_index: Rate::one(),
 				protocol_interest: Balance::zero(),
@@ -265,7 +265,7 @@ impl ExtBuilder {
 					LiquidationPoolData {
 						deviation_threshold: Rate::saturating_from_rational(1, 10),
 						balance_ratio: Rate::saturating_from_rational(2, 10),
-						max_ideal_balance: None,
+						max_ideal_balance_usd: None,
 					},
 				),
 				(
@@ -273,7 +273,7 @@ impl ExtBuilder {
 					LiquidationPoolData {
 						deviation_threshold: Rate::saturating_from_rational(1, 10),
 						balance_ratio: Rate::saturating_from_rational(2, 10),
-						max_ideal_balance: None,
+						max_ideal_balance_usd: None,
 					},
 				),
 				(
@@ -281,7 +281,7 @@ impl ExtBuilder {
 					LiquidationPoolData {
 						deviation_threshold: Rate::saturating_from_rational(1, 10),
 						balance_ratio: Rate::saturating_from_rational(2, 10),
-						max_ideal_balance: None,
+						max_ideal_balance_usd: None,
 					},
 				),
 				(
@@ -289,7 +289,7 @@ impl ExtBuilder {
 					LiquidationPoolData {
 						deviation_threshold: Rate::saturating_from_rational(1, 10),
 						balance_ratio: Rate::saturating_from_rational(2, 10),
-						max_ideal_balance: None,
+						max_ideal_balance_usd: None,
 					},
 				),
 			],
@@ -334,8 +334,8 @@ fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::liquidity_pool_state(currency_id)
 }
 
-fn get_utilization_rate_rpc(pool_id: CurrencyId) -> Option<Rate> {
-	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_utilization_rate(pool_id)
+fn get_pool_utilization_rate_rpc(pool_id: CurrencyId) -> Option<Rate> {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_pool_utilization_rate(pool_id)
 }
 
 fn get_user_total_supply_and_borrow_balance_in_usd_rpc(account_id: AccountId) -> Option<UserPoolBalanceData> {
@@ -934,7 +934,7 @@ fn test_get_protocol_total_value_rpc() {
 }
 
 #[test]
-fn test_get_utilization_rate_rpc() {
+fn test_get_pool_utilization_rate_rpc() {
 	ExtBuilder::default()
 		.pool_initial(DOT)
 		.pool_initial(ETH)
@@ -953,8 +953,8 @@ fn test_get_utilization_rate_rpc() {
 			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
 			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), ETH));
 			// No borrows -> utilization rates equal to 0
-			assert_eq!(get_utilization_rate_rpc(DOT), Some(Rate::zero()));
-			assert_eq!(get_utilization_rate_rpc(ETH), Some(Rate::zero()));
+			assert_eq!(get_pool_utilization_rate_rpc(DOT), Some(Rate::zero()));
+			assert_eq!(get_pool_utilization_rate_rpc(ETH), Some(Rate::zero()));
 
 			System::set_block_number(20);
 
@@ -962,18 +962,18 @@ fn test_get_utilization_rate_rpc() {
 			assert_eq!(pool_balance(DOT), dollars(80_000));
 			// 70 / (80 + 70) = 0.466666667
 			assert_eq!(
-				get_utilization_rate_rpc(DOT),
+				get_pool_utilization_rate_rpc(DOT),
 				Some(Rate::from_inner(466_666_666_666_666_667))
 			);
-			assert_eq!(get_utilization_rate_rpc(ETH), Some(Rate::zero()));
+			assert_eq!(get_pool_utilization_rate_rpc(ETH), Some(Rate::zero()));
 
 			System::set_block_number(100);
 			// Utilization rate grows with time as interest is accrued
 			assert_eq!(
-				get_utilization_rate_rpc(DOT),
+				get_pool_utilization_rate_rpc(DOT),
 				Some(Rate::from_inner(466_666_757_610_653_833))
 			);
-			assert_eq!(get_utilization_rate_rpc(ETH), Some(Rate::zero()));
+			assert_eq!(get_pool_utilization_rate_rpc(ETH), Some(Rate::zero()));
 		});
 }
 
@@ -991,15 +991,15 @@ fn test_user_balances_using_rpc() {
 			assert_eq!(
 				get_user_total_supply_and_borrow_balance_in_usd_rpc(ALICE::get()),
 				Some(UserPoolBalanceData {
-					total_supply: dollars(0),
-					total_borrowed: dollars(0)
+					total_supply_in_usd: dollars(0),
+					total_borrowed_in_usd: dollars(0)
 				})
 			);
 			assert_eq!(
 				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
-					total_supply: dollars(0),
-					total_borrowed: dollars(0)
+					total_supply_in_usd: dollars(0),
+					total_borrowed_in_usd: dollars(0)
 				})
 			);
 
@@ -1009,15 +1009,15 @@ fn test_user_balances_using_rpc() {
 			assert_eq!(
 				get_user_total_supply_and_borrow_balance_in_usd_rpc(ALICE::get()),
 				Some(UserPoolBalanceData {
-					total_supply: dollars(0),
-					total_borrowed: dollars(0)
+					total_supply_in_usd: dollars(0),
+					total_borrowed_in_usd: dollars(0)
 				})
 			);
 			assert_eq!(
 				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
-					total_supply: dollars(240_000),
-					total_borrowed: dollars(0)
+					total_supply_in_usd: dollars(240_000),
+					total_borrowed_in_usd: dollars(0)
 				})
 			);
 			assert_eq!(
@@ -1035,8 +1035,8 @@ fn test_user_balances_using_rpc() {
 			assert_eq!(
 				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
-					total_supply: dollars(240_000),
-					total_borrowed: dollars(100_000)
+					total_supply_in_usd: dollars(240_000),
+					total_borrowed_in_usd: dollars(100_000)
 				})
 			);
 			assert_eq!(
@@ -1050,8 +1050,8 @@ fn test_user_balances_using_rpc() {
 			assert_eq!(
 				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()),
 				Some(UserPoolBalanceData {
-					total_supply: dollars(240_000),
-					total_borrowed: dollars(40_000)
+					total_supply_in_usd: dollars(240_000),
+					total_borrowed_in_usd: dollars(40_000)
 				})
 			);
 			assert_eq!(
@@ -1063,8 +1063,8 @@ fn test_user_balances_using_rpc() {
 
 			System::set_block_number(30);
 			let account_data = get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
-			assert!(account_data.total_supply > dollars(240_000));
-			assert!(account_data.total_borrowed > dollars(40_000));
+			assert!(account_data.total_supply_in_usd > dollars(240_000));
+			assert!(account_data.total_borrowed_in_usd > dollars(40_000));
 			assert!(get_user_borrow_per_asset_rpc(BOB::get(), DOT).unwrap().amount > dollars(20_000));
 		});
 }
@@ -1085,11 +1085,11 @@ fn test_get_hypothetical_account_liquidity_rpc() {
 
 			assert_eq!(
 				get_hypothetical_account_liquidity_rpc(ALICE::get()),
-				Some(HypotheticalLiquidityData { liquidity: 0 })
+				Some(HypotheticalLiquidityData { liquidity_in_usd: 0 })
 			);
 			assert_eq!(
 				get_hypothetical_account_liquidity_rpc(BOB::get()),
-				Some(HypotheticalLiquidityData { liquidity: 0 })
+				Some(HypotheticalLiquidityData { liquidity_in_usd: 0 })
 			);
 
 			assert_ok!(MinterestProtocol::enable_is_collateral(bob(), DOT));
@@ -1100,7 +1100,7 @@ fn test_get_hypothetical_account_liquidity_rpc() {
 			assert_eq!(
 				get_hypothetical_account_liquidity_rpc(BOB::get()),
 				Some(HypotheticalLiquidityData {
-					liquidity: 116_000_000_000_000_000_000_000
+					liquidity_in_usd: 116_000_000_000_000_000_000_000
 				})
 			);
 
@@ -1112,7 +1112,7 @@ fn test_get_hypothetical_account_liquidity_rpc() {
 			assert_eq!(
 				get_hypothetical_account_liquidity_rpc(BOB::get()),
 				Some(HypotheticalLiquidityData {
-					liquidity: -212_319_934_335_999_999_999_998
+					liquidity_in_usd: -212_319_934_335_999_999_999_998
 				})
 			);
 		});
@@ -1148,7 +1148,8 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 
 			let expected_free_balance_bob = bob_balance_before_repay_all
 				+ (Rate::from_inner(
-					account_data_before_repay_all.total_supply - account_data_before_repay_all.total_borrowed,
+					account_data_before_repay_all.total_supply_in_usd
+						- account_data_before_repay_all.total_borrowed_in_usd,
 				) / oracle_price)
 					.into_inner();
 
@@ -1188,13 +1189,14 @@ fn test_user_total_borrowed_difference_is_ok_before_and_after_repay_using_balanc
 				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
-				LiquidityPools::pool_user_data(DOT, BOB::get()).borrowed,
-				(Rate::from_inner(account_data_after_repay.total_borrowed) / oracle_price).into_inner()
+				LiquidityPools::pool_user_data_storage(DOT, BOB::get()).borrowed,
+				(Rate::from_inner(account_data_after_repay.total_borrowed_in_usd) / oracle_price).into_inner()
 			);
 			assert_eq!(
 				dollars(10_000),
-				(Rate::from_inner(account_data_before_repay.total_borrowed - account_data_after_repay.total_borrowed)
-					/ oracle_price)
+				(Rate::from_inner(
+					account_data_before_repay.total_borrowed_in_usd - account_data_after_repay.total_borrowed_in_usd
+				) / oracle_price)
 					.into_inner()
 			);
 		})
@@ -1227,13 +1229,13 @@ fn test_user_total_borrowed_difference_is_ok_before_and_after_borrow_using_balan
 				get_user_total_supply_and_borrow_balance_in_usd_rpc(BOB::get()).unwrap_or_default();
 
 			assert_eq!(
-				LiquidityPools::pool_user_data(DOT, BOB::get()).borrowed,
-				(Rate::from_inner(account_data_after_borrow.total_borrowed) / oracle_price).into_inner()
+				LiquidityPools::pool_user_data_storage(DOT, BOB::get()).borrowed,
+				(Rate::from_inner(account_data_after_borrow.total_borrowed_in_usd) / oracle_price).into_inner()
 			);
 			assert_eq!(
 				dollars(30_000),
 				(Rate::from_inner(
-					account_data_after_borrow.total_borrowed - account_data_before_borrow.total_borrowed
+					account_data_after_borrow.total_borrowed_in_usd - account_data_before_borrow.total_borrowed_in_usd
 				) / oracle_price)
 					.into_inner()
 			);
@@ -1268,8 +1270,9 @@ fn test_user_total_borrowed_difference_is_ok_before_and_after_deposit_using_bala
 
 			assert_eq!(
 				dollars(30_000),
-				(Rate::from_inner(account_data_after_deposit.total_supply - account_data_before_deposit.total_supply)
-					/ oracle_price)
+				(Rate::from_inner(
+					account_data_after_deposit.total_supply_in_usd - account_data_before_deposit.total_supply_in_usd
+				) / oracle_price)
 					.into_inner()
 			);
 		})

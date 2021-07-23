@@ -45,31 +45,31 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for minterest_model.
 pub trait WeightInfo {
-	fn set_jump_multiplier() -> Weight;
-	fn set_base_rate() -> Weight;
-	fn set_multiplier() -> Weight;
-	fn set_kink() -> Weight;
+	fn set_pool_jump_multiplier() -> Weight;
+	fn set_pool_base_rate() -> Weight;
+	fn set_pool_multiplier() -> Weight;
+	fn set_pool_kink() -> Weight;
 }
 
 /// Weights for minterest_model using the Minterest node and recommended hardware.
 pub struct MinterestWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for MinterestWeight<T> {
-	fn set_jump_multiplier() -> Weight {
+	fn set_pool_jump_multiplier() -> Weight {
 		(33_281_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn set_base_rate() -> Weight {
+	fn set_pool_base_rate() -> Weight {
 		(31_861_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn set_multiplier() -> Weight {
+	fn set_pool_multiplier() -> Weight {
 		(32_703_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn set_kink() -> Weight {
+	fn set_pool_kink() -> Weight {
 		(31_416_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
@@ -78,22 +78,22 @@ impl<T: frame_system::Config> WeightInfo for MinterestWeight<T> {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn set_jump_multiplier() -> Weight {
+	fn set_pool_jump_multiplier() -> Weight {
 		(33_281_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
-	fn set_base_rate() -> Weight {
+	fn set_pool_base_rate() -> Weight {
 		(31_861_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
-	fn set_multiplier() -> Weight {
+	fn set_pool_multiplier() -> Weight {
 		(32_703_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
-	fn set_kink() -> Weight {
+	fn set_pool_kink() -> Weight {
 		(31_416_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))

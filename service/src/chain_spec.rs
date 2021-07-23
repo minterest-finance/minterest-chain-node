@@ -1,7 +1,7 @@
 use controller::{ControllerData, PauseKeeper};
 use hex_literal::hex;
 use liquidation_pools::LiquidationPoolData;
-use liquidity_pools::Pool;
+use liquidity_pools::PoolData;
 use minterest_model::MinterestModelData;
 use minterest_primitives::currency::GetDecimals;
 use minterest_primitives::{VestingBucket, VestingScheduleJson};
@@ -256,7 +256,7 @@ fn minterest_genesis(
 			pools: vec![
 				(
 					ETH,
-					Pool {
+					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
 						protocol_interest: Balance::zero(),
@@ -264,7 +264,7 @@ fn minterest_genesis(
 				),
 				(
 					DOT,
-					Pool {
+					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
 						protocol_interest: Balance::zero(),
@@ -272,7 +272,7 @@ fn minterest_genesis(
 				),
 				(
 					KSM,
-					Pool {
+					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
 						protocol_interest: Balance::zero(),
@@ -280,7 +280,7 @@ fn minterest_genesis(
 				),
 				(
 					BTC,
-					Pool {
+					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
 						protocol_interest: Balance::zero(),
@@ -402,7 +402,7 @@ fn minterest_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
-						max_ideal_balance: None,
+						max_ideal_balance_usd: None,
 					},
 				),
 				(
@@ -410,7 +410,7 @@ fn minterest_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
-						max_ideal_balance: None,
+						max_ideal_balance_usd: None,
 					},
 				),
 				(
@@ -418,7 +418,7 @@ fn minterest_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
-						max_ideal_balance: None,
+						max_ideal_balance_usd: None,
 					},
 				),
 				(
@@ -426,7 +426,7 @@ fn minterest_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
-						max_ideal_balance: None,
+						max_ideal_balance_usd: None,
 					},
 				),
 			],
@@ -528,7 +528,7 @@ fn testnet_genesis(
 			pools: vec![
 				(
 					ETH,
-					Pool {
+					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
 						protocol_interest: Balance::zero(),
@@ -536,7 +536,7 @@ fn testnet_genesis(
 				),
 				(
 					DOT,
-					Pool {
+					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
 						protocol_interest: Balance::zero(),
@@ -544,7 +544,7 @@ fn testnet_genesis(
 				),
 				(
 					KSM,
-					Pool {
+					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
 						protocol_interest: Balance::zero(),
@@ -552,7 +552,7 @@ fn testnet_genesis(
 				),
 				(
 					BTC,
-					Pool {
+					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: FixedU128::one(),
 						protocol_interest: Balance::zero(),
@@ -674,7 +674,7 @@ fn testnet_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
-						max_ideal_balance: None,
+						max_ideal_balance_usd: None,
 					},
 				),
 				(
@@ -682,7 +682,7 @@ fn testnet_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
-						max_ideal_balance: None,
+						max_ideal_balance_usd: None,
 					},
 				),
 				(
@@ -690,7 +690,7 @@ fn testnet_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
-						max_ideal_balance: None,
+						max_ideal_balance_usd: None,
 					},
 				),
 				(
@@ -698,7 +698,7 @@ fn testnet_genesis(
 					LiquidationPoolData {
 						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
 						balance_ratio: FixedU128::saturating_from_rational(2, 10),
-						max_ideal_balance: None,
+						max_ideal_balance_usd: None,
 					},
 				),
 			],

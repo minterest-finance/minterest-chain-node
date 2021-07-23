@@ -18,7 +18,7 @@
 
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
-use liquidity_pools::{Pool, PoolUserData};
+use liquidity_pools::{PoolData, PoolUserData};
 use minterest_primitives::{
 	currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, Operation, Operation::Deposit, Rate,
 };
@@ -85,7 +85,7 @@ pub mod module {
 		type ManagerLiquidationPools: LiquidationPoolsManager<Self::AccountId>;
 
 		/// The basic liquidity pools.
-		type ManagerLiquidityPools: LiquidityPoolStorageProvider<Self::AccountId, Pool>
+		type ManagerLiquidityPools: LiquidityPoolStorageProvider<Self::AccountId, PoolData>
 			+ PoolsManager<Self::AccountId>
 			+ CurrencyConverter
 			+ Borrowing<Self::AccountId>
@@ -760,7 +760,7 @@ impl<T: Config> Pallet<T> {
 		T::MntManager::distribute_borrower_mnt(underlying_asset, who, false)?;
 
 		// Fetch the amount the borrower owes, with accumulated interest.
-		let account_borrows = T::ControllerManager::borrow_balance_stored(&who, underlying_asset)?;
+		let account_borrows = T::ControllerManager::user_borrow_balance_stored(&who, underlying_asset)?;
 
 		T::ManagerLiquidityPools::update_state_on_borrow(&who, underlying_asset, borrow_amount, account_borrows)?;
 
@@ -910,7 +910,7 @@ impl<T: Config> MinterestProtocolManager<T::AccountId> for Pallet<T> {
 		T::MntManager::distribute_borrower_mnt(underlying_asset, borrower, false)?;
 
 		// Fetch the amount the borrower owes, with accumulated interest
-		let account_borrows = T::ControllerManager::borrow_balance_stored(&borrower, underlying_asset)?;
+		let account_borrows = T::ControllerManager::user_borrow_balance_stored(&borrower, underlying_asset)?;
 
 		if repay_amount.is_zero() {
 			repay_amount = account_borrows
