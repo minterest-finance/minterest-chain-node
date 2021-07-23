@@ -148,6 +148,8 @@ pub mod module {
 		TransferToLiquidationPool(CurrencyId, Balance, T::AccountId),
 	}
 
+	/// [`MNT Storage`](?search=liquidation_pools::module::Pallet::liquidation_pools_data)
+	#[doc(alias("MNT Storage", "MNT liquidation_pools"))]
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_pools_data)]
 	pub type LiquidationPoolsData<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, LiquidationPoolData, ValueQuery>;

@@ -220,12 +220,16 @@ pub mod module {
 
 	/// Controller data information: `(timestamp, protocol_interest_factor, collateral_factor,
 	/// max_borrow_rate)`.
+	/// [`MNT Storage`](?search=controller::module::Pallet::controller_params)
+	#[doc(alias("MNT Storage", "MNT controller"))]
 	#[pallet::storage]
 	#[pallet::getter(fn controller_params)]
 	pub type ControllerParams<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, ControllerData<T::BlockNumber>, ValueQuery>;
 
 	/// The Pause Guardian can pause certain actions as a safety mechanism.
+	/// [`MNT Storage`](?search=controller::module::Pallet::pause_keepers)
+	#[doc(alias("MNT Storage", "MNT controller"))]
 	#[pallet::storage]
 	#[pallet::getter(fn pause_keepers)]
 	pub(crate) type PauseKeepers<T: Config> =

@@ -233,6 +233,8 @@ pub mod module {
 	}
 
 	/// Vesting schedules of an account.
+	/// [`MNT Storage`](?search=module_vesting::module::Pallet::vesting_schedule_storage)
+	#[doc(alias("MNT Storage", "MNT module_vesting"))]
 	#[pallet::storage]
 	#[pallet::getter(fn vesting_schedule_storage)]
 	pub type VestingScheduleStorage<T: Config> =
@@ -283,7 +285,7 @@ pub mod module {
 	{
 		/// Claim unlocked balances.
 		/// Can not get VestingSchedule count from `who`, so use `MaxVestingSchedules / 2`.
-		#[doc(alias("MNT Extrinsic", "MNT vesting"))]
+		#[doc(alias("MNT Extrinsic", "MNT module_vesting"))]
 		#[pallet::weight(T::WeightInfo::claim((<T as Config>::MaxVestingSchedules::get() / 2) as u32))]
 		pub fn claim(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -302,7 +304,7 @@ pub mod module {
 		/// - `bucket`: vesting bucket type (must be `Team` or `Marketing` or `Strategic Partners`);
 		/// - `start`: block number in which the vesting schedule starts to work;
 		/// - `amount`: the balance for which the vesting schedule is created.
-		#[doc(alias("MNT Extrinsic", "MNT vesting"))]
+		#[doc(alias("MNT Extrinsic", "MNT module_vesting"))]
 		#[pallet::weight(T::WeightInfo::vested_transfer())]
 		pub fn vested_transfer(
 			origin: OriginFor<T>,
@@ -335,7 +337,7 @@ pub mod module {
 		///
 		/// - `target`: the account that receives vesting schedule of the MNT tokens;
 		/// - `bucket`: the type of vesting bucket from which we want to delete the schedule;
-		#[doc(alias("MNT Extrinsic", "MNT vesting"))]
+		#[doc(alias("MNT Extrinsic", "MNT module_vesting"))]
 		#[pallet::weight(T::WeightInfo::remove_vesting_schedules())]
 		pub fn remove_vesting_schedules(
 			origin: OriginFor<T>,

@@ -125,6 +125,8 @@ pub mod module {
 
 	/// The Minterest Model data information: `(kink, base_rate_per_block, multiplier_per_block,
 	/// jump_multiplier_per_block)`.
+	/// [`MNT Storage`](?search=minterest_model::module::Pallet::minterest_model_data_storage)
+	#[doc(alias("MNT Storage", "MNT minterest_model"))]
 	#[pallet::storage]
 	#[pallet::getter(fn minterest_model_data_storage)]
 	pub type MinterestModelDataStorage<T: Config> =

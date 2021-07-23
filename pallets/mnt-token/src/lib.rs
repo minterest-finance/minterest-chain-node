@@ -142,6 +142,8 @@ pub mod module {
 	}
 
 	/// The threshold above which the flywheel transfers MNT
+	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_claim_threshold_storage)
+	#[doc(alias("MNT Storage", "MNT mnt_token"))]
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_claim_threshold_storage)]
 	pub(crate) type MntClaimThresholdStorage<T: Config> = StorageValue<_, Balance, ValueQuery>;
@@ -149,29 +151,39 @@ pub mod module {
 	/// MNT minting speed for each pool
 	/// Doubling this number shows how much MNT goes to all suppliers and borrowers of a particular
 	/// pool.
+	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_speed_storage)
+	#[doc(alias("MNT Storage", "MNT mnt_token"))]
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_speed_storage)]
 	pub type MntSpeedStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Balance, ValueQuery>;
 
 	/// Index + block_number need for generating and distributing new MNT tokens for pool
+	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_pool_state_storage)
+	#[doc(alias("MNT Storage", "MNT mnt_token"))]
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_pool_state_storage)]
 	pub(crate) type MntPoolStateStorage<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, MntPoolState<T>, ValueQuery>;
 
 	/// Use for accruing MNT tokens for supplier
+	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_supplier_index_storage)
+	#[doc(alias("MNT Storage", "MNT mnt_token"))]
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_supplier_index_storage)]
 	pub(crate) type MntSupplierIndexStorage<T: Config> =
 		StorageDoubleMap<_, Twox64Concat, CurrencyId, Twox64Concat, T::AccountId, Rate, OptionQuery>;
 
 	/// Use for accruing MNT tokens for borrower
+	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_borrower_index_storage)
+	#[doc(alias("MNT Storage", "MNT mnt_token"))]
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_borrower_index_storage)]
 	pub(crate) type MntBorrowerIndexStorage<T: Config> =
 		StorageDoubleMap<_, Twox64Concat, CurrencyId, Twox64Concat, T::AccountId, Rate, ValueQuery>;
 
 	/// Place where accrued MNT tokens are kept for each user
+    /// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_accrued_storage)
+	#[doc(alias("MNT Storage", "MNT mnt_token"))]
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_accrued_storage)]
 	pub(crate) type MntAccruedStorage<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Balance, ValueQuery>;
