@@ -221,14 +221,14 @@ pub mod module {
 	/// Controller data information: `(timestamp, protocol_interest_factor, collateral_factor,
 	/// max_borrow_rate)`.
 	#[pallet::storage]
-	#[pallet::getter(fn controller_params)]
-	pub type ControllerParams<T: Config> =
+	#[pallet::getter(fn controller_data_storage)]
+	pub type ControllerDataStorage<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, ControllerData<T::BlockNumber>, ValueQuery>;
 
 	/// The Pause Guardian can pause certain actions as a safety mechanism.
 	#[pallet::storage]
-	#[pallet::getter(fn pause_keepers)]
-	pub(crate) type PauseKeepers<T: Config> =
+	#[pallet::getter(fn pause_keeper_storage)]
+	pub(crate) type PauseKeeperStorage<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, PauseKeeper, ValueQuery, GetAllPaused>;
 
 	#[pallet::genesis_config]
@@ -254,10 +254,10 @@ pub mod module {
 			self.controller_params
 				.iter()
 				.for_each(|(currency_id, controller_data)| {
-					ControllerParams::<T>::insert(currency_id, ControllerData { ..*controller_data })
+					ControllerDataStorage::<T>::insert(currency_id, ControllerData { ..*controller_data })
 				});
 			self.pause_keepers.iter().for_each(|(currency_id, pause_keeper)| {
-				PauseKeepers::<T>::insert(currency_id, PauseKeeper { ..*pause_keeper })
+				PauseKeeperStorage::<T>::insert(currency_id, PauseKeeper { ..*pause_keeper })
 			});
 		}
 	}
@@ -288,7 +288,7 @@ pub mod module {
 				Error::<T>::PoolNotFound
 			);
 
-			PauseKeepers::<T>::mutate(pool_id, |pool| match operation {
+			PauseKeeperStorage::<T>::mutate(pool_id, |pool| match operation {
 				Operation::Deposit => pool.deposit_paused = true,
 				Operation::Redeem => pool.redeem_paused = true,
 				Operation::Borrow => pool.borrow_paused = true,
@@ -317,7 +317,7 @@ pub mod module {
 				Error::<T>::PoolNotFound
 			);
 
-			PauseKeepers::<T>::mutate(pool_id, |pool| match operation {
+			PauseKeeperStorage::<T>::mutate(pool_id, |pool| match operation {
 				Operation::Deposit => pool.deposit_paused = false,
 				Operation::Redeem => pool.redeem_paused = false,
 				Operation::Borrow => pool.borrow_paused = false,
@@ -348,7 +348,9 @@ pub mod module {
 				Error::<T>::PoolNotFound
 			);
 
-			ControllerParams::<T>::mutate(pool_id, |data| data.protocol_interest_factor = protocol_interest_factor);
+			ControllerDataStorage::<T>::mutate(pool_id, |data| {
+				data.protocol_interest_factor = protocol_interest_factor
+			});
 			Self::deposit_event(Event::InterestFactorChanged);
 			Ok(().into())
 		}
@@ -376,7 +378,7 @@ pub mod module {
 				Error::<T>::MaxBorrowRateCannotBeZero
 			);
 
-			ControllerParams::<T>::mutate(pool_id, |data| data.max_borrow_rate = max_borrow_rate);
+			ControllerDataStorage::<T>::mutate(pool_id, |data| data.max_borrow_rate = max_borrow_rate);
 			Self::deposit_event(Event::MaxBorrowRateChanged);
 			Ok(().into())
 		}
@@ -404,7 +406,7 @@ pub mod module {
 				Error::<T>::CollateralFactorIncorrectValue
 			);
 
-			ControllerParams::<T>::mutate(pool_id, |data| data.collateral_factor = collateral_factor);
+			ControllerDataStorage::<T>::mutate(pool_id, |data| data.collateral_factor = collateral_factor);
 			Self::deposit_event(Event::CollateralFactorChanged);
 			Ok(().into())
 		}
@@ -428,7 +430,7 @@ pub mod module {
 			);
 
 			ensure!(Self::is_valid_borrow_cap(borrow_cap), Error::<T>::InvalidBorrowCap);
-			ControllerParams::<T>::mutate(pool_id, |data| data.borrow_cap = borrow_cap);
+			ControllerDataStorage::<T>::mutate(pool_id, |data| data.borrow_cap = borrow_cap);
 			Self::deposit_event(Event::BorrowCapChanged(pool_id, borrow_cap));
 			Ok(().into())
 		}
@@ -450,7 +452,7 @@ pub mod module {
 				Error::<T>::PoolNotFound
 			);
 
-			ControllerParams::<T>::mutate(pool_id, |data| {
+			ControllerDataStorage::<T>::mutate(pool_id, |data| {
 				data.protocol_interest_threshold = protocol_interest_threshold
 			});
 			Self::deposit_event(Event::ProtocolInterestThresholdChanged(
@@ -468,7 +470,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// Return true if pool borrow underlying will exceed borrow cap, otherwise false.
 	fn is_borrow_cap_reached(pool_id: CurrencyId, borrow_amount: Balance) -> Result<bool, DispatchError> {
-		if let Some(borrow_cap) = Self::controller_params(pool_id).borrow_cap {
+		if let Some(borrow_cap) = Self::controller_data_storage(pool_id).borrow_cap {
 			let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 			let pool_borrow_underlying = T::LiquidityPoolsManager::get_pool_borrow_underlying(pool_id);
 
@@ -610,7 +612,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		protocol_interest_threshold: Balance,
 	) -> DispatchResult {
 		ensure!(
-			!ControllerParams::<T>::contains_key(currency_id),
+			!ControllerDataStorage::<T>::contains_key(currency_id),
 			Error::<T>::PoolAlreadyCreated
 		);
 		ensure!(
@@ -622,7 +624,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			Error::<T>::CollateralFactorIncorrectValue
 		);
 
-		ControllerParams::<T>::insert(
+		ControllerDataStorage::<T>::insert(
 			currency_id,
 			ControllerData {
 				last_interest_accrued_block: <frame_system::Pallet<T>>::block_number(),
@@ -633,7 +635,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 				protocol_interest_threshold,
 			},
 		);
-		PauseKeepers::<T>::insert(
+		PauseKeeperStorage::<T>::insert(
 			currency_id,
 			PauseKeeper {
 				deposit_paused: false,
@@ -650,7 +652,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	///
 	/// - `who`: The address whose balance should be calculated.
 	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
-	fn borrow_balance_stored(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
+	fn user_borrow_balance_stored(who: &T::AccountId, underlying_asset_id: CurrencyId) -> BalanceResult {
 		let pool_borrow_index = T::LiquidityPoolsManager::get_pool_borrow_index(underlying_asset_id);
 		let user_borrow_underlying = Self::calculate_user_borrow_balance(who, underlying_asset_id, pool_borrow_index)?;
 		Ok(user_borrow_underlying)
@@ -682,9 +684,9 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			}
 
 			// Read the balances and exchange rate from the cToken
-			let user_borrow_underlying = Self::borrow_balance_stored(account, underlying_asset)?;
+			let user_borrow_underlying = Self::user_borrow_balance_stored(account, underlying_asset)?;
 			let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(underlying_asset)?;
-			let collateral_factor = Self::controller_params(underlying_asset).collateral_factor;
+			let collateral_factor = Self::controller_data_storage(underlying_asset).collateral_factor;
 
 			// Get the normalized price of the asset.
 			let oracle_price =
@@ -749,11 +751,11 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	/// This calculates interest accrued from the last checkpointed block
 	/// up to the current block and writes new checkpoint to storage.
 	///
-	/// - `pool_id`: CurrencyId to calculate parameters for.
+	/// - `underlying_asset`: CurrencyId to calculate parameters for.
 	fn accrue_interest_rate(underlying_asset: CurrencyId) -> DispatchResult {
 		//Remember the initial block number.
 		let current_block_number = <frame_system::Pallet<T>>::block_number();
-		let accrual_block_number_previous = Self::controller_params(underlying_asset).last_interest_accrued_block;
+		let accrual_block_number_previous = Self::controller_data_storage(underlying_asset).last_interest_accrued_block;
 
 		//Short-circuit accumulating 0 interest.
 		if current_block_number == accrual_block_number_previous {
@@ -773,7 +775,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			max_borrow_rate,
 			protocol_interest_factor: pool_interest_factor,
 			..
-		} = Self::controller_params(underlying_asset);
+		} = Self::controller_data_storage(underlying_asset);
 
 		ensure!(
 			pool_borrow_interest_rate <= max_borrow_rate,
@@ -811,7 +813,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		// Save new params
-		ControllerParams::<T>::mutate(underlying_asset, |data| {
+		ControllerDataStorage::<T>::mutate(underlying_asset, |data| {
 			data.last_interest_accrued_block = current_block_number
 		});
 		T::LiquidityPoolsManager::set_pool_data(
@@ -830,11 +832,11 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	/// Return true - if operation is allowed, false - if operation is unallowed.
 	fn is_operation_allowed(pool_id: CurrencyId, operation: Operation) -> bool {
 		match operation {
-			Operation::Deposit => !Self::pause_keepers(pool_id).deposit_paused,
-			Operation::Redeem => !Self::pause_keepers(pool_id).redeem_paused,
-			Operation::Borrow => !Self::pause_keepers(pool_id).borrow_paused,
-			Operation::Repay => !Self::pause_keepers(pool_id).repay_paused,
-			Operation::Transfer => !Self::pause_keepers(pool_id).transfer_paused,
+			Operation::Deposit => !Self::pause_keeper_storage(pool_id).deposit_paused,
+			Operation::Redeem => !Self::pause_keeper_storage(pool_id).redeem_paused,
+			Operation::Borrow => !Self::pause_keeper_storage(pool_id).borrow_paused,
+			Operation::Repay => !Self::pause_keeper_storage(pool_id).repay_paused,
+			Operation::Transfer => !Self::pause_keeper_storage(pool_id).transfer_paused,
 		}
 	}
 
@@ -878,7 +880,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 
 	/// Return minimum protocol interest needed to transfer it to liquidation pool
 	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance {
-		Self::controller_params(pool_id).protocol_interest_threshold
+		Self::controller_data_storage(pool_id).protocol_interest_threshold
 	}
 
 	/// TODO: Raw implementation. Cover with unit-tests.
@@ -919,8 +921,8 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			return None;
 		}
 		Self::accrue_interest_rate(pool_id).ok()?;
-		let pool_interest_factor: Rate = Self::controller_params(pool_id).protocol_interest_factor;
-		let utilization_rate: Rate = Self::get_utilization_rate(pool_id)?;
+		let pool_interest_factor: Rate = Self::controller_data_storage(pool_id).protocol_interest_factor;
+		let utilization_rate: Rate = Self::get_pool_utilization_rate(pool_id)?;
 		let exchange_rate: Rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id).ok()?;
 		let borrow_rate: Rate =
 			T::MinterestModelManager::calculate_pool_borrow_interest_rate(pool_id, utilization_rate).ok()?;
@@ -936,7 +938,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	}
 
 	/// Gets current utilization rate of the pool. The rate is calculated for the current block.
-	fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate> {
+	fn get_pool_utilization_rate(pool_id: CurrencyId) -> Option<Rate> {
 		Self::accrue_interest_rate(pool_id).ok()?;
 		let pool_supply_underlying = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
 		let pool_data = T::LiquidityPoolsManager::get_pool_data(pool_id);
@@ -979,7 +981,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 						acc_user_total_supply_in_usd += user_supply_in_usd
 					}
 					if has_user_borrow_underlying_balance {
-						let user_borrow_underlying = Self::borrow_balance_stored(&who, pool_id)?;
+						let user_borrow_underlying = Self::user_borrow_balance_stored(&who, pool_id)?;
 						let user_borrow_in_usd =
 							T::LiquidityPoolsManager::underlying_to_usd(user_borrow_underlying, oracle_price)?;
 						acc_user_total_borrow_in_usd += user_borrow_in_usd
@@ -1057,7 +1059,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			.filter(|&pool_id| T::LiquidityPoolsManager::is_pool_collateral(&who, *pool_id))
 			.try_fold(Balance::zero(), |acc, &pool_id| -> BalanceResult {
 				let user_supply_underlying = Self::get_user_supply_underlying_balance(&who, pool_id)?;
-				let pool_collateral_factor = Self::controller_params(pool_id).collateral_factor;
+				let pool_collateral_factor = Self::controller_data_storage(pool_id).collateral_factor;
 				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 				let user_supply_usd =
 					T::LiquidityPoolsManager::underlying_to_usd(user_supply_underlying, oracle_price)?;
@@ -1083,7 +1085,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 		Self::accrue_interest_rate(underlying_asset_id)?;
-		Self::borrow_balance_stored(&who, underlying_asset_id)
+		Self::user_borrow_balance_stored(&who, underlying_asset_id)
 	}
 
 	/// Calculates user balance converted to underlying asset using exchange rate calculated for the
