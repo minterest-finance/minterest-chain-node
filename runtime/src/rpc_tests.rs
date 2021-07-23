@@ -1923,7 +1923,30 @@ fn get_user_total_borrow_usd_rpc_should_work() {
 			System::set_block_number(21);
 
 			// 20 blocks after there should be the borrowed value + some accumulated interest
-			// TODO: add formulas
+			// given the value of DOT asset as   50000_000000000000000000 out of 100000_~18,
+			// default accumulated interest rate 00001_000000000000000000 (first accrue),
+			// and default per block multiplier  00000_000000009000000000
+			//
+			// DOT part:
+			// taking into account pool utilization of 0.5 (100_000 put, 50_000 borrowed)
+			// we can calculate interest part as 0.5 * 0.000000009 = 00000_000000004500000000
+			// and update accumulated interest rate for 20 blocks up to 1_000000090000000000
+			// so updated pool borrow underlying (DOT) becomes 50000_004500000000000000
+			// asset value (in usd) is 50000_004500000000000000 * 2 = 100000_009000000000000000
+			//
+			// same calculated for ETH:
+			// ETH asset left in pool is 20000_000000000000000000 out of 100000_~18,
+			// taking into account pool utilization of 0.8 (100_000 put, 80_000 borrowed)
+			// we can calculate interest rate as 0.8 * 0.000000009 = 00000.000000007200000000
+			// and update accumulated interest rate for 20 blocks up to 1_0000001440000000000
+			// so updated pool borrow underlying (ETH) becomes 80000_011520000000000000
+			// asset value (in usd) is 80000_011520000000000000 * 3 = 240000_034560000000000000
+			//
+			// and the total borrow in usd should be
+			// 100000_009000000000000000 +
+			// 240000_034560000000000000 =
+			// 340000_043560000000000000
+
 			assert_eq!(
 				get_user_total_borrow_usd_rpc(ALICE::get()),
 				340000043560000000000000u128
