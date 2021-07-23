@@ -80,7 +80,7 @@ impl ControllerPresets for ExtBuilder {
 fn operations_are_paused_by_default() {
 	ExtBuilder::default().build().execute_with(|| {
 		// All operations are paused when nothing is in storage
-		assert_eq!(TestController::pause_keepers(KSM), PauseKeeper::all_paused());
+		assert_eq!(TestController::pause_keeper_storage(KSM), PauseKeeper::all_paused());
 	});
 }
 
@@ -162,7 +162,10 @@ fn accrue_interest_should_work() {
 			System::set_block_number(1);
 
 			assert_ok!(TestController::accrue_interest_rate(DOT));
-			assert_eq!(TestController::controller_params(DOT).last_interest_accrued_block, 1);
+			assert_eq!(
+				TestController::controller_data_storage(DOT).last_interest_accrued_block,
+				1
+			);
 			assert_eq!(TestPools::pool_data_storage(DOT).protocol_interest, 57_600_000_000);
 			assert_eq!(
 				TestController::get_pool_exchange_borrow_and_supply_rates(DOT),
@@ -211,7 +214,10 @@ fn accrue_interest_should_not_work() {
 			System::set_block_number(1);
 
 			assert_ok!(TestController::accrue_interest_rate(DOT));
-			assert_eq!(TestController::controller_params(DOT).last_interest_accrued_block, 1);
+			assert_eq!(
+				TestController::controller_data_storage(DOT).last_interest_accrued_block,
+				1
+			);
 
 			assert_ok!(TestController::set_max_borrow_rate(
 				alice_origin(),
@@ -268,7 +274,7 @@ fn calculate_interest_factor_should_work() {
 }
 
 #[test]
-fn borrow_balance_stored_with_zero_balance_should_work() {
+fn user_borrow_balance_stored_with_zero_balance_should_work() {
 	ExtBuilder::default()
 		.init_pool(
 			DOT,                                  // pool_id
@@ -286,12 +292,15 @@ fn borrow_balance_stored_with_zero_balance_should_work() {
 		.build()
 		.execute_with(|| {
 			// If borrow_balance = 0 then borrow_index is likely also 0, return Ok(0)
-			assert_eq!(TestController::borrow_balance_stored(&ALICE, DOT), Ok(Balance::zero()));
+			assert_eq!(
+				TestController::user_borrow_balance_stored(&ALICE, DOT),
+				Ok(Balance::zero())
+			);
 		});
 }
 
 #[test]
-fn borrow_balance_stored_should_work() {
+fn user_borrow_balance_stored_should_work() {
 	ExtBuilder::default()
 		.init_pool(
 			DOT,                                  // pool_id
@@ -309,12 +318,12 @@ fn borrow_balance_stored_should_work() {
 		.build()
 		.execute_with(|| {
 			// recent_borrow_balance = 100 * 2 / 4 = 50
-			assert_eq!(TestController::borrow_balance_stored(&ALICE, DOT), Ok(50));
+			assert_eq!(TestController::user_borrow_balance_stored(&ALICE, DOT), Ok(50));
 		});
 }
 
 #[test]
-fn borrow_balance_stored_fails_if_num_overflow() {
+fn user_borrow_balance_stored_fails_if_num_overflow() {
 	ExtBuilder::default()
 		.init_pool(
 			DOT,                                  // pool_id
@@ -345,7 +354,7 @@ fn borrow_balance_stored_fails_if_num_overflow() {
 		.build()
 		.execute_with(|| {
 			assert_noop!(
-				TestController::borrow_balance_stored(&ALICE, DOT),
+				TestController::user_borrow_balance_stored(&ALICE, DOT),
 				Error::<TestRuntime>::BorrowBalanceOverflow
 			);
 		});
@@ -875,7 +884,7 @@ fn set_protocol_interest_factor_should_work() {
 			let expected_event = Event::TestController(crate::Event::InterestFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
-				TestController::controller_params(DOT).protocol_interest_factor,
+				TestController::controller_data_storage(DOT).protocol_interest_factor,
 				Rate::saturating_from_rational(20, 10)
 			);
 
@@ -888,7 +897,7 @@ fn set_protocol_interest_factor_should_work() {
 			let expected_event = Event::TestController(crate::Event::InterestFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
-				TestController::controller_params(DOT).protocol_interest_factor,
+				TestController::controller_data_storage(DOT).protocol_interest_factor,
 				Rate::zero()
 			);
 
@@ -925,7 +934,7 @@ fn set_max_borrow_rate_should_work() {
 			let expected_event = Event::TestController(crate::Event::MaxBorrowRateChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
-				TestController::controller_params(DOT).max_borrow_rate,
+				TestController::controller_data_storage(DOT).max_borrow_rate,
 				Rate::saturating_from_rational(20, 10)
 			);
 
@@ -968,7 +977,7 @@ fn set_collateral_factor_should_work() {
 			let expected_event = Event::TestController(crate::Event::CollateralFactorChanged);
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(
-				TestController::controller_params(DOT).collateral_factor,
+				TestController::controller_data_storage(DOT).collateral_factor,
 				Rate::saturating_from_rational(1, 2)
 			);
 
@@ -1010,11 +1019,11 @@ fn pause_operation_should_work() {
 		.set_pause_keeper(DOT, false)
 		.build()
 		.execute_with(|| {
-			assert!(!TestController::pause_keepers(&DOT).deposit_paused);
-			assert!(!TestController::pause_keepers(&DOT).redeem_paused);
-			assert!(!TestController::pause_keepers(&DOT).borrow_paused);
-			assert!(!TestController::pause_keepers(&DOT).repay_paused);
-			assert!(!TestController::pause_keepers(&DOT).transfer_paused);
+			assert!(!TestController::pause_keeper_storage(&DOT).deposit_paused);
+			assert!(!TestController::pause_keeper_storage(&DOT).redeem_paused);
+			assert!(!TestController::pause_keeper_storage(&DOT).borrow_paused);
+			assert!(!TestController::pause_keeper_storage(&DOT).repay_paused);
+			assert!(!TestController::pause_keeper_storage(&DOT).transfer_paused);
 
 			assert_ok!(TestController::pause_operation(alice_origin(), DOT, Operation::Deposit));
 			let expected_event = Event::TestController(crate::Event::OperationIsPaused(DOT, Operation::Deposit));
@@ -1040,11 +1049,11 @@ fn pause_operation_should_work() {
 			let expected_event = Event::TestController(crate::Event::OperationIsPaused(DOT, Operation::Transfer));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert!(TestController::pause_keepers(&DOT).deposit_paused);
-			assert!(TestController::pause_keepers(&DOT).redeem_paused);
-			assert!(TestController::pause_keepers(&DOT).borrow_paused);
-			assert!(TestController::pause_keepers(&DOT).repay_paused);
-			assert!(TestController::pause_keepers(&DOT).transfer_paused);
+			assert!(TestController::pause_keeper_storage(&DOT).deposit_paused);
+			assert!(TestController::pause_keeper_storage(&DOT).redeem_paused);
+			assert!(TestController::pause_keeper_storage(&DOT).borrow_paused);
+			assert!(TestController::pause_keeper_storage(&DOT).repay_paused);
+			assert!(TestController::pause_keeper_storage(&DOT).transfer_paused);
 
 			assert_noop!(
 				TestController::pause_operation(bob_origin(), DOT, Operation::Deposit),
@@ -1075,11 +1084,11 @@ fn resume_operation_should_work() {
 		.set_pause_keeper(KSM, true)
 		.build()
 		.execute_with(|| {
-			assert!(TestController::pause_keepers(&KSM).deposit_paused);
-			assert!(TestController::pause_keepers(&KSM).redeem_paused);
-			assert!(TestController::pause_keepers(&KSM).borrow_paused);
-			assert!(TestController::pause_keepers(&KSM).repay_paused);
-			assert!(TestController::pause_keepers(&KSM).transfer_paused);
+			assert!(TestController::pause_keeper_storage(&KSM).deposit_paused);
+			assert!(TestController::pause_keeper_storage(&KSM).redeem_paused);
+			assert!(TestController::pause_keeper_storage(&KSM).borrow_paused);
+			assert!(TestController::pause_keeper_storage(&KSM).repay_paused);
+			assert!(TestController::pause_keeper_storage(&KSM).transfer_paused);
 
 			assert_ok!(TestController::resume_operation(
 				alice_origin(),
@@ -1109,11 +1118,11 @@ fn resume_operation_should_work() {
 			let expected_event = Event::TestController(crate::Event::OperationIsUnPaused(KSM, Operation::Transfer));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
-			assert!(!TestController::pause_keepers(&KSM).deposit_paused);
-			assert!(!TestController::pause_keepers(&KSM).redeem_paused);
-			assert!(!TestController::pause_keepers(&KSM).borrow_paused);
-			assert!(!TestController::pause_keepers(&KSM).repay_paused);
-			assert!(!TestController::pause_keepers(&KSM).transfer_paused);
+			assert!(!TestController::pause_keeper_storage(&KSM).deposit_paused);
+			assert!(!TestController::pause_keeper_storage(&KSM).redeem_paused);
+			assert!(!TestController::pause_keeper_storage(&KSM).borrow_paused);
+			assert!(!TestController::pause_keeper_storage(&KSM).repay_paused);
+			assert!(!TestController::pause_keeper_storage(&KSM).transfer_paused);
 
 			assert_noop!(
 				TestController::resume_operation(bob_origin(), DOT, Operation::Deposit),
