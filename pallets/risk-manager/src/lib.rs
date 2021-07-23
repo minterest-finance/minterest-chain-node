@@ -464,9 +464,16 @@ impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 
 	// TODO: Raw implementation, cover with tests. No need to review this function.
 	/// Mutates user liquidation attempts depending on user operation.
-	/// If the user makes a deposit to the collateral pool, then attempts are set to zero.
-	/// -`who`:
-	/// -`operation`:
+	/// If the user makes a deposit to one of his collateral liquidity pools, then user liquidation
+	/// attempts are set to zero.
+	/// In liquidation process:
+	/// - partial liquidation - increases user liquidation attempts by one;
+	/// - complete liquidation - set user liquidation attempts to zero.
+	///
+	/// Parameters:
+	/// -`who`: user whose liquidation attempts change;
+	/// -`operation`: operation with protocol during which changing user liquidation attempts.
+	/// Should be: `Deposit` - deposit operation, or `Repay` - liquidation of user insolvent loan.
 	/// -`pool_id`:
 	/// -`liquidation_mode`:
 	fn try_mutate_attempts(

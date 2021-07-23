@@ -1,5 +1,6 @@
 //! Tests for the risk-manager pallet.
 use super::*;
+use crate::LiquidationMode::{Complete, ForgivableComplete, Partial};
 use frame_support::{assert_noop, assert_ok};
 use minterest_primitives::Operation::Deposit;
 use mock::{Event, *};
@@ -14,6 +15,17 @@ fn set_user_liquidation_attempts_to(n: usize) {
 			Some(LiquidationMode::Partial)
 		));
 	}
+}
+
+fn check_user_loan_state(
+	user_loan_state: &UserLoanState<TestRuntime>,
+	liquidation_mode: Option<LiquidationMode>,
+	seizes: Vec<(CurrencyId, Balance)>,
+	repays: Vec<(CurrencyId, Balance)>,
+) {
+	assert_eq!(user_loan_state.get_user_liquidation_mode(), liquidation_mode);
+	assert_eq!(user_loan_state.get_user_supplies_to_seize_underlying(), seizes);
+	assert_eq!(user_loan_state.get_user_borrows_to_repay_underlying(), repays);
 }
 
 #[test]
@@ -138,6 +150,7 @@ fn build_user_loan_state_with_accrue_should_work() {
 		.execute_with(|| {
 			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
 
+			assert_eq!(alice_loan_state.get_user(), &ALICE);
 			assert_eq!(alice_loan_state.get_user_supplies(), vec![(BTC, dollars(800))]);
 			assert_eq!(
 				alice_loan_state.get_user_borrows(),
@@ -151,20 +164,11 @@ fn build_user_loan_state_with_accrue_should_work() {
 			assert_eq!(alice_loan_state.total_collateral().unwrap(), dollars(720));
 			// alice_total_seize = $400 * 1.05 + $330 * 1.10 = $783.
 			assert_eq!(alice_loan_state.total_seize().unwrap(), dollars(783));
-			assert_eq!(alice_loan_state.get_user(), &ALICE);
-			assert_eq!(
-				alice_loan_state.get_user_liquidation_mode().unwrap(),
-				LiquidationMode::Complete
-			);
-			//TODO: fix after implementation math
-			assert_eq!(
-				alice_loan_state.get_user_supplies_to_seize_underlying(),
-				<Vec<(CurrencyId, Balance)>>::new()
-			);
-			//TODO: fix after implementation math
-			assert_eq!(
-				alice_loan_state.get_user_borrows_to_repay_underlying(),
-				<Vec<(CurrencyId, Balance)>>::new()
+			check_user_loan_state(
+				&alice_loan_state,
+				Some(Complete),
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
 			);
 
 			System::set_block_number(100);
@@ -176,15 +180,11 @@ fn build_user_loan_state_with_accrue_should_work() {
 				alice_loan_state_accrued.get_user_borrows(),
 				vec![(DOT, 400_000285120000000000), (ETH, 330_000194059800000000)]
 			);
-			//TODO: fix after implementation math
-			assert_eq!(
-				alice_loan_state.get_user_supplies_to_seize_underlying(),
-				<Vec<(CurrencyId, Balance)>>::new()
-			);
-			//TODO: fix after implementation math
-			assert_eq!(
-				alice_loan_state.get_user_borrows_to_repay_underlying(),
-				<Vec<(CurrencyId, Balance)>>::new()
+			check_user_loan_state(
+				&alice_loan_state_accrued,
+				Some(Complete),
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
 			);
 		})
 }
@@ -242,9 +242,11 @@ fn forgivable_liquidation_less_min_sum() {
 			// alice_liquidation_attempts == 0:
 			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 0_u8);
-			assert_eq!(
-				alice_loan_state.get_user_liquidation_mode().unwrap(),
-				LiquidationMode::ForgivableComplete
+			check_user_loan_state(
+				&alice_loan_state,
+				Some(ForgivableComplete),
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
 			);
 
 			set_user_liquidation_attempts_to(1);
@@ -252,9 +254,11 @@ fn forgivable_liquidation_less_min_sum() {
 			// alice_liquidation_attempts == 1:
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 1_u8);
 			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
-			assert_eq!(
-				alice_loan_state.get_user_liquidation_mode().unwrap(),
-				LiquidationMode::ForgivableComplete
+			check_user_loan_state(
+				&alice_loan_state,
+				Some(ForgivableComplete),
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
 			);
 		});
 }
@@ -290,9 +294,11 @@ fn forgivable_liquidation_greater_min_sum() {
 			// alice_liquidation_attempts == 0:
 			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 0_u8);
-			assert_eq!(
-				alice_loan_state.get_user_liquidation_mode().unwrap(),
-				LiquidationMode::ForgivableComplete
+			check_user_loan_state(
+				&alice_loan_state,
+				Some(ForgivableComplete),
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
 			);
 
 			set_user_liquidation_attempts_to(1);
@@ -300,9 +306,11 @@ fn forgivable_liquidation_greater_min_sum() {
 			// alice_liquidation_attempts == 1:
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 1_u8);
 			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
-			assert_eq!(
-				alice_loan_state.get_user_liquidation_mode().unwrap(),
-				LiquidationMode::ForgivableComplete
+			check_user_loan_state(
+				&alice_loan_state,
+				Some(ForgivableComplete),
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
 			);
 		});
 }
@@ -367,18 +375,22 @@ fn partial_and_complete_liquidation() {
 		.execute_with(|| {
 			// borrow=$910<min_sum=$10_000, liquidation_attempts=0, => complete.
 			let alice_complete = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
-			assert_eq!(
-				alice_complete.get_user_liquidation_mode().unwrap(),
-				LiquidationMode::Complete
+			check_user_loan_state(
+				&alice_complete,
+				Some(Complete),
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
 			);
 
 			// set partial_liquidation_min_sum == $500
 			MinSumMock::set_partial_liquidation_min_sum(dollars(500));
 			// borrow=$910>min_sum=$500, liquidation_attempts=0, => partial.
 			let alice_partial = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
-			assert_eq!(
-				alice_partial.get_user_liquidation_mode().unwrap(),
-				LiquidationMode::Partial
+			check_user_loan_state(
+				&alice_partial,
+				Some(Partial),
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
 			);
 
 			set_user_liquidation_attempts_to(3);
@@ -387,9 +399,11 @@ fn partial_and_complete_liquidation() {
 			// alice_liquidation_attempts == 3:
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 3_u8);
 			// borrow=$910>min_sum=$500, liquidation_attempts=3, => complete.
-			assert_eq!(
-				alice_complete.get_user_liquidation_mode().unwrap(),
-				LiquidationMode::Complete
+			check_user_loan_state(
+				&alice_complete,
+				Some(Complete),
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
 			);
 
 			// set partial_liquidation_min_sum == $10_000
@@ -398,9 +412,11 @@ fn partial_and_complete_liquidation() {
 			// alice_liquidation_attempts == 3:
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 3_u8);
 			// borrow=$910<min_sum=$10_000, liquidation_attempts=3, => complete.
-			assert_eq!(
-				alice_complete.get_user_liquidation_mode().unwrap(),
-				LiquidationMode::Complete
+			check_user_loan_state(
+				&alice_complete,
+				Some(Complete),
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
 			);
 		});
 }
