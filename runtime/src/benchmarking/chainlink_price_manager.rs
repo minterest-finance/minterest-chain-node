@@ -1,7 +1,6 @@
-use crate::{Balance, Operation, Rate, Runtime, DOT};
+use crate::Runtime;
 use frame_system::RawOrigin;
-use orml_benchmarking::{runtime_benchmarks, Zero};
-use sp_runtime::traits::One;
+use orml_benchmarking::runtime_benchmarks;
 
 runtime_benchmarks! {
 	{ Runtime, chainlink_price_manager }
