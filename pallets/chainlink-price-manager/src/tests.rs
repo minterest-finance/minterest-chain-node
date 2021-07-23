@@ -3,25 +3,42 @@
 #![cfg(test)]
 
 use crate::mock::*;
+use codec::Decode;
 use frame_support::assert_ok;
-use minterest_primitives::CurrencyId;
+use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, CurrencyId};
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData};
 use pallet_traits::PricesManager;
+use sp_core::offchain::{
+	testing::{TestOffchainExt, TestTransactionPoolExt},
+	OffchainDbExt, OffchainWorkerExt, TransactionPoolExt,
+};
 use sp_runtime::traits::AccountIdConversion;
 use sp_runtime::{FixedPointNumber, FixedU128};
 use test_helper::currency_mock::*;
 use test_helper::users_mock::*;
 
-use codec::{Decode, Encode};
-use sp_core::offchain::{
-	testing::{TestOffchainExt, TestTransactionPoolExt},
-	OffchainDbExt, OffchainWorkerExt, TransactionPoolExt,
-};
+fn create_default_feeds() {
+	for currency in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset) {
+		let oracles_admin: AccountId = 999;
+		ChainlinkFeed::create_feed(
+			alice_origin(),
+			20,
+			10,
+			(10, 1_000 * DOLLARS),
+			1,
+			5,
+			ChainlinkPriceManager::convert_to_description(currency).to_vec(),
+			0,
+			vec![(ORACLE, oracles_admin)],
+			None,
+			None,
+		)
+		.unwrap();
+	}
+}
 
 #[test]
 fn offchain_worker_test() {
-	let oracles_admin: AccountId = 999;
-	let oracle1: AccountId = 100;
 	let mut ext = test_externalities();
 	let (offchain, _) = TestOffchainExt::new();
 	let (pool, trans_pool_state) = TestTransactionPoolExt::new();
@@ -29,66 +46,7 @@ fn offchain_worker_test() {
 	ext.register_extension(OffchainWorkerExt::new(offchain));
 	ext.register_extension(TransactionPoolExt::new(pool));
 	ext.execute_with(|| {
-		ChainlinkFeed::create_feed(
-			alice_origin(),
-			20,
-			10,
-			(10, 1_000 * DOLLARS),
-			1,
-			5,
-			b"MIN-BTC".to_vec(),
-			0,
-			vec![(oracle1, oracles_admin)],
-			None,
-			None,
-		)
-		.unwrap();
-
-		ChainlinkFeed::create_feed(
-			alice_origin(),
-			20,
-			10,
-			(10, 1_000 * DOLLARS),
-			1,
-			5,
-			b"MIN-ETH".to_vec(),
-			0,
-			vec![(oracle1, oracles_admin)],
-			None,
-			None,
-		)
-		.unwrap();
-
-		ChainlinkFeed::create_feed(
-			alice_origin(),
-			20,
-			10,
-			(10, 1_000 * DOLLARS),
-			1,
-			5,
-			b"MIN-DOT".to_vec(),
-			0,
-			vec![(oracle1, oracles_admin)],
-			None,
-			None,
-		)
-		.unwrap();
-
-		ChainlinkFeed::create_feed(
-			alice_origin(),
-			20,
-			10,
-			(10, 1_000 * DOLLARS),
-			1,
-			5,
-			b"MIN-KSM".to_vec(),
-			0,
-			vec![(oracle1, oracles_admin)],
-			None,
-			None,
-		)
-		.unwrap();
-
+		create_default_feeds();
 		assert_ok!(ChainlinkPriceManager::_offchain_worker(3));
 
 		// 1 balancing transcation in transactions pool
@@ -109,88 +67,28 @@ fn offchain_worker_test() {
 
 #[test]
 fn get_min_round_id() {
-	let oracles_admin: AccountId = 999;
-	let oracle1: AccountId = 100;
 	test_externalities().execute_with(|| {
-		ChainlinkFeed::create_feed(
-			alice_origin(),
-			20,
-			10,
-			(10, 1_000 * DOLLARS),
-			1,
-			5,
-			b"MIN-BTC".to_vec(),
-			0,
-			vec![(oracle1, oracles_admin)],
-			None,
-			None,
-		)
-		.unwrap();
-
-		ChainlinkFeed::create_feed(
-			alice_origin(),
-			20,
-			10,
-			(10, 1_000 * DOLLARS),
-			1,
-			5,
-			b"MIN-ETH".to_vec(),
-			0,
-			vec![(oracle1, oracles_admin)],
-			None,
-			None,
-		)
-		.unwrap();
-
-		ChainlinkFeed::create_feed(
-			alice_origin(),
-			20,
-			10,
-			(10, 1_000 * DOLLARS),
-			1,
-			5,
-			b"MIN-DOT".to_vec(),
-			0,
-			vec![(oracle1, oracles_admin)],
-			None,
-			None,
-		)
-		.unwrap();
-
-		ChainlinkFeed::create_feed(
-			alice_origin(),
-			20,
-			10,
-			(10, 1_000 * DOLLARS),
-			1,
-			5,
-			b"MIN-KSM".to_vec(),
-			0,
-			vec![(oracle1, oracles_admin)],
-			None,
-			None,
-		)
-		.unwrap();
-
+		create_default_feeds();
 		let min_round_id = ChainlinkPriceManager::get_min_round_id().unwrap();
 		assert_eq!(min_round_id, 0);
 
 		ChainlinkFeed::submit(
-			Origin::signed(oracle1),
+			Origin::signed(ORACLE),
 			ChainlinkPriceManager::get_feed_id(BTC).unwrap(),
 			min_round_id + 1,
 			42 * DOLLARS,
 		)
 		.unwrap();
+
 		ChainlinkFeed::submit(
-			Origin::signed(oracle1),
+			Origin::signed(ORACLE),
 			ChainlinkPriceManager::get_feed_id(ETH).unwrap(),
 			min_round_id + 1,
 			42 * DOLLARS,
 		)
 		.unwrap();
 		ChainlinkFeed::submit(
-			Origin::signed(oracle1),
+			Origin::signed(ORACLE),
 			ChainlinkPriceManager::get_feed_id(KSM).unwrap(),
 			min_round_id + 1,
 			42 * DOLLARS,
@@ -199,7 +97,7 @@ fn get_min_round_id() {
 		// min_round_id still zero
 		assert_eq!(ChainlinkPriceManager::get_min_round_id().unwrap(), 0);
 		ChainlinkFeed::submit(
-			Origin::signed(oracle1),
+			Origin::signed(ORACLE),
 			ChainlinkPriceManager::get_feed_id(DOT).unwrap(),
 			min_round_id + 1,
 			42 * DOLLARS,
@@ -212,7 +110,7 @@ fn get_min_round_id() {
 #[test]
 fn get_feed_id() {
 	let oracles_admin: AccountId = 999;
-	let oracle1: AccountId = 100;
+	let oracle: AccountId = 100;
 	test_externalities().execute_with(|| {
 		ChainlinkFeed::create_feed(
 			alice_origin(),
@@ -223,7 +121,7 @@ fn get_feed_id() {
 			5,
 			b"MIN-BTC".to_vec(),
 			0,
-			vec![(oracle1, oracles_admin)],
+			vec![(oracle, oracles_admin)],
 			None,
 			None,
 		)

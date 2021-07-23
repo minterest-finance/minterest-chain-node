@@ -6,6 +6,7 @@ use crate as chainlink_price_adapter;
 use frame_support::{construct_runtime, ord_parameter_types, parameter_types, PalletId};
 use frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
 use frame_system::EnsureSignedBy;
+use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, CurrencyId};
 use minterest_primitives::{Balance, Price};
 use sp_runtime::testing::Header;
 use sp_runtime::testing::TestXt;
@@ -89,6 +90,10 @@ impl chainlink_price_adapter::Config for Runtime {
 	type UnsignedPriority = LiquidityPoolsPriority;
 }
 
+pub const FEED_CREATOR: AccountId = ALICE;
+pub const ORACLE_ADMIN: AccountId = 1001;
+pub const ORACLE: AccountId = 1002;
+
 pub fn test_externalities() -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default()
 		.build_storage::<Runtime>()
@@ -102,7 +107,7 @@ pub fn test_externalities() -> sp_io::TestExternalities {
 
 	pallet_chainlink_feed::GenesisConfig::<Runtime> {
 		pallet_admin: Some(ADMIN),
-		feed_creators: vec![ALICE],
+		feed_creators: vec![FEED_CREATOR],
 	}
 	.assimilate_storage(&mut storage)
 	.unwrap();
