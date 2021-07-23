@@ -105,8 +105,8 @@ fn set_threshold_should_work() {
 
 // ---------------------- mod liquidation tests ----------------------------
 
-// Alice supply: 500 DOT; 500 ETH; 750 BTC collateral.
-// Alice borrow: 200 DOT; 300 ETH.
+// Alice supply: 500 DOT; 500 ETH; 800 BTC collateral.
+// Alice borrow: 400 DOT; 330 ETH.
 // Note: prices for all assets set equal $1.
 #[test]
 fn build_user_loan_state_should_work() {
@@ -118,42 +118,63 @@ fn build_user_loan_state_should_work() {
 		])
 		.deposit_underlying(ALICE, DOT, dollars(500))
 		.deposit_underlying(ALICE, ETH, dollars(500))
-		.deposit_underlying(ALICE, BTC, dollars(750))
+		.deposit_underlying(ALICE, BTC, dollars(800))
 		.enable_as_collateral(ALICE, BTC)
-		.borrow_underlying(ALICE, DOT, dollars(200))
-		.borrow_underlying(ALICE, ETH, dollars(300))
+		.borrow_underlying(ALICE, DOT, dollars(400))
+		.borrow_underlying(ALICE, ETH, dollars(330))
 		.merge_duplicates()
 		.build()
 		.execute_with(|| {
 			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
 
-			assert_eq!(alice_loan_state.get_user_supplies(), vec![(BTC, dollars(750))]);
+			assert_eq!(alice_loan_state.get_user_supplies(), vec![(BTC, dollars(800))]);
 			assert_eq!(
 				alice_loan_state.get_user_borrows(),
-				vec![(DOT, dollars(200)), (ETH, dollars(300))]
+				vec![(DOT, dollars(400)), (ETH, dollars(330))]
 			);
-			// alice_total_borrow = $200 + $300 = $500.
-			assert_eq!(alice_loan_state.total_borrow().unwrap(), dollars(500));
-			// alice_total_supply in collateral pools: $750.
-			assert_eq!(alice_loan_state.total_supply().unwrap(), dollars(750));
-			// alice_total_collateral = $750 * 0.9 = $675.
-			assert_eq!(alice_loan_state.total_collateral().unwrap(), dollars(675));
-			// alice_total_seize = $200 * 1.05 + $300 * 1.10 = $540.
-			assert_eq!(alice_loan_state.total_seize().unwrap(), dollars(540));
+			// alice_total_borrow = $400 + $330 = $730.
+			assert_eq!(alice_loan_state.total_borrow().unwrap(), dollars(730));
+			// alice_total_supply in collateral pools: $800.
+			assert_eq!(alice_loan_state.total_supply().unwrap(), dollars(800));
+			// alice_total_collateral = $800 * 0.9 = $720.
+			assert_eq!(alice_loan_state.total_collateral().unwrap(), dollars(720));
+			// alice_total_seize = $400 * 1.05 + $330 * 1.10 = $783.
+			assert_eq!(alice_loan_state.total_seize().unwrap(), dollars(783));
+			assert_eq!(alice_loan_state.get_user(), &ALICE);
+			assert_eq!(
+				alice_loan_state.get_user_liquidation_mode().unwrap(),
+				LiquidationMode::Complete
+			);
+			//TODO: fix after implementation math
+			assert_eq!(
+				alice_loan_state.get_user_supplies_to_seize_underlying(),
+				<Vec<(CurrencyId, Balance)>>::new()
+			);
+			//TODO: fix after implementation math
+			assert_eq!(
+				alice_loan_state.get_user_borrows_to_repay_underlying(),
+				<Vec<(CurrencyId, Balance)>>::new()
+			);
 
 			System::set_block_number(100);
 
 			let alice_loan_state_accrued = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
 
-			assert_eq!(alice_loan_state_accrued.get_user_supplies(), vec![(BTC, dollars(750))]);
+			assert_eq!(alice_loan_state_accrued.get_user_supplies(), vec![(BTC, dollars(800))]);
 			assert_eq!(
 				alice_loan_state_accrued.get_user_borrows(),
-				vec![(DOT, 200000071280000000000), (ETH, 300000160380000000000)]
+				vec![(DOT, 400_000285120000000000), (ETH, 330_000194059800000000)]
 			);
-			assert_eq!(alice_loan_state_accrued.total_borrow().unwrap(), 500000231660000000000);
-			assert_eq!(alice_loan_state_accrued.total_supply().unwrap(), dollars(750));
-			assert_eq!(alice_loan_state_accrued.total_collateral().unwrap(), dollars(675));
-			assert_eq!(alice_loan_state_accrued.total_seize().unwrap(), 540000251262000000000);
+			//TODO: fix after implementation math
+			assert_eq!(
+				alice_loan_state.get_user_supplies_to_seize_underlying(),
+				<Vec<(CurrencyId, Balance)>>::new()
+			);
+			//TODO: fix after implementation math
+			assert_eq!(
+				alice_loan_state.get_user_borrows_to_repay_underlying(),
+				<Vec<(CurrencyId, Balance)>>::new()
+			);
 		})
 }
 
@@ -310,28 +331,8 @@ fn choose_liquidation_mode_solvent_should_work() {
 		.merge_duplicates()
 		.build()
 		.execute_with(|| {
-			// alice_liquidation_attempts == 0:
-			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 0_u8);
-			let alice_solvent_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
-
 			assert_noop!(
-				alice_solvent_loan_state.choose_liquidation_mode(),
-				Error::<TestRuntime>::SolventUserLoan
-			);
-
-			assert_ok!(TestRiskManager::try_mutate_attempts(
-				&ALICE,
-				Operation::Repay,
-				None,
-				Some(LiquidationMode::Partial)
-			));
-
-			// alice_liquidation_attempts == 1:
-			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 1_u8);
-			let alice_solvent_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
-
-			assert_noop!(
-				alice_solvent_loan_state.choose_liquidation_mode(),
+				UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE),
 				Error::<TestRuntime>::SolventUserLoan
 			);
 		});

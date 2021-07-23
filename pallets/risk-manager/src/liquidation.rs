@@ -53,7 +53,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 		user_loan_state.supplies = supplies;
 		user_loan_state.borrows = borrows;
 
-		user_loan_state.liquidation_mode = user_loan_state.choose_liquidation_mode().ok();
+		user_loan_state.liquidation_mode = Some(user_loan_state.choose_liquidation_mode()?);
 
 		let (supplies_to_seize_underlying, borrows_to_repay_underlying) = match user_loan_state
 			.liquidation_mode
@@ -147,7 +147,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 
 // private functions
 impl<T: Config + Debug> UserLoanState<T> {
-	fn new(user: &T::AccountId) -> Self {
+	pub(crate) fn new(user: &T::AccountId) -> Self {
 		Self {
 			user: user.clone(),
 			borrows: Vec::new(),
@@ -254,7 +254,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 	pub(crate) fn calculate_partial_liquidation(
 		&self,
 	) -> Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
-		todo!()
+		Ok((Vec::new(), Vec::new()))
 	}
 
 	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
@@ -268,7 +268,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 	pub(crate) fn calculate_complete_liquidation(
 		&self,
 	) -> Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
-		todo!()
+		Ok((Vec::new(), Vec::new()))
 	}
 
 	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
@@ -283,6 +283,6 @@ impl<T: Config + Debug> UserLoanState<T> {
 	pub(crate) fn calculate_forgivable_complete_liquidation(
 		&self,
 	) -> Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
-		todo!()
+		Ok((Vec::new(), Vec::new()))
 	}
 }
