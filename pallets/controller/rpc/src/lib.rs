@@ -172,12 +172,13 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 
 	/// Returns total borrow balance for user per all assets based on fresh latest indexes.
 	///
+	/// Parameters:
 	///  - `&self` :  Self reference
 	///  - `account_id`: current account id.
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - amount: account total borrow in usd.
+	/// - [`amount`](`BalanceInfo::amount`): account total borrow in USD.
 	#[rpc(name = "controller_getUserTotalBorrowToUsd")]
 	fn get_user_total_borrow_usd(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
 }
