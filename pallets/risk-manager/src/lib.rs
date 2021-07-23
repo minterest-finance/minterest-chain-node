@@ -326,6 +326,8 @@ impl<T: Config> Pallet<T> {
 			return Err(OffchainErr::NotValidator);
 		}
 
+		//TODO: After implementing the architecture of liquidation, implement specific errors in
+		// the enum OffchainErr.
 		let borrower_iterator = T::ControllerManager::get_all_users_with_insolvent_loan()
 			.map_err(|_| OffchainErr::CheckFail)?
 			.into_iter();

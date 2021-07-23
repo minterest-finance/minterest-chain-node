@@ -713,22 +713,20 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 					.map_err(|_| Error::<T>::BalanceOverflow)?;
 
 			// Calculate effects of interacting with Underlying Asset Modify.
-			if let Some(underlying_to_borrow) = underlying_to_borrow {
-				if underlying_to_borrow == underlying_asset {
-					// redeem effect
-					if redeem_amount > 0 {
-						// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
-						sum_borrow_plus_effects =
-							sum_with_mult_result(sum_borrow_plus_effects, redeem_amount, tokens_to_denom)
-								.map_err(|_| Error::<T>::BalanceOverflow)?;
-					};
-					// borrow effect
-					if borrow_amount > 0 {
-						// sum_borrow_plus_effects += oracle_price * borrow_amount
-						sum_borrow_plus_effects =
-							sum_with_mult_result(sum_borrow_plus_effects, borrow_amount, oracle_price)
-								.map_err(|_| Error::<T>::BalanceOverflow)?;
-					}
+			if Some(underlying_asset) == underlying_to_borrow {
+				// redeem effect
+				if redeem_amount > 0 {
+					// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
+					sum_borrow_plus_effects =
+						sum_with_mult_result(sum_borrow_plus_effects, redeem_amount, tokens_to_denom)
+							.map_err(|_| Error::<T>::BalanceOverflow)?;
+				};
+				// borrow effect
+				if borrow_amount > 0 {
+					// sum_borrow_plus_effects += oracle_price * borrow_amount
+					sum_borrow_plus_effects =
+						sum_with_mult_result(sum_borrow_plus_effects, borrow_amount, oracle_price)
+							.map_err(|_| Error::<T>::BalanceOverflow)?;
 				}
 			}
 		}
@@ -891,7 +889,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	/// Cannot overflow, because the collateral factor is always less than one.
 	/// Returns: `collateral_amount = supply_amount * collateral_factor`.
 	fn calculate_collateral(pool_id: CurrencyId, supply_amount: Balance) -> Balance {
-		let collateral_factor = ControllerParams::<T>::get(pool_id).collateral_factor;
+		let collateral_factor = ControllerDataStorage::<T>::get(pool_id).collateral_factor;
 		Rate::from_inner(supply_amount)
 			.saturating_mul(collateral_factor)
 			.into_inner()
