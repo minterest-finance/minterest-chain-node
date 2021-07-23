@@ -866,13 +866,14 @@ impl_runtime_apis! {
 		CurrencyId,
 		TimeStampedPrice,
 	> for Runtime {
+	    #[doc(alias("MNT RPC", "MNT oracle"))]
 		fn get_value(provider_id: DataProviderId, key: CurrencyId) -> Option<TimeStampedPrice> {
 			match provider_id {
 				DataProviderId::Minterest => MinterestOracle::get_no_op(&key),
 				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_no_op(&key)
 			}
 		}
-
+        #[doc(alias("MNT RPC", "MNT oracle"))]
 		fn get_all_values(provider_id: DataProviderId) -> Vec<(CurrencyId, Option<TimeStampedPrice>)> {
 			match provider_id {
 				DataProviderId::Minterest => MinterestOracle::get_all_values(),

@@ -26,6 +26,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// - pool_total_borrow_in_usd: total borrowed including interest in the protocol in usd.
 	/// - tvl_in_usd: total value of locked money in protocol in usd.
 	/// - pool_total_protocol_interest_in_usd: total protocol interest for all pools in usd.
+	#[doc(alias("MNT RPC", "MNT controller"))]
 	#[rpc(name = "controller_protocolTotalValues")]
 	fn get_protocol_total_values(&self, at: Option<BlockHash>) -> Result<Option<ProtocolTotalValue>>;
 
@@ -43,6 +44,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// - borrow_rate: Borrow Interest Rate
 	/// - supply_rate: current Supply Interest Rate.
 	/// 	The supply rate is derived from the borrow_rate and the amount of Total Borrowed.
+	#[doc(alias("MNT RPC", "MNT controller"))]
 	#[rpc(name = "controller_liquidityPoolState")]
 	fn liquidity_pool_state(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<PoolState>>;
 
@@ -54,6 +56,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///
 	/// Return:
 	/// - utilization_rate: current utilization rate of a pool.
+	#[doc(alias("MNT RPC", "MNT controller"))]
 	#[rpc(name = "controller_utilizationRate")]
 	fn get_utilization_rate(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<Rate>>;
 
@@ -66,6 +69,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// Return:
 	/// - total_supply: total balance that user has in all pools converted to usd
 	/// - total_borrowed: total borrowed tokens from all pools converted to usd.
+	#[doc(alias("MNT RPC", "MNT controller"))]
 	#[rpc(name = "controller_userBalanceInfo")]
 	fn get_user_balance(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<UserPoolBalanceData>>;
 
@@ -78,6 +82,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// Return:
 	/// - liquidity: account liquidity in usd.
 	/// Positive amount if user has collateral greater than borrowed, otherwise negative.
+	#[doc(alias("MNT RPC", "MNT controller"))]
 	#[rpc(name = "controller_accountLiquidity")]
 	fn get_hypothetical_account_liquidity(
 		&self,
@@ -93,6 +98,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///
 	/// Return
 	/// - is_admin: true / false
+	#[doc(alias("MNT RPC", "MNT controller"))]
 	#[rpc(name = "controller_isAdmin")]
 	fn is_admin(&self, caller: AccountId, at: Option<BlockHash>) -> Result<Option<bool>>;
 
@@ -104,6 +110,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///
 	/// Return:
 	/// - amount: account total collateral converted to usd.
+	#[doc(alias("MNT RPC", "MNT controller"))]
 	#[rpc(name = "controller_accountCollateral")]
 	fn get_user_total_collateral(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
 
@@ -116,6 +123,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///
 	/// Return:
 	/// - amount: account total borrow per asset.
+	#[doc(alias("MNT RPC", "MNT controller"))]
 	#[rpc(name = "controller_getUserBorrowPerAsset")]
 	fn get_user_borrow_per_asset(
 		&self,
@@ -125,6 +133,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	) -> Result<Option<BalanceInfo>>;
 
 	/// Returns user underlying asset balance for the pool
+	#[doc(alias("MNT RPC", "MNT controller"))]
 	#[rpc(name = "controller_getUserUnderlyingBalancePerAsset")]
 	fn get_user_underlying_balance_per_asset(
 		&self,
@@ -141,6 +150,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///
 	/// Return:
 	/// - is_created: true / false
+	#[doc(alias("MNT RPC", "MNT controller"))]
 	#[rpc(name = "controller_poolExists")]
 	fn pool_exists(&self, underlying_asset_id: CurrencyId, at: Option<BlockHash>) -> Result<bool>;
 
@@ -151,6 +161,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	/// Return:
 	/// - (supply_apy, borrow_apy, net_apy)
+	#[doc(alias("MNT RPC", "MNT controller"))]
 	#[rpc(name = "controller_getUserTotalSupplyBorrowAndNetApy")]
 	fn get_user_total_supply_borrow_and_net_apy(
 		&self,
@@ -167,6 +178,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// Returns:
 	/// - (user_total_collateral, user_total_supply_in_usd, user_total_borrow_in_usd,
 	///   user_total_supply_apy, user_total_borrow_apy, user_net_apy)
+	#[doc(alias("MNT RPC", "MNT controller"))]
 	#[rpc(name = "controller_getUserData")]
 	fn get_user_data(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<UserData>>;
 }

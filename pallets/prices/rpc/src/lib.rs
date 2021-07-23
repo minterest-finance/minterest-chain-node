@@ -33,6 +33,7 @@ pub trait PricesRpcApi<BlockHash> {
 	/// curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d '{"jsonrpc":"2.0",
 	/// "id":1, "method":"prices_getCurrentPrice", "params": [{"UnderlyingAsset":"DOT"}]}'
 	/// ```
+	#[doc(alias("MNT RPC", "MNT prices"))]
 	#[rpc(name = "prices_getCurrentPrice")]
 	fn get_current_price(&self, currency_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<Price>>;
 
@@ -51,6 +52,7 @@ pub trait PricesRpcApi<BlockHash> {
 	/// curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d '{"jsonrpc":"2.0",
 	/// "id":1, "method":"prices_getAllLockedPrices", "params": []}'
 	/// ```
+	#[doc(alias("MNT RPC", "MNT prices"))]
 	#[rpc(name = "prices_getAllLockedPrices")]
 	fn get_all_locked_prices(&self, at: Option<BlockHash>) -> Result<Vec<(CurrencyId, Option<Price>)>>;
 
@@ -67,6 +69,7 @@ pub trait PricesRpcApi<BlockHash> {
 	/// curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d '{"jsonrpc":"2.0",
 	/// "id":1, "method":"prices_getAllFreshestPrices", "params": []}'
 	/// ```
+	#[doc(alias("MNT RPC", "MNT prices"))]
 	#[rpc(name = "prices_getAllFreshestPrices")]
 	fn get_all_freshest_prices(&self, at: Option<BlockHash>) -> Result<Vec<(CurrencyId, Option<Price>)>>;
 }
