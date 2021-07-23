@@ -264,6 +264,7 @@ pub mod module {
 		/// - `liquidation_fee`: new liquidation fee value.
 		///
 		/// The dispatch origin of this call must be 'RiskManagerUpdateOrigin'.
+		#[doc(alias("MNT Extrinsic", "MNT risk_manager"))]
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_liquidation_fee(
@@ -291,6 +292,7 @@ pub mod module {
 		/// - `threshold`: new threshold.
 		///
 		/// The dispatch origin of this call must be 'RiskManagerUpdateOrigin'.
+		#[doc(alias("MNT Extrinsic", "MNT risk_manager"))]
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_liquidation_threshold(
@@ -320,6 +322,7 @@ pub mod module {
 		/// liquidation pools instead of the borrower, and a vector with user's supplies to be
 		/// withdrawn from the borrower and sent to the liquidation pools. Balances are calculated
 		/// in underlying assets.
+		#[doc(alias("MNT Extrinsic", "MNT risk_manager"))]
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn liquidate(

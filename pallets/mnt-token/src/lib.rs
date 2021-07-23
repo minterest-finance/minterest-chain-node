@@ -218,6 +218,7 @@ pub mod module {
 		/// - `speed`: new minting speed. Zero speed means minting will be disabled.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias("MNT Extrinsic", "MNT mnt_token"))]
 		#[pallet::weight(T::MntTokenWeightInfo::set_speed())]
 		#[transactional]
 		pub fn set_speed(origin: OriginFor<T>, currency_id: CurrencyId, speed: Balance) -> DispatchResultWithPostInfo {

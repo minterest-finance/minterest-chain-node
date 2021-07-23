@@ -208,6 +208,7 @@ pub mod module {
 		/// - `threshold`: New value of deviation threshold.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias("MNT Extrinsic", "MNT liquidation_pools"))]
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_deviation_threshold())]
 		#[transactional]
 		pub fn set_deviation_threshold(
@@ -245,6 +246,7 @@ pub mod module {
 		/// - `balance_ratio`: New value of balance ratio.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias("MNT Extrinsic", "MNT liquidation_pools"))]
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_balance_ratio())]
 		#[transactional]
 		pub fn set_balance_ratio(
@@ -282,6 +284,7 @@ pub mod module {
 		/// - `max_ideal_balance`: New value of maximum ideal balance.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias("MNT Extrinsic", "MNT liquidation_pools"))]
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_max_ideal_balance())]
 		#[transactional]
 		pub fn set_max_ideal_balance(
@@ -311,6 +314,7 @@ pub mod module {
 		/// Make balance the liquidation pools.
 		///
 		/// The dispatch origin of this call must be _None_.
+		#[doc(alias("MNT Extrinsic", "MNT liquidation_pools"))]
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::balance_liquidation_pools())]
 		#[transactional]
 		pub fn balance_liquidation_pools(
@@ -342,6 +346,7 @@ pub mod module {
 		/// Seed the liquidation pool
 		/// - `underlying_asset_id`: currency of transfer
 		/// - `underlying_amount`: amount to transfer to liquidation pool
+		#[doc(alias("MNT Extrinsic", "MNT liquidation_pools"))]
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::transfer_to_liquidation_pool())]
 		#[transactional]
 		pub fn transfer_to_liquidation_pool(

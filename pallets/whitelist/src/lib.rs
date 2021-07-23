@@ -148,6 +148,7 @@ pub mod module {
 		/// - `new_account`: the account that is being added to the whitelist.
 		///
 		/// The dispatch origin of this call must be 'WhitelistOrigin'.
+		#[doc(alias("MNT Extrinsic", "MNT whitelist"))]
 		#[pallet::weight(T::WhitelistWeightInfo::add_member((<T as Config>::MaxMembers::get() / 2) as u32))]
 		pub fn add_member(origin: OriginFor<T>, new_account: T::AccountId) -> DispatchResultWithPostInfo {
 			T::WhitelistOrigin::ensure_origin(origin)?;
@@ -167,6 +168,7 @@ pub mod module {
 		/// - `who`: the account that is being removed from the whitelist.
 		///
 		/// The dispatch origin of this call must be 'WhitelistOrigin'.
+		#[doc(alias("MNT Extrinsic", "MNT whitelist"))]
 		#[pallet::weight(T::WhitelistWeightInfo::remove_member((<T as Config>::MaxMembers::get() / 2) as u32))]
 		pub fn remove_member(origin: OriginFor<T>, account_to_remove: T::AccountId) -> DispatchResultWithPostInfo {
 			T::WhitelistOrigin::ensure_origin(origin)?;
@@ -185,6 +187,7 @@ pub mod module {
 		/// Enable / disable whitelist mode.
 		///
 		/// The dispatch origin of this call must be 'WhitelistOrigin'.
+		#[doc(alias("MNT Extrinsic", "MNT whitelist"))]
 		#[pallet::weight(T::WhitelistWeightInfo::switch_whitelist_mode())]
 		#[transactional]
 		pub fn switch_whitelist_mode(origin: OriginFor<T>, new_state: bool) -> DispatchResultWithPostInfo {

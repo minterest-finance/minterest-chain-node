@@ -274,6 +274,7 @@ pub mod module {
 		/// Pause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias("MNT Extrinsic", "MNT controller"))]
 		#[pallet::weight(T::ControllerWeightInfo::pause_operation())]
 		#[transactional]
 		pub fn pause_operation(
@@ -303,6 +304,7 @@ pub mod module {
 		/// Unpause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias("MNT Extrinsic", "MNT controller"))]
 		#[pallet::weight(T::ControllerWeightInfo::resume_operation())]
 		#[transactional]
 		pub fn resume_operation(
@@ -334,6 +336,7 @@ pub mod module {
 		/// - `protocol_interest_factor`: new value for interest factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias("MNT Extrinsic", "MNT controller"))]
 		#[pallet::weight(T::ControllerWeightInfo::set_protocol_interest_factor())]
 		#[transactional]
 		pub fn set_protocol_interest_factor(
@@ -358,6 +361,7 @@ pub mod module {
 		/// - `max_borrow_rate`: new value for maximum borrow rate.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias("MNT Extrinsic", "MNT controller"))]
 		#[pallet::weight(T::ControllerWeightInfo::set_max_borrow_rate())]
 		#[transactional]
 		pub fn set_max_borrow_rate(
@@ -386,6 +390,7 @@ pub mod module {
 		/// - `collateral_factor`: new value for collateral factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias("MNT Extrinsic", "MNT controller"))]
 		#[pallet::weight(T::ControllerWeightInfo::set_collateral_factor())]
 		#[transactional]
 		pub fn set_collateral_factor(
@@ -413,6 +418,7 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be Administrator.
 		/// Borrow cap value must be in range 0..1_000_000_000_000_000_000_000_000
+		#[doc(alias("MNT Extrinsic", "MNT controller"))]
 		#[pallet::weight(T::ControllerWeightInfo::set_borrow_cap())]
 		#[transactional]
 		pub fn set_borrow_cap(
@@ -436,6 +442,7 @@ pub mod module {
 		/// Set protocol interest threshold.
 		///
 		/// The dispatch origin of this call must be Administrator.
+		#[doc(alias("MNT Extrinsic", "MNT controller"))]
 		#[pallet::weight(T::ControllerWeightInfo::set_protocol_interest_threshold())]
 		#[transactional]
 		pub fn set_protocol_interest_threshold(
