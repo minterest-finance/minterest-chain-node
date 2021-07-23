@@ -466,7 +466,7 @@ fn minterest_genesis(
 			whitelist_mode: false,
 		},
 		chainlink_feed: ChainlinkFeedConfig {
-			pallet_admin: Some(root_key.clone()),
+			pallet_admin: Some(root_key),
 			feed_creators: endowed_accounts,
 		},
 	}
@@ -739,7 +739,7 @@ fn testnet_genesis(
 		},
 		chainlink_feed: ChainlinkFeedConfig {
 			pallet_admin: Some(root_key.clone()),
-			feed_creators: vec![root_key.clone()],
+			feed_creators: vec![root_key],
 		},
 	}
 }

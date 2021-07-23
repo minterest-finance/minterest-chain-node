@@ -605,7 +605,6 @@ impl pallet_chainlink_feed::Config for Runtime {
 	type Value = Value;
 	type Currency = pallet_balances::Pallet<Runtime>;
 	type PalletId = ChainlinkFeedPalletId;
-
 	// TODO Review this parameter before production preperements
 	type MinimumReserve = MinimumReserve;
 	type StringLimit = StringLimit;
