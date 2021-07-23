@@ -55,7 +55,7 @@ use sp_runtime::{
 	traits::{CheckedAdd, CheckedMul, One, StaticLookup, Zero},
 	FixedPointNumber,
 };
-use sp_std::prelude::*;
+use sp_std::{fmt::Debug, prelude::*};
 
 mod liquidation;
 #[cfg(test)]
@@ -68,7 +68,7 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
+	pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> + Debug {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// A configuration for base priority of unsigned transactions.
@@ -286,11 +286,11 @@ pub mod module {
 		pub fn liquidate(
 			origin: OriginFor<T>,
 			borrower: <T::Lookup as StaticLookup>::Source,
-			liquidation_amounts: LiquidationAmounts,
+			user_loan_state: UserLoanState<T>,
 		) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
 			let borrower = T::Lookup::lookup(borrower)?;
-			Self::do_liquidate(&borrower, liquidation_amounts)?;
+			Self::do_liquidate(&borrower, user_loan_state)?;
 			Ok(().into())
 		}
 	}
@@ -350,25 +350,12 @@ impl<T: Config> Pallet<T> {
 	fn process_insolvent_loan(borrower: T::AccountId) -> Result<(), OffchainErr> {
 		let user_loan_state: UserLoanState<T> =
 			UserLoanState::build_user_loan_state(&borrower).map_err(|_| OffchainErr::CheckFail)?;
+
 		ensure!(borrower == *user_loan_state.get_user(), OffchainErr::CheckFail);
-		let liquidation_amounts = match user_loan_state
-			.choose_liquidation_mode()
-			.map_err(|_| OffchainErr::CheckFail)?
-		{
-			LiquidationMode::Partial => user_loan_state
-				.calculate_partial_liquidation()
-				.map_err(|_| OffchainErr::CheckFail)?,
-			LiquidationMode::Complete => user_loan_state
-				.calculate_complete_liquidation()
-				.map_err(|_| OffchainErr::CheckFail)?,
-			LiquidationMode::ForgivableComplete => user_loan_state
-				.calculate_forgivable_complete_liquidation()
-				.map_err(|_| OffchainErr::CheckFail)?,
-		};
 
 		// call to change the offchain worker local storage
-		Self::do_liquidate(&borrower, liquidation_amounts.clone()).map_err(|_| OffchainErr::CheckFail)?;
-		Self::submit_unsigned_liquidation(&borrower, liquidation_amounts);
+		Self::do_liquidate(&borrower, user_loan_state.clone()).map_err(|_| OffchainErr::CheckFail)?;
+		Self::submit_unsigned_liquidation(&borrower, user_loan_state);
 		Ok(())
 	}
 
@@ -379,9 +366,9 @@ impl<T: Config> Pallet<T> {
 	/// liquidation pools instead of the borrower, and a vector with user's supplies to be
 	/// withdrawn from the borrower and sent to the liquidation pools. Balances are calculated
 	/// in underlying assets.
-	fn submit_unsigned_liquidation(borrower: &T::AccountId, liquidation_amounts: LiquidationAmounts) {
+	fn submit_unsigned_liquidation(borrower: &T::AccountId, user_loan_state: UserLoanState<T>) {
 		let who = T::Lookup::unlookup(borrower.clone());
-		let call = Call::<T>::liquidate(who.clone(), liquidation_amounts);
+		let call = Call::<T>::liquidate(who.clone(), user_loan_state);
 		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
 			log::info!(
 				target: "RiskManager offchain worker",
@@ -400,10 +387,10 @@ impl<T: Config> Pallet<T> {
 	/// liquidation pools instead of the borrower, and a vector with user's supplies to be
 	/// withdrawn from the borrower and sent to the liquidation pools. Balances are calculated
 	/// in underlying assets.
-	fn do_liquidate(borrower: &T::AccountId, liquidation_amounts: LiquidationAmounts) -> DispatchResult {
+	fn do_liquidate(borrower: &T::AccountId, user_loan_state: UserLoanState<T>) -> DispatchResult {
 		let liquidation_pool_account_id = T::LiquidationPoolsManager::pools_account_id();
-		liquidation_amounts
-			.borrower_loans_to_repay_underlying
+		user_loan_state
+			.get_user_borrows_to_repay_underlying()
 			.into_iter()
 			.try_for_each(|(pool_id, repay_underlying)| -> DispatchResult {
 				T::MinterestProtocolManager::do_repay(
@@ -415,19 +402,18 @@ impl<T: Config> Pallet<T> {
 				)?;
 				Ok(())
 			})?;
-		liquidation_amounts
-			.borrower_supplies_to_seize_underlying
+		user_loan_state
+			.get_user_supplies_to_seize_underlying()
 			.into_iter()
 			.try_for_each(|(pool_id, seize_underlying)| -> DispatchResult {
 				T::MinterestProtocolManager::do_seize(&borrower, pool_id, seize_underlying)?;
 				Ok(())
 			})?;
-		// TODO: need liquidation mode here
 		<Self as UserLiquidationAttemptsManager<T::AccountId>>::try_mutate_attempts(
 			&borrower,
 			Operation::Repay,
 			None,
-			None,
+			user_loan_state.get_user_liquidation_mode(),
 		)?;
 		Ok(())
 	}
