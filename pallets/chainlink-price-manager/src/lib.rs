@@ -28,6 +28,7 @@ use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, currency::*,
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData, RoundId};
 use pallet_traits::PricesManager;
 use sp_runtime::traits::Zero;
+use sp_std::convert::TryInto;
 pub use weights::WeightInfo;
 
 #[cfg(test)]
@@ -94,10 +95,7 @@ pub mod module {
 	}
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T>
-	where
-		u128: From<<T as pallet_chainlink_feed::Config>::Value>,
-	{
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn offchain_worker(now: T::BlockNumber) {
 			if let Err(error) = Self::_offchain_worker(now) {
 				log::info!(
@@ -150,10 +148,7 @@ pub mod module {
 	}
 }
 
-impl<T: Config> Pallet<T>
-where
-	u128: From<<T as pallet_chainlink_feed::Config>::Value>,
-{
+impl<T: Config> Pallet<T> {
 	// TODO rework it.
 	// This is temporary function. Shouldn't use in production but helpful in test project stage.
 	// If one of pool_id has lower RoundId that others we should syncronize it with others.
@@ -230,10 +225,7 @@ where
 	}
 }
 
-impl<T: Config> PricesManager<CurrencyId> for Pallet<T>
-where
-	u128: From<<T as pallet_chainlink_feed::Config>::Value>,
-{
+impl<T: Config> PricesManager<CurrencyId> for Pallet<T> {
 	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
 		// TODO check is feeding enabled
 		let feed_id = Self::get_feed_id(currency_id)?;
@@ -247,7 +239,7 @@ where
 			return None;
 		}
 
-		Some(Price::from_inner(answer.into()))
+		Some(Price::from_inner(answer.try_into().ok()?))
 	}
 
 	// TODO These function will be removed from trait

@@ -31,8 +31,8 @@ pub use minterest_primitives::{
 		CurrencyType::{UnderlyingAsset, WrappedToken},
 		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
 	},
-	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index,
-	Interest, Moment, Operation, Price, Rate, Signature, VestingBucket,
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, ChainlinkFeedId, ChainlinkPriceValue, CurrencyId,
+	DataProviderId, DigestItem, Hash, Index, Interest, Moment, Operation, Price, Rate, Signature, VestingBucket,
 };
 pub use mnt_token_rpc_runtime_api::MntBalanceInfo;
 use orml_currencies::BasicCurrencyAdapter;
@@ -589,20 +589,18 @@ impl chainlink_price_manager::Config for Runtime {
 	type ChainlinkPriceManagerWeightInfo = weights::chainlink_price_manager::WeightInfo<Runtime>;
 }
 
-pub type FeedId = u32;
-pub type Value = u128;
 parameter_types! {
 	pub const StringLimit: u32 = 30;
 	pub const OracleCountLimit: u32 = 25;
-	pub const FeedLimit: FeedId = 100;
+	pub const FeedLimit: ChainlinkFeedId = 100;
 	// TODO Review this parameter before production preperements
 	pub const MinimumReserve: Balance = ExistentialDeposit::get() * 1000;
 }
 
 impl pallet_chainlink_feed::Config for Runtime {
 	type Event = Event;
-	type FeedId = u32;
-	type Value = Value;
+	type FeedId = ChainlinkFeedId;
+	type Value = ChainlinkPriceValue;
 	type Currency = pallet_balances::Pallet<Runtime>;
 	type PalletId = ChainlinkFeedPalletId;
 	// TODO Review this parameter before production preperements

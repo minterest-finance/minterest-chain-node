@@ -5,7 +5,7 @@
 use crate as chainlink_price_adapter;
 use frame_support::{construct_runtime, ord_parameter_types, parameter_types, PalletId};
 use frame_system::offchain::SendTransactionTypes;
-use minterest_primitives::Balance;
+use minterest_primitives::{Balance, ChainlinkFeedId, ChainlinkPriceValue};
 use sp_runtime::{
 	testing::{Header, TestXt, H256},
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
@@ -39,20 +39,19 @@ parameter_types! {
 	pub ChainlinkPriceManagerAccountId: AccountId =  ChainlinkPriceManagerPalletId::get().into_account();
 }
 
-pub type FeedId = u32;
 const MIN_RESERVE: u128 = 100000;
 
 parameter_types! {
 	pub const StringLimit: u32 = 30;
 	pub const OracleCountLimit: u32 = 25;
-	pub const FeedLimit: FeedId = 100;
+	pub const FeedLimit: ChainlinkFeedId = 100;
 	pub const MinimumReserve: Balance = MIN_RESERVE;
 }
 
 impl pallet_chainlink_feed::Config for Runtime {
 	type Event = Event;
-	type FeedId = u32;
-	type Value = u128;
+	type FeedId = ChainlinkFeedId;
+	type Value = ChainlinkPriceValue;
 	type Currency = Balances;
 	type PalletId = ChainlinkFeedPalletId;
 	type MinimumReserve = MinimumReserve;
