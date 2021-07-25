@@ -49,7 +49,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// - [`exchange_rate`](`PoolState::exchange_rate`): the Exchange Rate between an mToken and the
 	/// underlying asset.
 	/// - [`borrow_rate`](`PoolState::borrow_rate`): Borrow Interest Rate
-	/// - [`supply_rate`](`PoolState::supply_rate`): current Supply Interest Rate.
+	/// - [`supply_rate`](`PoolState::supply_rate`): Supply Interest Rate.
 	///  The supply rate is derived from the borrow_rate and utilization_rate.
 	#[rpc(name = "controller_liquidityPoolState")]
 	fn liquidity_pool_state(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<PoolState>>;
