@@ -295,7 +295,7 @@ pub mod module {
 		///
 		/// Parameters:
 		/// - `pool_id`: the CurrencyId of the pool for which the operation is paused;
-		/// - `operation`: paused Operation.
+		/// - `operation`: the operation to be paused.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::pause_operation())]
