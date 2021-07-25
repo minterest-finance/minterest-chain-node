@@ -166,8 +166,7 @@ pub mod module {
 		/// Remove a member from the whitelist.
 		///
 		/// Parameters:
-		/// - `who`: the account that is being removed from the whitelist.
-		/// - `account_to_remove`: AccountId of the removed member.
+		/// - `account_to_remove`: the account that is being removed from the whitelist.
 		///
 		/// The dispatch origin of this call must be 'WhitelistOrigin'.
 		#[pallet::weight(T::WhitelistWeightInfo::remove_member((<T as Config>::MaxMembers::get() / 2) as u32))]
