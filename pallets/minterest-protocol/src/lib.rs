@@ -486,7 +486,7 @@ pub mod module {
 		/// Sender allowed the assets in the pool to be used as collateral.
 		///
 		/// Parameters:
-		/// `pool_id`: CurrencyId of a pool that  should be used a Collateral.
+		/// `pool_id`: CurrencyId of a pool that should be used a Collateral.
 		#[pallet::weight(T::ProtocolWeightInfo::enable_is_collateral())]
 		#[transactional]
 		pub fn enable_is_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
