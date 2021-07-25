@@ -70,7 +70,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///
 	/// Parameters:
 	///  - `&self`: Self reference
-	///  - `account_id`: current account id.
+	///  - `account_id`: target account id.
 	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
