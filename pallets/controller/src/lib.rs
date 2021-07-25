@@ -328,7 +328,7 @@ pub mod module {
 		///
 		/// Parameters:
 		/// - `pool_id`: the CurrencyId of the pool for which the operation is unpaused;
-		/// - `operation`: an Operation to enable.
+		/// - `operation`: the operation to be resumed.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::resume_operation())]
