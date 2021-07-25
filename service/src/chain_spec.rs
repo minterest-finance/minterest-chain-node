@@ -224,7 +224,7 @@ fn minterest_genesis(
 		.collect::<Vec<(AccountId, Balance)>>();
 
 	// Initial allocation calculation
-	let initial_allocations = calculate_initial_allocations(endowed_accounts.clone(), allocated_list);
+	let initial_allocations = calculate_initial_allocations(endowed_accounts, allocated_list);
 	// Vesting calculation
 	let vesting_list = calculate_vesting_list(allocated_list_parsed);
 
