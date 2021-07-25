@@ -38,7 +38,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///
 	/// Parameters:
 	///  - `&self`: Self reference
-	///  - `pool_id`: current pool id.
+	///  - `pool_id`: target pool id.
 	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	///	is equal to:
