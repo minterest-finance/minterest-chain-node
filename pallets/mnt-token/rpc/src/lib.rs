@@ -44,9 +44,6 @@ pub trait MntTokenRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	///
-	///   (borrow_rate, supply_rate)
-	///
 	/// - [`borrow_rate`](`Rate`): MNT Borrow Rate value
 	/// - [`supply_rate`](`Rate`): MNT Supply Rate value
 	#[rpc(name = "mntToken_getPoolMntBorrowAndSupplyRates")]
