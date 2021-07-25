@@ -111,7 +111,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	#[rpc(name = "controller_isAdmin")]
 	fn is_admin(&self, caller: AccountId, at: Option<BlockHash>) -> Result<Option<bool>>;
 
-	/// Returns account total collateral in usd.
+	/// Returns user total collateral in usd.
 	///
 	/// Parameters:
 	///  - `&self`: Self reference
