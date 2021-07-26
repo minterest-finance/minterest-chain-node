@@ -99,6 +99,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 					hex!["6ae90e9d3f0b4f1161a12024b46c7b44030bedbc4772260f1836262b37806d15"].into(),
 					hex!["38099e3930713a1fdae1419be266ea78ff353752a83033acbe215e190cb0cf2b"].into(),
 					hex!["267e9faef0221b88501b0b943222b3d9f052e8308de28bc86f10780e8f9c5b0a"].into(),
+					//Kirill
+					hex!["48c9efb4a2f9af46aa67db1142adba5a762734ea06a4e3f933309d31ce00504c"].into(),
 				],
 				true,
 			)
