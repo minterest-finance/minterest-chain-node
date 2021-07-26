@@ -2,7 +2,7 @@
 use super::*;
 use crate::LiquidationMode::{Complete, ForgivableComplete, Partial};
 use frame_support::{assert_noop, assert_ok};
-use minterest_primitives::Operation::Deposit;
+use minterest_primitives::Operation::{Deposit, Redeem, Repay};
 use mock::{Event, *};
 use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 
@@ -41,13 +41,13 @@ fn user_liquidation_attempts_should_work() {
 }
 
 #[test]
-fn mutate_attempts_should_work() {
+fn try_mutate_attempts_should_work() {
 	ExtBuilder::default()
 		.set_pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), u8::zero());
-			TestRiskManager::user_liquidation_attempts_increase_by_one(&ALICE);
+			assert_ok!(TestRiskManager::try_mutate_attempts(&ALICE, Repay, None, Some(Partial)));
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 1_u8);
 
 			// ETH pool is disabled as collateral. Don't reset liquidation attempts.
@@ -57,6 +57,41 @@ fn mutate_attempts_should_work() {
 			// DOT pool is enabled as collateral. Reset liquidation attempts to zero.
 			assert_ok!(TestRiskManager::try_mutate_attempts(&ALICE, Deposit, Some(DOT), None));
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), u8::zero());
+
+			set_user_liquidation_attempts_to(2);
+			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 2_u8);
+
+			assert_ok!(TestRiskManager::try_mutate_attempts(
+				&ALICE,
+				Repay,
+				None,
+				Some(Complete)
+			));
+			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), u8::zero());
+
+			set_user_liquidation_attempts_to(2);
+			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 2_u8);
+
+			assert_ok!(TestRiskManager::try_mutate_attempts(
+				&ALICE,
+				Repay,
+				None,
+				Some(ForgivableComplete)
+			));
+			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), u8::zero());
+
+			assert_noop!(
+				TestRiskManager::try_mutate_attempts(&ALICE, Deposit, None, None),
+				Error::<TestRuntime>::ErrorChangingLiquidationAttempts
+			);
+			assert_noop!(
+				TestRiskManager::try_mutate_attempts(&ALICE, Repay, None, None),
+				Error::<TestRuntime>::ErrorChangingLiquidationAttempts
+			);
+			assert_noop!(
+				TestRiskManager::try_mutate_attempts(&ALICE, Redeem, None, None),
+				Error::<TestRuntime>::ErrorChangingLiquidationAttempts
+			);
 		})
 }
 
