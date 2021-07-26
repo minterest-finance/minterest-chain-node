@@ -279,6 +279,7 @@ pub mod module {
 			Ok(().into())
 		}
 
+		// TODO: cover with tests
 		/// Liquidate insolvent loan. Calls internal functions from minterest-protocol pallet
 		/// `do_repay` and `do_seize`, these functions within themselves call
 		/// `accrue_interest_rate`. Before calling the extrinsic, it is necessary to perform all
@@ -334,6 +335,7 @@ pub mod module {
 
 // Private functions
 impl<T: Config> Pallet<T> {
+	// TODO: cover with tests
 	/// Checks if the node is a validator. The worker is launched every block. The worker's working
 	/// time is limited in time. Each next worker starts checking user loans from the beginning.
 	/// Calls a processing insolvent loan function.
@@ -392,6 +394,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
+	// TODO: cover with tests
 	/// Handles the user's loan. Selects one of the required types of liquidation (Partial,
 	/// Complete or Forgivable Complete) and calls extrinsic `liquidate()`. This function within
 	/// itself call `accrue_interest_rate`.
