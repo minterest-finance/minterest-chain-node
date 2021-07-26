@@ -191,6 +191,11 @@ fn protocol_operations_not_working_for_nonexisting_pool() {
 				TestMinterestProtocol::claim_mnt(alice_origin(), vec![DOT, ETH]),
 				crate::Error::<Test>::PoolNotFound
 			);
+
+			assert_noop!(
+				TestMinterestProtocol::do_seize(&ALICE, ETH, dollars(100_u128)),
+				crate::Error::<Test>::PoolNotFound
+			);
 		});
 }
 
