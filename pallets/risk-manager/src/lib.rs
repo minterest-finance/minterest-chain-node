@@ -219,6 +219,7 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		/// Set liquidation fee that covers liquidation costs.
 		///
+		/// Parameters:
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `liquidation_fee`: new liquidation fee value.
 		///
@@ -246,22 +247,14 @@ pub mod module {
 
 		/// Set threshold which used in liquidation to protect the user from micro liquidations.
 		///
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// Parameters:
 		/// - `threshold`: new threshold.
 		///
 		/// The dispatch origin of this call must be 'RiskManagerUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_liquidation_threshold(
-			origin: OriginFor<T>,
-			pool_id: CurrencyId,
-			threshold: Rate,
-		) -> DispatchResultWithPostInfo {
+		pub fn set_liquidation_threshold(origin: OriginFor<T>, threshold: Rate) -> DispatchResultWithPostInfo {
 			T::RiskManagerUpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				pool_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
 			LiquidationThresholdStorage::<T>::put(threshold);
 			Self::deposit_event(Event::LiquidationThresholdUpdated(threshold));
 			Ok(().into())
@@ -272,8 +265,6 @@ pub mod module {
 		/// `accrue_interest_rate`. Before calling the extrinsic, it is necessary to perform all
 		/// checks and math calculations of the user's borrows and collaterals.
 		///
-		/// The dispatch origin of this call must be _None_.
-		///
 		/// - `borrower`: AccountId of the borrower whose loan is being liquidated.
 		/// - `liquidation_amounts`: contains a vectors with user's borrows to be paid from the
 		/// liquidation pools instead of the borrower, and a vector with user's supplies to be
@@ -281,6 +272,8 @@ pub mod module {
 		/// in underlying assets.
 		///TODO: try to use the struct `UserLoanState` in the last parameter (add Debug constraint
 		/// to Config).
+		///
+		/// The dispatch origin of this call must be _None_.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn liquidate(
