@@ -216,12 +216,15 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// TODO: Add description and qa cfg
-		#[cfg(feature = "qa_build")]
+		/// QA only functional!
+		/// Switch on/off pools balancing
+		/// - `new_state`: true - balancing on, false - off
+		///
+		/// origin should be root.
 		#[pallet::weight(10_000)]
 		#[transactional]
 		pub fn switch_balancing_state(origin: OriginFor<T>, new_state: bool) -> DispatchResultWithPostInfo {
-			T::UpdateOrigin::ensure_origin(origin)?;
+			let _ = ensure_signed(origin)?;
 			PoolBalancingStateStorage::<T>::try_mutate(|mode| -> DispatchResultWithPostInfo {
 				ensure!(*mode != new_state, Error::<T>::BalacingStateChangeError);
 				*mode = new_state;
