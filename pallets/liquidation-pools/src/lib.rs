@@ -130,6 +130,8 @@ pub mod module {
 		NotEnoughLiquidityAvailable,
 		/// Transaction with zero balance is not allowed.
 		ZeroBalanceTransaction,
+		/// Wrong state for balansing switcher. QA only!
+		BalacingStateChangeError,
 	}
 
 	#[pallet::event]
@@ -146,12 +148,22 @@ pub mod module {
 		///  Successful transfer to liquidation pull: \[underlying_asset_id, underlying_amount,
 		/// who\]
 		TransferToLiquidationPool(CurrencyId, Balance, T::AccountId),
+		/// Pool balancing state switched: \[new_state\]. QA only!
+		PoolBalacingStateChanged(bool),
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_pool_data_storage)]
 	pub type LiquidationPoolDataStorage<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, LiquidationPoolData, ValueQuery>;
+
+	#[pallet::type_value]
+	pub fn BalancingStateDefault<T: Config>() -> bool {
+		true
+	}
+	#[pallet::storage]
+	#[pallet::getter(fn pool_balancing_state_storage)]
+	pub type PoolBalancingStateStorage<T: Config> = StorageValue<_, bool, ValueQuery, BalancingStateDefault<T>>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -204,6 +216,20 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// TODO: Add description and qa cfg
+		#[cfg(feature = "qa_build")]
+		#[pallet::weight(10_000)]
+		#[transactional]
+		pub fn switch_balancing_state(origin: OriginFor<T>, new_state: bool) -> DispatchResultWithPostInfo {
+			T::UpdateOrigin::ensure_origin(origin)?;
+			PoolBalancingStateStorage::<T>::try_mutate(|mode| -> DispatchResultWithPostInfo {
+				ensure!(*mode != new_state, Error::<T>::BalacingStateChangeError);
+				*mode = new_state;
+				Self::deposit_event(Event::PoolBalacingStateChanged(new_state));
+				Ok(().into())
+			})
+		}
+
 		/// Set new value of deviation threshold.
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `threshold`: New value of deviation threshold.
@@ -427,10 +453,15 @@ pub struct Sales {
 
 impl<T: Config> Pallet<T> {
 	fn _offchain_worker(_now: T::BlockNumber) -> Result<(), OffchainErr> {
-		// Check if we are a potential validator
+		// Check if we are a potential validator and balancing is enabled.
 		if !sp_io::offchain::is_validator() {
 			return Err(OffchainErr::NotValidator);
 		}
+
+		if !Self::pool_balancing_state_storage() {
+			return Err(OffchainErr::PoolsBalancingIsOff);
+		}
+
 		let mut lock = StorageLock::<Time>::new(&OFFCHAIN_LIQUIDATION_WORKER_LOCK);
 		// If pools balancing procedure already started should be returned OffchainLock error.
 		// To prevent any race condition sutiations.

@@ -92,12 +92,13 @@ pub enum DataProviderId {
 }
 
 /// Error which may occur while executing the off-chain code.
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(PartialEq, Eq)]
 pub enum OffchainErr {
 	OffchainLock,
 	NotValidator,
 	CheckFail,
 	PoolsBalancingError,
+	PoolsBalancingIsOff,
 }
 
 impl sp_std::fmt::Debug for OffchainErr {
@@ -107,6 +108,7 @@ impl sp_std::fmt::Debug for OffchainErr {
 			OffchainErr::NotValidator => write!(fmt, "Not validator"),
 			OffchainErr::CheckFail => write!(fmt, "Check fail"),
 			OffchainErr::PoolsBalancingError => write!(fmt, "Pools balancing error"),
+			OffchainErr::PoolsBalancingIsOff => write!(fmt, "Pools balancing switched off"),
 		}
 	}
 }
