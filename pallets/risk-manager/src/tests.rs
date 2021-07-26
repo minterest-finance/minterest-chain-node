@@ -80,10 +80,7 @@ fn set_liquidation_fee_should_work() {
 fn set_threshold_should_work() {
 	ExternalityBuilder::default().build().execute_with(|| {
 		// Can be set to 1.0
-		assert_ok!(TestRiskManager::set_liquidation_threshold(
-			admin_origin(),
-			Rate::one()
-		));
+		assert_ok!(TestRiskManager::set_liquidation_threshold(admin_origin(), Rate::one()));
 		assert_eq!(TestRiskManager::liquidation_threshold_storage(), Rate::one());
 		let expected_event = Event::TestRiskManager(crate::Event::LiquidationThresholdUpdated(Rate::one()));
 		assert!(System::events().iter().any(|record| record.event == expected_event));
@@ -92,12 +89,6 @@ fn set_threshold_should_work() {
 		assert_noop!(
 			TestRiskManager::set_liquidation_threshold(alice_origin(), Rate::one()),
 			BadOrigin
-		);
-
-		// MDOT is wrong CurrencyId for underlying assets.
-		assert_noop!(
-			TestRiskManager::set_liquidation_threshold(admin_origin(), Rate::one()),
-			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
 }
