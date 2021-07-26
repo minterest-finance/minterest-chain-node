@@ -141,6 +141,14 @@ pub mod module {
 		LiquidationFeeUpdated(CurrencyId, Rate),
 		/// Liquidation threshold has been successfully changed: \[threshold\]
 		LiquidationThresholdUpdated(Rate),
+		/// Insolvent loan has been successfully liquidated: \[who, repaid_pools,
+		/// seized pools, liquidation_mode\]
+		LiquidateUnsafeLoan(
+			T::AccountId,
+			Vec<(CurrencyId, Balance)>,
+			Vec<(CurrencyId, Balance)>,
+			LiquidationMode,
+		),
 	}
 
 	/// The additional collateral which is taken from borrowers as a penalty for being liquidated.
@@ -265,8 +273,9 @@ pub mod module {
 		/// `accrue_interest_rate`. Before calling the extrinsic, it is necessary to perform all
 		/// checks and math calculations of the user's borrows and collaterals.
 		///
+		/// Parameters:
 		/// - `borrower`: AccountId of the borrower whose loan is being liquidated.
-		/// - `liquidation_amounts`: contains a vectors with user's borrows to be paid from the
+		/// - `user_loan_state`: contains a vectors with user's borrows to be paid from the
 		/// liquidation pools instead of the borrower, and a vector with user's supplies to be
 		/// withdrawn from the borrower and sent to the liquidation pools. Balances are calculated
 		/// in underlying assets.
@@ -281,7 +290,13 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
 			let borrower = T::Lookup::lookup(borrower)?;
-			Self::do_liquidate(&borrower, user_loan_state)?;
+			Self::do_liquidate(&borrower, user_loan_state.clone())?;
+			Self::deposit_event(Event::LiquidateUnsafeLoan(
+				borrower,
+				user_loan_state.get_user_borrows_to_repay_underlying(),
+				user_loan_state.get_user_supplies_to_seize_underlying(),
+				user_loan_state.get_user_liquidation_mode().unwrap(),
+			));
 			Ok(().into())
 		}
 	}
