@@ -35,7 +35,13 @@
 #![allow(clippy::upper_case_acronyms)]
 #![allow(clippy::redundant_clone)]
 
-use frame_support::{log, pallet_prelude::*, transactional};
+use frame_support::{
+	sp_runtime::offchain::{
+		storage_lock::{StorageLock, Time},
+		Duration,
+	},
+	{log, pallet_prelude::*, transactional},
+};
 use frame_system::{
 	ensure_none,
 	offchain::{SendTransactionTypes, SubmitTransaction},
@@ -56,6 +62,8 @@ use sp_runtime::{
 	FixedPointNumber,
 };
 use sp_std::{fmt::Debug, prelude::*};
+
+pub const OFFCHAIN_WORKER_LOCK: &[u8] = b"pallets/risk-manager/lock/";
 
 mod liquidation;
 #[cfg(test)]
@@ -114,6 +122,9 @@ pub mod module {
 
 		/// Provides the basic minterest protocol functionality.
 		type MinterestProtocolManager: MinterestProtocolManager<Self::AccountId>;
+
+		/// Max duration time for offchain worker.
+		type OffchainWorkerMaxDurationMs: Get<u64>;
 	}
 
 	#[pallet::error]
@@ -209,14 +220,14 @@ pub mod module {
 			if let Err(e) = Self::_offchain_worker() {
 				log::info!(
 					target: "RiskManager offchain worker",
-					"cannot run offchain worker at {:?}: {:?}",
+					"Error in offchain worker at {:?}: {:?}",
 					now,
 					e,
 				);
 			} else {
 				log::debug!(
 					target: "RiskManager offchain worker",
-					" RiskManager offchain worker start at block: {:?} already done!",
+					"RiskManager offchain worker start at block: {:?} already done!",
 					now,
 				);
 			}
@@ -332,18 +343,51 @@ impl<T: Config> Pallet<T> {
 			return Err(OffchainErr::NotValidator);
 		}
 
-		//TODO: After implementing the architecture of liquidation, implement specific errors in
-		// the enum OffchainErr.
-		let borrower_iterator = T::ControllerManager::get_all_users_with_insolvent_loan()
-			.map_err(|_| OffchainErr::CheckFail)?
-			.into_iter();
+		// acquire offchain worker lock
+		let lock_expiration = Duration::from_millis(T::OffchainWorkerMaxDurationMs::get());
+		let mut lock = StorageLock::<'_, Time>::with_deadline(&OFFCHAIN_WORKER_LOCK, lock_expiration);
+		let mut guard = lock.try_lock().map_err(|_| OffchainErr::OffchainLock)?;
 
-		// TODO: offchain worker locks
+		let users_with_insolvent_loan = T::ControllerManager::get_all_users_with_insolvent_loan()
+			.map_err(|_| OffchainErr::UnableGetUsersWithLoan)?;
 
-		for borrower in borrower_iterator {
+		let mut loans_liquidated_count = 0_u32;
+		let working_start_time = sp_io::offchain::timestamp();
+
+		for borrower in users_with_insolvent_loan.iter() {
 			Self::process_insolvent_loan(borrower)?;
-			// TODO: offchain worker guard try extend
+			loans_liquidated_count += 1;
+			// extend offchain worker lock
+			guard.extend_lock().map_err(|_| {
+				log::info!(
+					"Risk Manager offchain worker hasn't(!) processed all insolvent loans, \
+						MAX duration time is expired. number of insolvent loans: {:?}, number of liquidated loans: {:?}",
+					users_with_insolvent_loan.len(),
+					loans_liquidated_count
+				);
+				OffchainErr::OffchainLock
+			})?;
 		}
+
+		// ensure that all insolvent loans have been liquidated
+		ensure!(
+			T::ControllerManager::get_all_users_with_insolvent_loan()
+				.map_err(|_| OffchainErr::NotAllLoansLiquidated)?
+				.is_empty(),
+			OffchainErr::NotAllLoansLiquidated
+		);
+
+		let working_time = sp_io::offchain::timestamp().diff(&working_start_time);
+		log::info!(
+			"Risk Manager offchain worker has processed all loans, \
+			number of insolvent loans: {:?}, number of liquidated loans: {:?}, execution time(ms): {:?}",
+			users_with_insolvent_loan.len(),
+			loans_liquidated_count,
+			working_time.millis()
+		);
+
+		// Consume the guard but **do not** unlock the underlying lock.
+		guard.forget();
 
 		Ok(())
 	}
@@ -353,14 +397,12 @@ impl<T: Config> Pallet<T> {
 	/// itself call `accrue_interest_rate`.
 	///
 	/// -`borrower`: AccountId of the borrower whose loan is being processed.
-	fn process_insolvent_loan(borrower: T::AccountId) -> Result<(), OffchainErr> {
+	fn process_insolvent_loan(borrower: &T::AccountId) -> Result<(), OffchainErr> {
 		let user_loan_state: UserLoanState<T> =
-			UserLoanState::build_user_loan_state(&borrower).map_err(|_| OffchainErr::CheckFail)?;
-
-		ensure!(borrower == *user_loan_state.get_user(), OffchainErr::CheckFail);
+			UserLoanState::build_user_loan_state(borrower).map_err(|_| OffchainErr::UnableBuildUserLoanState)?;
 
 		// call to change the offchain worker local storage
-		Self::do_liquidate(&borrower, user_loan_state.clone()).map_err(|_| OffchainErr::CheckFail)?;
+		Self::do_liquidate(&borrower, user_loan_state.clone()).map_err(|_| OffchainErr::LiquidateTransactionFailed)?;
 		Self::submit_unsigned_liquidation(&borrower, user_loan_state);
 		Ok(())
 	}

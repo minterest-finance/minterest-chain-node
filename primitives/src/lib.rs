@@ -96,7 +96,10 @@ pub enum DataProviderId {
 pub enum OffchainErr {
 	OffchainLock,
 	NotValidator,
-	CheckFail,
+	UnableGetUsersWithLoan,
+	UnableBuildUserLoanState,
+	NotAllLoansLiquidated,
+	LiquidateTransactionFailed,
 	PoolsBalancingError,
 }
 
@@ -105,7 +108,10 @@ impl sp_std::fmt::Debug for OffchainErr {
 		match *self {
 			OffchainErr::OffchainLock => write!(fmt, "Failed to get or extend lock"),
 			OffchainErr::NotValidator => write!(fmt, "Not validator"),
-			OffchainErr::CheckFail => write!(fmt, "Check fail"),
+			OffchainErr::UnableGetUsersWithLoan => write!(fmt, "Unable to get all users with insolvent loan"),
+			OffchainErr::UnableBuildUserLoanState => write!(fmt, "Unable to calculate and build a user's loan state"),
+			OffchainErr::NotAllLoansLiquidated => write!(fmt, "Not all insolvent loans have been liquidated"),
+			OffchainErr::LiquidateTransactionFailed => write!(fmt, "Error executing liquidation extrinsic"),
 			OffchainErr::PoolsBalancingError => write!(fmt, "Pools balancing error"),
 		}
 	}
