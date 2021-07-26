@@ -102,8 +102,8 @@
         "supply_rate": "Rate"
       },
       "UserPoolBalanceData": {
-        "total_supply": "Balance",
-        "total_borrowed": "Balance"
+        "total_supply_in_usd": "Balance",
+        "total_borrowed_in_usd": "Balance"
       },
       "MntState": {
         "mnt_distribution_index": "Rate",
