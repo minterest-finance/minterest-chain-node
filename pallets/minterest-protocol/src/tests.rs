@@ -53,7 +53,7 @@ fn create_pool_should_work() {
 				},
 			);
 			assert_eq!(
-				Controller::controller_params(DOT),
+				Controller::controller_data_storage(DOT),
 				ControllerData {
 					last_interest_accrued_block: 1,
 					protocol_interest_factor: Rate::saturating_from_rational(1, 10),
@@ -63,7 +63,7 @@ fn create_pool_should_work() {
 					protocol_interest_threshold: 100000,
 				},
 			);
-			assert_eq!(Controller::pause_keepers(DOT), PauseKeeper::all_unpaused());
+			assert_eq!(Controller::pause_keeper_storage(DOT), PauseKeeper::all_unpaused());
 			assert_eq!(
 				TestLiquidationPools::liquidation_pool_data_storage(DOT),
 				LiquidationPoolData {

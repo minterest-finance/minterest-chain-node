@@ -772,14 +772,14 @@ impl_runtime_apis! {
 			Some(PoolState { exchange_rate, borrow_rate, supply_rate })
 		}
 
-		fn get_utilization_rate(pool_id: CurrencyId) -> Option<Rate> {
-			Controller::get_utilization_rate(pool_id)
+		fn get_pool_utilization_rate(pool_id: CurrencyId) -> Option<Rate> {
+			Controller::get_pool_utilization_rate(pool_id)
 		}
 
 		fn get_user_total_supply_and_borrow_balance_in_usd(account_id: AccountId) -> Option<UserPoolBalanceData> {
-			let (total_supply, total_borrowed) = Controller::get_user_total_supply_and_borrow_balance_in_usd(&account_id).ok()?;
+			let (total_supply_in_usd, total_borrowed_in_usd) = Controller::get_user_total_supply_and_borrow_balance_in_usd(&account_id).ok()?;
 
-			Some(UserPoolBalanceData {total_supply, total_borrowed})
+			Some(UserPoolBalanceData {total_supply_in_usd, total_borrowed_in_usd})
 		}
 
 		fn get_hypothetical_account_liquidity(account_id: AccountId) -> Option<HypotheticalLiquidityData> {
@@ -792,7 +792,7 @@ impl_runtime_apis! {
 				_ => Amount::try_from(excess).ok()?
 			};
 
-			Some(HypotheticalLiquidityData{ liquidity: res })
+			Some(HypotheticalLiquidityData{ liquidity_in_usd: res })
 		}
 
 		fn is_admin(caller: AccountId) -> Option<bool> {

@@ -82,7 +82,6 @@ fn set_threshold_should_work() {
 		// Can be set to 1.0
 		assert_ok!(TestRiskManager::set_liquidation_threshold(
 			admin_origin(),
-			DOT,
 			Rate::one()
 		));
 		assert_eq!(TestRiskManager::liquidation_threshold_storage(), Rate::one());
@@ -91,13 +90,13 @@ fn set_threshold_should_work() {
 
 		// The dispatch origin of this call must be Administrator.
 		assert_noop!(
-			TestRiskManager::set_liquidation_threshold(alice_origin(), DOT, Rate::one()),
+			TestRiskManager::set_liquidation_threshold(alice_origin(), Rate::one()),
 			BadOrigin
 		);
 
 		// MDOT is wrong CurrencyId for underlying assets.
 		assert_noop!(
-			TestRiskManager::set_liquidation_threshold(admin_origin(), MDOT, Rate::one()),
+			TestRiskManager::set_liquidation_threshold(admin_origin(), Rate::one()),
 			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
