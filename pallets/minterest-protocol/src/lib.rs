@@ -981,7 +981,7 @@ impl<T: Config> MinterestProtocolManager<T::AccountId> for Pallet<T> {
 		T::MultiCurrency::withdraw(wrapped_id, &borrower, user_seize_wrap)?;
 		T::MultiCurrency::transfer(
 			underlying_asset,
-			&borrower,
+			&T::ManagerLiquidityPools::pools_account_id(),
 			&T::ManagerLiquidationPools::pools_account_id(),
 			user_seize_underlying,
 		)?;

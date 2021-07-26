@@ -51,9 +51,9 @@ ord_parameter_types! {
 }
 
 parameter_types! {
-	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"min/lqdy");
-	pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"min/lqdn");
-	pub const MntTokenPalletId: PalletId = PalletId(*b"min/mntt");
+	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"lqdy/min");
+	pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"lqdn/min");
+	pub const MntTokenPalletId: PalletId = PalletId(*b"mntt/min");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
 	pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
