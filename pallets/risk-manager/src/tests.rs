@@ -90,12 +90,6 @@ fn set_threshold_should_work() {
 			TestRiskManager::set_liquidation_threshold(alice_origin(), Rate::one()),
 			BadOrigin
 		);
-
-		// MDOT is wrong CurrencyId for underlying assets.
-		assert_noop!(
-			TestRiskManager::set_liquidation_threshold(admin_origin(), MDOT, Rate::one()),
-			Error::<TestRuntime>::NotValidUnderlyingAssetId
-		);
 	});
 }
 
