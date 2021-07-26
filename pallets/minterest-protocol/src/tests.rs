@@ -4,7 +4,7 @@ use super::*;
 use mock::{Event, *};
 
 use controller::{ControllerData, PauseKeeper};
-use frame_support::{assert_noop, assert_ok, error::BadOrigin};
+use frame_support::{assert_err, assert_noop, assert_ok, error::BadOrigin};
 use liquidation_pools::LiquidationPoolData;
 use minterest_model::MinterestModelData;
 use minterest_primitives::Rate;
@@ -854,6 +854,8 @@ fn repay_on_behalf_should_work() {
 		});
 }
 
+// TODO: add comments
+// Note: exchange_rate = 10_000 / 100 = 100;
 #[test]
 fn do_seize_should_work() {
 	ExtBuilder::default()
@@ -861,11 +863,21 @@ fn do_seize_should_work() {
 		.user_balance(ALICE, MDOT, ONE_HUNDRED)
 		.build()
 		.execute_with(|| {
-			assert_noop!(
+			// alice_seize_wrap = alice_seize_underlying / exchange_rate;
+
+			// alice_seize_wrap = 10100 DOT / 100 = 101 MDOT;
+			// alice_mdot_balance = 100 MDOT < alice_seize_wrap = 101 MDOT;
+			assert_err!(
+				TestMinterestProtocol::do_seize(&ALICE, DOT, dollars(10_100)),
+				Error::<Test>::NotEnoughWrappedTokens
+			);
+
+			// alice_seize_wrap = 101 DOT / 100 = 1.01 MDOT;
+			assert_err!(
 				TestMinterestProtocol::do_seize(&ALICE, DOT, dollars(101)),
 				Error::<Test>::NotEnoughWrappedTokens
 			);
-			assert_ok!(TestMinterestProtocol::do_seize(&ALICE, DOT, dollars(50)));
+			assert_ok!(TestMinterestProtocol::do_seize(&ALICE, DOT, dollars(100)));
 		});
 }
 
