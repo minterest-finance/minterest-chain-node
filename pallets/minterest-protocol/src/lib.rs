@@ -583,7 +583,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Performs the necessary checks for the existence of currency, check the user's
-	/// balance, calls `accrue_interest_rate`, `update_mnt_supply_index`, `distribute_supplier_mnt`.
+	/// balance, calls `accrue_interest_rate`, `update_pool_mnt_supply_index`, `distribute_supplier_mnt`.
 	/// Transfers an asset into the protocol. The user receives a quantity of wrapped Tokens equal
 	/// to the underlying tokens supplied, divided by the current Exchange Rate.
 	/// Also resets `user_liquidation_attempts` if it's greater than zero.
@@ -934,10 +934,57 @@ impl<T: Config> MinterestProtocolManager<T::AccountId> for Pallet<T> {
 		Ok(repay_amount)
 	}
 
-	/// Withdraws wrapped tokens from the borrower's account. Transfers the corresponding number
-	/// of underlying assets from the liquidity pool to the liquidation pool. Called only during
-	/// the liquidation process.
-	fn do_seize(_borrower: &T::AccountId, _underlying_asset: CurrencyId, _seize_underlying: Balance) -> DispatchResult {
-		todo!()
+	/// Performs the necessary checks for the existence of currency, check the user's
+	/// balance, calls `accrue_interest_rate`, `update_pool_mnt_supply_index`,
+	/// `distribute_supplier_mnt`. Withdraws wrapped tokens from the borrower's account.
+	/// Transfers the corresponding number of underlying assets from the liquidity pool to
+	/// the liquidation pool. Called only during the liquidation process.
+	///
+	/// Parameters:
+	/// -`borrower`:
+	/// -`underlying_asset`:
+	/// -`seize_underlying`:
+	fn do_seize(
+		borrower: &T::AccountId,
+		underlying_asset: CurrencyId,
+		user_seize_underlying: Balance,
+	) -> DispatchResult {
+		ensure!(
+			underlying_asset.is_supported_underlying_asset(),
+			Error::<T>::NotValidUnderlyingAssetId
+		);
+		ensure!(
+			T::ManagerLiquidityPools::pool_exists(&underlying_asset),
+			Error::<T>::PoolNotFound
+		);
+
+		T::ControllerManager::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
+
+		let wrapped_id = underlying_asset
+			.wrapped_asset()
+			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+		let exchange_rate = T::ManagerLiquidityPools::get_exchange_rate(underlying_asset)?;
+		let user_seize_wrap = T::ManagerLiquidityPools::underlying_to_wrapped(user_seize_underlying, exchange_rate)?;
+
+		ensure!(
+			user_seize_wrap <= T::MultiCurrency::free_balance(wrapped_id, &borrower),
+			Error::<T>::NotEnoughWrappedTokens
+		);
+		ensure!(
+			user_seize_underlying <= T::ManagerLiquidityPools::get_pool_available_liquidity(underlying_asset),
+			Error::<T>::NotEnoughLiquidityAvailable
+		);
+
+		T::MntManager::update_pool_mnt_supply_index(underlying_asset)?;
+		T::MntManager::distribute_supplier_mnt(underlying_asset, borrower, false)?;
+
+		T::MultiCurrency::withdraw(wrapped_id, &borrower, user_seize_wrap)?;
+		T::MultiCurrency::transfer(
+			underlying_asset,
+			&borrower,
+			&T::ManagerLiquidationPools::pools_account_id(),
+			user_seize_underlying,
+		)?;
+		Ok(())
 	}
 }

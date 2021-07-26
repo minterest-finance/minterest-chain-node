@@ -394,6 +394,7 @@ impl<T: Config> Pallet<T> {
 				)?;
 				Ok(())
 			})?;
+
 		user_loan_state
 			.get_user_supplies_to_seize_underlying()
 			.into_iter()
@@ -401,6 +402,7 @@ impl<T: Config> Pallet<T> {
 				T::MinterestProtocolManager::do_seize(&borrower, pool_id, seize_underlying)?;
 				Ok(())
 			})?;
+
 		<Self as UserLiquidationAttemptsManager<T::AccountId>>::try_mutate_attempts(
 			&borrower,
 			Operation::Repay,
