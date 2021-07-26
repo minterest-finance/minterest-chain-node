@@ -11,10 +11,6 @@ use minterest_primitives::Rate;
 use pallet_traits::UserCollateral;
 use sp_runtime::{traits::One, FixedPointNumber};
 
-fn dollars<T: Into<u128>>(d: T) -> Balance {
-	DOLLARS.saturating_mul(d.into())
-}
-
 #[test]
 fn create_pool_should_work() {
 	ExtBuilder::default()
@@ -855,6 +851,21 @@ fn repay_on_behalf_should_work() {
 			));
 			let expected_event = Event::TestMinterestProtocol(crate::Event::Repaid(BOB, DOT, dollars(20_u128)));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
+		});
+}
+
+#[test]
+fn do_seize_should_work() {
+	ExtBuilder::default()
+		.pool_with_params(DOT, Balance::zero(), Rate::one(), Balance::zero())
+		.user_balance(ALICE, MDOT, ONE_HUNDRED)
+		.build()
+		.execute_with(|| {
+			assert_noop!(
+				TestMinterestProtocol::do_seize(&ALICE, DOT, dollars(101)),
+				Error::<Test>::NotEnoughWrappedTokens
+			);
+			assert_ok!(TestMinterestProtocol::do_seize(&ALICE, DOT, dollars(50)));
 		});
 }
 
