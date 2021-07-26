@@ -219,6 +219,7 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		/// Set liquidation fee that covers liquidation costs.
 		///
+		/// Parameters:
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `liquidation_fee`: new liquidation fee value.
 		///
@@ -246,7 +247,7 @@ pub mod module {
 
 		/// Set threshold which used in liquidation to protect the user from micro liquidations.
 		///
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		/// Parameters:
 		/// - `threshold`: new threshold.
 		///
 		/// The dispatch origin of this call must be 'RiskManagerUpdateOrigin'.
@@ -264,15 +265,13 @@ pub mod module {
 		/// `accrue_interest_rate`. Before calling the extrinsic, it is necessary to perform all
 		/// checks and math calculations of the user's borrows and collaterals.
 		///
-		/// The dispatch origin of this call must be _None_.
-		///
 		/// - `borrower`: AccountId of the borrower whose loan is being liquidated.
 		/// - `liquidation_amounts`: contains a vectors with user's borrows to be paid from the
 		/// liquidation pools instead of the borrower, and a vector with user's supplies to be
 		/// withdrawn from the borrower and sent to the liquidation pools. Balances are calculated
 		/// in underlying assets.
-		///TODO: try to use the struct `UserLoanState` in the last parameter (add Debug constraint
-		/// to Config).
+		///
+		/// The dispatch origin of this call must be _None_.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn liquidate(
