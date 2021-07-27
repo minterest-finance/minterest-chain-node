@@ -28,7 +28,7 @@
 //! - `set_liquidation_threshold` - setter for parameter `liquidation_threshold`. The dispatch
 //! origin of this call must be 'RiskManagerUpdateOrigin'.
 //! - `liquidate` - Liquidate insolvent loan.  The dispatch origin of this call must be
-//! _None_. Called from OCW.
+//! _None_. Called from the OCW.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
@@ -41,6 +41,7 @@ use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 	pallet_prelude::OriginFor,
 };
+pub use liquidation::*;
 use liquidity_pools::PoolData;
 use minterest_primitives::{
 	currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, OffchainErr, Operation, Rate,
@@ -50,65 +51,17 @@ use pallet_traits::{
 	ControllerManager, CurrencyConverter, LiquidityPoolStorageProvider, MinterestProtocolManager, PoolsManager,
 	PricesManager, RiskManagerStorageProvider, UserCollateral, UserLiquidationAttemptsManager,
 };
-use sp_runtime::traits::{One, StaticLookup, Zero};
+use sp_runtime::{
+	traits::{CheckedAdd, CheckedMul, One, StaticLookup, Zero},
+	FixedPointNumber,
+};
 use sp_std::prelude::*;
 
+mod liquidation;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
-
-/// Types of liquidation of user loans.
-enum LiquidationMode {
-	/// Makes the user's loan solvent. A portion of the user's borrow is paid from the
-	/// liquidation pools, and a portion of the user's collateral is withdrawn and transferred to
-	/// the liquidation pools.
-	Partial,
-	/// All user borrow is paid from liquidation pools. The user's collateral required to cover
-	/// the borrow is withdrawn and transferred to liquidation pools.
-	Complete,
-	/// Occurs when the user's borrow exceeds his supply. This type refers to complete liquidation.
-	ForgivableComplete,
-}
-
-/// Contains information about the transferred amounts for liquidation.
-#[derive(Encode, Decode, RuntimeDebug, Clone, PartialOrd, PartialEq)]
-pub struct LiquidationAmounts {
-	/// Contains a vector of pools and a balances that must be paid instead of the borrower from
-	/// liquidation pools to liquidity pools.
-	borrower_loans_to_repay_underlying: Vec<(CurrencyId, Balance)>,
-	/// Contains a vector of pools and a balances that must be withdrawn from the user's collateral
-	/// and sent to the liquidation pools.
-	borrower_supplies_to_seize_underlying: Vec<(CurrencyId, Balance)>,
-}
-
-/// Contains information about the current state of the borrower's loan.
-#[derive(Encode, Decode, RuntimeDebug, Clone, PartialOrd, PartialEq)]
-pub struct UserLoanState {
-	/// Vector of user loans. Contains information about the CurrencyId and the amount of loan.
-	loans: Vec<(CurrencyId, Balance)>,
-	/// Vector of user supplies. Contains information about the CurrencyId and the amount of supply.
-	supplies: Vec<(CurrencyId, Balance)>,
-}
-
-impl UserLoanState {
-	fn new() -> Self {
-		Self {
-			loans: Vec::new(),
-			supplies: Vec::new(),
-		}
-	}
-
-	/// Returns user_total_borrow_usd.
-	fn total_borrow_usd(&self) -> Balance {
-		self.loans.iter().map(|(_, v)| v).sum()
-	}
-
-	/// Returns user_total_supply_usd.
-	fn total_supply_usd(&self) -> Balance {
-		self.supplies.iter().map(|(_, v)| v).sum()
-	}
-}
 
 #[frame_support::pallet]
 pub mod module {
@@ -173,6 +126,12 @@ pub mod module {
 		RiskManagerParamsAlreadyCreated,
 		/// Feed price is invalid
 		InvalidFeedPrice,
+		/// Number overflow in calculation.
+		NumOverflow,
+		/// User's loan is solvent.
+		SolventUserLoan,
+		/// An error occurred while changing the number of user liquidation attempts.
+		ErrorChangingLiquidationAttempts,
 	}
 
 	#[pallet::event]
@@ -315,6 +274,8 @@ pub mod module {
 		/// liquidation pools instead of the borrower, and a vector with user's supplies to be
 		/// withdrawn from the borrower and sent to the liquidation pools. Balances are calculated
 		/// in underlying assets.
+		///TODO: try to use the struct `UserLoanState` in the last parameter (add Debug constraint
+		/// to Config).
 		///
 		/// The dispatch origin of this call must be _None_.
 		#[pallet::weight(0)]
@@ -362,6 +323,8 @@ impl<T: Config> Pallet<T> {
 			return Err(OffchainErr::NotValidator);
 		}
 
+		//TODO: After implementing the architecture of liquidation, implement specific errors in
+		// the enum OffchainErr.
 		let borrower_iterator = T::ControllerManager::get_all_users_with_insolvent_loan()
 			.map_err(|_| OffchainErr::CheckFail)?
 			.into_iter();
@@ -382,19 +345,24 @@ impl<T: Config> Pallet<T> {
 	///
 	/// -`borrower`: AccountId of the borrower whose loan is being processed.
 	fn process_insolvent_loan(borrower: T::AccountId) -> Result<(), OffchainErr> {
-		let user_loan_state = Self::get_user_loan_state(&borrower).map_err(|_| OffchainErr::CheckFail)?;
-		let liquidation_mode = Self::choose_liquidation_mode(&borrower, &user_loan_state);
-		let liquidation_amounts =
-			match liquidation_mode {
-				LiquidationMode::Partial => Self::calculate_partial_liquidation(&borrower, &user_loan_state)
-					.map_err(|_| OffchainErr::CheckFail)?,
-				LiquidationMode::Complete => Self::calculate_complete_liquidation(&borrower, &user_loan_state)
-					.map_err(|_| OffchainErr::CheckFail)?,
-				LiquidationMode::ForgivableComplete => {
-					Self::calculate_forgivable_complete_liquidation(&borrower, &user_loan_state)
-						.map_err(|_| OffchainErr::CheckFail)?
-				}
-			};
+		let user_loan_state: UserLoanState<T> =
+			UserLoanState::build_user_loan_state(&borrower).map_err(|_| OffchainErr::CheckFail)?;
+		ensure!(borrower == *user_loan_state.get_user(), OffchainErr::CheckFail);
+		let liquidation_amounts = match user_loan_state
+			.choose_liquidation_mode()
+			.map_err(|_| OffchainErr::CheckFail)?
+		{
+			LiquidationMode::Partial => user_loan_state
+				.calculate_partial_liquidation()
+				.map_err(|_| OffchainErr::CheckFail)?,
+			LiquidationMode::Complete => user_loan_state
+				.calculate_complete_liquidation()
+				.map_err(|_| OffchainErr::CheckFail)?,
+			LiquidationMode::ForgivableComplete => user_loan_state
+				.calculate_forgivable_complete_liquidation()
+				.map_err(|_| OffchainErr::CheckFail)?,
+		};
+
 		// call to change the offchain worker local storage
 		Self::do_liquidate(&borrower, liquidation_amounts.clone()).map_err(|_| OffchainErr::CheckFail)?;
 		Self::submit_unsigned_liquidation(&borrower, liquidation_amounts);
@@ -418,62 +386,6 @@ impl<T: Config> Pallet<T> {
 				borrower,
 			);
 		}
-	}
-
-	// TODO: Raw implementation. Cover with unit-tests.
-	/// Selects the liquidation mode for the user's loan. The choice of the liquidation mode is
-	/// made based on the parameters of the current number of user's liquidation attempts and
-	/// the current state of the user's loan.
-	///
-	/// -`borrower`: user for which the liquidation mode is chosen.
-	/// -`user_loan_state`: contains the current state of the borrower's loan.
-	fn choose_liquidation_mode(borrower: &T::AccountId, user_loan_state: &UserLoanState) -> LiquidationMode {
-		let (borrower_total_borrow_usd, borrower_total_supply_usd) =
-			(user_loan_state.total_borrow_usd(), user_loan_state.total_supply_usd());
-		let user_liquidation_attempts = Self::get_user_liquidation_attempts(&borrower);
-		if borrower_total_borrow_usd >= T::PartialLiquidationMinSum::get()
-			&& user_liquidation_attempts < T::PartialLiquidationMaxAttempts::get()
-		{
-			LiquidationMode::Partial
-		} else if borrower_total_borrow_usd > borrower_total_supply_usd {
-			LiquidationMode::ForgivableComplete
-		} else {
-			LiquidationMode::Complete
-		}
-	}
-
-	// TODO: Raw implementation. Cover with unit-tests.
-	/// Calculates the state of the user's loan. Considers supply only for those pools that are
-	/// enabled as collateral.
-	/// Returns user supplies and user borrows for each pool.
-	///
-	/// -`who`: AccountId of the user whose loan state is being calculated.
-	fn get_user_loan_state(who: &T::AccountId) -> Result<UserLoanState, DispatchError> {
-		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.into_iter()
-			.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
-			.try_fold(
-				UserLoanState::new(),
-				|mut acc_user_state, pool_id| -> Result<UserLoanState, DispatchError> {
-					let oracle_price =
-						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-
-					let user_borrow_underlying =
-						T::ControllerManager::get_user_borrow_underlying_balance(who, pool_id)?;
-					let user_borrow_usd =
-						T::LiquidityPoolsManager::underlying_to_usd(user_borrow_underlying, oracle_price)?;
-					acc_user_state.loans.push((pool_id, user_borrow_usd));
-
-					if T::LiquidityPoolsManager::is_pool_collateral(&who, pool_id) {
-						let user_supply_underlying =
-							T::ControllerManager::get_user_supply_underlying_balance(who, pool_id)?;
-						let user_supply_usd =
-							T::LiquidityPoolsManager::underlying_to_usd(user_supply_underlying, oracle_price)?;
-						acc_user_state.supplies.push((pool_id, user_supply_usd));
-					}
-					Ok(acc_user_state)
-				},
-			)
 	}
 
 	/// Calls internal functions from minterest-protocol pallet `do_repay` and `do_seize`, these
@@ -507,54 +419,14 @@ impl<T: Config> Pallet<T> {
 				T::MinterestProtocolManager::do_seize(&borrower, pool_id, seize_underlying)?;
 				Ok(())
 			})?;
-		<Self as UserLiquidationAttemptsManager<T::AccountId>>::mutate_attempts(None, &borrower, Operation::Repay);
+		// TODO: need liquidation mode here
+		<Self as UserLiquidationAttemptsManager<T::AccountId>>::try_mutate_attempts(
+			&borrower,
+			Operation::Repay,
+			None,
+			None,
+		)?;
 		Ok(())
-	}
-
-	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
-	/// for partial liquidation.
-	///
-	/// Returns: vectors with user's borrows to be paid from the liquidation pools instead of
-	/// the borrower, and a vector with user's supplies to be withdrawn from the borrower and sent
-	/// to the liquidation pools. Balances are calculated in underlying assets.
-	///
-	/// Note: this function should be used after `accrue_interest_rate`.
-	fn calculate_partial_liquidation(
-		_borrower: &T::AccountId,
-		_borrower_loan_state: &UserLoanState,
-	) -> Result<LiquidationAmounts, DispatchError> {
-		todo!()
-	}
-
-	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
-	/// for complete liquidation.
-	///
-	/// Returns: vectors with user's borrows to be paid from the liquidation pools instead of
-	/// the borrower, and a vector with user's supplies to be withdrawn from the borrower and sent
-	/// to the liquidation pools. Balances are calculated in underlying assets.
-	///
-	/// Note: this function should be used after `accrue_interest_rate`.
-	fn calculate_complete_liquidation(
-		_borrower: &T::AccountId,
-		_borrower_loan_state: &UserLoanState,
-	) -> Result<LiquidationAmounts, DispatchError> {
-		todo!()
-	}
-
-	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
-	/// for "forgivable" complete liquidation. This function is called when user_total_borrow is
-	/// greater than user_total_supply.
-	///
-	/// Returns: vectors with user's borrows to be paid from the liquidation pools instead of
-	/// the borrower, and a vector with user's supplies to be withdrawn from the borrower and sent
-	/// to the liquidation pools. Balances are calculated in underlying assets.
-	///
-	/// Note: this function should be used after `accrue_interest_rate`.
-	fn calculate_forgivable_complete_liquidation(
-		_borrower: &T::AccountId,
-		_borrower_loan_state: &UserLoanState,
-	) -> Result<LiquidationAmounts, DispatchError> {
-		todo!()
 	}
 
 	/// Checks if liquidation_fee <= 0.5
@@ -594,26 +466,50 @@ impl<T: Config> RiskManagerStorageProvider for Pallet<T> {
 }
 
 impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
+	type LiquidationMode = LiquidationMode;
+
 	/// Gets user liquidation attempts.
 	fn get_user_liquidation_attempts(who: &T::AccountId) -> u8 {
 		Self::user_liquidation_attempts_storage(who)
 	}
 
+	// TODO: Raw implementation, cover with tests. No need to review this function.
 	/// Mutates user liquidation attempts depending on user operation.
 	/// If the user makes a deposit to the collateral pool, then attempts are set to zero.
-	/// TODO: implement mutate in case of liquidation
-	fn mutate_attempts(pool_id: Option<CurrencyId>, who: &T::AccountId, operation: Operation) {
-		// pool_id existence in case of a deposit operation
-		if let Some(pool_id) = pool_id {
-			if operation == Operation::Deposit && T::UserCollateral::is_pool_collateral(&who, pool_id) {
-				let user_liquidation_attempts = Self::get_user_liquidation_attempts(&who);
-				if !user_liquidation_attempts.is_zero() {
-					Self::user_liquidation_attempts_reset_to_zero(&who);
+	/// -`who`:
+	/// -`operation`:
+	/// -`pool_id`:
+	/// -`liquidation_mode`:
+	fn try_mutate_attempts(
+		who: &T::AccountId,
+		operation: Operation,
+		pool_id: Option<CurrencyId>,
+		liquidation_mode: Option<LiquidationMode>,
+	) -> DispatchResult {
+		match operation {
+			Operation::Deposit => pool_id.map_or(Err(Error::<T>::ErrorChangingLiquidationAttempts), {
+				|pool_id| {
+					if T::UserCollateral::is_pool_collateral(&who, pool_id) {
+						let user_liquidation_attempts = Self::get_user_liquidation_attempts(&who);
+						if !user_liquidation_attempts.is_zero() {
+							Self::user_liquidation_attempts_reset_to_zero(&who);
+						}
+					}
+					Ok(())
 				}
-			}
-		// Fixme: After implementation of liquidation fix this case and cover with tests
-		} else if operation == Operation::Repay {
-			Self::user_liquidation_attempts_increase_by_one(&who);
-		}
+			}),
+			Operation::Repay => liquidation_mode.map_or(Err(Error::<T>::ErrorChangingLiquidationAttempts), {
+				|mode| {
+					match mode {
+						LiquidationMode::Partial => Self::user_liquidation_attempts_increase_by_one(&who),
+						LiquidationMode::Complete => Self::user_liquidation_attempts_reset_to_zero(&who),
+						LiquidationMode::ForgivableComplete => Self::user_liquidation_attempts_reset_to_zero(&who),
+					}
+					Ok(())
+				}
+			}),
+			_ => Err(Error::<T>::ErrorChangingLiquidationAttempts),
+		}?;
+		Ok(())
 	}
 }

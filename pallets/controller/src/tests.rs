@@ -3,14 +3,13 @@ use super::*;
 use crate::mock::{Event, *};
 use frame_support::{assert_err, assert_noop, assert_ok};
 pub use minterest_primitives::{Balance, CurrencyId, Interest, Operation, Rate};
-use pallet_traits::PoolsManager;
-use pallet_traits::{ControllerManager, UserCollateral};
+use pallet_traits::{ControllerManager, PoolsManager, UserCollateral};
 use sp_runtime::DispatchError::BadOrigin;
 use sp_runtime::{
 	traits::{One, Zero},
 	FixedPointNumber,
 };
-pub use test_helper::*;
+use std::collections::BTreeSet;
 
 // Presets for controller testing
 #[cfg(test)]
@@ -439,19 +438,19 @@ fn get_hypothetical_account_liquidity_when_m_tokens_balance_is_zero_should_work(
 			// Checking the function when called from redeem.
 			// The function should return the shortfall to a large zero.
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 5, 0),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 5, 0),
 				Ok((0, 9))
 			);
 			// Checking the function when called from borrow.
 			// The function should return the shortfall to a large zero.
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 0, 10),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 0, 10),
 				Ok((0, 20))
 			);
 			// Checking scenario: the user tries to take a borrow in a currency which is not
 			// pool as available for collateral, and he fails.
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&BOB, BTC, 0, 10),
+				TestController::get_hypothetical_account_liquidity(&BOB, Some(BTC), 0, 10),
 				Ok((0, 20))
 			);
 		});
@@ -469,15 +468,15 @@ fn get_hypothetical_account_liquidity_one_currency_from_redeem_should_work() {
 			// Checking the function when called from redeem.
 			// collateral parameter is set to false, user can't redeem.
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 5, 0),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 5, 0),
 				Ok((0, 9))
 			);
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 60, 0),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 60, 0),
 				Ok((0, 108))
 			);
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 200, 0),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 200, 0),
 				Ok((0, 360))
 			);
 		});
@@ -496,15 +495,15 @@ fn get_hypothetical_account_liquidity_two_currencies_from_redeem_should_work() {
 			// Checking the function when called from redeem.
 			// collateral parameter is set to false, user can't redeem.
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, ETH, 15, 0),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(ETH), 15, 0),
 				Ok((0, 27))
 			);
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, ETH, 80, 0),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(ETH), 80, 0),
 				Ok((0, 144))
 			);
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, ETH, 100, 0),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(ETH), 100, 0),
 				Ok((0, 180))
 			);
 		});
@@ -548,7 +547,7 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 			// Checking the function when called from borrow.
 			// collateral parameter for DOT and ETH pool is set to false. User can't borrow.
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 0, 30),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 0, 30),
 				Ok((0, 120))
 			);
 
@@ -556,11 +555,11 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 			TestPools::enable_is_collateral(&ALICE, DOT);
 
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 0, 50),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 0, 50),
 				Ok((2, 0))
 			);
 			assert_eq!(
-				TestController::get_hypothetical_account_liquidity(&ALICE, DOT, 0, 100),
+				TestController::get_hypothetical_account_liquidity(&ALICE, Some(DOT), 0, 100),
 				Ok((0, 98))
 			);
 		});
@@ -611,6 +610,80 @@ fn get_liquidity_pool_exchange_rate_should_work() {
 					.unwrap()
 					.0,
 				Rate::from_inner(3200001458000012737)
+			);
+		});
+}
+
+// ALice: 	300 DOT collateral;	400 ETH borrow;		600 BTC collateral. -- solvent
+// Bob:		500 DOT borrow;		250 ETH borrow;		750 BTC collateral.	-- insolvent
+// Charlie:	300 DOT borrow;		900 ETH supply;		300 BTC collateral.	-- insolvent
+#[test]
+fn get_all_users_with_insolvent_loan_should_work() {
+	ExtBuilder::default()
+		.init_pool(
+			DOT,               // pool_id
+			dollars(800_u128), // borrowed
+			Rate::one(),       // borrow_index
+			Balance::zero(),   // protocol_interest
+		)
+		.init_pool(
+			ETH,               // pool_id
+			dollars(650_u128), // borrowed
+			Rate::one(),       // borrow_index
+			Balance::zero(),   // protocol_interest
+		)
+		.init_pool(
+			BTC,               // pool_id
+			dollars(650_u128), // borrowed
+			Rate::one(),       // borrow_index
+			Balance::zero(),   // protocol_interest
+		)
+		.set_pool_user_data(DOT, ALICE, Balance::zero(), Rate::one(), true)
+		.set_pool_user_data(ETH, ALICE, dollars(400_u128), Rate::one(), false)
+		.set_pool_user_data(BTC, ALICE, Balance::zero(), Rate::one(), true)
+		.set_pool_user_data(DOT, BOB, dollars(500_u128), Rate::one(), false)
+		.set_pool_user_data(ETH, BOB, dollars(250_u128), Rate::one(), false)
+		.set_pool_user_data(BTC, BOB, Balance::zero(), Rate::one(), true)
+		.set_pool_user_data(DOT, CHARLIE, dollars(300_u128), Rate::one(), false)
+		.set_pool_user_data(ETH, CHARLIE, Balance::zero(), Rate::one(), false)
+		.set_pool_user_data(BTC, CHARLIE, Balance::zero(), Rate::one(), true)
+		.set_user_balance(ALICE, MDOT, dollars(300_u128))
+		.set_user_balance(ALICE, MBTC, dollars(600_u128))
+		.set_user_balance(BOB, MBTC, dollars(750_u128))
+		.set_user_balance(CHARLIE, METH, dollars(900_u128))
+		.set_user_balance(CHARLIE, MBTC, dollars(300_u128))
+		.set_controller_data(
+			DOT,                                     // currency_id
+			0,                                       // last_interest_accrued_block
+			Rate::saturating_from_rational(1, 10),   // protocol_interest_factor
+			Rate::saturating_from_rational(5, 1000), // max_borrow_rate
+			Rate::saturating_from_rational(9, 10),   //collateral_factor
+			None,                                    // borrow_cap
+			PROTOCOL_INTEREST_TRANSFER_THRESHOLD,    // protocol_interest_threshold
+		)
+		.set_controller_data(
+			ETH,                                     // currency_id
+			0,                                       // last_interest_accrued_block
+			Rate::saturating_from_rational(1, 10),   // protocol_interest_factor
+			Rate::saturating_from_rational(5, 1000), // max_borrow_rate
+			Rate::saturating_from_rational(9, 10),   //collateral_factor
+			None,                                    // borrow_cap
+			PROTOCOL_INTEREST_TRANSFER_THRESHOLD,    // protocol_interest_threshold
+		)
+		.set_controller_data(
+			BTC,                                     // currency_id
+			0,                                       // last_interest_accrued_block
+			Rate::saturating_from_rational(1, 10),   // protocol_interest_factor
+			Rate::saturating_from_rational(5, 1000), // max_borrow_rate
+			Rate::saturating_from_rational(9, 10),   //collateral_factor
+			None,                                    // borrow_cap
+			PROTOCOL_INTEREST_TRANSFER_THRESHOLD,    // protocol_interest_threshold
+		)
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				TestController::get_all_users_with_insolvent_loan().unwrap(),
+				vec![BOB, CHARLIE].into_iter().collect::<BTreeSet<AccountId>>()
 			);
 		});
 }
@@ -763,6 +836,27 @@ fn is_operation_allowed_should_work() {
 			assert!(!TestController::is_operation_allowed(DOT, Operation::Redeem));
 			assert!(TestController::is_operation_allowed(DOT, Operation::Borrow));
 			assert!(TestController::is_operation_allowed(DOT, Operation::Repay));
+		});
+}
+
+#[test]
+fn calculate_collateral_should_work() {
+	ExtBuilder::default()
+		.set_controller_data(
+			DOT,                                     // currency_id
+			0,                                       // last_interest_accrued_block
+			Rate::saturating_from_rational(1, 10),   // protocol_interest_factor
+			Rate::saturating_from_rational(5, 1000), // max_borrow_rate
+			Rate::saturating_from_rational(9, 10),   //collateral_factor
+			None,                                    // borrow_cap
+			PROTOCOL_INTEREST_TRANSFER_THRESHOLD,    // protocol_interest_threshold
+		)
+		.build()
+		.execute_with(|| {
+			assert_eq!(
+				TestController::calculate_collateral(DOT, dollars(100_u128)),
+				dollars(90_u128)
+			);
 		});
 }
 
