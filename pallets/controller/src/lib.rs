@@ -1295,4 +1295,23 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 
 		Ok((user_total_supply_apy, user_total_borrow_apy, user_net_apy))
 	}
+
+	/// Calculate user total borrow in usd based on fresh exchange rate and
+	/// latest oracle price
+	///
+	/// - `who`: the AccountId whose borrow should be calculated.
+	fn get_user_total_borrow_usd(who: &T::AccountId) -> BalanceResult {
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.into_iter()
+			.filter(|pool_id| T::LiquidityPoolsManager::pool_exists(pool_id))
+			.try_fold(Balance::zero(), |acc, pool_id| {
+				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+				let underlying_borrow = Self::get_user_borrow_underlying_balance(who, pool_id)?;
+				let borrow_balance_in_usd =
+					T::LiquidityPoolsManager::underlying_to_usd(underlying_borrow, oracle_price)?;
+				Ok(acc
+					.checked_add(borrow_balance_in_usd)
+					.ok_or(Error::<T>::BalanceOverflow)?)
+			})
+	}
 }
