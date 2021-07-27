@@ -193,7 +193,9 @@
         "frozen": "Balance"
       },
       "AccountData": "OrmlAccountData",
-      "FeedId": "u32",
+      "ChainlinkFeedId": "u32",
+      "ChainlinkPriceValue": "u128",
+      "FeedId": "ChainlinkFeedId",
       "SubmissionBounds": "(u32, u32)",
       "RoundId": "u32"
   },

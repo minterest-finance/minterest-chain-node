@@ -200,7 +200,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	// TODO This is temporary function. We need tom move this function as method to
-	// privitives/src/currency.rs. Also, add distingiush between chainlink provider and minterest
+	// primitives/src/currency.rs. Also, add distingiush between chainlink provider and minterest
 	fn convert_to_description(currency_id: CurrencyId) -> &'static [u8] {
 		match currency_id {
 			ETH => b"MIN-ETH",
