@@ -214,6 +214,8 @@ pub mod module {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Set MNT minting speed for pool.
+		///
+		/// Parameters:
 		/// - `currency_id`: currency id for which speed is being set
 		/// - `speed`: new minting speed. Zero speed means minting will be disabled.
 		///

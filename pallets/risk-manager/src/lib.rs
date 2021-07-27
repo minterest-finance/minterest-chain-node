@@ -289,6 +289,7 @@ pub mod module {
 		/// Set threshold which used in liquidation to protect the user from micro liquidations.
 		///
 		/// Parameters:
+		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `threshold`: new threshold.
 		///
 		/// The dispatch origin of this call must be 'RiskManagerUpdateOrigin'.
@@ -306,6 +307,9 @@ pub mod module {
 		/// `accrue_interest_rate`. Before calling the extrinsic, it is necessary to perform all
 		/// checks and math calculations of the user's borrows and collaterals.
 		///
+		/// The dispatch origin of this call must be _None_.
+		///
+		/// Parameters:
 		/// - `borrower`: AccountId of the borrower whose loan is being liquidated.
 		/// - `liquidation_amounts`: contains a vectors with user's borrows to be paid from the
 		/// liquidation pools instead of the borrower, and a vector with user's supplies to be
