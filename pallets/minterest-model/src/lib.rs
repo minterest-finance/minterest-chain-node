@@ -136,6 +136,7 @@ pub mod module {
 	/// - `jump_multiplier_per_block`: Jump Multiplier Per Block is used to correct Borrow Interest
 	/// Rate after Utilization Rate hits Kink
 	///
+	/// Storage location:
 	/// [`MNT Storage`](?search=minterest_model::module::Pallet::minterest_model_data_storage)
 	#[doc(alias("MNT Storage", "MNT minterest_model"))]
 	#[pallet::storage]

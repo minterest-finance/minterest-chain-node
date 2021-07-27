@@ -142,6 +142,8 @@ pub mod module {
 	}
 
 	/// The threshold above which the flywheel transfers MNT
+	///
+	/// Storage location:
 	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_claim_threshold_storage)
 	#[doc(alias("MNT Storage", "MNT mnt_token"))]
 	#[pallet::storage]
@@ -151,6 +153,8 @@ pub mod module {
 	/// MNT minting speed for each pool
 	/// Doubling this number shows how much MNT goes to all suppliers and borrowers of a particular
 	/// pool.
+	///
+	/// Storage location:
 	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_speed_storage)
 	#[doc(alias("MNT Storage", "MNT mnt_token"))]
 	#[pallet::storage]
@@ -158,6 +162,8 @@ pub mod module {
 	pub type MntSpeedStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Balance, ValueQuery>;
 
 	/// Index + block_number need for generating and distributing new MNT tokens for pool
+	///
+	/// Storage location:
 	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_pool_state_storage)
 	#[doc(alias("MNT Storage", "MNT mnt_token"))]
 	#[pallet::storage]
@@ -166,6 +172,8 @@ pub mod module {
 		StorageMap<_, Twox64Concat, CurrencyId, MntPoolState<T>, ValueQuery>;
 
 	/// Use for accruing MNT tokens for supplier
+	///
+	/// Storage location:
 	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_supplier_index_storage)
 	#[doc(alias("MNT Storage", "MNT mnt_token"))]
 	#[pallet::storage]
@@ -175,6 +183,7 @@ pub mod module {
 
 	/// Use for accruing MNT tokens for borrower
 	///
+	/// Storage location:
 	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_borrower_index_storage)
 	#[doc(alias("MNT Storage", "MNT mnt_token"))]
 	#[pallet::storage]

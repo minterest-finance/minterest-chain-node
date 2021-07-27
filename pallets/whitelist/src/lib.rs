@@ -79,6 +79,8 @@ pub mod module {
 	}
 
 	/// The set of all members.
+	///
+	/// Storage location:
 	/// [`MNT Storage`](?search=whitelist_module::module::Pallet::members)
 	#[doc(alias("MNT Storage", "MNT whitelist_module"))]
 	#[pallet::storage]
@@ -87,6 +89,8 @@ pub mod module {
 
 	/// The total number of members stored in the map.
 	/// Because the map does not store its size, we must store it separately.
+	///
+	/// Storage location:
 	/// [`MNT Storage`](?search=whitelist_module::module::Pallet::member_count)
 	#[doc(alias("MNT Storage", "MNT whitelist_module"))]
 	#[pallet::storage]
@@ -95,6 +99,8 @@ pub mod module {
 
 	/// Boolean variable. Protocol operation mode. In whitelist mode, only members
 	/// from whitelist can work with protocol.
+	///
+	/// Storage location:
 	/// [`MNT Storage`](?search=whitelist_module::module::Pallet::whitelist_mode)
 	#[doc(alias("MNT Storage", "MNT whitelist_module"))]
 	#[pallet::storage]

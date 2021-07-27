@@ -186,6 +186,8 @@ pub mod module {
 
 	/// The additional collateral which is taken from borrowers as a penalty for being liquidated.
 	/// Sets for each liquidity pool separately.
+	///
+	/// Storage location:
 	/// [`MNT Storage`](?search=risk_manager::module::Pallet::liquidation_fee_storage)
 	#[doc(alias("MNT Storage", "MNT risk_manager"))]
 	#[pallet::storage]
@@ -194,6 +196,8 @@ pub mod module {
 
 	/// Step used in liquidation to protect the user from micro liquidations. One value for
 	/// the entire protocol.
+	///
+	/// Storage location:
 	/// [`MNT Storage`](?search=risk_manager::module::Pallet::liquidation_threshold_storage)
 	#[doc(alias("MNT Storage", "MNT risk_manager"))]
 	#[pallet::storage]
@@ -201,6 +205,8 @@ pub mod module {
 	pub(crate) type LiquidationThresholdStorage<T: Config> = StorageValue<_, Rate, ValueQuery>;
 
 	/// Counter of the number of partial liquidations at the user.
+	///
+	/// Storage location:
 	/// [`MNT Storage`](?search=risk_manager::module::Pallet::user_liquidation_attempts_storage)
 	#[doc(alias("MNT Storage", "MNT risk_manager"))]
 	#[pallet::storage]
