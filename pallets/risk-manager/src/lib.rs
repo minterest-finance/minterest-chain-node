@@ -295,16 +295,8 @@ pub mod module {
 		/// The dispatch origin of this call must be 'RiskManagerUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_liquidation_threshold(
-			origin: OriginFor<T>,
-			pool_id: CurrencyId,
-			threshold: Rate,
-		) -> DispatchResultWithPostInfo {
+		pub fn set_liquidation_threshold(origin: OriginFor<T>, threshold: Rate) -> DispatchResultWithPostInfo {
 			T::RiskManagerUpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				pool_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
 			LiquidationThresholdStorage::<T>::put(threshold);
 			Self::deposit_event(Event::LiquidationThresholdUpdated(threshold));
 			Ok(().into())
@@ -323,6 +315,8 @@ pub mod module {
 		/// liquidation pools instead of the borrower, and a vector with user's supplies to be
 		/// withdrawn from the borrower and sent to the liquidation pools. Balances are calculated
 		/// in underlying assets.
+		///
+		/// The dispatch origin of this call must be _None_.
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn liquidate(

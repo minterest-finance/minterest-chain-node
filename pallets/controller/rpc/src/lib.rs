@@ -64,7 +64,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// Return:
 	/// - utilization_rate: current utilization rate of a pool.
 	#[rpc(name = "controller_utilizationRate")]
-	fn get_utilization_rate(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<Rate>>;
+	fn get_pool_utilization_rate(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<Rate>>;
 
 	/// Returns user total supply and user total borrowed balance in usd.
 	///
@@ -294,12 +294,16 @@ where
 		})
 	}
 
-	fn get_utilization_rate(&self, pool_id: CurrencyId, at: Option<<Block as BlockT>::Hash>) -> Result<Option<Rate>> {
+	fn get_pool_utilization_rate(
+		&self,
+		pool_id: CurrencyId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<Option<Rate>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
-		api.get_utilization_rate(&at, pool_id).map_err(|e| RpcError {
+		api.get_pool_utilization_rate(&at, pool_id).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
 			message: "Unable to get pool utilization rate.".into(),
 			data: Some(format!("{:?}", e).into()),

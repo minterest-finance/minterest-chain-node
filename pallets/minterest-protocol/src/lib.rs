@@ -787,7 +787,7 @@ impl<T: Config> Pallet<T> {
 		T::MntManager::distribute_borrower_mnt(underlying_asset, who, false)?;
 
 		// Fetch the amount the borrower owes, with accumulated interest.
-		let account_borrows = T::ControllerManager::borrow_balance_stored(&who, underlying_asset)?;
+		let account_borrows = T::ControllerManager::user_borrow_balance_stored(&who, underlying_asset)?;
 
 		T::ManagerLiquidityPools::update_state_on_borrow(&who, underlying_asset, borrow_amount, account_borrows)?;
 
@@ -937,7 +937,7 @@ impl<T: Config> MinterestProtocolManager<T::AccountId> for Pallet<T> {
 		T::MntManager::distribute_borrower_mnt(underlying_asset, borrower, false)?;
 
 		// Fetch the amount the borrower owes, with accumulated interest
-		let account_borrows = T::ControllerManager::borrow_balance_stored(&borrower, underlying_asset)?;
+		let account_borrows = T::ControllerManager::user_borrow_balance_stored(&borrower, underlying_asset)?;
 
 		if repay_amount.is_zero() {
 			repay_amount = account_borrows
