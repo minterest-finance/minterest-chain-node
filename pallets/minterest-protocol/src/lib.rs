@@ -583,10 +583,10 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Performs the necessary checks for the existence of currency, check the user's
-	/// balance, calls `accrue_interest_rate`, `update_pool_mnt_supply_index`, `distribute_supplier_mnt`.
-	/// Transfers an asset into the protocol. The user receives a quantity of wrapped Tokens equal
-	/// to the underlying tokens supplied, divided by the current Exchange Rate.
-	/// Also resets `user_liquidation_attempts` if it's greater than zero.
+	/// balance, calls `accrue_interest_rate`, `update_pool_mnt_supply_index`,
+	/// `distribute_supplier_mnt`. Transfers an asset into the protocol. The user receives a
+	/// quantity of wrapped Tokens equal to the underlying tokens supplied, divided by the current
+	/// Exchange Rate. Also resets `user_liquidation_attempts` if it's greater than zero.
 	///
 	/// - `underlying_asset`: CurrencyId of underlying assets to be transferred into the protocol.
 	/// - `deposit_underlying_amount`: The amount of the asset to be supplied, in units of the

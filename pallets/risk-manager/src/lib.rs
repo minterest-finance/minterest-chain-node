@@ -34,6 +34,7 @@
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
 #![allow(clippy::redundant_clone)]
+#![allow(clippy::unnecessary_wraps)] // TODO: remove after implementation math functions
 
 use frame_support::{
 	sp_runtime::offchain::{

@@ -1,6 +1,8 @@
 use super::*;
 use sp_std::fmt::Debug;
 
+type LiquidationAmountsResult = Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError>;
+
 /// Types of liquidation of user loans.
 #[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, PartialOrd, Ord)]
 pub enum LiquidationMode {
@@ -209,17 +211,13 @@ impl<T: Config + Debug> UserLoanState<T> {
 	/// -`who`: user AccountId whose loan is being processed.
 	///
 	/// Returns: information about the current state of the borrower's loan.
-	pub(crate) fn calculate_user_loan_state(
-		who: &T::AccountId,
-	) -> Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
+	pub(crate) fn calculate_user_loan_state(who: &T::AccountId) -> LiquidationAmountsResult {
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.into_iter()
 			.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
 			.try_fold(
 				(Vec::new(), Vec::new()),
-				|(mut supplies, mut borrows),
-				 pool_id|
-				 -> Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
+				|(mut supplies, mut borrows), pool_id| -> LiquidationAmountsResult {
 					let oracle_price =
 						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
@@ -251,9 +249,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 	/// to the liquidation pools. Balances are calculated in underlying assets.
 	///
 	/// Note: this function should be used after `accrue_interest_rate`.
-	pub(crate) fn calculate_partial_liquidation(
-		&self,
-	) -> Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
+	pub(crate) fn calculate_partial_liquidation(&self) -> LiquidationAmountsResult {
 		Ok((Vec::new(), Vec::new()))
 	}
 
@@ -265,9 +261,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 	/// to the liquidation pools. Balances are calculated in underlying assets.
 	///
 	/// Note: this function should be used after `accrue_interest_rate`.
-	pub(crate) fn calculate_complete_liquidation(
-		&self,
-	) -> Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
+	pub(crate) fn calculate_complete_liquidation(&self) -> LiquidationAmountsResult {
 		Ok((Vec::new(), Vec::new()))
 	}
 
@@ -280,9 +274,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 	/// to the liquidation pools. Balances are calculated in underlying assets.
 	///
 	/// Note: this function should be used after `accrue_interest_rate`.
-	pub(crate) fn calculate_forgivable_complete_liquidation(
-		&self,
-	) -> Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError> {
+	pub(crate) fn calculate_forgivable_complete_liquidation(&self) -> LiquidationAmountsResult {
 		Ok((Vec::new(), Vec::new()))
 	}
 }
