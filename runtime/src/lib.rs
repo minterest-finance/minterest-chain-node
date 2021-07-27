@@ -883,6 +883,7 @@ impl_runtime_apis! {
 				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_no_op(&key)
 			}
 		}
+
 			/// Return the USD exchange rate for all underlying assets
 			///
 			/// Parameters:
@@ -893,7 +894,7 @@ impl_runtime_apis! {
 			/// - [`CurrencyId`](`minterest_primitives::CurrencyId`): currency type
 			/// - [`Price`](`minterest_primitives::Price`):  price of a currency in USD
 			/// - [`Moment`](`minterest_primitives::Moment`):  time stamp at the time of the call.
-            #[doc(alias("MNT RPC", "MNT oracle"))]
+			#[doc(alias("MNT RPC", "MNT oracle"))]
 		fn get_all_values(provider_id: DataProviderId) -> Vec<(CurrencyId, Option<TimeStampedPrice>)> {
 			match provider_id {
 				DataProviderId::Minterest => MinterestOracle::get_all_values(),

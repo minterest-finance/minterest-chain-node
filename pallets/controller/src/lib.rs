@@ -235,7 +235,8 @@ pub mod module {
 	/// - `protocol_interest_threshold`: Protocol interest threshold determines a minimum amount of
 	/// protocol interest needed to transfer it from liquidity to liquidation pool
 	///
-    /// [`MNT Storage`](?search=controller::module::Pallet::controller_params)
+	/// Storage location:
+	/// [`MNT Storage`](?search=controller::module::Pallet::controller_params)
 	#[doc(alias("MNT Storage", "MNT controller"))]
 	#[pallet::storage]
 	#[pallet::getter(fn controller_data_storage)]
@@ -250,7 +251,8 @@ pub mod module {
 	/// - `borrow_paused`: is pause borrow operation in the pool
 	/// - `repay_paused`: is pause repay operation in the pool
 	///
-    /// [`MNT Storage`](?search=controller::module::Pallet::pause_keepers)
+	/// Storage location:
+	/// [`MNT Storage`](?search=controller::module::Pallet::pause_keepers)
 	#[doc(alias("MNT Storage", "MNT controller"))]
 	#[pallet::storage]
 	#[pallet::getter(fn pause_keeper_storage)]

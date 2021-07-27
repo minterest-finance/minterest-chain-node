@@ -158,7 +158,8 @@ pub mod module {
 	/// - `max_ideal_balance`: Max Ideal Balance represents the ideal balance of Liquidation Pool
 	/// and is used to limit ideal balance during pool balancing.
 	///
-    /// [`MNT Storage`](?search=liquidation_pools::module::Pallet::liquidation_pools_data)
+	/// Storage location:
+	/// [`MNT Storage`](?search=liquidation_pools::module::Pallet::liquidation_pools_data)
 	#[doc(alias("MNT Storage", "MNT liquidation_pools"))]
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_pool_data_storage)]

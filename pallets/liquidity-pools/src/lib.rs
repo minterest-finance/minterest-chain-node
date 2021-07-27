@@ -139,7 +139,8 @@ pub mod module {
 	/// Used to accrue interest when user repays a loan.
 	/// - `protocol_interest`: amount of protocol_interest of the underlying held in this pool.
 	///
-    /// [`MNT Storage`](?search=liquidity_pools::module::Pallet::pools)
+	/// Storage location:
+	/// [`MNT Storage`](?search=liquidity_pools::module::Pallet::pools)
 	#[doc(alias("MNT Storage", "MNT liquidity_pools"))]
 	#[pallet::storage]
 	#[pallet::getter(fn pool_data_storage)]
@@ -154,6 +155,7 @@ pub mod module {
 	/// - `interest_index`: global borrow_index at the time of the last balance changing action.
 	/// - `is_collateral`: whether or not the pool can be used as a collateral by this user.
 	///
+	/// Storage location:
 	/// [`MNT Storage`](?search=liquidity_pools::module::Pallet::pool_user_data)
 	#[doc(alias("MNT Storage", "MNT liquidity_pools"))]
 	#[pallet::storage]

@@ -174,6 +174,7 @@ pub mod module {
 		StorageDoubleMap<_, Twox64Concat, CurrencyId, Twox64Concat, T::AccountId, Rate, OptionQuery>;
 
 	/// Use for accruing MNT tokens for borrower
+	///
 	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_borrower_index_storage)
 	#[doc(alias("MNT Storage", "MNT mnt_token"))]
 	#[pallet::storage]
@@ -182,7 +183,9 @@ pub mod module {
 		StorageDoubleMap<_, Twox64Concat, CurrencyId, Twox64Concat, T::AccountId, Rate, ValueQuery>;
 
 	/// Place where accrued MNT tokens are kept for each user
-    /// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_accrued_storage)
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_accrued_storage)
 	#[doc(alias("MNT Storage", "MNT mnt_token"))]
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_accrued_storage)]

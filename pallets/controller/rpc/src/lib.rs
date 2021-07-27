@@ -217,10 +217,9 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Returns:
-    ///
+	///
 	/// (user_total_collateral, user_total_supply_in_usd, user_total_borrow_in_usd,
 	///   user_total_supply_apy, user_total_borrow_apy, user_net_apy)
-    ///
 	/// - [`total_collateral_in_usd`](`UserData::total_collateral_in_usd`): user total collateral
 	/// in usd.
 	/// - [`total_supply_in_usd`](`UserData::total_supply_in_usd`): user total supplied to the

@@ -64,7 +64,9 @@ pub mod module {
 	}
 
 	/// Mapping from currency id to it's locked(approved by Oracles pallet) price in USD.
-    /// [`MNT Storage`](?search=module_prices::module::Pallet::locked_price_storage)
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=module_prices::module::Pallet::locked_price_storage)
 	#[doc(alias("MNT Storage", "MNT module_prices"))]
 	#[pallet::storage]
 	#[pallet::getter(fn locked_price_storage)]
