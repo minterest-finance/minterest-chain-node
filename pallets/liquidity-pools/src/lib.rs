@@ -42,7 +42,7 @@ use sp_std::{result, vec::Vec};
 /// Pool metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct Pool {
+pub struct PoolData {
 	/// The amount of underlying currently loaned out by the pool, and the amount upon which
 	/// interest is accumulated to suppliers of the pool.
 	pub borrowed: Balance,
@@ -129,23 +129,42 @@ pub mod module {
 		PoolAlreadyCreated,
 	}
 
-	/// [`MNT Storage`](?search=liquidity_pools::module::Pallet::pools)
+	/// Return liquidity pools information: (borrowed, borrow_index, protocol_interest)
+	///
+	/// Return:
+	/// - `borrowed`: Pool Borrowed value of the underlying asset plus all the interest, that
+	/// should be paid back by borrowers on repay.
+	/// - `borrow_index`: Borrow Index accumulates the total earned interest since the opening of
+	/// the pool.
+	/// Used to accrue interest when user repays a loan.
+	/// - `protocol_interest`: amount of protocol_interest of the underlying held in this pool.
+	///
+    /// [`MNT Storage`](?search=liquidity_pools::module::Pallet::pools)
 	#[doc(alias("MNT Storage", "MNT liquidity_pools"))]
 	#[pallet::storage]
-	#[pallet::getter(fn pools)]
-	pub(crate) type Pools<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Pool, ValueQuery>;
+	#[pallet::getter(fn pool_data_storage)]
+	pub(crate) type PoolDataStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, PoolData, ValueQuery>;
 
+	/// Return information about the user of the liquidity pool: (borrowed, interest_index,
+	/// is_collateral,)
+	///
+	/// Return:
+	/// - `borrowed`: User Borrow Underlying (with accrued interest), after applying the most
+	/// recent balance-changing action.
+	/// - `interest_index`: global borrow_index at the time of the last balance changing action.
+	/// - `is_collateral`: whether or not the pool can be used as a collateral by this user.
+	///
 	/// [`MNT Storage`](?search=liquidity_pools::module::Pallet::pool_user_data)
 	#[doc(alias("MNT Storage", "MNT liquidity_pools"))]
 	#[pallet::storage]
-	#[pallet::getter(fn pool_user_data)]
-	pub(crate) type PoolUserParams<T: Config> =
+	#[pallet::getter(fn pool_user_data_storage)]
+	pub(crate) type PoolUserDataStorage<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, CurrencyId, Twox64Concat, T::AccountId, PoolUserData, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		#[allow(clippy::type_complexity)]
-		pub pools: Vec<(CurrencyId, Pool)>,
+		pub pools: Vec<(CurrencyId, PoolData)>,
 		pub pool_user_data: Vec<(CurrencyId, T::AccountId, PoolUserData)>,
 	}
 
@@ -164,11 +183,11 @@ pub mod module {
 		fn build(&self) {
 			self.pools
 				.iter()
-				.for_each(|(currency_id, pool)| Pools::<T>::insert(currency_id, Pool { ..*pool }));
+				.for_each(|(currency_id, pool)| PoolDataStorage::<T>::insert(currency_id, PoolData { ..*pool }));
 			self.pool_user_data
 				.iter()
 				.for_each(|(currency_id, account_id, pool_user_data)| {
-					PoolUserParams::<T>::insert(currency_id, account_id, PoolUserData { ..*pool_user_data })
+					PoolUserDataStorage::<T>::insert(currency_id, account_id, PoolUserData { ..*pool_user_data })
 				});
 		}
 	}
@@ -221,7 +240,7 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config> UserStorageProvider<T::AccountId, PoolUserData> for Pallet<T> {
 	fn set_user_data(who: &T::AccountId, pool_id: CurrencyId, pool_user_data: PoolUserData) {
-		PoolUserParams::<T>::insert(pool_id, who, pool_user_data)
+		PoolUserDataStorage::<T>::insert(pool_id, who, pool_user_data)
 	}
 
 	fn set_user_borrow_and_interest_index(
@@ -230,22 +249,22 @@ impl<T: Config> UserStorageProvider<T::AccountId, PoolUserData> for Pallet<T> {
 		new_borrow_underlying: Balance,
 		new_interest_index: Rate,
 	) {
-		PoolUserParams::<T>::mutate(pool_id, who, |p| {
+		PoolUserDataStorage::<T>::mutate(pool_id, who, |p| {
 			p.borrowed = new_borrow_underlying;
 			p.interest_index = new_interest_index;
 		})
 	}
 
 	fn get_user_data(pool_id: CurrencyId, who: &T::AccountId) -> PoolUserData {
-		Self::pool_user_data(pool_id, who)
+		Self::pool_user_data_storage(pool_id, who)
 	}
 
 	fn get_user_borrow_index(who: &T::AccountId, pool_id: CurrencyId) -> Rate {
-		Self::pool_user_data(pool_id, who).interest_index
+		Self::pool_user_data_storage(pool_id, who).interest_index
 	}
 
 	fn get_user_borrow_balance(who: &T::AccountId, pool_id: CurrencyId) -> Balance {
-		Self::pool_user_data(pool_id, who).borrowed
+		Self::pool_user_data_storage(pool_id, who).borrowed
 	}
 }
 
@@ -335,25 +354,25 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	}
 }
 
-impl<T: Config> LiquidityPoolStorageProvider<T::AccountId, Pool> for Pallet<T> {
-	fn set_pool_data(pool_id: CurrencyId, pool_data: Pool) {
-		Pools::<T>::insert(pool_id, pool_data)
+impl<T: Config> LiquidityPoolStorageProvider<T::AccountId, PoolData> for Pallet<T> {
+	fn set_pool_data(pool_id: CurrencyId, pool_data: PoolData) {
+		PoolDataStorage::<T>::insert(pool_id, pool_data)
 	}
 
 	fn set_pool_borrow_underlying(pool_id: CurrencyId, new_pool_borrows: Balance) {
-		Pools::<T>::mutate(pool_id, |pool| pool.borrowed = new_pool_borrows);
+		PoolDataStorage::<T>::mutate(pool_id, |pool| pool.borrowed = new_pool_borrows);
 	}
 
 	fn set_pool_protocol_interest(pool_id: CurrencyId, new_pool_protocol_interest: Balance) {
-		Pools::<T>::mutate(pool_id, |r| r.protocol_interest = new_pool_protocol_interest)
+		PoolDataStorage::<T>::mutate(pool_id, |r| r.protocol_interest = new_pool_protocol_interest)
 	}
 
-	fn get_pool_data(pool_id: CurrencyId) -> Pool {
-		Self::pools(pool_id)
+	fn get_pool_data(pool_id: CurrencyId) -> PoolData {
+		Self::pool_data_storage(pool_id)
 	}
 
 	fn get_pool_members_with_loan(underlying_asset: CurrencyId) -> result::Result<Vec<T::AccountId>, DispatchError> {
-		let user_vec: Vec<T::AccountId> = PoolUserParams::<T>::iter_prefix(underlying_asset)
+		let user_vec: Vec<T::AccountId> = PoolUserDataStorage::<T>::iter_prefix(underlying_asset)
 			.filter(|(_, pool_user_data)| !pool_user_data.borrowed.is_zero())
 			.map(|(account, _)| account)
 			.collect();
@@ -361,27 +380,27 @@ impl<T: Config> LiquidityPoolStorageProvider<T::AccountId, Pool> for Pallet<T> {
 	}
 
 	fn get_pool_borrow_underlying(pool_id: CurrencyId) -> Balance {
-		Self::pools(pool_id).borrowed
+		Self::pool_data_storage(pool_id).borrowed
 	}
 
 	fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate {
-		Self::pools(pool_id).borrow_index
+		Self::pool_data_storage(pool_id).borrow_index
 	}
 
 	fn get_pool_protocol_interest(pool_id: CurrencyId) -> Balance {
-		Self::pools(pool_id).protocol_interest
+		Self::pool_data_storage(pool_id).protocol_interest
 	}
 
 	fn pool_exists(underlying_asset: &CurrencyId) -> bool {
-		Pools::<T>::contains_key(underlying_asset)
+		PoolDataStorage::<T>::contains_key(underlying_asset)
 	}
 
 	fn create_pool(currency_id: CurrencyId) -> DispatchResult {
 		ensure!(!Self::pool_exists(&currency_id), Error::<T>::PoolAlreadyCreated);
 
-		Pools::<T>::insert(
+		PoolDataStorage::<T>::insert(
 			currency_id,
-			Pool {
+			PoolData {
 				borrowed: Balance::zero(),
 				borrow_index: Rate::one(),
 				protocol_interest: Balance::zero(),
@@ -391,7 +410,7 @@ impl<T: Config> LiquidityPoolStorageProvider<T::AccountId, Pool> for Pallet<T> {
 	}
 
 	fn remove_pool_data(pool_id: CurrencyId) {
-		Pools::<T>::remove(pool_id)
+		PoolDataStorage::<T>::remove(pool_id)
 	}
 }
 
@@ -502,7 +521,7 @@ impl<T: Config> UserCollateral<T::AccountId> for Pallet<T> {
 	}
 
 	fn is_pool_collateral(who: &T::AccountId, pool_id: CurrencyId) -> bool {
-		Self::pool_user_data(pool_id, who).is_collateral
+		Self::pool_user_data_storage(pool_id, who).is_collateral
 	}
 
 	fn check_user_has_collateral(who: &T::AccountId) -> bool {
@@ -520,10 +539,10 @@ impl<T: Config> UserCollateral<T::AccountId> for Pallet<T> {
 	}
 
 	fn enable_is_collateral(who: &T::AccountId, pool_id: CurrencyId) {
-		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = true)
+		PoolUserDataStorage::<T>::mutate(pool_id, who, |p| p.is_collateral = true)
 	}
 
 	fn disable_is_collateral(who: &T::AccountId, pool_id: CurrencyId) {
-		PoolUserParams::<T>::mutate(pool_id, who, |p| p.is_collateral = false);
+		PoolUserDataStorage::<T>::mutate(pool_id, who, |p| p.is_collateral = false);
 	}
 }

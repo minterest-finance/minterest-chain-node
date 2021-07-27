@@ -102,7 +102,7 @@ mod tests {
 					alice_deposited_amount - alice_borrowed_amount_in_dot
 				);
 				// Checking total interest for DOT pool.
-				assert_eq!(TestPools::pools(DOT).protocol_interest, Balance::zero());
+				assert_eq!(TestPools::pool_data_storage(DOT).protocol_interest, Balance::zero());
 
 				System::set_block_number(10);
 
@@ -124,7 +124,7 @@ mod tests {
 					alice_deposited_amount + expected_interest_accumulated
 				);
 				assert_eq!(
-					TestPools::pools(DOT).protocol_interest,
+					TestPools::pool_data_storage(DOT).protocol_interest,
 					Balance::zero() + (expected_interest_accumulated / 2)
 				);
 			});
@@ -168,7 +168,7 @@ mod tests {
 					alice_deposited_amount - alice_borrowed_amount_in_dot
 				);
 				// Checking total interest for DOT pool.
-				assert_eq!(TestPools::pools(DOT).protocol_interest, Balance::zero());
+				assert_eq!(TestPools::pool_data_storage(DOT).protocol_interest, Balance::zero());
 
 				System::set_block_number(10);
 
@@ -183,7 +183,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::repay_all(Origin::signed(ALICE), DOT));
 
 				// Checking pool total interest.
-				assert_eq!(TestPools::pools(DOT).protocol_interest, Balance::zero());
+				assert_eq!(TestPools::pool_data_storage(DOT).protocol_interest, Balance::zero());
 			});
 	}
 }

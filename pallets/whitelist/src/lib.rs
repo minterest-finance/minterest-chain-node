@@ -151,6 +151,7 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		/// Add a new member to the whitelist.
 		///
+		/// Parameters:
 		/// - `new_account`: the account that is being added to the whitelist.
 		///
 		/// The dispatch origin of this call must be 'WhitelistOrigin'.
@@ -171,7 +172,8 @@ pub mod module {
 
 		/// Remove a member from the whitelist.
 		///
-		/// - `who`: the account that is being removed from the whitelist.
+		/// Parameters:
+		/// - `account_to_remove`: the account that is being removed from the whitelist.
 		///
 		/// The dispatch origin of this call must be 'WhitelistOrigin'.
 		#[doc(alias("MNT Extrinsic", "MNT whitelist_module"))]
@@ -193,6 +195,9 @@ pub mod module {
 		/// Enable / disable whitelist mode.
 		///
 		/// The dispatch origin of this call must be 'WhitelistOrigin'.
+		///
+		/// Parameters:
+		/// - `new_state`: new protocol mode.
 		#[doc(alias("MNT Extrinsic", "MNT whitelist_module"))]
 		#[pallet::weight(T::WhitelistWeightInfo::switch_whitelist_mode())]
 		#[transactional]

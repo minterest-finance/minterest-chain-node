@@ -17,16 +17,17 @@ use std::sync::Arc;
 #[rpc]
 /// Base trait for RPC interface of prices
 pub trait PricesRpcApi<BlockHash> {
-	/// This function returns a price for a currency.
+	/// This function returns a price for a currency in USD.
 	/// If currency price has been locked, locked value will be returned.
 	/// Otherwise the value from Oracle will be returned
 	///
+	/// Parameters:
 	///  - `&self` :  Self reference
 	///  - `currency_id`: currency type.
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - price: price for currency
+	/// - [`price`](`minterest_primitives::Price`): price for currency in USD
 	///
 	///  # Example:
 	/// ``` ignore
@@ -41,11 +42,16 @@ pub trait PricesRpcApi<BlockHash> {
 	/// In case some currency prices were not locked, None will be returned for corresponding
 	/// currencies. Function read prices values from local storage.
 	///
+	/// Parameters:
 	///  - `&self` :  Self reference
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - Vec<(currency_id, price)>: vector of (id, price) pairs for all locked currencies
+	///
+	/// Vec<(currency_id, price)>: vector of (id, price) pairs for all locked currencies
+	///
+	/// - [`currency_id`](`minterest_primitives::CurrencyId`): currency type
+	/// - [`price`](`minterest_primitives::Price`): price for currency in USD
 	///
 	/// # Example:
 	/// ``` ignore
@@ -58,11 +64,16 @@ pub trait PricesRpcApi<BlockHash> {
 
 	/// This function returns a Vector containing prices for all currencies from Oracle
 	///
+	/// Parameters:
 	///  - `&self` :  Self reference
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	/// - Vec<(currency_id, price)>: vector of (id, price) pairs for all currencies
+	///
+	/// Vec<(currency_id, price)>: vector of (id, price) pairs for all currencies
+	///
+	/// - [`currency_id`](`minterest_primitives::CurrencyId`): currency type
+	/// - [`price`](`minterest_primitives::Price`): price for currency in USD
 	///
 	/// # Example:
 	/// ``` ignore

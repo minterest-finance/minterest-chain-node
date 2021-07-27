@@ -94,7 +94,7 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 // -----------------------------------------------------------------------------------------
 pub struct ExtBuilder {
 	pub endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	pub pools: Vec<(CurrencyId, Pool)>,
+	pub pools: Vec<(CurrencyId, PoolData)>,
 	pub pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	pub controller_params: Vec<(CurrencyId, ControllerData<u64>)>,
 	pub pause_keepers: Vec<(CurrencyId, PauseKeeper)>,
@@ -131,7 +131,7 @@ impl ExtBuilder {
 	) -> Self {
 		self.pools.push((
 			pool_id,
-			Pool {
+			PoolData {
 				borrowed,
 				borrow_index,
 				protocol_interest,

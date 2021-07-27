@@ -63,8 +63,8 @@ pub mod module {
 		UnlockPrice(CurrencyId),
 	}
 
-	/// Mapping from currency id to it's locked price
-	/// [`MNT Storage`](?search=module_prices::module::Pallet::locked_price_storage)
+	/// Mapping from currency id to it's locked(approved by Oracles pallet) price in USD.
+    /// [`MNT Storage`](?search=module_prices::module::Pallet::locked_price_storage)
 	#[doc(alias("MNT Storage", "MNT module_prices"))]
 	#[pallet::storage]
 	#[pallet::getter(fn locked_price_storage)]
@@ -108,6 +108,7 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be `LockOrigin`.
 		///
+		/// Parameters:
 		/// - `currency_id`: currency type.
 		#[doc(alias("MNT Extrinsic", "MNT module_prices"))]
 		#[pallet::weight((T::WeightInfo::lock_price(), DispatchClass::Operational))]
@@ -128,6 +129,7 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be `LockOrigin`.
 		///
+		/// Parameters:
 		/// - `currency_id`: currency type.
 		#[doc(alias("MNT Extrinsic", "MNT module_prices"))]
 		#[pallet::weight((T::WeightInfo::unlock_price(), DispatchClass::Operational))]

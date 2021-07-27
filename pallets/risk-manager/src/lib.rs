@@ -41,7 +41,7 @@ use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 	pallet_prelude::OriginFor,
 };
-use liquidity_pools::Pool;
+use liquidity_pools::PoolData;
 use minterest_primitives::{
 	currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, OffchainErr, Operation, Rate,
 };
@@ -152,7 +152,7 @@ pub mod module {
 		type ControllerManager: ControllerManager<Self::AccountId>;
 
 		/// Provides the basic liquidity pools functionality.
-		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, Pool>
+		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, PoolData>
 			+ CurrencyConverter
 			+ UserCollateral<Self::AccountId>;
 
@@ -266,6 +266,7 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		/// Set liquidation fee that covers liquidation costs.
 		///
+		/// Parameters:
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `liquidation_fee`: new liquidation fee value.
 		///
@@ -294,6 +295,7 @@ pub mod module {
 
 		/// Set threshold which used in liquidation to protect the user from micro liquidations.
 		///
+		/// Parameters:
 		/// - `pool_id`: PoolID for which the parameter value is being set.
 		/// - `threshold`: new threshold.
 		///
@@ -301,16 +303,8 @@ pub mod module {
 		#[doc(alias("MNT Extrinsic", "MNT risk_manager"))]
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_liquidation_threshold(
-			origin: OriginFor<T>,
-			pool_id: CurrencyId,
-			threshold: Rate,
-		) -> DispatchResultWithPostInfo {
+		pub fn set_liquidation_threshold(origin: OriginFor<T>, threshold: Rate) -> DispatchResultWithPostInfo {
 			T::RiskManagerUpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				pool_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
 			LiquidationThresholdStorage::<T>::put(threshold);
 			Self::deposit_event(Event::LiquidationThresholdUpdated(threshold));
 			Ok(().into())
@@ -323,6 +317,7 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be _None_.
 		///
+		/// Parameters:
 		/// - `borrower`: AccountId of the borrower whose loan is being liquidated.
 		/// - `liquidation_amounts`: contains a vectors with user's borrows to be paid from the
 		/// liquidation pools instead of the borrower, and a vector with user's supplies to be
