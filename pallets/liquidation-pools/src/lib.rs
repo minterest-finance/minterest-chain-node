@@ -23,7 +23,8 @@ use minterest_primitives::{
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	CurrencyConverter, DEXManager, LiquidationPoolsManager, LiquidityPoolStorageProvider, PoolsManager, PricesManager,
+	ControllerManager, CurrencyConverter, DEXManager, LiquidationPoolsManager, LiquidityPoolStorageProvider,
+	PoolsManager, PricesManager,
 };
 use sp_runtime::{
 	offchain::storage_lock::{StorageLock, Time},
@@ -104,6 +105,9 @@ pub mod module {
 
 		/// Weight information for the extrinsics.
 		type LiquidationPoolsWeightInfo: WeightInfo;
+
+		/// Public API of controller pallet
+		type ControllerManager: ControllerManager<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -492,6 +496,7 @@ impl<T: Config> Pallet<T> {
 					|(mut current_vec, mut current_sum_oversupply_usd, mut current_sum_shortfall_usd),
 					 pool_id|
 					 -> sp_std::result::Result<(Vec<LiquidationInformation>, Balance, Balance), DispatchError> {
+						T::ControllerManager::accrue_interest_rate(*pool_id)?;
 						let oracle_price =
 							T::PriceSource::get_underlying_price(*pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 						let liquidation_pool_supply_underlying = Self::get_pool_available_liquidity(*pool_id);
@@ -637,6 +642,7 @@ impl<T: Config> Pallet<T> {
 	fn calculate_pool_ideal_balance_usd(pool_id: CurrencyId) -> BalanceResult {
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 		let balance_ratio = Self::liquidation_pool_data_storage(pool_id).balance_ratio;
+		T::ControllerManager::accrue_interest_rate(pool_id)?;
 		// Liquidation pool ideal balance in USD: liquidity_pool_borrow_usd * balance_ratio * oracle_price
 		let ideal_balance_usd = Rate::from_inner(T::LiquidityPoolsManager::get_pool_borrow_underlying(pool_id))
 			.checked_mul(&balance_ratio)

@@ -31,6 +31,9 @@ orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 dex = { path = "../dex" }
 liquidity-pools = { path = "../liquidity-pools" }
 test-helper = { path = "../../test-helper" }
+controller = { path = "../controller" }
+minterest-model = { path = "../minterest-model" }
+mnt-token = { path = "../mnt-token" }
 
 [features]
 default = ["std"]

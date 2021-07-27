@@ -37,9 +37,17 @@ frame_support::construct_runtime!(
 		// Minterest pallets
 		TestLiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, ValidateUnsigned},
 		TestLiquidityPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
-		TestDex: dex::{Pallet, Storage, Call, Event<T>}
+		TestDex: dex::{Pallet, Storage, Call, Event<T>},
+		Controller: controller::{Pallet, Storage, Call, Event, Config<T>},
+		MntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
+		MinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
 	}
 );
+
+parameter_types! {
+	pub const MntTokenPalletId: PalletId = PalletId(*b"min/mntt");
+	pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
+}
 
 mock_impl_system_config!(Test);
 mock_impl_liquidity_pools_config!(Test);
@@ -47,6 +55,9 @@ mock_impl_orml_tokens_config!(Test);
 mock_impl_orml_currencies_config!(Test);
 mock_impl_dex_config!(Test);
 mock_impl_balances_config!(Test);
+mock_impl_controller_config!(Test, ZeroAdmin);
+mock_impl_mnt_token_config!(Test, ZeroAdmin);
+mock_impl_minterest_model_config!(Test, ZeroAdmin);
 
 parameter_types! {
 	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"lqdy/min");
@@ -107,6 +118,7 @@ impl Config for Test {
 	type LiquidityPoolsManager = liquidity_pools::Pallet<Test>;
 	type Dex = dex::Pallet<Test>;
 	type LiquidationPoolsWeightInfo = ();
+	type ControllerManager = Controller;
 }
 
 /// An extrinsic type used for tests.
@@ -159,14 +171,6 @@ impl Default for ExternalityBuilder {
 						protocol_interest: Balance::zero(),
 					},
 				),
-				/*(
-					KSM,
-					PoolData {
-						borrowed: Balance::zero(),
-						borrow_index: Rate::one(),
-						protocol_interest: Balance::zero(),
-					},
-				),*/
 			],
 			liquidation_pools: vec![
 				(
@@ -212,10 +216,6 @@ impl ExternalityBuilder {
 		self
 	}
 
-	/*pub fn pool_remove(mut self, pool_id: CurrencyId) -> Self {
-		self.liquidity_pools.retain(|&(currency_id, _)| currency_id != pool_id);
-		self
-	}*/
 	pub fn set_pool_borrow_underlying(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.liquidity_pools.push((
 			currency_id,
@@ -227,19 +227,6 @@ impl ExternalityBuilder {
 		));
 		self
 	}
-	/*pub fn liquidity_total_borrow_pool(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
-		for &mut (currency, ref mut pool) in self.liquidity_pools.iter_mut() {
-			if currency == currency_id {
-				*pool = PoolData {
-					borrowed: balance,
-					borrow_index: Rate::one(),
-					protocol_interest: Balance::zero(),
-				};
-				return self;
-			}
-		}
-		self
-	}*/
 
 	pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
