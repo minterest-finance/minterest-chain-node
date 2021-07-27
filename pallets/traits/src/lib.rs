@@ -48,7 +48,7 @@ pub trait LiquidityPoolStorageProvider<AccountId, PoolData> {
 	fn get_pool_data(pool_id: CurrencyId) -> PoolData;
 
 	/// Get list of users with active loan positions for a particular pool.
-	fn get_pool_members_with_loan(underlying_asset: CurrencyId) -> Result<Vec<AccountId>, DispatchError>;
+	fn get_pool_members_with_loan(underlying_asset: CurrencyId) -> Vec<AccountId>;
 
 	/// Gets total amount borrowed from the pool.
 	fn get_pool_borrow_underlying(pool_id: CurrencyId) -> Balance;
@@ -74,9 +74,6 @@ pub trait LiquidityPoolStorageProvider<AccountId, PoolData> {
 /// Provides functionality for working with a user's storage. Set parameters in storage,
 /// get parameters, check parameters.
 pub trait UserStorageProvider<AccountId, PoolUserData> {
-	/// Sets user data.
-	fn set_user_data(who: &AccountId, pool_id: CurrencyId, user_data: PoolUserData);
-
 	/// Sets the total borrowed and interest index for user.
 	fn set_user_borrow_and_interest_index(
 		who: &AccountId,
@@ -175,7 +172,7 @@ pub trait ControllerManager<AccountId> {
 	/// Determine what the account liquidity would be if the given amounts were redeemed/borrowed.
 	fn get_hypothetical_account_liquidity(
 		account: &AccountId,
-		underlying_to_borrow: CurrencyId,
+		underlying_to_borrow: Option<CurrencyId>,
 		redeem_amount: Balance,
 		borrow_amount: Balance,
 	) -> Result<(Balance, Balance), DispatchError>;
@@ -196,6 +193,12 @@ pub trait ControllerManager<AccountId> {
 
 	/// Return minimum protocol interest needed to transfer it to liquidation pool
 	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance;
+
+	/// Calculates the amount of collateral based on the parameters pool_id and the supply amount.
+	/// Reads the collateral factor value from storage.
+	///
+	/// Returns: `collateral_amount = supply_amount * collateral_factor`.
+	fn calculate_collateral(pool_id: CurrencyId, supply_amount: Balance) -> Balance;
 
 	/// For all active pools in the protocol, it checks all users: calls `accrue_interest_rate`,
 	/// and then get_hypothetical_account_liquidity. If the user has a shortfall, then writes it
@@ -417,12 +420,19 @@ pub trait CurrencyConverter {
 
 /// Provides functionality to manage the number of attempts to partially liquidation a user's loan.
 pub trait UserLiquidationAttemptsManager<AccountId> {
+	type LiquidationMode;
+
 	/// Gets user liquidation attempts.
 	fn get_user_liquidation_attempts(who: &AccountId) -> u8;
 
 	/// Mutates user liquidation attempts depending on user operation.
 	/// If the user makes a deposit to the collateral pool, then attempts are set to zero.
-	fn mutate_attempts(pool_id: Option<CurrencyId>, who: &AccountId, operation: Operation);
+	fn try_mutate_attempts(
+		who: &AccountId,
+		operation: Operation,
+		pool_id: Option<CurrencyId>,
+		liquidation_mode: Option<Self::LiquidationMode>,
+	) -> DispatchResult;
 }
 
 /// Creates storage records for risk-manager pallet. This is a part of a pool creation flow.
