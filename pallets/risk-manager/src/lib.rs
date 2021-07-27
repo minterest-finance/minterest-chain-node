@@ -342,9 +342,7 @@ impl<T: Config> Pallet<T> {
 	/// Calls a processing insolvent loan function.
 	fn _offchain_worker() -> Result<(), OffchainErr> {
 		// Check if we are a potential validator
-		if !sp_io::offchain::is_validator() {
-			return Err(OffchainErr::NotValidator);
-		}
+		ensure!(sp_io::offchain::is_validator(), OffchainErr::NotValidator);
 
 		// acquire offchain worker lock
 		let lock_expiration = Duration::from_millis(T::OffchainWorkerMaxDurationMs::get());
