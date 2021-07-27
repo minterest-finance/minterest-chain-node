@@ -148,7 +148,8 @@ pub mod module {
 	///
 	/// Storage location:
 	/// [`MNT Storage`](?search=risk_manager::module::Pallet::liquidation_fee_storage)
-	#[doc(alias("MNT Storage", "MNT risk_manager"))]
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT risk_manager")]
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_fee_storage)]
 	pub(crate) type LiquidationFeeStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Rate, ValueQuery>;
@@ -158,7 +159,8 @@ pub mod module {
 	///
 	/// Storage location:
 	/// [`MNT Storage`](?search=risk_manager::module::Pallet::liquidation_threshold_storage)
-	#[doc(alias("MNT Storage", "MNT risk_manager"))]
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT risk_manager")]
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_threshold_storage)]
 	pub(crate) type LiquidationThresholdStorage<T: Config> = StorageValue<_, Rate, ValueQuery>;
@@ -167,7 +169,8 @@ pub mod module {
 	///
 	/// Storage location:
 	/// [`MNT Storage`](?search=risk_manager::module::Pallet::user_liquidation_attempts_storage)
-	#[doc(alias("MNT Storage", "MNT risk_manager"))]
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT risk_manager")]
 	#[pallet::storage]
 	#[pallet::getter(fn user_liquidation_attempts_storage)]
 	pub(crate) type UserLiquidationAttemptsStorage<T: Config> =
@@ -236,7 +239,8 @@ pub mod module {
 		/// - `liquidation_fee`: new liquidation fee value.
 		///
 		/// The dispatch origin of this call must be 'RiskManagerUpdateOrigin'.
-		#[doc(alias("MNT Extrinsic", "MNT risk_manager"))]
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT risk_manager")]
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_liquidation_fee(
@@ -265,7 +269,8 @@ pub mod module {
 		/// - `threshold`: new threshold.
 		///
 		/// The dispatch origin of this call must be 'RiskManagerUpdateOrigin'.
-		#[doc(alias("MNT Extrinsic", "MNT risk_manager"))]
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT risk_manager")]
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_liquidation_threshold(origin: OriginFor<T>, threshold: Rate) -> DispatchResultWithPostInfo {
@@ -288,12 +293,13 @@ pub mod module {
 		/// liquidation pools instead of the borrower, and a vector with user's supplies to be
 		/// withdrawn from the borrower and sent to the liquidation pools. Balances are calculated
 		/// in underlying assets.
-    ///
+		///
 		///TODO: try to use the struct `UserLoanState` in the last parameter (add Debug constraint
 		/// to Config).
 		///
 		/// The dispatch origin of this call must be _None_.
-    #[doc(alias("MNT Extrinsic", "MNT risk_manager"))]
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT risk_manager")]
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn liquidate(

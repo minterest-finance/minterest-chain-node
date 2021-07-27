@@ -237,7 +237,8 @@ pub mod module {
 	///
 	/// Storage location:
 	/// [`MNT Storage`](?search=controller::module::Pallet::controller_params)
-	#[doc(alias("MNT Storage", "MNT controller"))]
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT controller")]
 	#[pallet::storage]
 	#[pallet::getter(fn controller_data_storage)]
 	pub type ControllerDataStorage<T: Config> =
@@ -253,7 +254,8 @@ pub mod module {
 	///
 	/// Storage location:
 	/// [`MNT Storage`](?search=controller::module::Pallet::pause_keepers)
-	#[doc(alias("MNT Storage", "MNT controller"))]
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT controller")]
 	#[pallet::storage]
 	#[pallet::getter(fn pause_keeper_storage)]
 	pub(crate) type PauseKeeperStorage<T: Config> =
@@ -306,7 +308,8 @@ pub mod module {
 		/// - `operation`: the operation to be paused.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[doc(alias("MNT Extrinsic", "MNT controller"))]
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT controller")]
 		#[pallet::weight(T::ControllerWeightInfo::pause_operation())]
 		#[transactional]
 		pub fn pause_operation(
@@ -340,7 +343,8 @@ pub mod module {
 		/// - `operation`: the operation to be resumed.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[doc(alias("MNT Extrinsic", "MNT controller"))]
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT controller")]
 		#[pallet::weight(T::ControllerWeightInfo::resume_operation())]
 		#[transactional]
 		pub fn resume_operation(
@@ -374,7 +378,8 @@ pub mod module {
 		/// - `protocol_interest_factor`: new value for interest factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[doc(alias("MNT Extrinsic", "MNT controller"))]
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT controller")]
 		#[pallet::weight(T::ControllerWeightInfo::set_protocol_interest_factor())]
 		#[transactional]
 		pub fn set_protocol_interest_factor(
@@ -403,7 +408,8 @@ pub mod module {
 		/// - `max_borrow_rate`: new value for maximum borrow rate.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[doc(alias("MNT Extrinsic", "MNT controller"))]
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT controller")]
 		#[pallet::weight(T::ControllerWeightInfo::set_max_borrow_rate())]
 		#[transactional]
 		pub fn set_max_borrow_rate(
@@ -434,7 +440,8 @@ pub mod module {
 		/// - `collateral_factor`: new value for collateral factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
-		#[doc(alias("MNT Extrinsic", "MNT controller"))]
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT controller")]
 		#[pallet::weight(T::ControllerWeightInfo::set_collateral_factor())]
 		#[transactional]
 		pub fn set_collateral_factor(
@@ -466,7 +473,8 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be Administrator.
 		/// Borrow cap value must be in range 0..1_000_000_000_000_000_000_000_000
-		#[doc(alias("MNT Extrinsic", "MNT controller"))]
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT controller")]
 		#[pallet::weight(T::ControllerWeightInfo::set_borrow_cap())]
 		#[transactional]
 		pub fn set_borrow_cap(
@@ -494,7 +502,8 @@ pub mod module {
 		/// - `protocol_interest_threshold`: new protocol_interest_threshold value.
 		///
 		/// The dispatch origin of this call must be Administrator.
-		#[doc(alias("MNT Extrinsic", "MNT controller"))]
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT controller")]
 		#[pallet::weight(T::ControllerWeightInfo::set_protocol_interest_threshold())]
 		#[transactional]
 		pub fn set_protocol_interest_threshold(

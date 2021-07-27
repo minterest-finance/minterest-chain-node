@@ -138,7 +138,8 @@ pub mod module {
 	///
 	/// Storage location:
 	/// [`MNT Storage`](?search=minterest_model::module::Pallet::minterest_model_data_storage)
-	#[doc(alias("MNT Storage", "MNT minterest_model"))]
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT minterest_model")]
 	#[pallet::storage]
 	#[pallet::getter(fn minterest_model_data_storage)]
 	pub type MinterestModelDataStorage<T: Config> =
@@ -193,7 +194,8 @@ pub mod module {
 		///
 		/// `jump_multiplier_per_block = jump_multiplier_rate_per_year / blocks_per_year`
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
-		#[doc(alias("MNT Extrinsic", "MNT minterest_model"))]
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_model")]
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_pool_jump_multiplier(
@@ -232,7 +234,8 @@ pub mod module {
 		///
 		/// `base_rate_per_block = base_rate_per_year / blocks_per_year`
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
-		#[doc(alias("MNT Extrinsic", "MNT minterest_model"))]
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_model")]
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_pool_base_rate(
@@ -278,7 +281,8 @@ pub mod module {
 		///
 		/// `multiplier_per_block = multiplier_per_year / blocks_per_year`
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
-		#[doc(alias("MNT Extrinsic", "MNT minterest_model"))]
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_model")]
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_pool_multiplier(
@@ -319,7 +323,8 @@ pub mod module {
 		/// - `kink`: new kink value, must be less or equal to 1.
 		///
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
-		#[doc(alias("MNT Extrinsic", "MNT minterest_model"))]
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_model")]
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_pool_kink(origin: OriginFor<T>, pool_id: CurrencyId, kink: Rate) -> DispatchResultWithPostInfo {

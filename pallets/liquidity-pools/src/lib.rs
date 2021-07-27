@@ -141,7 +141,8 @@ pub mod module {
 	///
 	/// Storage location:
 	/// [`MNT Storage`](?search=liquidity_pools::module::Pallet::pools)
-	#[doc(alias("MNT Storage", "MNT liquidity_pools"))]
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT liquidity_pools")]
 	#[pallet::storage]
 	#[pallet::getter(fn pool_data_storage)]
 	pub(crate) type PoolDataStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, PoolData, ValueQuery>;
@@ -157,7 +158,8 @@ pub mod module {
 	///
 	/// Storage location:
 	/// [`MNT Storage`](?search=liquidity_pools::module::Pallet::pool_user_data)
-	#[doc(alias("MNT Storage", "MNT liquidity_pools"))]
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT liquidity_pools")]
 	#[pallet::storage]
 	#[pallet::getter(fn pool_user_data_storage)]
 	pub(crate) type PoolUserDataStorage<T: Config> =

@@ -28,7 +28,8 @@ pub trait MntTokenRpcApi<BlockHash, AccountId> {
 	/// Return:
 	/// - [`amount`](`MntBalanceInfo::amount`): the MNT accrued but not yet transferred to each
 	/// user.
-	#[doc(alias("MNT RPC", "MNT mnt_token"))]
+	#[doc(alias = "MNT RPC")]
+	#[doc(alias = "MNT mnt_token")]
 	#[rpc(name = "mntToken_getUserTotalUnclaimedMntBalance")]
 	fn get_user_total_unclaimed_mnt_balance(
 		&self,
@@ -48,7 +49,8 @@ pub trait MntTokenRpcApi<BlockHash, AccountId> {
 	///
 	/// - [`borrow_rate`](`Rate`): MNT Borrow Rate value
 	/// - [`supply_rate`](`Rate`): MNT Supply Rate value
-	#[doc(alias("MNT RPC", "MNT mnt_token"))]
+	#[doc(alias = "MNT RPC")]
+	#[doc(alias = "MNT mnt_token")]
 	#[rpc(name = "mntToken_getPoolMntBorrowAndSupplyRates")]
 	fn get_pool_mnt_borrow_and_supply_rates(
 		&self,

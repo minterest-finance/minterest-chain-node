@@ -22,7 +22,8 @@ pub trait WhitelistRpcApi<BlockHash, AccountId> {
 	/// Return
 	///
 	/// - is_admin: true / false
-	#[doc(alias("MNT RPC", "MNT whitelist_module"))]
+	#[doc(alias = "MNT RPC")]
+	#[doc(alias = "MNT whitelist_module")]
 	#[rpc(name = "whitelist_isWhitelistMember")]
 	fn is_whitelist_member(&self, who: AccountId, at: Option<BlockHash>) -> Result<bool>;
 }
