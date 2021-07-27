@@ -941,9 +941,9 @@ impl<T: Config> MinterestProtocolManager<T::AccountId> for Pallet<T> {
 	/// the liquidation pool. Called only during the liquidation process.
 	///
 	/// Parameters:
-	/// -`borrower`:
-	/// -`underlying_asset`:
-	/// -`seize_underlying`:
+	/// -`borrower`: AccountId of the user whose supply is being seized;
+	/// -`underlying_asset`: CurrencyId of the supply that is seized;
+	/// -`seize_underlying`: the number of underlying assets to be seized;
 	fn do_seize(
 		borrower: &T::AccountId,
 		underlying_asset: CurrencyId,
