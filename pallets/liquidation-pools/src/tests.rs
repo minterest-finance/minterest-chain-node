@@ -19,8 +19,8 @@ fn offchain_worker_balancing_test() {
 	let mut ext = ExternalityBuilder::default()
 		.liquidation_pool_balance(DOT, 10_000 * DOLLARS)
 		.liquidation_pool_balance(ETH, 30_000 * DOLLARS)
-		.liquidity_total_borrow_pool(DOT, 100_000 * DOLLARS)
-		.liquidity_total_borrow_pool(ETH, 100_000 * DOLLARS)
+		.set_pool_borrow_underlying(DOT, 100_000 * DOLLARS)
+		.set_pool_borrow_underlying(ETH, 100_000 * DOLLARS)
 		.build();
 	let (offchain, _) = TestOffchainExt::new();
 
@@ -55,7 +55,7 @@ fn offchain_worker_balancing_test() {
 
 #[test]
 fn protocol_operations_not_working_for_nonexisting_pool() {
-	ExternalityBuilder::default().pool_remove(KSM).build().execute_with(|| {
+	ExternalityBuilder::default().build().execute_with(|| {
 		assert_noop!(
 			TestLiquidationPools::set_deviation_threshold(admin(), KSM, 123),
 			Error::<Test>::PoolNotFound
@@ -216,7 +216,7 @@ fn set_max_ideal_balance_should_work() {
 #[test]
 fn calculate_pool_ideal_balance_usd_should_work() {
 	ExternalityBuilder::default()
-		.liquidity_total_borrow_pool(DOT, 500_000 * DOLLARS)
+		.set_pool_borrow_underlying(DOT, 500_000 * DOLLARS)
 		.build()
 		.execute_with(|| {
 			// Check that ideal balance is calculated correctly when max_ideal_balance_usd is set to None
@@ -311,10 +311,10 @@ fn transfer_to_liquidation_pool_should_work() {
 #[test]
 fn collects_sales_list_should_work_2_2() {
 	ExternalityBuilder::default()
-		.liquidity_total_borrow_pool(DOT, 2_700_000 * DOLLARS)
-		.liquidity_total_borrow_pool(KSM, 1_000_000 * DOLLARS)
-		.liquidity_total_borrow_pool(ETH, 2_500_000_000 * DOLLARS)
-		.liquidity_total_borrow_pool(BTC, 1_200_000 * DOLLARS)
+		.set_pool_borrow_underlying(DOT, 2_700_000 * DOLLARS)
+		.set_pool_borrow_underlying(KSM, 1_000_000 * DOLLARS)
+		.set_pool_borrow_underlying(ETH, 2_500_000_000 * DOLLARS)
+		.set_pool_borrow_underlying(BTC, 1_200_000 * DOLLARS)
 		.liquidation_pool_balance(DOT, 400_000 * DOLLARS)
 		.liquidation_pool_balance(KSM, 300_000 * DOLLARS)
 		.liquidation_pool_balance(ETH, 800_000_000 * DOLLARS)
@@ -359,10 +359,10 @@ fn collects_sales_list_should_work_2_2() {
 #[test]
 fn balance_liquidation_pools_should_work() {
 	ExternalityBuilder::default()
-		.liquidity_total_borrow_pool(DOT, 500_000 * DOLLARS)
-		.liquidity_total_borrow_pool(KSM, 1_000_000 * DOLLARS)
-		.liquidity_total_borrow_pool(ETH, 1_500_000 * DOLLARS)
-		.liquidity_total_borrow_pool(BTC, 2_000_000 * DOLLARS)
+		.set_pool_borrow_underlying(DOT, 500_000 * DOLLARS)
+		.set_pool_borrow_underlying(KSM, 1_000_000 * DOLLARS)
+		.set_pool_borrow_underlying(ETH, 1_500_000 * DOLLARS)
+		.set_pool_borrow_underlying(BTC, 2_000_000 * DOLLARS)
 		.liquidation_pool_balance(DOT, 400_000 * DOLLARS)
 		.liquidation_pool_balance(KSM, 300_000 * DOLLARS)
 		.liquidation_pool_balance(ETH, 200_000 * DOLLARS)
@@ -464,8 +464,8 @@ fn balance_liquidation_pools_should_work() {
 #[test]
 fn balance_liquidation_pools_two_pools_should_work_test() {
 	ExternalityBuilder::default()
-		.liquidity_total_borrow_pool(DOT, 500_000 * DOLLARS)
-		.liquidity_total_borrow_pool(ETH, 300_000 * DOLLARS)
+		.set_pool_borrow_underlying(DOT, 500_000 * DOLLARS)
+		.set_pool_borrow_underlying(ETH, 300_000 * DOLLARS)
 		.liquidation_pool_balance(DOT, 170_000 * DOLLARS) // + 140_000$
 		.liquidation_pool_balance(ETH, 30_000 * DOLLARS) //- 120_000$
 		.dex_balance(DOT, 500_000 * DOLLARS)

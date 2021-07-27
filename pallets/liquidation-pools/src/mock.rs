@@ -159,14 +159,14 @@ impl Default for ExternalityBuilder {
 						protocol_interest: Balance::zero(),
 					},
 				),
-				(
+				/*(
 					KSM,
 					PoolData {
 						borrowed: Balance::zero(),
 						borrow_index: Rate::one(),
 						protocol_interest: Balance::zero(),
 					},
-				),
+				),*/
 			],
 			liquidation_pools: vec![
 				(
@@ -212,12 +212,22 @@ impl ExternalityBuilder {
 		self
 	}
 
-	pub fn pool_remove(mut self, pool_id: CurrencyId) -> Self {
+	/*pub fn pool_remove(mut self, pool_id: CurrencyId) -> Self {
 		self.liquidity_pools.retain(|&(currency_id, _)| currency_id != pool_id);
 		self
+	}*/
+	pub fn set_pool_borrow_underlying(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		self.liquidity_pools.push((
+			currency_id,
+			PoolData {
+				borrowed: balance,
+				borrow_index: Rate::one(),
+				protocol_interest: Balance::zero(),
+			},
+		));
+		self
 	}
-
-	pub fn liquidity_total_borrow_pool(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+	/*pub fn liquidity_total_borrow_pool(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		for &mut (currency, ref mut pool) in self.liquidity_pools.iter_mut() {
 			if currency == currency_id {
 				*pool = PoolData {
@@ -229,7 +239,7 @@ impl ExternalityBuilder {
 			}
 		}
 		self
-	}
+	}*/
 
 	pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts
