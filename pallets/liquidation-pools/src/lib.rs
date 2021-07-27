@@ -162,8 +162,8 @@ pub mod module {
 		true
 	}
 	#[pallet::storage]
-	#[pallet::getter(fn pool_balancing_state_storage)]
-	pub type PoolBalancingStateStorage<T: Config> = StorageValue<_, bool, ValueQuery, BalancingStateDefault<T>>;
+	#[pallet::getter(fn pool_balancing_enabled_storage)]
+	pub type PoolBalancingEnabledStorage<T: Config> = StorageValue<_, bool, ValueQuery, BalancingStateDefault<T>>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -224,8 +224,9 @@ pub mod module {
 		#[pallet::weight(10_000)]
 		#[transactional]
 		pub fn switch_balancing_state(origin: OriginFor<T>, new_state: bool) -> DispatchResultWithPostInfo {
-			let _ = ensure_signed(origin)?;
-			PoolBalancingStateStorage::<T>::try_mutate(|mode| -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+
+			PoolBalancingEnabledStorage::<T>::try_mutate(|mode| -> DispatchResultWithPostInfo {
 				ensure!(*mode != new_state, Error::<T>::BalacingStateChangeError);
 				*mode = new_state;
 				Self::deposit_event(Event::PoolBalacingStateChanged(new_state));
@@ -457,13 +458,9 @@ pub struct Sales {
 impl<T: Config> Pallet<T> {
 	fn _offchain_worker(_now: T::BlockNumber) -> Result<(), OffchainErr> {
 		// Check if we are a potential validator and balancing is enabled.
-		if !sp_io::offchain::is_validator() {
-			return Err(OffchainErr::NotValidator);
-		}
-
-		if !Self::pool_balancing_state_storage() {
-			return Err(OffchainErr::PoolsBalancingIsOff);
-		}
+		ensure!(sp_io::offchain::is_validator(), OffchainErr::NotValidator);
+		// Check if pool balansing is switched ON.
+		ensure!(Self::pool_balancing_enabled_storage(), OffchainErr::PoolsBalancingIsOff);
 
 		let mut lock = StorageLock::<Time>::new(&OFFCHAIN_LIQUIDATION_WORKER_LOCK);
 		// If pools balancing procedure already started should be returned OffchainLock error.
