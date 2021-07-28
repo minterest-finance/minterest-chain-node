@@ -556,7 +556,7 @@ pub mod module {
 			// Check if the user will have enough collateral if he removes one of the collaterals.
 			let (_, shortfall) = T::ControllerManager::get_hypothetical_account_liquidity(
 				&sender,
-				pool_id,
+				Some(pool_id),
 				user_supply_underlying,
 				Balance::zero(),
 			)
@@ -668,7 +668,7 @@ impl<T: Config> Pallet<T> {
 		)?;
 
 		T::MultiCurrency::deposit(wrapped_id, &who, deposit_wrapped_amount)?;
-		T::UserLiquidationAttempts::mutate_attempts(Some(underlying_asset), &who, Deposit);
+		T::UserLiquidationAttempts::try_mutate_attempts(&who, Deposit, Some(underlying_asset), None)?;
 
 		Ok((deposit_underlying_amount, wrapped_id, deposit_wrapped_amount))
 	}

@@ -442,6 +442,12 @@ fn get_user_total_supply_borrow_and_net_apy_rpc(account_id: AccountId) -> Option
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_total_supply_borrow_and_net_apy(account_id)
 }
 
+fn get_user_total_borrow_usd_rpc(account_id: AccountId) -> Balance {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_total_borrow_usd(account_id)
+		.unwrap()
+		.amount
+}
+
 fn run_to_block(n: u32) {
 	while System::block_number() < n {
 		MinterestProtocol::on_finalize(System::block_number());
@@ -1876,5 +1882,84 @@ fn get_user_data_rpc_should_work() {
 				net_apy: Rate::one()
 			})
 		);
+	})
+}
+
+#[test]
+fn get_user_total_borrow_usd_rpc_should_work() {
+	ExtBuilder::default()
+		.pool_initial(DOT)
+		.pool_initial(KSM)
+		.pool_initial(ETH)
+		.pool_initial(BTC)
+		.build()
+		.execute_with(|| {
+			let dot_price = 2;
+			let eth_price = 3;
+
+			assert_ok!(set_oracle_prices(vec![
+				(DOT, Price::saturating_from_integer(dot_price)),
+				(ETH, Price::saturating_from_integer(eth_price)),
+				(KSM, Price::saturating_from_integer(1)),
+				(BTC, Price::saturating_from_integer(1)),
+			]));
+
+			// use 4 pools but only two with actual assets on them
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), DOT, 100_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::deposit_underlying(alice(), ETH, 100_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), DOT));
+			assert_ok!(MinterestProtocol::enable_is_collateral(alice(), ETH));
+
+			// no total borrow value for alice on fresh pool
+			assert_eq!(get_user_total_borrow_usd_rpc(ALICE::get()), 0);
+
+			assert_ok!(MinterestProtocol::borrow(alice(), ETH, 80_000 * DOLLARS));
+			assert_ok!(MinterestProtocol::borrow(alice(), DOT, 50_000 * DOLLARS));
+
+			// in the block when borrow happens there should be no interest accumulated
+			// total borrow should be equal to the sum of borrowed value times asset price in usd
+			assert_eq!(
+				get_user_total_borrow_usd_rpc(ALICE::get()),
+				80_000 * DOLLARS * eth_price + 50_000 * DOLLARS * dot_price
+			);
+
+			System::set_block_number(21);
+
+			// 20 blocks after there should be the borrowed value + some accumulated interest
+			// given the value of DOT asset as   50000_000000000000000000 out of 100000_~18,
+			// default accumulated interest rate 00001_000000000000000000 (first accrue),
+			// and default per block multiplier  00000_000000009000000000
+			//
+			// DOT part:
+			// taking into account pool utilization of 0.5 (100_000 put, 50_000 borrowed)
+			// we can calculate interest part as 0.5 * 0.000000009 = 00000_000000004500000000
+			// and update accumulated interest rate for 20 blocks up to 1_000000090000000000
+			// so updated pool borrow underlying (DOT) becomes 50000_004500000000000000
+			// asset value (in usd) is 50000_004500000000000000 * 2 = 100000_009000000000000000
+			//
+			// same calculated for ETH:
+			// ETH asset left in pool is 20000_000000000000000000 out of 100000_~18,
+			// taking into account pool utilization of 0.8 (100_000 put, 80_000 borrowed)
+			// we can calculate interest rate as 0.8 * 0.000000009 = 00000.000000007200000000
+			// and update accumulated interest rate for 20 blocks up to 1_0000001440000000000
+			// so updated pool borrow underlying (ETH) becomes 80000_011520000000000000
+			// asset value (in usd) is 80000_011520000000000000 * 3 = 240000_034560000000000000
+			//
+			// and the total borrow in usd should be
+			// 100000_009000000000000000 +
+			// 240000_034560000000000000 =
+			// 340000_043560000000000000
+
+			assert_eq!(
+				get_user_total_borrow_usd_rpc(ALICE::get()),
+				340000043560000000000000u128
+			);
+		})
+}
+
+#[test]
+fn get_user_total_borrow_usd_rpc_without_initialized_pools_should_return_zero() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_eq!(get_user_total_borrow_usd_rpc(ALICE::get()), 0);
 	})
 }

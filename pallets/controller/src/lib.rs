@@ -30,7 +30,7 @@ use pallet_traits::{
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
+	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Saturating, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, FixedU128, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, collections::btree_set::BTreeSet, convert::TryInto, prelude::Vec, result};
@@ -710,7 +710,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	///          hypothetical account shortfall below collateral requirements).
 	fn get_hypothetical_account_liquidity(
 		account: &T::AccountId,
-		underlying_to_borrow: CurrencyId,
+		underlying_to_borrow: Option<CurrencyId>,
 		redeem_amount: Balance,
 		borrow_amount: Balance,
 	) -> LiquidityResult {
@@ -755,7 +755,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 					.map_err(|_| Error::<T>::BalanceOverflow)?;
 
 			// Calculate effects of interacting with Underlying Asset Modify.
-			if underlying_to_borrow == underlying_asset {
+			if Some(underlying_asset) == underlying_to_borrow {
 				// redeem effect
 				if redeem_amount > 0 {
 					// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
@@ -893,7 +893,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	fn redeem_allowed(underlying_asset: CurrencyId, redeemer: &T::AccountId, redeem_amount: Balance) -> DispatchResult {
 		if T::LiquidityPoolsManager::is_pool_collateral(&redeemer, underlying_asset) {
 			let (_, shortfall) =
-				Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset, redeem_amount, 0)
+				Self::get_hypothetical_account_liquidity(&redeemer, Some(underlying_asset), redeem_amount, 0)
 					.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 
 			ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
@@ -909,10 +909,10 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	///
 	/// Return Ok if the borrow is allowed.
 	fn borrow_allowed(underlying_asset: CurrencyId, who: &T::AccountId, borrow_amount: Balance) -> DispatchResult {
-		let borrow_cap_reached = Self::is_borrow_cap_reached(underlying_asset, borrow_amount)?;
-		ensure!(!borrow_cap_reached, Error::<T>::BorrowCapReached);
+		let is_borrow_cap_reached = Self::is_borrow_cap_reached(underlying_asset, borrow_amount)?;
+		ensure!(!is_borrow_cap_reached, Error::<T>::BorrowCapReached);
 
-		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, underlying_asset, 0, borrow_amount)
+		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, Some(underlying_asset), 0, borrow_amount)
 			.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 
 		ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
@@ -925,7 +925,18 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		Self::controller_data_storage(pool_id).protocol_interest_threshold
 	}
 
-	/// TODO: Raw implementation. Cover with unit-tests.
+	/// Calculates the amount of collateral based on the parameters pool_id and the supply amount.
+	/// Reads the collateral factor value from storage.
+	///
+	/// Cannot overflow, because the collateral factor is always less than one.
+	/// Returns: `collateral_amount = supply_amount * collateral_factor`.
+	fn calculate_collateral(pool_id: CurrencyId, supply_amount: Balance) -> Balance {
+		let collateral_factor = ControllerDataStorage::<T>::get(pool_id).collateral_factor;
+		Rate::from_inner(supply_amount)
+			.saturating_mul(collateral_factor)
+			.into_inner()
+	}
+
 	/// Calculates and gets all insolvent loans of users in the protocol. Calls a function
 	/// internally `accrue_interest_rate`. To determine that the loan is insolvent calls
 	/// the function `get_hypothetical_account_liquidity`, if the shortfall is greater than zero,
@@ -937,21 +948,25 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			.into_iter()
 			.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
 			.try_fold(
-				BTreeSet::new(),
-				|protocol_users_with_shortfall, pool_id| -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
-					let pool_users = T::LiquidityPoolsManager::get_pool_members_with_loan(pool_id)?;
+				<Vec<T::AccountId>>::new(),
+				|mut protocol_users_with_loan, pool_id| -> result::Result<Vec<T::AccountId>, DispatchError> {
 					Self::accrue_interest_rate(pool_id)?;
-					let pool_users_with_shortfall = pool_users
-						.into_iter()
-						.filter(|user| {
-							Self::get_hypothetical_account_liquidity(&user, pool_id, Balance::zero(), Balance::zero())
-								.map_or(false, |(_, shortfall)| !shortfall.is_zero())
-						})
-						.collect::<BTreeSet<T::AccountId>>();
-					protocol_users_with_shortfall.union(&pool_users_with_shortfall);
-					Ok(protocol_users_with_shortfall)
+					// get all users with loan from particular liquidity pools.
+					let pool_users_with_loan = T::LiquidityPoolsManager::get_pool_members_with_loan(pool_id);
+					protocol_users_with_loan.extend_from_slice(&pool_users_with_loan);
+					Ok(protocol_users_with_loan)
 				},
 			)
+			.map(|protocol_users_with_loan| {
+				protocol_users_with_loan
+					.into_iter()
+					.filter(|user| {
+						// leave in the collection only users with shortfall
+						Self::get_hypothetical_account_liquidity(&user, None, Balance::zero(), Balance::zero())
+							.map_or(false, |(_, shortfall)| !shortfall.is_zero())
+					})
+					.collect::<BTreeSet<T::AccountId>>()
+			})
 	}
 
 	// RPC methods
@@ -1279,5 +1294,24 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		};
 
 		Ok((user_total_supply_apy, user_total_borrow_apy, user_net_apy))
+	}
+
+	/// Calculate user total borrow in usd based on fresh exchange rate and
+	/// latest oracle price
+	///
+	/// - `who`: the AccountId whose borrow should be calculated.
+	fn get_user_total_borrow_usd(who: &T::AccountId) -> BalanceResult {
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.into_iter()
+			.filter(|pool_id| T::LiquidityPoolsManager::pool_exists(pool_id))
+			.try_fold(Balance::zero(), |acc, pool_id| {
+				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+				let underlying_borrow = Self::get_user_borrow_underlying_balance(who, pool_id)?;
+				let borrow_balance_in_usd =
+					T::LiquidityPoolsManager::underlying_to_usd(underlying_borrow, oracle_price)?;
+				Ok(acc
+					.checked_add(borrow_balance_in_usd)
+					.ok_or(Error::<T>::BalanceOverflow)?)
+			})
 	}
 }
