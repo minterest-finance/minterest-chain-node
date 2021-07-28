@@ -12,7 +12,6 @@ use parachain_runtime::{
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
-use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
 use serde_json::map::Map;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -30,9 +29,6 @@ use std::collections::{HashMap, HashSet};
 
 const INITIAL_BALANCE: u128 = 100_000 * DOLLARS;
 const INITIAL_TREASURY: u128 = 5_000_000 * DOLLARS;
-
-// The URL for the telemetry server.
-const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<parachain_runtime::GenesisConfig, Extensions>;

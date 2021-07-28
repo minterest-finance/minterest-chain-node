@@ -20,36 +20,25 @@ use cumulus_client_network::build_block_announce_validator;
 use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
-use cumulus_primitives_core::{
-	relay_chain::v1::{Hash as PHash, PersistedValidationData},
-	ParaId,
-};
+use cumulus_primitives_core::ParaId;
 use cumulus_primitives_parachain_inherent::MockValidationDataInherentDataProvider;
 
-use futures::lock::Mutex;
-use futures::stream::StreamExt;
 use sc_client_api::ExecutorProvider;
 use sc_consensus::LongestChain;
 use sc_consensus_aura::{ImportQueueParams, StartAuraParams};
 use sc_executor::native_executor_instance;
-use sc_finality_grandpa::{AuthorityId as GrandpaId, SharedVoterState};
+use sc_finality_grandpa::SharedVoterState;
 use sc_keystore::LocalKeystore;
 use sc_network::NetworkService;
 use sc_service::{
 	error::Error as ServiceError, Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager,
 };
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
-use sp_api::{ApiExt, ConstructRuntimeApi};
-use sp_consensus::{
-	import_queue::{BasicQueue, CacheKeyId, Verifier as VerifierT},
-	BlockImportParams, BlockOrigin, SlotData,
-};
-use sp_consensus_aura::{sr25519::AuthorityId as AuraId, sr25519::AuthorityPair as AuraPair, AuraApi};
+use sp_api::ConstructRuntimeApi;
+use sp_consensus::SlotData;
+use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use sp_keystore::SyncCryptoStorePtr;
-use sp_runtime::{
-	generic::BlockId,
-	traits::{BlakeTwo256, Header as HeaderT},
-};
+use sp_runtime::traits::BlakeTwo256;
 use std::{sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
 
@@ -641,7 +630,7 @@ pub fn start_standalone_node(mut config: Configuration) -> Result<TaskManager, S
 			slot_duration,
 			client: client.clone(),
 			select_chain,
-			block_import: client.clone(),
+			block_import: block_import,
 			proposer_factory,
 			create_inherent_data_providers: move |_, ()| async move {
 				let timestamp = sp_timestamp::InherentDataProvider::from_system_time();

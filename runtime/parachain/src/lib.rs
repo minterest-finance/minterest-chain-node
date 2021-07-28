@@ -783,7 +783,7 @@ impl_runtime_apis! {
 		}
 
 		fn get_hypothetical_account_liquidity(account_id: AccountId) -> Option<HypotheticalLiquidityData> {
-			let (excess, shortfall) = Controller::get_hypothetical_account_liquidity(&account_id, MNT, 0, 0).ok()?;
+			let (excess, shortfall) = Controller::get_hypothetical_account_liquidity(&account_id, None, 0, 0).ok()?;
 			let res = match excess.cmp(&shortfall) {
 				Ordering::Less => {
 					let amount = Amount::try_from(shortfall).ok()?;
@@ -817,6 +817,10 @@ impl_runtime_apis! {
 
 		fn get_user_total_supply_borrow_and_net_apy(account_id: AccountId) -> Option<(Interest, Interest, Interest)> {
 			Controller::get_user_total_supply_borrow_and_net_apy(account_id).ok()
+		}
+
+		fn get_user_total_borrow_usd(account_id: AccountId) -> Option<BalanceInfo> {
+			Some(BalanceInfo{amount: Controller::get_user_total_borrow_usd(&account_id).ok()?})
 		}
 	}
 
