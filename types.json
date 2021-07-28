@@ -192,7 +192,12 @@
         "reserved": "Balance",
         "frozen": "Balance"
       },
-      "AccountData": "OrmlAccountData"
+      "AccountData": "OrmlAccountData",
+      "ChainlinkFeedId": "u32",
+      "ChainlinkPriceValue": "u128",
+      "FeedId": "ChainlinkFeedId",
+      "SubmissionBounds": "(u32, u32)",
+      "RoundId": "u32"
   },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
 }

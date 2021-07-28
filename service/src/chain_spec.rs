@@ -472,7 +472,7 @@ fn minterest_genesis(
 			phantom: Default::default(),
 		},
 		operator_membership_minterest: parachain_runtime::OperatorMembershipMinterestConfig {
-			members: vec![root_key],
+			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		},
 		mnt_token: parachain_runtime::MntTokenConfig {
@@ -489,6 +489,10 @@ fn minterest_genesis(
 		whitelist: parachain_runtime::WhitelistConfig {
 			members: whitelist_members,
 			whitelist_mode: false,
+		},
+		chainlink_feed: parachain_runtime::ChainlinkFeedConfig {
+			pallet_admin: Some(root_key.clone()),
+			feed_creators: vec![root_key],
 		},
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
@@ -735,7 +739,7 @@ fn standalone_dev_genesis(
 		},
 		minterest_council: Default::default(),
 		minterest_council_membership: standalone_runtime::MinterestCouncilMembershipConfig {
-			members: vec![root_key],
+			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		},
 		operator_membership_minterest: standalone_runtime::OperatorMembershipMinterestConfig {
@@ -754,8 +758,12 @@ fn standalone_dev_genesis(
 		},
 		vesting: standalone_runtime::VestingConfig { vesting: vec![] },
 		whitelist: standalone_runtime::WhitelistConfig {
-			members: endowed_accounts,
+			members: endowed_accounts.clone(),
 			whitelist_mode: false,
+		},
+		chainlink_feed: standalone_runtime::ChainlinkFeedConfig {
+			pallet_admin: Some(root_key.clone()),
+			feed_creators: vec![root_key],
 		},
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),

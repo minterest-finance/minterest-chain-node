@@ -27,8 +27,8 @@ pub use minterest_primitives::{
 		CurrencyType::{UnderlyingAsset, WrappedToken},
 		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
 	},
-	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index,
-	Interest, Moment, Operation, Price, Rate, Signature, VestingBucket,
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, ChainlinkFeedId, ChainlinkPriceValue, CurrencyId,
+	DataProviderId, DigestItem, Hash, Index, Interest, Moment, Operation, Price, Rate, Signature, VestingBucket,
 };
 pub use mnt_token_rpc_runtime_api::MntBalanceInfo;
 use orml_currencies::BasicCurrencyAdapter;
@@ -117,6 +117,8 @@ parameter_types! {
 	pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"min/lqdn");
 	pub const DexPalletId: PalletId = PalletId(*b"min/dexs");
 	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"min/lqdy");
+	pub const ChainlinkFeedPalletId: PalletId = PalletId(*b"chl/feed");
+	pub const ChainlinkPriceManagerPalletId: PalletId = PalletId(*b"chl/pram");
 }
 
 // Do not change the order of modules. Used for genesis block.
@@ -576,6 +578,41 @@ impl whitelist_module::Config for Runtime {
 	type WhitelistWeightInfo = weights::whitelist::WeightInfo<Runtime>;
 }
 
+parameter_types! {
+	pub const ChainlinkManagerPriority: TransactionPriority = TransactionPriority::max_value() - 2;
+	pub ChainlinkPriceManagerAccountId: AccountId = ChainlinkPriceManagerPalletId::get().into_account();
+}
+
+impl chainlink_price_manager::Config for Runtime {
+	type Event = Event;
+	type PalletAccountId = ChainlinkPriceManagerAccountId;
+	type UnsignedPriority = ChainlinkManagerPriority;
+	type ChainlinkPriceManagerWeightInfo = weights::chainlink_price_manager::WeightInfo<Runtime>;
+}
+
+parameter_types! {
+	pub const StringLimit: u32 = 30;
+	pub const OracleCountLimit: u32 = 25;
+	pub const FeedLimit: ChainlinkFeedId = 100;
+	// TODO Review this parameter before production preperements
+	pub const MinimumReserve: Balance = ExistentialDeposit::get() * 1000;
+}
+
+impl pallet_chainlink_feed::Config for Runtime {
+	type Event = Event;
+	type FeedId = ChainlinkFeedId;
+	type Value = ChainlinkPriceValue;
+	type Currency = pallet_balances::Pallet<Runtime>;
+	type PalletId = ChainlinkFeedPalletId;
+	// TODO Review this parameter before production preperements
+	type MinimumReserve = MinimumReserve;
+	type StringLimit = StringLimit;
+	type OracleCountLimit = OracleCountLimit;
+	type FeedLimit = FeedLimit;
+	type OnAnswerHandler = ();
+	type WeightInfo = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -610,6 +647,10 @@ construct_runtime!(
 		MinterestOracle: orml_oracle::<Instance1>::{Pallet, Storage, Call, Event<T>},
 		Prices: module_prices::{Pallet, Storage, Call, Event<T>, Config<T>},
 		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
+
+		// ChainLink
+		ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Config<T>, Storage, Event<T>},
+		ChainlinkPriceManager: chainlink_price_manager::{Pallet, Call, Storage, Event<T>, ValidateUnsigned},
 
 		// Minterest pallets
 		MinterestProtocol: minterest_protocol::{Pallet, Call, Event<T>},
