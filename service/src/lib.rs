@@ -68,14 +68,14 @@ type MaybeGrandpaImportLink<RuntimeApi, Executor> = Option<(
 
 native_executor_instance!(
 	pub ParachainRuntimeExecutor,
-	parachain_runtime::api::dispatch,
-	parachain_runtime::native_version,
+	minterest_parachain_runtime::api::dispatch,
+	minterest_parachain_runtime::native_version,
 );
 
 native_executor_instance!(
 	pub StandaloneRuntimeExecutor,
-	standalone_runtime::api::dispatch,
-	standalone_runtime::native_version,
+	minterest_standalone_runtime::api::dispatch,
+	minterest_standalone_runtime::native_version,
 	frame_benchmarking::benchmarking::HostFunctions,
 );
 
@@ -348,15 +348,15 @@ where
 
 /// Build the import queue for the rococo parachain runtime.
 pub fn parachain_build_import_queue(
-	client: Arc<TFullClient<Block, parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>>,
+	client: Arc<TFullClient<Block, minterest_parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>>,
 	config: &Configuration,
-	_maybe_grandpa: &MaybeGrandpaImportLink<parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>,
+	_maybe_grandpa: &MaybeGrandpaImportLink<minterest_parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>,
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 ) -> Result<
 	sp_consensus::DefaultImportQueue<
 		Block,
-		TFullClient<Block, parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>,
+		TFullClient<Block, minterest_parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>,
 	>,
 	sc_service::Error,
 > {
@@ -392,9 +392,9 @@ pub async fn start_parachain_node(
 	para_id: ParaId,
 ) -> sc_service::error::Result<(
 	TaskManager,
-	Arc<TFullClient<Block, parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>>,
+	Arc<TFullClient<Block, minterest_parachain_runtime::RuntimeApi, ParachainRuntimeExecutor>>,
 )> {
-	start_parachain_node_impl::<parachain_runtime::RuntimeApi, ParachainRuntimeExecutor, _, _, _>(
+	start_parachain_node_impl::<minterest_parachain_runtime::RuntimeApi, ParachainRuntimeExecutor, _, _, _>(
 		parachain_config,
 		polkadot_config,
 		para_id,
@@ -479,15 +479,15 @@ pub async fn start_parachain_node(
 
 /// Build the import queue for the rococo parachain runtime.
 pub fn standalone_build_import_queue(
-	client: Arc<TFullClient<Block, standalone_runtime::RuntimeApi, StandaloneRuntimeExecutor>>,
+	client: Arc<TFullClient<Block, minterest_standalone_runtime::RuntimeApi, StandaloneRuntimeExecutor>>,
 	config: &Configuration,
-	maybe_grandpa: &MaybeGrandpaImportLink<standalone_runtime::RuntimeApi, StandaloneRuntimeExecutor>,
+	maybe_grandpa: &MaybeGrandpaImportLink<minterest_standalone_runtime::RuntimeApi, StandaloneRuntimeExecutor>,
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 ) -> Result<
 	sp_consensus::DefaultImportQueue<
 		Block,
-		TFullClient<Block, standalone_runtime::RuntimeApi, StandaloneRuntimeExecutor>,
+		TFullClient<Block, minterest_standalone_runtime::RuntimeApi, StandaloneRuntimeExecutor>,
 	>,
 	sc_service::Error,
 > {

@@ -4,12 +4,14 @@ use hex_literal::hex;
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::PoolData;
 use minterest_model::MinterestModelData;
-use minterest_primitives::currency::GetDecimals;
-use minterest_primitives::{VestingBucket, VestingScheduleJson};
-use parachain_runtime::{
+use minterest_parachain_runtime as parachain_runtime;
+use minterest_parachain_runtime::{
 	get_all_modules_accounts, AccountId, Balance, ExistentialDeposit, MntTokenPalletId, Signature, BTC, DOLLARS, DOT,
 	ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION,
 };
+use minterest_primitives::currency::GetDecimals;
+use minterest_primitives::{VestingBucket, VestingScheduleJson};
+use minterest_standalone_runtime as standalone_runtime;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
@@ -23,9 +25,6 @@ use sp_runtime::{
 };
 use sp_std::collections::btree_map::BTreeMap;
 use std::collections::{HashMap, HashSet};
-
-// The URL for the telemetry server.
-// const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 const INITIAL_BALANCE: u128 = 100_000 * DOLLARS;
 const INITIAL_TREASURY: u128 = 5_000_000 * DOLLARS;

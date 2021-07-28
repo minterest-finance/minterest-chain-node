@@ -80,8 +80,8 @@ risk-manager = { path = "../pallets/risk-manager" }
 module-vesting = { path = "../pallets/vesting" }
 minterest-primitives = { path = "../primitives" }
 
-parachain-runtime = { path = "../runtime/parachain" }
-standalone-runtime = { path = "../runtime/standalone" }
+minterest-parachain-runtime = { path = "../runtime/parachain" }
+minterest-standalone-runtime = { path = "../runtime/standalone" }
 
 [features]
 default = ["std"]
@@ -89,4 +89,4 @@ std = [
     "polkadot-service/rococo-native",
     "polkadot-cli/rococo-native",
 ]
-runtime-benchmarks = ["standalone-runtime/runtime-benchmarks"]
+runtime-benchmarks = ["minterest-standalone-runtime/runtime-benchmarks"]

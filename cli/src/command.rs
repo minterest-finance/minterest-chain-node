@@ -85,9 +85,9 @@ impl SubstrateCli for Cli {
 
 	fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
 		if chain_spec.is_standalone() {
-			&standalone_runtime::VERSION
+			&minterest_standalone_runtime::VERSION
 		} else {
-			&parachain_runtime::VERSION
+			&minterest_parachain_runtime::VERSION
 		}
 	}
 }
@@ -147,7 +147,7 @@ macro_rules! construct_async_run {
 
 		runner.async_run(|$config| {
 			let $components = new_partial::<
-				parachain_runtime::RuntimeApi,
+				minterest_parachain_runtime::RuntimeApi,
 				ParachainRuntimeExecutor,
 				_
 			>(

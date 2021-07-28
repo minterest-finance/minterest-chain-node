@@ -6,7 +6,7 @@ use crate::chain_spec::{calculate_initial_allocations, calculate_vesting_list};
 use frame_benchmarking::frame_support::sp_io;
 use minterest_primitives::constants::currency::DOLLARS;
 use minterest_primitives::{AccountId, Balance, VestingBucket, VestingScheduleJson};
-use parachain_runtime::{get_all_modules_accounts, MntTokenPalletId};
+use minterest_parachain_runtime::{get_all_modules_accounts, MntTokenPalletId};
 use sp_core::crypto::Ss58Codec;
 use sp_runtime::traits::AccountIdConversion;
 use std::collections::HashMap;
@@ -16,19 +16,19 @@ use std::collections::HashMap;
 fn get_all_modules_accounts_should_work() {
 	assert_eq!(
 		get_all_modules_accounts()[0],
-		parachain_runtime::MntTokenPalletId::get().into_account()
+		minterest_parachain_runtime::MntTokenPalletId::get().into_account()
 	);
 	assert_eq!(
 		get_all_modules_accounts()[1],
-		parachain_runtime::LiquidationPoolsPalletId::get().into_account()
+		minterest_parachain_runtime::LiquidationPoolsPalletId::get().into_account()
 	);
 	assert_eq!(
 		get_all_modules_accounts()[2],
-		parachain_runtime::DexPalletId::get().into_account()
+		minterest_parachain_runtime::DexPalletId::get().into_account()
 	);
 	assert_eq!(
 		get_all_modules_accounts()[3],
-		parachain_runtime::LiquidityPoolsPalletId::get().into_account()
+		minterest_parachain_runtime::LiquidityPoolsPalletId::get().into_account()
 	);
 }
 

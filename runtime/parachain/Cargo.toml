@@ -2,7 +2,7 @@
 authors = ["Minterest <https://github.com/minterest-defi>"]
 edition = "2018"
 license = "Unlicense"
-name = "parachain-runtime"
+name = "minterest-parachain-runtime"
 repository = "https://github.com/minterest-defi/minterest-chain-node/"
 version = "0.6.0"
 

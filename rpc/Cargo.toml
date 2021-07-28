@@ -18,7 +18,7 @@ sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 orml-oracle-rpc = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 
 # local dependencies
-parachain-runtime = { path = "../runtime/parachain", version = "0.6.0" }
+minterest-parachain-runtime = { path = "../runtime/parachain", version = "0.6.0" }
 controller-rpc = { path = "../pallets/controller/rpc" }
 mnt-token-rpc = { path = "../pallets/mnt-token/rpc" }
 prices-rpc = { path = "../pallets/prices/rpc" }
