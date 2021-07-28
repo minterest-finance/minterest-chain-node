@@ -125,6 +125,16 @@ pub mod module {
 
 	/// The Minterest Model data information: `(kink, base_rate_per_block, multiplier_per_block,
 	/// jump_multiplier_per_block)`.
+	///
+	/// Return:
+	/// - `kink`: If Utilization Rate exceeds Kink, the protocol applies correction to Borrow
+	/// Interest Rate
+	/// - `base_rate_per_block`: Base Interest Rate, which is the y-intercept when Utilization Rate
+	/// is 0
+	/// - `multiplier_per_block`: Multiplier Per Block is a multiplier against Utilization Rate that
+	/// gives the slope of the interest rate
+	/// - `jump_multiplier_per_block`: Jump Multiplier Per Block is used to correct Borrow Interest
+	/// Rate after Utilization Rate hits Kink
 	#[pallet::storage]
 	#[pallet::getter(fn minterest_model_data_storage)]
 	pub type MinterestModelDataStorage<T: Config> =
@@ -171,8 +181,11 @@ pub mod module {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Set JumpMultiplierPerBlock from JumpMultiplierPerYear.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `jump_multiplier_rate_per_year`: used to calculate multiplier per block.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `jump_multiplier_rate_per_year`:  new jump multiplier rate per year value. Used to
+		/// calculate and set up multiplier per block.
 		///
 		/// `jump_multiplier_per_block = jump_multiplier_rate_per_year / blocks_per_year`
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
@@ -206,8 +219,11 @@ pub mod module {
 		}
 
 		/// Set BaseRatePerBlock from BaseRatePerYear.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `base_rate_per_year`: used to calculate rate per block.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `base_rate_per_year`: new base rate per year value. Used to calculate and set up base
+		/// rate per block.
 		///
 		/// `base_rate_per_block = base_rate_per_year / blocks_per_year`
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
@@ -248,8 +264,11 @@ pub mod module {
 		}
 
 		/// Set MultiplierPerBlock from MultiplierPerYear.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
-		/// - `multiplier_per_year`: used to calculate multiplier per block.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `multiplier_per_year`: new multiplier per year value. Used to calculate and set up
+		/// multiplier per block.
 		///
 		/// `multiplier_per_block = multiplier_per_year / blocks_per_year`
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
@@ -287,7 +306,9 @@ pub mod module {
 		}
 
 		/// Set parameter `kink`.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `kink`: new kink value, must be less or equal to 1.
 		///
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.

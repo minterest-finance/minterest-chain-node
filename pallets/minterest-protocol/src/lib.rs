@@ -209,8 +209,18 @@ pub mod module {
 		/// Creates pool in storage. It is a part of a pool creation process and must be called
 		/// after new CurrencyId is added to runtime.
 		///
-		/// - `pool_id`: id of the pool that is being created
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the underlying asset to create pool for;
 		/// - `pool_data`: data to initialize pool storage in all pallets
+		/// 	- [`Minterest Model:`](?search=MinterestModelData) kink, base_rate_per_block,
+		/// multiplier_per_block, jump_multiplier_per_block
+		/// 	- [`Controller:`](?search=controller::ControllerData) protocol_interest_factor,
+		/// max_borrow_rate, collateral_factor, protocol_interest_threshold
+		/// 	- [`Liquidation Pools:`](?search=liquidation_pools::LiquidationPoolData)
+		/// deviation_threshold,
+		/// balance_ratio
+		/// 	- [`Risk Manager:`](?search=risk_manager::module::Call) liquidation_threshold,
+		/// liquidation_fee
 		#[pallet::weight(T::ProtocolWeightInfo::create_pool())]
 		#[transactional]
 		pub fn create_pool(
@@ -237,6 +247,7 @@ pub mod module {
 		/// Transfers an asset into the protocol. The user receives a quantity of wrapped Tokens
 		/// equal to the underlying tokens supplied, divided by the current Exchange Rate.
 		///
+		/// Parameters:
 		/// - `underlying_asset`: CurrencyId of underlying assets to be transferred into the
 		///   protocol.
 		/// - `underlying_amount`: The amount of the asset to be supplied, in units of the
@@ -269,6 +280,7 @@ pub mod module {
 		/// to the user. The amount of underlying tokens received is equal to the quantity of
 		/// mTokens redeemed, multiplied by the current Exchange Rate.
 		///
+		/// Parameters:
 		/// - `underlying_asset`: CurrencyId of underlying assets to be redeemed.
 		#[pallet::weight(T::ProtocolWeightInfo::redeem())]
 		#[transactional]
@@ -294,6 +306,7 @@ pub mod module {
 		/// the user. The amount of mTokens redeemed is equal to the quantity of underlying tokens
 		/// received, divided by the current Exchange Rate.
 		///
+		/// Parameters:
 		/// - `underlying_asset`: CurrencyId of underlying assets to be redeemed.
 		/// - `underlying_amount`: The number of underlying assets to be redeemed.
 		#[pallet::weight(T::ProtocolWeightInfo::redeem_underlying())]
@@ -324,6 +337,7 @@ pub mod module {
 		/// the user. The amount of underlying tokens received is equal to the quantity of mTokens
 		/// redeemed, multiplied by the current Exchange Rate.
 		///
+		/// Parameters:
 		/// - `wrapped_id`: CurrencyId of mTokens to be redeemed.
 		/// - `wrapped_amount`: The number of mTokens to be redeemed.
 		#[pallet::weight(T::ProtocolWeightInfo::redeem_wrapped())]
@@ -357,6 +371,7 @@ pub mod module {
 		/// Borrowing a specific amount of the pool currency, provided that the borrower already
 		/// deposited enough collateral.
 		///
+		/// Parameters:
 		/// - `underlying_asset`: The currency ID of the underlying asset to be borrowed.
 		/// - `underlying_amount`: The amount of the underlying asset to be borrowed.
 		#[pallet::weight(T::ProtocolWeightInfo::borrow())]
@@ -379,6 +394,7 @@ pub mod module {
 
 		/// Repays a borrow on the specific pool, for the specified amount.
 		///
+		/// Parameters:
 		/// - `underlying_asset`: The currency ID of the underlying asset to be repaid.
 		/// - `repay_amount`: The amount of the underlying asset to be repaid.
 		#[pallet::weight(T::ProtocolWeightInfo::repay())]
@@ -401,6 +417,7 @@ pub mod module {
 
 		/// Repays a borrow on the specific pool, for the all amount.
 		///
+		/// Parameters:
 		/// - `underlying_asset`: The currency ID of the underlying asset to be repaid.
 		#[pallet::weight(T::ProtocolWeightInfo::repay_all())]
 		#[transactional]
@@ -418,6 +435,7 @@ pub mod module {
 
 		/// Transfers an asset into the protocol, reducing the target user's borrow balance.
 		///
+		/// Parameters:
 		/// - `underlying_asset`: The currency ID of the underlying asset to be repaid.
 		/// - `borrower`: The account which borrowed the asset to be repaid.
 		/// - `repay_amount`: The amount of the underlying borrowed asset to be repaid.
@@ -442,6 +460,7 @@ pub mod module {
 
 		/// Transfers an asset within the pool.
 		///
+		/// Parameters:
 		/// - `receiver`: the account that will receive tokens.
 		/// - `wrapped_id`: the currency ID of the wrapped asset to transfer.
 		/// - `transfer_amount`: the amount of the wrapped asset to transfer.
@@ -465,6 +484,9 @@ pub mod module {
 		}
 
 		/// Sender allowed the assets in the pool to be used as collateral.
+		///
+		/// Parameters:
+		/// `pool_id`: CurrencyId of a pool that should be used a Collateral.
 		#[pallet::weight(T::ProtocolWeightInfo::enable_is_collateral())]
 		#[transactional]
 		pub fn enable_is_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
@@ -499,6 +521,9 @@ pub mod module {
 		}
 
 		/// Sender has denies use the assets in pool as collateral.
+		///
+		/// Parameters:
+		/// `pool_id`: CurrencyId of a pool that the user wants to disable as collateral.
 		#[pallet::weight(T::ProtocolWeightInfo::disable_is_collateral())]
 		#[transactional]
 		pub fn disable_is_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
@@ -531,7 +556,7 @@ pub mod module {
 			// Check if the user will have enough collateral if he removes one of the collaterals.
 			let (_, shortfall) = T::ControllerManager::get_hypothetical_account_liquidity(
 				&sender,
-				pool_id,
+				Some(pool_id),
 				user_supply_underlying,
 				Balance::zero(),
 			)
@@ -544,6 +569,8 @@ pub mod module {
 		}
 
 		/// Claim all the MNT accrued by holder in the specified markets.
+		///
+		/// Parameters:
 		/// - `pools`: The vector of markets to claim MNT in
 		#[pallet::weight(T::ProtocolWeightInfo::claim_mnt())]
 		#[transactional]
@@ -641,7 +668,7 @@ impl<T: Config> Pallet<T> {
 		)?;
 
 		T::MultiCurrency::deposit(wrapped_id, &who, deposit_wrapped_amount)?;
-		T::UserLiquidationAttempts::mutate_attempts(Some(underlying_asset), &who, Deposit);
+		T::UserLiquidationAttempts::try_mutate_attempts(&who, Deposit, Some(underlying_asset), None)?;
 
 		Ok((deposit_underlying_amount, wrapped_id, deposit_wrapped_amount))
 	}

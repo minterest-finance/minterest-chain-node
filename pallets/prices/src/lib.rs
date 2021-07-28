@@ -63,7 +63,7 @@ pub mod module {
 		UnlockPrice(CurrencyId),
 	}
 
-	/// Mapping from currency id to it's locked price
+	/// mapping from currency id to it's locked(approved by Oracles pallet) price in USD.
 	#[pallet::storage]
 	#[pallet::getter(fn locked_price_storage)]
 	pub type LockedPriceStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Price, OptionQuery>;
@@ -106,6 +106,7 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be `LockOrigin`.
 		///
+		/// Parameters:
 		/// - `currency_id`: currency type.
 		#[pallet::weight((T::WeightInfo::lock_price(), DispatchClass::Operational))]
 		#[transactional]
@@ -125,6 +126,7 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be `LockOrigin`.
 		///
+		/// Parameters:
 		/// - `currency_id`: currency type.
 		#[pallet::weight((T::WeightInfo::unlock_price(), DispatchClass::Operational))]
 		#[transactional]

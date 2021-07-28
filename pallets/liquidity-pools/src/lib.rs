@@ -41,7 +41,7 @@ use sp_std::{result, vec::Vec};
 
 /// Pool metadata
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default, Clone)]
 pub struct PoolData {
 	/// The amount of underlying currently loaned out by the pool, and the amount upon which
 	/// interest is accumulated to suppliers of the pool.
@@ -55,7 +55,7 @@ pub struct PoolData {
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default, Clone)]
 pub struct PoolUserData {
 	/// Total balance (with accrued interest), after applying the most
 	/// recent balance-changing action.
@@ -129,10 +129,27 @@ pub mod module {
 		PoolAlreadyCreated,
 	}
 
+	/// Return liquidity pools information: (borrowed, borrow_index, protocol_interest)
+	///
+	/// Return:
+	/// - `borrowed`: Pool Borrowed value of the underlying asset plus all the interest, that
+	/// should be paid back by borrowers on repay.
+	/// - `borrow_index`: Borrow Index accumulates the total earned interest since the opening of
+	/// the pool.
+	/// Used to accrue interest when user repays a loan.
+	/// - `protocol_interest`: amount of protocol_interest of the underlying held in this pool.
 	#[pallet::storage]
 	#[pallet::getter(fn pool_data_storage)]
 	pub(crate) type PoolDataStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, PoolData, ValueQuery>;
 
+	/// Return information about the user of the liquidity pool: (borrowed, interest_index,
+	/// is_collateral,)
+	///
+	/// Return:
+	/// - `borrowed`: User Borrow Underlying (with accrued interest), after applying the most
+	/// recent balance-changing action.
+	/// - `interest_index`: global borrow_index at the time of the last balance changing action.
+	/// - `is_collateral`: whether or not the pool can be used as a collateral by this user.
 	#[pallet::storage]
 	#[pallet::getter(fn pool_user_data_storage)]
 	pub(crate) type PoolUserDataStorage<T: Config> =
@@ -216,10 +233,6 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> UserStorageProvider<T::AccountId, PoolUserData> for Pallet<T> {
-	fn set_user_data(who: &T::AccountId, pool_id: CurrencyId, pool_user_data: PoolUserData) {
-		PoolUserDataStorage::<T>::insert(pool_id, who, pool_user_data)
-	}
-
 	fn set_user_borrow_and_interest_index(
 		who: &T::AccountId,
 		pool_id: CurrencyId,
@@ -348,12 +361,11 @@ impl<T: Config> LiquidityPoolStorageProvider<T::AccountId, PoolData> for Pallet<
 		Self::pool_data_storage(pool_id)
 	}
 
-	fn get_pool_members_with_loan(underlying_asset: CurrencyId) -> result::Result<Vec<T::AccountId>, DispatchError> {
-		let user_vec: Vec<T::AccountId> = PoolUserDataStorage::<T>::iter_prefix(underlying_asset)
+	fn get_pool_members_with_loan(underlying_asset: CurrencyId) -> Vec<T::AccountId> {
+		PoolUserDataStorage::<T>::iter_prefix(underlying_asset)
 			.filter(|(_, pool_user_data)| !pool_user_data.borrowed.is_zero())
 			.map(|(account, _)| account)
-			.collect();
-		Ok(user_vec)
+			.collect()
 	}
 
 	fn get_pool_borrow_underlying(pool_id: CurrencyId) -> Balance {

@@ -832,7 +832,7 @@ impl_runtime_apis! {
 		}
 
 		fn get_hypothetical_account_liquidity(account_id: AccountId) -> Option<HypotheticalLiquidityData> {
-			let (excess, shortfall) = Controller::get_hypothetical_account_liquidity(&account_id, MNT, 0, 0).ok()?;
+			let (excess, shortfall) = Controller::get_hypothetical_account_liquidity(&account_id, None, 0, 0).ok()?;
 			let res = match excess.cmp(&shortfall) {
 				Ordering::Less => {
 					let amount = Amount::try_from(shortfall).ok()?;
@@ -867,6 +867,10 @@ impl_runtime_apis! {
 		fn get_user_total_supply_borrow_and_net_apy(account_id: AccountId) -> Option<(Interest, Interest, Interest)> {
 			Controller::get_user_total_supply_borrow_and_net_apy(account_id).ok()
 		}
+
+		fn get_user_total_borrow_usd(account_id: AccountId) -> Option<BalanceInfo> {
+			Some(BalanceInfo{amount: Controller::get_user_total_borrow_usd(&account_id).ok()?})
+		}
 	}
 
 	impl mnt_token_rpc_runtime_api::MntTokenRuntimeApi<Block, AccountId> for Runtime {
@@ -891,13 +895,32 @@ impl_runtime_apis! {
 		CurrencyId,
 		TimeStampedPrice,
 	> for Runtime {
+			/// Returns the USD exchange rate for the selected underlying asset
+			///
+			/// Parameters:
+			///  - [`provider_id`](`minterest_primitives::DataProviderId`):  provider type
+			///  - [`key`](`minterest_primitives::CurrencyId`): currency type
+			///
+			/// Returns:
+			///
+			/// - [`Price`](`minterest_primitives::Price`):  price of a currency in USD
+			/// - [`Moment`](`minterest_primitives::Moment`):  time stamp at the time of the call.
 		fn get_value(provider_id: DataProviderId, key: CurrencyId) -> Option<TimeStampedPrice> {
 			match provider_id {
 				DataProviderId::Minterest => MinterestOracle::get_no_op(&key),
 				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_no_op(&key)
 			}
 		}
-
+			/// Return the USD exchange rate for all underlying assets
+			///
+			/// Parameters:
+			///  - [`provider_id`](`minterest_primitives::DataProviderId`):  provider type
+			///
+			/// Returns:
+			///
+			/// - [`CurrencyId`](`minterest_primitives::CurrencyId`): currency type
+			/// - [`Price`](`minterest_primitives::Price`):  price of a currency in USD
+			/// - [`Moment`](`minterest_primitives::Moment`):  time stamp at the time of the call.
 		fn get_all_values(provider_id: DataProviderId) -> Vec<(CurrencyId, Option<TimeStampedPrice>)> {
 			match provider_id {
 				DataProviderId::Minterest => MinterestOracle::get_all_values(),
