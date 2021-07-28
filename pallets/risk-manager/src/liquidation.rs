@@ -218,9 +218,9 @@ impl<T: Config> UserLoanState<T> {
 			sum_r_vars = sum_r_vars.checked_add(&some_var).ok_or(Error::<T>::NumOverflow)?;
     	    Ok(())
 	    })?;
-	    let x_coef = Rate::saturating_from_integer(1).checked_div(&save_supply_ratio).ok_or(Error::<T>::NumOverflow)?
-	        .checked_sub(&Rate::saturating_from_integer(1).checked_div(&current_supply_ratio).ok_or(Error::<T>::NumOverflow)?)
-			.ok_or(Error::<T>::NumOverflow)?;
+		let x_coef = Rate::saturating_from_integer(1).checked_div(&save_supply_ratio).ok_or(Error::<T>::NumOverflow)?.to_float()
+			- Rate::saturating_from_integer(1).checked_div(&current_supply_ratio).ok_or(Error::<T>::NumOverflow)?.to_float();
+
 
 		/// Sum of collateral of pools where user has positive supply
 		let mut sum_used_collateral = Rate::zero();
@@ -230,8 +230,7 @@ impl<T: Config> UserLoanState<T> {
 		 		let diff = tmp.r_val.checked_div(&sum_r_vars).ok_or(Error::<T>::NumOverflow)?;
 		 		(*tmp).diff = diff;
 
-				let r_val_1 = x_coef.checked_mul(&diff).and_then(|v| v.checked_add(&tmp.r_val))
-					.ok_or(Error::<T>::NumOverflow)?;
+				let r_val_1 = Rate::from_float(x_coef * diff.to_float() + tmp.r_val.to_float());
 		 		(*tmp).r_val_1 = r_val_1;
 				if !tmp.lended.is_zero() {
 					sum_used_collateral = sum_used_collateral.checked_add(&T::ControllerManager::get_pool_collateral_factor(*pool_id)).ok_or(Error::<T>::NumOverflow)?;
@@ -260,18 +259,8 @@ impl<T: Config> UserLoanState<T> {
 
 			pools_to_remove_borrowed_from.iter().enumerate().try_for_each(|(j, &pool_id_inner)| -> Result<(), DispatchError> {
 				let liquidation_fee = Pallet::<T>::liquidation_fee_storage(pool_id_inner);
-				let matrix_value = Rate::saturating_from_integer(1).checked_add(&liquidation_fee)
-					.and_then(|v| v.neg().checked_mul(&tmp.r_val_1))
-					.and_then(|v| {
-						if i == j {
-							v.checked_add(&Rate::one())
-						}
-						else {
-							Some(v)
-						}
-					}).ok_or(Error::<T>::NumOverflow)?;
-
-				matrix.set(i, j, matrix_value.to_float());
+				let matrix_value = -(1f64 + liquidation_fee.to_float()) * tmp.r_val_1.to_float() + (if i == j { 1f64 } else { 0f64 });
+				matrix.set(i, j, matrix_value);
 				Ok(())
 			})?;
 			Ok(())
