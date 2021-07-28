@@ -152,6 +152,15 @@ pub mod module {
 		PoolBalacingStateChanged(bool),
 	}
 
+	/// Return parameters for liquidation pool configuration.
+	///
+	/// Return:
+	/// - `deviation_threshold`: Deviation Threshold represents how much current value in a pool
+	/// may differ from ideal value (defined by balance_ratio).
+	/// - `balance_ratio`: Balance Ratio represents the percentage of Working pool value to be
+	/// covered by value in Liquidation Pool.
+	/// - `max_ideal_balance`: Max Ideal Balance represents the ideal balance of Liquidation Pool
+	/// and is used to limit ideal balance during pool balancing.
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_pool_data_storage)]
 	pub type LiquidationPoolDataStorage<T: Config> =
@@ -235,7 +244,9 @@ pub mod module {
 		}
 
 		/// Set new value of deviation threshold.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `threshold`: New value of deviation threshold.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -272,7 +283,9 @@ pub mod module {
 		}
 
 		/// Set new value of balance ratio.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `balance_ratio`: New value of balance ratio.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -309,7 +322,9 @@ pub mod module {
 		}
 
 		/// Set new value of maximum ideal balance.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `max_ideal_balance`: New value of maximum ideal balance.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -342,6 +357,13 @@ pub mod module {
 		/// Make balance the liquidation pools.
 		///
 		/// The dispatch origin of this call must be _None_.
+		///
+		/// Parameters:
+		/// - `supply_pool_id`: the pool from which tokens are sent for sale on DEX
+		/// - `target_pool_id`: pool for which tokens are bought on DEX
+		/// - `max_supply_amount`: the maximum number of tokens for sale from the `supply_pool_id`
+		/// pool on DEX to buy `target_amount` of tokens
+		/// - `target_amount`: number of tokens to buy in `target_pool_id` on DEX
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::balance_liquidation_pools())]
 		#[transactional]
 		pub fn balance_liquidation_pools(
@@ -371,6 +393,8 @@ pub mod module {
 		}
 
 		/// Seed the liquidation pool
+		///
+		/// Parameters:
 		/// - `underlying_asset_id`: currency of transfer
 		/// - `underlying_amount`: amount to transfer to liquidation pool
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::transfer_to_liquidation_pool())]

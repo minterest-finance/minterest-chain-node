@@ -267,10 +267,33 @@ macro_rules! mock_impl_minterest_protocol_config {
 
 #[macro_export]
 macro_rules! mock_impl_risk_manager_config {
+	($target:ty, $acc:ident, $min_sum_mock:ty) => {
+		parameter_types! {
+			pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
+			pub const PartialLiquidationMaxAttempts: u8 = 3_u8;
+			pub const MaxLiquidationFee: Rate = Rate::from_inner(500_000_000_000_000_000);
+		}
+
+		impl risk_manager::Config for $target {
+			type Event = Event;
+			type UnsignedPriority = RiskManagerPriority;
+			type PriceSource = MockPriceSource;
+			type UserCollateral = liquidity_pools::Pallet<$target>;
+			type PartialLiquidationMinSum = $min_sum_mock;
+			type PartialLiquidationMaxAttempts = PartialLiquidationMaxAttempts;
+			type MaxLiquidationFee = MaxLiquidationFee;
+			type RiskManagerUpdateOrigin = EnsureSignedBy<$acc, AccountId>;
+			type ControllerManager = controller::Pallet<$target>;
+			type LiquidityPoolsManager = liquidity_pools::Pallet<$target>;
+			type LiquidationPoolsManager = liquidation_pools::Pallet<$target>;
+			type MinterestProtocolManager = minterest_protocol::Pallet<$target>;
+		}
+	};
+
 	($target:ty, $acc:ident) => {
 		parameter_types! {
 			pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
-			pub const PartialLiquidationMinSum: Balance = 100_000 * DOLLARS;
+			pub const PartialLiquidationMinSum: Balance = 10_000 * DOLLARS;
 			pub const PartialLiquidationMaxAttempts: u8 = 3_u8;
 			pub const MaxLiquidationFee: Rate = Rate::from_inner(500_000_000_000_000_000);
 		}

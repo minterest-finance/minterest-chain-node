@@ -30,7 +30,7 @@ use pallet_traits::{
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
+	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Saturating, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, FixedU128, RuntimeDebug,
 };
 use sp_std::{cmp::Ordering, collections::btree_set::BTreeSet, convert::TryInto, prelude::Vec, result};
@@ -220,12 +220,32 @@ pub mod module {
 
 	/// Controller data information: `(timestamp, protocol_interest_factor, collateral_factor,
 	/// max_borrow_rate)`.
+	///
+	/// Return:
+	/// - `last_interest_accrued_block`: block number that interest was last accrued at
+	/// - `protocol_interest_factor`: defines the portion of borrower interest that is converted
+	/// into protocol interest
+	/// - `max_borrow_rate`:  Maximum Borrow Rate is used to block the protocol functioning,
+	/// if the rate goes higher than this value
+	/// - `collateral_factor`: multiplier, represents which share of the supplied value can be used
+	/// as a collateral for loans.
+	/// - `borrow_cap`: Borrow Cap determines a maximum amount of underlying assets which can be
+	/// borrowed from a pool.
+	/// This is option should not be used when the protocol is fully up and running on prod
+	/// - `protocol_interest_threshold`: Protocol interest threshold determines a minimum amount of
+	/// protocol interest needed to transfer it from liquidity to liquidation pool
 	#[pallet::storage]
 	#[pallet::getter(fn controller_data_storage)]
 	pub type ControllerDataStorage<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, ControllerData<T::BlockNumber>, ValueQuery>;
 
 	/// The Pause Guardian can pause certain actions as a safety mechanism.
+	///
+	/// Return:
+	/// - `deposit_paused`: is pause mint operation in the pool
+	/// - `redeem_paused`: is pause redeem operation in the pool
+	/// - `borrow_paused`: is pause borrow operation in the pool
+	/// - `repay_paused`: is pause repay operation in the pool
 	#[pallet::storage]
 	#[pallet::getter(fn pause_keeper_storage)]
 	pub(crate) type PauseKeeperStorage<T: Config> =
@@ -273,6 +293,10 @@ pub mod module {
 	impl<T: Config> Pallet<T> {
 		/// Pause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the operation is paused;
+		/// - `operation`: the operation to be paused.
+		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::pause_operation())]
 		#[transactional]
@@ -302,6 +326,10 @@ pub mod module {
 
 		/// Unpause specific operation (deposit, redeem, borrow, repay) with the pool.
 		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the operation is unpaused;
+		/// - `operation`: the operation to be resumed.
+		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
 		#[pallet::weight(T::ControllerWeightInfo::resume_operation())]
 		#[transactional]
@@ -330,7 +358,9 @@ pub mod module {
 		}
 
 		/// Set interest factor.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `protocol_interest_factor`: new value for interest factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -356,7 +386,9 @@ pub mod module {
 		}
 
 		/// Set Maximum borrow rate.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `max_borrow_rate`: new value for maximum borrow rate.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -384,7 +416,9 @@ pub mod module {
 		}
 
 		/// Set Collateral factor.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `collateral_factor`: new value for collateral factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -413,6 +447,10 @@ pub mod module {
 
 		/// Set borrow cap.
 		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `borrow_cap`: new borrow_cap.
+		///
 		/// The dispatch origin of this call must be Administrator.
 		/// Borrow cap value must be in range 0..1_000_000_000_000_000_000_000_000
 		#[pallet::weight(T::ControllerWeightInfo::set_borrow_cap())]
@@ -436,6 +474,10 @@ pub mod module {
 		}
 
 		/// Set protocol interest threshold.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `protocol_interest_threshold`: new protocol_interest_threshold value.
 		///
 		/// The dispatch origin of this call must be Administrator.
 		#[pallet::weight(T::ControllerWeightInfo::set_protocol_interest_threshold())]
@@ -668,7 +710,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	///          hypothetical account shortfall below collateral requirements).
 	fn get_hypothetical_account_liquidity(
 		account: &T::AccountId,
-		underlying_to_borrow: CurrencyId,
+		underlying_to_borrow: Option<CurrencyId>,
 		redeem_amount: Balance,
 		borrow_amount: Balance,
 	) -> LiquidityResult {
@@ -713,7 +755,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 					.map_err(|_| Error::<T>::BalanceOverflow)?;
 
 			// Calculate effects of interacting with Underlying Asset Modify.
-			if underlying_to_borrow == underlying_asset {
+			if Some(underlying_asset) == underlying_to_borrow {
 				// redeem effect
 				if redeem_amount > 0 {
 					// sum_borrow_plus_effects += tokens_to_denom * redeem_tokens
@@ -851,7 +893,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	fn redeem_allowed(underlying_asset: CurrencyId, redeemer: &T::AccountId, redeem_amount: Balance) -> DispatchResult {
 		if T::LiquidityPoolsManager::is_pool_collateral(&redeemer, underlying_asset) {
 			let (_, shortfall) =
-				Self::get_hypothetical_account_liquidity(&redeemer, underlying_asset, redeem_amount, 0)
+				Self::get_hypothetical_account_liquidity(&redeemer, Some(underlying_asset), redeem_amount, 0)
 					.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 
 			ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
@@ -867,10 +909,10 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	///
 	/// Return Ok if the borrow is allowed.
 	fn borrow_allowed(underlying_asset: CurrencyId, who: &T::AccountId, borrow_amount: Balance) -> DispatchResult {
-		let borrow_cap_reached = Self::is_borrow_cap_reached(underlying_asset, borrow_amount)?;
-		ensure!(!borrow_cap_reached, Error::<T>::BorrowCapReached);
+		let is_borrow_cap_reached = Self::is_borrow_cap_reached(underlying_asset, borrow_amount)?;
+		ensure!(!is_borrow_cap_reached, Error::<T>::BorrowCapReached);
 
-		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, underlying_asset, 0, borrow_amount)
+		let (_, shortfall) = Self::get_hypothetical_account_liquidity(&who, Some(underlying_asset), 0, borrow_amount)
 			.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 
 		ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
@@ -883,7 +925,18 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		Self::controller_data_storage(pool_id).protocol_interest_threshold
 	}
 
-	/// TODO: Raw implementation. Cover with unit-tests.
+	/// Calculates the amount of collateral based on the parameters pool_id and the supply amount.
+	/// Reads the collateral factor value from storage.
+	///
+	/// Cannot overflow, because the collateral factor is always less than one.
+	/// Returns: `collateral_amount = supply_amount * collateral_factor`.
+	fn calculate_collateral(pool_id: CurrencyId, supply_amount: Balance) -> Balance {
+		let collateral_factor = ControllerDataStorage::<T>::get(pool_id).collateral_factor;
+		Rate::from_inner(supply_amount)
+			.saturating_mul(collateral_factor)
+			.into_inner()
+	}
+
 	/// Calculates and gets all insolvent loans of users in the protocol. Calls a function
 	/// internally `accrue_interest_rate`. To determine that the loan is insolvent calls
 	/// the function `get_hypothetical_account_liquidity`, if the shortfall is greater than zero,
@@ -895,21 +948,25 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			.into_iter()
 			.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
 			.try_fold(
-				BTreeSet::new(),
-				|protocol_users_with_shortfall, pool_id| -> result::Result<BTreeSet<T::AccountId>, DispatchError> {
-					let pool_users = T::LiquidityPoolsManager::get_pool_members_with_loan(pool_id)?;
+				<Vec<T::AccountId>>::new(),
+				|mut protocol_users_with_loan, pool_id| -> result::Result<Vec<T::AccountId>, DispatchError> {
 					Self::accrue_interest_rate(pool_id)?;
-					let pool_users_with_shortfall = pool_users
-						.into_iter()
-						.filter(|user| {
-							Self::get_hypothetical_account_liquidity(&user, pool_id, Balance::zero(), Balance::zero())
-								.map_or(false, |(_, shortfall)| !shortfall.is_zero())
-						})
-						.collect::<BTreeSet<T::AccountId>>();
-					protocol_users_with_shortfall.union(&pool_users_with_shortfall);
-					Ok(protocol_users_with_shortfall)
+					// get all users with loan from particular liquidity pools.
+					let pool_users_with_loan = T::LiquidityPoolsManager::get_pool_members_with_loan(pool_id);
+					protocol_users_with_loan.extend_from_slice(&pool_users_with_loan);
+					Ok(protocol_users_with_loan)
 				},
 			)
+			.map(|protocol_users_with_loan| {
+				protocol_users_with_loan
+					.into_iter()
+					.filter(|user| {
+						// leave in the collection only users with shortfall
+						Self::get_hypothetical_account_liquidity(&user, None, Balance::zero(), Balance::zero())
+							.map_or(false, |(_, shortfall)| !shortfall.is_zero())
+					})
+					.collect::<BTreeSet<T::AccountId>>()
+			})
 	}
 
 	// RPC methods
@@ -1237,5 +1294,24 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		};
 
 		Ok((user_total_supply_apy, user_total_borrow_apy, user_net_apy))
+	}
+
+	/// Calculate user total borrow in usd based on fresh exchange rate and
+	/// latest oracle price
+	///
+	/// - `who`: the AccountId whose borrow should be calculated.
+	fn get_user_total_borrow_usd(who: &T::AccountId) -> BalanceResult {
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.into_iter()
+			.filter(|pool_id| T::LiquidityPoolsManager::pool_exists(pool_id))
+			.try_fold(Balance::zero(), |acc, pool_id| {
+				let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+				let underlying_borrow = Self::get_user_borrow_underlying_balance(who, pool_id)?;
+				let borrow_balance_in_usd =
+					T::LiquidityPoolsManager::underlying_to_usd(underlying_borrow, oracle_price)?;
+				Ok(acc
+					.checked_add(borrow_balance_in_usd)
+					.ok_or(Error::<T>::BalanceOverflow)?)
+			})
 	}
 }

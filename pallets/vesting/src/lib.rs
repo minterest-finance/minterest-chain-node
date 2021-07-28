@@ -233,6 +233,13 @@ pub mod module {
 	}
 
 	/// Vesting schedules of an account.
+	///
+	/// Return:
+	/// - `bucket`: `VestingBucket` vesting bucket type
+	/// - `start`: `BlockNumber` vesting starting block
+	/// - `period`: `BlockNumber` number of blocks between vest
+	/// - `period_count`: `u32` number of vest
+	/// - `per_period`: `Rate` amount of tokens to release per vest
 	#[pallet::storage]
 	#[pallet::getter(fn vesting_schedule_storage)]
 	pub type VestingScheduleStorage<T: Config> =
@@ -297,6 +304,7 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be `VestedTransferOrigin`.
 		///
+		/// Parameters:
 		/// - `target`: the AccountId on which the vesting schedule is created;
 		/// - `bucket`: vesting bucket type (must be `Team` or `Marketing` or `Strategic Partners`);
 		/// - `start`: block number in which the vesting schedule starts to work;
@@ -331,6 +339,7 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be `VestedTransferOrigin`.
 		///
+		/// Parameters:
 		/// - `target`: the account that receives vesting schedule of the MNT tokens;
 		/// - `bucket`: the type of vesting bucket from which we want to delete the schedule;
 		#[pallet::weight(T::WeightInfo::remove_vesting_schedules())]
