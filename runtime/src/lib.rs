@@ -23,7 +23,10 @@ use minterest_primitives::constants::fee::WeightToFee;
 pub use minterest_primitives::{
 	constants::{
 		currency::DOLLARS,
-		liquidation::{MAX_LIQUIDATION_FEE, PARTIAL_LIQUIDATION_MAX_ATTEMPTS, PARTIAL_LIQUIDATION_MIN_SUM},
+		liquidation::{
+			MAX_LIQUIDATION_FEE, PARTIAL_LIQUIDATION_MAX_ATTEMPTS, PARTIAL_LIQUIDATION_MIN_SUM,
+			RISK_MANAGER_WORKER_MAX_DURATION_MS,
+		},
 		time::{BLOCKS_PER_YEAR, DAYS, SLOT_DURATION},
 		INITIAL_EXCHANGE_RATE, MAX_BORROW_CAP, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION,
 	},
@@ -31,8 +34,8 @@ pub use minterest_primitives::{
 		CurrencyType::{UnderlyingAsset, WrappedToken},
 		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
 	},
-	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index,
-	Interest, Moment, Operation, Price, Rate, Signature, VestingBucket,
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, ChainlinkFeedId, ChainlinkPriceValue, CurrencyId,
+	DataProviderId, DigestItem, Hash, Index, Interest, Moment, Operation, Price, Rate, Signature, VestingBucket,
 };
 pub use mnt_token_rpc_runtime_api::MntBalanceInfo;
 use orml_currencies::BasicCurrencyAdapter;
@@ -123,6 +126,8 @@ parameter_types! {
 	pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"min/lqdn");
 	pub const DexPalletId: PalletId = PalletId(*b"min/dexs");
 	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"min/lqdy");
+	pub const ChainlinkFeedPalletId: PalletId = PalletId(*b"chl/feed");
+	pub const ChainlinkPriceManagerPalletId: PalletId = PalletId(*b"chl/pram");
 }
 
 // Do not change the order of modules. Used for genesis block.
@@ -442,11 +447,13 @@ impl minterest_model::Config for Runtime {
 }
 
 parameter_types! {
-	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
+	pub const ChainlinkManagerPriority: TransactionPriority = TransactionPriority::max_value() - 2;
 	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
+	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
 	pub const PartialLiquidationMinSum: Balance = PARTIAL_LIQUIDATION_MIN_SUM;
 	pub const PartialLiquidationMaxAttempts: u8 = PARTIAL_LIQUIDATION_MAX_ATTEMPTS;
 	pub const MaxLiquidationFee: Rate = MAX_LIQUIDATION_FEE;
+	pub const RiskManagerWorkerMaxDurationMs: u64 = RISK_MANAGER_WORKER_MAX_DURATION_MS;
 }
 
 impl risk_manager::Config for Runtime {
@@ -462,6 +469,8 @@ impl risk_manager::Config for Runtime {
 	type LiquidityPoolsManager = LiquidityPools;
 	type LiquidationPoolsManager = LiquidationPools;
 	type MinterestProtocolManager = MinterestProtocol;
+	type OffchainWorkerMaxDurationMs = RiskManagerWorkerMaxDurationMs;
+	type MultiCurrency = Currencies;
 }
 
 parameter_types! {
@@ -569,6 +578,7 @@ impl module_vesting::Config for Runtime {
 
 parameter_types! {
 	pub const MaxMembersWhitelistMode: u8 = 100;
+	pub ChainlinkPriceManagerAccountId: AccountId = ChainlinkPriceManagerPalletId::get().into_account();
 }
 
 impl whitelist_module::Config for Runtime {
@@ -576,6 +586,36 @@ impl whitelist_module::Config for Runtime {
 	type MaxMembers = MaxMembersWhitelistMode;
 	type WhitelistOrigin = EnsureRootOrHalfMinterestCouncil;
 	type WhitelistWeightInfo = weights::whitelist::WeightInfo<Runtime>;
+}
+
+impl chainlink_price_manager::Config for Runtime {
+	type Event = Event;
+	type PalletAccountId = ChainlinkPriceManagerAccountId;
+	type UnsignedPriority = ChainlinkManagerPriority;
+	type ChainlinkPriceManagerWeightInfo = weights::chainlink_price_manager::WeightInfo<Runtime>;
+}
+
+parameter_types! {
+	pub const StringLimit: u32 = 30;
+	pub const OracleCountLimit: u32 = 25;
+	pub const FeedLimit: ChainlinkFeedId = 100;
+	// TODO Review this parameter before production preperements
+	pub const MinimumReserve: Balance = ExistentialDeposit::get() * 1000;
+}
+
+impl pallet_chainlink_feed::Config for Runtime {
+	type Event = Event;
+	type FeedId = ChainlinkFeedId;
+	type Value = ChainlinkPriceValue;
+	type Currency = pallet_balances::Pallet<Runtime>;
+	type PalletId = ChainlinkFeedPalletId;
+	// TODO Review this parameter before production preperements
+	type MinimumReserve = MinimumReserve;
+	type StringLimit = StringLimit;
+	type OracleCountLimit = OracleCountLimit;
+	type FeedLimit = FeedLimit;
+	type OnAnswerHandler = ();
+	type WeightInfo = ();
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -606,6 +646,9 @@ construct_runtime!(
 		// Oracle and Prices
 		MinterestOracle: orml_oracle::<Instance1>::{Pallet, Storage, Call, Event<T>},
 		Prices: module_prices::{Pallet, Storage, Call, Event<T>, Config<T>},
+
+		ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Config<T>, Storage, Event<T>},
+		ChainlinkPriceManager: chainlink_price_manager::{Pallet, Call, Storage, Event<T>, ValidateUnsigned},
 
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -842,6 +885,10 @@ impl_runtime_apis! {
 		fn get_user_total_supply_borrow_and_net_apy(account_id: AccountId) -> Option<(Interest, Interest, Interest)> {
 			Controller::get_user_total_supply_borrow_and_net_apy(account_id).ok()
 		}
+
+		fn get_user_total_borrow_usd(account_id: AccountId) -> Option<BalanceInfo> {
+			Some(BalanceInfo{amount: Controller::get_user_total_borrow_usd(&account_id).ok()?})
+		}
 	}
 
 	impl mnt_token_rpc_runtime_api::MntTokenRuntimeApi<Block, AccountId> for Runtime {
@@ -949,6 +996,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, mnt_token, benchmarking::mnt_token);
 			add_benchmark!(params, batches, module_vesting, benchmarking::vesting);
 			add_benchmark!(params, batches, whitelist_module, benchmarking::whitelist);
+			add_benchmark!(params, batches, chainlink_price_manager, benchmarking::chainlink_price_manager);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

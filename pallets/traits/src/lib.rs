@@ -265,6 +265,12 @@ pub trait ControllerManager<AccountId> {
 	fn get_user_total_supply_borrow_and_net_apy(
 		who: AccountId,
 	) -> Result<(Interest, Interest, Interest), DispatchError>;
+
+	/// Calculate user total borrow in usd based on fresh exchange rate and
+	/// latest oracle price
+	///
+	/// - `who`: the AccountId whose borrow should be calculated.
+	fn get_user_total_borrow_usd(who: &AccountId) -> Result<Balance, DispatchError>;
 }
 
 pub trait MntManager<AccountId> {

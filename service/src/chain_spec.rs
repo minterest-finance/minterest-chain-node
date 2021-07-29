@@ -6,11 +6,12 @@ use minterest_model::MinterestModelData;
 use minterest_primitives::currency::GetDecimals;
 use minterest_primitives::{VestingBucket, VestingScheduleJson};
 use node_minterest_runtime::{
-	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ControllerConfig, ExistentialDeposit,
-	GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig, MinterestCouncilMembershipConfig,
-	MinterestModelConfig, MntTokenConfig, MntTokenPalletId, OperatorMembershipMinterestConfig, PricesConfig,
-	RiskManagerConfig, Signature, SudoConfig, SystemConfig, TokensConfig, VestingConfig, WhitelistConfig, BTC, DOLLARS,
-	DOT, ETH, KSM, MNT, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
+	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ChainlinkFeedConfig, ControllerConfig,
+	ExistentialDeposit, GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig,
+	MinterestCouncilMembershipConfig, MinterestModelConfig, MntTokenConfig, MntTokenPalletId,
+	OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
+	TokensConfig, VestingConfig, WhitelistConfig, BTC, DOLLARS, DOT, ETH, KSM, MNT,
+	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
 };
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
@@ -99,6 +100,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 					hex!["6ae90e9d3f0b4f1161a12024b46c7b44030bedbc4772260f1836262b37806d15"].into(),
 					hex!["38099e3930713a1fdae1419be266ea78ff353752a83033acbe215e190cb0cf2b"].into(),
 					hex!["267e9faef0221b88501b0b943222b3d9f052e8308de28bc86f10780e8f9c5b0a"].into(),
+					//Kirill
+					hex!["48c9efb4a2f9af46aa67db1142adba5a762734ea06a4e3f933309d31ce00504c"].into(),
 				],
 				true,
 			)
@@ -446,7 +449,7 @@ fn minterest_genesis(
 			phantom: Default::default(),
 		},
 		operator_membership_minterest: OperatorMembershipMinterestConfig {
-			members: vec![root_key],
+			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		},
 		mnt_token: MntTokenConfig {
@@ -463,6 +466,10 @@ fn minterest_genesis(
 		whitelist: WhitelistConfig {
 			members: whitelist_members,
 			whitelist_mode: false,
+		},
+		chainlink_feed: ChainlinkFeedConfig {
+			pallet_admin: Some(root_key.clone()),
+			feed_creators: vec![root_key],
 		},
 	}
 }
@@ -710,7 +717,7 @@ fn testnet_genesis(
 		},
 		minterest_council: Default::default(),
 		minterest_council_membership: MinterestCouncilMembershipConfig {
-			members: vec![root_key],
+			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		},
 		operator_membership_minterest: OperatorMembershipMinterestConfig {
@@ -729,8 +736,12 @@ fn testnet_genesis(
 		},
 		vesting: VestingConfig { vesting: vec![] },
 		whitelist: WhitelistConfig {
-			members: endowed_accounts,
+			members: endowed_accounts.clone(),
 			whitelist_mode: false,
+		},
+		chainlink_feed: ChainlinkFeedConfig {
+			pallet_admin: Some(root_key.clone()),
+			feed_creators: vec![root_key],
 		},
 	}
 }

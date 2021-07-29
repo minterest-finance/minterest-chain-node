@@ -102,8 +102,8 @@
         "supply_rate": "Rate"
       },
       "UserPoolBalanceData": {
-        "total_supply": "Balance",
-        "total_borrowed": "Balance"
+        "total_supply_in_usd": "Balance",
+        "total_borrowed_in_usd": "Balance"
       },
       "MntState": {
         "mnt_distribution_index": "Rate",
@@ -114,7 +114,7 @@
         "borrow_state": "MntState"
       },
       "HypotheticalLiquidityData": {
-        "liquidity": "Amount"
+        "liquidity_in_usd": "Amount"
       },
       "BalanceInfo": {
         "amount": "Balance"
@@ -192,7 +192,12 @@
         "reserved": "Balance",
         "frozen": "Balance"
       },
-      "AccountData": "OrmlAccountData"
+      "AccountData": "OrmlAccountData",
+      "ChainlinkFeedId": "u32",
+      "ChainlinkPriceValue": "u128",
+      "FeedId": "ChainlinkFeedId",
+      "SubmissionBounds": "(u32, u32)",
+      "RoundId": "u32"
   },
   "PROVIDER_SOCKET": "ws://127.0.0.1:9944"
 }
