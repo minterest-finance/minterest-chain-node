@@ -55,12 +55,12 @@ impl<T: Config + Debug> UserLoanState<T> {
 		user_loan_state.supplies = supplies;
 		user_loan_state.borrows = borrows;
 
-		user_loan_state.liquidation_mode = Some(user_loan_state.choose_liquidation_mode()?);
+		user_loan_state.liquidation_mode = user_loan_state.choose_liquidation_mode().ok();
 
 		let (supplies_to_seize_underlying, borrows_to_repay_underlying) = match user_loan_state
 			.liquidation_mode
 			.as_ref()
-			.ok_or(Error::<T>::NumOverflow)?
+			.ok_or(Error::<T>::SolventUserLoan)?
 		{
 			LiquidationMode::Partial => user_loan_state.calculate_partial_liquidation()?,
 			LiquidationMode::Complete => user_loan_state.calculate_complete_liquidation()?,

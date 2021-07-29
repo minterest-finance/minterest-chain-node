@@ -144,6 +144,8 @@ pub mod module {
 		SolventUserLoan,
 		/// An error occurred while changing the number of user liquidation attempts.
 		ErrorChangingLiquidationAttempts,
+		/// Error in choosing the liquidation mode.
+		ErrorLiquidationMode,
 	}
 
 	#[pallet::event]
@@ -308,7 +310,9 @@ pub mod module {
 				borrower,
 				user_loan_state.get_user_borrows_to_repay_underlying(),
 				user_loan_state.get_user_supplies_to_seize_underlying(),
-				user_loan_state.get_user_liquidation_mode().unwrap(),
+				user_loan_state
+					.get_user_liquidation_mode()
+					.ok_or(Error::<T>::ErrorLiquidationMode)?,
 			));
 			Ok(().into())
 		}
