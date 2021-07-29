@@ -29,19 +29,18 @@ pub struct LiquidationAmounts {
 	pub borrower_supplies_to_seize_underlying: Vec<(CurrencyId, Balance)>,
 }
 
-#[derive(Default, Clone, Copy)]
-pub struct PoolUserIntermediaryLiquidationValues {
-	pub borrow_usd: Balance,
-	pub supply_usd: Balance,
-	pub borrowed_to_total_supply_ratio: Rate,
-	pub borrowed_to_total_supply_ratio_percentage: Rate,
-	pub borrowed_to_total_supply_ratio_new: Rate,
-	pub to_remove_from_borrowed: Balance,
-	/// Next values are used to calculate the value to reduce supply for
-	pub supply_ratio: Rate,
-	pub collateral_ratio: Rate,
-	pub supply_seize_factor: Rate,
-}
+// #[derive(Default, Clone, Copy)]
+// pub struct PoolUserIntermediaryLiquidationValues {
+// 	pub borrow_usd: Balance,
+// 	pub supply_usd: Balance,
+// 	pub borrowed_to_total_supply_ratio: Rate,
+// 	pub borrowed_to_total_supply_ratio_percentage: Rate,
+// 	pub borrowed_to_total_supply_ratio_new: Rate,
+// 	/// Next values are used to calculate the value to reduce supply for
+// 	pub supply_ratio: Rate,
+// 	pub collateral_ratio: Rate,
+// 	pub supply_seize_factor: Rate,
+// }
 
 /// Contains information about the current state of the borrower's loan.
 #[derive(Encode, Decode, Eq, PartialEq, Clone, Debug, PartialOrd, Ord)]
@@ -176,24 +175,29 @@ impl<T: Config> UserLoanState<T> {
 		}
 	}
 
-	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
-	/// for partial liquidation.
-	///
-	/// Returns: vectors with user's borrows to be paid from the liquidation pools instead of
-	/// the borrower, and a vector with user's supplies to be withdrawn from the borrower and sent
-	/// to the liquidation pools. Balances are calculated in underlying assets.
-	///
-	/// Note: this function should be used after `accrue_interest_rate`.
-	pub fn calculate_partial_liquidation(&self) -> Result<LiquidationAmounts, DispatchError> {
-	    let liquidation_threshold = Pallet::<T>::liquidation_threshold_storage();
+    pub fn calculate_borrower_loans_to_repay(&self) -> Result<Vec<(CurrencyId, Balance)>, DispatchError> {
+		#[derive(Default, Clone, Copy)]
+		struct PoolUserIntermediaryLiquidationValues {
+			/// User borrow for a pool
+			pub borrow_usd: Balance,
+			/// User supply for a pool
+			pub supply_usd: Balance,
+			/// User borrow for a pool divided by sum(supply)
+			pub borrowed_to_total_supply_ratio: Rate,
+			/// User borrowed_to_total_supply_ratio divided by a sum(borrowed_to_total_supply_ratio)
+			pub borrowed_to_total_supply_ratio_percentage: Rate,
+			/// borrowed_to_total_supply_ratio which we need to achieve
+			pub borrowed_to_total_supply_ratio_new: Rate,
+		}
 
-	    let total_supply = self.total_supply()?;
-	    let total_borrowed = self.total_borrow()?;
-	    let total_collateral = self.total_collateral()?;
-	    let total_collateral_factor = Rate::from_inner(total_collateral).checked_div(&Rate::from_inner(total_supply)).ok_or(Error::<T>::NumOverflow)?;
-	    let minimal_supply_ratio = Rate::saturating_from_integer(1).checked_div(&total_collateral_factor).ok_or(Error::<T>::NumOverflow)?;
-	    let save_supply_ratio = minimal_supply_ratio.checked_add(&liquidation_threshold).ok_or(Error::<T>::NumOverflow)?;
-	    let current_supply_ratio = Rate::from_inner(total_supply).checked_div(&Rate::from_inner(total_borrowed)).ok_or(Error::<T>::NumOverflow)?;
+		let liquidation_threshold = Pallet::<T>::liquidation_threshold_storage();
+		let total_supply = self.total_supply()?;
+		let total_borrowed = self.total_borrow()?;
+		let total_collateral = self.total_collateral()?;
+		let total_collateral_factor = Rate::from_inner(total_collateral).checked_div(&Rate::from_inner(total_supply)).ok_or(Error::<T>::NumOverflow)?;
+		let minimal_supply_ratio = Rate::saturating_from_integer(1).checked_div(&total_collateral_factor).ok_or(Error::<T>::NumOverflow)?;
+		let save_supply_ratio = minimal_supply_ratio.checked_add(&liquidation_threshold).ok_or(Error::<T>::NumOverflow)?;
+		let current_supply_ratio = Rate::from_inner(total_supply).checked_div(&Rate::from_inner(total_borrowed)).ok_or(Error::<T>::NumOverflow)?;
 
 		let mut pool_to_liquidation_values = BTreeMap::new();
 		/// Copy self.supplies to a map of pool values
@@ -208,15 +212,15 @@ impl<T: Config> UserLoanState<T> {
 			});
 
 		/// Fill borrow_usd and calculate all stuff required for matrix calculations
-	    let mut sum_borrowed_to_total_supply_ratio = Rate::zero();
-	    self.borrows.iter().try_for_each(|(pool_id, user_borrow_usd)| -> Result<(), DispatchError> {
-    	    let borrowed_to_total_supply_ratio = Rate::from_inner(*user_borrow_usd).checked_div(&Rate::from_inner(total_supply)).ok_or(Error::<T>::NumOverflow)?;
-    	    let liquidation_values = pool_to_liquidation_values.get_mut(pool_id).ok_or(Error::<T>::NumOverflow)?;
+		let mut sum_borrowed_to_total_supply_ratio = Rate::zero();
+		self.borrows.iter().try_for_each(|(pool_id, user_borrow_usd)| -> Result<(), DispatchError> {
+			let borrowed_to_total_supply_ratio = Rate::from_inner(*user_borrow_usd).checked_div(&Rate::from_inner(total_supply)).ok_or(Error::<T>::NumOverflow)?;
+			let liquidation_values = pool_to_liquidation_values.get_mut(pool_id).ok_or(Error::<T>::NumOverflow)?;
 			liquidation_values.borrow_usd = *user_borrow_usd;
 			liquidation_values.borrowed_to_total_supply_ratio = borrowed_to_total_supply_ratio;
 			sum_borrowed_to_total_supply_ratio = sum_borrowed_to_total_supply_ratio.checked_add(&borrowed_to_total_supply_ratio).ok_or(Error::<T>::NumOverflow)?;
-    	    Ok(())
-	    })?;
+			Ok(())
+		})?;
 		let x_coef = Rate::saturating_from_integer(1).checked_div(&save_supply_ratio).ok_or(Error::<T>::NumOverflow)?.to_float()
 			- Rate::saturating_from_integer(1).checked_div(&current_supply_ratio).ok_or(Error::<T>::NumOverflow)?.to_float();
 
@@ -225,8 +229,8 @@ impl<T: Config> UserLoanState<T> {
 		let mut sum_used_collateral = Rate::zero();
 		pool_to_liquidation_values.iter_mut()
 			.filter(|(_, liquidation_values)| liquidation_values.borrowed_to_total_supply_ratio.is_positive())
-		 	.try_for_each(|(pool_id, liquidation_values)| -> Result<(), DispatchError> {
-		 		let borrowed_to_total_supply_ratio_percentage = liquidation_values.borrowed_to_total_supply_ratio.checked_div(&sum_borrowed_to_total_supply_ratio).ok_or(Error::<T>::NumOverflow)?;
+			.try_for_each(|(pool_id, liquidation_values)| -> Result<(), DispatchError> {
+				let borrowed_to_total_supply_ratio_percentage = liquidation_values.borrowed_to_total_supply_ratio.checked_div(&sum_borrowed_to_total_supply_ratio).ok_or(Error::<T>::NumOverflow)?;
 				liquidation_values.borrowed_to_total_supply_ratio_percentage = borrowed_to_total_supply_ratio_percentage;
 
 				let borrowed_to_total_supply_ratio_new = Rate::from_float(x_coef * borrowed_to_total_supply_ratio_percentage.to_float() + liquidation_values.borrowed_to_total_supply_ratio.to_float());
@@ -234,8 +238,8 @@ impl<T: Config> UserLoanState<T> {
 				if !liquidation_values.supply_usd.is_zero() {
 					sum_used_collateral = sum_used_collateral.checked_add(&T::ControllerManager::get_pool_collateral_factor(*pool_id)).ok_or(Error::<T>::NumOverflow)?;
 				}
-		 		Ok(())
-		 	})?;
+				Ok(())
+			})?;
 		/// Pools with positive borrow
 		let mut pools_to_remove_borrowed_from = Vec::new();
 		pool_to_liquidation_values.iter()
@@ -246,7 +250,7 @@ impl<T: Config> UserLoanState<T> {
 				}
 			});
 
-        /// Calculate how much to repay for each pool
+		/// Calculate how much to repay for each pool
 		let size = pools_to_remove_borrowed_from.len();
 		let mut matrix = MatrixF64::zeros(size, size);
 		let mut vector = MatrixF64::zeros(size, 1);
@@ -265,16 +269,49 @@ impl<T: Config> UserLoanState<T> {
 			Ok(())
 		})?;
 		let x = GaussElimination::new(&matrix, &vector).solve().map_err(|_| Error::<T>::NumOverflow)?;
+		let mut borrower_loans_to_repay = Vec::new();
 		pools_to_remove_borrowed_from.iter().enumerate().try_for_each(|(i, pool_id)| -> Result<(), DispatchError> {
-			let liquidation_values = pool_to_liquidation_values.get_mut(pool_id).ok_or(Error::<T>::NumOverflow)?;
-			liquidation_values.to_remove_from_borrowed = Rate::from_float(x.get(i, 0).ok_or(Error::<T>::NumOverflow)?).into_inner();
+			borrower_loans_to_repay.push((*pool_id, Rate::from_float(x.get(i, 0).ok_or(Error::<T>::NumOverflow)?).into_inner()));
 			Ok(())
 		})?;
+		Ok(borrower_loans_to_repay)
+	}
+
+	pub fn calculate_borrower_supplies_to_seize(&self, borrower_loans_to_repay: &Vec<(CurrencyId, Balance)>) -> Result<Vec<(CurrencyId, Balance)>, DispatchError> {
+		#[derive(Default, Clone, Copy)]
+		struct PoolUserIntermediaryLiquidationValues {
+			/// User supply for a pool
+			pub supply_usd: Balance,
+			/// User supply for a pool divided by a sum(supply)
+			pub supply_ratio: Rate,
+			/// Collateral for a pool divided by a sum(collateral)
+			pub collateral_ratio: Rate,
+			/// (supply_ratio * collateral_ratio) / sum(supply_ratio * collateral_ratio)
+			pub supply_seize_factor: Rate,
+		}
+
+		let mut pool_to_liquidation_values = BTreeMap::new();
+		/// Sum of collateral of pools where user has positive supply
+		let mut sum_used_collateral = Rate::zero();
+		/// Copy self.supplies to a map of pool values
+		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+			.into_iter()
+			.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
+			.try_for_each(|pool_id| -> Result<(), DispatchError> {
+				let mut liquidation_values = PoolUserIntermediaryLiquidationValues::default();
+				let supply = self.supplies.iter().find(|(p, _)| *p == pool_id).map(|(_, supply)| *supply).unwrap_or(Balance::zero());
+				if !supply.is_zero() {
+					sum_used_collateral = sum_used_collateral.checked_add(&T::ControllerManager::get_pool_collateral_factor(pool_id)).ok_or(Error::<T>::NumOverflow)?;
+				}
+				liquidation_values.supply_usd = supply;
+				pool_to_liquidation_values.insert(pool_id, liquidation_values);
+				Ok(())
+			});
 
 		///Calculate how much to seize from supply pools
 		let mut sum_of_supply_and_collateral_ratio_product = Rate::zero();
 		pool_to_liquidation_values.iter_mut().try_for_each(|(pool_id, liquidation_values)| -> Result<(), DispatchError> {
-			liquidation_values.supply_ratio = Rate::from_inner(liquidation_values.supply_usd).checked_div(&Rate::from_inner(total_supply)).ok_or(Error::<T>::NumOverflow)?;
+			liquidation_values.supply_ratio = Rate::from_inner(liquidation_values.supply_usd).checked_div(&Rate::from_inner(self.total_supply()?)).ok_or(Error::<T>::NumOverflow)?;
 			liquidation_values.collateral_ratio = match liquidation_values.supply_usd.is_zero() {
 				true =>	Rate::zero(),
 				false => T::ControllerManager::get_pool_collateral_factor(*pool_id).checked_div(&sum_used_collateral).ok_or(Error::<T>::NumOverflow)?,
@@ -292,14 +329,11 @@ impl<T: Config> UserLoanState<T> {
 		})?;
 
 		let mut supply_to_seize = BTreeMap::new();
-		let mut result = LiquidationAmounts::default();
-		pool_to_liquidation_values.iter().try_for_each(|(pool_id, liquidation_values)| -> Result<(), DispatchError> {
-			result.borrower_loans_to_repay_underlying.push((*pool_id, liquidation_values.to_remove_from_borrowed));
+		borrower_loans_to_repay.iter().try_for_each(|(pool_id, borrower_loan_to_repay)| -> Result<(), DispatchError> {
 			let liquidation_fee = Pallet::<T>::liquidation_fee_storage(pool_id);
-			let to_remove_from_borrowed = liquidation_values.to_remove_from_borrowed;
 			pool_to_liquidation_values.iter().try_for_each(|(pool_id_inner, liquidation_values)| -> Result<(), DispatchError> {
 				let to_seize = Rate::one().checked_add(&liquidation_fee)
-					.and_then(|v| v.checked_mul(&Rate::from_inner(to_remove_from_borrowed)))
+					.and_then(|v| v.checked_mul(&Rate::from_inner(*borrower_loan_to_repay)))
 					.and_then(|v| v.checked_mul(&liquidation_values.supply_seize_factor))
 					.ok_or(Error::<T>::NumOverflow)?;
 				let pool_seize = supply_to_seize.entry(*pool_id_inner).or_insert(Rate::zero());
@@ -325,6 +359,7 @@ impl<T: Config> UserLoanState<T> {
 			Ok(())
 		})?;
 
+		let mut borrower_supply_to_seize = Vec::new();
 		pool_to_liquidation_values.iter().try_for_each(|(pool_id, liquidation_values)| -> Result<(), DispatchError> {
 			let pool_seize = supply_to_seize.entry(*pool_id).or_insert(Rate::zero());
 			let supply_as_rate = Rate::from_inner(liquidation_values.supply_usd);
@@ -339,10 +374,24 @@ impl<T: Config> UserLoanState<T> {
 			else {
 				*pool_seize = Rate::zero();
 			}
-			result.borrower_supplies_to_seize_underlying.push((*pool_id, pool_seize.into_inner()));
+			borrower_supply_to_seize.push((*pool_id, pool_seize.into_inner()));
 			Ok(())
 		})?;
+		Ok(borrower_supply_to_seize)
+	}
 
+	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
+	/// for partial liquidation.
+	///
+	/// Returns: vectors with user's borrows to be paid from the liquidation pools instead of
+	/// the borrower, and a vector with user's supplies to be withdrawn from the borrower and sent
+	/// to the liquidation pools. Balances are calculated in underlying assets.
+	///
+	/// Note: this function should be used after `accrue_interest_rate`.
+	pub fn calculate_partial_liquidation(&self) -> Result<LiquidationAmounts, DispatchError> {
+		let mut result = LiquidationAmounts::default();
+		result.borrower_loans_to_repay_underlying = self.calculate_borrower_loans_to_repay()?;
+		result.borrower_supplies_to_seize_underlying = self.calculate_borrower_supplies_to_seize(&result.borrower_loans_to_repay_underlying)?;
 		Ok(result)
 	}
 
@@ -355,7 +404,10 @@ impl<T: Config> UserLoanState<T> {
 	///
 	/// Note: this function should be used after `accrue_interest_rate`.
 	pub fn calculate_complete_liquidation(&self) -> Result<LiquidationAmounts, DispatchError> {
-		todo!()
+		let mut result = LiquidationAmounts::default();
+		result.borrower_loans_to_repay_underlying = self.borrows.to_vec();
+		result.borrower_supplies_to_seize_underlying = self.calculate_borrower_supplies_to_seize(&result.borrower_loans_to_repay_underlying)?;
+		Ok(result)
 	}
 
 	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
@@ -368,7 +420,13 @@ impl<T: Config> UserLoanState<T> {
 	///
 	/// Note: this function should be used after `accrue_interest_rate`.
 	pub fn calculate_forgivable_complete_liquidation(&self) -> Result<LiquidationAmounts, DispatchError> {
-		todo!()
+		let mut result = LiquidationAmounts::default();
+		result.borrower_loans_to_repay_underlying = self.borrows.to_vec();
+		result.borrower_supplies_to_seize_underlying = self.borrows
+			.iter()
+			.map(|(pool_id, borrow_usd)| Ok((*pool_id, Self::calculate_seize_amount(*pool_id, *borrow_usd)?)))
+			.collect::<Result<Vec<_>, DispatchError>>()?;
+		Ok(result)
 	}
 
 	/// Getter for `self.user`.
