@@ -255,9 +255,9 @@ pub mod module {
 		///
 		/// Parameters:
 		/// - `underlying_asset`: CurrencyId of underlying assets to be transferred into the
-		///   protocol.
+		///   protocol;
 		/// - `underlying_amount`: The amount of the asset to be supplied, in units of the
-		///   underlying asset.
+		///   underlying asset;
 		#[doc(alias = "MNT Extrinsic")]
 		#[doc(alias = "MNT minterest_protocol")]
 		#[pallet::weight(T::ProtocolWeightInfo::deposit_underlying())]
