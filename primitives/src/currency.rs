@@ -73,14 +73,16 @@ create_currency_id! {
 	# [repr(u8)]
 	pub enum TokenSymbol {
 		MNT("Minterest", 18, Native) = 0,
-		DOT("Polkadot", 10, UnderlyingAsset) = 1,
-		MDOT("Polkadot", 10, WrappedToken) = 2,
-		KSM("Kusama", 12, UnderlyingAsset) = 3,
-		MKSM("Kusama", 12, WrappedToken) = 4,
-		BTC("Bitcoin", 8, UnderlyingAsset) = 5,
-		MBTC("Bitcoin", 8, WrappedToken) = 6,
-		ETH("Ethereum", 18, UnderlyingAsset) = 7,
-		METH("Ethereum", 18, WrappedToken) = 8,
+		MMNT("Minterest", 18, WrappedToken) = 1,
+		DOT("Polkadot", 10, UnderlyingAsset) = 2,
+		MDOT("Polkadot", 10, WrappedToken) = 3,
+		KSM("Kusama", 12, UnderlyingAsset) = 4,
+		MKSM("Kusama", 12, WrappedToken) = 5,
+		BTC("Bitcoin", 8, UnderlyingAsset) = 6,
+		MBTC("Bitcoin", 8, WrappedToken) = 7,
+		ETH("Ethereum", 18, UnderlyingAsset) = 8,
+		METH("Ethereum", 18, WrappedToken) = 9,
+
 	}
 }
 
@@ -116,8 +118,14 @@ impl CurrencyId {
 	}
 
 	pub fn wrapped_asset(&self) -> Option<CurrencyId> {
-		match (self.is_supported_underlying_asset(), self) {
+		match (
+			self.is_supported_underlying_asset() || self.is_native_currency_id(),
+			self,
+		) {
 			(true, CurrencyId::UnderlyingAsset(currency_id)) => Some(CurrencyId::WrappedToken(
+				TokenSymbol::try_from(*currency_id as u8 + 1_u8).ok()?,
+			)),
+			(true, CurrencyId::Native(currency_id)) => Some(CurrencyId::WrappedToken(
 				TokenSymbol::try_from(*currency_id as u8 + 1_u8).ok()?,
 			)),
 			_ => None,
@@ -149,6 +157,9 @@ mod tests {
 		assert!(!MDOT.is_supported_underlying_asset());
 		assert!(!ETH.is_supported_wrapped_asset());
 		assert!(METH.is_supported_wrapped_asset());
+		assert!(!MMNT.is_native_currency_id());
+		assert!(!MMNT.is_supported_underlying_asset());
+		assert!(MMNT.is_supported_wrapped_asset());
 	}
 
 	#[test]
@@ -159,7 +170,7 @@ mod tests {
 
 	#[test]
 	fn wrapped_asset_should_work() {
-		assert_eq!(MNT.wrapped_asset(), None);
+		assert_eq!(MNT.wrapped_asset(), Some(MMNT));
 		assert_eq!(DOT.wrapped_asset(), Some(MDOT));
 		assert_eq!(METH.wrapped_asset(), None);
 	}
@@ -180,7 +191,7 @@ mod tests {
 		);
 		assert_eq!(
 			CurrencyId::get_enabled_tokens_in_protocol(WrappedToken),
-			vec![MDOT, MKSM, MBTC, METH]
+			vec![MMNT, MDOT, MKSM, MBTC, METH]
 		);
 	}
 }
