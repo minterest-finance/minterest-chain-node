@@ -335,7 +335,6 @@ fn collects_sales_list_should_work_2_2() {
 			Liquidity Pools balances (in USD): [81_000_000, 5_000_000, 3_750_000_000_000, 60_000_000_000]
 			Ideal balances 0.2 * liquidity_pool_balance (in USD): [16_200_000, 1_000_000,
 			750_000_000_000, 12_000_000_000]
-
 			Liquidation Pools balances (in assets): [400_000, 300_000, 800_000_000, 100_000]
 			Liquidation Pools balances (in USD): [12_000_000, 1_500_000, 1_200_000_000_000,
 			5_000_000_000]
@@ -386,12 +385,9 @@ fn balance_liquidation_pools_should_work() {
 			Liquidity Pools balances (in assets): [500_000, 1_000_000, 1_500_000, 2_000_000]
 			Liquidity Pools balances (in USD): [500_000, 2_000_000, 7_500_000, 20_000_000]
 			Ideal balances 0.2 * liquidity_pool_balance (in USD): [100_000, 400_000, 1_500_000, 4_000_000]
-
 			Liquidation Pools balances (in assets): [400_000, 300_000, 200_000, 100_000]
 			Liquidation Pools balances (in USD): [400_000, 600_000, 1_000_000, 1_000_000]
-
 			Sales list (in assets): [(DOT, BTC, 300_000$), (KSM, BTC, 200_000$)]
-
 			*/
 			let expected_sales_list = vec![
 				Sales {
