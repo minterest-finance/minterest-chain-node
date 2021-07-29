@@ -175,7 +175,7 @@ fn build_user_loan_state_with_accrue_should_work() {
 		.execute_with(|| {
 			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
 
-			assert_eq!(alice_loan_state.get_user(), &ALICE);
+			assert_eq!(alice_loan_state.get_user_account_id(), &ALICE);
 			assert_eq!(alice_loan_state.get_user_supplies(), vec![(BTC, dollars(800))]);
 			assert_eq!(
 				alice_loan_state.get_user_borrows(),

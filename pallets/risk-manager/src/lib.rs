@@ -221,7 +221,7 @@ pub mod module {
 			if let Err(e) = Self::_offchain_worker() {
 				log::info!(
 					target: "RiskManager offchain worker",
-					"Error in offchain worker at {:?}: {:?}",
+					"Error in RiskManager offchain worker at {:?}: {:?}",
 					now,
 					e,
 				);

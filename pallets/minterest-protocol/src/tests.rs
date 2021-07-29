@@ -854,8 +854,6 @@ fn repay_on_behalf_should_work() {
 		});
 }
 
-// TODO: add comments
-
 #[test]
 fn do_seize_should_work() {
 	ExtBuilder::default()

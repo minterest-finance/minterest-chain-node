@@ -1011,7 +1011,6 @@ impl<T: Config> MinterestProtocolManager<T::AccountId> for Pallet<T> {
 			&T::ManagerLiquidityPools::pools_account_id(),
 			&T::ManagerLiquidationPools::pools_account_id(),
 			user_seize_underlying,
-		)?;
-		Ok(())
+		)
 	}
 }

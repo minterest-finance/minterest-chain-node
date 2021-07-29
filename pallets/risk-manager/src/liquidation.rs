@@ -117,7 +117,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 	}
 
 	/// Getter for `self.user`.
-	pub fn get_user(&self) -> &T::AccountId {
+	pub fn get_user_account_id(&self) -> &T::AccountId {
 		&self.user
 	}
 
@@ -241,6 +241,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 			)
 	}
 
+	// TODO: implement and cover with tests!
 	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
 	/// for partial liquidation.
 	///
@@ -253,6 +254,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 		Ok((Vec::new(), Vec::new()))
 	}
 
+	// TODO: implement and cover with tests!
 	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
 	/// for complete liquidation.
 	///
@@ -265,6 +267,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 		Ok((Vec::new(), Vec::new()))
 	}
 
+	// TODO: implement and cover with tests!
 	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
 	/// for "forgivable" complete liquidation. This function is called when user_total_borrow is
 	/// greater than user_total_supply.
