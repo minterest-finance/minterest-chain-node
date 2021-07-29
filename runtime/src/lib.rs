@@ -470,6 +470,7 @@ impl risk_manager::Config for Runtime {
 	type LiquidationPoolsManager = LiquidationPools;
 	type MinterestProtocolManager = MinterestProtocol;
 	type OffchainWorkerMaxDurationMs = RiskManagerWorkerMaxDurationMs;
+	type MultiCurrency = Currencies;
 }
 
 parameter_types! {

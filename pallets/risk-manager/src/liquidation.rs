@@ -2,6 +2,14 @@ use super::*;
 use sp_std::fmt::Debug;
 
 type LiquidationAmountsResult = Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError>;
+type ForgivableLiquidationAmountsResult = Result<
+	(
+		Vec<(CurrencyId, Balance)>,
+		Vec<(CurrencyId, Balance)>,
+		Vec<(CurrencyId, Balance)>,
+	),
+	DispatchError,
+>;
 
 /// Types of liquidation of user loans.
 #[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, PartialOrd, Ord)]
@@ -36,6 +44,9 @@ where
 	/// Contains a vector of pools and a balances that must be withdrawn from the user's collateral
 	/// and sent to the liquidation pools.
 	supplies_to_seize_underlying: Vec<(CurrencyId, Balance)>,
+	/// Contains a vector of pools and a balance that must be paid from the liquidation pools
+	/// to liquidity pools. This field is `Some` only in the case of Forgivable liquidation.
+	supplies_to_pay_underlying: Option<Vec<(CurrencyId, Balance)>>,
 	/// Type of liquidation of user loans.
 	liquidation_mode: Option<LiquidationMode>,
 }
@@ -64,7 +75,12 @@ impl<T: Config + Debug> UserLoanState<T> {
 		{
 			LiquidationMode::Partial => user_loan_state.calculate_partial_liquidation()?,
 			LiquidationMode::Complete => user_loan_state.calculate_complete_liquidation()?,
-			LiquidationMode::ForgivableComplete => user_loan_state.calculate_forgivable_complete_liquidation()?,
+			LiquidationMode::ForgivableComplete => {
+				let (supplies_to_seize_underlying, borrows_to_repay_underlying, supplies_to_pay_underlying) =
+					user_loan_state.calculate_forgivable_complete_liquidation()?;
+				user_loan_state.supplies_to_pay_underlying = Some(supplies_to_pay_underlying);
+				(supplies_to_seize_underlying, borrows_to_repay_underlying)
+			}
 		};
 
 		user_loan_state.supplies_to_seize_underlying = supplies_to_seize_underlying;
@@ -145,6 +161,11 @@ impl<T: Config + Debug> UserLoanState<T> {
 	pub fn get_user_supplies_to_seize_underlying(&self) -> Vec<(CurrencyId, Balance)> {
 		self.supplies_to_seize_underlying.clone()
 	}
+
+	/// Getter for `self.supplies_to_pay_underlying`.
+	pub fn get_user_supplies_to_pay_underlying(&self) -> Option<Vec<(CurrencyId, Balance)>> {
+		self.supplies_to_pay_underlying.clone()
+	}
 }
 
 // private functions
@@ -156,6 +177,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 			supplies: Vec::new(),
 			borrows_to_repay_underlying: Vec::new(),
 			supplies_to_seize_underlying: Vec::new(),
+			supplies_to_pay_underlying: None,
 			liquidation_mode: None,
 		}
 	}
@@ -277,7 +299,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 	/// to the liquidation pools. Balances are calculated in underlying assets.
 	///
 	/// Note: this function should be used after `accrue_interest_rate`.
-	pub(crate) fn calculate_forgivable_complete_liquidation(&self) -> LiquidationAmountsResult {
-		Ok((Vec::new(), Vec::new()))
+	pub(crate) fn calculate_forgivable_complete_liquidation(&self) -> ForgivableLiquidationAmountsResult {
+		Ok((Vec::new(), Vec::new(), Vec::new()))
 	}
 }

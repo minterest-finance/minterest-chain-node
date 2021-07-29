@@ -54,6 +54,7 @@ use minterest_primitives::{
 	currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, OffchainErr, Operation, Rate,
 };
 pub use module::*;
+use orml_traits::MultiCurrency;
 use pallet_traits::{
 	ControllerManager, CurrencyConverter, LiquidityPoolStorageProvider, MinterestProtocolManager, PoolsManager,
 	PricesManager, RiskManagerStorageProvider, UserCollateral, UserLiquidationAttemptsManager,
@@ -75,6 +76,7 @@ mod tests;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
+	use orml_traits::MultiCurrency;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> + Debug {
@@ -116,7 +118,8 @@ pub mod module {
 		/// Provides the basic liquidity pools functionality.
 		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, PoolData>
 			+ CurrencyConverter
-			+ UserCollateral<Self::AccountId>;
+			+ UserCollateral<Self::AccountId>
+			+ PoolsManager<Self::AccountId>;
 
 		/// Provides the basic liquidation pools functionality.
 		type LiquidationPoolsManager: PoolsManager<Self::AccountId>;
@@ -126,6 +129,9 @@ pub mod module {
 
 		/// Max duration time for offchain worker.
 		type OffchainWorkerMaxDurationMs: Get<u64>;
+
+		/// The `MultiCurrency` implementation.
+		type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 	}
 
 	#[pallet::error]
@@ -464,6 +470,19 @@ impl<T: Config> Pallet<T> {
 				T::MinterestProtocolManager::do_seize(&borrower, pool_id, seize_underlying)?;
 				Ok(())
 			})?;
+
+		if let Some(supplies_to_pay_underlying) = user_loan_state.get_user_supplies_to_pay_underlying() {
+			supplies_to_pay_underlying
+				.into_iter()
+				.try_for_each(|(pool_id, pay_underlying)| -> DispatchResult {
+					T::MultiCurrency::transfer(
+						pool_id,
+						&T::LiquidationPoolsManager::pools_account_id(),
+						&T::LiquidityPoolsManager::pools_account_id(),
+						pay_underlying,
+					)
+				})?;
+		}
 
 		<Self as UserLiquidationAttemptsManager<T::AccountId>>::try_mutate_attempts(
 			&borrower,
