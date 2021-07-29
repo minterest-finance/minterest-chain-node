@@ -316,6 +316,7 @@ macro_rules! mock_impl_risk_manager_config {
 			type LiquidationPoolsManager = liquidation_pools::Pallet<$target>;
 			type MinterestProtocolManager = minterest_protocol::Pallet<$target>;
 			type OffchainWorkerMaxDurationMs = RiskManagerWorkerMaxDurationMs;
+			type MultiCurrency = orml_currencies::Pallet<$target>;
 		}
 	};
 }

@@ -449,6 +449,7 @@ impl<T: Config> Pallet<T> {
 	/// in underlying assets.
 	fn do_liquidate(borrower: &T::AccountId, user_loan_state: UserLoanState<T>) -> DispatchResult {
 		let liquidation_pool_account_id = T::LiquidationPoolsManager::pools_account_id();
+		// perform repay
 		user_loan_state
 			.get_user_borrows_to_repay_underlying()
 			.into_iter()
@@ -462,7 +463,7 @@ impl<T: Config> Pallet<T> {
 				)?;
 				Ok(())
 			})?;
-
+		// perform seize
 		user_loan_state
 			.get_user_supplies_to_seize_underlying()
 			.into_iter()
@@ -471,13 +472,14 @@ impl<T: Config> Pallet<T> {
 				Ok(())
 			})?;
 
+		// perform pay in case of the forgivable liquidation
 		if let Some(supplies_to_pay_underlying) = user_loan_state.get_user_supplies_to_pay_underlying() {
 			supplies_to_pay_underlying
 				.into_iter()
 				.try_for_each(|(pool_id, pay_underlying)| -> DispatchResult {
 					T::MultiCurrency::transfer(
 						pool_id,
-						&T::LiquidationPoolsManager::pools_account_id(),
+						&liquidation_pool_account_id,
 						&T::LiquidityPoolsManager::pools_account_id(),
 						pay_underlying,
 					)
