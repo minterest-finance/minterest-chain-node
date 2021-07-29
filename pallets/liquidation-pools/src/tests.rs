@@ -260,6 +260,7 @@ fn calculate_pool_ideal_balance_usd_should_work() {
 			);
 		});
 }
+
 #[test]
 fn transfer_to_liquidation_pool_should_work() {
 	ExternalityBuilder::default()
