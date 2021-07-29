@@ -184,8 +184,6 @@ impl<T: Config> UserLoanState<T> {
 			pub supply_usd: Balance,
 			/// User borrow for a pool divided by sum(supply)
 			pub borrowed_to_total_supply_ratio: Rate,
-			/// User borrowed_to_total_supply_ratio divided by a sum(borrowed_to_total_supply_ratio)
-			pub borrowed_to_total_supply_ratio_percentage: Rate,
 			/// borrowed_to_total_supply_ratio which we need to achieve
 			pub borrowed_to_total_supply_ratio_new: Rate,
 		}
@@ -231,8 +229,6 @@ impl<T: Config> UserLoanState<T> {
 			.filter(|(_, liquidation_values)| liquidation_values.borrowed_to_total_supply_ratio.is_positive())
 			.try_for_each(|(pool_id, liquidation_values)| -> Result<(), DispatchError> {
 				let borrowed_to_total_supply_ratio_percentage = liquidation_values.borrowed_to_total_supply_ratio.checked_div(&sum_borrowed_to_total_supply_ratio).ok_or(Error::<T>::NumOverflow)?;
-				liquidation_values.borrowed_to_total_supply_ratio_percentage = borrowed_to_total_supply_ratio_percentage;
-
 				let borrowed_to_total_supply_ratio_new = Rate::from_float(x_coef * borrowed_to_total_supply_ratio_percentage.to_float() + liquidation_values.borrowed_to_total_supply_ratio.to_float());
 				liquidation_values.borrowed_to_total_supply_ratio_new = borrowed_to_total_supply_ratio_new;
 				if !liquidation_values.supply_usd.is_zero() {
@@ -306,7 +302,7 @@ impl<T: Config> UserLoanState<T> {
 				liquidation_values.supply_usd = supply;
 				pool_to_liquidation_values.insert(pool_id, liquidation_values);
 				Ok(())
-			});
+			})?;
 
 		///Calculate how much to seize from supply pools
 		let mut sum_of_supply_and_collateral_ratio_product = Rate::zero();
@@ -359,20 +355,43 @@ impl<T: Config> UserLoanState<T> {
 			Ok(())
 		})?;
 
+		// At this point some of entries in supply_to_seize may be greater than supply amounts for respective pools
+		// This means pool doesn`t have enough supply to repay borrow and we need to
+		// split this shortage between pools that have extra supply
 		let mut borrower_supply_to_seize = Vec::new();
 		pool_to_liquidation_values.iter().try_for_each(|(pool_id, liquidation_values)| -> Result<(), DispatchError> {
 			let pool_seize = supply_to_seize.entry(*pool_id).or_insert(Rate::zero());
 			let supply_as_rate = Rate::from_inner(liquidation_values.supply_usd);
-			if supply_as_rate > *pool_seize {
-				let supply_percent = supply_as_rate.checked_sub(pool_seize)
-					.and_then(|v| v.checked_div(&sum_positive_supply_after_seize))
-					.ok_or(Error::<T>::NumOverflow)?;
-				*pool_seize = supply_percent.checked_mul(&sum_negative_supply_after_seize)
-					.and_then(|v| v.checked_add(pool_seize))
-					.ok_or(Error::<T>::NumOverflow)?;
+			if sum_positive_supply_after_seize > sum_negative_supply_after_seize {
+				// Pool has extra supply -> increase pool_seize by a portion of sum_negative_supply_after_seize
+				if supply_as_rate > *pool_seize {
+					let supply_percent = supply_as_rate.checked_sub(pool_seize)
+						.and_then(|v| v.checked_div(&sum_positive_supply_after_seize))
+						.ok_or(Error::<T>::NumOverflow)?;
+					*pool_seize = supply_percent.checked_mul(&sum_negative_supply_after_seize)
+						.and_then(|v| v.checked_add(pool_seize))
+						.ok_or(Error::<T>::NumOverflow)?;
+				}
+				else { // Pool has supply shortage which is handled in the above if branch
+					*pool_seize = supply_as_rate;
+				}
 			}
+			else if sum_positive_supply_after_seize < sum_negative_supply_after_seize {
+				// Pool has shortage -> decrease pool_seize by a portion of sum_positive_supply_after_seize
+				if supply_as_rate < *pool_seize {
+					let supply_percent = pool_seize.checked_sub(&supply_as_rate)
+						.and_then(|v| v.checked_div(&sum_negative_supply_after_seize))
+						.ok_or(Error::<T>::NumOverflow)?;
+					*pool_seize = pool_seize.checked_sub(&supply_percent.checked_mul(&sum_positive_supply_after_seize).ok_or(Error::<T>::NumOverflow)?)
+						.ok_or(Error::<T>::NumOverflow)?;
+				}
+				else { // Pool has extra supply which is handled in the above if branch
+					*pool_seize = supply_as_rate;
+				}
+			}
+			// Total extra supply is equal to total shortage -> just seize all supply
 			else {
-				*pool_seize = Rate::zero();
+				*pool_seize = supply_as_rate;
 			}
 			borrower_supply_to_seize.push((*pool_id, pool_seize.into_inner()));
 			Ok(())
@@ -422,10 +441,7 @@ impl<T: Config> UserLoanState<T> {
 	pub fn calculate_forgivable_complete_liquidation(&self) -> Result<LiquidationAmounts, DispatchError> {
 		let mut result = LiquidationAmounts::default();
 		result.borrower_loans_to_repay_underlying = self.borrows.to_vec();
-		result.borrower_supplies_to_seize_underlying = self.borrows
-			.iter()
-			.map(|(pool_id, borrow_usd)| Ok((*pool_id, Self::calculate_seize_amount(*pool_id, *borrow_usd)?)))
-			.collect::<Result<Vec<_>, DispatchError>>()?;
+		result.borrower_supplies_to_seize_underlying = self.calculate_borrower_supplies_to_seize(&result.borrower_loans_to_repay_underlying)?;
 		Ok(result)
 	}
 
