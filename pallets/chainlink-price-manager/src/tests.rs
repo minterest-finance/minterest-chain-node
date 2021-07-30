@@ -46,12 +46,12 @@ fn offchain_worker_test() {
 		create_default_feeds();
 		assert_ok!(ChainlinkPriceManager::_offchain_worker(3));
 
-		// 1 balancing transcation in transactions pool
-		assert_eq!(trans_pool_state.read().transactions.len(), 1);
+		// There are 4 pools enabled therefore must be 4 events for each pool
+		assert_eq!(trans_pool_state.read().transactions.len(), 4);
 		let transaction = trans_pool_state.write().transactions.pop().unwrap();
 
 		let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
-		// Called extrinsic input params
+		// Just check the first event and ignore others
 		let (_feed_id, round_id) = match ex.call {
 			crate::mock::Call::ChainlinkPriceManager(crate::Call::initiate_new_round(feed_id, round_id)) => {
 				(feed_id, round_id)
@@ -59,52 +59,6 @@ fn offchain_worker_test() {
 			e => panic!("Unexpected call: {:?}", e),
 		};
 		assert_eq!(round_id, 1);
-	});
-}
-
-#[test]
-fn get_min_round_id() {
-	test_externalities().execute_with(|| {
-		create_default_feeds();
-		let min_round_id = ChainlinkPriceManager::get_min_round_id().unwrap();
-		assert_eq!(min_round_id, 0);
-
-		ChainlinkFeed::submit(
-			Origin::signed(ORACLE),
-			ChainlinkPriceManager::get_feed_id(BTC).unwrap(),
-			min_round_id + 1,
-			42 * DOLLARS,
-		)
-		.unwrap();
-
-		ChainlinkFeed::submit(
-			Origin::signed(ORACLE),
-			ChainlinkPriceManager::get_feed_id(ETH).unwrap(),
-			min_round_id + 1,
-			42 * DOLLARS,
-		)
-		.unwrap();
-
-		ChainlinkFeed::submit(
-			Origin::signed(ORACLE),
-			ChainlinkPriceManager::get_feed_id(KSM).unwrap(),
-			min_round_id + 1,
-			42 * DOLLARS,
-		)
-		.unwrap();
-
-		// min_round_id still zero
-		assert_eq!(ChainlinkPriceManager::get_min_round_id().unwrap(), 0);
-
-		ChainlinkFeed::submit(
-			Origin::signed(ORACLE),
-			ChainlinkPriceManager::get_feed_id(DOT).unwrap(),
-			min_round_id + 1,
-			42 * DOLLARS,
-		)
-		.unwrap();
-
-		assert_eq!(ChainlinkPriceManager::get_min_round_id().unwrap(), 1);
 	});
 }
 

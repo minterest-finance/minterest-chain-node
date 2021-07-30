@@ -14,7 +14,7 @@
 // --extrinsic=*
 // --execution=wasm
 // --wasm-execution=compiled
-// --output=./runtime/src/weights/minterest_protocol.rs
+// --output=./runtime/standalone/src/weights/minterest_protocol.rs
 
 #![allow(unused_parens)]
 #![allow(unused_imports)]
