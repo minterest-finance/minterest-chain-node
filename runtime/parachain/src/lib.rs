@@ -19,7 +19,10 @@ use minterest_primitives::constants::fee::WeightToFee;
 pub use minterest_primitives::{
 	constants::{
 		currency::DOLLARS,
-		liquidation::{MAX_LIQUIDATION_FEE, PARTIAL_LIQUIDATION_MAX_ATTEMPTS, PARTIAL_LIQUIDATION_MIN_SUM},
+		liquidation::{
+			MAX_LIQUIDATION_FEE, PARTIAL_LIQUIDATION_MAX_ATTEMPTS, PARTIAL_LIQUIDATION_MIN_SUM,
+			RISK_MANAGER_WORKER_MAX_DURATION_MS,
+		},
 		time::{BLOCKS_PER_YEAR, DAYS, SLOT_DURATION},
 		INITIAL_EXCHANGE_RATE, MAX_BORROW_CAP, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION,
 	},
@@ -446,6 +449,7 @@ parameter_types! {
 	pub const PartialLiquidationMinSum: Balance = PARTIAL_LIQUIDATION_MIN_SUM;
 	pub const PartialLiquidationMaxAttempts: u8 = PARTIAL_LIQUIDATION_MAX_ATTEMPTS;
 	pub const MaxLiquidationFee: Rate = MAX_LIQUIDATION_FEE;
+	pub const RiskManagerWorkerMaxDurationMs: u64 = RISK_MANAGER_WORKER_MAX_DURATION_MS;
 }
 
 impl risk_manager::Config for Runtime {
@@ -461,6 +465,8 @@ impl risk_manager::Config for Runtime {
 	type LiquidityPoolsManager = LiquidityPools;
 	type LiquidationPoolsManager = LiquidationPools;
 	type MinterestProtocolManager = MinterestProtocol;
+	type OffchainWorkerMaxDurationMs = RiskManagerWorkerMaxDurationMs;
+	type MultiCurrency = Currencies;
 }
 
 parameter_types! {
