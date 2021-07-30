@@ -36,10 +36,10 @@ use sp_std::{cmp::Ordering, prelude::*};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-#[cfg(test)]
+/*#[cfg(test)]
 mod mock;
 #[cfg(test)]
-mod tests;
+mod tests;*/
 
 pub mod weights;
 pub use weights::WeightInfo;
