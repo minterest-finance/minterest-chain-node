@@ -199,10 +199,8 @@ impl frame_system::Config for Runtime {
 	type SystemWeightInfo = ();
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
-	/// What to do if the user wants the code set to something. Just use `()` unless you are in
-	/// cumulus.
-	/// TODO MIN-293
-	type OnSetCode = ();
+	/// What to do if the user wants the code set to something.
+	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 }
 
 impl pallet_aura::Config for Runtime {
@@ -224,6 +222,27 @@ impl pallet_grandpa::Config for Runtime {
 
 	type WeightInfo = ();
 }
+
+const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND * 2;
+
+parameter_types! {
+	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
+}
+
+impl cumulus_pallet_parachain_system::Config for Runtime {
+	type Event = Event;
+	type OnValidationData = ();
+	type SelfParaId = parachain_info::Pallet<Runtime>;
+	type OutboundXcmpMessageSource = ();
+	type DmpMessageHandler = ();
+	type ReservedDmpWeight = ReservedDmpWeight;
+	type XcmpMessageHandler = ();
+	type ReservedXcmpWeight = ();
+}
+
+impl parachain_info::Config for Runtime {}
+
+impl cumulus_pallet_aura_ext::Config for Runtime {}
 
 parameter_types! {
 	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
@@ -444,7 +463,6 @@ impl minterest_model::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ChainlinkManagerPriority: TransactionPriority = TransactionPriority::max_value() - 2;
 	pub const LiquidityPoolsPriority: TransactionPriority = TransactionPriority::max_value() - 1;
 	pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
 	pub const PartialLiquidationMinSum: Balance = PARTIAL_LIQUIDATION_MIN_SUM;
@@ -573,7 +591,6 @@ impl module_vesting::Config for Runtime {
 
 parameter_types! {
 	pub const MaxMembersWhitelistMode: u8 = 100;
-	pub ChainlinkPriceManagerAccountId: AccountId = ChainlinkPriceManagerPalletId::get().into_account();
 }
 
 impl whitelist_module::Config for Runtime {
@@ -581,6 +598,11 @@ impl whitelist_module::Config for Runtime {
 	type MaxMembers = MaxMembersWhitelistMode;
 	type WhitelistOrigin = EnsureRootOrHalfMinterestCouncil;
 	type WhitelistWeightInfo = weights::whitelist::WeightInfo<Runtime>;
+}
+
+parameter_types! {
+	pub const ChainlinkManagerPriority: TransactionPriority = TransactionPriority::max_value() - 2;
+	pub ChainlinkPriceManagerAccountId: AccountId = ChainlinkPriceManagerPalletId::get().into_account();
 }
 
 impl chainlink_price_manager::Config for Runtime {
@@ -630,8 +652,13 @@ construct_runtime!(
 		Vesting: module_vesting::{Pallet, Storage, Call, Event<T>, Config<T>},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
 
+		// Parachain
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>},
+		ParachainInfo: parachain_info::{Pallet, Storage, Config},
+
 		// Consensus & Staking
 		Aura: pallet_aura::{Pallet, Config<T>},
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
 		Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
 
 		// Governance
@@ -639,14 +666,14 @@ construct_runtime!(
 		MinterestCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
 
 		// Oracle and Prices
+		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		MinterestOracle: orml_oracle::<Instance1>::{Pallet, Storage, Call, Event<T>},
 		Prices: module_prices::{Pallet, Storage, Call, Event<T>, Config<T>},
+		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
 
+		// ChainLink
 		ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Config<T>, Storage, Event<T>},
 		ChainlinkPriceManager: chainlink_price_manager::{Pallet, Call, Storage, Event<T>, ValidateUnsigned},
-
-		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
-		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
 
 		// Minterest pallets
 		MinterestProtocol: minterest_protocol::{Pallet, Call, Event<T>},
@@ -658,6 +685,7 @@ construct_runtime!(
 		MntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Pallet, Storage, Call, Event<T>},
 		Whitelist: whitelist_module::{Pallet, Storage, Call, Event<T>, Config<T>},
+
 		// Dev
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
 	}
@@ -956,6 +984,12 @@ impl_runtime_apis! {
 
 		fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
 			Prices::get_all_freshest_prices()
+		}
+	}
+
+	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
+		fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
+			ParachainSystem::collect_collation_info()
 		}
 	}
 

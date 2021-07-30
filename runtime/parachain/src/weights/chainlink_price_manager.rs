@@ -14,7 +14,7 @@
 // --extrinsic=*
 // --execution=wasm
 // --wasm-execution=compiled
-// --output=./runtime/src/weights/chainlink_price_manager.rs
+// --output=./runtime/standalone/src/weights/chainlink_price_manager.rs
 
 #![allow(unused_parens)]
 #![allow(unused_imports)]

@@ -14,7 +14,7 @@
 // --extrinsic=*
 // --execution=wasm
 // --wasm-execution=compiled
-// --output=./runtime/src/weights/vesting.rs
+// --output=./runtime/standalone/src/weights/vesting.rs
 
 #![allow(unused_parens)]
 #![allow(unused_imports)]
