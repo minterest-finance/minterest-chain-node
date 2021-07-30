@@ -82,7 +82,6 @@ create_currency_id! {
 		MBTC("Bitcoin", 8, WrappedToken) = 7,
 		ETH("Ethereum", 18, UnderlyingAsset) = 8,
 		METH("Ethereum", 18, WrappedToken) = 9,
-
 	}
 }
 
@@ -102,6 +101,10 @@ impl CurrencyId {
 
 	pub fn is_supported_underlying_asset(&self) -> bool {
 		matches!(self, CurrencyId::UnderlyingAsset(_))
+	}
+
+	pub fn is_supported_underlying_native_asset(&self) -> bool {
+		matches!(self, CurrencyId::UnderlyingAsset(_) | CurrencyId::Native(_))
 	}
 
 	pub fn is_supported_wrapped_asset(&self) -> bool {
@@ -190,6 +193,9 @@ mod tests {
 		assert!(!MMNT.is_native_currency_id());
 		assert!(!MMNT.is_supported_underlying_asset());
 		assert!(MMNT.is_supported_wrapped_asset());
+		assert!(MNT.is_supported_underlying_native_asset());
+		assert!(DOT.is_supported_underlying_native_asset());
+		assert!(!MMNT.is_supported_underlying_native_asset());
 	}
 
 	#[test]
