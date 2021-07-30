@@ -14,7 +14,7 @@
 // --extrinsic=*
 // --execution=wasm
 // --wasm-execution=compiled
-// --output=./runtime/src/weights/mnt_token.rs
+// --output=./runtime/standalone/src/weights/mnt_token.rs
 
 #![allow(unused_parens)]
 #![allow(unused_imports)]

@@ -14,7 +14,7 @@
 // --extrinsic=*
 // --execution=wasm
 // --wasm-execution=compiled
-// --output=./runtime/src/weights/whitelist.rs
+// --output=./runtime/standalone/src/weights/whitelist.rs
 
 #![allow(unused_parens)]
 #![allow(unused_imports)]
