@@ -1,5 +1,6 @@
 #![allow(clippy::unnecessary_cast)]
 
+pub mod chainlink_price_manager;
 pub mod controller;
 pub mod liquidation_pools;
 pub mod minterest_model;

@@ -74,6 +74,13 @@ pub type Moment = u64;
 /// Decimal representation of interest. Signed.
 pub type Interest = FixedI128;
 
+/// Chainlink Feed Id
+pub type ChainlinkFeedId = u32;
+
+/// Chainlink value to represent oracle price in USD.
+/// Expect all prices will be provided with 18 decimals.
+pub type ChainlinkPriceValue = u128;
+
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum Operation {
@@ -92,12 +99,15 @@ pub enum DataProviderId {
 }
 
 /// Error which may occur while executing the off-chain code.
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(PartialEq, Eq)]
 pub enum OffchainErr {
 	OffchainLock,
 	NotValidator,
 	CheckFail,
 	PoolsBalancingError,
+	PoolsBalancingIsOff,
+	FailReceivingOraclePrice,
+	ChainlinkFeedNotExists,
 }
 
 impl sp_std::fmt::Debug for OffchainErr {
@@ -107,6 +117,9 @@ impl sp_std::fmt::Debug for OffchainErr {
 			OffchainErr::NotValidator => write!(fmt, "Not validator"),
 			OffchainErr::CheckFail => write!(fmt, "Check fail"),
 			OffchainErr::PoolsBalancingError => write!(fmt, "Pools balancing error"),
+			OffchainErr::PoolsBalancingIsOff => write!(fmt, "Pools balancing switched off"),
+			OffchainErr::FailReceivingOraclePrice => write!(fmt, "Receiving oracle price is failed"),
+			OffchainErr::ChainlinkFeedNotExists => write!(fmt, "Can't retrieve feed for enabled currency"),
 		}
 	}
 }

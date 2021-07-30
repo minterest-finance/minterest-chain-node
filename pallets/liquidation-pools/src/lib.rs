@@ -130,6 +130,8 @@ pub mod module {
 		NotEnoughLiquidityAvailable,
 		/// Transaction with zero balance is not allowed.
 		ZeroBalanceTransaction,
+		/// Wrong state for balansing switcher. QA only!
+		BalacingStateChangeError,
 	}
 
 	#[pallet::event]
@@ -146,12 +148,31 @@ pub mod module {
 		///  Successful transfer to liquidation pull: \[underlying_asset_id, underlying_amount,
 		/// who\]
 		TransferToLiquidationPool(CurrencyId, Balance, T::AccountId),
+		/// Pool balancing state switched: \[new_state\]. QA only!
+		PoolBalacingStateChanged(bool),
 	}
 
+	/// Return parameters for liquidation pool configuration.
+	///
+	/// Return:
+	/// - `deviation_threshold`: Deviation Threshold represents how much current value in a pool
+	/// may differ from ideal value (defined by balance_ratio).
+	/// - `balance_ratio`: Balance Ratio represents the percentage of Working pool value to be
+	/// covered by value in Liquidation Pool.
+	/// - `max_ideal_balance`: Max Ideal Balance represents the ideal balance of Liquidation Pool
+	/// and is used to limit ideal balance during pool balancing.
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_pool_data_storage)]
 	pub type LiquidationPoolDataStorage<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, LiquidationPoolData, ValueQuery>;
+
+	#[pallet::type_value]
+	pub fn BalancingStateDefault<T: Config>() -> bool {
+		true
+	}
+	#[pallet::storage]
+	#[pallet::getter(fn pool_balancing_enabled_storage)]
+	pub type PoolBalancingEnabledStorage<T: Config> = StorageValue<_, bool, ValueQuery, BalancingStateDefault<T>>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -204,8 +225,28 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// QA only functional!
+		/// Switch on/off pools balancing
+		/// - `new_state`: true - balancing on, false - off
+		///
+		/// origin should be root.
+		#[pallet::weight(10_000)]
+		#[transactional]
+		pub fn switch_balancing_state(origin: OriginFor<T>, new_state: bool) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+
+			PoolBalancingEnabledStorage::<T>::try_mutate(|mode| -> DispatchResultWithPostInfo {
+				ensure!(*mode != new_state, Error::<T>::BalacingStateChangeError);
+				*mode = new_state;
+				Self::deposit_event(Event::PoolBalacingStateChanged(new_state));
+				Ok(().into())
+			})
+		}
+
 		/// Set new value of deviation threshold.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `threshold`: New value of deviation threshold.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -242,7 +283,9 @@ pub mod module {
 		}
 
 		/// Set new value of balance ratio.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `balance_ratio`: New value of balance ratio.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -279,7 +322,9 @@ pub mod module {
 		}
 
 		/// Set new value of maximum ideal balance.
-		/// - `pool_id`: PoolID for which the parameter value is being set.
+		///
+		/// Parameters:
+		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
 		/// - `max_ideal_balance`: New value of maximum ideal balance.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -312,6 +357,13 @@ pub mod module {
 		/// Make balance the liquidation pools.
 		///
 		/// The dispatch origin of this call must be _None_.
+		///
+		/// Parameters:
+		/// - `supply_pool_id`: the pool from which tokens are sent for sale on DEX
+		/// - `target_pool_id`: pool for which tokens are bought on DEX
+		/// - `max_supply_amount`: the maximum number of tokens for sale from the `supply_pool_id`
+		/// pool on DEX to buy `target_amount` of tokens
+		/// - `target_amount`: number of tokens to buy in `target_pool_id` on DEX
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::balance_liquidation_pools())]
 		#[transactional]
 		pub fn balance_liquidation_pools(
@@ -341,6 +393,8 @@ pub mod module {
 		}
 
 		/// Seed the liquidation pool
+		///
+		/// Parameters:
 		/// - `underlying_asset_id`: currency of transfer
 		/// - `underlying_amount`: amount to transfer to liquidation pool
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::transfer_to_liquidation_pool())]
@@ -427,10 +481,11 @@ pub struct Sales {
 
 impl<T: Config> Pallet<T> {
 	fn _offchain_worker(_now: T::BlockNumber) -> Result<(), OffchainErr> {
-		// Check if we are a potential validator
-		if !sp_io::offchain::is_validator() {
-			return Err(OffchainErr::NotValidator);
-		}
+		// Check if we are a potential validator and balancing is enabled.
+		ensure!(sp_io::offchain::is_validator(), OffchainErr::NotValidator);
+		// Check if pool balansing is switched ON.
+		ensure!(Self::pool_balancing_enabled_storage(), OffchainErr::PoolsBalancingIsOff);
+
 		let mut lock = StorageLock::<Time>::new(&OFFCHAIN_LIQUIDATION_WORKER_LOCK);
 		// If pools balancing procedure already started should be returned OffchainLock error.
 		// To prevent any race condition sutiations.

@@ -32,7 +32,7 @@ fn offchain_worker_balancing_test() {
 	ext.execute_with(|| {
 		assert_ok!(TestLiquidationPools::_offchain_worker(0));
 
-		// 1 balancing transcation in transactions pool
+		// 1 balancing transaction in transactions pool
 		assert_eq!(trans_pool_state.read().transactions.len(), 1);
 		let transaction = trans_pool_state.write().transactions.pop().unwrap();
 		let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
@@ -50,6 +50,52 @@ fn offchain_worker_balancing_test() {
 		assert_eq!(target_pool_id, DOT);
 		assert_eq!(max_supply_amount, 10_000 * DOLLARS);
 		assert_eq!(target_supply_amount, 10_000 * DOLLARS);
+	});
+}
+
+#[test]
+fn offchain_worker_balancing_off_test() {
+	// balance ratio = 0.2 for two pools. Price the same.
+	// If pools balancing is On , the offchain worker should send transaction for balancing.
+	// It should change 10_000 ETH to 10_000 DOT
+	// Tests that this s scenario doesn't happened when we switch pools balancing Off:
+	// - no transaction happens
+	// - pool values are the same
+	let mut ext = ExternalityBuilder::default()
+		.liquidation_pool_balance(DOT, 10_000 * DOLLARS)
+		.liquidation_pool_balance(ETH, 30_000 * DOLLARS)
+		.liquidity_pool_balance(DOT, 100_000 * DOLLARS)
+		.liquidity_pool_balance(ETH, 100_000 * DOLLARS)
+		.build();
+	let (offchain, _) = TestOffchainExt::new();
+
+	let (pool, trans_pool_state) = TestTransactionPoolExt::new();
+	ext.register_extension(OffchainDbExt::new(offchain.clone()));
+	ext.register_extension(OffchainWorkerExt::new(offchain));
+	ext.register_extension(TransactionPoolExt::new(pool));
+
+	ext.execute_with(|| {
+		assert_ok!(TestLiquidationPools::switch_balancing_state(Origin::root(), false));
+		let expected_event = Event::TestLiquidationPools(crate::Event::PoolBalacingStateChanged(false));
+		assert!(System::events().iter().any(|record| record.event == expected_event));
+
+		assert_noop!(
+			TestLiquidationPools::_offchain_worker(0),
+			OffchainErr::PoolsBalancingIsOff
+		);
+
+		// 0 balancing transaction in transactions pool
+		assert_eq!(trans_pool_state.read().transactions.len(), 0);
+
+		// Check that pools are still unbalanced
+		assert_eq!(
+			TestLiquidationPools::get_pool_available_liquidity(DOT),
+			10_000 * DOLLARS
+		);
+		assert_eq!(
+			TestLiquidationPools::get_pool_available_liquidity(ETH),
+			30_000 * DOLLARS
+		);
 	});
 }
 
