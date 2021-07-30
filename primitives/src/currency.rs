@@ -130,7 +130,6 @@ impl CurrencyId {
 				.and_then(|token| match token {
 					TokenSymbol::MNT => Some(CurrencyId::Native(token)),
 					_ => None,
-
 				}),
 			_ => None,
 		}
