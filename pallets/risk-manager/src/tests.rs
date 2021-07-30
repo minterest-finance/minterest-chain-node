@@ -22,10 +22,15 @@ fn check_user_loan_state(
 	liquidation_mode: Option<LiquidationMode>,
 	seizes: Vec<(CurrencyId, Balance)>,
 	repays: Vec<(CurrencyId, Balance)>,
+	covered_by_liquidation_pools: Vec<(CurrencyId, Balance)>,
 ) {
 	assert_eq!(user_loan_state.get_user_liquidation_mode(), liquidation_mode);
 	assert_eq!(user_loan_state.get_user_supplies_to_seize_underlying(), seizes);
 	assert_eq!(user_loan_state.get_user_borrows_to_repay_underlying(), repays);
+	assert_eq!(
+		user_loan_state.get_user_supplies_to_pay_underlying(),
+		covered_by_liquidation_pools
+	);
 }
 
 #[test]
@@ -192,8 +197,9 @@ fn build_user_loan_state_with_accrue_should_work() {
 			check_user_loan_state(
 				&alice_loan_state,
 				Some(Complete),
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				vec![(BTC, dollars(783))],
+				vec![(DOT, dollars(400)), (ETH, dollars(330))],
+				vec![],
 			);
 
 			System::set_block_number(100);
@@ -208,8 +214,9 @@ fn build_user_loan_state_with_accrue_should_work() {
 			check_user_loan_state(
 				&alice_loan_state_accrued,
 				Some(Complete),
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				vec![(BTC, 783_000512841780000000)],
+				vec![(DOT, 400_000285120000000000), (ETH, 330_000194059800000000)],
+				vec![],
 			);
 		})
 }
@@ -270,8 +277,13 @@ fn forgivable_liquidation_less_min_sum() {
 			check_user_loan_state(
 				&alice_loan_state,
 				Some(ForgivableComplete),
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				vec![(DOT, dollars(300)), (BTC, dollars(50)), (ETH, dollars(650))],
+				vec![(DOT, dollars(200)), (BTC, dollars(360)), (ETH, dollars(400))],
+				vec![
+					(DOT, 2_399_999_999_999_998_992), // ~2.4
+					(BTC, 399_999_999_999_997_984),   // ~0.4
+					(ETH, 5_200_000_000_000_002_016), // ~5.2
+				],
 			);
 
 			set_user_liquidation_attempts_to(1);
@@ -282,8 +294,13 @@ fn forgivable_liquidation_less_min_sum() {
 			check_user_loan_state(
 				&alice_loan_state,
 				Some(ForgivableComplete),
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				vec![(DOT, dollars(300)), (BTC, dollars(50)), (ETH, dollars(650))],
+				vec![(DOT, dollars(200)), (BTC, dollars(360)), (ETH, dollars(400))],
+				vec![
+					(DOT, 2_399_999_999_999_998_992), // ~2.4
+					(BTC, 399_999_999_999_997_984),   // ~0.4
+					(ETH, 5_200_000_000_000_002_016), // ~5.2
+				],
 			);
 		});
 }
@@ -322,8 +339,13 @@ fn forgivable_liquidation_greater_min_sum() {
 			check_user_loan_state(
 				&alice_loan_state,
 				Some(ForgivableComplete),
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				vec![(DOT, dollars(3000)), (BTC, dollars(1500)), (ETH, dollars(6500))],
+				vec![(DOT, dollars(2000)), (BTC, dollars(4600)), (ETH, dollars(4000))],
+				vec![
+					(DOT, 35_454_545_454_545_429_250), // ~35.454545
+					(BTC, 17_727_272_727_272_709_060), // ~17.727273
+					(ETH, 76_818_181_818_181_839_430), // ~76.818182
+				],
 			);
 
 			set_user_liquidation_attempts_to(1);
@@ -334,8 +356,13 @@ fn forgivable_liquidation_greater_min_sum() {
 			check_user_loan_state(
 				&alice_loan_state,
 				Some(ForgivableComplete),
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				vec![(DOT, dollars(3000)), (BTC, dollars(1500)), (ETH, dollars(6500))],
+				vec![(DOT, dollars(2000)), (BTC, dollars(4600)), (ETH, dollars(4000))],
+				vec![
+					(DOT, 35_454_545_454_545_429_250), // ~35.454545
+					(BTC, 17_727_272_727_272_709_060), // ~17.727273
+					(ETH, 76_818_181_818_181_839_430), // ~76.818182
+				],
 			);
 		});
 }
@@ -403,8 +430,13 @@ fn partial_and_complete_liquidation() {
 			check_user_loan_state(
 				&alice_complete,
 				Some(Complete),
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				vec![
+					(DOT, 286_649_999_999_999_999_044), // ~286.65
+					(BTC, 47_774_999_999_999_998_089),  // ~47.775
+					(ETH, 621_075_000_000_000_001_911), // ~621.075
+				],
+				vec![(DOT, dollars(200)), (BTC, dollars(310)), (ETH, dollars(400))],
+				vec![],
 			);
 
 			// set partial_liquidation_min_sum == $500
@@ -414,8 +446,17 @@ fn partial_and_complete_liquidation() {
 			check_user_loan_state(
 				&alice_partial,
 				Some(Partial),
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				vec![
+					(DOT, 57_272_727_272_727_064_220),  // ~57.272727
+					(BTC, 9_545_454_545_454_510_351),   // ~9.545455
+					(ETH, 124_090_909_090_908_639_939), // ~124.090909
+				],
+				vec![
+					(DOT, 39_960_039_960_039_809_024), // ~39.96004
+					(BTC, 61_938_061_938_061_729_792), // ~61.938062
+					(ETH, 79_920_079_920_079_618_048), // ~79.92008
+				],
+				vec![],
 			);
 
 			set_user_liquidation_attempts_to(3);
@@ -427,8 +468,13 @@ fn partial_and_complete_liquidation() {
 			check_user_loan_state(
 				&alice_complete,
 				Some(Complete),
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				vec![
+					(DOT, 286_649_999_999_999_999_044), // ~286.65
+					(BTC, 47_774_999_999_999_998_089),  // ~47.775
+					(ETH, 621_075_000_000_000_001_911), // ~621.075
+				],
+				vec![(DOT, dollars(200)), (BTC, dollars(310)), (ETH, dollars(400))],
+				vec![],
 			);
 
 			// set partial_liquidation_min_sum == $10_000
@@ -440,8 +486,90 @@ fn partial_and_complete_liquidation() {
 			check_user_loan_state(
 				&alice_complete,
 				Some(Complete),
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
-				<Vec<(CurrencyId, Balance)>>::new(), //TODO: fix after implementation math
+				vec![
+					(DOT, 286_649_999_999_999_999_044), // ~286.65
+					(BTC, 47_774_999_999_999_998_089),  // ~47.775
+					(ETH, 621_075_000_000_000_001_911), // ~621.075
+				],
+				vec![(DOT, dollars(200)), (BTC, dollars(310)), (ETH, dollars(400))],
+				vec![],
 			);
 		});
+}
+
+// This test covers the situation when during supply seize amounts calculation seize amount for one
+// pool is bigger then it`s supply and for other pool seize amount is less then it`s supply so we
+// use extra supply of one pool to cover shortage of the other.
+// Bob   supply: 500 ETH - for liquidity in the ETH pool.
+// Alice supply: 500 DOT; 10 ETH collateral; 720 BTC collateral.
+// Alice borrow: 400 DOT; 330 ETH.
+// Note: prices for all assets set equal $1.
+#[test]
+fn forgivable_liquidation_use_supply_from_one_pool_to_cover_shortage_of_other() {
+	ExtBuilder::default()
+		.set_liquidation_fees(vec![
+			(DOT, Rate::saturating_from_rational(5, 100)),
+			(ETH, Rate::saturating_from_rational(5, 100)),
+			(BTC, Rate::saturating_from_rational(5, 100)),
+		])
+		.deposit_underlying(BOB, ETH, dollars(500))
+		.deposit_underlying(ALICE, DOT, dollars(500))
+		.deposit_underlying(ALICE, ETH, dollars(10))
+		.deposit_underlying(ALICE, BTC, dollars(720))
+		.enable_as_collateral(ALICE, ETH)
+		.enable_as_collateral(ALICE, BTC)
+		.borrow_underlying(ALICE, DOT, dollars(400))
+		.borrow_underlying(ALICE, ETH, dollars(330))
+		.merge_duplicates()
+		.build()
+		.execute_with(|| {
+			assert_ok!(TestController::set_collateral_factor(
+				admin_origin(),
+				ETH,
+				Rate::saturating_from_rational(8, 10)
+			));
+
+			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
+			check_user_loan_state(
+				&alice_loan_state,
+				Some(ForgivableComplete),
+				vec![(BTC, dollars(720)), (ETH, dollars(10))],
+				vec![(DOT, dollars(400)), (ETH, dollars(330))],
+				vec![(BTC, 36_499999999999999233)],
+			);
+		})
+}
+
+// Bob   supply: 500 ETH - for liquidity in the ETH pool.
+// Alice supply: 500 DOT; 100 ETH collateral; 740 BTC collateral.
+// Alice borrow: 400 DOT; 400 ETH.
+// Note: prices for all assets set equal $1.
+#[test]
+fn complete_liquidation_total_supply_equals_to_total_seize() {
+	ExtBuilder::default()
+		.set_liquidation_fees(vec![
+			(DOT, Rate::saturating_from_rational(5, 100)),
+			(ETH, Rate::saturating_from_rational(5, 100)),
+			(BTC, Rate::saturating_from_rational(5, 100)),
+		])
+		.deposit_underlying(BOB, ETH, dollars(500))
+		.deposit_underlying(ALICE, DOT, dollars(500))
+		.deposit_underlying(ALICE, ETH, dollars(100))
+		.deposit_underlying(ALICE, BTC, dollars(740))
+		.enable_as_collateral(ALICE, ETH)
+		.enable_as_collateral(ALICE, BTC)
+		.borrow_underlying(ALICE, DOT, dollars(400))
+		.borrow_underlying(ALICE, ETH, dollars(400))
+		.merge_duplicates()
+		.build()
+		.execute_with(|| {
+			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
+			check_user_loan_state(
+				&alice_loan_state,
+				Some(Complete),
+				vec![(BTC, dollars(740)), (ETH, 99_999999999999999160)],
+				vec![(DOT, dollars(400)), (ETH, dollars(400))],
+				vec![],
+			);
+		})
 }
