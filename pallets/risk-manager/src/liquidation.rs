@@ -6,7 +6,7 @@ use sp_std::collections::btree_map::BTreeMap;
 use sp_std::fmt::Debug;
 
 type LiquidationAmountsResult = Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError>;
-type ForgivableLiquidationAmountsResult = Result<
+type CompleteLiquidationAmountsResult = Result<
 	(
 		Vec<(CurrencyId, Balance)>,
 		Vec<(CurrencyId, Balance)>,
@@ -24,9 +24,9 @@ pub enum LiquidationMode {
 	Partial,
 	/// All user borrow is paid from liquidation pools. The user's collateral required to cover
 	/// the borrow is withdrawn and transferred to liquidation pools.
+	/// In case if user`s borrow exceeds his supply liquidation pools will be used to cover the
+	/// difference
 	Complete,
-	/// Occurs when the user's borrow exceeds his supply. This type refers to complete liquidation.
-	ForgivableComplete,
 }
 
 /// Contains information about the current state of the borrower's loan.
@@ -78,10 +78,9 @@ impl<T: Config + Debug> UserLoanState<T> {
 			.ok_or(Error::<T>::SolventUserLoan)?
 		{
 			LiquidationMode::Partial => user_loan_state.calculate_partial_liquidation()?,
-			LiquidationMode::Complete => user_loan_state.calculate_complete_liquidation()?,
-			LiquidationMode::ForgivableComplete => {
+			LiquidationMode::Complete => {
 				let (supplies_to_seize_underlying, borrows_to_repay_underlying, supplies_to_pay_underlying) =
-					user_loan_state.calculate_forgivable_complete_liquidation()?;
+					user_loan_state.calculate_complete_liquidation()?;
 				user_loan_state.supplies_to_pay_underlying = supplies_to_pay_underlying;
 				(supplies_to_seize_underlying, borrows_to_repay_underlying)
 			}
@@ -219,14 +218,13 @@ impl<T: Config + Debug> UserLoanState<T> {
 		);
 		let user_liquidation_attempts = Pallet::<T>::get_user_liquidation_attempts(&self.user);
 		let (user_total_seize_usd, user_total_supply_usd) = (self.total_seize()?, self.total_supply()?);
-		if user_total_seize_usd > user_total_supply_usd {
-			Ok(LiquidationMode::ForgivableComplete)
-		} else if user_total_borrow_usd >= T::PartialLiquidationMinSum::get()
-			&& user_liquidation_attempts < T::PartialLiquidationMaxAttempts::get()
+		if user_total_seize_usd > user_total_supply_usd
+			|| user_total_borrow_usd < T::PartialLiquidationMinSum::get()
+			|| user_liquidation_attempts >= T::PartialLiquidationMaxAttempts::get()
 		{
-			Ok(LiquidationMode::Partial)
-		} else {
 			Ok(LiquidationMode::Complete)
+		} else {
+			Ok(LiquidationMode::Partial)
 		}
 	}
 
@@ -627,26 +625,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 	/// to the liquidation pools. Balances are calculated in underlying assets.
 	///
 	/// Note: this function should be used after `accrue_interest_rate`.
-	pub(crate) fn calculate_complete_liquidation(&self) -> LiquidationAmountsResult {
-		let borrower_loans_to_repay_underlying = self.borrows.to_vec();
-		let borrower_supplies_to_seize_underlying =
-			self.calculate_borrower_supplies_to_seize(&borrower_loans_to_repay_underlying)?;
-		Ok((
-			borrower_supplies_to_seize_underlying,
-			borrower_loans_to_repay_underlying,
-		))
-	}
-
-	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
-	/// for "forgivable" complete liquidation. This function is called when user_total_borrow is
-	/// greater than user_total_supply.
-	///
-	/// Returns: vectors with user's borrows to be paid from the liquidation pools instead of
-	/// the borrower, and a vector with user's supplies to be withdrawn from the borrower and sent
-	/// to the liquidation pools. Balances are calculated in underlying assets.
-	///
-	/// Note: this function should be used after `accrue_interest_rate`.
-	pub(crate) fn calculate_forgivable_complete_liquidation(&self) -> ForgivableLiquidationAmountsResult {
+	pub(crate) fn calculate_complete_liquidation(&self) -> CompleteLiquidationAmountsResult {
 		let borrower_loans_to_repay_underlying = self.borrows.to_vec();
 		let mut borrower_supplies_to_seize_underlying =
 			self.calculate_borrower_supplies_to_seize(&borrower_loans_to_repay_underlying)?;

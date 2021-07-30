@@ -407,8 +407,8 @@ impl<T: Config> Pallet<T> {
 
 	// TODO: cover with tests
 	/// Handles the user's loan. Selects one of the required types of liquidation (Partial,
-	/// Complete or Forgivable Complete) and calls extrinsic `liquidate()`. This function within
-	/// itself call `accrue_interest_rate`.
+	/// Complete) and calls extrinsic `liquidate()`. This function within itself call
+	/// `accrue_interest_rate`.
 	///
 	/// -`borrower`: AccountId of the borrower whose loan is being processed.
 	fn process_insolvent_loan(borrower: &T::AccountId) -> Result<(), OffchainErr> {
@@ -474,7 +474,7 @@ impl<T: Config> Pallet<T> {
 				Ok(())
 			})?;
 
-		// perform pay in case of the forgivable liquidation
+		// pay from liquidation pools
 		user_loan_state
 			.get_user_supplies_to_pay_underlying()
 			.into_iter()
@@ -580,7 +580,6 @@ impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 					match mode {
 						LiquidationMode::Partial => Self::user_liquidation_attempts_increase_by_one(&who),
 						LiquidationMode::Complete => Self::user_liquidation_attempts_reset_to_zero(&who),
-						LiquidationMode::ForgivableComplete => Self::user_liquidation_attempts_reset_to_zero(&who),
 					}
 					Ok(())
 				}

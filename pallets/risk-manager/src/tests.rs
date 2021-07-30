@@ -1,6 +1,6 @@
 //! Tests for the risk-manager pallet.
 use super::*;
-use crate::LiquidationMode::{Complete, ForgivableComplete, Partial};
+use crate::LiquidationMode::{Complete, Partial};
 use frame_support::{assert_noop, assert_ok};
 use minterest_primitives::Operation::{Deposit, Redeem, Repay};
 use mock::{Event, *};
@@ -76,14 +76,6 @@ fn try_mutate_attempts_should_work() {
 
 			set_user_liquidation_attempts_to(2);
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 2_u8);
-
-			assert_ok!(TestRiskManager::try_mutate_attempts(
-				&ALICE,
-				Repay,
-				None,
-				Some(ForgivableComplete)
-			));
-			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), u8::zero());
 
 			assert_noop!(
 				TestRiskManager::try_mutate_attempts(&ALICE, Deposit, None, None),
@@ -276,7 +268,7 @@ fn forgivable_liquidation_less_min_sum() {
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 0_u8);
 			check_user_loan_state(
 				&alice_loan_state,
-				Some(ForgivableComplete),
+				Some(Complete),
 				vec![(DOT, dollars(300)), (BTC, dollars(50)), (ETH, dollars(650))],
 				vec![(DOT, dollars(200)), (BTC, dollars(360)), (ETH, dollars(400))],
 				vec![
@@ -293,7 +285,7 @@ fn forgivable_liquidation_less_min_sum() {
 			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
 			check_user_loan_state(
 				&alice_loan_state,
-				Some(ForgivableComplete),
+				Some(Complete),
 				vec![(DOT, dollars(300)), (BTC, dollars(50)), (ETH, dollars(650))],
 				vec![(DOT, dollars(200)), (BTC, dollars(360)), (ETH, dollars(400))],
 				vec![
@@ -338,7 +330,7 @@ fn forgivable_liquidation_greater_min_sum() {
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), 0_u8);
 			check_user_loan_state(
 				&alice_loan_state,
-				Some(ForgivableComplete),
+				Some(Complete),
 				vec![(DOT, dollars(3000)), (BTC, dollars(1500)), (ETH, dollars(6500))],
 				vec![(DOT, dollars(2000)), (BTC, dollars(4600)), (ETH, dollars(4000))],
 				vec![
@@ -355,7 +347,7 @@ fn forgivable_liquidation_greater_min_sum() {
 			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
 			check_user_loan_state(
 				&alice_loan_state,
-				Some(ForgivableComplete),
+				Some(Complete),
 				vec![(DOT, dollars(3000)), (BTC, dollars(1500)), (ETH, dollars(6500))],
 				vec![(DOT, dollars(2000)), (BTC, dollars(4600)), (ETH, dollars(4000))],
 				vec![
@@ -532,7 +524,7 @@ fn forgivable_liquidation_use_supply_from_one_pool_to_cover_shortage_of_other() 
 			let alice_loan_state = UserLoanState::<TestRuntime>::build_user_loan_state(&ALICE).unwrap();
 			check_user_loan_state(
 				&alice_loan_state,
-				Some(ForgivableComplete),
+				Some(Complete),
 				vec![(BTC, dollars(720)), (ETH, dollars(10))],
 				vec![(DOT, dollars(400)), (ETH, dollars(330))],
 				vec![(BTC, 36_499999999999999233)],
