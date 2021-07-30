@@ -306,7 +306,7 @@ pub mod module {
 			operation: Operation,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(pool_id.is_supported_underlying_asset(), Error::<T>::PoolNotFound);
+			ensure!(pool_id.is_supported_underlying_native_asset(), Error::<T>::PoolNotFound);
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -339,7 +339,7 @@ pub mod module {
 			operation: Operation,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(pool_id.is_supported_underlying_asset(), Error::<T>::PoolNotFound);
+			ensure!(pool_id.is_supported_underlying_native_asset(), Error::<T>::PoolNotFound);
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -372,7 +372,7 @@ pub mod module {
 			protocol_interest_factor: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(pool_id.is_supported_underlying_asset(), Error::<T>::PoolNotFound);
+			ensure!(pool_id.is_supported_underlying_native_asset(), Error::<T>::PoolNotFound);
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -400,7 +400,7 @@ pub mod module {
 			max_borrow_rate: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(pool_id.is_supported_underlying_asset(), Error::<T>::PoolNotFound);
+			ensure!(pool_id.is_supported_underlying_native_asset(), Error::<T>::PoolNotFound);
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -430,7 +430,7 @@ pub mod module {
 			collateral_factor: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(pool_id.is_supported_underlying_asset(), Error::<T>::PoolNotFound);
+			ensure!(pool_id.is_supported_underlying_native_asset(), Error::<T>::PoolNotFound);
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -461,7 +461,7 @@ pub mod module {
 			borrow_cap: Option<Balance>,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(pool_id.is_supported_underlying_asset(), Error::<T>::PoolNotFound);
+			ensure!(pool_id.is_supported_underlying_native_asset(), Error::<T>::PoolNotFound);
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -488,7 +488,7 @@ pub mod module {
 			protocol_interest_threshold: Balance,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(pool_id.is_supported_underlying_asset(), Error::<T>::PoolNotFound);
+			ensure!(pool_id.is_supported_underlying_native_asset(), Error::<T>::PoolNotFound);
 			ensure!(
 				T::LiquidityPoolsManager::pool_exists(&pool_id),
 				Error::<T>::PoolNotFound
@@ -1138,7 +1138,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			Error::<T>::PoolNotFound
 		);
 		ensure!(
-			underlying_asset_id.is_supported_underlying_asset(),
+			underlying_asset_id.is_supported_underlying_native_asset(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 		Self::accrue_interest_rate(underlying_asset_id)?;

@@ -113,39 +113,25 @@ impl CurrencyId {
 
 	pub fn underlying_asset(&self) -> Option<CurrencyId> {
 		match (self.is_supported_wrapped_asset(), self) {
-			(true, CurrencyId::WrappedToken(currency_id)) =>
-				{
-					TokenSymbol::try_from(*currency_id as u8 - 1_u8).ok().and_then(|token|{
-						match token {
-							TokenSymbol::MNT => {
-								 Some(CurrencyId::Native(token))
-							},
-							_ => {
-								 Some(CurrencyId::UnderlyingAsset(token))
-							}
-						}
-					})
-				}
-			  ,
+			(true, CurrencyId::WrappedToken(currency_id)) => TokenSymbol::try_from(*currency_id as u8 - 1_u8)
+				.ok()
+				.and_then(|token| match token {
+					TokenSymbol::MNT => Some(CurrencyId::Native(token)),
+					_ => Some(CurrencyId::UnderlyingAsset(token)),
+				}),
 			_ => None,
 		}
 	}
 
 	pub fn native_asset(&self) -> Option<CurrencyId> {
 		match (self.is_supported_wrapped_asset(), self) {
-			(true, CurrencyId::WrappedToken(currency_id)) =>
-				{
-					TokenSymbol::try_from(*currency_id as u8 - 1_u8).ok().and_then(|token|{
-						 match token {
-							TokenSymbol::MNT => {
-								 Some(CurrencyId::Native(token))
-							},
-							_ => {
-								 None
-							}
-						}
-					})
-				},
+			(true, CurrencyId::WrappedToken(currency_id)) => TokenSymbol::try_from(*currency_id as u8 - 1_u8)
+				.ok()
+				.and_then(|token| match token {
+					TokenSymbol::MNT => Some(CurrencyId::Native(token)),
+					_ => None,
+
+				}),
 			_ => None,
 		}
 	}
