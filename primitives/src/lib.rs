@@ -108,6 +108,7 @@ pub enum OffchainErr {
 	PoolsBalancingIsOff,
 	FailReceivingOraclePrice,
 	ChainlinkFeedNotExists,
+	NumOverflow,
 }
 
 impl sp_std::fmt::Debug for OffchainErr {
@@ -120,6 +121,7 @@ impl sp_std::fmt::Debug for OffchainErr {
 			OffchainErr::PoolsBalancingIsOff => write!(fmt, "Pools balancing switched off"),
 			OffchainErr::FailReceivingOraclePrice => write!(fmt, "Receiving oracle price is failed"),
 			OffchainErr::ChainlinkFeedNotExists => write!(fmt, "Can't retrieve feed for enabled currency"),
+			OffchainErr::NumOverflow => write!(fmt, "Number overflow"),
 		}
 	}
 }
