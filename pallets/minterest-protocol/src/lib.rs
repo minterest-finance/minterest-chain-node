@@ -237,7 +237,7 @@ pub mod module {
 			T::CreatePoolOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				pool_id.is_supported_underlying_asset(),
+				pool_id.is_supported_underlying_native_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 			ensure!(
@@ -523,7 +523,7 @@ pub mod module {
 			}
 
 			ensure!(
-				pool_id.is_supported_underlying_asset(),
+				pool_id.is_supported_underlying_native_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 			ensure!(
@@ -562,7 +562,7 @@ pub mod module {
 			}
 
 			ensure!(
-				pool_id.is_supported_underlying_asset(),
+				pool_id.is_supported_underlying_native_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 			ensure!(
@@ -656,7 +656,7 @@ impl<T: Config> Pallet<T> {
 		deposit_underlying_amount: Balance,
 	) -> TokensResult {
 		ensure!(
-			underlying_asset.is_supported_underlying_asset(),
+			underlying_asset.is_supported_underlying_native_asset(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 		ensure!(
@@ -711,7 +711,7 @@ impl<T: Config> Pallet<T> {
 		all_assets: bool,
 	) -> TokensResult {
 		ensure!(
-			underlying_asset.is_supported_underlying_asset(),
+			underlying_asset.is_supported_underlying_native_asset(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 		ensure!(
@@ -786,7 +786,7 @@ impl<T: Config> Pallet<T> {
 	/// - `underlying_amount`: the amount of the underlying asset to borrow.
 	fn do_borrow(who: &T::AccountId, underlying_asset: CurrencyId, borrow_amount: Balance) -> DispatchResult {
 		ensure!(
-			underlying_asset.is_supported_underlying_asset(),
+			underlying_asset.is_supported_underlying_native_asset(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 		ensure!(
@@ -915,7 +915,7 @@ impl<T: Config> Pallet<T> {
 	fn do_claim(holder: &T::AccountId, pools: Vec<CurrencyId>) -> DispatchResult {
 		pools.iter().try_for_each(|&pool_id| -> DispatchResult {
 			ensure!(
-				pool_id.is_supported_underlying_asset(),
+				pool_id.is_supported_underlying_native_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 			ensure!(
@@ -943,7 +943,7 @@ impl<T: Config> MinterestProtocolManager<T::AccountId> for Pallet<T> {
 	) -> BalanceResult {
 		let mut repay_amount = repay_amount;
 		ensure!(
-			underlying_asset.is_supported_underlying_asset(),
+			underlying_asset.is_supported_underlying_native_asset(),
 			Error::<T>::NotValidUnderlyingAssetId
 		);
 		ensure!(

@@ -257,7 +257,7 @@ pub mod module {
 		pub fn set_speed(origin: OriginFor<T>, currency_id: CurrencyId, speed: Balance) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(
-				currency_id.is_supported_underlying_asset(),
+				currency_id.is_supported_underlying_native_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 			ensure!(

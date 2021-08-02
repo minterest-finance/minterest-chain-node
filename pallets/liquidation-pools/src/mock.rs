@@ -159,6 +159,14 @@ impl Default for ExternalityBuilder {
 						protocol_interest: Balance::zero(),
 					},
 				),
+				(
+					MNT,
+					PoolData {
+						borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						protocol_interest: Balance::zero(),
+					},
+				),
 			],
 			liquidation_pools: vec![
 				(
@@ -187,6 +195,14 @@ impl Default for ExternalityBuilder {
 				),
 				(
 					KSM,
+					LiquidationPoolData {
+						deviation_threshold: Rate::saturating_from_rational(1, 10),
+						balance_ratio: Rate::saturating_from_rational(2, 10),
+						max_ideal_balance_usd: None,
+					},
+				),
+				(
+					MNT,
 					LiquidationPoolData {
 						deviation_threshold: Rate::saturating_from_rational(1, 10),
 						balance_ratio: Rate::saturating_from_rational(2, 10),
