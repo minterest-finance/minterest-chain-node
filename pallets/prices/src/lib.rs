@@ -63,7 +63,12 @@ pub mod module {
 		UnlockPrice(CurrencyId),
 	}
 
-	/// mapping from currency id to it's locked(approved by Oracles pallet) price in USD.
+	/// Mapping from currency id to it's locked(approved by Oracles pallet) price in USD.
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=module_prices::module::Pallet::locked_price_storage)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT module_prices")]
 	#[pallet::storage]
 	#[pallet::getter(fn locked_price_storage)]
 	pub type LockedPriceStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Price, OptionQuery>;
@@ -108,6 +113,8 @@ pub mod module {
 		///
 		/// Parameters:
 		/// - `currency_id`: currency type.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT module_prices")]
 		#[pallet::weight((T::WeightInfo::lock_price(), DispatchClass::Operational))]
 		#[transactional]
 		pub fn lock_price(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
@@ -128,6 +135,8 @@ pub mod module {
 		///
 		/// Parameters:
 		/// - `currency_id`: currency type.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT module_prices")]
 		#[pallet::weight((T::WeightInfo::unlock_price(), DispatchClass::Operational))]
 		#[transactional]
 		pub fn unlock_price(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
