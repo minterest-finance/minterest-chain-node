@@ -692,7 +692,7 @@ impl<T: Config> Pallet<T> {
 	/// Calculates ideal balance for pool balancing
 	/// - `pool_id`: PoolID for which the ideal balance is calculated.
 	///
-	/// Returns minimum of (liquidity_pool_total_borrow * balance_ratio * oracle_price) and
+	/// Returns minimum of (liquidity_pool_borrow_underlying * balance_ratio * oracle_price) and
 	/// max_ideal_balance_usd
 	fn calculate_pool_ideal_balance_usd(pool_id: CurrencyId) -> BalanceResult {
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
