@@ -14,7 +14,7 @@
 // --extrinsic=*
 // --execution=wasm
 // --wasm-execution=compiled
-// --output=./runtime/src/weights/controller.rs
+// --output=./runtime/standalone/src/weights/controller.rs
 
 #![allow(unused_parens)]
 #![allow(unused_imports)]

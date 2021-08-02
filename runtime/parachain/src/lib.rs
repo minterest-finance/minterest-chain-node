@@ -9,11 +9,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-mod benchmarking;
-#[cfg(test)]
-mod rpc_tests;
 mod weights;
-mod weights_test;
 
 pub use controller_rpc_runtime_api::{
 	BalanceInfo, HypotheticalLiquidityData, PoolState, ProtocolTotalValue, UserData, UserPoolBalanceData,
@@ -31,13 +27,12 @@ pub use minterest_primitives::{
 		CurrencyType::{UnderlyingAsset, WrappedToken},
 		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
 	},
-	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, DigestItem, Hash, Index,
-	Interest, Moment, Operation, Price, Rate, Signature, VestingBucket,
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, ChainlinkFeedId, ChainlinkPriceValue, CurrencyId,
+	DataProviderId, DigestItem, Hash, Index, Interest, Moment, Operation, Price, Rate, Signature, VestingBucket,
 };
 pub use mnt_token_rpc_runtime_api::MntBalanceInfo;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProviderExtended};
-use pallet_grandpa::{fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_traits::{ControllerManager, LiquidityPoolStorageProvider, MntManager, PricesManager, WhitelistManager};
 use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 use sp_api::impl_runtime_apis;
@@ -49,7 +44,7 @@ use sp_core::{
 };
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, NumberFor, One, Zero},
+	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, One, Zero},
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchResult, FixedPointNumber,
 };
@@ -93,7 +88,6 @@ pub mod opaque {
 	impl_opaque_keys! {
 		pub struct SessionKeys {
 			pub aura: Aura,
-			pub grandpa: Grandpa,
 		}
 	}
 }
@@ -123,6 +117,8 @@ parameter_types! {
 	pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"min/lqdn");
 	pub const DexPalletId: PalletId = PalletId(*b"min/dexs");
 	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"min/lqdy");
+	pub const ChainlinkFeedPalletId: PalletId = PalletId(*b"chl/feed");
+	pub const ChainlinkPriceManagerPalletId: PalletId = PalletId(*b"chl/pram");
 }
 
 // Do not change the order of modules. Used for genesis block.
@@ -197,31 +193,34 @@ impl frame_system::Config for Runtime {
 	type SystemWeightInfo = ();
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
-	/// What to do if the user wants the code set to something. Just use `()` unless you are in
-	/// cumulus.
-	/// TODO MIN-293
-	type OnSetCode = ();
+	/// What to do if the user wants the code set to something.
+	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 }
 
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
 }
 
-impl pallet_grandpa::Config for Runtime {
-	type Event = Event;
-	type Call = Call;
+const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND * 2;
 
-	type KeyOwnerProofSystem = ();
-
-	type KeyOwnerProof = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
-
-	type KeyOwnerIdentification =
-		<Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::IdentificationTuple;
-
-	type HandleEquivocation = ();
-
-	type WeightInfo = ();
+parameter_types! {
+	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
 }
+
+impl cumulus_pallet_parachain_system::Config for Runtime {
+	type Event = Event;
+	type OnValidationData = ();
+	type SelfParaId = parachain_info::Pallet<Runtime>;
+	type OutboundXcmpMessageSource = ();
+	type DmpMessageHandler = ();
+	type ReservedDmpWeight = ReservedDmpWeight;
+	type XcmpMessageHandler = ();
+	type ReservedXcmpWeight = ();
+}
+
+impl parachain_info::Config for Runtime {}
+
+impl cumulus_pallet_aura_ext::Config for Runtime {}
 
 parameter_types! {
 	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
@@ -578,6 +577,41 @@ impl whitelist_module::Config for Runtime {
 	type WhitelistWeightInfo = weights::whitelist::WeightInfo<Runtime>;
 }
 
+parameter_types! {
+	pub const ChainlinkManagerPriority: TransactionPriority = TransactionPriority::max_value() - 2;
+	pub ChainlinkPriceManagerAccountId: AccountId = ChainlinkPriceManagerPalletId::get().into_account();
+}
+
+impl chainlink_price_manager::Config for Runtime {
+	type Event = Event;
+	type PalletAccountId = ChainlinkPriceManagerAccountId;
+	type UnsignedPriority = ChainlinkManagerPriority;
+	type ChainlinkPriceManagerWeightInfo = weights::chainlink_price_manager::WeightInfo<Runtime>;
+}
+
+parameter_types! {
+	pub const StringLimit: u32 = 30;
+	pub const OracleCountLimit: u32 = 25;
+	pub const FeedLimit: ChainlinkFeedId = 100;
+	// TODO Review this parameter before production preperements
+	pub const MinimumReserve: Balance = ExistentialDeposit::get() * 1000;
+}
+
+impl pallet_chainlink_feed::Config for Runtime {
+	type Event = Event;
+	type FeedId = ChainlinkFeedId;
+	type Value = ChainlinkPriceValue;
+	type Currency = pallet_balances::Pallet<Runtime>;
+	type PalletId = ChainlinkFeedPalletId;
+	// TODO Review this parameter before production preperements
+	type MinimumReserve = MinimumReserve;
+	type StringLimit = StringLimit;
+	type OracleCountLimit = OracleCountLimit;
+	type FeedLimit = FeedLimit;
+	type OnAnswerHandler = ();
+	type WeightInfo = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -595,20 +629,27 @@ construct_runtime!(
 		Vesting: module_vesting::{Pallet, Storage, Call, Event<T>, Config<T>},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
 
+		// Parachain
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>},
+		ParachainInfo: parachain_info::{Pallet, Storage, Config},
+
 		// Consensus & Staking
 		Aura: pallet_aura::{Pallet, Config<T>},
-		Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
 
 		// Governance
 		MinterestCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		MinterestCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
 
 		// Oracle and Prices
+		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		MinterestOracle: orml_oracle::<Instance1>::{Pallet, Storage, Call, Event<T>},
 		Prices: module_prices::{Pallet, Storage, Call, Event<T>, Config<T>},
-
-		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		OperatorMembershipMinterest: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
+
+		// ChainLink
+		ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Config<T>, Storage, Event<T>},
+		ChainlinkPriceManager: chainlink_price_manager::{Pallet, Call, Storage, Event<T>, ValidateUnsigned},
 
 		// Minterest pallets
 		MinterestProtocol: minterest_protocol::{Pallet, Call, Event<T>},
@@ -620,6 +661,7 @@ construct_runtime!(
 		MntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 		Dex: dex::{Pallet, Storage, Call, Event<T>},
 		Whitelist: whitelist_module::{Pallet, Storage, Call, Event<T>, Config<T>},
+
 		// Dev
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
 	}
@@ -733,32 +775,6 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl fg_primitives::GrandpaApi<Block> for Runtime {
-		fn grandpa_authorities() -> GrandpaAuthorityList {
-			Grandpa::grandpa_authorities()
-		}
-
-		fn submit_report_equivocation_unsigned_extrinsic(
-			_equivocation_proof: fg_primitives::EquivocationProof<
-				<Block as BlockT>::Hash,
-				NumberFor<Block>,
-			>,
-			_key_owner_proof: fg_primitives::OpaqueKeyOwnershipProof,
-		) -> Option<()> {
-			None
-		}
-
-		fn generate_key_ownership_proof(
-			_set_id: fg_primitives::SetId,
-			_authority_id: GrandpaId,
-		) -> Option<fg_primitives::OpaqueKeyOwnershipProof> {
-			// NOTE: this is the only implementation possible since we've
-			// defined our key owner proof type as a bottom type (i.e. a type
-			// with no values).
-			None
-		}
-	}
-
 	impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
 		fn account_nonce(account: AccountId) -> Index {
 			System::account_nonce(account)
@@ -842,6 +858,10 @@ impl_runtime_apis! {
 		fn get_user_total_supply_borrow_and_net_apy(account_id: AccountId) -> Option<(Interest, Interest, Interest)> {
 			Controller::get_user_total_supply_borrow_and_net_apy(account_id).ok()
 		}
+
+		fn get_user_total_borrow_usd(account_id: AccountId) -> Option<BalanceInfo> {
+			Some(BalanceInfo{amount: Controller::get_user_total_borrow_usd(&account_id).ok()?})
+		}
 	}
 
 	impl mnt_token_rpc_runtime_api::MntTokenRuntimeApi<Block, AccountId> for Runtime {
@@ -866,18 +886,6 @@ impl_runtime_apis! {
 		CurrencyId,
 		TimeStampedPrice,
 	> for Runtime {
-			/// Returns the USD exchange rate for the selected underlying asset
-			///
-			/// Parameters:
-			///  - [`provider_id`](`minterest_primitives::DataProviderId`):  provider type
-			///  - [`key`](`minterest_primitives::CurrencyId`): currency type
-			///
-			/// Returns:
-			///
-			/// - [`Price`](`minterest_primitives::Price`):  price of a currency in USD
-			/// - [`Moment`](`minterest_primitives::Moment`):  time stamp at the time of the call.
-			#[doc(alias = "MNT RPC")]
-			#[doc(alias = "MNT oracle")]
 		fn get_value(provider_id: DataProviderId, key: CurrencyId) -> Option<TimeStampedPrice> {
 			match provider_id {
 				DataProviderId::Minterest => MinterestOracle::get_no_op(&key),
@@ -885,18 +893,6 @@ impl_runtime_apis! {
 			}
 		}
 
-			/// Return the USD exchange rate for all underlying assets
-			///
-			/// Parameters:
-			///  - [`provider_id`](`minterest_primitives::DataProviderId`):  provider type
-			///
-			/// Returns:
-			///
-			/// - [`CurrencyId`](`minterest_primitives::CurrencyId`): currency type
-			/// - [`Price`](`minterest_primitives::Price`):  price of a currency in USD
-			/// - [`Moment`](`minterest_primitives::Moment`):  time stamp at the time of the call.
-			#[doc(alias = "MNT RPC")]
-			#[doc(alias = "MNT oracle")]
 		fn get_all_values(provider_id: DataProviderId) -> Vec<(CurrencyId, Option<TimeStampedPrice>)> {
 			match provider_id {
 				DataProviderId::Minterest => MinterestOracle::get_all_values(),
@@ -922,41 +918,37 @@ impl_runtime_apis! {
 		}
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
-	impl frame_benchmarking::Benchmark<Block> for Runtime {
-		fn dispatch_benchmark(
-			config: frame_benchmarking::BenchmarkConfig
-		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
-			use orml_benchmarking::add_benchmark;
-
-			let whitelist: Vec<TrackedStorageKey> = vec![
-				// Block Number
-				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac").to_vec().into(),
-				// Total Issuance
-				hex_literal::hex!("c2261276cc9d1f8598ea4b6a74b15c2f57c875e4cff74148e4628f264b974c80").to_vec().into(),
-				// Execution Phase
-				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7ff553b5a9862a516939d82b3d3d8661a").to_vec().into(),
-				// Event Count
-				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef70a98fdbe9ce6c55837576c60c7af3850").to_vec().into(),
-				// System Events
-				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7").to_vec().into(),
-			];
-
-			let mut batches = Vec::<BenchmarkBatch>::new();
-			let params = (&config, &whitelist);
-
-			add_benchmark!(params, batches, controller, benchmarking::controller);
-			add_benchmark!(params, batches, minterest_model, benchmarking::minterest_model);
-			add_benchmark!(params, batches, module_prices, benchmarking::prices);
-			add_benchmark!(params, batches, liquidation_pools, benchmarking::liquidation_pools);
-			add_benchmark!(params, batches, minterest_protocol, benchmarking::minterest_protocol);
-			add_benchmark!(params, batches, mnt_token, benchmarking::mnt_token);
-			add_benchmark!(params, batches, module_vesting, benchmarking::vesting);
-			add_benchmark!(params, batches, whitelist_module, benchmarking::whitelist);
-
-			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
-			Ok(batches)
+	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
+		fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
+			ParachainSystem::collect_collation_info()
 		}
 	}
+}
+
+struct CheckInherents;
+
+impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
+	fn check_inherents(
+		block: &Block,
+		relay_state_proof: &cumulus_pallet_parachain_system::RelayChainStateProof,
+	) -> sp_inherents::CheckInherentsResult {
+		let relay_chain_slot = relay_state_proof
+			.read_slot()
+			.expect("Could not read the relay chain slot from the proof");
+
+		let inherent_data = cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
+			relay_chain_slot,
+			sp_std::time::Duration::from_secs(6),
+		)
+		.create_inherent_data()
+		.expect("Could not create the timestamp inherent data");
+
+		inherent_data.check_extrinsics(&block)
+	}
+}
+
+cumulus_pallet_parachain_system::register_validate_block! {
+	Runtime = Runtime,
+	BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
+	CheckInherents = CheckInherents,
 }

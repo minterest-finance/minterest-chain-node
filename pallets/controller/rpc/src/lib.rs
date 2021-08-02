@@ -244,6 +244,18 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	#[doc(alias = "MNT controller")]
 	#[rpc(name = "controller_getUserData")]
 	fn get_user_data(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<UserData>>;
+
+	/// Returns total borrow balance for user per all assets based on fresh latest indexes.
+	///
+	/// Parameters:
+	///  - `&self` :  Self reference
+	///  - `account_id`: current account id.
+	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
+	///
+	/// Return:
+	/// - [`amount`](`BalanceInfo::amount`): account total borrow in USD.
+	#[rpc(name = "controller_getUserTotalBorrowToUsd")]
+	fn get_user_total_borrow_usd(&self, account_id: AccountId, at: Option<BlockHash>) -> Result<Option<BalanceInfo>>;
 }
 
 /// A struct that implements the [`ControllerApi`].
@@ -463,5 +475,22 @@ where
 				message: "Unable to get user's APY.".into(),
 				data: Some(format!("{:?}", e).into()),
 			})
+	}
+
+	fn get_user_total_borrow_usd(
+		&self,
+		account_id: AccountId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<Option<BalanceInfo>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+
+		api.get_user_total_borrow_usd(&at, account_id).map_err(|e| RpcError {
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
+			message: "Unable to get total user borrow.".into(),
+			data: Some(format!("{:?}", e).into()),
+		})
 	}
 }

@@ -1,5 +1,6 @@
-#![cfg(feature = "runtime-benchmarks")]
+#![allow(clippy::unnecessary_cast)]
 
+pub mod chainlink_price_manager;
 pub mod controller;
 pub mod liquidation_pools;
 pub mod minterest_model;
@@ -8,5 +9,3 @@ pub mod mnt_token;
 pub mod prices;
 pub mod vesting;
 pub mod whitelist;
-
-pub mod utils;
