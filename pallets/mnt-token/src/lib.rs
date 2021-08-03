@@ -8,7 +8,7 @@
 use frame_support::{pallet_prelude::*, sp_std::cmp::Ordering, transactional};
 use frame_system::pallet_prelude::*;
 use liquidity_pools::PoolData;
-use minterest_primitives::{currency::MNT, Balance, OriginalAsset, CurrencyId, Price, Rate};
+use minterest_primitives::{Balance, OriginalAsset, OriginalAsset::MNT, CurrencyId, Price, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{

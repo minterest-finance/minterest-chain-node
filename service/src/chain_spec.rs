@@ -3,13 +3,13 @@ use hex_literal::hex;
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::PoolData;
 use minterest_model::MinterestModelData;
-use minterest_primitives::{VestingBucket, VestingScheduleJson};
+use minterest_primitives::{VestingBucket, VestingScheduleJson, OriginalAsset::*};
 use node_minterest_runtime::{
 	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ChainlinkFeedConfig, ControllerConfig,
 	ExistentialDeposit, GenesisConfig, GrandpaConfig, LiquidationPoolsConfig, LiquidityPoolsConfig,
 	MinterestCouncilMembershipConfig, MinterestModelConfig, MntTokenConfig, MntTokenPalletId,
 	OperatorMembershipMinterestConfig, PricesConfig, RiskManagerConfig, Signature, SudoConfig, SystemConfig,
-	TokensConfig, VestingConfig, WhitelistConfig, BTC, DOLLARS, DOT, ETH, KSM, MNT,
+	TokensConfig, VestingConfig, WhitelistConfig, DOLLARS,
 	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION, WASM_BINARY,
 };
 use sc_service::ChainType;

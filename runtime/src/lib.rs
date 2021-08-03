@@ -27,7 +27,6 @@ pub use minterest_primitives::{
 		time::{BLOCKS_PER_YEAR, DAYS, SLOT_DURATION},
 		INITIAL_EXCHANGE_RATE, MAX_BORROW_CAP, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION,
 	},
-	currency::{BTC, DOT, ETH, KSM, MNT},
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, ChainlinkFeedId, ChainlinkPriceValue, CurrencyId,
 	DataProviderId, DigestItem, Hash, Index, Interest, Moment, Operation, Price, Rate, Signature, VestingBucket,
 	OriginalAsset, WrapToken,
@@ -377,7 +376,7 @@ impl orml_tokens::Config for Runtime {
 }
 
 parameter_types! {
-	pub const GetMinterestCurrencyId: CurrencyId = CurrencyId::Native;
+	pub const GetMinterestCurrencyId: CurrencyId = CurrencyId::Original(OriginalAsset::MNT);
 }
 
 pub type MinterestToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;

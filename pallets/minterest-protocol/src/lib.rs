@@ -342,7 +342,6 @@ pub mod module {
 			#[pallet::compact] wrapped_amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			ensure!(wrapped_id.is_valid(), Error::<T>::NotValidWrappedTokenId);
 
 			if T::WhitelistManager::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistManager::is_whitelist_member(&who), BadOrigin);
@@ -466,7 +465,6 @@ pub mod module {
 			transfer_amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			ensure!(wrapped_id.is_valid(), Error::<T>::NotValidWrappedTokenId);
 
 			if T::WhitelistManager::is_whitelist_mode_enabled() {
 				ensure!(T::WhitelistManager::is_whitelist_member(&who), BadOrigin);
@@ -790,7 +788,6 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		ensure!(transfer_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
 		ensure!(who != receiver, Error::<T>::CannotTransferToSelf);
-		ensure!(wrapped_id.is_valid(), Error::<T>::NotValidWrappedTokenId);
 
 		// Fail if invalid token id
 		let pool_id = wrapped_id.as_asset();

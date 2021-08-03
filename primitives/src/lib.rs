@@ -16,7 +16,7 @@ pub mod constants;
 pub mod currency;
 pub mod vesting;
 
-pub use currency::{TokenSymbol, OriginalAsset, WrapToken, CurrencyId};
+pub use currency::{OriginalAsset, WrapToken, CurrencyId};
 pub use vesting::{VestingBucket, VestingScheduleJson};
 
 /// An index to a block.

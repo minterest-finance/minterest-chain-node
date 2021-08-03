@@ -24,7 +24,7 @@ use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 	pallet_prelude::*,
 };
-use minterest_primitives::{OriginalAsset, currency::*, OffchainErr, Price};
+use minterest_primitives::{OriginalAsset, OffchainErr, Price};
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData, RoundId};
 use pallet_traits::PricesManager;
 use sp_runtime::traits::Zero;
@@ -184,7 +184,7 @@ impl<T: Config> Pallet<T> {
 			// only min round id?
 			let new_round_id = Self::get_min_round_id()?.saturating_add(1);
 			// Currently feed id is not play any role. See TODO above
-			let feed_id = Self::get_feed_id(ETH).ok_or(OffchainErr::ChainlinkFeedNotExists)?;
+			let feed_id = Self::get_feed_id(OriginalAsset::ETH).ok_or(OffchainErr::ChainlinkFeedNotExists)?;
 			let call = Call::<T>::initiate_new_round(feed_id, new_round_id);
 			log::debug!("New round_id: {:?}", new_round_id);
 
@@ -203,10 +203,10 @@ impl<T: Config> Pallet<T> {
 	// primitives/src/currency.rs. Also, add distingiush between chainlink provider and minterest
 	fn convert_to_description(asset: OriginalAsset) -> &'static [u8] {
 		match asset {
-			ETH => b"MIN-ETH",
-			DOT => b"MIN-DOT",
-			KSM => b"MIN-KSM",
-			BTC => b"MIN-BTC",
+			OriginalAsset::ETH => b"MIN-ETH",
+			OriginalAsset::DOT => b"MIN-DOT",
+			OriginalAsset::KSM => b"MIN-KSM",
+			OriginalAsset::BTC => b"MIN-BTC",
 			// This must be gone after implementing strict CurrencyId types
 			_ => b"Non-existent-feed",
 		}

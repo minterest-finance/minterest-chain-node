@@ -1,31 +1,27 @@
 {
   "CUSTOM_TYPES": {
       "Address": "MultiAddress",
-      "TokenSymbol": {
+      "OriginalAsset": {
         "_enum": {
           "MNT": 0,
           "DOT": 1,
-          "MDOT": 2,
-          "KSM": 3,
-          "MKSM": 4,
-          "BTC": 5,
-          "MBTC": 6,
-          "ETH": 7,
-          "METH": 8
+          "KSM": 2,
+          "BTC": 3,
+          "ETH": 4
         }
       },
-      "CurrencyType": {
-        "_enum": [
-          "Native",
-          "OriginalAsset",
-          "WrapToken"
-        ]
+      "WrapToken": {
+        "_enum": {
+          "DOT": 1,
+          "KSM": 2,
+          "BTC": 3,
+          "ETH": 4
+        }
       },
       "CurrencyId": {
         "_enum": {
-          "Native": "TokenSymbol",
-          "OriginalAsset": "TokenSymbol",
-          "WrapToken": "TokenSymbol"
+          "Original": "OriginalAsset",
+          "Wrap": "WrapToken"
         }
       },
       "Operation": {
