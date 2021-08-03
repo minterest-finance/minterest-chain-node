@@ -7,7 +7,7 @@ use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{PoolData, PoolUserData};
 use minterest_model::MinterestModelData;
-pub use minterest_primitives::currency::CurrencyType::{OriginalAsset, WrapToken};
+pub use minterest_primitives::currency::{OriginalAsset, WrapToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PricesManager;
@@ -87,9 +87,9 @@ impl PricesManager<OriginalAsset> for MockPriceSource {
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	pools: Vec<(CurrencyId, PoolData)>,
-	controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
-	minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
+	pools: Vec<(OriginalAsset, PoolData)>,
+	controller_data: Vec<(OriginalAsset, ControllerData<BlockNumber>)>,
+	minterest_model_params: Vec<(OriginalAsset, MinterestModelData)>,
 }
 
 impl Default for ExtBuilder {
@@ -97,17 +97,17 @@ impl Default for ExtBuilder {
 		Self {
 			endowed_accounts: vec![
 				// seed: initial DOTs
-				(ALICE, DOT, ONE_HUNDRED),
-				(ALICE, ETH, ONE_HUNDRED),
-				(ALICE, KSM, ONE_HUNDRED),
-				(BOB, DOT, ONE_HUNDRED),
+				(ALICE, DOT.into(), ONE_HUNDRED),
+				(ALICE, ETH.into(), ONE_HUNDRED),
+				(ALICE, KSM.into(), ONE_HUNDRED),
+				(BOB, DOT.into(), ONE_HUNDRED),
 				// seed: initial interest, equal 10_000$
-				(TestPools::pools_account_id(), ETH, TEN_THOUSAND),
-				(TestPools::pools_account_id(), DOT, TEN_THOUSAND),
+				(TestPools::pools_account_id(), ETH.into(), TEN_THOUSAND),
+				(TestPools::pools_account_id(), DOT.into(), TEN_THOUSAND),
 				// seed: initial interest = 10_000$, initial pool balance = 1_000_000$
-				(TestPools::pools_account_id(), KSM, ONE_MILL),
+				(TestPools::pools_account_id(), KSM.into(), ONE_MILL),
 				// seed: initial MNT treasury = 1_000_000$
-				(TestMntToken::get_account_id(), MNT, ONE_MILL),
+				(TestMntToken::get_account_id(), MNT.into(), ONE_MILL),
 			],
 			pools: vec![],
 			controller_data: vec![
@@ -161,12 +161,12 @@ impl Default for ExtBuilder {
 	}
 }
 impl ExtBuilder {
-	pub fn set_controller_data(mut self, pools: Vec<(CurrencyId, ControllerData<BlockNumber>)>) -> Self {
+	pub fn set_controller_data(mut self, pools: Vec<(OriginalAsset, ControllerData<BlockNumber>)>) -> Self {
 		self.controller_data = pools;
 		self
 	}
 
-	pub fn set_minterest_model_params(mut self, pools: Vec<(CurrencyId, MinterestModelData)>) -> Self {
+	pub fn set_minterest_model_params(mut self, pools: Vec<(OriginalAsset, MinterestModelData)>) -> Self {
 		self.minterest_model_params = pools;
 		self
 	}

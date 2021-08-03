@@ -4,8 +4,8 @@ use crate as mnt_token;
 use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::*, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{PoolData, PoolUserData};
-pub use minterest_primitives::currency::CurrencyType::{OriginalAsset, WrapToken};
-use minterest_primitives::{Balance, CurrencyId, Price, Rate};
+pub use minterest_primitives::currency::{OriginalAsset, WrapToken};
+use minterest_primitives::{Balance, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PricesManager;
 use sp_runtime::{
@@ -62,10 +62,10 @@ pub struct MockPriceSource;
 impl PricesManager<OriginalAsset> for MockPriceSource {
 	fn get_underlying_price(asset: OriginalAsset) -> Option<Price> {
 		match asset {
-			DOT => return Some(Price::saturating_from_rational(5, 10)), // 0.5 USD
-			ETH => return Some(Price::saturating_from_rational(15, 10)), // 1.5 USD
-			KSM => return Some(Price::saturating_from_integer(2)),      // 2 USD
-			BTC => return Some(Price::saturating_from_integer(3)),      // 3 USD
+			OriginalAsset::DOT => return Some(Price::saturating_from_rational(5, 10)), // 0.5 USD
+			OriginalAsset::ETH => return Some(Price::saturating_from_rational(15, 10)), // 1.5 USD
+			OriginalAsset::KSM => return Some(Price::saturating_from_integer(2)),      // 2 USD
+			OriginalAsset::BTC => return Some(Price::saturating_from_integer(3)),      // 3 USD
 			_ => return None,
 		}
 	}
@@ -77,9 +77,9 @@ impl PricesManager<OriginalAsset> for MockPriceSource {
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	pools: Vec<(CurrencyId, PoolData)>,
-	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
-	minted_pools: Vec<(CurrencyId, Balance)>,
+	pools: Vec<(OriginalAsset, PoolData)>,
+	pool_user_data: Vec<(OriginalAsset, AccountId, PoolUserData)>,
+	minted_pools: Vec<(OriginalAsset, Balance)>,
 	mnt_claim_threshold: Balance,
 }
 
@@ -98,7 +98,7 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn mnt_enabled_pools(mut self, pools: Vec<(CurrencyId, Balance)>) -> Self {
+	pub fn mnt_enabled_pools(mut self, pools: Vec<(OriginalAsset, Balance)>) -> Self {
 		self.minted_pools = pools;
 		self
 	}
@@ -126,7 +126,7 @@ impl ExtBuilder {
 	}
 
 	pub fn mnt_account_balance(mut self, balance: Balance) -> Self {
-		self.endowed_accounts.push((MntToken::get_account_id(), MNT, balance));
+		self.endowed_accounts.push((MntToken::get_account_id(), MNT.into(), balance));
 		self
 	}
 
@@ -172,7 +172,7 @@ impl ExtBuilder {
 				.endowed_accounts
 				.clone()
 				.into_iter()
-				.filter(|(_, currency_id, _)| *currency_id == MNT)
+				.filter(|&(_, currency_id, _)| currency_id.is_native())
 				.map(|(account_id, _, initial_balance)| (account_id, initial_balance))
 				.collect::<Vec<_>>(),
 		}
@@ -183,7 +183,7 @@ impl ExtBuilder {
 			balances: self
 				.endowed_accounts
 				.into_iter()
-				.filter(|(_, currency_id, _)| *currency_id != MNT)
+				.filter(|&(_, currency_id, _)| !currency_id.is_native())
 				.collect::<Vec<_>>(),
 		}
 		.assimilate_storage(&mut t)

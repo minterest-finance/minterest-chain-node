@@ -5,7 +5,6 @@
 use crate::mock::*;
 use codec::Decode;
 use frame_support::assert_ok;
-use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, CurrencyId};
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData};
 use pallet_traits::PricesManager;
 use sp_core::offchain::{
@@ -16,7 +15,7 @@ use sp_runtime::{FixedPointNumber, FixedU128};
 use test_helper::{currency_mock::*, users_mock::*};
 
 fn create_default_feeds() {
-	for currency in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset) {
+	for &asset in OriginalAsset::get_original_assets() {
 		ChainlinkFeed::create_feed(
 			alice_origin(),
 			20,
@@ -24,7 +23,7 @@ fn create_default_feeds() {
 			(10, 1_000 * DOLLARS),
 			1,
 			5,
-			ChainlinkPriceManager::convert_to_description(currency).to_vec(),
+			ChainlinkPriceManager::convert_to_description(asset).to_vec(),
 			0,
 			vec![(ORACLE, ORACLES_ADMIN)],
 			None,

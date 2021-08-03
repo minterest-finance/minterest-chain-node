@@ -100,7 +100,7 @@ pub mod module {
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 
 		/// The DEX participating in balancing
-		type Dex: DEXManager<Self::AccountId, CurrencyId, Balance>;
+		type Dex: DEXManager<Self::AccountId, Balance>;
 
 		/// Weight information for the extrinsics.
 		type LiquidationPoolsWeightInfo: WeightInfo;
@@ -371,8 +371,8 @@ pub mod module {
 			let module_id = Self::pools_account_id();
 			T::Dex::swap_with_exact_target(
 				&module_id,
-				supply_pool_id.as_currency(),
-				target_pool_id.as_currency(),
+				supply_pool_id.into(),
+				target_pool_id.into(),
 				max_supply_amount_underlying,
 				target_amount_underlying,
 			)?;
@@ -400,11 +400,11 @@ pub mod module {
 			);
 			ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
 			ensure!(
-				underlying_amount <= T::MultiCurrency::free_balance(pool_id.as_currency(), &who),
+				underlying_amount <= T::MultiCurrency::free_balance(pool_id.into(), &who),
 				Error::<T>::NotEnoughLiquidityAvailable
 			);
 
-			T::MultiCurrency::transfer(pool_id.as_currency(), &who, &Self::pools_account_id(), underlying_amount)?;
+			T::MultiCurrency::transfer(pool_id.into(), &who, &Self::pools_account_id(), underlying_amount)?;
 
 			Self::deposit_event(Event::TransferToLiquidationPool(
 				pool_id,
@@ -706,7 +706,7 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	/// Gets current liquidation pool underlying amount.
 	fn get_pool_available_liquidity(pool_id: OriginalAsset) -> Balance {
 		let module_account_id = Self::pools_account_id();
-		T::MultiCurrency::free_balance(pool_id.as_currency(), &module_account_id)
+		T::MultiCurrency::free_balance(pool_id.into(), &module_account_id)
 	}
 }
 

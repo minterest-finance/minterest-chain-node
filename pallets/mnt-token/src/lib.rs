@@ -278,9 +278,9 @@ impl<T: Config> Pallet<T> {
 		};
 
 		if user_accrued >= threshold && user_accrued > 0 {
-			let mnt_treasury_balance = T::MultiCurrency::free_balance(MNT.as_currency(), &Self::get_account_id());
+			let mnt_treasury_balance = T::MultiCurrency::free_balance(MNT.into(), &Self::get_account_id());
 			if user_accrued <= mnt_treasury_balance {
-				T::MultiCurrency::transfer(MNT.as_currency(), &Self::get_account_id(), &user, user_accrued)?;
+				T::MultiCurrency::transfer(MNT.into(), &Self::get_account_id(), &user, user_accrued)?;
 				MntAccruedStorage::<T>::remove(user); // set to 0
 			}
 		} else {
@@ -347,7 +347,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 			.checked_mul(block_delta_as_u128)
 			.ok_or(Error::<T>::NumOverflow)?;
 
-		let pool_supply_wrapped = T::MultiCurrency::total_issuance(wrapped_asset_id.as_currency());
+		let pool_supply_wrapped = T::MultiCurrency::total_issuance(wrapped_asset_id.into());
 
 		let ratio = match pool_supply_wrapped.cmp(&Balance::zero()) {
 			Ordering::Greater => {
@@ -448,7 +448,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		// We use total_balance (not free balance). Because sum of balances should be equal to
 		// total_issuance. Otherwise, calculations will not be correct.
 		// (see pool_supply_wrapped in update_pool_mnt_supply_index)
-		let supplier_balance = Rate::from_inner(T::MultiCurrency::total_balance(wrapped_asset_id.as_currency(), supplier));
+		let supplier_balance = Rate::from_inner(T::MultiCurrency::total_balance(wrapped_asset_id.into(), supplier));
 
 		let supplier_delta = delta_index
 			.checked_mul(&supplier_balance)
@@ -552,7 +552,7 @@ impl<T: Config> MntManager<T::AccountId> for Pallet<T> {
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::GetUnderlyingPriceFail)?;
 		let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id)?;
 		let wrapped_id = pool_id.as_wrap().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
-		let pool_supply_wrapped = T::MultiCurrency::total_issuance(wrapped_id.as_currency());
+		let pool_supply_wrapped = T::MultiCurrency::total_issuance(wrapped_id.into());
 
 		let pool_borrow_in_usd = T::LiquidityPoolsManager::underlying_to_usd(pool_borrow_underlying, oracle_price)?;
 		let pool_tvl_in_usd =

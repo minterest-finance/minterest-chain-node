@@ -6,7 +6,7 @@ use frame_support::{
 	construct_runtime, pallet_prelude::GenesisBuild, parameter_types, sp_io::TestExternalities, PalletId,
 };
 
-pub use minterest_primitives::currency::CurrencyType::WrapToken;
+pub use minterest_primitives::currency::WrapToken;
 use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId};
 use orml_traits::parameter_type_with_key;
@@ -80,8 +80,8 @@ impl PricesManager<OriginalAsset> for MockPriceSource {
 // -----------------------------------------------------------------------------------------
 pub struct ExtBuilder {
 	pub endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	pub pools: Vec<(CurrencyId, PoolData)>,
-	pub pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
+	pub pools: Vec<(OriginalAsset, PoolData)>,
+	pub pool_user_data: Vec<(OriginalAsset, AccountId, PoolUserData)>,
 }
 
 // Default values for ExtBuilder.
@@ -164,12 +164,12 @@ impl ExtBuilder {
 	}
 
 	// Set balance for the particular pool
-	// - 'currency_id': pool id
+	// - 'pool_id': pool id
 	// - 'balance': balance value to set
-	pub fn set_pool_balance(mut self, account_id: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
+	pub fn set_pool_balance(mut self, account_id: AccountId, pool_id: OriginalAsset, balance: Balance) -> Self {
 		self.endowed_accounts
 			//TestPools::pools_account_id()
-			.push((account_id, currency_id, balance));
+			.push((account_id, pool_id.into(), balance));
 		self
 	}
 

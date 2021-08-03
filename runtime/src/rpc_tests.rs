@@ -13,7 +13,7 @@ use frame_support::{assert_noop, assert_ok, pallet_prelude::GenesisBuild, parame
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::{PoolData, PoolUserData};
 use minterest_model::MinterestModelData;
-use minterest_primitives::{CurrencyId, Interest, Operation, Price};
+use minterest_primitives::{CurrencyId, OriginalAsset, Interest, Operation, Price};
 use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
 use orml_traits::MultiCurrency;
 use pallet_traits::{ControllerManager, LiquidityPoolStorageProvider, PoolsManager, PricesManager, UserCollateral};
@@ -22,7 +22,7 @@ use sp_runtime::{
 	traits::{One, Zero},
 	DispatchResult, FixedPointNumber,
 };
-use test_helper::{BTC, DOT, ETH, KSM, MDOT, MNT};
+use test_helper::*;
 use whitelist_rpc_runtime_api::runtime_decl_for_WhitelistRuntimeApi::WhitelistRuntimeApi;
 
 parameter_types! {
@@ -37,10 +37,10 @@ parameter_types! {
 
 struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	pools: Vec<(CurrencyId, PoolData)>,
-	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
-	minted_pools: Vec<(CurrencyId, Balance)>,
-	liquidation_fee: Vec<(CurrencyId, Rate)>,
+	pools: Vec<(OriginalAsset, PoolData)>,
+	pool_user_data: Vec<(OriginalAsset, AccountId, PoolUserData)>,
+	minted_pools: Vec<(OriginalAsset, Balance)>,
+	liquidation_fee: Vec<(OriginalAsset, Rate)>,
 	liquidation_threshold: Rate,
 }
 
@@ -49,21 +49,21 @@ impl Default for ExtBuilder {
 		Self {
 			endowed_accounts: vec![
 				// seed: initial assets. Initial MNT to pay for gas.
-				(ALICE::get(), MNT, 100_000 * DOLLARS),
-				(ALICE::get(), DOT, 100_000 * DOLLARS),
-				(ALICE::get(), ETH, 100_000 * DOLLARS),
-				(ALICE::get(), BTC, 100_000 * DOLLARS),
-				(ALICE::get(), KSM, 100_000 * DOLLARS),
-				(BOB::get(), MNT, 100_000 * DOLLARS),
-				(BOB::get(), DOT, 100_000 * DOLLARS),
-				(BOB::get(), ETH, 100_000 * DOLLARS),
-				(BOB::get(), BTC, 100_000 * DOLLARS),
-				(BOB::get(), KSM, 100_000 * DOLLARS),
-				(CHARLIE::get(), MNT, 100_000 * DOLLARS),
-				(CHARLIE::get(), DOT, 100_000 * DOLLARS),
-				(CHARLIE::get(), ETH, 100_000 * DOLLARS),
-				(CHARLIE::get(), BTC, 100_000 * DOLLARS),
-				(CHARLIE::get(), KSM, 100_000 * DOLLARS),
+				(ALICE::get(), MNT.into(), 100_000 * DOLLARS),
+				(ALICE::get(), DOT.into(), 100_000 * DOLLARS),
+				(ALICE::get(), ETH.into(), 100_000 * DOLLARS),
+				(ALICE::get(), BTC.into(), 100_000 * DOLLARS),
+				(ALICE::get(), KSM.into(), 100_000 * DOLLARS),
+				(BOB::get(), MNT.into(), 100_000 * DOLLARS),
+				(BOB::get(), DOT.into(), 100_000 * DOLLARS),
+				(BOB::get(), ETH.into(), 100_000 * DOLLARS),
+				(BOB::get(), BTC.into(), 100_000 * DOLLARS),
+				(BOB::get(), KSM.into(), 100_000 * DOLLARS),
+				(CHARLIE::get(), MNT.into(), 100_000 * DOLLARS),
+				(CHARLIE::get(), DOT.into(), 100_000 * DOLLARS),
+				(CHARLIE::get(), ETH.into(), 100_000 * DOLLARS),
+				(CHARLIE::get(), BTC.into(), 100_000 * DOLLARS),
+				(CHARLIE::get(), KSM.into(), 100_000 * DOLLARS),
 			],
 			pools: vec![],
 			pool_user_data: vec![],
@@ -90,7 +90,7 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn mnt_enabled_pools(mut self, pools: Vec<(CurrencyId, Balance)>) -> Self {
+	pub fn mnt_enabled_pools(mut self, pools: Vec<(OriginalAsset, Balance)>) -> Self {
 		self.minted_pools = pools;
 		self
 	}
@@ -298,7 +298,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		module_prices::GenesisConfig::<Runtime> {
-			locked_price: vec![(MNT, Rate::saturating_from_integer(4))],
+			locked_price: vec![(OriginalAsset::MNT, Rate::saturating_from_integer(4))],
 			_phantom: PhantomData,
 		}
 		.assimilate_storage(&mut t)
@@ -319,7 +319,7 @@ impl ExtBuilder {
 }
 
 fn pool_balance(pool_id: OriginalAsset) -> Balance {
-	Currencies::free_balance(pool_id, &LiquidityPools::pools_account_id())
+	Currencies::free_balance(pool_id.into(), &LiquidityPools::pools_account_id())
 }
 
 fn get_user_data(account_id: AccountId) -> Option<UserData> {
@@ -330,8 +330,8 @@ fn get_protocol_total_values_rpc() -> Option<ProtocolTotalValue> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_protocol_total_values()
 }
 
-fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
-	<Runtime as ControllerRuntimeApi<Block, AccountId>>::liquidity_pool_state(currency_id)
+fn liquidity_pool_state_rpc(pool_id: OriginalAsset) -> Option<PoolState> {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::liquidity_pool_state(pool_id)
 }
 
 fn get_pool_utilization_rate_rpc(pool_id: OriginalAsset) -> Option<Rate> {
@@ -412,7 +412,7 @@ fn set_oracle_price_for_all_pools(price: u128) -> DispatchResult {
 	Ok(())
 }
 
-fn set_oracle_prices(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
+fn set_oracle_prices(prices: Vec<(OriginalAsset, Price)>) -> DispatchResult {
 	MinterestOracle::on_finalize(System::block_number());
 	assert_ok!(MinterestOracle::feed_values(origin_of(ORACLE1::get().clone()), prices));
 	Ok(())
@@ -1150,7 +1150,7 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 
 			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
-			let bob_balance_before_repay_all = Currencies::free_balance(DOT, &BOB::get());
+			let bob_balance_before_repay_all = Currencies::free_balance(DOT.into(), &BOB::get());
 
 			let expected_free_balance_bob = bob_balance_before_repay_all
 				+ (Rate::from_inner(
@@ -1162,7 +1162,7 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 			assert_ok!(MinterestProtocol::repay_all(bob(), DOT));
 			assert_ok!(MinterestProtocol::redeem(bob(), DOT));
 
-			assert_eq!(Currencies::free_balance(DOT, &BOB::get()), expected_free_balance_bob);
+			assert_eq!(Currencies::free_balance(DOT.into(), &BOB::get()), expected_free_balance_bob);
 		})
 }
 
@@ -1362,7 +1362,7 @@ fn get_user_total_collateral_rpc_should_work() {
 			assert_ok!(MinterestProtocol::transfer_wrapped(
 				alice(),
 				BOB::get(),
-				MDOT,
+				WrapToken::DOT,
 				dollars(50_000)
 			));
 
@@ -1435,7 +1435,7 @@ fn test_get_user_underlying_balance_per_asset_rpc() {
 		assert_ok!(MinterestProtocol::redeem(alice(), ETH));
 		// Check that value got by rpc and value after redeem the same
 		assert_eq!(
-			Currencies::free_balance(ETH, &ALICE::get()),
+			Currencies::free_balance(ETH.into(), &ALICE::get()),
 			alice_balance_after_borrowing
 		);
 	})
@@ -1448,7 +1448,7 @@ fn get_all_locked_prices_rpc_should_work() {
 
 		OriginalAsset::get_original_assets()
 			.into_iter()
-			.for_each(|pool_id| {
+			.for_each(|&pool_id| {
 				assert_ok!(Prices::lock_price(origin_root(), pool_id));
 			});
 

@@ -18,7 +18,7 @@ mod tests {
 	use frame_system::{offchain::SendTransactionTypes, EnsureSignedBy};
 	use liquidity_pools::{PoolData, PoolUserData};
 	use minterest_model::MinterestModelData;
-	pub use minterest_primitives::currency::CurrencyType::{OriginalAsset, WrapToken};
+	pub use minterest_primitives::currency::{OriginalAsset, WrapToken};
 	use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 	use minterest_protocol::{Error as MinterestProtocolError, PoolInitData};
 	use orml_traits::{parameter_type_with_key, MultiCurrency};
@@ -131,13 +131,13 @@ mod tests {
 
 	pub struct ExtBuilder {
 		endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-		pools: Vec<(CurrencyId, PoolData)>,
-		pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
-		minted_pools: Vec<(CurrencyId, Balance)>,
-		controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
-		minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
+		pools: Vec<(OriginalAsset, PoolData)>,
+		pool_user_data: Vec<(OriginalAsset, AccountId, PoolUserData)>,
+		minted_pools: Vec<(OriginalAsset, Balance)>,
+		controller_data: Vec<(OriginalAsset, ControllerData<BlockNumber>)>,
+		minterest_model_params: Vec<(OriginalAsset, MinterestModelData)>,
 		mnt_claim_threshold: Balance,
-		liquidation_fee: Vec<(CurrencyId, Rate)>,
+		liquidation_fee: Vec<(OriginalAsset, Rate)>,
 		liquidation_threshold: Rate,
 	}
 
@@ -227,7 +227,7 @@ mod tests {
 	impl ExtBuilder {
 		pub fn set_risk_manager_params(
 			mut self,
-			liquidation_fee: Vec<(CurrencyId, Rate)>,
+			liquidation_fee: Vec<(OriginalAsset, Rate)>,
 			liquidation_threshold: Rate,
 		) -> Self {
 			self.liquidation_fee = liquidation_fee;
@@ -235,17 +235,17 @@ mod tests {
 			self
 		}
 
-		pub fn set_controller_data(mut self, pools: Vec<(CurrencyId, ControllerData<BlockNumber>)>) -> Self {
+		pub fn set_controller_data(mut self, pools: Vec<(OriginalAsset, ControllerData<BlockNumber>)>) -> Self {
 			self.controller_data = pools;
 			self
 		}
 
-		pub fn set_minterest_model_params(mut self, pools: Vec<(CurrencyId, MinterestModelData)>) -> Self {
+		pub fn set_minterest_model_params(mut self, pools: Vec<(OriginalAsset, MinterestModelData)>) -> Self {
 			self.minterest_model_params = pools;
 			self
 		}
 
-		pub fn mnt_enabled_pools(mut self, pools: Vec<(CurrencyId, Balance)>) -> Self {
+		pub fn mnt_enabled_pools(mut self, pools: Vec<(OriginalAsset, Balance)>) -> Self {
 			self.minted_pools = pools;
 			self
 		}
@@ -255,9 +255,9 @@ mod tests {
 			self
 		}
 
-		pub fn pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+		pub fn pool_balance(mut self, pool_id: OriginalAsset, balance: Balance) -> Self {
 			self.endowed_accounts
-				.push((TestPools::pools_account_id(), currency_id, balance));
+				.push((TestPools::pools_account_id(), pool_id.into(), balance));
 			self
 		}
 
@@ -307,7 +307,7 @@ mod tests {
 
 		pub fn mnt_account_balance(mut self, balance: Balance) -> Self {
 			self.endowed_accounts
-				.push((TestMntToken::get_account_id(), MNT, balance));
+				.push((TestMntToken::get_account_id(), MNT.into(), balance));
 			self
 		}
 

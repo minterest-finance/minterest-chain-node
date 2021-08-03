@@ -20,7 +20,7 @@ pub trait ControllerPresets {
 
 impl ControllerPresets for ExtBuilder {
 	fn preset_alice_deposit_60_dot(self) -> Self {
-		self.set_user_balance(ALICE, DOT, dollars(40_u128))
+		self.set_user_balance(ALICE, DOT.into(), dollars(40_u128))
 			.set_user_balance(ALICE, MDOT, dollars(60_u128))
 			.set_pool_balance(TestPools::pools_account_id(), DOT, dollars(60_u128))
 			.init_pool(
@@ -48,7 +48,7 @@ impl ControllerPresets for ExtBuilder {
 	}
 
 	fn preset_alice_deposit_20_eth(self) -> Self {
-		self.set_user_balance(ALICE, ETH, dollars(80_u128))
+		self.set_user_balance(ALICE, ETH.into(), dollars(80_u128))
 			.set_user_balance(ALICE, METH, dollars(20_u128))
 			.init_pool(
 				ETH,                                  // pool_id
@@ -514,7 +514,7 @@ fn get_hypothetical_account_liquidity_two_currencies_from_borrow_should_work() {
 	ExtBuilder::default()
 		.preset_alice_deposit_20_eth()
 		// ALICE deposit 60 DOT and borrow 30 DOT
-		.set_user_balance(ALICE, DOT, 70)
+		.set_user_balance(ALICE, DOT.into(), 70)
 		.set_user_balance(ALICE, MDOT, 60)
 		.set_pool_balance(TestPools::pools_account_id(), DOT, 60)
 		.init_pool(
@@ -908,7 +908,7 @@ fn set_protocol_interest_factor_should_work() {
 			);
 
 			assert_noop!(
-				TestController::set_protocol_interest_factor(alice_origin(), MDOT, Rate::saturating_from_integer(2)),
+				TestController::set_protocol_interest_factor(alice_origin(), BTC, Rate::saturating_from_integer(2)),
 				Error::<TestRuntime>::PoolNotFound
 			);
 		});
@@ -951,7 +951,7 @@ fn set_max_borrow_rate_should_work() {
 			);
 
 			assert_noop!(
-				TestController::set_max_borrow_rate(alice_origin(), MDOT, Rate::saturating_from_integer(2)),
+				TestController::set_max_borrow_rate(alice_origin(), ETH, Rate::saturating_from_integer(2)),
 				Error::<TestRuntime>::PoolNotFound
 			);
 		});
@@ -1001,7 +1001,7 @@ fn set_collateral_factor_should_work() {
 
 			// Unavailable currency id.
 			assert_noop!(
-				TestController::set_collateral_factor(alice_origin(), MDOT, Rate::saturating_from_integer(2)),
+				TestController::set_collateral_factor(alice_origin(), ETH, Rate::saturating_from_integer(2)),
 				Error::<TestRuntime>::PoolNotFound
 			);
 		});
@@ -1060,7 +1060,7 @@ fn pause_operation_should_work() {
 				BadOrigin
 			);
 			assert_noop!(
-				TestController::pause_operation(alice_origin(), MDOT, Operation::Redeem),
+				TestController::pause_operation(alice_origin(), ETH, Operation::Redeem),
 				Error::<TestRuntime>::PoolNotFound
 			);
 		});
@@ -1129,7 +1129,7 @@ fn resume_operation_should_work() {
 				BadOrigin
 			);
 			assert_noop!(
-				TestController::resume_operation(alice_origin(), MDOT, Operation::Redeem),
+				TestController::resume_operation(alice_origin(), ETH, Operation::Redeem),
 				Error::<TestRuntime>::PoolNotFound
 			);
 		});
@@ -1144,7 +1144,7 @@ fn set_borrow_cap_should_work() {
 			Rate::saturating_from_rational(2, 1), // borrow_index
 			Balance::zero(),                      // protocol_interest
 		)
-		.set_user_balance(ALICE, DOT, ONE_HUNDRED)
+		.set_user_balance(ALICE, DOT.into(), ONE_HUNDRED)
 		.build()
 		.execute_with(|| {
 			// The dispatch origin of this call must be Administrator.
@@ -1185,7 +1185,7 @@ fn set_protocol_interest_threshold_should_work() {
 			Rate::saturating_from_rational(2, 1), // borrow_index
 			Balance::zero(),                      // protocol_interest
 		)
-		.set_user_balance(ALICE, DOT, ONE_HUNDRED)
+		.set_user_balance(ALICE, DOT.into(), ONE_HUNDRED)
 		.build()
 		.execute_with(|| {
 			// The dispatch origin of this call must be Administrator.

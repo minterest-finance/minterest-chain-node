@@ -1,9 +1,8 @@
 //! Unit tests for the prices module.
 
-use super::*;
 use crate::mock::{Event, *};
 use frame_support::{assert_noop, assert_ok};
-use minterest_primitives::Price;
+use minterest_primitives::{Price, OriginalAsset};
 use pallet_traits::PricesManager;
 use sp_runtime::{
 	traits::{BadOrigin, Zero},
@@ -24,9 +23,7 @@ fn get_underlying_price_should_work() {
 			Some(Price::saturating_from_integer(40u128))
 		);
 
-		assert_eq!(TestPrices::get_underlying_price(MNT), Some(Price::zero()));
-
-		assert_eq!(TestPrices::get_underlying_price(MDOT), None);
+		assert_eq!(TestPrices::get_underlying_price(OriginalAsset::MNT), Some(Price::zero()));
 	});
 }
 
@@ -61,10 +58,6 @@ fn lock_price_call_should_work() {
 			Some(Price::saturating_from_integer(48000))
 		);
 		assert_noop!(TestPrices::lock_price(bob_origin(), BTC), BadOrigin);
-		assert_noop!(
-			TestPrices::lock_price(alice_origin(), MDOT),
-			Error::<TestRuntime>::NotValidUnderlyingAssetId
-		);
 	});
 }
 
@@ -83,9 +76,5 @@ fn unlock_price_call_should_work() {
 			assert_eq!(TestPrices::locked_price_storage(BTC), None);
 
 			assert_noop!(TestPrices::unlock_price(bob_origin(), BTC), BadOrigin);
-			assert_noop!(
-				TestPrices::lock_price(alice_origin(), MDOT),
-				Error::<TestRuntime>::NotValidUnderlyingAssetId
-			);
 		});
 }

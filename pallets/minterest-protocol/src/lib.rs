@@ -500,7 +500,7 @@ pub mod module {
 
 			// If user does not have assets in the pool, then he cannot enable as collateral the pool.
 			let wrapped_id = pool_id.as_wrap().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
-			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id.as_currency(), &sender);
+			let user_wrapped_balance = T::MultiCurrency::free_balance(wrapped_id.into(), &sender);
 			ensure!(!user_wrapped_balance.is_zero(), Error::<T>::IsCollateralCannotBeEnabled);
 
 			T::ManagerLiquidityPools::enable_is_collateral(&sender, pool_id);
@@ -533,7 +533,7 @@ pub mod module {
 			T::ControllerManager::accrue_interest_rate(pool_id)?;
 			let exchange_rate = T::ManagerLiquidityPools::get_exchange_rate(pool_id)?;
 			let wrapped_id = pool_id.as_wrap().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
-			let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id.as_currency(), &sender);
+			let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id.into(), &sender);
 			let user_supply_underlying =
 				T::ManagerLiquidityPools::wrapped_to_underlying(user_supply_wrap, exchange_rate)?;
 
@@ -617,7 +617,7 @@ impl<T: Config> Pallet<T> {
 		ensure!(!deposit_underlying_amount.is_zero(), Error::<T>::ZeroBalanceTransaction);
 
 		ensure!(
-			deposit_underlying_amount <= T::MultiCurrency::free_balance(pool_id.as_currency(), &who),
+			deposit_underlying_amount <= T::MultiCurrency::free_balance(pool_id.into(), &who),
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
 
@@ -641,13 +641,13 @@ impl<T: Config> Pallet<T> {
 			T::ManagerLiquidityPools::underlying_to_wrapped(deposit_underlying_amount, exchange_rate)?;
 
 		T::MultiCurrency::transfer(
-			pool_id.as_currency(),
+			pool_id.into(),
 			&who,
 			&T::ManagerLiquidityPools::pools_account_id(),
 			deposit_underlying_amount,
 		)?;
 
-		T::MultiCurrency::deposit(wrapped_id.as_currency(), &who, deposit_wrapped_amount)?;
+		T::MultiCurrency::deposit(wrapped_id.into(), &who, deposit_wrapped_amount)?;
 		T::UserLiquidationAttempts::try_mutate_attempts(&who, Deposit, Some(pool_id), None)?;
 
 		Ok((deposit_underlying_amount, wrapped_id, deposit_wrapped_amount))
@@ -673,7 +673,7 @@ impl<T: Config> Pallet<T> {
 
 		let wrapped_amount = match (underlying_amount, wrapped_amount, all_assets) {
 			(0, 0, true) => {
-				let total_wrapped_amount = T::MultiCurrency::free_balance(wrapped_id.as_currency(), &who);
+				let total_wrapped_amount = T::MultiCurrency::free_balance(wrapped_id.into(), &who);
 				ensure!(
 					total_wrapped_amount > Balance::zero(),
 					Error::<T>::NotEnoughWrappedTokens
@@ -699,7 +699,7 @@ impl<T: Config> Pallet<T> {
 		);
 
 		ensure!(
-			wrapped_amount <= T::MultiCurrency::free_balance(wrapped_id.as_currency(), &who),
+			wrapped_amount <= T::MultiCurrency::free_balance(wrapped_id.into(), &who),
 			Error::<T>::NotEnoughWrappedTokens
 		);
 
@@ -713,10 +713,10 @@ impl<T: Config> Pallet<T> {
 		T::MntManager::update_pool_mnt_supply_index(pool_id)?;
 		T::MntManager::distribute_supplier_mnt(pool_id, who, false)?;
 
-		T::MultiCurrency::withdraw(wrapped_id.as_currency(), &who, wrapped_amount)?;
+		T::MultiCurrency::withdraw(wrapped_id.into(), &who, wrapped_amount)?;
 
 		T::MultiCurrency::transfer(
-			pool_id.as_currency(),
+			pool_id.into(),
 			&T::ManagerLiquidityPools::pools_account_id(),
 			&who,
 			underlying_amount,
@@ -765,7 +765,7 @@ impl<T: Config> Pallet<T> {
 
 		// Transfer the borrow_amount from the protocol account to the borrower's account.
 		T::MultiCurrency::transfer(
-			pool_id.as_currency(),
+			pool_id.into(),
 			&T::ManagerLiquidityPools::pools_account_id(),
 			&who,
 			borrow_amount,
@@ -811,12 +811,12 @@ impl<T: Config> Pallet<T> {
 
 		// Fail if not enough free balance
 		ensure!(
-			transfer_amount <= T::MultiCurrency::free_balance(wrapped_id.as_currency(), &who),
+			transfer_amount <= T::MultiCurrency::free_balance(wrapped_id.into(), &who),
 			Error::<T>::NotEnoughWrappedTokens
 		);
 
 		// Transfer the transfer_amount from one account to another
-		T::MultiCurrency::transfer(wrapped_id.as_currency(), &who, &receiver, transfer_amount)?;
+		T::MultiCurrency::transfer(wrapped_id.into(), &who, &receiver, transfer_amount)?;
 
 		Ok(())
 	}
@@ -833,7 +833,7 @@ impl<T: Config> Pallet<T> {
 		// If no overflow and transfer is successful update pool state
 		if let Some(new_protocol_interest) = pool_protocol_interest.checked_sub(to_liquidation_pool) {
 			if T::MultiCurrency::transfer(
-				pool_id.as_currency(),
+				pool_id.into(),
 				&T::ManagerLiquidityPools::pools_account_id(),
 				&T::ManagerLiquidationPools::pools_account_id(),
 				to_liquidation_pool,
@@ -906,7 +906,7 @@ impl<T: Config> MinterestProtocolManager<T::AccountId> for Pallet<T> {
 		}
 
 		ensure!(
-			repay_amount <= T::MultiCurrency::free_balance(pool_id.as_currency(), &who),
+			repay_amount <= T::MultiCurrency::free_balance(pool_id.into(), &who),
 			Error::<T>::NotEnoughUnderlyingAsset
 		);
 
@@ -914,7 +914,7 @@ impl<T: Config> MinterestProtocolManager<T::AccountId> for Pallet<T> {
 
 		// Transfer the repay_amount from the borrower's account to the protocol account.
 		T::MultiCurrency::transfer(
-			pool_id.as_currency(),
+			pool_id.into(),
 			&who,
 			&T::ManagerLiquidityPools::pools_account_id(),
 			repay_amount,

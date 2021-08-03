@@ -34,15 +34,15 @@ mod tests {
 			.pool_initial(DOT)
 			.pool_initial(ETH)
 			.pool_initial(BTC)
-			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
-			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
-			.user_balance(ADMIN, BTC, ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND)
-			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
-			.user_balance(BOB, ETH, ONE_HUNDRED_THOUSAND)
-			.user_balance(BOB, BTC, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, ETH.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, BTC.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, ETH.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, BTC.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, ETH.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, BTC.into(), ONE_HUNDRED_THOUSAND)
 			.mnt_enabled_pools(vec![(DOT, DOLLARS / 10), (ETH, DOLLARS / 10)])
 			.mnt_account_balance(ONE_HUNDRED_THOUSAND)
 			.mnt_claim_threshold(dollars(100))
@@ -141,7 +141,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::transfer_wrapped(
 					alice_origin(),
 					BOB,
-					MDOT,
+					WrapToken::DOT,
 					50_000 * DOLLARS
 				));
 				// Alice should receive tokens as a supplier for a 10 blocks since the last claim
@@ -255,15 +255,15 @@ mod tests {
 			)
 			.pool_initial(DOT)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
-			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
-			.user_balance(ADMIN, BTC, ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND)
-			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
-			.user_balance(BOB, ETH, ONE_HUNDRED_THOUSAND)
-			.user_balance(BOB, BTC, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, ETH.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, BTC.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, ETH.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, BTC.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, ETH.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, BTC.into(), ONE_HUNDRED_THOUSAND)
 			.mnt_enabled_pools(vec![(DOT, DOLLARS / 10), (ETH, DOLLARS / 10)])
 			.mnt_account_balance(ONE_HUNDRED_THOUSAND)
 			.mnt_claim_threshold(dollars(100))
@@ -406,10 +406,10 @@ mod tests {
 				Rate::saturating_from_rational(3, 100),
 			)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, ETH, ONE_HUNDRED_THOUSAND)
-			.user_balance(ADMIN, BTC, ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, ETH, ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, BTC, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, ETH.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, BTC.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, ETH.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, BTC.into(), ONE_HUNDRED_THOUSAND)
 			.mnt_enabled_pools(vec![(ETH, DOLLARS / 10)])
 			.mnt_account_balance(ONE_HUNDRED_THOUSAND)
 			.build()
@@ -514,9 +514,9 @@ mod tests {
 	fn test_mnt_token_scenario_n_4() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, DOT.into(), ONE_HUNDRED_THOUSAND)
 			.mnt_enabled_pools(vec![(DOT, 10 * DOLLARS)])
 			.mnt_account_balance(ONE_HUNDRED_THOUSAND)
 			.build()
@@ -580,10 +580,10 @@ mod tests {
 	fn mnt_token_supplier_distribution_when_users_transferring_tokens() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ADMIN, DOT, ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT, ONE_HUNDRED_THOUSAND)
-			.user_balance(BOB, DOT, ONE_HUNDRED_THOUSAND)
-			.user_balance(CHARLIE, DOT, 2 * ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(CHARLIE, DOT.into(), 2 * ONE_HUNDRED_THOUSAND)
 			.mnt_enabled_pools(vec![(DOT, DOLLARS / 10)])
 			.mnt_account_balance(ONE_HUNDRED_THOUSAND)
 			.build()
@@ -631,7 +631,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::transfer_wrapped(
 					alice_origin(),
 					BOB,
-					MDOT,
+					WrapToken::DOT,
 					Currencies::free_balance(MDOT, &ALICE)
 				));
 
@@ -649,7 +649,7 @@ mod tests {
 				assert_ok!(MinterestProtocol::transfer_wrapped(
 					bob_origin(),
 					ALICE,
-					MDOT,
+					WrapToken::DOT,
 					Currencies::free_balance(MDOT, &BOB) / 3
 				));
 
@@ -678,26 +678,26 @@ mod tests {
 				assert_ok!(MinterestProtocol::transfer_wrapped(
 					alice_origin(),
 					BOB,
-					MDOT,
+					WrapToken::DOT,
 					Currencies::free_balance(MDOT, &ALICE) / 2
 				));
 				assert_ok!(MinterestProtocol::transfer_wrapped(
 					bob_origin(),
 					ALICE,
-					MDOT,
+					WrapToken::DOT,
 					Currencies::free_balance(MDOT, &BOB) / 2
 				));
 				assert_ok!(MinterestProtocol::transfer_wrapped(
 					alice_origin(),
 					BOB,
-					MDOT,
+					WrapToken::DOT,
 					Currencies::free_balance(MDOT, &ALICE)
 				));
 				// Return the same proportions (1:2) eventually
 				assert_ok!(MinterestProtocol::transfer_wrapped(
 					bob_origin(),
 					ALICE,
-					MDOT,
+					WrapToken::DOT,
 					Currencies::free_balance(MDOT, &BOB) / 3
 				));
 

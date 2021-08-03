@@ -4,7 +4,6 @@ use super::*;
 use crate as module_prices;
 use frame_support::{construct_runtime, ord_parameter_types, parameter_types};
 use frame_system::EnsureSignedBy;
-use minterest_primitives::{Balance, CurrencyId};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -44,21 +43,20 @@ mock_impl_prices_module_config!(TestRuntime, OneAlice);
 // 										DATA PROVIDER
 // -----------------------------------------------------------------------------------------
 pub struct MockDataProvider;
-impl DataProvider<CurrencyId, Price> for MockDataProvider {
-	fn get(currency_id: &CurrencyId) -> Option<Price> {
-		match currency_id {
-			&MNT => Some(Price::zero()),
-			&BTC => Some(Price::saturating_from_integer(48_000)),
-			&DOT => Some(Price::saturating_from_integer(40)),
-			&ETH => Some(Price::saturating_from_integer(1_500)),
-			&KSM => Some(Price::saturating_from_integer(250)),
-			_ => None,
+impl DataProvider<OriginalAsset, Price> for MockDataProvider {
+	fn get(asset: &OriginalAsset) -> Option<Price> {
+		match &asset {
+			OriginalAsset::MNT => Some(Price::zero()),
+			OriginalAsset::BTC => Some(Price::saturating_from_integer(48_000)),
+			OriginalAsset::DOT => Some(Price::saturating_from_integer(40)),
+			OriginalAsset::ETH => Some(Price::saturating_from_integer(1_500)),
+			OriginalAsset::KSM => Some(Price::saturating_from_integer(250)),
 		}
 	}
 }
 
-impl DataFeeder<CurrencyId, Price, AccountId> for MockDataProvider {
-	fn feed_value(_: AccountId, _: CurrencyId, _: Price) -> sp_runtime::DispatchResult {
+impl DataFeeder<OriginalAsset, Price, AccountId> for MockDataProvider {
+	fn feed_value(_: AccountId, _: OriginalAsset, _: Price) -> sp_runtime::DispatchResult {
 		Ok(())
 	}
 }
@@ -67,7 +65,7 @@ impl DataFeeder<CurrencyId, Price, AccountId> for MockDataProvider {
 // 									EXTBUILDER
 // -----------------------------------------------------------------------------------------
 pub struct ExtBuilder {
-	pub locked_price: Vec<(CurrencyId, Price)>,
+	pub locked_price: Vec<(OriginalAsset, Price)>,
 }
 
 impl Default for ExtBuilder {
@@ -78,10 +76,10 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
 	// Set locked price for the currency
-	// - `currency_id` : currency identifier
+	// - `asset` : currency identifier
 	// - `price`: locked price
-	pub fn set_locked_price(mut self, currency_id: CurrencyId, price: Price) -> Self {
-		self.locked_price.push((currency_id, price));
+	pub fn set_locked_price(mut self, asset: OriginalAsset, price: Price) -> Self {
+		self.locked_price.push((asset, price));
 		self
 	}
 

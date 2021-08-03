@@ -197,15 +197,15 @@ fn check_user_available_is_collateral_should_work() {
 #[test]
 fn pool_should_exists() {
 	ExtBuilder::default().init_pool_default(DOT).build().execute_with(|| {
-		assert_eq!(TestPools::pool_exists(&DOT), true);
-		assert_eq!(TestPools::pool_exists(&MDOT), false);
+		assert_eq!(TestPools::pool_exists(DOT), true);
+		assert_eq!(TestPools::pool_exists(BTC), false);
 	});
 }
 
 #[test]
 fn update_state_on_borrow_should_work() {
 	ExtBuilder::default()
-		.set_user_balance(ALICE, DOT, ONE_HUNDRED)
+		.set_user_balance(ALICE, DOT.into(), ONE_HUNDRED)
 		.init_pool_default(DOT)
 		.build()
 		.execute_with(|| {
@@ -241,7 +241,7 @@ fn update_state_on_borrow_should_work() {
 #[test]
 fn update_state_on_repay_should_work() {
 	ExtBuilder::default()
-		.set_user_balance(ALICE, DOT, ONE_HUNDRED)
+		.set_user_balance(ALICE, DOT.into(), ONE_HUNDRED)
 		.build()
 		.execute_with(|| {
 			assert_eq!(TestPools::get_user_borrow_index(&ALICE, DOT), Rate::from_inner(0));
@@ -413,7 +413,7 @@ fn underlying_to_wrapped_and_usd_should_work() {
 			Rate::one(),     // borrow_index
 			Balance::zero(), // protocol_interest
 		)
-		.set_user_balance(ALICE, DOT, ONE_HUNDRED)
+		.set_user_balance(ALICE, DOT.into(), ONE_HUNDRED)
 		.set_user_balance(ALICE, MDOT, ONE_HUNDRED)
 		.build()
 		.execute_with(|| {
@@ -454,7 +454,7 @@ fn wrapped_to_underlying_and_usd_should_work() {
 			Rate::one(),     // borrow_index
 			Balance::zero(), // protocol_interest
 		)
-		.set_user_balance(ALICE, DOT, ONE_HUNDRED)
+		.set_user_balance(ALICE, DOT.into(), ONE_HUNDRED)
 		.set_user_balance(ALICE, MDOT, ONE_HUNDRED)
 		.set_user_balance(ALICE, MBTC, 1)
 		.set_pool_balance(TestPools::pools_account_id(), BTC, ONE_HUNDRED)

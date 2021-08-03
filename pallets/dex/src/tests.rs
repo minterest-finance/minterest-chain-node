@@ -29,20 +29,20 @@ fn swap_with_exact_target_should_work() {
 			);
 
 			assert_eq!(
-				Currencies::free_balance(DOT, &TestLiquidationPools::pools_account_id()),
+				Currencies::free_balance(DOT.into(), &TestLiquidationPools::pools_account_id()),
 				250_000 * DOLLARS
 			);
 			assert_eq!(
-				Currencies::free_balance(ETH, &TestLiquidationPools::pools_account_id()),
+				Currencies::free_balance(ETH.into(), &TestLiquidationPools::pools_account_id()),
 				450_000 * DOLLARS
 			);
 
 			assert_eq!(
-				Currencies::free_balance(DOT, &TestDex::dex_account_id()),
+				Currencies::free_balance(DOT.into(), &TestDex::dex_account_id()),
 				550_000 * DOLLARS
 			);
 			assert_eq!(
-				Currencies::free_balance(ETH, &TestDex::dex_account_id()),
+				Currencies::free_balance(ETH.into(), &TestDex::dex_account_id()),
 				450_000 * DOLLARS
 			);
 		});
@@ -77,20 +77,20 @@ fn do_swap_with_exact_target_should_work() {
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			assert_eq!(
-				Currencies::free_balance(DOT, &TestLiquidationPools::pools_account_id()),
+				Currencies::free_balance(DOT.into(), &TestLiquidationPools::pools_account_id()),
 				290_000 * DOLLARS
 			);
 			assert_eq!(
-				Currencies::free_balance(ETH, &TestLiquidationPools::pools_account_id()),
+				Currencies::free_balance(ETH.into(), &TestLiquidationPools::pools_account_id()),
 				410_000 * DOLLARS
 			);
 
 			assert_eq!(
-				Currencies::free_balance(DOT, &TestDex::dex_account_id()),
+				Currencies::free_balance(DOT.into(), &TestDex::dex_account_id()),
 				60_000 * DOLLARS
 			);
 			assert_eq!(
-				Currencies::free_balance(ETH, &TestDex::dex_account_id()),
+				Currencies::free_balance(ETH.into(), &TestDex::dex_account_id()),
 				40_000 * DOLLARS
 			);
 

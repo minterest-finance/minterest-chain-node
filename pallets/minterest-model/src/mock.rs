@@ -3,7 +3,7 @@ use super::*;
 use crate as minterest_model;
 use frame_support::{ord_parameter_types, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
-use minterest_primitives::currency::CurrencyType::{OriginalAsset, WrapToken};
+use minterest_primitives::currency::{OriginalAsset};
 pub use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PricesManager;
@@ -67,7 +67,7 @@ impl PricesManager<OriginalAsset> for MockPriceSource {
 // 										EXTBUILDER
 // -----------------------------------------------------------------------------------------
 pub struct ExtBuilder {
-	pub minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
+	pub minterest_model_params: Vec<(OriginalAsset, MinterestModelData)>,
 }
 
 impl Default for ExtBuilder {
@@ -80,7 +80,7 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
 	// Set minterest model parameters
-	// - 'currency_id': currency identifier
+	// - 'asset': currency identifier
 	// - 'kink': the utilization point at which the jump multiplier is applied
 	// - 'base_rate_per_block': the base interest rate which is the y-intercept when utilization rate is
 	//   0
@@ -90,14 +90,14 @@ impl ExtBuilder {
 	//   utilization point - kink
 	pub fn set_minterest_model_params(
 		mut self,
-		currency_id: CurrencyId,
+		asset: OriginalAsset,
 		kink: Rate,
 		base_rate_per_block: Rate,
 		multiplier_per_block: Rate,
 		jump_multiplier_per_block: Rate,
 	) -> Self {
 		self.minterest_model_params.push((
-			currency_id,
+			asset,
 			MinterestModelData {
 				kink,
 				base_rate_per_block,

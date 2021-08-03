@@ -101,7 +101,7 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(lender.clone()), DOT, 10_000 * DOLLARS)
 	verify {
-		assert_eq!(Currencies::free_balance(DOT, &LiquidityPoolsPalletId::get().into_account() ), 60_000 * DOLLARS);
+		assert_eq!(Currencies::free_balance(DOT.into(), &LiquidityPoolsPalletId::get().into_account() ), 60_000 * DOLLARS);
 		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(lender_supply) / 60(total_supply) = 3.33 MNT
 		assert_eq!(Currencies::free_balance(MNT, &lender), 3_333_333_324_333_330_029)
 	}
@@ -118,7 +118,7 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
 	verify {
-		assert_eq!(Currencies::free_balance(DOT, &borrower), 8_750_000_014_464_285_710_000);
+		assert_eq!(Currencies::free_balance(DOT.into(), &borrower), 8_750_000_014_464_285_710_000);
 		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(borrower_supply) / 80(total_supply) = 2.5 MNT
 		assert_eq!(Currencies::free_balance(MNT, &borrower), 2_500_000_000_000_000_000)
 	}
@@ -135,7 +135,7 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(borrower.clone()), DOT, 1_000 * DOLLARS)
 	verify {
-		assert_eq!(Currencies::free_balance(DOT, &borrower), 1_000 * DOLLARS);
+		assert_eq!(Currencies::free_balance(DOT.into(), &borrower), 1_000 * DOLLARS);
 		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(borrower_supply) / 80(total_supply) = 2.5 MNT
 		assert_eq!(Currencies::free_balance(MNT, &borrower), 2_500_000_000_000_000_000)
 	}
@@ -152,7 +152,7 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(borrower.clone()), MDOT, 10_000 * DOLLARS)
 	verify {
-		assert_eq!(Currencies::free_balance(DOT, &borrower), 8_750_000_014_464_285_710_000);
+		assert_eq!(Currencies::free_balance(DOT.into(), &borrower), 8_750_000_014_464_285_710_000);
 		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(borrower_supply) / 80(total_supply) = 2.5 MNT
 		assert_eq!(Currencies::free_balance(MNT, &borrower), 2_500_000_000_000_000_000)
 	}
@@ -171,7 +171,7 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(borrower.clone()), DOT, 5_000 * DOLLARS)
 	verify {
-		assert_eq!(Currencies::free_balance(DOT, &borrower ), 10_000 * DOLLARS);
+		assert_eq!(Currencies::free_balance(DOT.into(), &borrower ), 10_000 * DOLLARS);
 		assert_eq!(Currencies::free_balance(MNT, &borrower), 19_999_999_999_999_995_000)
 	}
 

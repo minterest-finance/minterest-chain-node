@@ -517,10 +517,10 @@ fn testnet_genesis(
 				.chain(get_all_modules_accounts()[1..3].iter()) // liquidation_pools + DEXes
 				.flat_map(|x| {
 					vec![
-						(x.clone(), DOT.as_currency(), INITIAL_BALANCE),
-						(x.clone(), ETH.as_currency(), INITIAL_BALANCE),
-						(x.clone(), KSM.as_currency(), INITIAL_BALANCE),
-						(x.clone(), BTC.as_currency(), INITIAL_BALANCE),
+						(x.clone(), DOT.into(), INITIAL_BALANCE),
+						(x.clone(), ETH.into(), INITIAL_BALANCE),
+						(x.clone(), KSM.into(), INITIAL_BALANCE),
+						(x.clone(), BTC.into(), INITIAL_BALANCE),
 					]
 				})
 				.collect(),

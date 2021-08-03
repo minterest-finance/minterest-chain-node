@@ -8,7 +8,7 @@ use frame_system::EnsureSignedBy;
 use minterest_model::MinterestModelData;
 pub(crate) use minterest_primitives::Price;
 pub use minterest_primitives::{
-	currency::CurrencyType::{OriginalAsset, WrapToken},
+	currency::{OriginalAsset, WrapToken},
 	Balance, CurrencyId, Interest, Rate,
 };
 use orml_traits::parameter_type_with_key;
@@ -95,8 +95,8 @@ pub struct ExtBuilder {
 	pub pools: Vec<(OriginalAsset, PoolData)>,
 	pub pool_user_data: Vec<(OriginalAsset, AccountId, PoolUserData)>,
 	pub controller_params: Vec<(OriginalAsset, ControllerData<u64>)>,
-	pub pause_keepers: Vec<(CurrencyId, PauseKeeper)>,
-	pub minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
+	pub pause_keepers: Vec<(OriginalAsset, PauseKeeper)>,
+	pub minterest_model_params: Vec<(OriginalAsset, MinterestModelData)>,
 }
 
 // Default values for ExtBuilder.
@@ -202,11 +202,11 @@ impl ExtBuilder {
 	}
 
 	// Set pausekeeper state.
-	// - 'currency_id': currency identifier
+	// - 'asset': currency identifier
 	// - 'is_paused': pause / unpause all keepers for current currency
-	pub fn set_pause_keeper(mut self, currency_id: CurrencyId, is_paused: bool) -> Self {
+	pub fn set_pause_keeper(mut self, asset: OriginalAsset, is_paused: bool) -> Self {
 		self.pause_keepers.push((
-			currency_id,
+			asset,
 			if is_paused {
 				PauseKeeper::all_paused()
 			} else {
@@ -217,7 +217,7 @@ impl ExtBuilder {
 	}
 
 	// Set minterest model parameters
-	// - 'currency_id': currency identifier
+	// - 'asset': currency identifier
 	// - 'kink': the utilization point at which the jump multiplier is applied
 	// - 'base_rate_per_block': the base interest rate which is the y-intercept when utilization rate is
 	//   0
@@ -227,14 +227,14 @@ impl ExtBuilder {
 	//   utilization point - kink
 	pub fn set_minterest_model_params(
 		mut self,
-		currency_id: CurrencyId,
+		asset: OriginalAsset,
 		kink: Rate,
 		base_rate_per_block: Rate,
 		multiplier_per_block: Rate,
 		jump_multiplier_per_block: Rate,
 	) -> Self {
 		self.minterest_model_params.push((
-			currency_id,
+			asset,
 			MinterestModelData {
 				kink,
 				base_rate_per_block,
@@ -255,12 +255,12 @@ impl ExtBuilder {
 	}
 
 	// Set balance for the particular pool
-	// - 'currency_id': pool id
+	// - 'pool_id': pool id
 	// - 'balance': balance value to set
-	pub fn set_pool_balance(mut self, account_id: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
+	pub fn set_pool_balance(mut self, account_id: AccountId, pool_id: OriginalAsset, balance: Balance) -> Self {
 		self.endowed_accounts
 			//TestPools::pools_account_id()
-			.push((account_id, currency_id, balance));
+			.push((account_id, pool_id.into(), balance));
 		self
 	}
 

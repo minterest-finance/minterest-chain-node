@@ -6,7 +6,6 @@ use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{PoolData, PoolUserData};
 use minterest_model::MinterestModelData;
-use minterest_primitives::currency::CurrencyType::{OriginalAsset, WrapToken};
 pub use minterest_primitives::{Balance, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PricesManager;
@@ -113,34 +112,34 @@ impl PricesManager<OriginalAsset> for MockPriceSource {
 #[derive(Default)]
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Amount)>,
-	pools: Vec<(CurrencyId, PoolData)>,
-	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
-	controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
-	liquidation_fee: Vec<(CurrencyId, Rate)>,
+	pools: Vec<(OriginalAsset, PoolData)>,
+	pool_user_data: Vec<(OriginalAsset, AccountId, PoolUserData)>,
+	controller_data: Vec<(OriginalAsset, ControllerData<BlockNumber>)>,
+	liquidation_fee: Vec<(OriginalAsset, Rate)>,
 	liquidation_threshold: Rate,
-	minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
+	minterest_model_params: Vec<(OriginalAsset, MinterestModelData)>,
 }
 
 impl ExtBuilder {
 	/// Simulates extrinsic `deposit_underlying()` in genesis block.
 	///
 	///-`who`: the user who performs the operation.
-	///-`pool_id`: CurrencyId of underlying assets to be transferred into the protocol.
+	///-`pool_id`: Asset to be transferred into the protocol.
 	///-`underlying_amount`: The amount of the asset to be supplied, in units of the underlying
 	/// asset.
-	pub fn deposit_underlying(self, who: AccountId, pool_id: OriginalAsset, underlying_amount: Balance) -> Self {
-		self.init_pool(underlying_asset, Balance::zero(), Rate::one(), Balance::zero())
-			.set_pool_user_data(underlying_asset, who, Balance::zero(), Rate::one(), false)
-			.set_init_controller_params(vec![underlying_asset])
-			.set_init_minterest_model_params(vec![underlying_asset])
-			.set_user_balance(who, underlying_asset.as_wrap().unwrap(), underlying_amount)
-			.set_pool_balance(underlying_asset, underlying_amount as Amount)
+	pub fn deposit_underlying(self, who: AccountId, pool_id: OriginalAsset, amount: Balance) -> Self {
+		self.init_pool(pool_id, Balance::zero(), Rate::one(), Balance::zero())
+			.set_pool_user_data(pool_id, who, Balance::zero(), Rate::one(), false)
+			.set_init_controller_params(vec![pool_id])
+			.set_init_minterest_model_params(vec![pool_id])
+			.set_user_balance(who, pool_id.as_wrap().unwrap().into(), amount)
+			.set_pool_balance(pool_id, amount as Amount)
 	}
 
 	/// Simulates extrinsic `enable_is_collateral()` in genesis block.
 	///
 	///-`who`: the user who performs the operation.
-	///-`pool_id`: CurrencyId of liquidity pool to be enabled as collateral.
+	///-`pool_id`: Liquidity pool id to be enabled as collateral.
 	pub fn enable_as_collateral(mut self, who: AccountId, pool_id: OriginalAsset) -> Self {
 		self.pool_user_data = self
 			.pool_user_data
@@ -151,22 +150,22 @@ impl ExtBuilder {
 				}
 				(p, w, pool_user_data)
 			})
-			.collect::<Vec<(CurrencyId, AccountId, PoolUserData)>>();
+			.collect::<Vec<(OriginalAsset, AccountId, PoolUserData)>>();
 		self
 	}
 
 	/// Simulates extrinsic `borrow()` in genesis block.
 	///
 	///-`who`: the user who performs the operation.
-	/// - `pool_id`: The currency ID of the underlying asset to be borrowed.
+	/// - `pool_id`: Asset to be borrowed.
 	/// - `underlying_amount`: The amount of the underlying asset to be borrowed.
 	///
 	/// Note: use only after `deposit_underlying`.
 	pub fn borrow_underlying(self, who: AccountId, pool_id: OriginalAsset, borrow_amount: Balance) -> Self {
-		self.init_pool(underlying_asset, borrow_amount as Balance, Rate::one(), Balance::zero())
-			.set_pool_user_data(underlying_asset, who, borrow_amount, Rate::one(), false)
-			.set_user_balance(who, underlying_asset, borrow_amount)
-			.set_pool_balance(underlying_asset, (borrow_amount as Amount).saturating_neg())
+		self.init_pool(pool_id, borrow_amount as Balance, Rate::one(), Balance::zero())
+			.set_pool_user_data(pool_id, who, borrow_amount, Rate::one(), false)
+			.set_user_balance(who, pool_id.into(), borrow_amount)
+			.set_pool_balance(pool_id, (borrow_amount as Amount).saturating_neg())
 	}
 
 	/// Merges duplicate balances in `endowed_accounts` in a genesis block.
@@ -177,24 +176,24 @@ impl ExtBuilder {
 			.iter()
 			.fold(
 				BTreeMap::<(AccountId, CurrencyId), Amount>::new(),
-				|mut acc, &(account_id, pool_id, amount)| {
-					if let Some(balance) = acc.get_mut(&(account_id, pool_id)) {
+				|mut acc, &(account_id, currency_id, amount)| {
+					if let Some(balance) = acc.get_mut(&(account_id, currency_id)) {
 						*balance += amount;
 					} else {
-						acc.insert((account_id.clone(), pool_id), amount);
+						acc.insert((account_id.clone(), currency_id), amount);
 					}
 					acc
 				},
 			)
 			.into_iter()
-			.map(|((account_id, pool_id), amount)| (account_id, pool_id, amount))
+			.map(|((account_id, currency_id), amount)| (account_id, currency_id, amount))
 			.collect::<Vec<(AccountId, CurrencyId, Amount)>>();
 		self.pool_user_data = self
 			.pool_user_data
-			.iter()
+			.into_iter()
 			.fold(
-				BTreeMap::<(CurrencyId, AccountId), PoolUserData>::new(),
-				|mut acc, &(pool_id, account_id, pool_user_data)| {
+				BTreeMap::<(OriginalAsset, AccountId), PoolUserData>::new(),
+				|mut acc, (pool_id, account_id, pool_user_data)| {
 					if let Some(user_data) = acc.get_mut(&(pool_id, account_id)) {
 						user_data.borrowed += pool_user_data.borrowed;
 					} else {
@@ -205,12 +204,12 @@ impl ExtBuilder {
 			)
 			.into_iter()
 			.map(|((pool_id, account_id), pool_user_data)| (pool_id, account_id, pool_user_data))
-			.collect::<Vec<(CurrencyId, AccountId, PoolUserData)>>();
+			.collect::<Vec<(OriginalAsset, AccountId, PoolUserData)>>();
 		self.pools = self
 			.pools
 			.iter()
 			.fold(
-				BTreeMap::<CurrencyId, PoolData>::new(),
+				BTreeMap::<OriginalAsset, PoolData>::new(),
 				|mut acc, (pool_id, pool_data)| {
 					// merge duplicated accounts
 					if let Some(pool) = acc.get_mut(pool_id) {
@@ -223,13 +222,13 @@ impl ExtBuilder {
 			)
 			.into_iter()
 			.map(|(pool_id, pool)| (pool_id, pool))
-			.collect::<Vec<(CurrencyId, PoolData)>>();
+			.collect::<Vec<(OriginalAsset, PoolData)>>();
 		self
 	}
 
 	/// Set balance for the particular user.
 	/// - 'user': id of users account.
-	/// - 'currency_id': currency.
+	/// - 'asset': currency.
 	/// - 'balance': balance value to set.
 	pub fn set_user_balance(mut self, user: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
 		self.endowed_accounts.push((user, currency_id, balance as Amount));
@@ -237,13 +236,13 @@ impl ExtBuilder {
 	}
 
 	/// Set balance for the particular pool.
-	/// - 'currency_id': pool id.
+	/// - 'pool_id': pool id.
 	/// - 'balance': balance value to set. This parameter has type `Amount`, because during
 	/// the borrow operation it is necessary to subtract the balance from the balance of
 	/// the liquidity pool.
-	pub fn set_pool_balance(mut self, currency_id: CurrencyId, balance: Amount) -> Self {
+	pub fn set_pool_balance(mut self, pool_id: OriginalAsset, balance: Amount) -> Self {
 		self.endowed_accounts
-			.push((TestPools::pools_account_id(), currency_id, balance));
+			.push((TestPools::pools_account_id(), pool_id.into(), balance));
 		self
 	}
 
@@ -302,7 +301,7 @@ impl ExtBuilder {
 	/// `kink = 0.8`, `base_rate_per_block = 0`, `multiplier_per_block = 0.000000009`,
 	/// `jump_multiplier_per_block = 0.000000207`.
 	/// -`pools`: vector of initialized liquidity pools.
-	pub fn set_init_minterest_model_params(mut self, pools: Vec<CurrencyId>) -> Self {
+	pub fn set_init_minterest_model_params(mut self, pools: Vec<OriginalAsset>) -> Self {
 		pools.into_iter().for_each(|pool_id| {
 			self.minterest_model_params.push((
 				pool_id,
@@ -318,7 +317,7 @@ impl ExtBuilder {
 	}
 
 	/// Sets liquidation_fee
-	pub fn set_liquidation_fees(mut self, liquidation_fees: Vec<(CurrencyId, Rate)>) -> Self {
+	pub fn set_liquidation_fees(mut self, liquidation_fees: Vec<(OriginalAsset, Rate)>) -> Self {
 		self.liquidation_fee.extend_from_slice(&liquidation_fees);
 		self
 	}
@@ -326,7 +325,7 @@ impl ExtBuilder {
 	/// Sets initial minterest model parameters.
 	/// `kink = 0.8`, `base_rate_per_block = 0`, `multiplier_per_block = 0.000000009`,
 	/// `jump_multiplier_per_block = 0.000000207`.
-	pub fn set_init_controller_params(mut self, pools: Vec<CurrencyId>) -> Self {
+	pub fn set_init_controller_params(mut self, pools: Vec<OriginalAsset>) -> Self {
 		pools.into_iter().for_each(|pool_id| {
 			self.controller_data.push((
 				pool_id,
@@ -353,7 +352,7 @@ impl ExtBuilder {
 			balances: self
 				.endowed_accounts
 				.into_iter()
-				.map(|(account_id, pool_id, amount)| (account_id, pool_id, amount as Balance))
+				.map(|(account_id, currency_id, amount)| (account_id, currency_id, amount as Balance))
 				.collect::<Vec<(AccountId, CurrencyId, Balance)>>(),
 		}
 		.assimilate_storage(&mut storage)

@@ -4,7 +4,7 @@ use crate as liquidation_pools;
 use frame_support::{ord_parameter_types, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
 use minterest_primitives::Price;
-pub use minterest_primitives::{currency::CurrencyType::WrapToken, Balance, CurrencyId, Rate};
+pub use minterest_primitives::{currency::WrapToken, Balance, CurrencyId, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PricesManager;
 use sp_core::H256;
@@ -55,7 +55,7 @@ parameter_types! {
 }
 
 thread_local! {
-	static UNDERLYING_PRICE: RefCell<HashMap<CurrencyId, Price>> = RefCell::new(
+	static UNDERLYING_PRICE: RefCell<HashMap<OriginalAsset, Price>> = RefCell::new(
 		[
 			(DOT, Price::one()),
 			(ETH, Price::one()),
@@ -69,14 +69,14 @@ thread_local! {
 
 pub struct MockPriceSource;
 impl MockPriceSource {
-	pub fn set_underlying_price(currency_id: CurrencyId, price: Price) {
-		UNDERLYING_PRICE.with(|v| v.borrow_mut().insert(currency_id, price));
+	pub fn set_underlying_price(asset: OriginalAsset, price: Price) {
+		UNDERLYING_PRICE.with(|v| v.borrow_mut().insert(asset, price));
 	}
 }
 
 impl PricesManager<OriginalAsset> for MockPriceSource {
 	fn get_underlying_price(asset: OriginalAsset) -> Option<Price> {
-		UNDERLYING_PRICE.with(|v| v.borrow().get(&asset).copied())
+		UNDERLYING_PRICE.with(|v| v.borrow().get(&asset.into()).copied())
 	}
 
 	fn lock_price(_asset: OriginalAsset) {}
@@ -124,8 +124,8 @@ pub fn admin() -> Origin {
 
 pub struct ExternalityBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	liquidity_pools: Vec<(CurrencyId, PoolData)>,
-	liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
+	liquidity_pools: Vec<(OriginalAsset, PoolData)>,
+	liquidation_pools: Vec<(OriginalAsset, LiquidationPoolData)>,
 }
 
 impl Default for ExternalityBuilder {
@@ -214,21 +214,21 @@ impl ExternalityBuilder {
 		self
 	}
 
-	pub fn liquidation_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+	pub fn liquidation_pool_balance(mut self, pool_id: OriginalAsset, balance: Balance) -> Self {
 		self.endowed_accounts
-			.push((TestLiquidationPools::pools_account_id(), currency_id, balance));
+			.push((TestLiquidationPools::pools_account_id(), pool_id.into(), balance));
 		self
 	}
 
-	pub fn liquidity_pool_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+	pub fn liquidity_pool_balance(mut self, pool_id: OriginalAsset, balance: Balance) -> Self {
 		self.endowed_accounts
-			.push((TestLiquidityPools::pools_account_id(), currency_id, balance));
+			.push((TestLiquidityPools::pools_account_id(), pool_id.into(), balance));
 		self
 	}
 
-	pub fn dex_balance(mut self, currency_id: CurrencyId, balance: Balance) -> Self {
+	pub fn dex_balance(mut self, pool_id: OriginalAsset, balance: Balance) -> Self {
 		self.endowed_accounts
-			.push((TestDex::dex_account_id(), currency_id, balance));
+			.push((TestDex::dex_account_id(), pool_id.into(), balance));
 		self
 	}
 
@@ -261,12 +261,12 @@ impl ExternalityBuilder {
 	}
 }
 
-pub(crate) fn set_prices_for_assets(prices: Vec<(CurrencyId, Price)>) {
-	prices.into_iter().for_each(|(currency_id, price)| {
-		MockPriceSource::set_underlying_price(currency_id, price);
+pub(crate) fn set_prices_for_assets(prices: Vec<(OriginalAsset, Price)>) {
+	prices.into_iter().for_each(|(asset, price)| {
+		MockPriceSource::set_underlying_price(asset, price);
 	});
 }
 
 pub(crate) fn liquidation_pool_balance(pool_id: OriginalAsset) -> Balance {
-	Currencies::free_balance(pool_id, &TestLiquidationPools::pools_account_id())
+	Currencies::free_balance(pool_id.into(), &TestLiquidationPools::pools_account_id())
 }

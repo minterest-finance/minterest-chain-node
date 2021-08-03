@@ -4,7 +4,7 @@ use super::Error;
 use crate::mock::*;
 use crate::{MntPoolState, MntState};
 use frame_support::{assert_noop, assert_ok};
-use minterest_primitives::{Balance, CurrencyId, Rate};
+use minterest_primitives::{Balance, Rate};
 use orml_traits::MultiCurrency;
 use pallet_traits::MntManager;
 use sp_arithmetic::FixedPointNumber;
@@ -336,13 +336,13 @@ fn test_update_pool_mnt_borrow_index() {
 			let initial_index = Rate::one();
 			System::set_block_number(1);
 
-			let check_borrow_index = |asset: OriginalAsset, pool_mnt_speed: Balance, total_borrow: Balance| {
-				MntToken::update_pool_mnt_borrow_index(underlying_id).unwrap();
+			let check_borrow_index = |pool_id: OriginalAsset, pool_mnt_speed: Balance, total_borrow: Balance| {
+				MntToken::update_pool_mnt_borrow_index(pool_id).unwrap();
 				// 1.5 current borrow_index. I use 15 in this function, that`s why I make total_borrow * 10
 				let borrow_total_amount = Rate::saturating_from_rational(total_borrow * 10, 15);
 
 				let expected_index = initial_index + Rate::from_inner(pool_mnt_speed) / borrow_total_amount;
-				let pool_state = MntToken::mnt_pool_state_storage(underlying_id);
+				let pool_state = MntToken::mnt_pool_state_storage(pool_id);
 				assert_eq!(pool_state.borrow_state.mnt_distribution_index, expected_index);
 			};
 
@@ -502,9 +502,9 @@ fn test_update_pool_mnt_supply_index() {
 			Currencies::deposit(MKSM, &ALICE, mksm_total_issuance).unwrap();
 			Currencies::deposit(MBTC, &ALICE, mbtc_total_issuance).unwrap();
 
-			let check_supply_index = |underlying_id: CurrencyId, mnt_speed: Balance, total_issuance: Balance| {
-				MntToken::update_pool_mnt_supply_index(underlying_id).unwrap();
-				let pool_state = MntToken::mnt_pool_state_storage(underlying_id);
+			let check_supply_index = |pool_id: OriginalAsset, mnt_speed: Balance, total_issuance: Balance| {
+				MntToken::update_pool_mnt_supply_index(pool_id).unwrap();
+				let pool_state = MntToken::mnt_pool_state_storage(pool_id);
 				assert_eq!(
 					pool_state.supply_state.mnt_distribution_index,
 					Rate::one() + Rate::from_inner(mnt_speed) / Rate::from_inner(total_issuance)
@@ -574,12 +574,6 @@ fn test_minting_enable_disable() {
 		.mnt_account_balance(100 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			// Try to disable minting for invalid underlying asset id
-			assert_noop!(
-				MntToken::set_speed(admin_origin(), MNT, Balance::zero()),
-				Error::<Runtime>::NotValidUnderlyingAssetId
-			);
-
 			// The dispatch origin of this call must be Root or 2/3 MinterestCouncil.
 			assert_noop!(MntToken::set_speed(alice_origin(), DOT, 1 * DOLLARS), BadOrigin);
 

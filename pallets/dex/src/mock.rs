@@ -7,10 +7,7 @@ use crate as dex;
 use frame_support::{construct_runtime, ord_parameter_types, parameter_types};
 use frame_system::offchain::SendTransactionTypes;
 use frame_system::EnsureSignedBy;
-pub use minterest_primitives::{
-	currency::CurrencyType::{OriginalAsset, WrapToken},
-	currency::DOT,
-};
+pub use minterest_primitives::currency::{OriginalAsset, WrapToken};
 pub(crate) use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
 pub(crate) use pallet_traits::PricesManager;
@@ -103,27 +100,27 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
 	/// Set balance of the liquidation pool
-	/// - 'currency_id': pool id
+	/// - 'pool_id': pool id
 	/// - 'balance': balance to set
 	pub fn set_liquidation_pool_balance(
 		mut self,
 		pool_account: AccountId,
-		currency_id: CurrencyId,
+		pool_id: OriginalAsset,
 		balance: Balance,
 	) -> Self {
 		self.endowed_accounts
 			//TestLiquidationPools::pools_account_id()
-			.push((pool_account, currency_id, balance));
+			.push((pool_account, pool_id.into(), balance));
 		self
 	}
 
 	/// Set DEX balance
-	/// - 'currency_id': currency id
+	/// - 'asset': asset
 	/// - 'balance': balance value
-	pub fn set_dex_balance(mut self, account_id: AccountId, currency_id: CurrencyId, balance: Balance) -> Self {
+	pub fn set_dex_balance(mut self, account_id: AccountId, asset: OriginalAsset, balance: Balance) -> Self {
 		self.endowed_accounts
 			//TestDex::dex_account_id()
-			.push((account_id, currency_id, balance));
+			.push((account_id, asset.into(), balance));
 		self
 	}
 

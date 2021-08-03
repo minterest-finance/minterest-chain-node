@@ -148,7 +148,7 @@ fn protocol_operations_not_working_for_nonexisting_pool() {
 			);
 
 			assert_noop!(
-				TestMinterestProtocol::redeem_wrapped(alice_origin(), METH, dollars(60_u128)),
+				TestMinterestProtocol::redeem_wrapped(alice_origin(), WrapToken::ETH, dollars(60_u128)),
 				crate::Error::<Test>::PoolNotFound
 			);
 
@@ -183,7 +183,7 @@ fn protocol_operations_not_working_for_nonexisting_pool() {
 			);
 
 			assert_noop!(
-				TestMinterestProtocol::transfer_wrapped(alice_origin(), BOB, METH, dollars(10_u128)),
+				TestMinterestProtocol::transfer_wrapped(alice_origin(), BOB, WrapToken::ETH, dollars(10_u128)),
 				crate::Error::<Test>::PoolNotFound
 			);
 
@@ -213,19 +213,13 @@ fn deposit_underlying_should_work() {
 				ALICE,
 				DOT,
 				dollars(60_u128),
-				MDOT,
+				WrapToken::DOT,
 				dollars(60_u128),
 			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
 			// Check liquidation_attempts has been reset.
 			assert_eq!(TestRiskManager::get_user_liquidation_attempts(&ALICE), u8::zero());
-
-			// MDOT pool does not exist.
-			assert_noop!(
-				TestMinterestProtocol::deposit_underlying(alice_origin(), MDOT, 10),
-				Error::<Test>::NotValidUnderlyingAssetId
-			);
 
 			// Alice has 100 ETH on her account, so she cannot make a deposit 150 ETH.
 			assert_noop!(
@@ -287,7 +281,7 @@ fn redeem_should_work() {
 				ALICE,
 				DOT,
 				dollars(60_u128),
-				MDOT,
+				WrapToken::DOT,
 				dollars(60_u128),
 			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
@@ -306,12 +300,6 @@ fn redeem_should_not_work() {
 			assert_noop!(
 				TestMinterestProtocol::redeem(bob_origin(), DOT),
 				Error::<Test>::NotEnoughWrappedTokens
-			);
-
-			// MDOT is wrong CurrencyId for underlying assets.
-			assert_noop!(
-				TestMinterestProtocol::redeem(alice_origin(), MDOT),
-				Error::<Test>::NotValidUnderlyingAssetId
 			);
 
 			// All operations in the KSM pool are paused.
@@ -341,7 +329,7 @@ fn redeem_should_not_work() {
 fn redeem_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
 		.pool_with_params(BTC, Balance::zero(), Rate::one(), Balance::zero())
-		.user_balance(ALICE, BTC, TEN_THOUSAND)
+		.user_balance(ALICE, BTC.into(), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 10_000$ to BTC pool.
@@ -387,12 +375,6 @@ fn redeem_underlying_should_work() {
 				Error::<Test>::NotEnoughWrappedTokens
 			);
 
-			// MDOT is wrong CurrencyId for underlying assets.
-			assert_noop!(
-				TestMinterestProtocol::redeem_underlying(alice_origin(), MDOT, dollars(20_u128)),
-				Error::<Test>::NotValidUnderlyingAssetId
-			);
-
 			// Transaction with zero balance is not allowed.
 			assert_noop!(
 				TestMinterestProtocol::redeem_underlying(alice_origin(), DOT, Balance::zero()),
@@ -424,7 +406,7 @@ fn redeem_underlying_should_work() {
 				ALICE,
 				DOT,
 				dollars(30_u128),
-				MDOT,
+				WrapToken::DOT,
 				dollars(30_u128),
 			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
@@ -435,7 +417,7 @@ fn redeem_underlying_should_work() {
 fn redeem_underlying_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
 		.pool_with_params(BTC, Balance::zero(), Rate::one(), Balance::zero())
-		.user_balance(ALICE, BTC, TEN_THOUSAND)
+		.user_balance(ALICE, BTC.into(), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 10_000$ to BTC pool.
@@ -476,25 +458,19 @@ fn redeem_wrapped_should_work() {
 
 			// Alice has 60 MDOT. She can't redeem 100 MDOT.
 			assert_noop!(
-				TestMinterestProtocol::redeem_wrapped(alice_origin(), MDOT, dollars(100_u128)),
+				TestMinterestProtocol::redeem_wrapped(alice_origin(), WrapToken::DOT, dollars(100_u128)),
 				Error::<Test>::NotEnoughWrappedTokens
-			);
-
-			// MDOT is wrong CurrencyId for underlying assets.
-			assert_noop!(
-				TestMinterestProtocol::redeem_wrapped(alice_origin(), DOT, dollars(20_u128)),
-				Error::<Test>::NotValidWrappedTokenId
 			);
 
 			// Transaction with zero balance is not allowed.
 			assert_noop!(
-				TestMinterestProtocol::redeem_wrapped(alice_origin(), MDOT, Balance::zero()),
+				TestMinterestProtocol::redeem_wrapped(alice_origin(), WrapToken::DOT, Balance::zero()),
 				Error::<Test>::ZeroBalanceTransaction
 			);
 
 			// All operations in the KSM pool are paused.
 			assert_noop!(
-				TestMinterestProtocol::redeem_wrapped(alice_origin(), MKSM, dollars(10_u128)),
+				TestMinterestProtocol::redeem_wrapped(alice_origin(), WrapToken::KSM, dollars(10_u128)),
 				Error::<Test>::OperationPaused
 			);
 
@@ -502,7 +478,7 @@ fn redeem_wrapped_should_work() {
 			// from whitelist can work with protocol.
 			assert_ok!(TestWhitelist::switch_whitelist_mode(alice_origin(), true));
 			assert_noop!(
-				TestMinterestProtocol::redeem_wrapped(alice_origin(), MDOT, dollars(35_u128)),
+				TestMinterestProtocol::redeem_wrapped(alice_origin(), WrapToken::DOT, dollars(35_u128)),
 				BadOrigin
 			);
 
@@ -510,14 +486,14 @@ fn redeem_wrapped_should_work() {
 
 			assert_ok!(TestMinterestProtocol::redeem_wrapped(
 				alice_origin(),
-				MDOT,
+				WrapToken::DOT,
 				dollars(35_u128)
 			));
 			let expected_event = Event::TestMinterestProtocol(crate::Event::Redeemed(
 				ALICE,
 				DOT,
 				dollars(35_u128),
-				MDOT,
+				WrapToken::DOT,
 				dollars(35_u128),
 			));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
@@ -528,7 +504,7 @@ fn redeem_wrapped_should_work() {
 fn redeem_wrapped_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
 		.pool_with_params(BTC, Balance::zero(), Rate::one(), Balance::zero())
-		.user_balance(ALICE, BTC, TEN_THOUSAND)
+		.user_balance(ALICE, BTC.into(), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 10_000$ to BTC pool.
@@ -546,7 +522,7 @@ fn redeem_wrapped_fails_if_low_balance_in_pool() {
 			// Alice is trying to change all her 10_000 MBTC tokens to BTC. She can't do it because:
 			// pool_total_liquidity = 9_900 BTC < 10_000 MBTC * 1.0 = 10_000 BTC
 			assert_noop!(
-				TestMinterestProtocol::redeem_wrapped(alice_origin(), MBTC, TEN_THOUSAND),
+				TestMinterestProtocol::redeem_wrapped(alice_origin(), WrapToken::BTC, TEN_THOUSAND),
 				Error::<Test>::NotEnoughLiquidityAvailable
 			);
 		});
@@ -573,12 +549,6 @@ fn borrow_should_work() {
 			assert_noop!(
 				TestMinterestProtocol::borrow(alice_origin(), DOT, dollars(100_u128)),
 				controller::Error::<Test>::InsufficientLiquidity
-			);
-
-			// MDOT is wrong CurrencyId for underlying assets.
-			assert_noop!(
-				TestMinterestProtocol::borrow(alice_origin(), MDOT, dollars(60_u128)),
-				Error::<Test>::NotValidUnderlyingAssetId
 			);
 
 			// Transaction with zero balance is not allowed.
@@ -614,7 +584,7 @@ fn borrow_should_work() {
 fn borrow_fails_if_low_balance_in_pool() {
 	ExtBuilder::default()
 		.pool_with_params(BTC, Balance::zero(), Rate::one(), Balance::zero())
-		.user_balance(ALICE, BTC, TEN_THOUSAND)
+		.user_balance(ALICE, BTC.into(), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
 			// Alice deposited 100$ to BTC pool.
@@ -626,7 +596,7 @@ fn borrow_fails_if_low_balance_in_pool() {
 
 			// set total_pool_liquidity = 50 DOT
 			assert_ok!(Currencies::withdraw(
-				BTC,
+				BTC.into(),
 				&TestPools::pools_account_id(),
 				dollars(50_u128)
 			));
@@ -639,7 +609,7 @@ fn borrow_fails_if_low_balance_in_pool() {
 
 			// set total_pool_liquidity = 0 DOT
 			assert_ok!(Currencies::withdraw(
-				BTC,
+				BTC.into(),
 				&TestPools::pools_account_id(),
 				dollars(50_u128)
 			));
@@ -668,13 +638,7 @@ fn repay_should_work() {
 			// Alice borrowed 30 DOT from the pool.
 			assert_ok!(TestMinterestProtocol::borrow(alice_origin(), DOT, dollars(30_u128)));
 			// Alice balance = 70 DOT
-			assert_eq!(Currencies::free_balance(DOT, &ALICE), dollars(70_u128));
-
-			// MDOT is wrong CurrencyId for underlying assets.
-			assert_noop!(
-				TestMinterestProtocol::repay(alice_origin(), MDOT, dollars(10_u128)),
-				Error::<Test>::NotValidUnderlyingAssetId
-			);
+			assert_eq!(Currencies::free_balance(DOT.into(), &ALICE), dollars(70_u128));
 
 			// Alice cannot repay 100 DOT, because she only have 70 DOT.
 			assert_noop!(
@@ -732,12 +696,6 @@ fn repay_all_should_work() {
 			));
 			// Alice borrowed 30 DOT from the pool.
 			assert_ok!(TestMinterestProtocol::borrow(alice_origin(), DOT, dollars(30_u128)));
-
-			// MDOT is wrong CurrencyId for underlying assets.
-			assert_noop!(
-				TestMinterestProtocol::repay_all(alice_origin(), MDOT),
-				Error::<Test>::NotValidUnderlyingAssetId
-			);
 
 			// All operations in the KSM pool are paused.
 			assert_noop!(
@@ -805,12 +763,6 @@ fn repay_on_behalf_should_work() {
 
 			// Alice borrowed 30 DOT from the pool.
 			assert_ok!(TestMinterestProtocol::borrow(alice_origin(), DOT, dollars(30_u128)));
-
-			// MDOT is wrong CurrencyId for underlying assets.
-			assert_noop!(
-				TestMinterestProtocol::repay_on_behalf(bob_origin(), MDOT, ALICE, dollars(10_u128)),
-				Error::<Test>::NotValidUnderlyingAssetId
-			);
 
 			// Bob can't pay off the 120 DOT debt for Alice, because he has 100 DOT in his account.
 			assert_noop!(
@@ -894,11 +846,6 @@ fn enable_is_collateral_should_work() {
 				TestMinterestProtocol::enable_is_collateral(alice_origin(), ETH),
 				Error::<Test>::AlreadyIsCollateral
 			);
-
-			assert_noop!(
-				TestMinterestProtocol::enable_is_collateral(alice_origin(), MDOT),
-				Error::<Test>::NotValidUnderlyingAssetId
-			);
 		});
 }
 
@@ -944,11 +891,6 @@ fn disable_is_collateral_should_work() {
 				TestMinterestProtocol::disable_is_collateral(alice_origin(), ETH),
 				Error::<Test>::IsCollateralAlreadyDisabled
 			);
-
-			assert_noop!(
-				TestMinterestProtocol::disable_is_collateral(alice_origin(), MDOT),
-				Error::<Test>::NotValidUnderlyingAssetId
-			);
 		});
 }
 
@@ -965,10 +907,10 @@ fn transfer_wrapped_should_work() {
 			assert_ok!(TestMinterestProtocol::transfer_wrapped(
 				alice_origin(),
 				BOB,
-				MDOT,
+				WrapToken::DOT,
 				ONE_HUNDRED
 			));
-			let expected_event = Event::TestMinterestProtocol(crate::Event::Transferred(ALICE, BOB, MDOT, ONE_HUNDRED));
+			let expected_event = Event::TestMinterestProtocol(crate::Event::Transferred(ALICE, BOB, WrapToken::DOT, ONE_HUNDRED));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(Currencies::free_balance(MDOT, &ALICE), 0);
 			assert_eq!(Currencies::free_balance(MDOT, &BOB), ONE_HUNDRED);
@@ -977,10 +919,10 @@ fn transfer_wrapped_should_work() {
 			assert_ok!(TestMinterestProtocol::transfer_wrapped(
 				bob_origin(),
 				ALICE,
-				MBTC,
+				WrapToken::BTC,
 				ONE_HUNDRED,
 			));
-			let expected_event = Event::TestMinterestProtocol(crate::Event::Transferred(BOB, ALICE, MBTC, ONE_HUNDRED));
+			let expected_event = Event::TestMinterestProtocol(crate::Event::Transferred(BOB, ALICE, WrapToken::BTC, ONE_HUNDRED));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(Currencies::free_balance(MBTC, &ALICE), ONE_HUNDRED);
 			assert_eq!(Currencies::free_balance(MBTC, &BOB), 0);
@@ -989,11 +931,11 @@ fn transfer_wrapped_should_work() {
 			assert_ok!(TestMinterestProtocol::transfer_wrapped(
 				alice_origin(),
 				BOB,
-				MBTC,
+				WrapToken::BTC,
 				dollars(40_u128),
 			));
 			let expected_event =
-				Event::TestMinterestProtocol(crate::Event::Transferred(ALICE, BOB, MBTC, dollars(40_u128)));
+				Event::TestMinterestProtocol(crate::Event::Transferred(ALICE, BOB, WrapToken::BTC, dollars(40_u128)));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(Currencies::free_balance(MBTC, &ALICE), dollars(60_u128));
 			assert_eq!(Currencies::free_balance(MBTC, &BOB), dollars(40_u128));
@@ -1002,11 +944,11 @@ fn transfer_wrapped_should_work() {
 			assert_ok!(TestMinterestProtocol::transfer_wrapped(
 				bob_origin(),
 				ALICE,
-				MDOT,
+				WrapToken::DOT,
 				dollars(40_u128),
 			));
 			let expected_event =
-				Event::TestMinterestProtocol(crate::Event::Transferred(BOB, ALICE, MDOT, dollars(40_u128)));
+				Event::TestMinterestProtocol(crate::Event::Transferred(BOB, ALICE, WrapToken::DOT, dollars(40_u128)));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(Currencies::free_balance(MDOT, &ALICE), dollars(40_u128));
 			assert_eq!(Currencies::free_balance(MDOT, &BOB), dollars(60_u128));
@@ -1022,15 +964,9 @@ fn transfer_wrapped_should_not_work() {
 		.pool_with_params(KSM, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
 		.execute_with(|| {
-			// Alice is unable to transfer more tokens tan she has
-			assert_noop!(
-				TestMinterestProtocol::transfer_wrapped(alice_origin(), BOB, MNT, ONE_HUNDRED),
-				Error::<Test>::NotValidWrappedTokenId
-			);
-
 			// Alice is unable to transfer tokens to self
 			assert_noop!(
-				TestMinterestProtocol::transfer_wrapped(alice_origin(), ALICE, MDOT, ONE_HUNDRED),
+				TestMinterestProtocol::transfer_wrapped(alice_origin(), ALICE, WrapToken::DOT, ONE_HUNDRED),
 				Error::<Test>::CannotTransferToSelf
 			);
 
@@ -1038,7 +974,7 @@ fn transfer_wrapped_should_not_work() {
 			// from whitelist can work with protocol.
 			assert_ok!(TestWhitelist::switch_whitelist_mode(alice_origin(), true));
 			assert_noop!(
-				TestMinterestProtocol::transfer_wrapped(alice_origin(), BOB, MDOT, ONE_HUNDRED),
+				TestMinterestProtocol::transfer_wrapped(alice_origin(), BOB, WrapToken::DOT, ONE_HUNDRED),
 				BadOrigin
 			);
 
@@ -1046,25 +982,25 @@ fn transfer_wrapped_should_not_work() {
 
 			// Alice is unable to transfer more tokens than she has
 			assert_noop!(
-				TestMinterestProtocol::transfer_wrapped(alice_origin(), BOB, MDOT, dollars(101_u128)),
+				TestMinterestProtocol::transfer_wrapped(alice_origin(), BOB, WrapToken::DOT, dollars(101_u128)),
 				Error::<Test>::NotEnoughWrappedTokens
 			);
 
 			// Bob is unable to transfer tokens with zero balance
 			assert_noop!(
-				TestMinterestProtocol::transfer_wrapped(bob_origin(), ALICE, MDOT, 1_u128),
+				TestMinterestProtocol::transfer_wrapped(bob_origin(), ALICE, WrapToken::DOT, 1_u128),
 				Error::<Test>::NotEnoughWrappedTokens
 			);
 
 			// Bob is unable to send zero tokens
 			assert_noop!(
-				TestMinterestProtocol::transfer_wrapped(bob_origin(), ALICE, MBTC, Balance::zero()),
+				TestMinterestProtocol::transfer_wrapped(bob_origin(), ALICE, WrapToken::BTC, Balance::zero()),
 				Error::<Test>::ZeroBalanceTransaction
 			);
 
 			// All operations in the KSM pool are paused.
 			assert_noop!(
-				TestMinterestProtocol::transfer_wrapped(alice_origin(), BOB, MKSM, ONE_HUNDRED),
+				TestMinterestProtocol::transfer_wrapped(alice_origin(), BOB, WrapToken::KSM, ONE_HUNDRED),
 				Error::<Test>::OperationPaused
 			);
 		});

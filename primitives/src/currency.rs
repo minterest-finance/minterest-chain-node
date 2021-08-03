@@ -24,10 +24,6 @@ impl OriginalAsset {
 		}
 	}
 
-	pub fn as_currency(self) -> CurrencyId {
-		CurrencyId::Original(self)
-	}
-
 	pub fn get_original_assets() -> &'static [OriginalAsset] {
 		&[
 			OriginalAsset::MNT,
@@ -59,10 +55,6 @@ impl WrapToken {
 		}
 	}
 
-	pub fn as_currency(self) -> CurrencyId {
-		CurrencyId::Wrap(self)
-	}
-
 	pub fn get_wrap_tokens() -> &'static [WrapToken] {
 		&[
 			WrapToken::DOT,
@@ -85,4 +77,16 @@ impl CurrencyId {
 	pub fn is_native(&self) -> bool {
 		*self == CurrencyId::Original(OriginalAsset::MNT)
 	}
+}
+
+impl From<OriginalAsset> for CurrencyId {
+    fn from(asset: OriginalAsset) -> Self {
+        CurrencyId::Original(asset)
+    }
+}
+
+impl From<WrapToken> for CurrencyId {
+    fn from(token: WrapToken) -> Self {
+        CurrencyId::Wrap(token)
+    }
 }

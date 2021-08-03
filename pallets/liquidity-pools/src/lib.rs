@@ -332,7 +332,7 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 	/// Gets current the total amount of cash the pool has.
 	fn get_pool_available_liquidity(pool_id: OriginalAsset) -> Balance {
 		let module_account_id = Self::pools_account_id();
-		T::MultiCurrency::free_balance(pool_id.as_currency(), &module_account_id)
+		T::MultiCurrency::free_balance(pool_id.into(), &module_account_id)
 	}
 }
 
@@ -408,7 +408,7 @@ impl<T: Config> CurrencyConverter for Pallet<T> {
 			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
 		let pool_supply_underlying = Self::get_pool_available_liquidity(pool_id);
-		let pool_supply_wrap = T::MultiCurrency::total_issuance(wrapped_asset_id.as_currency());
+		let pool_supply_wrap = T::MultiCurrency::total_issuance(wrapped_asset_id.into());
 		let pool_data = Self::get_pool_data(pool_id);
 
 		Self::calculate_exchange_rate(
@@ -481,7 +481,7 @@ impl<T: Config> UserCollateral<T::AccountId> for Pallet<T> {
 			.filter(|&&pool_id| Self::pool_exists(pool_id) && Self::is_pool_collateral(&who, pool_id))
 			.filter_map(|&pool_id| {
 				// We calculate the value of the user's wrapped tokens in USD.
-				let user_supply_wrap = T::MultiCurrency::free_balance(pool_id.as_currency(), &who);
+				let user_supply_wrap = T::MultiCurrency::free_balance(pool_id.into(), &who);
 				if user_supply_wrap.is_zero() {
 					return None;
 				}
@@ -510,7 +510,7 @@ impl<T: Config> UserCollateral<T::AccountId> for Pallet<T> {
 			.filter(|&&pool_id| Self::pool_exists(pool_id) && Self::is_pool_collateral(&who, pool_id))
 		{
 			if let Some(wrapped_id) = pool_id.as_wrap() {
-				if !T::MultiCurrency::free_balance(wrapped_id.as_currency(), &who).is_zero() {
+				if !T::MultiCurrency::free_balance(wrapped_id.into(), &who).is_zero() {
 					return true;
 				}
 			}

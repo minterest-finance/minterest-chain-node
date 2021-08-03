@@ -11,17 +11,18 @@ pub use users_mock::*;
 
 pub mod currency_mock {
 	use frame_support::sp_runtime::FixedPointNumber;
-	use minterest_primitives::{currency::TokenSymbol, Balance, OriginalAsset, CurrencyId, Price};
+	pub use minterest_primitives::{Balance, OriginalAsset, WrapToken, CurrencyId, Price};
+	pub use OriginalAsset::{DOT, KSM, BTC, ETH};
 
-	pub const MNT: CurrencyId = CurrencyId::Native;
-	pub const DOT: CurrencyId = OriginalAsset(TokenSymbol::DOT).as_currency();
-	pub const MDOT: CurrencyId = CurrencyId::WrapToken(TokenSymbol::MDOT);
-	pub const KSM: CurrencyId = CurrencyId::OriginalAsset(TokenSymbol::KSM);
-	pub const MKSM: CurrencyId = CurrencyId::WrapToken(TokenSymbol::MKSM);
-	pub const BTC: CurrencyId = CurrencyId::OriginalAsset(TokenSymbol::BTC);
-	pub const MBTC: CurrencyId = CurrencyId::WrapToken(TokenSymbol::MBTC);
-	pub const ETH: CurrencyId = CurrencyId::OriginalAsset(TokenSymbol::ETH);
-	pub const METH: CurrencyId = CurrencyId::WrapToken(TokenSymbol::METH);
+	pub const MNT: CurrencyId = CurrencyId::Original(OriginalAsset::MNT);
+	// pub const DOT: CurrencyId = CurrencyId::Original(OriginalAsset::DOT);
+	// pub const KSM: CurrencyId = CurrencyId::Original(OriginalAsset::KSM);
+	// pub const BTC: CurrencyId = CurrencyId::Original(OriginalAsset::BTC);
+	// pub const ETH: CurrencyId = CurrencyId::Original(OriginalAsset::ETH);
+	pub const MDOT: CurrencyId = CurrencyId::Wrap(WrapToken::DOT);
+	pub const MKSM: CurrencyId = CurrencyId::Wrap(WrapToken::KSM);
+	pub const MBTC: CurrencyId = CurrencyId::Wrap(WrapToken::BTC);
+	pub const METH: CurrencyId = CurrencyId::Wrap(WrapToken::ETH);
 
 	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 	pub fn dollars(amount: u128) -> u128 {

@@ -133,12 +133,12 @@ pub trait PricesManager<OriginalAsset> {
 }
 
 /// An abstraction of DEXs basic functionalities.
-pub trait DEXManager<AccountId, CurrencyId, Balance> {
+pub trait DEXManager<AccountId, Balance> {
 	//TODO: Add function description
 	fn swap_with_exact_supply(
 		who: &AccountId,
-		target_currency_id: CurrencyId,
-		supply_currency_id: CurrencyId,
+		target_asset: OriginalAsset,
+		supply_asset: OriginalAsset,
 		supply_amount: Balance,
 		min_target_amount: Balance,
 	) -> Result<Balance, DispatchError>;
@@ -146,8 +146,8 @@ pub trait DEXManager<AccountId, CurrencyId, Balance> {
 	//TODO: Add function description
 	fn swap_with_exact_target(
 		who: &AccountId,
-		supply_currency_id: CurrencyId,
-		target_currency_id: CurrencyId,
+		supply_asset: OriginalAsset,
+		target_asset: OriginalAsset,
 		max_supply_amount: Balance,
 		target_amount: Balance,
 	) -> Result<Balance, DispatchError>;

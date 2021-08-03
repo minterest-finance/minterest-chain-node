@@ -709,7 +709,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		let (mut user_total_collateral, mut sum_borrow_plus_effects) = (Balance::zero(), Balance::zero());
 
 		// For each tokens the account is in
-		for token in WrapToken::get_wrap_tokens() {
+		for &token in WrapToken::get_wrap_tokens() {
 			let pool_id = token.as_asset();
 			if !T::LiquidityPoolsManager::pool_exists(pool_id) {
 				continue;
@@ -732,7 +732,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 				.ok_or(Error::<T>::NumOverflow)?;
 
 			if T::LiquidityPoolsManager::is_pool_collateral(&account, pool_id) {
-				let user_supply_wrap = T::MultiCurrency::free_balance(token.as_currency(), account);
+				let user_supply_wrap = T::MultiCurrency::free_balance(token.into(), account);
 
 				// user_total_collateral += tokens_to_denom * user_supply_wrap
 				user_total_collateral = sum_with_mult_result(user_total_collateral, user_supply_wrap, tokens_to_denom)
@@ -1008,7 +1008,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 					let wrapped_id = pool_id.as_wrap().ok_or(Error::<T>::PoolNotFound)?;
 
 					// Check if user has / had borrow wrapped tokens in the pool
-					let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id.as_currency(), &who);
+					let user_supply_wrap = T::MultiCurrency::free_balance(wrapped_id.into(), &who);
 					let has_user_supply_wrap_balance = !user_supply_wrap.is_zero();
 					let has_user_borrow_underlying_balance =
 						!T::LiquidityPoolsManager::get_user_borrow_balance(&who, pool_id).is_zero();
@@ -1064,7 +1064,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 				 -> result::Result<(Balance, Balance, Balance, Balance), DispatchError> {
 					Self::accrue_interest_rate(pool_id).ok();
 					let wrapped_id = pool_id.as_wrap().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
-					let pool_supply_wrap = T::MultiCurrency::total_issuance(wrapped_id.as_currency());
+					let pool_supply_wrap = T::MultiCurrency::total_issuance(wrapped_id.into());
 					let pool_supply_underlying = T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id);
 					let pool_data = T::LiquidityPoolsManager::get_pool_data(pool_id);
 					let exchange_rate = T::LiquidityPoolsManager::get_exchange_rate(pool_id)?;
@@ -1142,7 +1142,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			Error::<T>::PoolNotFound
 		);
 		let wrapped_id = pool_id.as_wrap().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
-		let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id.as_currency(), &who);
+		let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id.into(), &who);
 		if user_balance_wrapped_tokens.is_zero() {
 			return Ok(Balance::zero());
 		}

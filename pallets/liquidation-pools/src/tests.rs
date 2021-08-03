@@ -165,12 +165,6 @@ fn set_deviation_threshold_should_work() {
 			TestLiquidationPools::set_deviation_threshold(alice_origin(), DOT, 10),
 			BadOrigin
 		);
-
-		// MDOT is wrong CurrencyId for underlying assets.
-		assert_noop!(
-			TestLiquidationPools::set_deviation_threshold(admin(), MDOT, 10),
-			Error::<Test>::NotValidUnderlyingAssetId
-		);
 	});
 }
 
@@ -210,12 +204,6 @@ fn set_balance_ratio_should_work() {
 			TestLiquidationPools::set_balance_ratio(alice_origin(), DOT, 10),
 			BadOrigin
 		);
-
-		// MDOT is wrong CurrencyId for underlying assets.
-		assert_noop!(
-			TestLiquidationPools::set_balance_ratio(admin(), MDOT, 10),
-			Error::<Test>::NotValidUnderlyingAssetId
-		);
 	});
 }
 
@@ -249,12 +237,6 @@ fn set_max_ideal_balance_should_work() {
 		assert_noop!(
 			TestLiquidationPools::set_max_ideal_balance(alice_origin(), DOT, Some(10u128)),
 			BadOrigin
-		);
-
-		// MDOT is wrong CurrencyId for underlying assets.
-		assert_noop!(
-			TestLiquidationPools::set_max_ideal_balance(admin(), MDOT, Some(10u128)),
-			Error::<Test>::NotValidUnderlyingAssetId
 		);
 	});
 }
@@ -310,7 +292,7 @@ fn calculate_pool_ideal_balance_usd_should_work() {
 fn transfer_to_liquidation_pool_should_work() {
 	ExternalityBuilder::default()
 		.liquidation_pool_balance(DOT, 500_000)
-		.user_balance(ADMIN, DOT, 20_000)
+		.user_balance(ADMIN, DOT.into(), 20_000)
 		.build()
 		.execute_with(|| {
 			let who = ensure_signed(admin());
@@ -331,14 +313,6 @@ fn transfer_to_liquidation_pool_should_work() {
 			assert_noop!(
 				TestLiquidationPools::transfer_to_liquidation_pool(admin(), DOT, 0),
 				Error::<Test>::ZeroBalanceTransaction
-			);
-
-			// Check thet transaction with unsuppurted asset returns error.
-			// Asset: MNT - native asset, underline assets are only allowed
-			// Expected error: NotValidUnderlyingAssetId
-			assert_noop!(
-				TestLiquidationPools::transfer_to_liquidation_pool(admin(), MNT, 20_000),
-				Error::<Test>::NotValidUnderlyingAssetId
 			);
 
 			// Check that attempt to transfer amount bigger that user balance returns error

@@ -87,12 +87,6 @@ fn set_pool_base_rate_should_work() {
 				TestMinterestModel::set_pool_base_rate(bob_origin(), DOT, Rate::from_inner(2)),
 				BadOrigin
 			);
-
-			// MDOT is wrong CurrencyId for underlying assets.
-			assert_noop!(
-				TestMinterestModel::set_pool_base_rate(alice_origin(), MDOT, Rate::from_inner(2)),
-				Error::<TestRuntime>::NotValidUnderlyingAssetId
-			);
 		});
 }
 
@@ -160,12 +154,6 @@ fn set_pool_multiplier_should_work() {
 				TestMinterestModel::set_pool_multiplier(bob_origin(), DOT, Rate::from_inner(2)),
 				BadOrigin
 			);
-
-			// MDOT is wrong CurrencyId for underlying assets.
-			assert_noop!(
-				TestMinterestModel::set_pool_base_rate(alice_origin(), MDOT, Rate::from_inner(2)),
-				Error::<TestRuntime>::NotValidUnderlyingAssetId
-			);
 		});
 }
 
@@ -221,12 +209,6 @@ fn set_pool_jump_multiplier_should_work() {
 				TestMinterestModel::set_pool_jump_multiplier(bob_origin(), DOT, Rate::from_inner(2)),
 				BadOrigin
 			);
-
-			// MDOT is wrong CurrencyId for underlying assets.
-			assert_noop!(
-				TestMinterestModel::set_pool_base_rate(alice_origin(), MDOT, Rate::from_inner(2)),
-				Error::<TestRuntime>::NotValidUnderlyingAssetId
-			);
 		});
 }
 
@@ -258,12 +240,6 @@ fn set_pool_kink_should_work() {
 			assert_noop!(
 				TestMinterestModel::set_pool_kink(bob_origin(), DOT, Rate::saturating_from_rational(8, 10)),
 				BadOrigin
-			);
-
-			// MDOT is wrong CurrencyId for underlying assets.
-			assert_noop!(
-				TestMinterestModel::set_pool_kink(alice_origin(), MDOT, Rate::saturating_from_rational(8, 10)),
-				Error::<TestRuntime>::NotValidUnderlyingAssetId
 			);
 
 			// Parameter `kink` cannot be larger than one.
