@@ -33,7 +33,7 @@
 use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
-use minterest_primitives::{CurrencyId, Rate};
+use minterest_primitives::{OriginalAsset, Rate};
 use pallet_traits::MinterestModelManager;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -138,11 +138,11 @@ pub mod module {
 	#[pallet::storage]
 	#[pallet::getter(fn minterest_model_data_storage)]
 	pub type MinterestModelDataStorage<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyId, MinterestModelData, ValueQuery>;
+		StorageMap<_, Twox64Concat, OriginalAsset, MinterestModelData, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
+		pub minterest_model_params: Vec<(OriginalAsset, MinterestModelData)>,
 		pub _phantom: sp_std::marker::PhantomData<T>,
 	}
 
@@ -161,9 +161,9 @@ pub mod module {
 		fn build(&self) {
 			self.minterest_model_params
 				.iter()
-				.for_each(|(currency_id, minterest_model_data)| {
+				.for_each(|(asset, minterest_model_data)| {
 					MinterestModelDataStorage::<T>::insert(
-						currency_id,
+						asset,
 						MinterestModelData {
 							..*minterest_model_data
 						},
@@ -183,7 +183,7 @@ pub mod module {
 		/// Set JumpMultiplierPerBlock from JumpMultiplierPerYear.
 		///
 		/// Parameters:
-		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `pool_id`: the OriginalAsset of the pool for which the parameter value is being set.
 		/// - `jump_multiplier_rate_per_year`:  new jump multiplier rate per year value. Used to
 		/// calculate and set up multiplier per block.
 		///
@@ -193,15 +193,10 @@ pub mod module {
 		#[transactional]
 		pub fn set_pool_jump_multiplier(
 			origin: OriginFor<T>,
-			pool_id: CurrencyId,
+			pool_id: OriginalAsset,
 			jump_multiplier_rate_per_year: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
-
-			ensure!(
-				pool_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
 
 			// jump_multiplier_per_block = jump_multiplier_rate_per_year / blocks_per_year
 			let new_jump_multiplier_per_block = jump_multiplier_rate_per_year
@@ -221,7 +216,7 @@ pub mod module {
 		/// Set BaseRatePerBlock from BaseRatePerYear.
 		///
 		/// Parameters:
-		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `pool_id`: the OriginalAsset of the pool for which the parameter value is being set.
 		/// - `base_rate_per_year`: new base rate per year value. Used to calculate and set up base
 		/// rate per block.
 		///
@@ -231,15 +226,10 @@ pub mod module {
 		#[transactional]
 		pub fn set_pool_base_rate(
 			origin: OriginFor<T>,
-			pool_id: CurrencyId,
+			pool_id: OriginalAsset,
 			base_rate_per_year: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
-
-			ensure!(
-				pool_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
 
 			let new_base_rate_per_block = base_rate_per_year
 				.checked_div(&Rate::saturating_from_integer(T::BlocksPerYear::get()))
@@ -266,7 +256,7 @@ pub mod module {
 		/// Set MultiplierPerBlock from MultiplierPerYear.
 		///
 		/// Parameters:
-		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `pool_id`: the OriginalAsset of the pool for which the parameter value is being set.
 		/// - `multiplier_per_year`: new multiplier per year value. Used to calculate and set up
 		/// multiplier per block.
 		///
@@ -276,15 +266,10 @@ pub mod module {
 		#[transactional]
 		pub fn set_pool_multiplier(
 			origin: OriginFor<T>,
-			pool_id: CurrencyId,
+			pool_id: OriginalAsset,
 			multiplier_per_year: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
-
-			ensure!(
-				pool_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
 
 			let new_multiplier_per_block = multiplier_per_year
 				.checked_div(&Rate::saturating_from_integer(T::BlocksPerYear::get()))
@@ -308,19 +293,14 @@ pub mod module {
 		/// Set parameter `kink`.
 		///
 		/// Parameters:
-		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `pool_id`: the OriginalAsset of the pool for which the parameter value is being set.
 		/// - `kink`: new kink value, must be less or equal to 1.
 		///
 		/// The dispatch origin of this call must be 'ModelUpdateOrigin'.
 		#[pallet::weight(0)]
 		#[transactional]
-		pub fn set_pool_kink(origin: OriginFor<T>, pool_id: CurrencyId, kink: Rate) -> DispatchResultWithPostInfo {
+		pub fn set_pool_kink(origin: OriginFor<T>, pool_id: OriginalAsset, kink: Rate) -> DispatchResultWithPostInfo {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
-
-			ensure!(
-				pool_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
 
 			ensure!(Self::is_valid_kink(kink), Error::<T>::KinkCannotBeMoreThanOne);
 
@@ -347,27 +327,27 @@ impl<T: Config> MinterestModelManager for Pallet<T> {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for MinterestModelDataStorage
 	fn create_pool(
-		currency_id: CurrencyId,
+		asset: OriginalAsset,
 		kink: Rate,
 		base_rate_per_block: Rate,
 		multiplier_per_block: Rate,
 		jump_multiplier_per_block: Rate,
 	) -> DispatchResult {
 		ensure!(
-			!MinterestModelDataStorage::<T>::contains_key(currency_id),
+			!MinterestModelDataStorage::<T>::contains_key(asset),
 			Error::<T>::PoolAlreadyCreated
 		);
 		ensure!(Self::is_valid_kink(kink), Error::<T>::KinkCannotBeMoreThanOne);
 		ensure!(
 			Self::is_valid_base_rate_and_multiplier(
 				multiplier_per_block,
-				Self::minterest_model_data_storage(currency_id).base_rate_per_block
+				Self::minterest_model_data_storage(asset).base_rate_per_block
 			),
 			Error::<T>::MultiplierPerBlockCannotBeZero
 		);
 
 		MinterestModelDataStorage::<T>::insert(
-			currency_id,
+			asset,
 			MinterestModelData {
 				kink,
 				base_rate_per_block,
@@ -381,17 +361,17 @@ impl<T: Config> MinterestModelManager for Pallet<T> {
 	/// Calculates the current borrow rate per block. To perform the calculation, this function
 	/// takes the main mathematical parameters from the storage. From outside, it only takes
 	/// the value of the parameter Utilization Rate.
-	/// - `underlying_asset`: asset ID for which the borrow interest rate is calculated.
+	/// - `pool_id`: asset ID for which the borrow interest rate is calculated.
 	/// - `utilization_rate`: current Utilization rate value.
 	///
 	/// returns `borrow_interest_rate`.
-	fn calculate_pool_borrow_interest_rate(underlying_asset: CurrencyId, utilization_rate: Rate) -> RateResult {
+	fn calculate_pool_borrow_interest_rate(pool_id: OriginalAsset, utilization_rate: Rate) -> RateResult {
 		let MinterestModelData {
 			kink,
 			base_rate_per_block,
 			multiplier_per_block,
 			jump_multiplier_per_block,
-		} = Self::minterest_model_data_storage(underlying_asset);
+		} = Self::minterest_model_data_storage(pool_id);
 
 		// if utilization_rate > kink:
 		// normal_rate = kink * multiplier_per_block + base_rate_per_block

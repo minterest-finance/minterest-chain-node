@@ -17,15 +17,15 @@
       "CurrencyType": {
         "_enum": [
           "Native",
-          "UnderlyingAsset",
-          "WrappedToken"
+          "OriginalAsset",
+          "WrapToken"
         ]
       },
       "CurrencyId": {
         "_enum": {
           "Native": "TokenSymbol",
-          "UnderlyingAsset": "TokenSymbol",
-          "WrappedToken": "TokenSymbol"
+          "OriginalAsset": "TokenSymbol",
+          "WrapToken": "TokenSymbol"
         }
       },
       "Operation": {

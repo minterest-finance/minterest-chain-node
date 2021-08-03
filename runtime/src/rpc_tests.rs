@@ -1,5 +1,5 @@
 use crate::{
-	AccountId, Balance, Block, Controller, Currencies, EnabledUnderlyingAssetsIds, LiquidationPools, LiquidityPools,
+	AccountId, Balance, Block, Controller, Currencies, LiquidationPools, LiquidityPools,
 	MinterestCouncilMembership, MinterestOracle, MinterestProtocol, MntToken, Prices, Rate, Runtime, System, UserData,
 	Whitelist, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 };
@@ -95,7 +95,7 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
+	pub fn pool_initial(mut self, pool_id: OriginalAsset) -> Self {
 		self.pools.push((
 			pool_id,
 			PoolData {
@@ -318,7 +318,7 @@ impl ExtBuilder {
 	}
 }
 
-fn pool_balance(pool_id: CurrencyId) -> Balance {
+fn pool_balance(pool_id: OriginalAsset) -> Balance {
 	Currencies::free_balance(pool_id, &LiquidityPools::pools_account_id())
 }
 
@@ -334,7 +334,7 @@ fn liquidity_pool_state_rpc(currency_id: CurrencyId) -> Option<PoolState> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::liquidity_pool_state(currency_id)
 }
 
-fn get_pool_utilization_rate_rpc(pool_id: CurrencyId) -> Option<Rate> {
+fn get_pool_utilization_rate_rpc(pool_id: OriginalAsset) -> Option<Rate> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_pool_utilization_rate(pool_id)
 }
 
@@ -360,11 +360,11 @@ fn get_user_total_collateral_rpc(account_id: AccountId) -> Balance {
 		.amount
 }
 
-fn get_user_borrow_per_asset_rpc(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
-	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_borrow_per_asset(account_id, underlying_asset_id)
+fn get_user_borrow_per_asset_rpc(account_id: AccountId, pool_id: OriginalAsset) -> Option<BalanceInfo> {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_borrow_per_asset(account_id, pool_id)
 }
 
-fn get_user_underlying_balance_per_asset_rpc(account_id: AccountId, pool_id: CurrencyId) -> Option<BalanceInfo> {
+fn get_user_underlying_balance_per_asset_rpc(account_id: AccountId, pool_id: OriginalAsset) -> Option<BalanceInfo> {
 	<Runtime as ControllerRuntimeApi<Block, AccountId>>::get_user_underlying_balance_per_asset(account_id, pool_id)
 }
 
@@ -374,8 +374,8 @@ fn get_user_total_unclaimed_mnt_balance_rpc(account_id: AccountId) -> Balance {
 		.amount
 }
 
-fn pool_exists_rpc(underlying_asset_id: CurrencyId) -> bool {
-	<Runtime as ControllerRuntimeApi<Block, AccountId>>::pool_exists(underlying_asset_id)
+fn pool_exists_rpc(pool_id: OriginalAsset) -> bool {
+	<Runtime as ControllerRuntimeApi<Block, AccountId>>::pool_exists(pool_id)
 }
 
 fn dollars(amount: u128) -> u128 {
@@ -403,9 +403,9 @@ fn origin_root() -> <Runtime as frame_system::Config>::Origin {
 }
 
 fn set_oracle_price_for_all_pools(price: u128) -> DispatchResult {
-	let prices: Vec<(CurrencyId, Price)> = EnabledUnderlyingAssetsIds::get()
+	let prices: Vec<(OriginalAsset, Price)> = OriginalAsset::get_original_assets()
 		.into_iter()
-		.map(|pool_id| (pool_id, Price::saturating_from_integer(price)))
+		.map(|&pool_id| (pool_id, Price::saturating_from_integer(price)))
 		.collect();
 	MinterestOracle::on_finalize(System::block_number());
 	assert_ok!(MinterestOracle::feed_values(origin_of(ORACLE1::get().clone()), prices));
@@ -418,23 +418,23 @@ fn set_oracle_prices(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
 	Ok(())
 }
 
-fn get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
+fn get_all_locked_prices() -> Vec<(OriginalAsset, Option<Price>)> {
 	<Runtime as PricesRuntimeApi<Block>>::get_all_locked_prices()
 }
 
-fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
+fn get_all_freshest_prices() -> Vec<(OriginalAsset, Option<Price>)> {
 	<Runtime as PricesRuntimeApi<Block>>::get_all_freshest_prices()
 }
 
-fn lock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
+fn lock_price(currency_id: OriginalAsset) -> DispatchResultWithPostInfo {
 	Prices::lock_price(origin_root(), currency_id)
 }
 
-fn unlock_price(currency_id: CurrencyId) -> DispatchResultWithPostInfo {
+fn unlock_price(currency_id: OriginalAsset) -> DispatchResultWithPostInfo {
 	Prices::unlock_price(origin_root(), currency_id)
 }
 
-fn get_pool_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> (Rate, Rate) {
+fn get_pool_mnt_borrow_and_supply_rates(pool_id: OriginalAsset) -> (Rate, Rate) {
 	<Runtime as MntTokenRuntimeApi<Block, AccountId>>::get_pool_mnt_borrow_and_supply_rates(pool_id).unwrap()
 }
 
@@ -1446,7 +1446,7 @@ fn get_all_locked_prices_rpc_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(set_oracle_price_for_all_pools(10_000));
 
-		CurrencyId::get_enabled_tokens_in_protocol(minterest_primitives::currency::CurrencyType::UnderlyingAsset)
+		OriginalAsset::get_original_assets()
 			.into_iter()
 			.for_each(|pool_id| {
 				assert_ok!(Prices::lock_price(origin_root(), pool_id));

@@ -4,7 +4,7 @@ use crate as liquidation_pools;
 use frame_support::{ord_parameter_types, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
 use minterest_primitives::Price;
-pub use minterest_primitives::{currency::CurrencyType::WrappedToken, Balance, CurrencyId, Rate};
+pub use minterest_primitives::{currency::CurrencyType::WrapToken, Balance, CurrencyId, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PricesManager;
 use sp_core::H256;
@@ -52,8 +52,6 @@ parameter_types! {
 	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"lqdy/min");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
 thread_local! {
@@ -76,14 +74,14 @@ impl MockPriceSource {
 	}
 }
 
-impl PricesManager<CurrencyId> for MockPriceSource {
-	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
-		UNDERLYING_PRICE.with(|v| v.borrow().get(&currency_id).copied())
+impl PricesManager<OriginalAsset> for MockPriceSource {
+	fn get_underlying_price(asset: OriginalAsset) -> Option<Price> {
+		UNDERLYING_PRICE.with(|v| v.borrow().get(&asset).copied())
 	}
 
-	fn lock_price(_currency_id: CurrencyId) {}
+	fn lock_price(_asset: OriginalAsset) {}
 
-	fn unlock_price(_currency_id: CurrencyId) {}
+	fn unlock_price(_asset: OriginalAsset) {}
 }
 
 parameter_types! {
@@ -204,7 +202,7 @@ impl ExternalityBuilder {
 		self
 	}
 
-	pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
+	pub fn pool_initial(mut self, pool_id: OriginalAsset) -> Self {
 		self.liquidity_pools.push((
 			pool_id,
 			PoolData {
@@ -269,6 +267,6 @@ pub(crate) fn set_prices_for_assets(prices: Vec<(CurrencyId, Price)>) {
 	});
 }
 
-pub(crate) fn liquidation_pool_balance(pool_id: CurrencyId) -> Balance {
+pub(crate) fn liquidation_pool_balance(pool_id: OriginalAsset) -> Balance {
 	Currencies::free_balance(pool_id, &TestLiquidationPools::pools_account_id())
 }

@@ -12,7 +12,7 @@
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
 use frame_support::{pallet_prelude::*, transactional};
-use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, CurrencyId, Price};
+use minterest_primitives::{OriginalAsset, Price};
 use orml_traits::{DataFeeder, DataProvider};
 use pallet_traits::PricesManager;
 use sp_std::vec::Vec;
@@ -39,7 +39,7 @@ pub mod module {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// The data source, such as Oracle.
-		type Source: DataProvider<CurrencyId, Price> + DataFeeder<CurrencyId, Price, Self::AccountId>;
+		type Source: DataProvider<OriginalAsset, Price> + DataFeeder<OriginalAsset, Price, Self::AccountId>;
 
 		/// The origin which may lock and unlock prices feed to system.
 		type LockOrigin: EnsureOrigin<Self::Origin>;
@@ -58,20 +58,20 @@ pub mod module {
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Lock price. \[currency_id, locked_price\]
-		LockPrice(CurrencyId, Price),
+		LockPrice(OriginalAsset, Price),
 		/// Unlock price. \[currency_id\]
-		UnlockPrice(CurrencyId),
+		UnlockPrice(OriginalAsset),
 	}
 
 	/// mapping from currency id to it's locked(approved by Oracles pallet) price in USD.
 	#[pallet::storage]
 	#[pallet::getter(fn locked_price_storage)]
-	pub type LockedPriceStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Price, OptionQuery>;
+	pub type LockedPriceStorage<T: Config> = StorageMap<_, Twox64Concat, OriginalAsset, Price, OptionQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		#[allow(clippy::type_complexity)]
-		pub locked_price: Vec<(CurrencyId, Price)>,
+		pub locked_price: Vec<(OriginalAsset, Price)>,
 		pub _phantom: PhantomData<T>,
 	}
 
@@ -110,15 +110,10 @@ pub mod module {
 		/// - `currency_id`: currency type.
 		#[pallet::weight((T::WeightInfo::lock_price(), DispatchClass::Operational))]
 		#[transactional]
-		pub fn lock_price(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
+		pub fn lock_price(origin: OriginFor<T>, asset: OriginalAsset) -> DispatchResultWithPostInfo {
 			T::LockOrigin::ensure_origin(origin)?;
 
-			ensure!(
-				currency_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
-
-			<Pallet<T> as PricesManager<CurrencyId>>::lock_price(currency_id);
+			<Pallet<T> as PricesManager<OriginalAsset>>::lock_price(asset);
 			Ok(().into())
 		}
 
@@ -130,49 +125,44 @@ pub mod module {
 		/// - `currency_id`: currency type.
 		#[pallet::weight((T::WeightInfo::unlock_price(), DispatchClass::Operational))]
 		#[transactional]
-		pub fn unlock_price(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResultWithPostInfo {
+		pub fn unlock_price(origin: OriginFor<T>, asset: OriginalAsset) -> DispatchResultWithPostInfo {
 			T::LockOrigin::ensure_origin(origin)?;
 
-			ensure!(
-				currency_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
-
-			<Pallet<T> as PricesManager<CurrencyId>>::unlock_price(currency_id);
+			<Pallet<T> as PricesManager<OriginalAsset>>::unlock_price(asset);
 			Ok(().into())
 		}
 	}
 }
 
-impl<T: Config> PricesManager<CurrencyId> for Pallet<T> {
+impl<T: Config> PricesManager<OriginalAsset> for Pallet<T> {
 	/// Get price underlying token in USD.
-	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
+	fn get_underlying_price(asset: OriginalAsset) -> Option<Price> {
 		// if locked price exists, return it, otherwise return latest price from oracle:
-		Self::locked_price_storage(currency_id).or_else(|| T::Source::get(&currency_id))
+		Self::locked_price_storage(asset).or_else(|| T::Source::get(&asset))
 	}
 
 	/// Locks price when get valid price from source.
-	fn lock_price(currency_id: CurrencyId) {
+	fn lock_price(asset: OriginalAsset) {
 		// lock price when get valid price from source
-		if let Some(val) = T::Source::get(&currency_id) {
-			LockedPriceStorage::<T>::insert(currency_id, val);
-			<Pallet<T>>::deposit_event(Event::LockPrice(currency_id, val));
+		if let Some(val) = T::Source::get(&asset) {
+			LockedPriceStorage::<T>::insert(asset, val);
+			<Pallet<T>>::deposit_event(Event::LockPrice(asset, val));
 		}
 	}
 
 	/// Unlocks price when get valid price from source.
-	fn unlock_price(currency_id: CurrencyId) {
-		LockedPriceStorage::<T>::remove(currency_id);
-		<Pallet<T>>::deposit_event(Event::UnlockPrice(currency_id));
+	fn unlock_price(asset: OriginalAsset) {
+		LockedPriceStorage::<T>::remove(asset);
+		<Pallet<T>>::deposit_event(Event::UnlockPrice(asset));
 	}
 }
 
 /// RPC calls
 impl<T: Config> Pallet<T> {
-	pub fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
-		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-			.into_iter()
-			.map(|currency_id| (currency_id, T::Source::get(&currency_id)))
+	pub fn get_all_freshest_prices() -> Vec<(OriginalAsset, Option<Price>)> {
+		OriginalAsset::get_original_assets()
+			.iter()
+			.map(|asset| (*asset, T::Source::get(asset)))
 			.collect()
 	}
 }

@@ -3,7 +3,6 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use codec::{Decode, Encode};
-pub use currency::CurrencyId;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -11,12 +10,14 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
 	FixedI128, FixedU128, MultiSignature, RuntimeDebug,
 };
-pub use vesting::{VestingBucket, VestingScheduleJson};
 
 pub mod arithmetic;
 pub mod constants;
 pub mod currency;
 pub mod vesting;
+
+pub use currency::{TokenSymbol, OriginalAsset, WrapToken, CurrencyId};
+pub use vesting::{VestingBucket, VestingScheduleJson};
 
 /// An index to a block.
 pub type BlockNumber = u32;

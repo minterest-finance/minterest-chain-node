@@ -2,7 +2,7 @@ use super::utils::{
 	enable_is_collateral_mock, enable_whitelist_mode_and_add_member, prepare_for_mnt_distribution, set_balance, SEED,
 };
 use crate::{
-	AccountId, Balance, Currencies, EnabledUnderlyingAssetsIds, EnabledWrappedTokensId, LiquidityPools,
+	AccountId, Balance, Currencies, EnabledWrappedTokensId, LiquidityPools,
 	LiquidityPoolsPalletId, MinterestProtocol, MntTokenPalletId, Origin, Rate, RiskManager, Runtime, System, Whitelist,
 	BTC, DOLLARS, DOT, ETH, KSM, MBTC, MDOT, MNT,
 };
@@ -42,13 +42,13 @@ fn hypothetical_liquidity_setup(borrower: &AccountId, lender: &AccountId) -> Res
 	set_balance(BTC, &LiquidityPoolsPalletId::get().into_account(), 20_000 * DOLLARS)?;
 
 	// enable pools as collateral
-	EnabledUnderlyingAssetsIds::get()
+	OriginalAsset::get_original_assets()
 		.into_iter()
-		.try_for_each(|asset_id| -> Result<(), &'static str> {
-			enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), asset_id)?;
+		.try_for_each(|&asset| -> Result<(), &'static str> {
+			enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), asset)?;
 			// set borrow params
-			LiquidityPools::set_pool_borrow_underlying(asset_id, 10_000 * DOLLARS);
-			LiquidityPools::set_user_borrow_and_interest_index(borrower, asset_id, 10_000 * DOLLARS, Rate::one());
+			LiquidityPools::set_pool_borrow_underlying(asset, 10_000 * DOLLARS);
+			LiquidityPools::set_user_borrow_and_interest_index(borrower, asset, 10_000 * DOLLARS, Rate::one());
 			Ok(())
 		})?;
 	Ok(())
@@ -289,9 +289,9 @@ runtime_benchmarks! {
 			1_000_000 * DOLLARS,
 		)?;
 
-		EnabledUnderlyingAssetsIds::get()
+		OriginalAsset::get_original_assets()
 			.into_iter()
-			.try_for_each(|pool_id| -> Result<(), &'static str> {
+			.try_for_each(|&pool_id| -> Result<(), &'static str> {
 				LiquidityPools::set_pool_data(pool_id, PoolData {
 					borrowed: Balance::zero(),
 					borrow_index: Rate::one(),
@@ -306,9 +306,9 @@ runtime_benchmarks! {
 
 		System::set_block_number(50);
 
-		EnabledUnderlyingAssetsIds::get()
+		OriginalAsset::get_original_assets()
 			.into_iter()
-			.try_for_each(|pool_id| -> Result<(), &'static str> {
+			.try_for_each(|&pool_id| -> Result<(), &'static str> {
 				set_balance(pool_id, &borrower, 100_000 * DOLLARS)?;
 				MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), pool_id, 100_000 * DOLLARS)?;
 				MinterestProtocol::enable_is_collateral(Origin::signed(borrower.clone()).into(), pool_id)?;

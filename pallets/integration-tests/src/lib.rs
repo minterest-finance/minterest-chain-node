@@ -18,7 +18,7 @@ mod tests {
 	use frame_system::{offchain::SendTransactionTypes, EnsureSignedBy};
 	use liquidity_pools::{PoolData, PoolUserData};
 	use minterest_model::MinterestModelData;
-	pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
+	pub use minterest_primitives::currency::CurrencyType::{OriginalAsset, WrapToken};
 	use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 	use minterest_protocol::{Error as MinterestProtocolError, PoolInitData};
 	use orml_traits::{parameter_type_with_key, MultiCurrency};
@@ -79,8 +79,6 @@ mod tests {
 		pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
 		pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
 		pub InitialExchangeRate: Rate = Rate::one();
-		pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
-		pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 	}
 
 	mock_impl_system_config!(Test);
@@ -98,7 +96,7 @@ mod tests {
 	mock_impl_whitelist_module_config!(Test, ZeroAdmin);
 
 	thread_local! {
-		static UNDERLYING_PRICE: RefCell<HashMap<CurrencyId, Price>> = RefCell::new(
+		static UNDERLYING_PRICE: RefCell<HashMap<OriginalAsset, Price>> = RefCell::new(
 			[
 				(DOT, Price::one()),
 				(ETH, Price::one()),
@@ -112,19 +110,19 @@ mod tests {
 
 	pub struct MockPriceSource;
 	impl MockPriceSource {
-		pub fn set_underlying_price(currency_id: CurrencyId, price: Price) {
-			UNDERLYING_PRICE.with(|v| v.borrow_mut().insert(currency_id, price));
+		pub fn set_underlying_price(asset: OriginalAsset, price: Price) {
+			UNDERLYING_PRICE.with(|v| v.borrow_mut().insert(asset, price));
 		}
 	}
 
-	impl PricesManager<CurrencyId> for MockPriceSource {
-		fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
-			UNDERLYING_PRICE.with(|v| v.borrow().get(&currency_id).copied())
+	impl PricesManager<OriginalAsset> for MockPriceSource {
+		fn get_underlying_price(asset: OriginalAsset) -> Option<Price> {
+			UNDERLYING_PRICE.with(|v| v.borrow().get(&asset).copied())
 		}
 
-		fn lock_price(_currency_id: CurrencyId) {}
+		fn lock_price(_asset: OriginalAsset) {}
 
-		fn unlock_price(_currency_id: CurrencyId) {}
+		fn unlock_price(_asset: OriginalAsset) {}
 	}
 
 	thread_local! {
@@ -263,7 +261,7 @@ mod tests {
 			self
 		}
 
-		pub fn pool_borrow_underlying(mut self, pool_id: CurrencyId, borrowed: Balance) -> Self {
+		pub fn pool_borrow_underlying(mut self, pool_id: OriginalAsset, borrowed: Balance) -> Self {
 			self.pools.push((
 				pool_id,
 				PoolData {
@@ -277,7 +275,7 @@ mod tests {
 
 		pub fn pool_user_data(
 			mut self,
-			pool_id: CurrencyId,
+			pool_id: OriginalAsset,
 			user: AccountId,
 			borrowed: Balance,
 			interest_index: Rate,
@@ -295,7 +293,7 @@ mod tests {
 			self
 		}
 
-		pub fn pool_initial(mut self, pool_id: CurrencyId) -> Self {
+		pub fn pool_initial(mut self, pool_id: OriginalAsset) -> Self {
 			self.pools.push((
 				pool_id,
 				PoolData {

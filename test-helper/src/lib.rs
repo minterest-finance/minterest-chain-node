@@ -11,17 +11,17 @@ pub use users_mock::*;
 
 pub mod currency_mock {
 	use frame_support::sp_runtime::FixedPointNumber;
-	use minterest_primitives::{currency::TokenSymbol, Balance, CurrencyId, Price};
+	use minterest_primitives::{currency::TokenSymbol, Balance, OriginalAsset, CurrencyId, Price};
 
-	pub const MNT: CurrencyId = CurrencyId::Native(TokenSymbol::MNT);
-	pub const DOT: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::DOT);
-	pub const MDOT: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MDOT);
-	pub const KSM: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::KSM);
-	pub const MKSM: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MKSM);
-	pub const BTC: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::BTC);
-	pub const MBTC: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MBTC);
-	pub const ETH: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::ETH);
-	pub const METH: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::METH);
+	pub const MNT: CurrencyId = CurrencyId::Native;
+	pub const DOT: CurrencyId = OriginalAsset(TokenSymbol::DOT).as_currency();
+	pub const MDOT: CurrencyId = CurrencyId::WrapToken(TokenSymbol::MDOT);
+	pub const KSM: CurrencyId = CurrencyId::OriginalAsset(TokenSymbol::KSM);
+	pub const MKSM: CurrencyId = CurrencyId::WrapToken(TokenSymbol::MKSM);
+	pub const BTC: CurrencyId = CurrencyId::OriginalAsset(TokenSymbol::BTC);
+	pub const MBTC: CurrencyId = CurrencyId::WrapToken(TokenSymbol::MBTC);
+	pub const ETH: CurrencyId = CurrencyId::OriginalAsset(TokenSymbol::ETH);
+	pub const METH: CurrencyId = CurrencyId::WrapToken(TokenSymbol::METH);
 
 	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 	pub fn dollars(amount: u128) -> u128 {
@@ -152,8 +152,6 @@ macro_rules! mock_impl_liquidity_pools_config {
 			type PalletId = LiquidityPoolsPalletId;
 			type LiquidityPoolAccountId = LiquidityPoolAccountId;
 			type InitialExchangeRate = InitialExchangeRate;
-			type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
-			type EnabledWrappedTokensId = EnabledWrappedTokensId;
 		}
 	};
 }

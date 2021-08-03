@@ -24,7 +24,7 @@ use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 	pallet_prelude::*,
 };
-use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, currency::*, CurrencyId, OffchainErr, Price};
+use minterest_primitives::{OriginalAsset, currency::*, OffchainErr, Price};
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData, RoundId};
 use pallet_traits::PricesManager;
 use sp_runtime::traits::Zero;
@@ -155,8 +155,8 @@ impl<T: Config> Pallet<T> {
 	// This can happen if oracle hasn't enough time to submit all prices.
 	fn get_min_round_id() -> Result<RoundId, OffchainErr> {
 		let mut min_round_id: RoundId = RoundId::MAX;
-		for currency in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset) {
-			let feed_id = Self::get_feed_id(currency).ok_or(OffchainErr::ChainlinkFeedNotExists)?;
+		for asset in OriginalAsset::get_original_assets() {
+			let feed_id = Self::get_feed_id(*asset).ok_or(OffchainErr::ChainlinkFeedNotExists)?;
 			let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id)
 				.ok_or(OffchainErr::FailReceivingOraclePrice)?
 				.latest_round();
@@ -167,11 +167,11 @@ impl<T: Config> Pallet<T> {
 
 	// Print prices to node debug log
 	fn print_prices() {
-		for currency in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset) {
-			if let Some(price) = Self::get_underlying_price(currency) {
-				log::debug!("{:?} price is {:?}", currency, price);
+		for asset in OriginalAsset::get_original_assets() {
+			if let Some(price) = Self::get_underlying_price(*asset) {
+				log::debug!("{:?} price is {:?}", asset, price);
 			} else {
-				log::warn!("Can't receive price for {:?}", currency);
+				log::warn!("Can't receive price for {:?}", asset);
 			}
 		}
 	}
@@ -201,8 +201,8 @@ impl<T: Config> Pallet<T> {
 
 	// TODO This is temporary function. We need tom move this function as method to
 	// primitives/src/currency.rs. Also, add distingiush between chainlink provider and minterest
-	fn convert_to_description(currency_id: CurrencyId) -> &'static [u8] {
-		match currency_id {
+	fn convert_to_description(asset: OriginalAsset) -> &'static [u8] {
+		match asset {
 			ETH => b"MIN-ETH",
 			DOT => b"MIN-DOT",
 			KSM => b"MIN-KSM",
@@ -213,22 +213,22 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Looks for appropriate feed config with description and returns FeedId
-	pub fn get_feed_id(currency_id: CurrencyId) -> Option<T::FeedId> {
+	pub fn get_feed_id(asset: OriginalAsset) -> Option<T::FeedId> {
 		Some(
 			<pallet_chainlink_feed::Feeds<T> as IterableStorageMap<
 				T::FeedId,
 				pallet_chainlink_feed::FeedConfigOf<T>,
 			>>::iter()
-			.find(|(_, v)| v.description == Self::convert_to_description(currency_id))?
+			.find(|(_, v)| v.description == Self::convert_to_description(asset))?
 			.0,
 		)
 	}
 }
 
-impl<T: Config> PricesManager<CurrencyId> for Pallet<T> {
-	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
+impl<T: Config> PricesManager<OriginalAsset> for Pallet<T> {
+	fn get_underlying_price(asset: OriginalAsset) -> Option<Price> {
 		// TODO check is feeding enabled
-		let feed_id = Self::get_feed_id(currency_id)?;
+		let feed_id = Self::get_feed_id(asset)?;
 		let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id)?;
 		// TODO handle updated_at
 		let RoundData { answer, .. } = feed_result.latest_data();
@@ -243,10 +243,10 @@ impl<T: Config> PricesManager<CurrencyId> for Pallet<T> {
 	}
 
 	// TODO These function will be removed from trait
-	fn lock_price(_currency_id: CurrencyId) {
+	fn lock_price(_asset: OriginalAsset) {
 		unimplemented!()
 	}
-	fn unlock_price(_currency_id: CurrencyId) {
+	fn unlock_price(_asset: OriginalAsset) {
 		unimplemented!()
 	}
 }

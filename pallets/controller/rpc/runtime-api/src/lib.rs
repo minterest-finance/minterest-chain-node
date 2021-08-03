@@ -11,7 +11,7 @@
 #![allow(clippy::unnecessary_mut_passed)]
 
 use codec::{Codec, Decode, Encode};
-use minterest_primitives::{Amount, Balance, CurrencyId, Interest, Rate};
+use minterest_primitives::{Amount, Balance, OriginalAsset, Interest, Rate};
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
 
@@ -114,9 +114,9 @@ sp_api::decl_runtime_apis! {
 
 		fn get_protocol_total_values() -> Option<ProtocolTotalValue>;
 
-		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState>;
+		fn liquidity_pool_state(pool_id: OriginalAsset) -> Option<PoolState>;
 
-		fn get_pool_utilization_rate(pool_id: CurrencyId) -> Option<Rate>;
+		fn get_pool_utilization_rate(pool_id: OriginalAsset) -> Option<Rate>;
 
 		fn get_user_total_supply_and_borrow_balance_in_usd(account_id: AccountId) -> Option<UserPoolBalanceData>;
 
@@ -128,15 +128,15 @@ sp_api::decl_runtime_apis! {
 
 		fn get_user_borrow_per_asset(
 			account_id: AccountId,
-			underlying_asset_id: CurrencyId,
+			pool_id: OriginalAsset,
 		) -> Option<BalanceInfo>;
 
 		fn get_user_underlying_balance_per_asset(
 			account_id: AccountId,
-			pool_id: CurrencyId,
+			pool_id: OriginalAsset,
 		) -> Option<BalanceInfo>;
 
-		fn pool_exists(underlying_asset_id: CurrencyId) -> bool;
+		fn pool_exists(pool_id: OriginalAsset) -> bool;
 
 		fn get_user_total_supply_borrow_and_net_apy(account_id: AccountId) -> Option<(Interest, Interest, Interest)>;
 

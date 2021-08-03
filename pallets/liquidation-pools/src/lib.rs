@@ -18,7 +18,7 @@ use frame_system::{
 };
 use liquidity_pools::PoolData;
 use minterest_primitives::{
-	arithmetic::sum_with_mult_result, currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, OffchainErr, Rate,
+	arithmetic::sum_with_mult_result, OriginalAsset, Balance, CurrencyId, OffchainErr, Rate,
 };
 pub use module::*;
 use orml_traits::MultiCurrency;
@@ -88,7 +88,7 @@ pub mod module {
 		type LiquidationPoolAccountId: Get<Self::AccountId>;
 
 		/// The price source of currencies
-		type PriceSource: PricesManager<CurrencyId>;
+		type PriceSource: PricesManager<OriginalAsset>;
 
 		/// The basic liquidity pools manager.
 		type LiquidityPoolsManager: LiquidityPoolStorageProvider<Self::AccountId, PoolData>
@@ -140,14 +140,14 @@ pub mod module {
 		/// Liquidation pools are balanced
 		LiquidationPoolsBalanced,
 		///  Deviation Threshold has been successfully changed: \[pool_id, new_threshold_value\]
-		DeviationThresholdChanged(CurrencyId, Rate),
+		DeviationThresholdChanged(OriginalAsset, Rate),
 		///  Balance ratio has been successfully changed: \[pool_id, new_threshold_value\]
-		BalanceRatioChanged(CurrencyId, Rate),
+		BalanceRatioChanged(OriginalAsset, Rate),
 		///  Maximum ideal balance has been successfully changed: \[pool_id, new_threshold_value\]
-		MaxIdealBalanceChanged(CurrencyId, Option<Balance>),
-		///  Successful transfer to liquidation pull: \[underlying_asset_id, underlying_amount,
+		MaxIdealBalanceChanged(OriginalAsset, Option<Balance>),
+		///  Successful transfer to liquidation pull: \[pool_id, underlying_amount,
 		/// who\]
-		TransferToLiquidationPool(CurrencyId, Balance, T::AccountId),
+		TransferToLiquidationPool(OriginalAsset, Balance, T::AccountId),
 		/// Pool balancing state switched: \[new_state\]. QA only!
 		PoolBalacingStateChanged(bool),
 	}
@@ -164,7 +164,7 @@ pub mod module {
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_pool_data_storage)]
 	pub type LiquidationPoolDataStorage<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyId, LiquidationPoolData, ValueQuery>;
+		StorageMap<_, Twox64Concat, OriginalAsset, LiquidationPoolData, ValueQuery>;
 
 	#[pallet::type_value]
 	pub fn BalancingStateDefault<T: Config>() -> bool {
@@ -177,7 +177,7 @@ pub mod module {
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		#[allow(clippy::type_complexity)]
-		pub liquidation_pools: Vec<(CurrencyId, LiquidationPoolData)>,
+		pub liquidation_pools: Vec<(OriginalAsset, LiquidationPoolData)>,
 		pub phantom: PhantomData<T>,
 	}
 
@@ -194,8 +194,8 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.liquidation_pools.iter().for_each(|(currency_id, pool_data)| {
-				LiquidationPoolDataStorage::<T>::insert(currency_id, LiquidationPoolData { ..*pool_data })
+			self.liquidation_pools.iter().for_each(|(asset, pool_data)| {
+				LiquidationPoolDataStorage::<T>::insert(asset, LiquidationPoolData { ..*pool_data })
 			});
 		}
 	}
@@ -246,7 +246,7 @@ pub mod module {
 		/// Set new value of deviation threshold.
 		///
 		/// Parameters:
-		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `pool_id`: the OriginalAsset of the pool for which the parameter value is being set.
 		/// - `threshold`: New value of deviation threshold.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -254,17 +254,13 @@ pub mod module {
 		#[transactional]
 		pub fn set_deviation_threshold(
 			origin: OriginFor<T>,
-			pool_id: CurrencyId,
+			pool_id: OriginalAsset,
 			threshold: u128,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				pool_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				T::LiquidityPoolsManager::pool_exists(pool_id),
 				Error::<T>::PoolNotFound
 			);
 
@@ -285,7 +281,7 @@ pub mod module {
 		/// Set new value of balance ratio.
 		///
 		/// Parameters:
-		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `pool_id`: the OriginalAsset of the pool for which the parameter value is being set.
 		/// - `balance_ratio`: New value of balance ratio.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -293,17 +289,13 @@ pub mod module {
 		#[transactional]
 		pub fn set_balance_ratio(
 			origin: OriginFor<T>,
-			pool_id: CurrencyId,
+			pool_id: OriginalAsset,
 			balance_ratio: u128,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				pool_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				T::LiquidityPoolsManager::pool_exists(pool_id),
 				Error::<T>::PoolNotFound
 			);
 
@@ -324,7 +316,7 @@ pub mod module {
 		/// Set new value of maximum ideal balance.
 		///
 		/// Parameters:
-		/// - `pool_id`: the CurrencyId of the pool for which the parameter value is being set.
+		/// - `pool_id`: the OriginalAsset of the pool for which the parameter value is being set.
 		/// - `max_ideal_balance`: New value of maximum ideal balance.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
@@ -332,17 +324,13 @@ pub mod module {
 		#[transactional]
 		pub fn set_max_ideal_balance(
 			origin: OriginFor<T>,
-			pool_id: CurrencyId,
+			pool_id: OriginalAsset,
 			max_ideal_balance_usd: Option<Balance>,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				pool_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&pool_id),
+				T::LiquidityPoolsManager::pool_exists(pool_id),
 				Error::<T>::PoolNotFound
 			);
 
@@ -368,23 +356,23 @@ pub mod module {
 		#[transactional]
 		pub fn balance_liquidation_pools(
 			origin: OriginFor<T>,
-			supply_pool_id: CurrencyId,
-			target_pool_id: CurrencyId,
+			supply_pool_id: OriginalAsset,
+			target_pool_id: OriginalAsset,
 			max_supply_amount_underlying: Balance,
 			target_amount_underlying: Balance,
 		) -> DispatchResultWithPostInfo {
 			let _ = ensure_none(origin)?;
 			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&supply_pool_id)
-					&& T::LiquidityPoolsManager::pool_exists(&target_pool_id),
+				T::LiquidityPoolsManager::pool_exists(supply_pool_id)
+					&& T::LiquidityPoolsManager::pool_exists(target_pool_id),
 				Error::<T>::PoolNotFound
 			);
 
 			let module_id = Self::pools_account_id();
 			T::Dex::swap_with_exact_target(
 				&module_id,
-				supply_pool_id,
-				target_pool_id,
+				supply_pool_id.as_currency(),
+				target_pool_id.as_currency(),
 				max_supply_amount_underlying,
 				target_amount_underlying,
 			)?;
@@ -395,35 +383,31 @@ pub mod module {
 		/// Seed the liquidation pool
 		///
 		/// Parameters:
-		/// - `underlying_asset_id`: currency of transfer
+		/// - `pool_id`: currency of transfer
 		/// - `underlying_amount`: amount to transfer to liquidation pool
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::transfer_to_liquidation_pool())]
 		#[transactional]
 		pub fn transfer_to_liquidation_pool(
 			origin: OriginFor<T>,
-			underlying_asset_id: CurrencyId,
+			pool_id: OriginalAsset,
 			underlying_amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			ensure!(
-				underlying_asset_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(&underlying_asset_id),
+				T::LiquidityPoolsManager::pool_exists(pool_id),
 				Error::<T>::PoolNotFound
 			);
 			ensure!(underlying_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
 			ensure!(
-				underlying_amount <= T::MultiCurrency::free_balance(underlying_asset_id, &who),
+				underlying_amount <= T::MultiCurrency::free_balance(pool_id.as_currency(), &who),
 				Error::<T>::NotEnoughLiquidityAvailable
 			);
 
-			T::MultiCurrency::transfer(underlying_asset_id, &who, &Self::pools_account_id(), underlying_amount)?;
+			T::MultiCurrency::transfer(pool_id.as_currency(), &who, &Self::pools_account_id(), underlying_amount)?;
 
 			Self::deposit_event(Event::TransferToLiquidationPool(
-				underlying_asset_id,
+				pool_id,
 				underlying_amount,
 				who,
 			));
@@ -457,8 +441,8 @@ pub mod module {
 /// Used in the liquidation pools balancing algorithm.
 #[derive(Debug, Clone)]
 struct LiquidationInformation {
-	/// CurrencyId
-	pool_id: CurrencyId,
+	/// OriginalAsset
+	pool_id: OriginalAsset,
 	/// Pool current balance in USD.
 	balance_usd: Balance,
 	/// Pool balance above ideal value (USD).
@@ -470,10 +454,10 @@ struct LiquidationInformation {
 /// Information about the operations required for balancing Liquidation Pools.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Sales {
-	/// Liquidation pool CurrencyId with oversupply.
-	pub supply_pool_id: CurrencyId,
-	/// Liquidation pool CurrencyId with shortfall.
-	pub target_pool_id: CurrencyId,
+	/// Liquidation pool OriginalAsset with oversupply.
+	pub supply_pool_id: OriginalAsset,
+	/// Liquidation pool OriginalAsset with shortfall.
+	pub target_pool_id: OriginalAsset,
 	/// The amount of underlying asset in usd to transfer from the oversupply pool to the shortfall
 	/// pool.
 	pub amount_usd: Balance,
@@ -515,8 +499,8 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn submit_unsigned_tx(
-		supply_pool_id: CurrencyId,
-		target_pool_id: CurrencyId,
+		supply_pool_id: OriginalAsset,
+		target_pool_id: OriginalAsset,
 		max_supply_amount_underlying: Balance,
 		target_amount_underlying: Balance,
 	) {
@@ -529,7 +513,7 @@ impl<T: Config> Pallet<T> {
 		if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
 			log::info!(
 				target: "liquidation-pools offchain worker",
-				"submit unsigned balancing tx for \n CurrencyId {:?} and CurrencyId {:?} \nfailed!",
+				"submit unsigned balancing tx for \n OriginalAsset {:?} and CurrencyId {:?} \nfailed!",
 				supply_pool_id, target_pool_id,
 			);
 		}
@@ -539,22 +523,22 @@ impl<T: Config> Pallet<T> {
 	fn collects_sales_list() -> sp_std::result::Result<Vec<Sales>, DispatchError> {
 		// Collecting information about the current state of liquidation pools.
 		let (mut information_vec, mut sum_oversupply_usd, mut sum_shortfall_usd) =
-			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
-				.iter()
-				.filter(|&underlying_id| T::LiquidityPoolsManager::pool_exists(underlying_id))
+			OriginalAsset::get_original_assets()
+				.into_iter()
+				.filter(|&&pool_id| T::LiquidityPoolsManager::pool_exists(pool_id))
 				.try_fold(
 					(Vec::<LiquidationInformation>::new(), Balance::zero(), Balance::zero()),
 					|(mut current_vec, mut current_sum_oversupply_usd, mut current_sum_shortfall_usd),
-					 pool_id|
+					 &pool_id|
 					 -> sp_std::result::Result<(Vec<LiquidationInformation>, Balance, Balance), DispatchError> {
 						let oracle_price =
-							T::PriceSource::get_underlying_price(*pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
-						let liquidation_pool_supply_underlying = Self::get_pool_available_liquidity(*pool_id);
+							T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+						let liquidation_pool_supply_underlying = Self::get_pool_available_liquidity(pool_id);
 						let liquidation_pool_supply_usd = T::LiquidityPoolsManager::underlying_to_usd(
 							liquidation_pool_supply_underlying,
 							oracle_price,
 						)?;
-						let pool_ideal_balance_usd = Self::calculate_pool_ideal_balance_usd(*pool_id)?;
+						let pool_ideal_balance_usd = Self::calculate_pool_ideal_balance_usd(pool_id)?;
 
 						// If the pool is not balanced:
 						// oversupply_usd = liquidation_pool_balance - pool_ideal_balance_usd
@@ -570,14 +554,14 @@ impl<T: Config> Pallet<T> {
 						};
 
 						current_vec.push(LiquidationInformation {
-							pool_id: *pool_id,
+							pool_id,
 							balance_usd: liquidation_pool_supply_usd,
 							oversupply_usd,
 							shortfall_usd,
 						});
 
 						// Calculate sum_extra and sum_shortfall for all pools.
-						let deviation_threshold = Self::liquidation_pool_data_storage(*pool_id).deviation_threshold;
+						let deviation_threshold = Self::liquidation_pool_data_storage(pool_id).deviation_threshold;
 						// right_border = pool_ideal_balance_usd + pool_ideal_balance_usd * deviation_threshold
 						let right_border =
 							sum_with_mult_result(pool_ideal_balance_usd, pool_ideal_balance_usd, deviation_threshold)
@@ -670,8 +654,8 @@ impl<T: Config> Pallet<T> {
 
 	/// Temporary function
 	fn get_amounts(
-		supply_pool_id: CurrencyId,
-		target_pool_id: CurrencyId,
+		supply_pool_id: OriginalAsset,
+		target_pool_id: OriginalAsset,
 		amount_usd: Balance,
 	) -> sp_std::result::Result<(Balance, Balance), DispatchError> {
 		let supply_oracle_price =
@@ -689,7 +673,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// Returns minimum of (liquidity_pool_balance * balance_ratio * oracle_price) and
 	/// max_ideal_balance_usd
-	fn calculate_pool_ideal_balance_usd(pool_id: CurrencyId) -> BalanceResult {
+	fn calculate_pool_ideal_balance_usd(pool_id: OriginalAsset) -> BalanceResult {
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 		let balance_ratio = Self::liquidation_pool_data_storage(pool_id).balance_ratio;
 		// Liquidation pool ideal balance in USD: liquidity_pool_balance * balance_ratio * oracle_price
@@ -720,18 +704,18 @@ impl<T: Config> PoolsManager<T::AccountId> for Pallet<T> {
 		T::LiquidationPoolsPalletId::get().into_account()
 	}
 	/// Gets current liquidation pool underlying amount.
-	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance {
+	fn get_pool_available_liquidity(pool_id: OriginalAsset) -> Balance {
 		let module_account_id = Self::pools_account_id();
-		T::MultiCurrency::free_balance(pool_id, &module_account_id)
+		T::MultiCurrency::free_balance(pool_id.as_currency(), &module_account_id)
 	}
 }
 
 impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for LiquidationPoolDataStorage
-	fn create_pool(currency_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult {
+	fn create_pool(pool_id: OriginalAsset, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult {
 		ensure!(
-			!LiquidationPoolDataStorage::<T>::contains_key(currency_id),
+			!LiquidationPoolDataStorage::<T>::contains_key(pool_id),
 			Error::<T>::PoolAlreadyCreated
 		);
 		ensure!(
@@ -744,7 +728,7 @@ impl<T: Config> LiquidationPoolsManager<T::AccountId> for Pallet<T> {
 		);
 
 		LiquidationPoolDataStorage::<T>::insert(
-			currency_id,
+			pool_id,
 			LiquidationPoolData {
 				deviation_threshold,
 				balance_ratio,

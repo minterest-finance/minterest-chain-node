@@ -7,7 +7,7 @@ use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{PoolData, PoolUserData};
 use minterest_model::MinterestModelData;
-pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
+pub use minterest_primitives::currency::CurrencyType::{OriginalAsset, WrapToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PricesManager;
@@ -58,8 +58,6 @@ parameter_types! {
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
 	pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
 mock_impl_system_config!(Test);
@@ -77,14 +75,14 @@ mock_impl_whitelist_module_config!(Test, OneAlice);
 mock_impl_risk_manager_config!(Test, OneAlice);
 
 pub struct MockPriceSource;
-impl PricesManager<CurrencyId> for MockPriceSource {
-	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
+impl PricesManager<OriginalAsset> for MockPriceSource {
+	fn get_underlying_price(_asset: OriginalAsset) -> Option<Price> {
 		Some(Price::one())
 	}
 
-	fn lock_price(_currency_id: CurrencyId) {}
+	fn lock_price(_asset: OriginalAsset) {}
 
-	fn unlock_price(_currency_id: CurrencyId) {}
+	fn unlock_price(_asset: OriginalAsset) {}
 }
 
 pub struct ExtBuilder {
@@ -180,7 +178,7 @@ impl ExtBuilder {
 
 	pub fn pool_with_params(
 		mut self,
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		borrowed: Balance,
 		borrow_index: Rate,
 		protocol_interest: Balance,

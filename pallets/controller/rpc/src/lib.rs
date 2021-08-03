@@ -7,7 +7,7 @@ pub use controller_rpc_runtime_api::{
 };
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use minterest_primitives::{CurrencyId, Interest, Rate};
+use minterest_primitives::{OriginalAsset, Interest, Rate};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
@@ -52,7 +52,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// - [`supply_rate`](`PoolState::supply_rate`): Supply Interest Rate.
 	///  The supply rate is derived from the borrow_rate and utilization_rate.
 	#[rpc(name = "controller_liquidityPoolState")]
-	fn liquidity_pool_state(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<PoolState>>;
+	fn liquidity_pool_state(&self, pool_id: OriginalAsset, at: Option<BlockHash>) -> Result<Option<PoolState>>;
 
 	/// Returns utilization rate based on pool parameters calculated for current block.
 	///
@@ -64,7 +64,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// Return:
 	/// - utilization_rate: current utilization rate of a pool.
 	#[rpc(name = "controller_utilizationRate")]
-	fn get_pool_utilization_rate(&self, pool_id: CurrencyId, at: Option<BlockHash>) -> Result<Option<Rate>>;
+	fn get_pool_utilization_rate(&self, pool_id: OriginalAsset, at: Option<BlockHash>) -> Result<Option<Rate>>;
 
 	/// Returns user total supply and user total borrowed balance in usd.
 	///
@@ -129,7 +129,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	/// Parameters:
 	///  - `&self`: Self reference
 	///  - `account_id`: current account id.
-	///  - `underlying_asset_id`: current asset id
+	///  - `pool_id`: current asset id
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
@@ -139,7 +139,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	fn get_user_borrow_per_asset(
 		&self,
 		account_id: AccountId,
-		underlying_asset_id: CurrencyId,
+		pool_id: OriginalAsset,
 		at: Option<BlockHash>,
 	) -> Result<Option<BalanceInfo>>;
 
@@ -159,7 +159,7 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	fn get_user_underlying_balance_per_asset(
 		&self,
 		account_id: AccountId,
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		at: Option<BlockHash>,
 	) -> Result<Option<BalanceInfo>>;
 
@@ -167,13 +167,13 @@ pub trait ControllerRpcApi<BlockHash, AccountId> {
 	///
 	/// Parameters:
 	///  - `&self`: Self reference
-	///  - `underlying_asset_id`: current asset id
+	///  - `pool_id`: current asset id
 	///  - `at`: Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
 	/// - is_created: true / false
 	#[rpc(name = "controller_poolExists")]
-	fn pool_exists(&self, underlying_asset_id: CurrencyId, at: Option<BlockHash>) -> Result<bool>;
+	fn pool_exists(&self, pool_id: OriginalAsset, at: Option<BlockHash>) -> Result<bool>;
 
 	/// Return borrow APY, supply APY and Net APY for current user
 	///
@@ -292,7 +292,7 @@ where
 
 	fn liquidity_pool_state(
 		&self,
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> Result<Option<PoolState>> {
 		let api = self.client.runtime_api();
@@ -308,7 +308,7 @@ where
 
 	fn get_pool_utilization_rate(
 		&self,
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> Result<Option<Rate>> {
 		let api = self.client.runtime_api();
@@ -387,14 +387,14 @@ where
 	fn get_user_borrow_per_asset(
 		&self,
 		account_id: AccountId,
-		underlying_asset_id: CurrencyId,
+		pool_id: OriginalAsset,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> Result<Option<BalanceInfo>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
-		api.get_user_borrow_per_asset(&at, account_id, underlying_asset_id)
+		api.get_user_borrow_per_asset(&at, account_id, pool_id)
 			.map_err(|e| RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
 				message: "Unable to get total user borrow balance.".into(),
@@ -405,7 +405,7 @@ where
 	fn get_user_underlying_balance_per_asset(
 		&self,
 		account_id: AccountId,
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> Result<Option<BalanceInfo>> {
 		let api = self.client.runtime_api();
@@ -420,12 +420,12 @@ where
 			})
 	}
 
-	fn pool_exists(&self, underlying_asset_id: CurrencyId, at: Option<<Block as BlockT>::Hash>) -> Result<bool> {
+	fn pool_exists(&self, pool_id: OriginalAsset, at: Option<<Block as BlockT>::Hash>) -> Result<bool> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
-		api.pool_exists(&at, underlying_asset_id).map_err(|e| RpcError {
+		api.pool_exists(&at, pool_id).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
 			message: "Unable to check if pool exists.".into(),
 			data: Some(format!("{:?}", e).into()),

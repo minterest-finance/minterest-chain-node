@@ -8,7 +8,7 @@ use frame_system::EnsureSignedBy;
 use minterest_model::MinterestModelData;
 pub(crate) use minterest_primitives::Price;
 pub use minterest_primitives::{
-	currency::CurrencyType::{UnderlyingAsset, WrappedToken},
+	currency::CurrencyType::{OriginalAsset, WrapToken},
 	Balance, CurrencyId, Interest, Rate,
 };
 use orml_traits::parameter_type_with_key;
@@ -63,8 +63,6 @@ parameter_types! {
 	pub const MntTokenPalletId: PalletId = PalletId(*b"min/mntt");
 	pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
 // -----------------------------------------------------------------------------------------
@@ -81,12 +79,12 @@ impl MockPriceSource {
 	}
 }
 
-impl PricesManager<CurrencyId> for MockPriceSource {
-	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
+impl PricesManager<OriginalAsset> for MockPriceSource {
+	fn get_underlying_price(_asset: OriginalAsset) -> Option<Price> {
 		UNDERLYING_PRICE.with(|v| *v.borrow_mut())
 	}
-	fn lock_price(_currency_id: CurrencyId) {}
-	fn unlock_price(_currency_id: CurrencyId) {}
+	fn lock_price(_asset: OriginalAsset) {}
+	fn unlock_price(_asset: OriginalAsset) {}
 }
 
 // -----------------------------------------------------------------------------------------
@@ -94,9 +92,9 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 // -----------------------------------------------------------------------------------------
 pub struct ExtBuilder {
 	pub endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	pub pools: Vec<(CurrencyId, PoolData)>,
-	pub pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
-	pub controller_params: Vec<(CurrencyId, ControllerData<u64>)>,
+	pub pools: Vec<(OriginalAsset, PoolData)>,
+	pub pool_user_data: Vec<(OriginalAsset, AccountId, PoolUserData)>,
+	pub controller_params: Vec<(OriginalAsset, ControllerData<u64>)>,
 	pub pause_keepers: Vec<(CurrencyId, PauseKeeper)>,
 	pub minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
 }
@@ -124,7 +122,7 @@ impl ExtBuilder {
 	// - 'protocol_interest': interest of the protocol
 	pub fn init_pool(
 		mut self,
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		borrowed: Balance,
 		borrow_index: Rate,
 		protocol_interest: Balance,
@@ -150,7 +148,7 @@ impl ExtBuilder {
 	// - 'liquidation_attempts': number of partial liquidations for debt
 	pub fn set_pool_user_data(
 		mut self,
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		user: AccountId,
 		borrowed: Balance,
 		interest_index: Rate,
@@ -168,7 +166,7 @@ impl ExtBuilder {
 		self
 	}
 	// Set controller data for the current pool
-	// - 'currency_id': pool / currency id
+	// - 'pool_id': pool id
 	// - 'last_interest_accrued_block': block number that interest was last accrued at.
 	// - 'protocol_interest_factor': defines the portion of borrower interest that is converted
 	// into protocol interest.
@@ -181,7 +179,7 @@ impl ExtBuilder {
 	//   pool
 	pub fn set_controller_data(
 		mut self,
-		currency_id: CurrencyId,
+		pool_id: OriginalAsset,
 		last_interest_accrued_block: u64,
 		protocol_interest_factor: Rate,
 		max_borrow_rate: Rate,
@@ -190,7 +188,7 @@ impl ExtBuilder {
 		protocol_interest_threshold: Balance,
 	) -> Self {
 		self.controller_params.push((
-			currency_id,
+			pool_id,
 			ControllerData {
 				last_interest_accrued_block,
 				protocol_interest_factor,
@@ -276,7 +274,7 @@ impl ExtBuilder {
 			balances: self
 				.endowed_accounts
 				.into_iter()
-				.filter(|(_, currency_id, _)| *currency_id != MNT)
+				.filter(|&(_, currency_id, _)| currency_id != MNT)
 				.collect::<Vec<_>>(),
 		}
 		.assimilate_storage(&mut t)

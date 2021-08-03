@@ -3,7 +3,7 @@ use super::*;
 use crate as minterest_model;
 use frame_support::{ord_parameter_types, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
-use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
+use minterest_primitives::currency::CurrencyType::{OriginalAsset, WrapToken};
 pub use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PricesManager;
@@ -48,8 +48,6 @@ parameter_types! {
 	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
 // -----------------------------------------------------------------------------------------
@@ -57,12 +55,12 @@ parameter_types! {
 // -----------------------------------------------------------------------------------------
 pub struct MockPriceSource;
 
-impl PricesManager<CurrencyId> for MockPriceSource {
-	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
+impl PricesManager<OriginalAsset> for MockPriceSource {
+	fn get_underlying_price(_asset: OriginalAsset) -> Option<Price> {
 		Some(Price::one())
 	}
-	fn lock_price(_currency_id: CurrencyId) {}
-	fn unlock_price(_currency_id: CurrencyId) {}
+	fn lock_price(_asset: OriginalAsset) {}
+	fn unlock_price(_asset: OriginalAsset) {}
 }
 
 // -----------------------------------------------------------------------------------------

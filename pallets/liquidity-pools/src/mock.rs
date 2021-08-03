@@ -6,7 +6,7 @@ use frame_support::{
 	construct_runtime, pallet_prelude::GenesisBuild, parameter_types, sp_io::TestExternalities, PalletId,
 };
 
-pub use minterest_primitives::currency::CurrencyType::WrappedToken;
+pub use minterest_primitives::currency::CurrencyType::WrapToken;
 use minterest_primitives::Price;
 pub use minterest_primitives::{Balance, CurrencyId};
 use orml_traits::parameter_type_with_key;
@@ -51,8 +51,6 @@ parameter_types! {
 	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"min/lqdy");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
 // -----------------------------------------------------------------------------------------
@@ -69,12 +67,12 @@ impl MockPriceSource {
 	}
 }
 
-impl PricesManager<CurrencyId> for MockPriceSource {
-	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
+impl PricesManager<OriginalAsset> for MockPriceSource {
+	fn get_underlying_price(_asset: OriginalAsset) -> Option<Price> {
 		UNDERLYING_PRICE.with(|v| *v.borrow_mut())
 	}
-	fn lock_price(_currency_id: CurrencyId) {}
-	fn unlock_price(_currency_id: CurrencyId) {}
+	fn lock_price(_asset: OriginalAsset) {}
+	fn unlock_price(_asset: OriginalAsset) {}
 }
 
 // -----------------------------------------------------------------------------------------
@@ -102,7 +100,7 @@ impl ExtBuilder {
 	// Initialize pool with default parameters:
 	// borrowed: 0, borrow_index: 1, protocol_interest: 0
 	// - 'pool_id': pool currency / id
-	pub fn init_pool_default(mut self, pool_id: CurrencyId) -> Self {
+	pub fn init_pool_default(mut self, pool_id: OriginalAsset) -> Self {
 		self.pools.push((
 			pool_id,
 			PoolData {
@@ -121,7 +119,7 @@ impl ExtBuilder {
 	// - 'protocol_interest': interest of the protocol
 	pub fn init_pool(
 		mut self,
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		borrowed: Balance,
 		borrow_index: Rate,
 		protocol_interest: Balance,
@@ -147,7 +145,7 @@ impl ExtBuilder {
 	// - 'liquidation_attempts': number of partial liquidations for debt
 	pub fn set_pool_user_data(
 		mut self,
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		user: AccountId,
 		borrowed: Balance,
 		interest_index: Rate,

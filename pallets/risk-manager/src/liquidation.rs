@@ -19,10 +19,10 @@ pub enum LiquidationMode {
 pub struct LiquidationAmounts {
 	/// Contains a vector of pools and a balances that must be paid instead of the borrower from
 	/// liquidation pools to liquidity pools.
-	pub borrower_loans_to_repay_underlying: Vec<(CurrencyId, Balance)>,
+	pub borrower_loans_to_repay_underlying: Vec<(OriginalAsset, Balance)>,
 	/// Contains a vector of pools and a balances that must be withdrawn from the user's collateral
 	/// and sent to the liquidation pools.
-	pub borrower_supplies_to_seize_underlying: Vec<(CurrencyId, Balance)>,
+	pub borrower_supplies_to_seize_underlying: Vec<(OriginalAsset, Balance)>,
 }
 
 /// Contains information about the current state of the borrower's loan.
@@ -34,10 +34,10 @@ where
 	/// User AccountId whose loan is being processed.
 	user: T::AccountId,
 	/// Vector of user borrows. Contains information about the CurrencyId and the amount of borrow.
-	borrows: Vec<(CurrencyId, Balance)>,
+	borrows: Vec<(OriginalAsset, Balance)>,
 	/// Vector of user supplies. Contains information about the CurrencyId and the amount of supply.
 	/// Considers supply only for those pools that are enabled as collateral.
-	supplies: Vec<(CurrencyId, Balance)>,
+	supplies: Vec<(OriginalAsset, Balance)>,
 }
 
 // Pub API.
@@ -59,12 +59,12 @@ impl<T: Config> UserLoanState<T> {
 	///
 	/// Returns: information about the current state of the borrower's loan.
 	pub fn build_user_loan_state(who: &T::AccountId) -> Result<Self, DispatchError> {
-		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+		OriginalAsset::get_original_assets()
 			.into_iter()
-			.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
+			.filter(|&&pool_id| T::LiquidityPoolsManager::pool_exists(pool_id))
 			.try_fold(
 				Self::new(who),
-				|mut user_loan_state, pool_id| -> Result<Self, DispatchError> {
+				|mut user_loan_state, &pool_id| -> Result<Self, DispatchError> {
 					let oracle_price =
 						T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
@@ -113,8 +113,8 @@ impl<T: Config> UserLoanState<T> {
 	pub fn total_seize(&self) -> Result<Balance, DispatchError> {
 		self.borrows.iter().try_fold(
 			Balance::zero(),
-			|acc, (pool_id, borrow_usd)| -> Result<Balance, DispatchError> {
-				let seize_usd = Self::calculate_seize_amount(*pool_id, *borrow_usd)?;
+			|acc, &(pool_id, borrow_usd)| -> Result<Balance, DispatchError> {
+				let seize_usd = Self::calculate_seize_amount(pool_id, borrow_usd)?;
 				Ok(acc.checked_add(seize_usd).ok_or(Error::<T>::NumOverflow)?)
 			},
 		)
@@ -125,8 +125,8 @@ impl<T: Config> UserLoanState<T> {
 	pub fn total_collateral(&self) -> Result<Balance, DispatchError> {
 		self.supplies
 			.iter()
-			.try_fold(Balance::zero(), |acc, (pool_id, supply_amount)| {
-				let collateral_amount = T::ControllerManager::calculate_collateral(*pool_id, *supply_amount);
+			.try_fold(Balance::zero(), |acc, &(pool_id, supply_amount)| {
+				let collateral_amount = T::ControllerManager::calculate_collateral(pool_id, supply_amount);
 				Ok(acc.checked_add(collateral_amount).ok_or(Error::<T>::NumOverflow)?)
 			})
 	}
@@ -201,12 +201,12 @@ impl<T: Config> UserLoanState<T> {
 	}
 
 	/// Getter for `self.supplies`.
-	pub fn get_user_supplies(&self) -> Vec<(CurrencyId, Balance)> {
+	pub fn get_user_supplies(&self) -> Vec<(OriginalAsset, Balance)> {
 		self.supplies.clone()
 	}
 
 	/// Getter for `self.borrows`.
-	pub fn get_user_borrows(&self) -> Vec<(CurrencyId, Balance)> {
+	pub fn get_user_borrows(&self) -> Vec<(OriginalAsset, Balance)> {
 		self.borrows.clone()
 	}
 }
@@ -218,7 +218,7 @@ impl<T: Config> UserLoanState<T> {
 	///
 	/// Returns: `seize_amount = borrow_amount * (1 + liquidation_fee)`.
 	pub(crate) fn calculate_seize_amount(
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		borrow_amount: Balance,
 	) -> Result<Balance, DispatchError> {
 		let liquidation_fee = Pallet::<T>::liquidation_fee_storage(pool_id);

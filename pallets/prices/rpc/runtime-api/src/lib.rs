@@ -10,14 +10,14 @@
 // The `unnecessary_mut_passed` warning originates from `decl_runtime_apis` macro.
 #![allow(clippy::unnecessary_mut_passed)]
 
-use minterest_primitives::{CurrencyId, Price};
+use minterest_primitives::{OriginalAsset, Price};
 use sp_std::vec::Vec;
 
 sp_api::decl_runtime_apis! {
 	pub trait PricesRuntimeApi
 	{
-		fn  get_current_price(currency_id: CurrencyId) -> Option<Price>;
-		fn  get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)>;
-		fn  get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)>;
+		fn  get_current_price(currency_id: OriginalAsset) -> Option<Price>;
+		fn  get_all_locked_prices() -> Vec<(OriginalAsset, Option<Price>)>;
+		fn  get_all_freshest_prices() -> Vec<(OriginalAsset, Option<Price>)>;
 	}
 }

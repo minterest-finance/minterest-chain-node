@@ -6,10 +6,7 @@
 
 #![allow(clippy::vec_init_then_push)]
 
-use crate::{
-	currency::{GetDecimals, MNT},
-	AccountId, Balance,
-};
+use crate::{AccountId, Balance, constants::currency::DOLLARS};
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -76,14 +73,14 @@ impl VestingBucket {
 	/// Returns the total number of tokens for each vesting bucket.
 	pub fn total_amount(&self) -> Balance {
 		match self {
-			VestingBucket::Community => 50_032_400_u128 * 10_u128.saturating_pow(MNT.decimals()),
-			VestingBucket::PrivateSale => 10_001_000_u128 * 10_u128.saturating_pow(MNT.decimals()),
-			VestingBucket::PublicSale => 2_500_250_u128 * 10_u128.saturating_pow(MNT.decimals()),
-			VestingBucket::MarketMaking => 3_000_000_u128 * 10_u128.saturating_pow(MNT.decimals()),
-			VestingBucket::StrategicPartners => 1_949_100_u128 * 10_u128.saturating_pow(MNT.decimals()),
-			VestingBucket::Marketing => 4_000_400_u128 * 10_u128.saturating_pow(MNT.decimals()),
-			VestingBucket::Ecosystem => 4_499_880_u128 * 10_u128.saturating_pow(MNT.decimals()),
-			VestingBucket::Team => 24_017_000_u128 * 10_u128.saturating_pow(MNT.decimals()),
+			VestingBucket::Community => 50_032_400_u128 * DOLLARS,
+			VestingBucket::PrivateSale => 10_001_000_u128 * DOLLARS,
+			VestingBucket::PublicSale => 2_500_250_u128 * DOLLARS,
+			VestingBucket::MarketMaking => 3_000_000_u128 * DOLLARS,
+			VestingBucket::StrategicPartners => 1_949_100_u128 * DOLLARS,
+			VestingBucket::Marketing => 4_000_400_u128 * DOLLARS,
+			VestingBucket::Ecosystem => 4_499_880_u128 * DOLLARS,
+			VestingBucket::Team => 24_017_000_u128 * DOLLARS,
 		}
 	}
 

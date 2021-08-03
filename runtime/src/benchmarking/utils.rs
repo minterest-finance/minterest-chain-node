@@ -42,9 +42,9 @@ pub fn enable_whitelist_mode_and_add_member(who: &AccountId) -> DispatchResultWi
 }
 
 pub(crate) fn create_pools(pools: &Vec<CurrencyId>) {
-	pools.into_iter().for_each(|pool_id| {
+	pools.into_iter().for_each(|&pool_id| {
 		LiquidityPools::set_pool_data(
-			*pool_id,
+			pool_id,
 			PoolData {
 				borrowed: Balance::zero(),
 				borrow_index: Rate::one(),

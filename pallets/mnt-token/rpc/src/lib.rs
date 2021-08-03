@@ -8,7 +8,7 @@
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use minterest_primitives::{CurrencyId, Rate};
+use minterest_primitives::{OriginalAsset, Rate};
 pub use mnt_token_rpc_runtime_api::{MntBalanceInfo, MntTokenRuntimeApi};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
@@ -49,7 +49,7 @@ pub trait MntTokenRpcApi<BlockHash, AccountId> {
 	#[rpc(name = "mntToken_getPoolMntBorrowAndSupplyRates")]
 	fn get_pool_mnt_borrow_and_supply_rates(
 		&self,
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		at: Option<BlockHash>,
 	) -> Result<Option<(Rate, Rate)>>;
 }
@@ -109,7 +109,7 @@ where
 
 	fn get_pool_mnt_borrow_and_supply_rates(
 		&self,
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> Result<Option<(Rate, Rate)>> {
 		let api = self.client.runtime_api();

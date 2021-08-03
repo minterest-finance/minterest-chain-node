@@ -1,4 +1,4 @@
-use crate::{CurrencyId, EnabledUnderlyingAssetsIds, MinterestOracle, Origin, Price, Prices, Runtime, DOT};
+use crate::{CurrencyId, MinterestOracle, Origin, Price, Prices, Runtime, DOT};
 
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
@@ -9,7 +9,7 @@ runtime_benchmarks! {
 	{ Runtime, module_prices }
 
 	lock_price {
-		let pool_id: CurrencyId = EnabledUnderlyingAssetsIds::get()[0];
+		let pool_id: OriginalAsset = OriginalAsset::get_original_assets()[0];
 
 		MinterestOracle::feed_values(RawOrigin::Root.into(), vec![(pool_id, Price::one())])?;
 	}: _(
@@ -18,7 +18,7 @@ runtime_benchmarks! {
 	)
 
 	unlock_price {
-		let pool_id: CurrencyId = EnabledUnderlyingAssetsIds::get()[0];
+		let pool_id: OriginalAsset = OriginalAsset::get_original_assets()[0];
 
 		MinterestOracle::feed_values(RawOrigin::Root.into(), vec![(pool_id, Price::one())])?;
 		Prices::lock_price(Origin::root(), DOT)?;

@@ -21,7 +21,7 @@ fn get_mnt_account_balance(user: AccountId) -> Balance {
 
 /// Move flywheel and check borrower balance
 fn check_borrower(
-	pool_id: CurrencyId,
+	pool_id: OriginalAsset,
 	borrower: AccountId,
 	expected_mnt_balance: Balance,
 	expected_mnt_in_storage: Balance,
@@ -39,7 +39,7 @@ fn check_borrower(
 
 /// Move flywheel and check supplier balance
 fn check_supplier_accrued(
-	pool_id: CurrencyId,
+	pool_id: OriginalAsset,
 	supplier: AccountId,
 	expected_mnt_balance: Balance,
 	expected_mnt_in_storage: Balance,
@@ -336,7 +336,7 @@ fn test_update_pool_mnt_borrow_index() {
 			let initial_index = Rate::one();
 			System::set_block_number(1);
 
-			let check_borrow_index = |underlying_id: CurrencyId, pool_mnt_speed: Balance, total_borrow: Balance| {
+			let check_borrow_index = |asset: OriginalAsset, pool_mnt_speed: Balance, total_borrow: Balance| {
 				MntToken::update_pool_mnt_borrow_index(underlying_id).unwrap();
 				// 1.5 current borrow_index. I use 15 in this function, that`s why I make total_borrow * 10
 				let borrow_total_amount = Rate::saturating_from_rational(total_borrow * 10, 15);

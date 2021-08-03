@@ -6,7 +6,7 @@ use frame_support::{ord_parameter_types, pallet_prelude::GenesisBuild, parameter
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{PoolData, PoolUserData};
 use minterest_model::MinterestModelData;
-use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
+use minterest_primitives::currency::CurrencyType::{OriginalAsset, WrapToken};
 pub use minterest_primitives::{Balance, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PricesManager;
@@ -59,8 +59,6 @@ parameter_types! {
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
 	pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
 mock_impl_system_config!(TestRuntime);
@@ -99,14 +97,14 @@ impl Get<Balance> for MinSumMock {
 // -----------------------------------------------------------------------------------------
 pub struct MockPriceSource;
 
-impl PricesManager<CurrencyId> for MockPriceSource {
-	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
+impl PricesManager<OriginalAsset> for MockPriceSource {
+	fn get_underlying_price(_asset: OriginalAsset) -> Option<Price> {
 		Some(Price::one())
 	}
 
-	fn lock_price(_currency_id: CurrencyId) {}
+	fn lock_price(_asset: OriginalAsset) {}
 
-	fn unlock_price(_currency_id: CurrencyId) {}
+	fn unlock_price(_asset: OriginalAsset) {}
 }
 
 // -----------------------------------------------------------------------------------------
@@ -127,15 +125,15 @@ impl ExtBuilder {
 	/// Simulates extrinsic `deposit_underlying()` in genesis block.
 	///
 	///-`who`: the user who performs the operation.
-	///-`underlying_asset`: CurrencyId of underlying assets to be transferred into the protocol.
+	///-`pool_id`: CurrencyId of underlying assets to be transferred into the protocol.
 	///-`underlying_amount`: The amount of the asset to be supplied, in units of the underlying
 	/// asset.
-	pub fn deposit_underlying(self, who: AccountId, underlying_asset: CurrencyId, underlying_amount: Balance) -> Self {
+	pub fn deposit_underlying(self, who: AccountId, pool_id: OriginalAsset, underlying_amount: Balance) -> Self {
 		self.init_pool(underlying_asset, Balance::zero(), Rate::one(), Balance::zero())
 			.set_pool_user_data(underlying_asset, who, Balance::zero(), Rate::one(), false)
 			.set_init_controller_params(vec![underlying_asset])
 			.set_init_minterest_model_params(vec![underlying_asset])
-			.set_user_balance(who, underlying_asset.wrapped_asset().unwrap(), underlying_amount)
+			.set_user_balance(who, underlying_asset.as_wrap().unwrap(), underlying_amount)
 			.set_pool_balance(underlying_asset, underlying_amount as Amount)
 	}
 
@@ -143,7 +141,7 @@ impl ExtBuilder {
 	///
 	///-`who`: the user who performs the operation.
 	///-`pool_id`: CurrencyId of liquidity pool to be enabled as collateral.
-	pub fn enable_as_collateral(mut self, who: AccountId, pool_id: CurrencyId) -> Self {
+	pub fn enable_as_collateral(mut self, who: AccountId, pool_id: OriginalAsset) -> Self {
 		self.pool_user_data = self
 			.pool_user_data
 			.into_iter()
@@ -160,11 +158,11 @@ impl ExtBuilder {
 	/// Simulates extrinsic `borrow()` in genesis block.
 	///
 	///-`who`: the user who performs the operation.
-	/// - `underlying_asset`: The currency ID of the underlying asset to be borrowed.
+	/// - `pool_id`: The currency ID of the underlying asset to be borrowed.
 	/// - `underlying_amount`: The amount of the underlying asset to be borrowed.
 	///
 	/// Note: use only after `deposit_underlying`.
-	pub fn borrow_underlying(self, who: AccountId, underlying_asset: CurrencyId, borrow_amount: Balance) -> Self {
+	pub fn borrow_underlying(self, who: AccountId, pool_id: OriginalAsset, borrow_amount: Balance) -> Self {
 		self.init_pool(underlying_asset, borrow_amount as Balance, Rate::one(), Balance::zero())
 			.set_pool_user_data(underlying_asset, who, borrow_amount, Rate::one(), false)
 			.set_user_balance(who, underlying_asset, borrow_amount)
@@ -179,11 +177,11 @@ impl ExtBuilder {
 			.iter()
 			.fold(
 				BTreeMap::<(AccountId, CurrencyId), Amount>::new(),
-				|mut acc, (account_id, pool_id, amount)| {
-					if let Some(balance) = acc.get_mut(&(*account_id, *pool_id)) {
+				|mut acc, &(account_id, pool_id, amount)| {
+					if let Some(balance) = acc.get_mut(&(account_id, pool_id)) {
 						*balance += amount;
 					} else {
-						acc.insert((account_id.clone(), *pool_id), *amount);
+						acc.insert((account_id.clone(), pool_id), amount);
 					}
 					acc
 				},
@@ -196,11 +194,11 @@ impl ExtBuilder {
 			.iter()
 			.fold(
 				BTreeMap::<(CurrencyId, AccountId), PoolUserData>::new(),
-				|mut acc, (pool_id, account_id, pool_user_data)| {
-					if let Some(user_data) = acc.get_mut(&(*pool_id, *account_id)) {
+				|mut acc, &(pool_id, account_id, pool_user_data)| {
+					if let Some(user_data) = acc.get_mut(&(pool_id, account_id)) {
 						user_data.borrowed += pool_user_data.borrowed;
 					} else {
-						acc.insert((*pool_id, account_id.clone()), pool_user_data.clone());
+						acc.insert((pool_id, account_id.clone()), pool_user_data.clone());
 					}
 					acc
 				},
@@ -259,7 +257,7 @@ impl ExtBuilder {
 	/// - 'liquidation_attempts': number of partial liquidations for debt.
 	pub fn set_pool_user_data(
 		mut self,
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		user: AccountId,
 		borrowed: Balance,
 		interest_index: Rate,
@@ -284,7 +282,7 @@ impl ExtBuilder {
 	/// - 'protocol_interest': interest of the protocol.
 	pub fn init_pool(
 		mut self,
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		borrowed: Balance,
 		borrow_index: Rate,
 		protocol_interest: Balance,

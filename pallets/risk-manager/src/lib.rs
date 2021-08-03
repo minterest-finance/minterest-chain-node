@@ -44,7 +44,7 @@ use frame_system::{
 pub use liquidation::*;
 use liquidity_pools::PoolData;
 use minterest_primitives::{
-	currency::CurrencyType::UnderlyingAsset, Balance, CurrencyId, OffchainErr, Operation, Rate,
+	OriginalAsset, Balance, OffchainErr, Operation, Rate,
 };
 pub use module::*;
 use pallet_traits::{
@@ -78,7 +78,7 @@ pub mod module {
 		type UnsignedPriority: Get<TransactionPriority>;
 
 		/// The price source of currencies
-		type PriceSource: PricesManager<CurrencyId>;
+		type PriceSource: PricesManager<OriginalAsset>;
 
 		/// Provides functionality for working with a user's collateral pools.
 		type UserCollateral: UserCollateral<Self::AccountId>;
@@ -138,7 +138,7 @@ pub mod module {
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Liquidation fee has been successfully changed: \[pool_id, liquidation_fee\]
-		LiquidationFeeUpdated(CurrencyId, Rate),
+		LiquidationFeeUpdated(OriginalAsset, Rate),
 		/// Liquidation threshold has been successfully changed: \[threshold\]
 		LiquidationThresholdUpdated(Rate),
 	}
@@ -147,7 +147,7 @@ pub mod module {
 	/// Sets for each liquidity pool separately.
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_fee_storage)]
-	pub(crate) type LiquidationFeeStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Rate, ValueQuery>;
+	pub(crate) type LiquidationFeeStorage<T: Config> = StorageMap<_, Twox64Concat, OriginalAsset, Rate, ValueQuery>;
 
 	/// Step used in liquidation to protect the user from micro liquidations. One value for
 	/// the entire protocol.
@@ -163,7 +163,7 @@ pub mod module {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub liquidation_fee: Vec<(CurrencyId, Rate)>,
+		pub liquidation_fee: Vec<(OriginalAsset, Rate)>,
 		pub liquidation_threshold: Rate,
 		pub _phantom: sp_std::marker::PhantomData<T>,
 	}
@@ -228,14 +228,10 @@ pub mod module {
 		#[transactional]
 		pub fn set_liquidation_fee(
 			origin: OriginFor<T>,
-			pool_id: CurrencyId,
+			pool_id: OriginalAsset,
 			liquidation_fee: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::RiskManagerUpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				pool_id.is_supported_underlying_asset(),
-				Error::<T>::NotValidUnderlyingAssetId
-			);
 			ensure!(
 				Self::is_valid_liquidation_fee(liquidation_fee),
 				Error::<T>::InvalidLiquidationFeeValue
@@ -446,7 +442,7 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> RiskManagerStorageProvider for Pallet<T> {
-	fn create_pool(pool_id: CurrencyId, liquidation_threshold: Rate, liquidation_fee: Rate) -> DispatchResult {
+	fn create_pool(pool_id: OriginalAsset, liquidation_threshold: Rate, liquidation_fee: Rate) -> DispatchResult {
 		ensure!(
 			!LiquidationFeeStorage::<T>::contains_key(pool_id),
 			Error::<T>::RiskManagerParamsAlreadyCreated
@@ -460,7 +456,7 @@ impl<T: Config> RiskManagerStorageProvider for Pallet<T> {
 		Ok(())
 	}
 
-	fn remove_pool(pool_id: CurrencyId) {
+	fn remove_pool(pool_id: OriginalAsset) {
 		LiquidationFeeStorage::<T>::remove(pool_id)
 	}
 }
@@ -483,7 +479,7 @@ impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 	fn try_mutate_attempts(
 		who: &T::AccountId,
 		operation: Operation,
-		pool_id: Option<CurrencyId>,
+		pool_id: Option<OriginalAsset>,
 		liquidation_mode: Option<LiquidationMode>,
 	) -> DispatchResult {
 		match operation {

@@ -27,12 +27,10 @@ pub use minterest_primitives::{
 		time::{BLOCKS_PER_YEAR, DAYS, SLOT_DURATION},
 		INITIAL_EXCHANGE_RATE, MAX_BORROW_CAP, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION,
 	},
-	currency::{
-		CurrencyType::{UnderlyingAsset, WrappedToken},
-		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
-	},
+	currency::{BTC, DOT, ETH, KSM, MNT},
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, ChainlinkFeedId, ChainlinkPriceValue, CurrencyId,
 	DataProviderId, DigestItem, Hash, Index, Interest, Moment, Operation, Price, Rate, Signature, VestingBucket,
+	OriginalAsset, WrapToken,
 };
 pub use mnt_token_rpc_runtime_api::MntBalanceInfo;
 use orml_currencies::BasicCurrencyAdapter;
@@ -379,7 +377,7 @@ impl orml_tokens::Config for Runtime {
 }
 
 parameter_types! {
-	pub const GetMinterestCurrencyId: CurrencyId = MNT;
+	pub const GetMinterestCurrencyId: CurrencyId = CurrencyId::Native;
 }
 
 pub type MinterestToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
@@ -395,8 +393,6 @@ impl orml_currencies::Config for Runtime {
 parameter_types! {
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
 	pub const InitialExchangeRate: Rate = INITIAL_EXCHANGE_RATE;
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
 impl liquidity_pools::Config for Runtime {
@@ -405,8 +401,6 @@ impl liquidity_pools::Config for Runtime {
 	type PalletId = LiquidityPoolsPalletId;
 	type LiquidityPoolAccountId = LiquidityPoolAccountId;
 	type InitialExchangeRate = InitialExchangeRate;
-	type EnabledUnderlyingAssetsIds = EnabledUnderlyingAssetsIds;
-	type EnabledWrappedTokensId = EnabledWrappedTokensId;
 }
 
 parameter_types! {
@@ -521,7 +515,7 @@ impl orml_oracle::Config<MinterestDataProvider> for Runtime {
 	type OnNewData = ();
 	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn, MinterestDataProvider>;
 	type Time = Timestamp;
-	type OracleKey = CurrencyId;
+	type OracleKey = OriginalAsset;
 	type OracleValue = Price;
 	type RootOperatorAccountId = ZeroAccountId;
 	type WeightInfo = ();
@@ -531,14 +525,14 @@ impl orml_oracle::Config<MinterestDataProvider> for Runtime {
 
 create_median_value_data_provider!(
 	AggregatedDataProvider,
-	CurrencyId,
+	OriginalAsset,
 	Price,
 	TimeStampedPrice,
 	[MinterestOracle]
 );
 // Aggregated data provider cannot feed.
-impl DataFeeder<CurrencyId, Price, AccountId> for AggregatedDataProvider {
-	fn feed_value(_: AccountId, _: CurrencyId, _: Price) -> DispatchResult {
+impl DataFeeder<OriginalAsset, Price, AccountId> for AggregatedDataProvider {
+	fn feed_value(_: AccountId, _: OriginalAsset, _: Price) -> DispatchResult {
 		Err("Not supported".into())
 	}
 }
@@ -828,12 +822,12 @@ impl_runtime_apis! {
 				Some(ProtocolTotalValue{pool_total_supply_in_usd, pool_total_borrow_in_usd, tvl_in_usd, pool_total_protocol_interest_in_usd })
 		}
 
-		fn liquidity_pool_state(pool_id: CurrencyId) -> Option<PoolState> {
+		fn liquidity_pool_state(pool_id: OriginalAsset) -> Option<PoolState> {
 			let (exchange_rate, borrow_rate, supply_rate) = Controller::get_pool_exchange_borrow_and_supply_rates(pool_id)?;
 			Some(PoolState { exchange_rate, borrow_rate, supply_rate })
 		}
 
-		fn get_pool_utilization_rate(pool_id: CurrencyId) -> Option<Rate> {
+		fn get_pool_utilization_rate(pool_id: OriginalAsset) -> Option<Rate> {
 			Controller::get_pool_utilization_rate(pool_id)
 		}
 
@@ -864,16 +858,16 @@ impl_runtime_apis! {
 				Some(BalanceInfo{amount: Controller::get_user_total_collateral(account_id).ok()?})
 		}
 
-		fn get_user_borrow_per_asset(account_id: AccountId, underlying_asset_id: CurrencyId) -> Option<BalanceInfo> {
-				Some(BalanceInfo{amount: Controller::get_user_borrow_underlying_balance(&account_id, underlying_asset_id).ok()?})
+		fn get_user_borrow_per_asset(account_id: AccountId, pool_id: OriginalAsset) -> Option<BalanceInfo> {
+				Some(BalanceInfo{amount: Controller::get_user_borrow_underlying_balance(&account_id, pool_id).ok()?})
 		}
 
-		fn get_user_underlying_balance_per_asset(account_id: AccountId, pool_id: CurrencyId) -> Option<BalanceInfo> {
+		fn get_user_underlying_balance_per_asset(account_id: AccountId, pool_id: OriginalAsset) -> Option<BalanceInfo> {
 				Some(BalanceInfo{amount: Controller::get_user_supply_underlying_balance(&account_id, pool_id).ok()?})
 		}
 
-		fn pool_exists(underlying_asset_id: CurrencyId) -> bool {
-			LiquidityPools::pool_exists(&underlying_asset_id)
+		fn pool_exists(pool_id: OriginalAsset) -> bool {
+			LiquidityPools::pool_exists(pool_id)
 		}
 
 		fn get_user_total_supply_borrow_and_net_apy(account_id: AccountId) -> Option<(Interest, Interest, Interest)> {
@@ -890,7 +884,7 @@ impl_runtime_apis! {
 				Some(MntBalanceInfo{amount: MntToken::get_user_total_unclaimed_mnt_balance(&account_id).ok()?})
 		}
 
-		fn get_pool_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate)> {
+		fn get_pool_mnt_borrow_and_supply_rates(pool_id: OriginalAsset) -> Option<(Rate, Rate)> {
 			MntToken::get_pool_mnt_borrow_and_supply_rates(pool_id).ok()
 		}
 	}
@@ -904,23 +898,23 @@ impl_runtime_apis! {
 	impl orml_oracle_rpc_runtime_api::OracleApi<
 		Block,
 		DataProviderId,
-		CurrencyId,
+		OriginalAsset,
 		TimeStampedPrice,
 	> for Runtime {
 			/// Returns the USD exchange rate for the selected underlying asset
 			///
 			/// Parameters:
 			///  - [`provider_id`](`minterest_primitives::DataProviderId`):  provider type
-			///  - [`key`](`minterest_primitives::CurrencyId`): currency type
+			///  - [`asset`](`minterest_primitives::OriginalAsset`): currency type
 			///
 			/// Returns:
 			///
 			/// - [`Price`](`minterest_primitives::Price`):  price of a currency in USD
 			/// - [`Moment`](`minterest_primitives::Moment`):  time stamp at the time of the call.
-		fn get_value(provider_id: DataProviderId, key: CurrencyId) -> Option<TimeStampedPrice> {
+		fn get_value(provider_id: DataProviderId, asset: OriginalAsset) -> Option<TimeStampedPrice> {
 			match provider_id {
-				DataProviderId::Minterest => MinterestOracle::get_no_op(&key),
-				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_no_op(&key)
+				DataProviderId::Minterest => MinterestOracle::get_no_op(&asset),
+				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_no_op(&asset)
 			}
 		}
 			/// Return the USD exchange rate for all underlying assets
@@ -930,10 +924,10 @@ impl_runtime_apis! {
 			///
 			/// Returns:
 			///
-			/// - [`CurrencyId`](`minterest_primitives::CurrencyId`): currency type
+			/// - [`OriginalAsset`](`minterest_primitives::OriginalAsset`): currency type
 			/// - [`Price`](`minterest_primitives::Price`):  price of a currency in USD
 			/// - [`Moment`](`minterest_primitives::Moment`):  time stamp at the time of the call.
-		fn get_all_values(provider_id: DataProviderId) -> Vec<(CurrencyId, Option<TimeStampedPrice>)> {
+		fn get_all_values(provider_id: DataProviderId) -> Vec<(OriginalAsset, Option<TimeStampedPrice>)> {
 			match provider_id {
 				DataProviderId::Minterest => MinterestOracle::get_all_values(),
 				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_all_values()
@@ -942,18 +936,18 @@ impl_runtime_apis! {
 	}
 
 	impl prices_rpc_runtime_api::PricesRuntimeApi<Block> for Runtime {
-		fn  get_current_price(currency_id: CurrencyId) -> Option<Price> {
-			Prices::get_underlying_price(currency_id)
+		fn  get_current_price(asset: OriginalAsset) -> Option<Price> {
+			Prices::get_underlying_price(asset)
 		}
 
-		fn  get_all_locked_prices() -> Vec<(CurrencyId, Option<Price>)> {
-			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
+		fn  get_all_locked_prices() -> Vec<(OriginalAsset, Option<Price>)> {
+			OriginalAsset::get_original_assets()
 				.into_iter()
-				.map(|currency_id| (currency_id, Prices::locked_price_storage(currency_id)))
+				.map(|&asset| (asset, Prices::locked_price_storage(asset)))
 				.collect()
 		}
 
-		fn get_all_freshest_prices() -> Vec<(CurrencyId, Option<Price>)> {
+		fn get_all_freshest_prices() -> Vec<(OriginalAsset, Option<Price>)> {
 			Prices::get_all_freshest_prices()
 		}
 	}

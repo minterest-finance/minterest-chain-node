@@ -3,7 +3,6 @@ use hex_literal::hex;
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::PoolData;
 use minterest_model::MinterestModelData;
-use minterest_primitives::currency::GetDecimals;
 use minterest_primitives::{VestingBucket, VestingScheduleJson};
 use node_minterest_runtime::{
 	get_all_modules_accounts, AccountId, AuraConfig, Balance, BalancesConfig, ChainlinkFeedConfig, ControllerConfig,
@@ -518,10 +517,10 @@ fn testnet_genesis(
 				.chain(get_all_modules_accounts()[1..3].iter()) // liquidation_pools + DEXes
 				.flat_map(|x| {
 					vec![
-						(x.clone(), DOT, INITIAL_BALANCE),
-						(x.clone(), ETH, INITIAL_BALANCE),
-						(x.clone(), KSM, INITIAL_BALANCE),
-						(x.clone(), BTC, INITIAL_BALANCE),
+						(x.clone(), DOT.as_currency(), INITIAL_BALANCE),
+						(x.clone(), ETH.as_currency(), INITIAL_BALANCE),
+						(x.clone(), KSM.as_currency(), INITIAL_BALANCE),
+						(x.clone(), BTC.as_currency(), INITIAL_BALANCE),
 					]
 				})
 				.collect(),
@@ -804,7 +803,7 @@ pub(crate) fn calculate_initial_allocations(
 		total_allocated,
 		TOTAL_ALLOCATION,
 		"Total allocation must be equal to 100,000,030 MNT tokens, but passed: {} MNT",
-		total_allocated / 10_u128.pow(MNT.decimals())
+		total_allocated / DOLLARS
 	);
 	initial_allocations
 }

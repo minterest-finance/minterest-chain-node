@@ -1,5 +1,5 @@
 use super::utils::{create_pools, prepare_for_mnt_distribution};
-use crate::{EnabledUnderlyingAssetsIds, MntToken, Runtime, System, DOLLARS, DOT};
+use crate::{MntToken, Runtime, System, DOLLARS, DOT};
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
 
@@ -7,7 +7,7 @@ runtime_benchmarks! {
 	{ Runtime, mnt_token }
 
 	set_speed {
-		let pools = EnabledUnderlyingAssetsIds::get();
+		let pools = OriginalAsset::get_original_assets();
 		create_pools(&pools);
 		prepare_for_mnt_distribution(pools)?;
 		System::set_block_number(10);

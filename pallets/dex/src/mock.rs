@@ -8,7 +8,7 @@ use frame_support::{construct_runtime, ord_parameter_types, parameter_types};
 use frame_system::offchain::SendTransactionTypes;
 use frame_system::EnsureSignedBy;
 pub use minterest_primitives::{
-	currency::CurrencyType::{UnderlyingAsset, WrappedToken},
+	currency::CurrencyType::{OriginalAsset, WrapToken},
 	currency::DOT,
 };
 pub(crate) use minterest_primitives::{Balance, CurrencyId, Price, Rate};
@@ -55,8 +55,6 @@ parameter_types! {
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
 mock_impl_system_config!(TestRuntime);
@@ -80,12 +78,12 @@ impl MockPriceSource {
 	}
 }
 
-impl PricesManager<CurrencyId> for MockPriceSource {
-	fn get_underlying_price(_currency_id: CurrencyId) -> Option<Price> {
+impl PricesManager<OriginalAsset> for MockPriceSource {
+	fn get_underlying_price(_asset: OriginalAsset) -> Option<Price> {
 		UNDERLYING_PRICE.with(|v| *v.borrow_mut())
 	}
-	fn lock_price(_currency_id: CurrencyId) {}
-	fn unlock_price(_currency_id: CurrencyId) {}
+	fn lock_price(_asset: OriginalAsset) {}
+	fn unlock_price(_asset: OriginalAsset) {}
 }
 
 // -----------------------------------------------------------------------------------------
@@ -105,17 +103,17 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
 	/// Set balance of the liquidation pool
-	/// - 'currency_id': pool / currency id
+	/// - 'currency_id': pool id
 	/// - 'balance': balance to set
 	pub fn set_liquidation_pool_balance(
 		mut self,
-		pool_id: AccountId,
+		pool_account: AccountId,
 		currency_id: CurrencyId,
 		balance: Balance,
 	) -> Self {
 		self.endowed_accounts
 			//TestLiquidationPools::pools_account_id()
-			.push((pool_id, currency_id, balance));
+			.push((pool_account, currency_id, balance));
 		self
 	}
 

@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::upper_case_acronyms)]
 
-use minterest_primitives::{Balance, CurrencyId, Interest, Operation, Price, Rate};
+use minterest_primitives::{Balance, OriginalAsset, Interest, Operation, Price, Rate};
 use sp_runtime::{DispatchError, DispatchResult};
 use sp_std::{collections::btree_set::BTreeSet, result::Result, vec::Vec};
 
@@ -10,7 +10,7 @@ pub trait Borrowing<AccountId> {
 	/// Updates the state of the core as a consequence of a borrow action.
 	fn update_state_on_borrow(
 		who: &AccountId,
-		underlying_asset: CurrencyId,
+		pool_id: OriginalAsset,
 		amount_borrowed: Balance,
 		account_borrows: Balance,
 	) -> DispatchResult;
@@ -18,7 +18,7 @@ pub trait Borrowing<AccountId> {
 	/// updates the state of the core as a consequence of a repay action.
 	fn update_state_on_repay(
 		who: &AccountId,
-		underlying_asset: CurrencyId,
+		pool_id: OriginalAsset,
 		repay_amount: Balance,
 		account_borrows: Balance,
 	) -> DispatchResult;
@@ -30,45 +30,45 @@ pub trait PoolsManager<AccountId> {
 	fn pools_account_id() -> AccountId;
 
 	/// Return liquidity balance of `pool_id`.
-	fn get_pool_available_liquidity(pool_id: CurrencyId) -> Balance;
+	fn get_pool_available_liquidity(pool_id: OriginalAsset) -> Balance;
 }
 
 /// Provides functionality for working with storage of liquidity pools.
 pub trait LiquidityPoolStorageProvider<AccountId, PoolData> {
 	/// Sets pool data.
-	fn set_pool_data(pool_id: CurrencyId, pool_data: PoolData);
+	fn set_pool_data(pool_id: OriginalAsset, pool_data: PoolData);
 
 	/// Sets the total borrowed value in the pool.
-	fn set_pool_borrow_underlying(pool_id: CurrencyId, new_pool_borrows: Balance);
+	fn set_pool_borrow_underlying(pool_id: OriginalAsset, new_pool_borrows: Balance);
 
 	/// Sets the total interest in the pool.
-	fn set_pool_protocol_interest(pool_id: CurrencyId, new_pool_protocol_interest: Balance);
+	fn set_pool_protocol_interest(pool_id: OriginalAsset, new_pool_protocol_interest: Balance);
 
 	/// Gets pool associated data.
-	fn get_pool_data(pool_id: CurrencyId) -> PoolData;
+	fn get_pool_data(pool_id: OriginalAsset) -> PoolData;
 
 	/// Get list of users with active loan positions for a particular pool.
-	fn get_pool_members_with_loan(underlying_asset: CurrencyId) -> Vec<AccountId>;
+	fn get_pool_members_with_loan(pool_id: OriginalAsset) -> Vec<AccountId>;
 
 	/// Gets total amount borrowed from the pool.
-	fn get_pool_borrow_underlying(pool_id: CurrencyId) -> Balance;
+	fn get_pool_borrow_underlying(pool_id: OriginalAsset) -> Balance;
 
 	/// Gets pool borrow index
 	/// Accumulator of the total earned interest rate since the opening of the pool.
-	fn get_pool_borrow_index(pool_id: CurrencyId) -> Rate;
+	fn get_pool_borrow_index(pool_id: OriginalAsset) -> Rate;
 
 	/// Gets current total amount of protocol interest of the underlying held in this pool.
-	fn get_pool_protocol_interest(pool_id: CurrencyId) -> Balance;
+	fn get_pool_protocol_interest(pool_id: OriginalAsset) -> Balance;
 
 	/// Check if pool exists.
-	fn pool_exists(underlying_asset: &CurrencyId) -> bool;
+	fn pool_exists(pool_id: OriginalAsset) -> bool;
 
 	/// This is a part of a pool creation flow.
 	/// Creates storage records for LiquidityPool.
-	fn create_pool(pool_id: CurrencyId) -> DispatchResult;
+	fn create_pool(pool_id: OriginalAsset) -> DispatchResult;
 
 	/// Removes pool data.
-	fn remove_pool_data(pool_id: CurrencyId);
+	fn remove_pool_data(pool_id: OriginalAsset);
 }
 
 /// Provides functionality for working with a user's storage. Set parameters in storage,
@@ -77,19 +77,19 @@ pub trait UserStorageProvider<AccountId, PoolUserData> {
 	/// Sets the total borrowed and interest index for user.
 	fn set_user_borrow_and_interest_index(
 		who: &AccountId,
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		new_borrow_underlying: Balance,
 		new_interest_index: Rate,
 	);
 
 	/// Gets user data.
-	fn get_user_data(pool_id: CurrencyId, who: &AccountId) -> PoolUserData;
+	fn get_user_data(pool_id: OriginalAsset, who: &AccountId) -> PoolUserData;
 
 	/// Global borrow_index as of the most recent balance-changing action.
-	fn get_user_borrow_index(who: &AccountId, pool_id: CurrencyId) -> Rate;
+	fn get_user_borrow_index(who: &AccountId, pool_id: OriginalAsset) -> Rate;
 
 	/// Gets total user borrowing.
-	fn get_user_borrow_balance(who: &AccountId, pool_id: CurrencyId) -> Balance;
+	fn get_user_borrow_balance(who: &AccountId, pool_id: OriginalAsset) -> Balance;
 }
 
 /// Provides functionality for working with a user's collateral pools.
@@ -98,38 +98,38 @@ pub trait UserCollateral<AccountId> {
 	/// The array is sorted in descending order by the number of wrapped tokens in USD.
 	///
 	/// - `who`: AccountId for which the pool array is returned.
-	fn get_user_collateral_pools(who: &AccountId) -> Result<Vec<CurrencyId>, DispatchError>;
+	fn get_user_collateral_pools(who: &AccountId) -> Result<Vec<OriginalAsset>, DispatchError>;
 
 	/// Checks if the user has enabled the pool as collateral.
-	fn is_pool_collateral(who: &AccountId, pool_id: CurrencyId) -> bool;
+	fn is_pool_collateral(who: &AccountId, pool_id: OriginalAsset) -> bool;
 
 	/// Checks if the user has the collateral.
 	fn check_user_has_collateral(who: &AccountId) -> bool;
 
 	/// Sets the parameter `is_collateral` to `true`.
-	fn enable_is_collateral(who: &AccountId, pool_id: CurrencyId);
+	fn enable_is_collateral(who: &AccountId, pool_id: OriginalAsset);
 
 	/// Sets the parameter `is_collateral` to `false`.
-	fn disable_is_collateral(who: &AccountId, pool_id: CurrencyId);
+	fn disable_is_collateral(who: &AccountId, pool_id: OriginalAsset);
 }
 
 /// An abstraction of pools basic functionalities.
 pub trait LiquidationPoolsManager<AccountId>: PoolsManager<AccountId> {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for LiquidationPoolsData
-	fn create_pool(pool_id: CurrencyId, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult;
+	fn create_pool(pool_id: OriginalAsset, deviation_threshold: Rate, balance_ratio: Rate) -> DispatchResult;
 }
 
 /// An abstraction of prices basic functionalities.
-pub trait PricesManager<CurrencyId> {
+pub trait PricesManager<OriginalAsset> {
 	/// Get price underlying token in USD.
-	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price>;
+	fn get_underlying_price(asset: OriginalAsset) -> Option<Price>;
 
 	/// Locks price when get valid price from source.
-	fn lock_price(currency_id: CurrencyId);
+	fn lock_price(asset: OriginalAsset);
 
 	/// Unlocks price when get valid price from source.
-	fn unlock_price(currency_id: CurrencyId);
+	fn unlock_price(asset: OriginalAsset);
 }
 
 /// An abstraction of DEXs basic functionalities.
@@ -159,7 +159,7 @@ pub trait ControllerManager<AccountId> {
 	/// Creates storage records for ControllerParams and PauseKeepers
 	/// All operations are unpaused after this function call
 	fn create_pool(
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		protocol_interest_factor: Rate,
 		max_borrow_rate: Rate,
 		collateral_factor: Rate,
@@ -167,12 +167,12 @@ pub trait ControllerManager<AccountId> {
 	) -> DispatchResult;
 
 	/// Return the borrow balance of account based on stored data.
-	fn user_borrow_balance_stored(who: &AccountId, underlying_asset_id: CurrencyId) -> Result<Balance, DispatchError>;
+	fn user_borrow_balance_stored(who: &AccountId, pool_id: OriginalAsset) -> Result<Balance, DispatchError>;
 
 	/// Determine what the account liquidity would be if the given amounts were redeemed/borrowed.
 	fn get_hypothetical_account_liquidity(
 		account: &AccountId,
-		underlying_to_borrow: Option<CurrencyId>,
+		underlying_to_borrow: Option<OriginalAsset>,
 		redeem_amount: Balance,
 		borrow_amount: Balance,
 	) -> Result<(Balance, Balance), DispatchError>;
@@ -180,25 +180,25 @@ pub trait ControllerManager<AccountId> {
 	/// Applies accrued interest to total borrows and protocol interest.
 	/// This calculates interest accrued from the last checkpointed block
 	/// up to the current block and writes new checkpoint to storage.
-	fn accrue_interest_rate(underlying_asset_id: CurrencyId) -> DispatchResult;
+	fn accrue_interest_rate(pool_id: OriginalAsset) -> DispatchResult;
 
 	/// Checks if a specific operation is allowed on a pool.
-	fn is_operation_allowed(pool_id: CurrencyId, operation: Operation) -> bool;
+	fn is_operation_allowed(pool_id: OriginalAsset, operation: Operation) -> bool;
 
 	/// Checks if the account should be allowed to redeem tokens in the given pool.
-	fn redeem_allowed(underlying_asset_id: CurrencyId, redeemer: &AccountId, redeem_amount: Balance) -> DispatchResult;
+	fn redeem_allowed(pool_id: OriginalAsset, redeemer: &AccountId, redeem_amount: Balance) -> DispatchResult;
 
 	/// Checks if the account should be allowed to borrow the underlying asset of the given pool.
-	fn borrow_allowed(underlying_asset_id: CurrencyId, who: &AccountId, borrow_amount: Balance) -> DispatchResult;
+	fn borrow_allowed(pool_id: OriginalAsset, who: &AccountId, borrow_amount: Balance) -> DispatchResult;
 
 	/// Return minimum protocol interest needed to transfer it to liquidation pool
-	fn get_protocol_interest_threshold(pool_id: CurrencyId) -> Balance;
+	fn get_protocol_interest_threshold(pool_id: OriginalAsset) -> Balance;
 
 	/// Calculates the amount of collateral based on the parameters pool_id and the supply amount.
 	/// Reads the collateral factor value from storage.
 	///
 	/// Returns: `collateral_amount = supply_amount * collateral_factor`.
-	fn calculate_collateral(pool_id: CurrencyId, supply_amount: Balance) -> Balance;
+	fn calculate_collateral(pool_id: OriginalAsset, supply_amount: Balance) -> Balance;
 
 	/// For all active pools in the protocol, it checks all users: calls `accrue_interest_rate`,
 	/// and then get_hypothetical_account_liquidity. If the user has a shortfall, then writes it
@@ -208,10 +208,10 @@ pub trait ControllerManager<AccountId> {
 
 	/// Gets exchange, borrow interest rate and supply interest rate. The rates is calculated
 	/// for the current block.
-	fn get_pool_exchange_borrow_and_supply_rates(pool_id: CurrencyId) -> Option<(Rate, Rate, Rate)>;
+	fn get_pool_exchange_borrow_and_supply_rates(pool_id: OriginalAsset) -> Option<(Rate, Rate, Rate)>;
 
 	/// Gets current utilization rate of the pool. The rate is calculated for the current block.
-	fn get_pool_utilization_rate(pool_id: CurrencyId) -> Option<Rate>;
+	fn get_pool_utilization_rate(pool_id: OriginalAsset) -> Option<Rate>;
 
 	/// Calculates user total supply and user total borrow balance in usd based on
 	/// pool_borrow, pool_protocol_interest, borrow_index values calculated for current block.
@@ -246,7 +246,7 @@ pub trait ControllerManager<AccountId> {
 	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
 	fn get_user_borrow_underlying_balance(
 		who: &AccountId,
-		underlying_asset_id: CurrencyId,
+		pool_id: OriginalAsset,
 	) -> Result<Balance, DispatchError>;
 
 	/// Calculates user balance converted to underlying asset using exchange rate calculated for the
@@ -254,7 +254,7 @@ pub trait ControllerManager<AccountId> {
 	///
 	/// - `who`: the AccountId whose balance should be calculated.
 	/// - `pool_id` - ID of the pool to calculate balance for.
-	fn get_user_supply_underlying_balance(who: &AccountId, pool_id: CurrencyId) -> Result<Balance, DispatchError>;
+	fn get_user_supply_underlying_balance(who: &AccountId, pool_id: OriginalAsset) -> Result<Balance, DispatchError>;
 
 	/// Calculate total user's supply APY, borrow APY and Net APY.
 	///
@@ -273,22 +273,22 @@ pub trait ControllerManager<AccountId> {
 pub trait MntManager<AccountId> {
 	/// Update MNT supply index for a pool.
 	///
-	/// - `underlying_asset`: The pool which supply index to update.
-	fn update_pool_mnt_supply_index(underlying_id: CurrencyId) -> DispatchResult;
+	/// - `pool_id`: The pool which supply index to update.
+	fn update_pool_mnt_supply_index(pool_id: OriginalAsset) -> DispatchResult;
 
 	/// Update MNT borrow index for a pool.
 	///
-	/// - `underlying_asset`: The pool which borrow index to update.
-	fn update_pool_mnt_borrow_index(underlying_id: CurrencyId) -> DispatchResult;
+	/// - `pool_id`: The pool which borrow index to update.
+	fn update_pool_mnt_borrow_index(pool_id: OriginalAsset) -> DispatchResult;
 
 	/// Distribute MNT token to supplier. It should be called after update_mnt_supply_index.
 	///
-	/// - `underlying_id`: The pool in which the supplier is acting;
+	/// - `pool_id`: The pool in which the supplier is acting;
 	/// - `supplier`: The AccountId of the supplier to distribute MNT to.
 	///
 	/// returns `supplier_mnt_accrued`: - The MNT accrued but not yet transferred to each user
 	fn distribute_supplier_mnt(
-		underlying_id: CurrencyId,
+		pool_id: OriginalAsset,
 		supplier: &AccountId,
 		distribute_all: bool,
 	) -> Result<Balance, DispatchError>;
@@ -296,12 +296,12 @@ pub trait MntManager<AccountId> {
 	/// Distribute MNT token to borrower. It should be called after update_mnt_borrow_index.
 	/// Borrowers will not begin to accrue tokens till the first interaction with the protocol.
 	///
-	/// - `underlying_id`: The pool in which the borrower is acting;
+	/// - `pool_id`: The pool in which the borrower is acting;
 	/// - `borrower`: The AccountId of the borrower to distribute MNT to.
 	///
 	/// returns `borrower_mnt_accrued`: - The MNT accrued but not yet transferred to each user
 	fn distribute_borrower_mnt(
-		underlying_id: CurrencyId,
+		pool_id: OriginalAsset,
 		borrower: &AccountId,
 		distribute_all: bool,
 	) -> Result<Balance, DispatchError>;
@@ -310,7 +310,7 @@ pub trait MntManager<AccountId> {
 	/// - `pool_id` - the pool to calculate rates
 	///
 	/// returns (`borrow_apy`, `supply_apy`): - percentage yield per block
-	fn get_pool_mnt_borrow_and_supply_rates(pool_id: CurrencyId) -> Result<(Price, Price), DispatchError>;
+	fn get_pool_mnt_borrow_and_supply_rates(pool_id: OriginalAsset) -> Result<(Price, Price), DispatchError>;
 }
 
 /// An abstraction of minterest-model basic functionalities.
@@ -318,7 +318,7 @@ pub trait MinterestModelManager {
 	/// This is a part of a pool creation flow
 	/// Checks parameters validity and creates storage records for MinterestModelParams
 	fn create_pool(
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		kink: Rate,
 		base_rate_per_block: Rate,
 		multiplier_per_block: Rate,
@@ -326,12 +326,12 @@ pub trait MinterestModelManager {
 	) -> DispatchResult;
 
 	/// Calculates the current borrow rate per block.
-	/// - `underlying_asset`: Asset ID for which the borrow interest rate is calculated.
+	/// - `pool_id`: Asset ID for which the borrow interest rate is calculated.
 	/// - `utilization_rate`: Current Utilization rate value.
 	///
 	/// returns `borrow_interest_rate`.
 	fn calculate_pool_borrow_interest_rate(
-		underlying_asset: CurrencyId,
+		pool_id: OriginalAsset,
 		utilization_rate: Rate,
 	) -> Result<Rate, DispatchError>;
 }
@@ -360,7 +360,7 @@ pub trait CurrencyConverter {
 	///
 	/// returns `exchange_rate` between a mToken and the underlying asset.
 	/// Note: first call `accrue_interest` if you want to get a fresh rate.
-	fn get_exchange_rate(pool_id: CurrencyId) -> Result<Rate, DispatchError>;
+	fn get_exchange_rate(pool_id: OriginalAsset) -> Result<Rate, DispatchError>;
 
 	/// Converts a specified number of underlying assets into wrapped tokens.
 	/// The calculation is based on the exchange rate.
@@ -436,7 +436,7 @@ pub trait UserLiquidationAttemptsManager<AccountId> {
 	fn try_mutate_attempts(
 		who: &AccountId,
 		operation: Operation,
-		pool_id: Option<CurrencyId>,
+		pool_id: Option<OriginalAsset>,
 		liquidation_mode: Option<Self::LiquidationMode>,
 	) -> DispatchResult;
 }
@@ -445,11 +445,11 @@ pub trait UserLiquidationAttemptsManager<AccountId> {
 pub trait RiskManagerStorageProvider {
 	/// Creates storage records for risk-manager pallet: `liquidation_fee`
 	/// and `liquidation_threshold`
-	fn create_pool(pool_id: CurrencyId, liquidation_threshold: Rate, liquidation_fee: Rate) -> DispatchResult;
+	fn create_pool(pool_id: OriginalAsset, liquidation_threshold: Rate, liquidation_fee: Rate) -> DispatchResult;
 
 	/// Removes parameter values `liquidation_fee` and `liquidation_threshold` in the
 	/// risk-manager pallet.
-	fn remove_pool(pool_id: CurrencyId);
+	fn remove_pool(pool_id: OriginalAsset);
 }
 
 /// An abstraction of minterest-protocol basic functionalities.
@@ -458,12 +458,12 @@ pub trait MinterestProtocolManager<AccountId> {
 	///
 	/// - `who`: the account paying off the borrow.
 	/// - `borrower`: the account with the debt being payed off.
-	/// - `underlying_asset`: the currency ID of the underlying asset to repay.
+	/// - `pool_id`: the currency ID of the underlying asset to repay.
 	/// - `repay_amount`: the amount of the underlying asset to repay.
 	fn do_repay(
 		who: &AccountId,
 		borrower: &AccountId,
-		underlying_asset: CurrencyId,
+		pool_id: OriginalAsset,
 		repay_amount: Balance,
 		all_assets: bool,
 	) -> Result<Balance, DispatchError>;
@@ -473,9 +473,9 @@ pub trait MinterestProtocolManager<AccountId> {
 	/// the liquidation process.
 	///
 	/// - `borrower`: borrower's account being liquidated.
-	/// - `underlying_asset`: the currency ID of the underlying asset to seize.
+	/// - `pool_id`: the currency ID of the underlying asset to seize.
 	/// - `seize_underlying`: the amount of the underlying asset to seize.
 	///
 	/// Note: this function should be used after `accrue_interest_rate`.
-	fn do_seize(borrower: &AccountId, underlying_asset: CurrencyId, seize_underlying: Balance) -> DispatchResult;
+	fn do_seize(borrower: &AccountId, pool_id: OriginalAsset, seize_underlying: Balance) -> DispatchResult;
 }

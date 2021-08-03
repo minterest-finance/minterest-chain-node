@@ -4,7 +4,7 @@ use crate as mnt_token;
 use frame_support::{construct_runtime, ord_parameter_types, pallet_prelude::*, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
 use liquidity_pools::{PoolData, PoolUserData};
-pub use minterest_primitives::currency::CurrencyType::{UnderlyingAsset, WrappedToken};
+pub use minterest_primitives::currency::CurrencyType::{OriginalAsset, WrapToken};
 use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PricesManager;
@@ -41,8 +41,6 @@ parameter_types! {
 	pub const MntTokenPalletId: PalletId = PalletId(*b"min/mntt");
 	pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
-	pub EnabledUnderlyingAssetsIds: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset);
-	pub EnabledWrappedTokensId: Vec<CurrencyId> = CurrencyId::get_enabled_tokens_in_protocol(WrappedToken);
 }
 
 mock_impl_system_config!(Runtime);
@@ -61,9 +59,9 @@ ord_parameter_types! {
 
 pub struct MockPriceSource;
 
-impl PricesManager<CurrencyId> for MockPriceSource {
-	fn get_underlying_price(currency_id: CurrencyId) -> Option<Price> {
-		match currency_id {
+impl PricesManager<OriginalAsset> for MockPriceSource {
+	fn get_underlying_price(asset: OriginalAsset) -> Option<Price> {
+		match asset {
 			DOT => return Some(Price::saturating_from_rational(5, 10)), // 0.5 USD
 			ETH => return Some(Price::saturating_from_rational(15, 10)), // 1.5 USD
 			KSM => return Some(Price::saturating_from_integer(2)),      // 2 USD
@@ -72,9 +70,9 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 		}
 	}
 
-	fn lock_price(_currency_id: CurrencyId) {}
+	fn lock_price(_asset: OriginalAsset) {}
 
-	fn unlock_price(_currency_id: CurrencyId) {}
+	fn unlock_price(_asset: OriginalAsset) {}
 }
 
 pub struct ExtBuilder {
@@ -115,7 +113,7 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn pool_borrow_underlying(mut self, pool_id: CurrencyId, pool_borrowed: Balance) -> Self {
+	pub fn pool_borrow_underlying(mut self, pool_id: OriginalAsset, pool_borrowed: Balance) -> Self {
 		self.pools.push((
 			pool_id,
 			PoolData {
@@ -139,7 +137,7 @@ impl ExtBuilder {
 
 	pub fn pool_user_data(
 		mut self,
-		pool_id: CurrencyId,
+		pool_id: OriginalAsset,
 		user: AccountId,
 		borrowed: Balance,
 		interest_index: Rate,
