@@ -4,16 +4,12 @@ use super::*;
 use mock::{Event, *};
 
 use controller::{ControllerData, PauseKeeper};
-use frame_support::{assert_noop, assert_ok, error::BadOrigin};
+use frame_support::{assert_err, assert_noop, assert_ok, error::BadOrigin};
 use liquidation_pools::LiquidationPoolData;
 use minterest_model::MinterestModelData;
 use minterest_primitives::Rate;
 use pallet_traits::UserCollateral;
 use sp_runtime::{traits::One, FixedPointNumber};
-
-fn dollars<T: Into<u128>>(d: T) -> Balance {
-	DOLLARS.saturating_mul(d.into())
-}
 
 #[test]
 fn create_pool_should_work() {
@@ -189,6 +185,11 @@ fn protocol_operations_not_working_for_nonexisting_pool() {
 
 			assert_noop!(
 				TestMinterestProtocol::claim_mnt(alice_origin(), vec![DOT, ETH]),
+				crate::Error::<Test>::PoolNotFound
+			);
+
+			assert_noop!(
+				TestMinterestProtocol::do_seize(&ALICE, ETH, dollars(100_u128)),
 				crate::Error::<Test>::PoolNotFound
 			);
 		});
@@ -850,6 +851,44 @@ fn repay_on_behalf_should_work() {
 			));
 			let expected_event = Event::TestMinterestProtocol(crate::Event::Repaid(BOB, DOT, dollars(20_u128)));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
+		});
+}
+
+#[test]
+fn do_seize_should_work() {
+	ExtBuilder::default()
+		.pool_with_params(DOT, Balance::zero(), Rate::one(), Balance::zero())
+		.pool_with_params(BTC, dollars(50), Rate::one(), Balance::zero())
+		.user_balance(ALICE, MDOT, TEN_THOUSAND)
+		.user_balance(ALICE, MBTC, ONE_HUNDRED)
+		.build()
+		.execute_with(|| {
+			// DOT: exchange_rate = 10_000 / 10_000 = 1;
+			// alice_seize_wrap = alice_seize_underlying / exchange_rate;
+			// alice_seize_wrap = 10.001 DOT / 1 = 10.001 MDOT;
+			// alice_supply_MDOT = 10.000 MDOT < alice_seize_wrap = 10.001 MDOT;
+			assert_err!(
+				TestMinterestProtocol::do_seize(&ALICE, DOT, dollars(10_001)),
+				Error::<Test>::NotEnoughWrappedTokens
+			);
+
+			// BTC: exchange_rate = 50 / 50 = 1;
+			// alice_seize_MBTC = 50 BTC / 1 = 50 MBTC;
+			// pool_supply_btc = 0 < alice_seize_BTC = 50 BTC
+			assert_err!(
+				TestMinterestProtocol::do_seize(&ALICE, BTC, dollars(50)),
+				Error::<Test>::NotEnoughLiquidityAvailable
+			);
+
+			assert_eq!(Currencies::free_balance(MDOT, &ALICE), TEN_THOUSAND);
+			assert_eq!(TestPools::get_pool_available_liquidity(DOT), TEN_THOUSAND);
+			assert_eq!(TestLiquidationPools::get_pool_available_liquidity(DOT), Balance::zero());
+
+			assert_ok!(TestMinterestProtocol::do_seize(&ALICE, DOT, dollars(100)));
+
+			assert_eq!(Currencies::free_balance(MDOT, &ALICE), dollars(9_900));
+			assert_eq!(TestPools::get_pool_available_liquidity(DOT), dollars(9_900));
+			assert_eq!(TestLiquidationPools::get_pool_available_liquidity(DOT), dollars(100));
 		});
 }
 
