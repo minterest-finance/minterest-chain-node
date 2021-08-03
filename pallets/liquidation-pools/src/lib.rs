@@ -165,6 +165,11 @@ pub mod module {
 	/// covered by value in Liquidation Pool.
 	/// - `max_ideal_balance`: Max Ideal Balance represents the ideal balance of Liquidation Pool
 	/// and is used to limit ideal balance during pool balancing.
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=liquidation_pools::module::Pallet::liquidation_pools_data)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT liquidation_pools")]
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_pool_data_storage)]
 	pub type LiquidationPoolDataStorage<T: Config> =
@@ -254,6 +259,8 @@ pub mod module {
 		/// - `threshold`: New value of deviation threshold.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT liquidation_pools")]
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_deviation_threshold())]
 		#[transactional]
 		pub fn set_deviation_threshold(
@@ -293,6 +300,8 @@ pub mod module {
 		/// - `balance_ratio`: New value of balance ratio.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT liquidation_pools")]
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_balance_ratio())]
 		#[transactional]
 		pub fn set_balance_ratio(
@@ -332,6 +341,8 @@ pub mod module {
 		/// - `max_ideal_balance`: New value of maximum ideal balance.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT liquidation_pools")]
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_max_ideal_balance())]
 		#[transactional]
 		pub fn set_max_ideal_balance(
@@ -368,6 +379,8 @@ pub mod module {
 		/// - `max_supply_amount`: the maximum number of tokens for sale from the `supply_pool_id`
 		/// pool on DEX to buy `target_amount` of tokens
 		/// - `target_amount`: number of tokens to buy in `target_pool_id` on DEX
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT liquidation_pools")]
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::balance_liquidation_pools())]
 		#[transactional]
 		pub fn balance_liquidation_pools(
@@ -401,6 +414,8 @@ pub mod module {
 		/// Parameters:
 		/// - `underlying_asset_id`: currency of transfer
 		/// - `underlying_amount`: amount to transfer to liquidation pool
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT liquidation_pools")]
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::transfer_to_liquidation_pool())]
 		#[transactional]
 		pub fn transfer_to_liquidation_pool(

@@ -211,16 +211,22 @@ pub mod module {
 		///
 		/// Parameters:
 		/// - `pool_id`: the CurrencyId of the underlying asset to create pool for;
-		/// - `pool_data`: data to initialize pool storage in all pallets
-		/// 	- [`Minterest Model:`](?search=MinterestModelData) kink, base_rate_per_block,
+		/// - `pool_data`: data to initialize pool storage in all pallets;
+		///
+		///  [`Minterest Model:`](?search=MinterestModelData) kink, base_rate_per_block,
 		/// multiplier_per_block, jump_multiplier_per_block
-		/// 	- [`Controller:`](?search=controller::ControllerData) protocol_interest_factor,
+		///
+		///  [`Controller:`](?search=controller::ControllerData) protocol_interest_factor,
 		/// max_borrow_rate, collateral_factor, protocol_interest_threshold
-		/// 	- [`Liquidation Pools:`](?search=liquidation_pools::LiquidationPoolData)
+		///
+		///  [`Liquidation Pools:`](?search=liquidation_pools::LiquidationPoolData)
 		/// deviation_threshold,
 		/// balance_ratio
-		/// 	- [`Risk Manager:`](?search=risk_manager::module::Call) liquidation_threshold,
+		///
+		///  - [`Risk Manager:`](?search=risk_manager::module::Call) liquidation_threshold,
 		/// liquidation_fee
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_protocol")]
 		#[pallet::weight(T::ProtocolWeightInfo::create_pool())]
 		#[transactional]
 		pub fn create_pool(
@@ -249,9 +255,11 @@ pub mod module {
 		///
 		/// Parameters:
 		/// - `underlying_asset`: CurrencyId of underlying assets to be transferred into the
-		///   protocol.
+		///   protocol;
 		/// - `underlying_amount`: The amount of the asset to be supplied, in units of the
-		///   underlying asset.
+		///   underlying asset;
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_protocol")]
 		#[pallet::weight(T::ProtocolWeightInfo::deposit_underlying())]
 		#[transactional]
 		pub fn deposit_underlying(
@@ -282,6 +290,8 @@ pub mod module {
 		///
 		/// Parameters:
 		/// - `underlying_asset`: CurrencyId of underlying assets to be redeemed.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_protocol")]
 		#[pallet::weight(T::ProtocolWeightInfo::redeem())]
 		#[transactional]
 		pub fn redeem(origin: OriginFor<T>, underlying_asset: CurrencyId) -> DispatchResultWithPostInfo {
@@ -309,6 +319,8 @@ pub mod module {
 		/// Parameters:
 		/// - `underlying_asset`: CurrencyId of underlying assets to be redeemed.
 		/// - `underlying_amount`: The number of underlying assets to be redeemed.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_protocol")]
 		#[pallet::weight(T::ProtocolWeightInfo::redeem_underlying())]
 		#[transactional]
 		pub fn redeem_underlying(
@@ -340,6 +352,8 @@ pub mod module {
 		/// Parameters:
 		/// - `wrapped_id`: CurrencyId of mTokens to be redeemed.
 		/// - `wrapped_amount`: The number of mTokens to be redeemed.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_protocol")]
 		#[pallet::weight(T::ProtocolWeightInfo::redeem_wrapped())]
 		#[transactional]
 		pub fn redeem_wrapped(
@@ -374,6 +388,8 @@ pub mod module {
 		/// Parameters:
 		/// - `underlying_asset`: The currency ID of the underlying asset to be borrowed.
 		/// - `underlying_amount`: The amount of the underlying asset to be borrowed.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_protocol")]
 		#[pallet::weight(T::ProtocolWeightInfo::borrow())]
 		#[transactional]
 		pub fn borrow(
@@ -397,6 +413,8 @@ pub mod module {
 		/// Parameters:
 		/// - `underlying_asset`: The currency ID of the underlying asset to be repaid.
 		/// - `repay_amount`: The amount of the underlying asset to be repaid.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_protocol")]
 		#[pallet::weight(T::ProtocolWeightInfo::repay())]
 		#[transactional]
 		pub fn repay(
@@ -419,6 +437,8 @@ pub mod module {
 		///
 		/// Parameters:
 		/// - `underlying_asset`: The currency ID of the underlying asset to be repaid.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_protocol")]
 		#[pallet::weight(T::ProtocolWeightInfo::repay_all())]
 		#[transactional]
 		pub fn repay_all(origin: OriginFor<T>, underlying_asset: CurrencyId) -> DispatchResultWithPostInfo {
@@ -439,6 +459,8 @@ pub mod module {
 		/// - `underlying_asset`: The currency ID of the underlying asset to be repaid.
 		/// - `borrower`: The account which borrowed the asset to be repaid.
 		/// - `repay_amount`: The amount of the underlying borrowed asset to be repaid.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_protocol")]
 		#[pallet::weight(T::ProtocolWeightInfo::repay_on_behalf())]
 		#[transactional]
 		pub fn repay_on_behalf(
@@ -464,6 +486,8 @@ pub mod module {
 		/// - `receiver`: the account that will receive tokens.
 		/// - `wrapped_id`: the currency ID of the wrapped asset to transfer.
 		/// - `transfer_amount`: the amount of the wrapped asset to transfer.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_protocol")]
 		#[pallet::weight(T::ProtocolWeightInfo::transfer_wrapped())]
 		#[transactional]
 		pub fn transfer_wrapped(
@@ -487,6 +511,8 @@ pub mod module {
 		///
 		/// Parameters:
 		/// `pool_id`: CurrencyId of a pool that should be used a Collateral.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_protocol")]
 		#[pallet::weight(T::ProtocolWeightInfo::enable_is_collateral())]
 		#[transactional]
 		pub fn enable_is_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
@@ -524,6 +550,8 @@ pub mod module {
 		///
 		/// Parameters:
 		/// `pool_id`: CurrencyId of a pool that the user wants to disable as collateral.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_protocol")]
 		#[pallet::weight(T::ProtocolWeightInfo::disable_is_collateral())]
 		#[transactional]
 		pub fn disable_is_collateral(origin: OriginFor<T>, pool_id: CurrencyId) -> DispatchResultWithPostInfo {
@@ -572,6 +600,8 @@ pub mod module {
 		///
 		/// Parameters:
 		/// - `pools`: The vector of markets to claim MNT in
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT minterest_protocol")]
 		#[pallet::weight(T::ProtocolWeightInfo::claim_mnt())]
 		#[transactional]
 		pub fn claim_mnt(origin: OriginFor<T>, pools: Vec<CurrencyId>) -> DispatchResultWithPostInfo {
