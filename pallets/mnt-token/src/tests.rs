@@ -574,7 +574,6 @@ fn test_minting_enable_disable() {
 		.mnt_account_balance(100 * DOLLARS)
 		.build()
 		.execute_with(|| {
-			
 			// The dispatch origin of this call must be Root or 2/3 MinterestCouncil.
 			assert_noop!(MntToken::set_speed(alice_origin(), DOT, 1 * DOLLARS), BadOrigin);
 
