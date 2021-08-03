@@ -27,7 +27,7 @@ use frame_system::{
 use minterest_primitives::{currency::CurrencyType::UnderlyingAsset, currency::*, CurrencyId, OffchainErr, Price};
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData, RoundId};
 use pallet_traits::PricesManager;
-use sp_runtime::traits::Zero;
+use sp_runtime::traits::{One, Zero};
 use sp_std::convert::TryInto;
 pub use weights::WeightInfo;
 
@@ -149,22 +149,6 @@ pub mod module {
 }
 
 impl<T: Config> Pallet<T> {
-	// TODO rework it.
-	// This is temporary function. Shouldn't use in production but helpful in test project stage.
-	// If one of pool_id has lower RoundId that others we should syncronize it with others.
-	// This can happen if oracle hasn't enough time to submit all prices.
-	fn get_min_round_id() -> Result<RoundId, OffchainErr> {
-		let mut min_round_id: RoundId = RoundId::MAX;
-		for currency in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset) {
-			let feed_id = Self::get_feed_id(currency).ok_or(OffchainErr::ChainlinkFeedNotExists)?;
-			let feed_result = <ChainlinkFeedPallet<T>>::feed(feed_id)
-				.ok_or(OffchainErr::FailReceivingOraclePrice)?
-				.latest_round();
-			min_round_id = min_round_id.min(feed_result);
-		}
-		Ok(min_round_id)
-	}
-
 	// Print prices to node debug log
 	fn print_prices() {
 		for currency in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset) {
@@ -179,17 +163,21 @@ impl<T: Config> Pallet<T> {
 	fn _offchain_worker(now: T::BlockNumber) -> Result<(), OffchainErr> {
 		// TODO implement extrinsic to set initiate round period instead of hardcoded 3
 		let bn: T::BlockNumber = (3_u32).into();
-		if (now % bn).is_zero() {
-			// TODO should we get latest_round for each pool and produce event pair, or enough take
-			// only min round id?
-			let new_round_id = Self::get_min_round_id()?.saturating_add(1);
-			// Currently feed id is not play any role. See TODO above
-			let feed_id = Self::get_feed_id(ETH).ok_or(OffchainErr::ChainlinkFeedNotExists)?;
-			let call = Call::<T>::initiate_new_round(feed_id, new_round_id);
-			log::debug!("New round_id: {:?}", new_round_id);
+		if !(now % bn).is_zero() {
+			return Ok(());
+		}
 
+		for currency in CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset) {
+			let feed_id = Self::get_feed_id(currency).ok_or(OffchainErr::ChainlinkFeedNotExists)?;
+			let new_round_id = <ChainlinkFeedPallet<T>>::feed(feed_id)
+				.ok_or(OffchainErr::FailReceivingOraclePrice)?
+				.latest_round()
+				.checked_add(One::one())
+				.ok_or(OffchainErr::NumOverflow)?;
+			log::debug!("New round_id {:?} for currency {:?}", new_round_id, currency);
+			let call = Call::<T>::initiate_new_round(feed_id, new_round_id);
 			if SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).is_err() {
-				log::info!(
+				log::error!(
 					target: "ChainlinkPriceManager offchain worker",
 					"Initiate a new round is faled",
 				);
@@ -219,7 +207,7 @@ impl<T: Config> Pallet<T> {
 				T::FeedId,
 				pallet_chainlink_feed::FeedConfigOf<T>,
 			>>::iter()
-			.find(|(_, v)| v.description == Self::convert_to_description(currency_id))?
+			.find(|(_, v)| v.description.into_ref().as_slice() == Self::convert_to_description(currency_id))?
 			.0,
 		)
 	}

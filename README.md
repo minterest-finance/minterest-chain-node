@@ -62,7 +62,7 @@ subcommands:
 
 The `make run` command will launch the single-node development chain with persistent state. After the project has been built, there are other ways to launch the node.
 
-### Single-Node Development Chain
+### Standalone Development Chain
 
 This command will start the single-node development chain with persistent state:
 
@@ -81,6 +81,14 @@ Start the development chain with detailed logging:
 ```bash
 RUST_LOG=debug RUST_BACKTRACE=1 ./target/release/minterest -lruntime=debug --dev
 ```
+
+### Parachain
+
+To run parachain node you will need:
+- At least 2 running relay nodes (Polkadot)
+- At least 1 collator node and 1 normal node
+
+For step-by-step instruction consult with [scripts/README.md](scripts/README.md).
 
 ## Development
 

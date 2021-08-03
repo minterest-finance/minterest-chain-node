@@ -26,9 +26,10 @@ pub trait MntTokenRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
-	///
 	/// - [`amount`](`MntBalanceInfo::amount`): the MNT accrued but not yet transferred to each
 	/// user.
+	#[doc(alias = "MNT RPC")]
+	#[doc(alias = "MNT mnt_token")]
 	#[rpc(name = "mntToken_getUserTotalUnclaimedMntBalance")]
 	fn get_user_total_unclaimed_mnt_balance(
 		&self,
@@ -44,8 +45,12 @@ pub trait MntTokenRpcApi<BlockHash, AccountId> {
 	///  - `at` : Needed for runtime API use. Runtime API must always be called at a specific block.
 	///
 	/// Return:
+	/// (borrow_rate, supply_rate): MNT Borrow Rate and MNT Supply Rate values
+	///
 	/// - [`borrow_rate`](`Rate`): MNT Borrow Rate value
 	/// - [`supply_rate`](`Rate`): MNT Supply Rate value
+	#[doc(alias = "MNT RPC")]
+	#[doc(alias = "MNT mnt_token")]
 	#[rpc(name = "mntToken_getPoolMntBorrowAndSupplyRates")]
 	fn get_pool_mnt_borrow_and_supply_rates(
 		&self,

@@ -175,17 +175,32 @@ pub mod module {
 
 	/// The additional collateral which is taken from borrowers as a penalty for being liquidated.
 	/// Sets for each liquidity pool separately.
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=risk_manager::module::Pallet::liquidation_fee_storage)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT risk_manager")]
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_fee_storage)]
 	pub(crate) type LiquidationFeeStorage<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, Rate, ValueQuery>;
 
 	/// Step used in liquidation to protect the user from micro liquidations. One value for
 	/// the entire protocol.
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=risk_manager::module::Pallet::liquidation_threshold_storage)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT risk_manager")]
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_threshold_storage)]
 	pub(crate) type LiquidationThresholdStorage<T: Config> = StorageValue<_, Rate, ValueQuery>;
 
 	/// Counter of the number of partial liquidations at the user.
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=risk_manager::module::Pallet::user_liquidation_attempts_storage)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT risk_manager")]
 	#[pallet::storage]
 	#[pallet::getter(fn user_liquidation_attempts_storage)]
 	pub(crate) type UserLiquidationAttemptsStorage<T: Config> =
@@ -254,6 +269,8 @@ pub mod module {
 		/// - `liquidation_fee`: new liquidation fee value.
 		///
 		/// The dispatch origin of this call must be 'RiskManagerUpdateOrigin'.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT risk_manager")]
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_liquidation_fee(
@@ -281,6 +298,8 @@ pub mod module {
 		/// - `threshold`: new threshold.
 		///
 		/// The dispatch origin of this call must be 'RiskManagerUpdateOrigin'.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT risk_manager")]
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn set_liquidation_threshold(origin: OriginFor<T>, threshold: Rate) -> DispatchResultWithPostInfo {
@@ -304,6 +323,8 @@ pub mod module {
 		/// in underlying assets.
 		///
 		/// The dispatch origin of this call must be _None_.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT risk_manager")]
 		#[pallet::weight(0)]
 		#[transactional]
 		pub fn liquidate(
@@ -362,7 +383,7 @@ impl<T: Config> Pallet<T> {
 		let mut guard = lock.try_lock().map_err(|_| OffchainErr::OffchainLock)?;
 
 		let users_with_insolvent_loan = T::ControllerManager::get_all_users_with_insolvent_loan()
-			.map_err(|_| OffchainErr::UnableGetUsersWithLoan)?;
+			.map_err(|_| OffchainErr::GetUsersWithInsolventLoanFailed)?;
 
 		let mut loans_liquidated_count = 0_u32;
 		let working_start_time = sp_io::offchain::timestamp();
@@ -413,7 +434,7 @@ impl<T: Config> Pallet<T> {
 	/// -`borrower`: AccountId of the borrower whose loan is being processed.
 	fn process_insolvent_loan(borrower: &T::AccountId) -> Result<(), OffchainErr> {
 		let user_loan_state: UserLoanState<T> =
-			UserLoanState::build_user_loan_state(borrower).map_err(|_| OffchainErr::UnableBuildUserLoanState)?;
+			UserLoanState::build_user_loan_state(borrower).map_err(|_| OffchainErr::BuildUserLoanStateFailed)?;
 
 		// call to change the offchain worker local storage
 		Self::do_liquidate(&borrower, user_loan_state.clone()).map_err(|_| OffchainErr::LiquidateTransactionFailed)?;
