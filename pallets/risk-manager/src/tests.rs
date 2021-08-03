@@ -489,13 +489,21 @@ fn partial_and_complete_liquidation() {
 		});
 }
 
-// This test covers the situation when during supply seize amounts calculation seize amount for one
-// pool is bigger then it`s supply and for other pool seize amount is less then it`s supply so we
-// use extra supply of one pool to cover shortage of the other.
-// Bob   supply: 500 ETH - for liquidity in the ETH pool.
-// Alice supply: 500 DOT; 10 ETH collateral; 720 BTC collateral.
-// Alice borrow: 400 DOT; 330 ETH.
-// Note: prices for all assets set equal $1.
+/*
+This test covers the situation when during supply seize amounts calculation seize amount for one
+pool is bigger then it`s supply and for other pool seize amount is less then it`s supply so we
+use extra supply of one pool to cover shortage of the other.
+Bob   supply: 500 ETH - for liquidity in the ETH pool.
+Alice supply: 500 DOT; 10 ETH collateral; 720 BTC collateral.
+Alice borrow: 400 DOT; 330 ETH.
+
+alice_total_collateral_usd = $10 * 0.8 + $720 * 0.9 = $656
+alice_total_supply_in_collateral_pools_usd = $10 + $720 = $730
+alice_total_seize_usd = $400 * 1.05 + $330 * 1.05 = $766.5
+pay_from_liquidation_pools = $766.5 - $730 = $36.5
+Note: prices for all assets set equal $1.
+ */
+
 #[test]
 fn forgivable_liquidation_use_supply_from_one_pool_to_cover_shortage_of_other() {
 	ExtBuilder::default()
@@ -527,7 +535,7 @@ fn forgivable_liquidation_use_supply_from_one_pool_to_cover_shortage_of_other() 
 				Some(Complete),
 				vec![(BTC, dollars(720)), (ETH, dollars(10))],
 				vec![(DOT, dollars(400)), (ETH, dollars(330))],
-				vec![(BTC, 36_499999999999999233)],
+				vec![(BTC, 36_499999999999999233)], // ~36.5
 			);
 		})
 }

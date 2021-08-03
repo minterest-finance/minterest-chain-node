@@ -1,3 +1,5 @@
+#![allow(clippy::comparison_chain)]
+
 use super::*;
 use scirust::api::*;
 use sp_runtime::traits::{CheckedDiv, CheckedSub};
@@ -286,7 +288,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 		let total_collateral_factor = Rate::from_inner(total_collateral)
 			.checked_div(&Rate::from_inner(total_supply))
 			.ok_or(Error::<T>::NumOverflow)?;
-		let minimal_supply_ratio = Rate::saturating_from_integer(1)
+		let minimal_supply_ratio = Rate::one()
 			.checked_div(&total_collateral_factor)
 			.ok_or(Error::<T>::NumOverflow)?;
 		let save_supply_ratio = minimal_supply_ratio
@@ -308,7 +310,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 					.iter()
 					.find(|(p, _)| *p == pool_id)
 					.map(|(_, supply)| *supply)
-					.unwrap_or(Balance::zero());
+					.unwrap_or_else(Balance::zero);
 				liquidation_values.supply_usd = supply;
 				pool_to_liquidation_values.insert(pool_id, liquidation_values);
 			});
@@ -331,10 +333,10 @@ impl<T: Config + Debug> UserLoanState<T> {
 					.ok_or(Error::<T>::NumOverflow)?;
 				Ok(())
 			})?;
-		let x_coef = Rate::saturating_from_integer(1)
+		let x_coef = Rate::one()
 			.checked_div(&save_supply_ratio)
 			.ok_or(Error::<T>::NumOverflow)?
-			.to_float() - Rate::saturating_from_integer(1)
+			.to_float() - Rate::one()
 			.checked_div(&current_supply_ratio)
 			.ok_or(Error::<T>::NumOverflow)?
 			.to_float();
@@ -427,7 +429,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 	/// Returns: vector of (pool_id, seize_amount) for each pool where seize_amount is > 0
 	pub(crate) fn calculate_borrower_supplies_to_seize(
 		&self,
-		borrower_loans_to_repay: &Vec<(CurrencyId, Balance)>,
+		borrower_loans_to_repay: &[(CurrencyId, Balance)],
 	) -> Result<Vec<(CurrencyId, Balance)>, DispatchError> {
 		#[derive(Default, Clone, Copy)]
 		struct PoolUserIntermediaryLiquidationValues {
@@ -455,7 +457,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 					.iter()
 					.find(|(p, _)| *p == pool_id)
 					.map(|(_, supply)| *supply)
-					.unwrap_or(Balance::zero());
+					.unwrap_or_else(Balance::zero);
 				if !supply.is_zero() {
 					sum_used_collateral = sum_used_collateral
 						.checked_add(&T::ControllerManager::get_pool_collateral_factor(pool_id))
@@ -512,7 +514,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 							.and_then(|v| v.checked_mul(&Rate::from_inner(*borrower_loan_to_repay)))
 							.and_then(|v| v.checked_mul(&liquidation_values.supply_seize_factor))
 							.ok_or(Error::<T>::NumOverflow)?;
-						let pool_seize = supply_to_seize.entry(*pool_id_inner).or_insert(Rate::zero());
+						let pool_seize = supply_to_seize.entry(*pool_id_inner).or_insert_with(Rate::zero);
 						*pool_seize = pool_seize.checked_add(&to_seize).ok_or(Error::<T>::NumOverflow)?;
 						Ok(())
 					},
@@ -543,12 +545,12 @@ impl<T: Config + Debug> UserLoanState<T> {
 		)?;
 
 		// At this point some of entries in supply_to_seize may be greater than supply amounts for
-		// respective pools This means pool doesn`t have enough supply to repay borrow and we need to
+		// respective pools. This means pool doesn't have enough supply to repay borrow and we need to
 		// split this shortage between pools that have extra supply
 		let mut borrower_supply_to_seize = Vec::new();
 		pool_to_liquidation_values.iter().try_for_each(
 			|(pool_id, liquidation_values)| -> Result<(), DispatchError> {
-				let pool_seize = supply_to_seize.entry(*pool_id).or_insert(Rate::zero());
+				let pool_seize = supply_to_seize.entry(*pool_id).or_insert_with(Rate::zero);
 				let supply_as_rate = Rate::from_inner(liquidation_values.supply_usd);
 				if sum_positive_supply_after_seize > sum_negative_supply_after_seize {
 					// Pool has extra supply -> increase pool_seize by a portion of sum_negative_supply_after_seize
@@ -618,9 +620,14 @@ impl<T: Config + Debug> UserLoanState<T> {
 	/// Based on the current state of the user's insolvent loan, it calculates the amounts required
 	/// for complete liquidation.
 	///
-	/// Returns: vectors with user's borrows to be paid from the liquidation pools instead of
-	/// the borrower, and a vector with user's supplies to be withdrawn from the borrower and sent
-	/// to the liquidation pools. Balances are calculated in underlying assets.
+	/// Returns:
+	/// - vectors with user's borrows to be paid from the liquidation pools instead of
+	/// the borrower;
+	/// - vector with user's supplies to be withdrawn from the borrower and sent
+	/// to the liquidation pools;
+	/// - vector of pools and a balance that must be paid from the liquidation pools
+	/// to liquidity pools. This vector is not empty only if user_seize_ > user_supply.
+	/// Balances are calculated in underlying assets.
 	///
 	/// Note: this function should be used after `accrue_interest_rate`.
 	pub(crate) fn calculate_complete_liquidation(&self) -> CompleteLiquidationAmountsResult {
@@ -635,7 +642,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 					.iter()
 					.find(|(p, _)| *p == *pool_id)
 					.map(|(_, supply)| *supply)
-					.unwrap_or(Balance::zero());
+					.unwrap_or_else(Balance::zero);
 				if *to_seize > supply {
 					let to_pay = to_seize.checked_sub(supply).ok_or(Error::<T>::NumOverflow)?;
 					borrower_supplies_to_pay_underlying.push((*pool_id, to_pay));
