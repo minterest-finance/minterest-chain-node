@@ -299,7 +299,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		let mut pool_to_liquidation_values = BTreeMap::new();
-		/// Copy self.supplies to a map of pool values
+		// Copy self.supplies to a map of pool values
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.into_iter()
 			.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
@@ -315,7 +315,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 				pool_to_liquidation_values.insert(pool_id, liquidation_values);
 			});
 
-		/// Fill borrow_usd and calculate all stuff required for matrix calculations
+		// Fill borrow_usd and calculate all stuff required for matrix calculations
 		let mut sum_borrowed_to_total_supply_ratio = Rate::zero();
 		self.borrows
 			.iter()
@@ -341,7 +341,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 			.ok_or(Error::<T>::NumOverflow)?
 			.to_float();
 
-		/// Sum of collateral of pools where user has positive supply
+		// Sum of collateral of pools where user has positive supply
 		let mut sum_used_collateral = Rate::zero();
 		pool_to_liquidation_values
 			.iter_mut()
@@ -363,7 +363,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 				}
 				Ok(())
 			})?;
-		/// Pools with positive borrow
+		// Pools with positive borrow
 		let mut pools_to_remove_borrowed_from = Vec::new();
 		pool_to_liquidation_values
 			.iter()
@@ -374,7 +374,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 				}
 			});
 
-		/// Calculate how much to repay for each pool
+		// Calculate how much to repay for each pool
 		let size = pools_to_remove_borrowed_from.len();
 		let mut matrix = MatrixF64::zeros(size, size);
 		let mut vector = MatrixF64::zeros(size, 1);
@@ -444,9 +444,9 @@ impl<T: Config + Debug> UserLoanState<T> {
 		}
 
 		let mut pool_to_liquidation_values = BTreeMap::new();
-		/// Sum of collateral of pools where user has positive supply
+		// Sum of collateral of pools where user has positive supply
 		let mut sum_used_collateral = Rate::zero();
-		/// Copy self.supplies to a map of pool values
+		// Copy self.supplies to a map of pool values
 		CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset)
 			.into_iter()
 			.filter(|&pool_id| T::LiquidityPoolsManager::pool_exists(&pool_id))
@@ -468,7 +468,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 				Ok(())
 			})?;
 
-		///Calculate how much to seize from supply pools
+		// Calculate how much to seize from supply pools
 		let mut sum_of_supply_and_collateral_ratio_product = Rate::zero();
 		pool_to_liquidation_values.iter_mut().try_for_each(
 			|(pool_id, liquidation_values)| -> Result<(), DispatchError> {
