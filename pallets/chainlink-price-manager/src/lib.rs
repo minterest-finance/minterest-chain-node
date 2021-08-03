@@ -207,7 +207,7 @@ impl<T: Config> Pallet<T> {
 				T::FeedId,
 				pallet_chainlink_feed::FeedConfigOf<T>,
 			>>::iter()
-			.find(|(_, v)| v.description == Self::convert_to_description(currency_id))?
+			.find(|(_, v)| v.description.into_ref().as_slice() == Self::convert_to_description(currency_id))?
 			.0,
 		)
 	}
