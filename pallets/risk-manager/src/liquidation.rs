@@ -1,9 +1,7 @@
 use super::*;
 use scirust::api::*;
-use sp_runtime::traits::CheckedDiv;
-use sp_runtime::traits::CheckedSub;
-use sp_std::collections::btree_map::BTreeMap;
-use sp_std::fmt::Debug;
+use sp_runtime::traits::{CheckedDiv, CheckedSub};
+use sp_std::{collections::btree_map::BTreeMap, fmt::Debug};
 
 type LiquidationAmountsResult = Result<(Vec<(CurrencyId, Balance)>, Vec<(CurrencyId, Balance)>), DispatchError>;
 type CompleteLiquidationAmountsResult = Result<

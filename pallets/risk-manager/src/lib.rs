@@ -78,7 +78,6 @@ mod tests;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use orml_traits::MultiCurrency;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> + Debug {
