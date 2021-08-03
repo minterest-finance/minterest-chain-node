@@ -529,6 +529,7 @@ impl liquidation_pools::Config for Runtime {
 	type LiquidityPoolsManager = LiquidityPools;
 	type Dex = Dex;
 	type LiquidationPoolsWeightInfo = weights::liquidation_pools::WeightInfo<Runtime>;
+	type ControllerManager = Controller;
 }
 
 parameter_types! {

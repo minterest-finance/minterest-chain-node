@@ -176,6 +176,7 @@ macro_rules! mock_impl_liquidation_pools_config {
 			type LiquidationPoolAccountId = LiquidationPoolAccountId;
 			type Dex = dex::Pallet<$target>;
 			type LiquidationPoolsWeightInfo = ();
+			type ControllerManager = controller::Pallet<$target>;
 		}
 
 		/// An extrinsic type used for tests.

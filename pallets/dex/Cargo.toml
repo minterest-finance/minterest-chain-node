@@ -29,6 +29,9 @@ minterest-primitives = { path = "../../primitives" }
 liquidity-pools = { path = "../liquidity-pools" }
 liquidation-pools = { path = "../liquidation-pools" }
 test-helper = { path = "../../test-helper" }
+controller = { path = "../controller" }
+minterest-model = { path = "../minterest-model" }
+mnt-token = { path = "../mnt-token" }
 
 [features]
 default = ["std"]
