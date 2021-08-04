@@ -1,7 +1,7 @@
-use super::utils::{lookup_of_account, set_balance};
+use super::utils::{lookup_of_account, set_balance, MNT_CUR};
 use crate::{
 	benchmarking::utils::SEED, AccountId, BlockNumber, Currencies, MaxVestingSchedules, Runtime, System, Vesting,
-	BLOCKS_PER_YEAR, DOLLARS, MNT,
+	BLOCKS_PER_YEAR, DOLLARS,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
@@ -20,7 +20,7 @@ runtime_benchmarks! {
 		let schedule_amount = 10 * DOLLARS; // 10 MNT
 		let mut schedule: VestingSchedule<BlockNumber> = VestingSchedule::new(VestingBucket::Team, schedule_amount);
 
-		set_balance(MNT, &VestingBucket::Team.bucket_account_id().unwrap(), schedule_amount * i as u128)?;
+		set_balance(MNT_CUR, &VestingBucket::Team.bucket_account_id().unwrap(), schedule_amount * i as u128)?;
 
 		let claimer: AccountId = account("claimer", 0, SEED);
 		let claimer_lookup = lookup_of_account(claimer.clone());
@@ -33,7 +33,7 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(claimer.clone()))
 	verify {
 		assert_eq!(
-			<Currencies as MultiCurrency<_>>::free_balance(MNT, &claimer),
+			<Currencies as MultiCurrency<_>>::free_balance(MNT_CUR, &claimer),
 			schedule.total_amount().unwrap() * i as u128,
 		);
 	}
@@ -42,14 +42,14 @@ runtime_benchmarks! {
 		let schedule_amount = 10 * DOLLARS; // 10 MNT
 		let schedule: VestingSchedule<BlockNumber> = VestingSchedule::new(VestingBucket::Team, schedule_amount);
 
-		set_balance(MNT, &VestingBucket::Team.bucket_account_id().unwrap(), schedule_amount)?;
+		set_balance(MNT_CUR, &VestingBucket::Team.bucket_account_id().unwrap(), schedule_amount)?;
 
 		let to: AccountId = account("to", 0, SEED);
 		let to_lookup = lookup_of_account(to.clone());
 	}: _(RawOrigin::Root, to_lookup.clone(), VestingBucket::Team, 0, schedule_amount)
 	verify {
 		assert_eq!(
-			<Currencies as MultiCurrency<_>>::total_balance(MNT, &to),
+			<Currencies as MultiCurrency<_>>::total_balance(MNT_CUR, &to),
 			schedule.total_amount().unwrap()
 		);
 	}
@@ -57,7 +57,7 @@ runtime_benchmarks! {
 	remove_vesting_schedules {
 		let schedule_amount = 10 * DOLLARS; // 10 MNT
 
-		set_balance(MNT, &VestingBucket::Team.bucket_account_id().unwrap(), schedule_amount * MaxVestingSchedules::get() as u128)?;
+		set_balance(MNT_CUR, &VestingBucket::Team.bucket_account_id().unwrap(), schedule_amount * MaxVestingSchedules::get() as u128)?;
 
 		let teammate: AccountId = account("teammate", 0, SEED);
 		let teammate_lookup = lookup_of_account(teammate.clone());
@@ -70,7 +70,7 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Root, teammate_lookup.clone(), VestingBucket::Team)
 	verify {
 		assert_eq!(
-			<Currencies as MultiCurrency<_>>::free_balance(MNT, &teammate),
+			<Currencies as MultiCurrency<_>>::free_balance(MNT_CUR, &teammate),
 			schedule_amount * MaxVestingSchedules::get() as u128 / 2_u128,
 		);
 	}

@@ -1,10 +1,10 @@
 use super::utils::{
-	enable_is_collateral_mock, enable_whitelist_mode_and_add_member, prepare_for_mnt_distribution, set_balance, SEED,
+	enable_is_collateral_mock, enable_whitelist_mode_and_add_member, prepare_for_mnt_distribution, set_balance,
+	BTC_CUR, DOT_CUR, MDOT_CUR, MNT_CUR, SEED,
 };
 use crate::{
-	AccountId, Balance, Currencies, EnabledWrappedTokensId, LiquidityPools, LiquidityPoolsPalletId, MinterestProtocol,
-	MntTokenPalletId, Origin, Rate, RiskManager, Runtime, System, Whitelist, BTC, DOLLARS, DOT, ETH, KSM, MBTC, MDOT,
-	MNT,
+	AccountId, Balance, Currencies, LiquidityPools, LiquidityPoolsPalletId, MinterestProtocol, MntTokenPalletId,
+	Origin, OriginalAsset, OriginalAsset::*, Rate, RiskManager, Runtime, System, Whitelist, WrapToken, DOLLARS,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
@@ -25,21 +25,22 @@ use sp_std::prelude::*;
 
 fn hypothetical_liquidity_setup(borrower: &AccountId, lender: &AccountId) -> Result<(), &'static str> {
 	// set balance for users
-	EnabledWrappedTokensId::get()
+
+	WrapToken::get_wrap_tokens()
 		.into_iter()
-		.try_for_each(|token_id| -> Result<(), &'static str> {
-			if token_id == MBTC {
-				set_balance(token_id, borrower, 30_000 * DOLLARS)?;
+		.try_for_each(|&token_id| -> Result<(), &'static str> {
+			if token_id == WrapToken::BTC {
+				set_balance(token_id.into(), borrower, 30_000 * DOLLARS)?;
 			} else {
-				set_balance(token_id, borrower, 10_000 * DOLLARS)?;
+				set_balance(token_id.into(), borrower, 10_000 * DOLLARS)?;
 			}
 			Ok(())
 		})?;
-	set_balance(MDOT, lender, 20_000 * DOLLARS)?;
+	set_balance(MDOT_CUR, lender, 20_000 * DOLLARS)?;
 
 	// set balance for Pools
-	set_balance(DOT, &LiquidityPoolsPalletId::get().into_account(), 20_000 * DOLLARS)?;
-	set_balance(BTC, &LiquidityPoolsPalletId::get().into_account(), 20_000 * DOLLARS)?;
+	set_balance(DOT_CUR, &LiquidityPoolsPalletId::get().into_account(), 20_000 * DOLLARS)?;
+	set_balance(BTC_CUR, &LiquidityPoolsPalletId::get().into_account(), 20_000 * DOLLARS)?;
 
 	// enable pools as collateral
 	OriginalAsset::get_original_assets()
@@ -83,12 +84,12 @@ runtime_benchmarks! {
 	)
 
 	deposit_underlying {
-		prepare_for_mnt_distribution(vec![DOT])?;
+		prepare_for_mnt_distribution(&[DOT])?;
 		let lender: AccountId = account("lender", 0, SEED);
 		Whitelist::add_member(RawOrigin::Root.into(), lender.clone())?;
 
 		// set balance for lender
-		set_balance(DOT, &lender, 50_000 * DOLLARS)?;
+		set_balance(DOT_CUR, &lender, 50_000 * DOLLARS)?;
 
 		// Set liquidation_attempts grater than zero to reset them.
 		RiskManager::try_mutate_attempts(&lender, Operation::Repay, None, Some(Partial))?;
@@ -101,13 +102,13 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(lender.clone()), DOT, 10_000 * DOLLARS)
 	verify {
-		assert_eq!(Currencies::free_balance(DOT.into(), &LiquidityPoolsPalletId::get().into_account() ), 60_000 * DOLLARS);
+		assert_eq!(Currencies::free_balance(DOT_CUR, &LiquidityPoolsPalletId::get().into_account() ), 60_000 * DOLLARS);
 		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(lender_supply) / 60(total_supply) = 3.33 MNT
 		assert_eq!(Currencies::free_balance(MNT_CUR, &lender), 3_333_333_324_333_330_029)
 	}
 
 	redeem {
-		prepare_for_mnt_distribution(vec![DOT])?;
+		prepare_for_mnt_distribution(&[DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
@@ -118,13 +119,13 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
 	verify {
-		assert_eq!(Currencies::free_balance(DOT.into(), &borrower), 8_750_000_014_464_285_710_000);
+		assert_eq!(Currencies::free_balance(DOT_CUR, &borrower), 8_750_000_014_464_285_710_000);
 		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(borrower_supply) / 80(total_supply) = 2.5 MNT
 		assert_eq!(Currencies::free_balance(MNT_CUR, &borrower), 2_500_000_000_000_000_000)
 	}
 
 	redeem_underlying {
-		prepare_for_mnt_distribution(vec![DOT])?;
+		prepare_for_mnt_distribution(&[DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
@@ -135,13 +136,13 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(borrower.clone()), DOT, 1_000 * DOLLARS)
 	verify {
-		assert_eq!(Currencies::free_balance(DOT.into(), &borrower), 1_000 * DOLLARS);
+		assert_eq!(Currencies::free_balance(DOT_CUR, &borrower), 1_000 * DOLLARS);
 		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(borrower_supply) / 80(total_supply) = 2.5 MNT
 		assert_eq!(Currencies::free_balance(MNT_CUR, &borrower), 2_500_000_000_000_000_000)
 	}
 
 	redeem_wrapped {
-		prepare_for_mnt_distribution(vec![DOT])?;
+		prepare_for_mnt_distribution(&[DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
@@ -150,15 +151,15 @@ runtime_benchmarks! {
 
 		System::set_block_number(10);
 
-	}: _(RawOrigin::Signed(borrower.clone()), MDOT, 10_000 * DOLLARS)
+	}: _(RawOrigin::Signed(borrower.clone()), WrapToken::DOT, 10_000 * DOLLARS)
 	verify {
-		assert_eq!(Currencies::free_balance(DOT.into(), &borrower), 8_750_000_014_464_285_710_000);
+		assert_eq!(Currencies::free_balance(DOT_CUR, &borrower), 8_750_000_014_464_285_710_000);
 		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(borrower_supply) / 80(total_supply) = 2.5 MNT
 		assert_eq!(Currencies::free_balance(MNT_CUR, &borrower), 2_500_000_000_000_000_000)
 	}
 
 	borrow {
-		prepare_for_mnt_distribution(vec![DOT])?;
+		prepare_for_mnt_distribution(&[DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
@@ -171,15 +172,15 @@ runtime_benchmarks! {
 
 	}: _(RawOrigin::Signed(borrower.clone()), DOT, 5_000 * DOLLARS)
 	verify {
-		assert_eq!(Currencies::free_balance(DOT.into(), &borrower ), 10_000 * DOLLARS);
+		assert_eq!(Currencies::free_balance(DOT_CUR, &borrower ), 10_000 * DOLLARS);
 		assert_eq!(Currencies::free_balance(MNT_CUR, &borrower), 19_999_999_999_999_995_000)
 	}
 
 	repay {
-		prepare_for_mnt_distribution(vec![DOT])?;
+		prepare_for_mnt_distribution(&[DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
 		Whitelist::add_member(RawOrigin::Root.into(), borrower.clone())?;
-		set_balance(DOT, &borrower, 100_000 * DOLLARS)?;
+		set_balance(DOT_CUR, &borrower, 100_000 * DOLLARS)?;
 		MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), DOT, 50_000 * DOLLARS)?;
 
 		System::set_block_number(10);
@@ -196,10 +197,10 @@ runtime_benchmarks! {
 	}
 
 	repay_all {
-		prepare_for_mnt_distribution(vec![DOT])?;
+		prepare_for_mnt_distribution(&[DOT])?;
 		let borrower:AccountId = account("borrower", 0, SEED);
 		Whitelist::add_member(RawOrigin::Root.into(), borrower.clone())?;
-		set_balance(DOT, &borrower, 100_000 * DOLLARS)?;
+		set_balance(DOT_CUR, &borrower, 100_000 * DOLLARS)?;
 		MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), DOT, 50_000 * DOLLARS)?;
 
 		System::set_block_number(10);
@@ -216,13 +217,13 @@ runtime_benchmarks! {
 	}
 
 	repay_on_behalf {
-		prepare_for_mnt_distribution(vec![DOT])?;
+		prepare_for_mnt_distribution(&[DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 		Whitelist::add_member(RawOrigin::Root.into(), lender.clone())?;
 		Whitelist::add_member(RawOrigin::Root.into(), borrower.clone())?;
-		set_balance(DOT, &lender, 100_000 * DOLLARS)?;
-		set_balance(DOT, &borrower, 100_000 * DOLLARS)?;
+		set_balance(DOT_CUR, &lender, 100_000 * DOLLARS)?;
+		set_balance(DOT_CUR, &borrower, 100_000 * DOLLARS)?;
 		MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), DOT, 50_000 * DOLLARS)?;
 
 		System::set_block_number(10);
@@ -240,7 +241,7 @@ runtime_benchmarks! {
 	}
 
 	transfer_wrapped {
-		prepare_for_mnt_distribution(vec![DOT])?;
+		prepare_for_mnt_distribution(&[DOT])?;
 		let borrower: AccountId = account("borrower", 0, SEED);
 		let lender: AccountId = account("lender", 0, SEED);
 
@@ -251,10 +252,10 @@ runtime_benchmarks! {
 
 		System::set_block_number(20);
 
-	}: _(RawOrigin::Signed(borrower.clone()), lender.clone(), MDOT, 10_000 * DOLLARS)
+	}: _(RawOrigin::Signed(borrower.clone()), lender.clone(), WrapToken::DOT, 10_000 * DOLLARS)
 	verify  {
-		assert_eq!(Currencies::free_balance(MDOT, &borrower.clone()), Balance::zero());
-		assert_eq!(Currencies::free_balance(MDOT, &lender.clone()), 30_000 * DOLLARS);
+		assert_eq!(Currencies::free_balance(MDOT_CUR, &borrower.clone()), Balance::zero());
+		assert_eq!(Currencies::free_balance(MDOT_CUR, &lender.clone()), 30_000 * DOLLARS);
 		assert_eq!(Currencies::free_balance(MNT_CUR, &borrower), 5_000_000_000_000_000_000);
 		assert_eq!(Currencies::free_balance(MNT_CUR, &lender), 10_000_000_000_000_000_000);
 	 }
@@ -262,7 +263,7 @@ runtime_benchmarks! {
 	enable_is_collateral {
 		let borrower:AccountId = account("borrower", 0, SEED);
 		// set balance for users
-		set_balance(MDOT, &borrower, 10_000 * DOLLARS)?;
+		set_balance(MDOT_CUR, &borrower, 10_000 * DOLLARS)?;
 
 		enable_whitelist_mode_and_add_member(&borrower)?;
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
@@ -284,7 +285,7 @@ runtime_benchmarks! {
 		Whitelist::add_member(RawOrigin::Root.into(), borrower.clone())?;
 
 		set_balance(
-			MNT,
+			MNT_CUR,
 			&MntTokenPalletId::get().into_account(),
 			1_000_000 * DOLLARS,
 		)?;
@@ -297,7 +298,7 @@ runtime_benchmarks! {
 					borrow_index: Rate::one(),
 					protocol_interest: Balance::zero(),
 				});
-				set_balance(pool_id, &lender, 100_000 * DOLLARS)?;
+				set_balance(pool_id.into(), &lender, 100_000 * DOLLARS)?;
 				MinterestProtocol::deposit_underlying(RawOrigin::Signed(lender.clone()).into(), pool_id, 100_000 * DOLLARS)?;
 				MinterestProtocol::enable_is_collateral(Origin::signed(lender.clone()).into(), pool_id)?;
 				MinterestProtocol::borrow(RawOrigin::Signed(lender.clone()).into(), pool_id, 50_000 * DOLLARS)?;
@@ -309,7 +310,7 @@ runtime_benchmarks! {
 		OriginalAsset::get_original_assets()
 			.into_iter()
 			.try_for_each(|&pool_id| -> Result<(), &'static str> {
-				set_balance(pool_id, &borrower, 100_000 * DOLLARS)?;
+				set_balance(pool_id.into(), &borrower, 100_000 * DOLLARS)?;
 				MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), pool_id, 100_000 * DOLLARS)?;
 				MinterestProtocol::enable_is_collateral(Origin::signed(borrower.clone()).into(), pool_id)?;
 				MinterestProtocol::borrow(RawOrigin::Signed(borrower.clone()).into(), pool_id, 50_000 * DOLLARS)?;

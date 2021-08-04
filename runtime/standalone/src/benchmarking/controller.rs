@@ -1,4 +1,4 @@
-use crate::{Balance, Operation, Rate, Runtime, DOT};
+use crate::{Balance, Operation, OriginalAsset::DOT, Rate, Runtime};
 use frame_system::RawOrigin;
 use orml_benchmarking::{runtime_benchmarks, Zero};
 use sp_runtime::traits::One;

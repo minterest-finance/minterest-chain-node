@@ -1,4 +1,4 @@
-use crate::{Rate, Runtime, DOT};
+use crate::{OriginalAsset::DOT, Rate, Runtime};
 
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;

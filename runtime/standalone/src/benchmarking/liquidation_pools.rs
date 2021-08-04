@@ -1,5 +1,9 @@
-use super::utils::set_balance;
-use crate::{AccountId, DexPalletId, LiquidationPools, LiquidationPoolsPalletId, Rate, Runtime, DOLLARS, DOT, ETH};
+use super::utils::{set_balance, DOT_CUR, ETH_CUR};
+use crate::{
+	AccountId, DexPalletId, LiquidationPools, LiquidationPoolsPalletId,
+	OriginalAsset::{DOT, ETH},
+	Rate, Runtime, DOLLARS,
+};
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
@@ -11,25 +15,25 @@ runtime_benchmarks! {
 	set_deviation_threshold {}: _(RawOrigin::Root, DOT, 10u128.pow(18))
 	verify { assert_eq!(LiquidationPools::liquidation_pool_data_storage(DOT).deviation_threshold, Rate::one()) }
 
-	set_balance_ratio {}: _(RawOrigin::Root, DOT,  10u128.pow(18))
+	set_balance_ratio {}: _(RawOrigin::Root, DOT, 10u128.pow(18))
 	verify { assert_eq!(LiquidationPools::liquidation_pool_data_storage(DOT).balance_ratio, Rate::one()) }
 
-	set_max_ideal_balance {}: _(RawOrigin::Root, DOT,  Some(10u128.pow(18)))
+	set_max_ideal_balance {}: _(RawOrigin::Root, DOT, Some(10u128.pow(18)))
 	verify { assert_eq!(LiquidationPools::liquidation_pool_data_storage(DOT).max_ideal_balance_usd, Some(10u128.pow(18))) }
 
 	transfer_to_liquidation_pool {
 		let who: AccountId = account("alice", 0, 0);
-		set_balance(DOT, &who, 20_000)?;
+		set_balance(DOT_CUR, &who, 20_000)?;
 	}: _(RawOrigin::Signed(who), DOT, 20_000)
 
 	balance_liquidation_pools {
 		set_balance(
-			ETH,
+			ETH_CUR,
 			&DexPalletId::get().into_account(),
 			20_000 * DOLLARS,
 		)?;
 		set_balance(
-			DOT,
+			DOT_CUR,
 			&LiquidationPoolsPalletId::get().into_account(),
 			20_000 * DOLLARS,
 		)?;

@@ -1,4 +1,4 @@
-use crate::{CurrencyId, MinterestOracle, Origin, Price, Prices, Runtime, DOT};
+use crate::{MinterestOracle, Origin, OriginalAsset, OriginalAsset::DOT, Price, Prices, Runtime};
 
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;

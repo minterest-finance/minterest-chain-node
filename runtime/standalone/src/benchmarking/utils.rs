@@ -1,8 +1,8 @@
 #![allow(unused_imports)]
 
 use crate::{
-	AccountId, Balance, Currencies, CurrencyId, LiquidityPools, MinterestProtocol, MntTokenPalletId, Origin, Rate,
-	Runtime, Vec, Whitelist, BTC, DOLLARS, DOT, ETH, KSM, MNT,
+	AccountId, Balance, Currencies, CurrencyId, LiquidityPools, MinterestProtocol, MntTokenPalletId, Origin,
+	OriginalAsset, OriginalAsset::*, Rate, Runtime, Vec, Whitelist, WrapToken, DOLLARS,
 };
 
 use frame_benchmarking::account;
@@ -18,6 +18,12 @@ use sp_runtime::{
 
 pub const SEED: u32 = 0;
 
+pub const MNT_CUR: CurrencyId = CurrencyId::Original(OriginalAsset::MNT);
+pub const DOT_CUR: CurrencyId = CurrencyId::Original(OriginalAsset::DOT);
+pub const BTC_CUR: CurrencyId = CurrencyId::Original(OriginalAsset::BTC);
+pub const ETH_CUR: CurrencyId = CurrencyId::Original(OriginalAsset::ETH);
+pub const MDOT_CUR: CurrencyId = CurrencyId::Wrap(WrapToken::DOT);
+
 pub fn lookup_of_account(who: AccountId) -> <<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source {
 	<Runtime as frame_system::Config>::Lookup::unlookup(who)
 }
@@ -29,9 +35,9 @@ pub fn set_balance(currency_id: CurrencyId, who: &AccountId, balance: Balance) -
 
 pub fn enable_is_collateral_mock<T: frame_system::Config<Origin = Origin>>(
 	origin: OriginFor<T>,
-	currency_id: CurrencyId,
+	pool_id: OriginalAsset,
 ) -> DispatchResultWithPostInfo {
-	MinterestProtocol::enable_is_collateral(origin.into(), currency_id)?;
+	MinterestProtocol::enable_is_collateral(origin.into(), pool_id)?;
 	Ok(().into())
 }
 
@@ -41,8 +47,8 @@ pub fn enable_whitelist_mode_and_add_member(who: &AccountId) -> DispatchResultWi
 	Ok(().into())
 }
 
-pub(crate) fn create_pools(pools: &Vec<CurrencyId>) {
-	pools.into_iter().for_each(|&pool_id| {
+pub(crate) fn create_pools() {
+	OriginalAsset::get_original_assets().into_iter().for_each(|&pool_id| {
 		LiquidityPools::set_pool_data(
 			pool_id,
 			PoolData {
@@ -54,12 +60,12 @@ pub(crate) fn create_pools(pools: &Vec<CurrencyId>) {
 	});
 }
 
-pub(crate) fn prepare_for_mnt_distribution(pools: Vec<CurrencyId>) -> Result<(), &'static str> {
+pub(crate) fn prepare_for_mnt_distribution(pools: &[OriginalAsset]) -> Result<(), &'static str> {
 	let helper: AccountId = account("helper", 0, SEED);
 	enable_whitelist_mode_and_add_member(&helper)?;
-	set_balance(MNT, &MntTokenPalletId::get().into_account(), 1_000_000 * DOLLARS)?;
-	pools.into_iter().try_for_each(|pool_id| -> Result<(), &'static str> {
-		set_balance(pool_id, &helper, 50_000 * DOLLARS)?;
+	set_balance(MNT_CUR, &MntTokenPalletId::get().into_account(), 1_000_000 * DOLLARS)?;
+	pools.into_iter().try_for_each(|&pool_id| -> Result<(), &'static str> {
+		set_balance(pool_id.into(), &helper, 50_000 * DOLLARS)?;
 		MinterestProtocol::deposit_underlying(RawOrigin::Signed(helper.clone()).into(), pool_id, 50_000 * DOLLARS)?;
 		MinterestProtocol::enable_is_collateral(Origin::signed(helper.clone()).into(), pool_id)?;
 		MinterestProtocol::borrow(RawOrigin::Signed(helper.clone()).into(), pool_id, 10_000 * DOLLARS)?;
