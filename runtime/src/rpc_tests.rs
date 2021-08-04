@@ -1455,21 +1455,16 @@ fn get_all_locked_prices_rpc_should_work() {
 		// Check that locked prices are returned
 		// By default all price set to 10_000
 		let locked_prices = get_all_locked_prices();
-		for (_currency_id, price) in locked_prices {
+		for (_, price) in locked_prices {
 			assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
 		}
 		// Unlock price for DOT, check that None will be returned for this currency
 		assert_ok!(unlock_price(DOT));
 		let locked_prices = get_all_locked_prices();
-		for (currency_id, price) in locked_prices {
-			match currency_id {
-				DOT => {
-					assert_eq!(price, None);
-				}
-				ETH | BTC | KSM => {
-					assert_eq!(price, Some(Price::saturating_from_integer(10_000)));
-				}
-				_ => panic!("Unexpected token!"),
+		for (asset, price) in locked_prices {
+			match asset {
+				DOT => assert_eq!(price, None),
+				_ => assert_eq!(price, Some(Price::saturating_from_integer(10_000))),
 			}
 		}
 	});

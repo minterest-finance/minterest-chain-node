@@ -92,12 +92,20 @@ fn get_min_round_id() {
 		)
 		.unwrap();
 
+		ChainlinkFeed::submit(
+			Origin::signed(ORACLE),
+			ChainlinkPriceManager::get_feed_id(DOT).unwrap(),
+			min_round_id + 1,
+			42 * DOLLARS,
+		)
+		.unwrap();
+
 		// min_round_id still zero
 		assert_eq!(ChainlinkPriceManager::get_min_round_id().unwrap(), 0);
 
 		ChainlinkFeed::submit(
 			Origin::signed(ORACLE),
-			ChainlinkPriceManager::get_feed_id(DOT).unwrap(),
+			ChainlinkPriceManager::get_feed_id(OriginalAsset::MNT).unwrap(),
 			min_round_id + 1,
 			42 * DOLLARS,
 		)

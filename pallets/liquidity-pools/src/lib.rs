@@ -481,7 +481,8 @@ impl<T: Config> UserCollateral<T::AccountId> for Pallet<T> {
 			.filter(|&&pool_id| Self::pool_exists(pool_id) && Self::is_pool_collateral(&who, pool_id))
 			.filter_map(|&pool_id| {
 				// We calculate the value of the user's wrapped tokens in USD.
-				let user_supply_wrap = T::MultiCurrency::free_balance(pool_id.into(), &who);
+				let wrap_id = pool_id.as_wrap()?;
+				let user_supply_wrap = T::MultiCurrency::free_balance(wrap_id.into(), &who);
 				if user_supply_wrap.is_zero() {
 					return None;
 				}
