@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use minterest_parachain_runtime::{opaque::Block, AccountId, Balance, OriginalAsset, DataProviderId, Index};
+use minterest_parachain_runtime::{opaque::Block, AccountId, Balance, DataProviderId, Index, OriginalAsset};
 pub use sc_rpc::DenyUnsafe;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;

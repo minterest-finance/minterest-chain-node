@@ -15,11 +15,8 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use liquidity_pools::{PoolData, PoolUserData};
-use minterest_primitives::{
-	arithmetic::sum_with_mult_result,
-	constants::time::BLOCKS_PER_YEAR,
-};
-use minterest_primitives::{Balance, OriginalAsset, WrapToken, CurrencyId, Interest, Operation, Rate};
+use minterest_primitives::{arithmetic::sum_with_mult_result, constants::time::BLOCKS_PER_YEAR};
+use minterest_primitives::{Balance, CurrencyId, Interest, Operation, OriginalAsset, Rate, WrapToken};
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
@@ -280,11 +277,9 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.controller_params
-				.iter()
-				.for_each(|(asset, controller_data)| {
-					ControllerDataStorage::<T>::insert(asset, ControllerData { ..*controller_data })
-				});
+			self.controller_params.iter().for_each(|(asset, controller_data)| {
+				ControllerDataStorage::<T>::insert(asset, ControllerData { ..*controller_data })
+			});
 			self.pause_keepers.iter().for_each(|(asset, pause_keeper)| {
 				PauseKeeperStorage::<T>::insert(asset, PauseKeeper { ..*pause_keeper })
 			});
@@ -317,10 +312,7 @@ pub mod module {
 			operation: Operation,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::LiquidityPoolsManager::pool_exists(pool_id), Error::<T>::PoolNotFound);
 
 			PauseKeeperStorage::<T>::mutate(pool_id, |pool| match operation {
 				Operation::Deposit => pool.deposit_paused = true,
@@ -351,10 +343,7 @@ pub mod module {
 			operation: Operation,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::LiquidityPoolsManager::pool_exists(pool_id), Error::<T>::PoolNotFound);
 
 			PauseKeeperStorage::<T>::mutate(pool_id, |pool| match operation {
 				Operation::Deposit => pool.deposit_paused = false,
@@ -385,10 +374,7 @@ pub mod module {
 			protocol_interest_factor: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::LiquidityPoolsManager::pool_exists(pool_id), Error::<T>::PoolNotFound);
 
 			ControllerDataStorage::<T>::mutate(pool_id, |data| {
 				data.protocol_interest_factor = protocol_interest_factor
@@ -414,10 +400,7 @@ pub mod module {
 			max_borrow_rate: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::LiquidityPoolsManager::pool_exists(pool_id), Error::<T>::PoolNotFound);
 			ensure!(
 				Self::is_valid_max_borrow_rate(max_borrow_rate),
 				Error::<T>::MaxBorrowRateCannotBeZero
@@ -445,10 +428,7 @@ pub mod module {
 			collateral_factor: Rate,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::LiquidityPoolsManager::pool_exists(pool_id), Error::<T>::PoolNotFound);
 			ensure!(
 				Self::is_valid_collateral_factor(collateral_factor),
 				Error::<T>::CollateralFactorIncorrectValue
@@ -477,10 +457,7 @@ pub mod module {
 			borrow_cap: Option<Balance>,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::LiquidityPoolsManager::pool_exists(pool_id), Error::<T>::PoolNotFound);
 
 			ensure!(Self::is_valid_borrow_cap(borrow_cap), Error::<T>::InvalidBorrowCap);
 			ControllerDataStorage::<T>::mutate(pool_id, |data| data.borrow_cap = borrow_cap);
@@ -505,10 +482,7 @@ pub mod module {
 			protocol_interest_threshold: Balance,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::LiquidityPoolsManager::pool_exists(pool_id), Error::<T>::PoolNotFound);
 
 			ControllerDataStorage::<T>::mutate(pool_id, |data| {
 				data.protocol_interest_threshold = protocol_interest_threshold
@@ -749,8 +723,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			let collateral_factor = Self::controller_data_storage(pool_id).collateral_factor;
 
 			// Get the normalized price of the asset.
-			let oracle_price =
-				T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
+			let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 
 			// Pre-compute a conversion factor from tokens -> dollars (normalized price value)
 			// tokens_to_denom = collateral_factor * exchange_rate * oracle_price
@@ -873,9 +846,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 			.ok_or(Error::<T>::NumOverflow)?;
 
 		// Save new params
-		ControllerDataStorage::<T>::mutate(pool_id, |data| {
-			data.last_interest_accrued_block = current_block_number
-		});
+		ControllerDataStorage::<T>::mutate(pool_id, |data| data.last_interest_accrued_block = current_block_number);
 		T::LiquidityPoolsManager::set_pool_data(
 			pool_id,
 			PoolData {
@@ -910,9 +881,8 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	/// Return Ok if the redeem is allowed.
 	fn redeem_allowed(pool_id: OriginalAsset, redeemer: &T::AccountId, redeem_amount: Balance) -> DispatchResult {
 		if T::LiquidityPoolsManager::is_pool_collateral(&redeemer, pool_id) {
-			let (_, shortfall) =
-				Self::get_hypothetical_account_liquidity(&redeemer, Some(pool_id), redeem_amount, 0)
-					.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
+			let (_, shortfall) = Self::get_hypothetical_account_liquidity(&redeemer, Some(pool_id), redeem_amount, 0)
+				.map_err(|_| Error::<T>::HypotheticalLiquidityCalculationError)?;
 
 			ensure!(shortfall.is_zero(), Error::<T>::InsufficientLiquidity);
 		}
@@ -1151,10 +1121,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	/// - `who`: the AccountId whose balance should be calculated.
 	/// - `pool_id`: ID of the currency, the balance of borrowing of which we calculate.
 	fn get_user_borrow_underlying_balance(who: &T::AccountId, pool_id: OriginalAsset) -> BalanceResult {
-		ensure!(
-			T::LiquidityPoolsManager::pool_exists(pool_id),
-			Error::<T>::PoolNotFound
-		);
+		ensure!(T::LiquidityPoolsManager::pool_exists(pool_id), Error::<T>::PoolNotFound);
 		Self::accrue_interest_rate(pool_id)?;
 		Self::user_borrow_balance_stored(&who, pool_id)
 	}
@@ -1165,10 +1132,7 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	/// - `who`: the AccountId whose balance should be calculated.
 	/// - `pool_id` - ID of the pool to calculate balance for.
 	fn get_user_supply_underlying_balance(who: &T::AccountId, pool_id: OriginalAsset) -> BalanceResult {
-		ensure!(
-			T::LiquidityPoolsManager::pool_exists(pool_id),
-			Error::<T>::PoolNotFound
-		);
+		ensure!(T::LiquidityPoolsManager::pool_exists(pool_id), Error::<T>::PoolNotFound);
 		let wrapped_id = pool_id.as_wrap().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 		let user_balance_wrapped_tokens = T::MultiCurrency::free_balance(wrapped_id.into(), &who);
 		if user_balance_wrapped_tokens.is_zero() {

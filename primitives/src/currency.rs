@@ -56,12 +56,7 @@ impl WrapToken {
 	}
 
 	pub fn get_wrap_tokens() -> &'static [WrapToken] {
-		&[
-			WrapToken::DOT,
-			WrapToken::KSM,
-			WrapToken::BTC,
-			WrapToken::ETH,
-		]
+		&[WrapToken::DOT, WrapToken::KSM, WrapToken::BTC, WrapToken::ETH]
 	}
 }
 
@@ -80,13 +75,13 @@ impl CurrencyId {
 }
 
 impl From<OriginalAsset> for CurrencyId {
-    fn from(asset: OriginalAsset) -> Self {
-        CurrencyId::Original(asset)
-    }
+	fn from(asset: OriginalAsset) -> Self {
+		CurrencyId::Original(asset)
+	}
 }
 
 impl From<WrapToken> for CurrencyId {
-    fn from(token: WrapToken) -> Self {
-        CurrencyId::Wrap(token)
-    }
+	fn from(token: WrapToken) -> Self {
+		CurrencyId::Wrap(token)
+	}
 }

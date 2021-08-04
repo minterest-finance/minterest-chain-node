@@ -949,7 +949,8 @@ fn transfer_wrapped_should_work() {
 				WrapToken::DOT,
 				ONE_HUNDRED
 			));
-			let expected_event = Event::TestMinterestProtocol(crate::Event::Transferred(ALICE, BOB, WrapToken::DOT, ONE_HUNDRED));
+			let expected_event =
+				Event::TestMinterestProtocol(crate::Event::Transferred(ALICE, BOB, WrapToken::DOT, ONE_HUNDRED));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(Currencies::free_balance(MDOT, &ALICE), 0);
 			assert_eq!(Currencies::free_balance(MDOT, &BOB), ONE_HUNDRED);
@@ -961,7 +962,8 @@ fn transfer_wrapped_should_work() {
 				WrapToken::BTC,
 				ONE_HUNDRED,
 			));
-			let expected_event = Event::TestMinterestProtocol(crate::Event::Transferred(BOB, ALICE, WrapToken::BTC, ONE_HUNDRED));
+			let expected_event =
+				Event::TestMinterestProtocol(crate::Event::Transferred(BOB, ALICE, WrapToken::BTC, ONE_HUNDRED));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 			assert_eq!(Currencies::free_balance(MBTC, &ALICE), ONE_HUNDRED);
 			assert_eq!(Currencies::free_balance(MBTC, &BOB), 0);

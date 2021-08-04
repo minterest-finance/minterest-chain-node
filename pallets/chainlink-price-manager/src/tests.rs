@@ -45,8 +45,11 @@ fn offchain_worker_test() {
 		create_default_feeds();
 		assert_ok!(ChainlinkPriceManager::_offchain_worker(3));
 
-		// There are 4 pools enabled therefore must be 4 events for each pool
-		assert_eq!(trans_pool_state.read().transactions.len(), 4);
+		// There are 5 pools enabled therefore must be 5 events for each pool
+		assert_eq!(
+			trans_pool_state.read().transactions.len(),
+			OriginalAsset::get_original_assets().len()
+		);
 		let transaction = trans_pool_state.write().transactions.pop().unwrap();
 
 		let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();

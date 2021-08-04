@@ -24,7 +24,7 @@ use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 	pallet_prelude::*,
 };
-use minterest_primitives::{OriginalAsset, OffchainErr, Price};
+use minterest_primitives::{OffchainErr, OriginalAsset, Price};
 use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData, RoundId};
 use pallet_traits::PricesManager;
 use sp_runtime::traits::{One, Zero};

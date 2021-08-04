@@ -9,7 +9,7 @@
 #![allow(clippy::unused_unit)]
 
 use frame_support::{pallet_prelude::*, transactional, PalletId};
-use minterest_primitives::{Balance, OriginalAsset, CurrencyId};
+use minterest_primitives::{Balance, CurrencyId, OriginalAsset};
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::DEXManager;
@@ -141,13 +141,7 @@ impl<T: Config> DEXManager<T::AccountId, Balance> for Pallet<T> {
 		supply_amount: Balance,
 		min_target_amount: Balance,
 	) -> sp_std::result::Result<Balance, DispatchError> {
-		Self::do_swap_with_exact_supply(
-			who,
-			supply_asset,
-			target_asset,
-			supply_amount,
-			min_target_amount,
-		)
+		Self::do_swap_with_exact_supply(who, supply_asset, target_asset, supply_amount, min_target_amount)
 	}
 
 	fn swap_with_exact_target(
@@ -157,12 +151,6 @@ impl<T: Config> DEXManager<T::AccountId, Balance> for Pallet<T> {
 		max_supply_amount: Balance,
 		target_amount: Balance,
 	) -> sp_std::result::Result<Balance, DispatchError> {
-		Self::do_swap_with_exact_target(
-			who,
-			supply_asset,
-			target_asset,
-			max_supply_amount,
-			target_amount,
-		)
+		Self::do_swap_with_exact_target(who, supply_asset, target_asset, max_supply_amount, target_amount)
 	}
 }

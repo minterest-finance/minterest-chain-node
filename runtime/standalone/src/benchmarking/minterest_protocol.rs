@@ -2,9 +2,9 @@ use super::utils::{
 	enable_is_collateral_mock, enable_whitelist_mode_and_add_member, prepare_for_mnt_distribution, set_balance, SEED,
 };
 use crate::{
-	AccountId, Balance, Currencies, EnabledWrappedTokensId, LiquidityPools,
-	LiquidityPoolsPalletId, MinterestProtocol, MntTokenPalletId, Origin, Rate, RiskManager, Runtime, System, Whitelist,
-	BTC, DOLLARS, DOT, ETH, KSM, MBTC, MDOT, MNT,
+	AccountId, Balance, Currencies, EnabledWrappedTokensId, LiquidityPools, LiquidityPoolsPalletId, MinterestProtocol,
+	MntTokenPalletId, Origin, Rate, RiskManager, Runtime, System, Whitelist, BTC, DOLLARS, DOT, ETH, KSM, MBTC, MDOT,
+	MNT,
 };
 use frame_benchmarking::account;
 use frame_system::RawOrigin;

@@ -11,8 +11,8 @@ pub use users_mock::*;
 
 pub mod currency_mock {
 	use frame_support::sp_runtime::FixedPointNumber;
-	pub use minterest_primitives::{Balance, OriginalAsset, WrapToken, CurrencyId, Price};
-	pub use OriginalAsset::{DOT, KSM, BTC, ETH};
+	pub use minterest_primitives::{Balance, CurrencyId, OriginalAsset, Price, WrapToken};
+	pub use OriginalAsset::{BTC, DOT, ETH, KSM};
 
 	pub const MNT: CurrencyId = CurrencyId::Original(OriginalAsset::MNT);
 	// pub const DOT: CurrencyId = CurrencyId::Original(OriginalAsset::DOT);

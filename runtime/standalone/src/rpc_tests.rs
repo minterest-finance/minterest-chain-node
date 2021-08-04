@@ -1,7 +1,7 @@
 use crate::{
-	AccountId, Balance, Block, Controller, Currencies, LiquidationPools, LiquidityPools,
-	MinterestCouncilMembership, MinterestOracle, MinterestProtocol, MntToken, Prices, Rate, Runtime, System, UserData,
-	Whitelist, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+	AccountId, Balance, Block, Controller, Currencies, LiquidationPools, LiquidityPools, MinterestCouncilMembership,
+	MinterestOracle, MinterestProtocol, MntToken, Prices, Rate, Runtime, System, UserData, Whitelist, DOLLARS,
+	PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 };
 use controller::{ControllerData, PauseKeeper};
 use controller_rpc_runtime_api::{
@@ -13,7 +13,7 @@ use frame_support::{assert_noop, assert_ok, pallet_prelude::GenesisBuild, parame
 use liquidation_pools::LiquidationPoolData;
 use liquidity_pools::{PoolData, PoolUserData};
 use minterest_model::MinterestModelData;
-use minterest_primitives::{CurrencyId, OriginalAsset, Interest, Operation, Price};
+use minterest_primitives::{CurrencyId, Interest, Operation, OriginalAsset, Price};
 use mnt_token_rpc_runtime_api::runtime_decl_for_MntTokenRuntimeApi::MntTokenRuntimeApi;
 use orml_traits::MultiCurrency;
 use pallet_traits::{ControllerManager, LiquidityPoolStorageProvider, PoolsManager, PricesManager, UserCollateral};
@@ -1162,7 +1162,10 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 			assert_ok!(MinterestProtocol::repay_all(bob(), DOT));
 			assert_ok!(MinterestProtocol::redeem(bob(), DOT));
 
-			assert_eq!(Currencies::free_balance(DOT.into(), &BOB::get()), expected_free_balance_bob);
+			assert_eq!(
+				Currencies::free_balance(DOT.into(), &BOB::get()),
+				expected_free_balance_bob
+			);
 		})
 }
 
@@ -1446,11 +1449,9 @@ fn get_all_locked_prices_rpc_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(set_oracle_price_for_all_pools(10_000));
 
-		OriginalAsset::get_original_assets()
-			.into_iter()
-			.for_each(|&pool_id| {
-				assert_ok!(Prices::lock_price(origin_root(), pool_id));
-			});
+		OriginalAsset::get_original_assets().into_iter().for_each(|&pool_id| {
+			assert_ok!(Prices::lock_price(origin_root(), pool_id));
+		});
 
 		// Check that locked prices are returned
 		// By default all price set to 10_000

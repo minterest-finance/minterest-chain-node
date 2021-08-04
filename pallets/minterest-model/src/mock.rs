@@ -3,7 +3,7 @@ use super::*;
 use crate as minterest_model;
 use frame_support::{ord_parameter_types, parameter_types, PalletId};
 use frame_system::EnsureSignedBy;
-use minterest_primitives::currency::{OriginalAsset};
+use minterest_primitives::currency::OriginalAsset;
 pub use minterest_primitives::{Balance, CurrencyId, Price, Rate};
 use orml_traits::parameter_type_with_key;
 use pallet_traits::PricesManager;

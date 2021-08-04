@@ -11,7 +11,7 @@
 #![allow(clippy::unnecessary_mut_passed)]
 
 use codec::{Codec, Decode, Encode};
-use minterest_primitives::{Amount, Balance, OriginalAsset, Interest, Rate};
+use minterest_primitives::{Amount, Balance, Interest, OriginalAsset, Rate};
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
 

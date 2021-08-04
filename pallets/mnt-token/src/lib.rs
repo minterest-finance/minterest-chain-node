@@ -8,7 +8,7 @@
 use frame_support::{pallet_prelude::*, sp_std::cmp::Ordering, transactional};
 use frame_system::pallet_prelude::*;
 use liquidity_pools::PoolData;
-use minterest_primitives::{Balance, OriginalAsset, OriginalAsset::MNT, CurrencyId, Price, Rate};
+use minterest_primitives::{Balance, CurrencyId, OriginalAsset, OriginalAsset::MNT, Price, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
@@ -256,10 +256,7 @@ pub mod module {
 		#[transactional]
 		pub fn set_speed(origin: OriginFor<T>, pool_id: OriginalAsset, speed: Balance) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			ensure!(
-				T::LiquidityPoolsManager::pool_exists(pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::LiquidityPoolsManager::pool_exists(pool_id), Error::<T>::PoolNotFound);
 			Self::update_pool_mnt_supply_index(pool_id)?;
 			Self::update_pool_mnt_borrow_index(pool_id)?;
 

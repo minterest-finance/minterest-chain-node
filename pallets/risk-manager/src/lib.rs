@@ -50,9 +50,7 @@ use frame_system::{
 };
 pub use liquidation::*;
 use liquidity_pools::PoolData;
-use minterest_primitives::{
-	OriginalAsset, CurrencyId, Balance, OffchainErr, Operation, Rate,
-};
+use minterest_primitives::{Balance, CurrencyId, OffchainErr, Operation, OriginalAsset, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{

@@ -2,7 +2,7 @@
 
 use crate::mock::{Event, *};
 use frame_support::{assert_noop, assert_ok};
-use minterest_primitives::{Price, OriginalAsset};
+use minterest_primitives::{OriginalAsset, Price};
 use pallet_traits::PricesManager;
 use sp_runtime::{
 	traits::{BadOrigin, Zero},
@@ -23,7 +23,10 @@ fn get_underlying_price_should_work() {
 			Some(Price::saturating_from_integer(40u128))
 		);
 
-		assert_eq!(TestPrices::get_underlying_price(OriginalAsset::MNT), Some(Price::zero()));
+		assert_eq!(
+			TestPrices::get_underlying_price(OriginalAsset::MNT),
+			Some(Price::zero())
+		);
 	});
 }
 

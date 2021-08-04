@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::upper_case_acronyms)]
 
-use minterest_primitives::{Balance, OriginalAsset, Interest, Operation, Price, Rate};
+use minterest_primitives::{Balance, Interest, Operation, OriginalAsset, Price, Rate};
 use sp_runtime::{DispatchError, DispatchResult};
 use sp_std::{collections::btree_set::BTreeSet, result::Result, vec::Vec};
 
@@ -244,10 +244,7 @@ pub trait ControllerManager<AccountId> {
 	///
 	/// - `who`: the AccountId whose balance should be calculated.
 	/// - `currency_id`: ID of the currency, the balance of borrowing of which we calculate.
-	fn get_user_borrow_underlying_balance(
-		who: &AccountId,
-		pool_id: OriginalAsset,
-	) -> Result<Balance, DispatchError>;
+	fn get_user_borrow_underlying_balance(who: &AccountId, pool_id: OriginalAsset) -> Result<Balance, DispatchError>;
 
 	/// Calculates user balance converted to underlying asset using exchange rate calculated for the
 	/// current block.

@@ -24,7 +24,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{pallet_prelude::*, traits::Get, PalletId};
-use minterest_primitives::{OriginalAsset, CurrencyId, Balance, Price, Rate};
+use minterest_primitives::{Balance, CurrencyId, OriginalAsset, Price, Rate};
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
@@ -413,9 +413,7 @@ impl<T: Config> CurrencyConverter for Pallet<T> {
 	fn get_exchange_rate(pool_id: OriginalAsset) -> RateResult {
 		ensure!(Self::pool_exists(pool_id), Error::<T>::PoolNotFound);
 
-		let wrapped_asset_id = pool_id
-			.as_wrap()
-			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+		let wrapped_asset_id = pool_id.as_wrap().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
 		let pool_supply_underlying = Self::get_pool_available_liquidity(pool_id);
 		let pool_supply_wrap = T::MultiCurrency::total_issuance(wrapped_asset_id.into());

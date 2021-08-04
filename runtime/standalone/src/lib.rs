@@ -31,8 +31,8 @@ pub use minterest_primitives::{
 		INITIAL_EXCHANGE_RATE, MAX_BORROW_CAP, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION,
 	},
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, ChainlinkFeedId, ChainlinkPriceValue, CurrencyId,
-	DataProviderId, DigestItem, Hash, Index, Interest, Moment, Operation, Price, Rate, Signature, VestingBucket,
-	OriginalAsset, WrapToken,
+	DataProviderId, DigestItem, Hash, Index, Interest, Moment, Operation, OriginalAsset, Price, Rate, Signature,
+	VestingBucket, WrapToken,
 };
 pub use mnt_token_rpc_runtime_api::MntBalanceInfo;
 use orml_currencies::BasicCurrencyAdapter;

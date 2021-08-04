@@ -6,9 +6,10 @@ use liquidity_pools::PoolData;
 use minterest_model::MinterestModelData;
 use minterest_parachain_runtime as parachain_runtime;
 use minterest_parachain_runtime::{
-	get_all_modules_accounts, AccountId, Balance, ExistentialDeposit, MntTokenPalletId, Signature, DOLLARS, PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION,
+	get_all_modules_accounts, AccountId, Balance, ExistentialDeposit, MntTokenPalletId, Signature, DOLLARS,
+	PROTOCOL_INTEREST_TRANSFER_THRESHOLD, TOTAL_ALLOCATION,
 };
-use minterest_primitives::{VestingBucket, VestingScheduleJson, OriginalAsset::*};
+use minterest_primitives::{OriginalAsset::*, VestingBucket, VestingScheduleJson};
 use minterest_standalone_runtime as standalone_runtime;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;

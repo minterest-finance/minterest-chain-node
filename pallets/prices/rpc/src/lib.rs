@@ -137,7 +137,10 @@ where
 		})
 	}
 
-	fn get_all_locked_prices(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<(OriginalAsset, Option<Price>)>> {
+	fn get_all_locked_prices(
+		&self,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<Vec<(OriginalAsset, Option<Price>)>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
                 // If the block hash is not supplied assume the best block.
@@ -150,7 +153,10 @@ where
 		})
 	}
 
-	fn get_all_freshest_prices(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<(OriginalAsset, Option<Price>)>> {
+	fn get_all_freshest_prices(
+		&self,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<Vec<(OriginalAsset, Option<Price>)>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.

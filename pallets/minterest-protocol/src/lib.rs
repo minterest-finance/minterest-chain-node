@@ -19,9 +19,7 @@
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
 use liquidity_pools::{PoolData, PoolUserData};
-use minterest_primitives::{
-	OriginalAsset, Balance, WrapToken, CurrencyId, Operation, Operation::Deposit, Rate,
-};
+use minterest_primitives::{Balance, CurrencyId, Operation, Operation::Deposit, OriginalAsset, Rate, WrapToken};
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
@@ -514,10 +512,7 @@ pub mod module {
 				ensure!(T::WhitelistManager::is_whitelist_member(&sender), BadOrigin);
 			}
 
-			ensure!(
-				T::ManagerLiquidityPools::pool_exists(pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::ManagerLiquidityPools::pool_exists(pool_id), Error::<T>::PoolNotFound);
 
 			ensure!(
 				!T::ManagerLiquidityPools::is_pool_collateral(&sender, pool_id),
@@ -549,10 +544,7 @@ pub mod module {
 				ensure!(T::WhitelistManager::is_whitelist_member(&sender), BadOrigin);
 			}
 
-			ensure!(
-				T::ManagerLiquidityPools::pool_exists(pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::ManagerLiquidityPools::pool_exists(pool_id), Error::<T>::PoolNotFound);
 
 			ensure!(
 				T::ManagerLiquidityPools::is_pool_collateral(&sender, pool_id),
@@ -634,15 +626,8 @@ impl<T: Config> Pallet<T> {
 	///   underlying asset.
 	///
 	/// Returns (`deposit_underlying_amount`, `wrapped_id`, `deposit_wrapped_amount`).
-	fn do_deposit(
-		who: &T::AccountId,
-		pool_id: OriginalAsset,
-		deposit_underlying_amount: Balance,
-	) -> TokensResult {
-		ensure!(
-			T::ManagerLiquidityPools::pool_exists(pool_id),
-			Error::<T>::PoolNotFound
-		);
+	fn do_deposit(who: &T::AccountId, pool_id: OriginalAsset, deposit_underlying_amount: Balance) -> TokensResult {
+		ensure!(T::ManagerLiquidityPools::pool_exists(pool_id), Error::<T>::PoolNotFound);
 
 		ensure!(!deposit_underlying_amount.is_zero(), Error::<T>::ZeroBalanceTransaction);
 
@@ -662,9 +647,7 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::OperationPaused
 		);
 
-		let wrapped_id = pool_id
-			.as_wrap()
-			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+		let wrapped_id = pool_id.as_wrap().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
 		let exchange_rate = T::ManagerLiquidityPools::get_exchange_rate(pool_id)?;
 		let deposit_wrapped_amount =
@@ -690,16 +673,11 @@ impl<T: Config> Pallet<T> {
 		wrapped_amount: Balance,
 		all_assets: bool,
 	) -> TokensResult {
-		ensure!(
-			T::ManagerLiquidityPools::pool_exists(pool_id),
-			Error::<T>::PoolNotFound
-		);
+		ensure!(T::ManagerLiquidityPools::pool_exists(pool_id), Error::<T>::PoolNotFound);
 
 		T::ControllerManager::accrue_interest_rate(pool_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 		let exchange_rate = T::ManagerLiquidityPools::get_exchange_rate(pool_id)?;
-		let wrapped_id = pool_id
-			.as_wrap()
-			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
+		let wrapped_id = pool_id.as_wrap().ok_or(Error::<T>::NotValidUnderlyingAssetId)?;
 
 		let wrapped_amount = match (underlying_amount, wrapped_amount, all_assets) {
 			(0, 0, true) => {
@@ -761,10 +739,7 @@ impl<T: Config> Pallet<T> {
 	/// - `pool_id`: the currency ID of the underlying asset to borrow.
 	/// - `underlying_amount`: the amount of the underlying asset to borrow.
 	fn do_borrow(who: &T::AccountId, pool_id: OriginalAsset, borrow_amount: Balance) -> DispatchResult {
-		ensure!(
-			T::ManagerLiquidityPools::pool_exists(pool_id),
-			Error::<T>::PoolNotFound
-		);
+		ensure!(T::ManagerLiquidityPools::pool_exists(pool_id), Error::<T>::PoolNotFound);
 
 		let pool_available_liquidity = T::ManagerLiquidityPools::get_pool_available_liquidity(pool_id);
 
@@ -821,10 +796,7 @@ impl<T: Config> Pallet<T> {
 
 		// Fail if invalid token id
 		let pool_id = wrapped_id.as_asset();
-		ensure!(
-			T::ManagerLiquidityPools::pool_exists(pool_id),
-			Error::<T>::PoolNotFound
-		);
+		ensure!(T::ManagerLiquidityPools::pool_exists(pool_id), Error::<T>::PoolNotFound);
 
 		// Fail if transfer is not allowed
 		ensure!(
@@ -884,10 +856,7 @@ impl<T: Config> Pallet<T> {
 	/// - `pools`: The vector of pools to claim MNT in.
 	fn do_claim(holder: &T::AccountId, pools: Vec<OriginalAsset>) -> DispatchResult {
 		pools.iter().try_for_each(|&pool_id| -> DispatchResult {
-			ensure!(
-				T::ManagerLiquidityPools::pool_exists(pool_id),
-				Error::<T>::PoolNotFound
-			);
+			ensure!(T::ManagerLiquidityPools::pool_exists(pool_id), Error::<T>::PoolNotFound);
 
 			T::MntManager::update_pool_mnt_borrow_index(pool_id)?;
 			T::MntManager::distribute_borrower_mnt(pool_id, holder, true)?;
@@ -908,10 +877,7 @@ impl<T: Config> MinterestProtocolManager<T::AccountId> for Pallet<T> {
 		all_assets: bool,
 	) -> BalanceResult {
 		let mut repay_amount = repay_amount;
-		ensure!(
-			T::ManagerLiquidityPools::pool_exists(pool_id),
-			Error::<T>::PoolNotFound
-		);
+		ensure!(T::ManagerLiquidityPools::pool_exists(pool_id), Error::<T>::PoolNotFound);
 
 		T::ControllerManager::accrue_interest_rate(pool_id).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
@@ -963,22 +929,12 @@ impl<T: Config> MinterestProtocolManager<T::AccountId> for Pallet<T> {
 	/// -`borrower`: AccountId of the user whose supply is being seized;
 	/// -`asset`: Asset that is seized;
 	/// -`seize_amount`: the number of underlying assets to be seized;
-	fn do_seize(
-		borrower: &T::AccountId,
-		asset: OriginalAsset,
-		seize_amount: Balance,
-	) -> DispatchResult {
-		ensure!(
-			T::ManagerLiquidityPools::pool_exists(asset),
-			Error::<T>::PoolNotFound
-		);
+	fn do_seize(borrower: &T::AccountId, asset: OriginalAsset, seize_amount: Balance) -> DispatchResult {
+		ensure!(T::ManagerLiquidityPools::pool_exists(asset), Error::<T>::PoolNotFound);
 
 		T::ControllerManager::accrue_interest_rate(asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
 
-		let wrapped_currency: CurrencyId = asset
-			.as_wrap()
-			.ok_or(Error::<T>::NotValidUnderlyingAssetId)?
-			.into();
+		let wrapped_currency: CurrencyId = asset.as_wrap().ok_or(Error::<T>::NotValidUnderlyingAssetId)?.into();
 		let exchange_rate = T::ManagerLiquidityPools::get_exchange_rate(asset)?;
 		let user_seize_wrap = T::ManagerLiquidityPools::underlying_to_wrapped(seize_amount, exchange_rate)?;
 

@@ -6,7 +6,7 @@
 
 #![allow(clippy::vec_init_then_push)]
 
-use crate::{AccountId, Balance, constants::currency::DOLLARS};
+use crate::{constants::currency::DOLLARS, AccountId, Balance};
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
