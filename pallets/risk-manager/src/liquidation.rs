@@ -376,6 +376,10 @@ impl<T: Config + Debug> UserLoanState<T> {
 
 		// Calculate how much to repay for each pool
 		let size = pools_to_remove_borrowed_from.len();
+		//TODO: need to change library:
+		// the package `risk-manager` depends on `scirust`, with features: `std` but `scirust`
+		// does not have these features.
+		// the library `nalgebra' supports `std`, need to find a way to solve the system of equations.
 		let mut matrix = MatrixF64::zeros(size, size);
 		let mut vector = MatrixF64::zeros(size, 1);
 		pools_to_remove_borrowed_from
