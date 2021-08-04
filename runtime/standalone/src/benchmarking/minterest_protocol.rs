@@ -103,7 +103,7 @@ runtime_benchmarks! {
 	verify {
 		assert_eq!(Currencies::free_balance(DOT.into(), &LiquidityPoolsPalletId::get().into_account() ), 60_000 * DOLLARS);
 		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(lender_supply) / 60(total_supply) = 3.33 MNT
-		assert_eq!(Currencies::free_balance(MNT, &lender), 3_333_333_324_333_330_029)
+		assert_eq!(Currencies::free_balance(MNT_CUR, &lender), 3_333_333_324_333_330_029)
 	}
 
 	redeem {
@@ -120,7 +120,7 @@ runtime_benchmarks! {
 	verify {
 		assert_eq!(Currencies::free_balance(DOT.into(), &borrower), 8_750_000_014_464_285_710_000);
 		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(borrower_supply) / 80(total_supply) = 2.5 MNT
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 2_500_000_000_000_000_000)
+		assert_eq!(Currencies::free_balance(MNT_CUR, &borrower), 2_500_000_000_000_000_000)
 	}
 
 	redeem_underlying {
@@ -137,7 +137,7 @@ runtime_benchmarks! {
 	verify {
 		assert_eq!(Currencies::free_balance(DOT.into(), &borrower), 1_000 * DOLLARS);
 		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(borrower_supply) / 80(total_supply) = 2.5 MNT
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 2_500_000_000_000_000_000)
+		assert_eq!(Currencies::free_balance(MNT_CUR, &borrower), 2_500_000_000_000_000_000)
 	}
 
 	redeem_wrapped {
@@ -154,7 +154,7 @@ runtime_benchmarks! {
 	verify {
 		assert_eq!(Currencies::free_balance(DOT.into(), &borrower), 8_750_000_014_464_285_710_000);
 		// mnt_balance = 2(speed) * 10(delta_blocks) * 10(borrower_supply) / 80(total_supply) = 2.5 MNT
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 2_500_000_000_000_000_000)
+		assert_eq!(Currencies::free_balance(MNT_CUR, &borrower), 2_500_000_000_000_000_000)
 	}
 
 	borrow {
@@ -172,7 +172,7 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(borrower.clone()), DOT, 5_000 * DOLLARS)
 	verify {
 		assert_eq!(Currencies::free_balance(DOT.into(), &borrower ), 10_000 * DOLLARS);
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 19_999_999_999_999_995_000)
+		assert_eq!(Currencies::free_balance(MNT_CUR, &borrower), 19_999_999_999_999_995_000)
 	}
 
 	repay {
@@ -192,7 +192,7 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(borrower.clone()), DOT, 10_000 * DOLLARS)
 	verify {
 		assert_eq!(LiquidityPools::pool_user_data_storage(DOT, borrower.clone()).borrowed, 180_000_000_600_000);
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 9_999_999_954_999_990_405)
+		assert_eq!(Currencies::free_balance(MNT_CUR, &borrower), 9_999_999_954_999_990_405)
 	}
 
 	repay_all {
@@ -212,7 +212,7 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(borrower.clone()), DOT)
 	verify {
 		assert_eq!(LiquidityPools::pool_user_data_storage(DOT, borrower.clone()).borrowed, Balance::zero());
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 9_999_999_954_999_990_405)
+		assert_eq!(Currencies::free_balance(MNT_CUR, &borrower), 9_999_999_954_999_990_405)
 	}
 
 	repay_on_behalf {
@@ -235,8 +235,8 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(lender.clone()), DOT, borrower.clone(), 10_000 * DOLLARS)
 	verify {
 		assert_eq!(LiquidityPools::pool_user_data_storage(DOT, borrower.clone()).borrowed, 180_000_000_600_000);
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 9_999_999_954_999_990_405);
-		assert_eq!(Currencies::free_balance(MNT, &lender), Balance::zero());
+		assert_eq!(Currencies::free_balance(MNT_CUR, &borrower), 9_999_999_954_999_990_405);
+		assert_eq!(Currencies::free_balance(MNT_CUR, &lender), Balance::zero());
 	}
 
 	transfer_wrapped {
@@ -255,8 +255,8 @@ runtime_benchmarks! {
 	verify  {
 		assert_eq!(Currencies::free_balance(MDOT, &borrower.clone()), Balance::zero());
 		assert_eq!(Currencies::free_balance(MDOT, &lender.clone()), 30_000 * DOLLARS);
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 5_000_000_000_000_000_000);
-		assert_eq!(Currencies::free_balance(MNT, &lender), 10_000_000_000_000_000_000);
+		assert_eq!(Currencies::free_balance(MNT_CUR, &borrower), 5_000_000_000_000_000_000);
+		assert_eq!(Currencies::free_balance(MNT_CUR, &lender), 10_000_000_000_000_000_000);
 	 }
 
 	enable_is_collateral {
@@ -328,7 +328,7 @@ runtime_benchmarks! {
 		borrow_balance = 0 + (2 * 50 * 0.5) * 4 = 200 MNT
 		accrued MNT tokens: 200 + 200 = ~400_000 MNT
 		 */
-		assert_eq!(Currencies::free_balance(MNT, &borrower), 399_999_967_375_002_687_652)
+		assert_eq!(Currencies::free_balance(MNT_CUR, &borrower), 399_999_967_375_002_687_652)
 	}
 
 }

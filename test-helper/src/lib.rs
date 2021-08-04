@@ -12,13 +12,13 @@ pub use users_mock::*;
 pub mod currency_mock {
 	use frame_support::sp_runtime::FixedPointNumber;
 	pub use minterest_primitives::{Balance, CurrencyId, OriginalAsset, Price, WrapToken};
-	pub use OriginalAsset::{BTC, DOT, ETH, KSM};
+	pub use OriginalAsset::{MNT, BTC, DOT, ETH, KSM};
 
-	pub const MNT: CurrencyId = CurrencyId::Original(OriginalAsset::MNT);
-	// pub const DOT: CurrencyId = CurrencyId::Original(OriginalAsset::DOT);
-	// pub const KSM: CurrencyId = CurrencyId::Original(OriginalAsset::KSM);
-	// pub const BTC: CurrencyId = CurrencyId::Original(OriginalAsset::BTC);
-	// pub const ETH: CurrencyId = CurrencyId::Original(OriginalAsset::ETH);
+	pub const MNT_CUR: CurrencyId = CurrencyId::Original(OriginalAsset::MNT);
+	pub const DOT_CUR: CurrencyId = CurrencyId::Original(OriginalAsset::DOT);
+	pub const KSM_CUR: CurrencyId = CurrencyId::Original(OriginalAsset::KSM);
+	pub const BTC_CUR: CurrencyId = CurrencyId::Original(OriginalAsset::BTC);
+	pub const ETH_CUR: CurrencyId = CurrencyId::Original(OriginalAsset::ETH);
 	pub const MDOT: CurrencyId = CurrencyId::Wrap(WrapToken::DOT);
 	pub const MKSM: CurrencyId = CurrencyId::Wrap(WrapToken::KSM);
 	pub const MBTC: CurrencyId = CurrencyId::Wrap(WrapToken::BTC);
@@ -127,7 +127,7 @@ macro_rules! mock_impl_orml_tokens_config {
 macro_rules! mock_impl_orml_currencies_config {
 	($target:ty) => {
 		parameter_types! {
-			pub const MockGetNativeCurrencyId: CurrencyId = MNT;
+			pub const MockGetNativeCurrencyId: CurrencyId = CurrencyId::Original(OriginalAsset::MNT);
 		}
 
 		pub type Amount = i128;

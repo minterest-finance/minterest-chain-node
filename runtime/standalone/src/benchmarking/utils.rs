@@ -173,6 +173,7 @@ pub mod tests {
 				),
 			],
 			pause_keepers: vec![
+				(MNT, PauseKeeper::all_unpaused()),
 				(ETH, PauseKeeper::all_unpaused()),
 				(DOT, PauseKeeper::all_unpaused()),
 				(KSM, PauseKeeper::all_unpaused()),

@@ -9,9 +9,9 @@ mod tests {
 	fn deposit_underlying_with_supplied_interest_should_work() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(BOB, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, DOT_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false)
 			.build()
 			.execute_with(|| {
@@ -43,7 +43,7 @@ mod tests {
 
 				// Checking current free balance for DOT && MDOT
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount
 				);
 				assert_eq!(
@@ -73,9 +73,9 @@ mod tests {
 				);
 
 				// Checking current free balance for DOT && MDOT
-				assert_eq!(Currencies::free_balance(DOT.into(), &ALICE), 40_000 * DOLLARS);
+				assert_eq!(Currencies::free_balance(DOT_CUR, &ALICE), 40_000 * DOLLARS);
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &BOB),
+					Currencies::free_balance(DOT_CUR, &BOB),
 					ONE_HUNDRED_THOUSAND - bob_deposited_amount
 				);
 				assert_eq!(
@@ -90,7 +90,7 @@ mod tests {
 	fn deposit_underlying_overflow_while_convert_underline_to_wrap_should_work() {
 		ExtBuilder::default()
 			// Set genesis to get exchange rate 0,00000000000000001
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
 			.user_balance(ALICE, MDOT, DOLLARS)
 			.pool_balance(DOT, 5)
 			.pool_borrow_underlying(DOT, 5)
@@ -124,9 +124,9 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, ETH.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, ETH_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
@@ -174,11 +174,11 @@ mod tests {
 
 				// Checking Alice's free balance DOT && MDOT.
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot + alice_borrowed_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_eth
 				);
 				let exchange_rate = TestPools::get_exchange_rate(DOT).unwrap();
@@ -233,13 +233,13 @@ mod tests {
 
 				// Checking free balance DOT/MDOT && ETH/METH for user.
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 						+ alice_borrowed_amount_in_dot
 						+ expected_amount_redeemed_underlying_assets
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_eth - alice_deposited_amount_in_eth_secondary
 				);
 
@@ -290,9 +290,9 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ADMIN, ETH.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, ETH_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.pool_balance(DOT, Balance::zero())
 			.build()
@@ -328,11 +328,11 @@ mod tests {
 
 				// Checking free balance DOT && ETH for user.
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for Alice ETH pool
@@ -354,11 +354,11 @@ mod tests {
 				// Checking free balance DOT && ETH for user.
 				// Expected previously values
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					alice_borrowed_amount_in_eth
 				);
 
@@ -390,9 +390,9 @@ mod tests {
 			.pool_initial(DOT)
 			.pool_initial(ETH)
 			.pool_initial(BTC)
-			.user_balance(ADMIN, ETH.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, BTC.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, ETH_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, BTC_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
@@ -436,15 +436,15 @@ mod tests {
 
 				// Checking free balance DOT && ETH && BTC for user.
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(BTC.into(), &ALICE),
+					Currencies::free_balance(BTC_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_btc
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for Alice ETH pool
@@ -491,15 +491,15 @@ mod tests {
 				);
 				// Checking free balance DOT && ETH && BTC for user.
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot + alice_redeemed_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(BTC.into(), &ALICE),
+					Currencies::free_balance(BTC_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_btc - alice_deposited_amount_in_btc_secondary
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for Alice ETH pool
@@ -538,10 +538,10 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(BTC)
-			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(BOB, BTC.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(BOB, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, BTC_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, DOT_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false)
 			.pool_user_data(BTC, BOB, Balance::zero(), Rate::zero(), true)
 			.build()
@@ -615,15 +615,15 @@ mod tests {
 
 				// Checking free balance DOT && BTC for user.
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot + alice_redeemed_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &BOB),
+					Currencies::free_balance(DOT_CUR, &BOB),
 					ONE_HUNDRED_THOUSAND + bob_borrowed_amount_in_dot - bob_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(BTC.into(), &BOB),
+					Currencies::free_balance(BTC_CUR, &BOB),
 					ONE_HUNDRED_THOUSAND - bob_deposited_amount_in_btc
 				);
 			});
@@ -645,10 +645,10 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, ETH.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(BOB, DOT.into(), 100_000_000 * DOLLARS)
+			.user_balance(ADMIN, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, ETH_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, DOT_CUR, 100_000_000 * DOLLARS)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
@@ -696,11 +696,11 @@ mod tests {
 
 				// Checking free balance DOT && MDOT in pool.
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot + alice_borrowed_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_eth
 				);
 				let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
@@ -760,13 +760,13 @@ mod tests {
 				// Checking free balance DOT/MDOT && ETH/METH in pool.
 				let expected_amount_redeemed_underlying_assets = 60000000136963397880000;
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 						+ alice_borrowed_amount_in_dot
 						+ expected_amount_redeemed_underlying_assets
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_eth - alice_deposited_amount_in_eth_secondary
 				);
 
@@ -814,9 +814,9 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ADMIN, ETH.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, ETH_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
@@ -851,11 +851,11 @@ mod tests {
 
 				// Checking free balance DOT && ETH for user.
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for Alice ETH pool
@@ -877,11 +877,11 @@ mod tests {
 				// Checking free balance DOT && ETH for user.
 				// Expected previously values
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					alice_borrowed_amount_in_eth
 				);
 
@@ -913,9 +913,9 @@ mod tests {
 			.pool_initial(DOT)
 			.pool_initial(ETH)
 			.pool_initial(BTC)
-			.user_balance(ADMIN, ETH.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, BTC.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, ETH_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, BTC_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
@@ -957,15 +957,15 @@ mod tests {
 
 				// Checking free balance DOT && ETH && BTC for user.
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(BTC.into(), &ALICE),
+					Currencies::free_balance(BTC_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_btc
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for Alice ETH pool
@@ -1005,15 +1005,15 @@ mod tests {
 
 				// Checking free balance DOT && ETH && BTC for user.
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot + alice_redeemed_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(BTC.into(), &ALICE),
+					Currencies::free_balance(BTC_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_btc - alice_deposited_amount_in_btc_secondary
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for Alice ETH pool
@@ -1047,10 +1047,10 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(BTC)
-			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(BOB, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(BOB, BTC.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, BTC_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false)
 			.pool_user_data(DOT, BOB, Balance::zero(), Rate::zero(), false)
 			.pool_user_data(BTC, BOB, Balance::zero(), Rate::zero(), true)
@@ -1119,15 +1119,15 @@ mod tests {
 
 				// Checking free balance DOT && BTC for user.
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot + alice_redeemed_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &BOB),
+					Currencies::free_balance(DOT_CUR, &BOB),
 					ONE_HUNDRED_THOUSAND + bob_borrowed_amount_in_dot - bob_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(BTC.into(), &BOB),
+					Currencies::free_balance(BTC_CUR, &BOB),
 					ONE_HUNDRED_THOUSAND - bob_deposited_amount_in_btc
 				);
 			});
@@ -1140,8 +1140,8 @@ mod tests {
 	fn borrow_with_insufficient_collateral_no_deposits() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
@@ -1176,9 +1176,9 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ADMIN, ETH.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, ETH_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false)
 			.build()
 			.execute_with(|| {
@@ -1232,9 +1232,9 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ADMIN, ETH.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, ETH_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
@@ -1287,9 +1287,9 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ADMIN, ETH.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, ETH_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
@@ -1332,10 +1332,10 @@ mod tests {
 					ONE_HUNDRED_THOUSAND - alice_borrowed_amount
 				);
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount
 				);
-				assert_eq!(Currencies::free_balance(ETH.into(), &ALICE), alice_borrowed_amount);
+				assert_eq!(Currencies::free_balance(ETH_CUR, &ALICE), alice_borrowed_amount);
 				assert_eq!(TestPools::pool_data_storage(ETH).borrowed, alice_borrowed_amount);
 				assert_eq!(
 					TestPools::pool_user_data_storage(ETH, &ALICE).borrowed,
@@ -1361,10 +1361,10 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ADMIN, ETH.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(BOB, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, ETH_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(BOB, DOT_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.pool_user_data(DOT, BOB, Balance::zero(), Rate::zero(), true)
 			.build()
@@ -1454,9 +1454,9 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, ETH.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, ETH_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
@@ -1502,11 +1502,11 @@ mod tests {
 
 				// Checking Alice's free balance DOT && MDOT.
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot + alice_borrowed_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_eth
 				);
 				let exchange_rate_dot = TestPools::get_exchange_rate(DOT).unwrap();
@@ -1573,7 +1573,7 @@ mod tests {
 
 				// Checking ALICE ETH/METH balance
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_eth - alice_deposited_amount_in_eth_secondary
 				);
 				let exchange_rate_eth = TestPools::get_exchange_rate(ETH).unwrap();
@@ -1619,9 +1619,9 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ADMIN, ETH.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, ETH_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
@@ -1662,11 +1662,11 @@ mod tests {
 					expected_amount_wrapped_tokens_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for Alice ETH pool
@@ -1697,11 +1697,11 @@ mod tests {
 					expected_amount_wrapped_tokens_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					alice_borrowed_amount_in_eth
 				);
 
@@ -1734,9 +1734,9 @@ mod tests {
 			.pool_initial(DOT)
 			.pool_initial(ETH)
 			.pool_initial(BTC)
-			.user_balance(ADMIN, ETH.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, BTC.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, ETH_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, BTC_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
@@ -1785,15 +1785,15 @@ mod tests {
 					expected_amount_wrapped_tokens_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(BTC.into(), &ALICE),
+					Currencies::free_balance(BTC_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_btc
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for Alice ETH pool
@@ -1861,15 +1861,15 @@ mod tests {
 				);
 				// Checking free balance DOT && ETH && BTC for user.
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
 				assert_eq!(
-					Currencies::free_balance(BTC.into(), &ALICE),
+					Currencies::free_balance(BTC_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_btc - alice_deposited_amount_in_btc_secondary
 				);
 				assert_eq!(
-					Currencies::free_balance(ETH.into(), &ALICE),
+					Currencies::free_balance(ETH_CUR, &ALICE),
 					alice_borrowed_amount_in_eth
 				);
 				// Checking total borrow for Alice ETH pool

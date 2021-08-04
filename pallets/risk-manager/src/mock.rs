@@ -376,6 +376,7 @@ impl ExtBuilder {
 		controller::GenesisConfig::<TestRuntime> {
 			controller_params: self.controller_data,
 			pause_keepers: vec![
+				(MNT, PauseKeeper::all_unpaused()),
 				(ETH, PauseKeeper::all_unpaused()),
 				(DOT, PauseKeeper::all_unpaused()),
 				(KSM, PauseKeeper::all_unpaused()),

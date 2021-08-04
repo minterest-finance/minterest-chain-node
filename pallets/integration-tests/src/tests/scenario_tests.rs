@@ -13,8 +13,8 @@ mod tests {
 		ExtBuilder::default()
 			.pool_initial(DOT)
 			.pool_initial(ETH)
-			.user_balance(ADMIN, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ADMIN, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
@@ -63,7 +63,7 @@ mod tests {
 				// Checking free balance DOT && MDOT
 				// Admin gets 100_000 wrapped token after adding liquidity by exchange rate 1:1
 				// ADMIN:
-				assert_eq!(Currencies::free_balance(DOT.into(), &ADMIN), Balance::zero());
+				assert_eq!(Currencies::free_balance(DOT_CUR, &ADMIN), Balance::zero());
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ADMIN),
 					admin_deposit_amount_block_number_0
@@ -129,7 +129,7 @@ mod tests {
 
 				// Checking free balance DOT && MDOT
 				// ADMIN:
-				assert_eq!(Currencies::free_balance(DOT.into(), &ADMIN), Balance::zero());
+				assert_eq!(Currencies::free_balance(DOT_CUR, &ADMIN), Balance::zero());
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ADMIN),
 					admin_deposit_amount_block_number_0
@@ -139,7 +139,7 @@ mod tests {
 				let alice_dot_free_balance_block_number_1: Balance =
 					alice_dot_free_balance_start - alice_deposit_amount_block_number_1;
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					alice_dot_free_balance_block_number_1
 				);
 				let alice_m_dot_free_balance_block_number_1: Balance =
@@ -211,7 +211,7 @@ mod tests {
 
 				// Checking free balance DOT && MDOT
 				// ADMIN:
-				assert_eq!(Currencies::free_balance(DOT.into(), &ADMIN), Balance::zero());
+				assert_eq!(Currencies::free_balance(DOT_CUR, &ADMIN), Balance::zero());
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ADMIN),
 					admin_deposit_amount_block_number_0
@@ -222,7 +222,7 @@ mod tests {
 				let alice_dot_free_balance_block_number_2: Balance =
 					alice_dot_free_balance_block_number_1 + alice_borrow_amount_block_number_2;
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					alice_dot_free_balance_block_number_2
 				);
 				// Expected: 60 000
@@ -309,7 +309,7 @@ mod tests {
 
 				// Checking free balance DOT && MDOT
 				// ADMIN:
-				assert_eq!(Currencies::free_balance(DOT.into(), &ADMIN), Balance::zero());
+				assert_eq!(Currencies::free_balance(DOT_CUR, &ADMIN), Balance::zero());
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ADMIN),
 					admin_deposit_amount_block_number_0
@@ -320,7 +320,7 @@ mod tests {
 				let alice_dot_free_balance_block_number_3: Balance =
 					alice_dot_free_balance_block_number_2 - alice_repay_amount_block_number_3;
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					alice_dot_free_balance_block_number_3
 				);
 				assert_eq!(
@@ -420,7 +420,7 @@ mod tests {
 				assert_eq!(Currencies::total_issuance(MDOT), pool_m_dot_free_balance_block_number_1);
 				// Checking free balance DOT && MDOT for ADMIN
 				// ADMIN:
-				assert_eq!(Currencies::free_balance(DOT.into(), &ADMIN), Balance::zero());
+				assert_eq!(Currencies::free_balance(DOT_CUR, &ADMIN), Balance::zero());
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ADMIN),
 					admin_deposit_amount_block_number_0
@@ -431,7 +431,7 @@ mod tests {
 					- alice_dot_total_borrow_block_number_3
 					- borrow_accumulated_block_number_4;
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					alice_dot_free_balance_block_number_4
 				);
 				// Expected: 60 000
@@ -529,7 +529,7 @@ mod tests {
 
 				// Checking free balance DOT && MDOT
 				// ADMIN:
-				assert_eq!(Currencies::free_balance(DOT.into(), &ADMIN), Balance::zero());
+				assert_eq!(Currencies::free_balance(DOT_CUR, &ADMIN), Balance::zero());
 				assert_eq!(
 					Currencies::free_balance(MDOT, &ADMIN),
 					admin_deposit_amount_block_number_0
@@ -537,7 +537,7 @@ mod tests {
 				// ALICE:
 				// Expected 99_999,999_958_076_171_853_642
 				assert_eq!(
-					Currencies::free_balance(DOT.into(), &ALICE),
+					Currencies::free_balance(DOT_CUR, &ALICE),
 					alice_dot_free_balance_block_number_4 + alice_underlining_amount
 				);
 				// Expected: 0

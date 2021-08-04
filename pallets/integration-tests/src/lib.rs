@@ -324,7 +324,7 @@ mod tests {
 					.endowed_accounts
 					.clone()
 					.into_iter()
-					.filter(|(_, currency_id, _)| *currency_id == MNT)
+					.filter(|&(_, currency_id, _)| currency_id == MNT_CUR)
 					.map(|(account_id, _, initial_balance)| (account_id, initial_balance))
 					.collect::<Vec<_>>(),
 			}
@@ -335,7 +335,7 @@ mod tests {
 				balances: self
 					.endowed_accounts
 					.into_iter()
-					.filter(|(_, currency_id, _)| *currency_id != MNT)
+					.filter(|&(_, currency_id, _)| currency_id != MNT_CUR)
 					.collect::<Vec<_>>(),
 			}
 			.assimilate_storage(&mut t)
@@ -344,6 +344,7 @@ mod tests {
 			controller::GenesisConfig::<Test> {
 				controller_params: self.controller_data,
 				pause_keepers: vec![
+					(MNT, PauseKeeper::all_unpaused()),
 					(ETH, PauseKeeper::all_unpaused()),
 					(DOT, PauseKeeper::all_unpaused()),
 					(KSM, PauseKeeper::all_paused()),

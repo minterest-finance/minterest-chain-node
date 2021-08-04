@@ -19,9 +19,9 @@ mod tests {
 			.pool_initial(DOT)
 			.pool_initial(BTC)
 			.pool_initial(ETH)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, BTC.into(), ONE_HUNDRED_THOUSAND)
-			.user_balance(ALICE, ETH.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, BTC_CUR, ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, ETH_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), false)
 			.pool_user_data(BTC, ALICE, Balance::zero(), Rate::zero(), false)
 			.pool_user_data(ETH, ALICE, Balance::zero(), Rate::zero(), false)
@@ -74,7 +74,7 @@ mod tests {
 	fn set_protocol_interest_factor_greater_than_zero() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {
@@ -140,7 +140,7 @@ mod tests {
 	fn set_protocol_interest_factor_equal_zero() {
 		ExtBuilder::default()
 			.pool_initial(DOT)
-			.user_balance(ALICE, DOT.into(), ONE_HUNDRED_THOUSAND)
+			.user_balance(ALICE, DOT_CUR, ONE_HUNDRED_THOUSAND)
 			.pool_user_data(DOT, ALICE, Balance::zero(), Rate::zero(), true)
 			.build()
 			.execute_with(|| {

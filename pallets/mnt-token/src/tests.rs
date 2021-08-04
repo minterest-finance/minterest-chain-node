@@ -16,7 +16,7 @@ use sp_runtime::{
 const MNT_PALLET_START_BALANCE: Balance = 1_000_000 * DOLLARS;
 
 fn get_mnt_account_balance(user: AccountId) -> Balance {
-	Currencies::free_balance(MNT, &user)
+	Currencies::free_balance(MNT_CUR, &user)
 }
 
 /// Move flywheel and check borrower balance

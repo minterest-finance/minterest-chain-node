@@ -49,21 +49,21 @@ impl Default for ExtBuilder {
 		Self {
 			endowed_accounts: vec![
 				// seed: initial assets. Initial MNT to pay for gas.
-				(ALICE::get(), MNT.into(), 100_000 * DOLLARS),
-				(ALICE::get(), DOT.into(), 100_000 * DOLLARS),
-				(ALICE::get(), ETH.into(), 100_000 * DOLLARS),
-				(ALICE::get(), BTC.into(), 100_000 * DOLLARS),
-				(ALICE::get(), KSM.into(), 100_000 * DOLLARS),
-				(BOB::get(), MNT.into(), 100_000 * DOLLARS),
-				(BOB::get(), DOT.into(), 100_000 * DOLLARS),
-				(BOB::get(), ETH.into(), 100_000 * DOLLARS),
-				(BOB::get(), BTC.into(), 100_000 * DOLLARS),
-				(BOB::get(), KSM.into(), 100_000 * DOLLARS),
-				(CHARLIE::get(), MNT.into(), 100_000 * DOLLARS),
-				(CHARLIE::get(), DOT.into(), 100_000 * DOLLARS),
-				(CHARLIE::get(), ETH.into(), 100_000 * DOLLARS),
-				(CHARLIE::get(), BTC.into(), 100_000 * DOLLARS),
-				(CHARLIE::get(), KSM.into(), 100_000 * DOLLARS),
+				(ALICE::get(), MNT_CUR, 100_000 * DOLLARS),
+				(ALICE::get(), DOT_CUR, 100_000 * DOLLARS),
+				(ALICE::get(), ETH_CUR, 100_000 * DOLLARS),
+				(ALICE::get(), BTC_CUR, 100_000 * DOLLARS),
+				(ALICE::get(), KSM_CUR, 100_000 * DOLLARS),
+				(BOB::get(), MNT_CUR, 100_000 * DOLLARS),
+				(BOB::get(), DOT_CUR, 100_000 * DOLLARS),
+				(BOB::get(), ETH_CUR, 100_000 * DOLLARS),
+				(BOB::get(), BTC_CUR, 100_000 * DOLLARS),
+				(BOB::get(), KSM_CUR, 100_000 * DOLLARS),
+				(CHARLIE::get(), MNT_CUR, 100_000 * DOLLARS),
+				(CHARLIE::get(), DOT_CUR, 100_000 * DOLLARS),
+				(CHARLIE::get(), ETH_CUR, 100_000 * DOLLARS),
+				(CHARLIE::get(), BTC_CUR, 100_000 * DOLLARS),
+				(CHARLIE::get(), KSM_CUR, 100_000 * DOLLARS),
 			],
 			pools: vec![],
 			pool_user_data: vec![],
@@ -108,7 +108,7 @@ impl ExtBuilder {
 	}
 
 	pub fn mnt_account_balance(mut self, balance: Balance) -> Self {
-		self.endowed_accounts.push((MntToken::get_account_id(), MNT, balance));
+		self.endowed_accounts.push((MntToken::get_account_id(), MNT_CUR, balance));
 		self
 	}
 
@@ -122,7 +122,7 @@ impl ExtBuilder {
 				.endowed_accounts
 				.clone()
 				.into_iter()
-				.filter(|(_, currency_id, _)| *currency_id == MNT)
+				.filter(|&(_, currency_id, _)| currency_id == MNT_CUR)
 				.map(|(account_id, _, initial_balance)| (account_id, initial_balance))
 				.collect::<Vec<_>>(),
 		}
@@ -133,7 +133,7 @@ impl ExtBuilder {
 			balances: self
 				.endowed_accounts
 				.into_iter()
-				.filter(|(_, currency_id, _)| *currency_id != MNT)
+				.filter(|&(_, currency_id, _)| currency_id != MNT_CUR)
 				.collect::<Vec<_>>(),
 		}
 		.assimilate_storage(&mut t)
@@ -198,6 +198,7 @@ impl ExtBuilder {
 				),
 			],
 			pause_keepers: vec![
+				(MNT, PauseKeeper::all_unpaused()),
 				(DOT, PauseKeeper::all_unpaused()),
 				(ETH, PauseKeeper::all_unpaused()),
 				(BTC, PauseKeeper::all_unpaused()),
@@ -1150,7 +1151,7 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 
 			let oracle_price = Prices::get_underlying_price(DOT).unwrap();
 
-			let bob_balance_before_repay_all = Currencies::free_balance(DOT.into(), &BOB::get());
+			let bob_balance_before_repay_all = Currencies::free_balance(DOT_CUR, &BOB::get());
 
 			let expected_free_balance_bob = bob_balance_before_repay_all
 				+ (Rate::from_inner(
@@ -1163,7 +1164,7 @@ fn test_free_balance_is_ok_after_repay_all_and_redeem_using_balance_rpc() {
 			assert_ok!(MinterestProtocol::redeem(bob(), DOT));
 
 			assert_eq!(
-				Currencies::free_balance(DOT.into(), &BOB::get()),
+				Currencies::free_balance(DOT_CUR, &BOB::get()),
 				expected_free_balance_bob
 			);
 		})
@@ -1438,7 +1439,7 @@ fn test_get_user_underlying_balance_per_asset_rpc() {
 		assert_ok!(MinterestProtocol::redeem(alice(), ETH));
 		// Check that value got by rpc and value after redeem the same
 		assert_eq!(
-			Currencies::free_balance(ETH.into(), &ALICE::get()),
+			Currencies::free_balance(ETH_CUR, &ALICE::get()),
 			alice_balance_after_borrowing
 		);
 	})
@@ -1531,7 +1532,7 @@ fn get_user_total_unclaimed_mnt_balance_should_work() {
 				18_749_999_777_636_673_218
 			);
 			assert_eq!(
-				Currencies::free_balance(MNT, &ALICE::get()),
+				Currencies::free_balance(MNT_CUR, &ALICE::get()),
 				100_035_416_666_241_803_326_908
 			);
 			// In the test environment, the test storage changes.

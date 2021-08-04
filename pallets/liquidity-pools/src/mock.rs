@@ -192,7 +192,7 @@ impl ExtBuilder {
 			balances: self
 				.endowed_accounts
 				.into_iter()
-				.filter(|(_, currency_id, _)| *currency_id != MNT)
+				.filter(|&(_, currency_id, _)| currency_id != MNT_CUR)
 				.collect::<Vec<_>>(),
 		}
 		.assimilate_storage(&mut t)

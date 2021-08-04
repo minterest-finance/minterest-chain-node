@@ -1076,7 +1076,7 @@ fn claim_mnt_should_work() {
 			// Calculation of the balance of Alice in MNT tokens (only supply distribution):
 			// balance = previous_balance + speed_DOT * block_delta * alice_supply / total_supply;
 			// balance = 0 + 0.1 * 50 * 60 / 160 = 1.875 MNT;
-			assert_eq!(Currencies::free_balance(MNT, &ALICE), 1_875_000_000_000_000_000);
+			assert_eq!(Currencies::free_balance(MNT_CUR, &ALICE), 1_875_000_000_000_000_000);
 			let expected_event = Event::TestMinterestProtocol(crate::Event::Claimed(ALICE));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 
@@ -1097,7 +1097,7 @@ fn claim_mnt_should_work() {
 			borrow_balance = 0 + 0.1 * 100 * 10 / 60 = 1.6667 MNT
 			total_alice_balance = supply_balance + borrow_balance = 9.375 MNT + 1.6667 MNT = 11.042 MNT
 			 */
-			assert_eq!(Currencies::free_balance(MNT, &ALICE), 11_041_666_666_666_666_660);
+			assert_eq!(Currencies::free_balance(MNT_CUR, &ALICE), 11_041_666_666_666_666_660);
 
 			System::set_block_number(400);
 
@@ -1117,7 +1117,7 @@ fn claim_mnt_should_work() {
 			borrow_balance = 3.333 + 0.1 * 100 * 40 / 90 = 7.7774 MNT
 			total_alice_balance = supply_balance + borrow_balance = 16.875 MNT + 7.7774 MNT = 24.652 MNT
 			 */
-			assert_eq!(Currencies::free_balance(MNT, &ALICE), 24_652_777_777_777_777_760);
+			assert_eq!(Currencies::free_balance(MNT_CUR, &ALICE), 24_652_777_777_777_777_760);
 		})
 }
 
