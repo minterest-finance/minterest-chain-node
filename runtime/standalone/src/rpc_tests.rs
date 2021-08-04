@@ -108,7 +108,8 @@ impl ExtBuilder {
 	}
 
 	pub fn mnt_account_balance(mut self, balance: Balance) -> Self {
-		self.endowed_accounts.push((MntToken::get_account_id(), MNT_CUR, balance));
+		self.endowed_accounts
+			.push((MntToken::get_account_id(), MNT_CUR, balance));
 		self
 	}
 

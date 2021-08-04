@@ -446,7 +446,10 @@ mod tests {
 				// block delta = 10
 				// distributed_to_alice_for_eth_pool = 0.1 (speed) * 10 (blocks) * 2 (supply and borrow)
 				let distributed_to_alice_for_eth_pool = 2_000_000_000_000_000_000;
-				assert_eq!(Currencies::free_balance(MNT_CUR, &ALICE), distributed_to_alice_for_eth_pool);
+				assert_eq!(
+					Currencies::free_balance(MNT_CUR, &ALICE),
+					distributed_to_alice_for_eth_pool
+				);
 				assert_eq!(
 					Currencies::free_balance(MNT_CUR, &TestMntToken::get_account_id()),
 					ONE_HUNDRED_THOUSAND - distributed_to_alice_for_eth_pool
@@ -485,7 +488,10 @@ mod tests {
 				// Only BTC pool is enabled
 				test_mnt_speeds(0, 0, 100_000_000_000_000_000);
 
-				assert_eq!(Currencies::free_balance(MNT_CUR, &ALICE), distributed_to_alice_for_eth_pool);
+				assert_eq!(
+					Currencies::free_balance(MNT_CUR, &ALICE),
+					distributed_to_alice_for_eth_pool
+				);
 				assert_ok!(MinterestProtocol::claim_mnt(alice_origin(), vec![BTC]));
 
 				// Alice got the same amount of tokens for BTC pool

@@ -331,10 +331,7 @@ mod tests {
 					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
-				assert_eq!(
-					Currencies::free_balance(ETH_CUR, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH_CUR, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
 					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
@@ -357,10 +354,7 @@ mod tests {
 					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
-				assert_eq!(
-					Currencies::free_balance(ETH_CUR, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH_CUR, &ALICE), alice_borrowed_amount_in_eth);
 
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
@@ -443,10 +437,7 @@ mod tests {
 					Currencies::free_balance(BTC_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_btc
 				);
-				assert_eq!(
-					Currencies::free_balance(ETH_CUR, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH_CUR, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
 					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
@@ -498,10 +489,7 @@ mod tests {
 					Currencies::free_balance(BTC_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_btc - alice_deposited_amount_in_btc_secondary
 				);
-				assert_eq!(
-					Currencies::free_balance(ETH_CUR, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH_CUR, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
 					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
@@ -854,10 +842,7 @@ mod tests {
 					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
-				assert_eq!(
-					Currencies::free_balance(ETH_CUR, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH_CUR, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
 					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
@@ -880,10 +865,7 @@ mod tests {
 					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
-				assert_eq!(
-					Currencies::free_balance(ETH_CUR, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH_CUR, &ALICE), alice_borrowed_amount_in_eth);
 
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
@@ -964,10 +946,7 @@ mod tests {
 					Currencies::free_balance(BTC_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_btc
 				);
-				assert_eq!(
-					Currencies::free_balance(ETH_CUR, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH_CUR, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
 					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
@@ -1012,10 +991,7 @@ mod tests {
 					Currencies::free_balance(BTC_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_btc - alice_deposited_amount_in_btc_secondary
 				);
-				assert_eq!(
-					Currencies::free_balance(ETH_CUR, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH_CUR, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
 					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
@@ -1665,10 +1641,7 @@ mod tests {
 					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
-				assert_eq!(
-					Currencies::free_balance(ETH_CUR, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH_CUR, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
 					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
@@ -1700,10 +1673,7 @@ mod tests {
 					Currencies::free_balance(DOT_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_dot
 				);
-				assert_eq!(
-					Currencies::free_balance(ETH_CUR, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH_CUR, &ALICE), alice_borrowed_amount_in_eth);
 
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
@@ -1792,10 +1762,7 @@ mod tests {
 					Currencies::free_balance(BTC_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_btc
 				);
-				assert_eq!(
-					Currencies::free_balance(ETH_CUR, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH_CUR, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
 					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
@@ -1868,10 +1835,7 @@ mod tests {
 					Currencies::free_balance(BTC_CUR, &ALICE),
 					ONE_HUNDRED_THOUSAND - alice_deposited_amount_in_btc - alice_deposited_amount_in_btc_secondary
 				);
-				assert_eq!(
-					Currencies::free_balance(ETH_CUR, &ALICE),
-					alice_borrowed_amount_in_eth
-				);
+				assert_eq!(Currencies::free_balance(ETH_CUR, &ALICE), alice_borrowed_amount_in_eth);
 				// Checking total borrow for Alice ETH pool
 				assert_eq!(
 					TestPools::pool_user_data_storage(ETH, ALICE).borrowed,
