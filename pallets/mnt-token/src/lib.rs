@@ -142,6 +142,11 @@ pub mod module {
 	}
 
 	/// The threshold above which the flywheel transfers MNT
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_claim_threshold_storage)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT mnt_token")]
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_claim_threshold_storage)]
 	pub(crate) type MntClaimThresholdStorage<T: Config> = StorageValue<_, Balance, ValueQuery>;
@@ -149,29 +154,54 @@ pub mod module {
 	/// MNT minting speed for each pool
 	/// Doubling this number shows how much MNT goes to all suppliers and borrowers of a particular
 	/// pool.
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_speed_storage)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT mnt_token")]
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_speed_storage)]
 	pub type MntSpeedStorage<T: Config> = StorageMap<_, Twox64Concat, OriginalAsset, Balance, ValueQuery>;
 
 	/// Index + block_number need for generating and distributing new MNT tokens for pool
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_pool_state_storage)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT mnt_token")]
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_pool_state_storage)]
 	pub(crate) type MntPoolStateStorage<T: Config> =
 		StorageMap<_, Twox64Concat, OriginalAsset, MntPoolState<T>, ValueQuery>;
 
 	/// Use for accruing MNT tokens for supplier
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_supplier_index_storage)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT mnt_token")]
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_supplier_index_storage)]
 	pub(crate) type MntSupplierIndexStorage<T: Config> =
 		StorageDoubleMap<_, Twox64Concat, OriginalAsset, Twox64Concat, T::AccountId, Rate, OptionQuery>;
 
 	/// Use for accruing MNT tokens for borrower
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_borrower_index_storage)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT mnt_token")]
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_borrower_index_storage)]
 	pub(crate) type MntBorrowerIndexStorage<T: Config> =
 		StorageDoubleMap<_, Twox64Concat, OriginalAsset, Twox64Concat, T::AccountId, Rate, ValueQuery>;
 
 	/// Place where accrued MNT tokens are kept for each user
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=mnt_token::module::Pallet::mnt_accrued_storage)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT mnt_token")]
 	#[pallet::storage]
 	#[pallet::getter(fn mnt_accrued_storage)]
 	pub(crate) type MntAccruedStorage<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Balance, ValueQuery>;
@@ -220,6 +250,8 @@ pub mod module {
 		/// - `speed`: new minting speed. Zero speed means minting will be disabled.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT mnt_token")]
 		#[pallet::weight(T::MntTokenWeightInfo::set_speed())]
 		#[transactional]
 		pub fn set_speed(origin: OriginFor<T>, pool_id: OriginalAsset, speed: Balance) -> DispatchResultWithPostInfo {

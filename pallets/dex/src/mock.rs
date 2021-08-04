@@ -39,6 +39,9 @@ construct_runtime!(
 		TestPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
 		TestLiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, Config<T>, ValidateUnsigned},
 		TestDex: dex::{Pallet, Storage, Call, Event<T>},
+		TestController: controller::{Pallet, Storage, Call, Event, Config<T>},
+		TestMinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
+		TestMntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
 	}
 );
 
@@ -49,6 +52,8 @@ ord_parameter_types! {
 parameter_types! {
 	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"lqdy/min");
 	pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"lqdn/min");
+	pub const MntTokenPalletId: PalletId = PalletId(*b"mntt/min");
+	pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
 	pub InitialExchangeRate: Rate = Rate::one();
@@ -61,6 +66,10 @@ mock_impl_liquidity_pools_config!(TestRuntime);
 mock_impl_liquidation_pools_config!(TestRuntime);
 mock_impl_dex_config!(TestRuntime);
 mock_impl_balances_config!(TestRuntime);
+mock_impl_controller_config!(TestRuntime, ZeroAdmin);
+mock_impl_minterest_model_config!(TestRuntime, ZeroAdmin);
+mock_impl_mnt_token_config!(TestRuntime, ZeroAdmin);
+
 // -----------------------------------------------------------------------------------------
 // 									MOCK PRICE
 // -----------------------------------------------------------------------------------------

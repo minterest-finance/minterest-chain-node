@@ -233,6 +233,11 @@ pub mod module {
 	/// This is option should not be used when the protocol is fully up and running on prod
 	/// - `protocol_interest_threshold`: Protocol interest threshold determines a minimum amount of
 	/// protocol interest needed to transfer it from liquidity to liquidation pool
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=controller::module::Pallet::controller_params)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT controller")]
 	#[pallet::storage]
 	#[pallet::getter(fn controller_data_storage)]
 	pub type ControllerDataStorage<T: Config> =
@@ -245,6 +250,11 @@ pub mod module {
 	/// - `redeem_paused`: is pause redeem operation in the pool
 	/// - `borrow_paused`: is pause borrow operation in the pool
 	/// - `repay_paused`: is pause repay operation in the pool
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=controller::module::Pallet::pause_keepers)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT controller")]
 	#[pallet::storage]
 	#[pallet::getter(fn pause_keeper_storage)]
 	pub(crate) type PauseKeeperStorage<T: Config> =
@@ -297,6 +307,8 @@ pub mod module {
 		/// - `operation`: the operation to be paused.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT controller")]
 		#[pallet::weight(T::ControllerWeightInfo::pause_operation())]
 		#[transactional]
 		pub fn pause_operation(
@@ -329,6 +341,8 @@ pub mod module {
 		/// - `operation`: the operation to be resumed.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT controller")]
 		#[pallet::weight(T::ControllerWeightInfo::resume_operation())]
 		#[transactional]
 		pub fn resume_operation(
@@ -361,6 +375,8 @@ pub mod module {
 		/// - `protocol_interest_factor`: new value for interest factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT controller")]
 		#[pallet::weight(T::ControllerWeightInfo::set_protocol_interest_factor())]
 		#[transactional]
 		pub fn set_protocol_interest_factor(
@@ -388,6 +404,8 @@ pub mod module {
 		/// - `max_borrow_rate`: new value for maximum borrow rate.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT controller")]
 		#[pallet::weight(T::ControllerWeightInfo::set_max_borrow_rate())]
 		#[transactional]
 		pub fn set_max_borrow_rate(
@@ -417,6 +435,8 @@ pub mod module {
 		/// - `collateral_factor`: new value for collateral factor.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT controller")]
 		#[pallet::weight(T::ControllerWeightInfo::set_collateral_factor())]
 		#[transactional]
 		pub fn set_collateral_factor(
@@ -447,6 +467,8 @@ pub mod module {
 		///
 		/// The dispatch origin of this call must be Administrator.
 		/// Borrow cap value must be in range 0..1_000_000_000_000_000_000_000_000
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT controller")]
 		#[pallet::weight(T::ControllerWeightInfo::set_borrow_cap())]
 		#[transactional]
 		pub fn set_borrow_cap(
@@ -473,6 +495,8 @@ pub mod module {
 		/// - `protocol_interest_threshold`: new protocol_interest_threshold value.
 		///
 		/// The dispatch origin of this call must be Administrator.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT controller")]
 		#[pallet::weight(T::ControllerWeightInfo::set_protocol_interest_threshold())]
 		#[transactional]
 		pub fn set_protocol_interest_threshold(
@@ -693,7 +717,11 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 	}
 
 	/// Determine what the account liquidity would be if the given amounts were redeemed/borrowed.
+	/// Also this function is used to calculate current state of liquidity of a particular
+	/// account. To do this, in parameter `underlying_asset` should pass `None` and the
+	/// parameters `redeem_amount` and `borrow_amount` should be equal to zero.
 	///
+	/// Parameters:
 	/// - `account`: The account to determine liquidity.
 	/// - `pool_id`: The pool to hypothetically redeem/borrow.
 	/// - `redeem_amount`: The number of tokens to hypothetically redeem.

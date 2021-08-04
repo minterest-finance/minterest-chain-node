@@ -51,9 +51,9 @@ ord_parameter_types! {
 }
 
 parameter_types! {
-	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"min/lqdy");
-	pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"min/lqdn");
-	pub const MntTokenPalletId: PalletId = PalletId(*b"min/mntt");
+	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"lqdy/min");
+	pub const LiquidationPoolsPalletId: PalletId = PalletId(*b"lqdn/min");
+	pub const MntTokenPalletId: PalletId = PalletId(*b"mntt/min");
 	pub LiquidityPoolAccountId: AccountId = LiquidityPoolsPalletId::get().into_account();
 	pub LiquidationPoolAccountId: AccountId = LiquidationPoolsPalletId::get().into_account();
 	pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
@@ -101,10 +101,10 @@ impl Default for ExtBuilder {
 				(ALICE, ETH.into(), ONE_HUNDRED),
 				(ALICE, KSM.into(), ONE_HUNDRED),
 				(BOB, DOT.into(), ONE_HUNDRED),
-				// seed: initial interest, equal 10_000$
+				// seed: initial protocol interest, equal 10_000$
 				(TestPools::pools_account_id(), ETH.into(), TEN_THOUSAND),
 				(TestPools::pools_account_id(), DOT.into(), TEN_THOUSAND),
-				// seed: initial interest = 10_000$, initial pool balance = 1_000_000$
+				// seed: initial protocol interest = 10_000$, initial pool balance = 1_000_000$
 				(TestPools::pools_account_id(), KSM.into(), ONE_MILL),
 				// seed: initial MNT treasury = 1_000_000$
 				(TestMntToken::get_account_id(), MNT.into(), ONE_MILL),

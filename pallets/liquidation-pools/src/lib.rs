@@ -23,7 +23,8 @@ use minterest_primitives::{
 pub use module::*;
 use orml_traits::MultiCurrency;
 use pallet_traits::{
-	CurrencyConverter, DEXManager, LiquidationPoolsManager, LiquidityPoolStorageProvider, PoolsManager, PricesManager,
+	ControllerManager, CurrencyConverter, DEXManager, LiquidationPoolsManager, LiquidityPoolStorageProvider,
+	PoolsManager, PricesManager,
 };
 use sp_runtime::{
 	offchain::storage_lock::{StorageLock, Time},
@@ -104,6 +105,9 @@ pub mod module {
 
 		/// Weight information for the extrinsics.
 		type LiquidationPoolsWeightInfo: WeightInfo;
+
+		/// Public API of controller pallet
+		type ControllerManager: ControllerManager<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -161,6 +165,11 @@ pub mod module {
 	/// covered by value in Liquidation Pool.
 	/// - `max_ideal_balance`: Max Ideal Balance represents the ideal balance of Liquidation Pool
 	/// and is used to limit ideal balance during pool balancing.
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=liquidation_pools::module::Pallet::liquidation_pools_data)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT liquidation_pools")]
 	#[pallet::storage]
 	#[pallet::getter(fn liquidation_pool_data_storage)]
 	pub type LiquidationPoolDataStorage<T: Config> =
@@ -250,6 +259,8 @@ pub mod module {
 		/// - `threshold`: New value of deviation threshold.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT liquidation_pools")]
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_deviation_threshold())]
 		#[transactional]
 		pub fn set_deviation_threshold(
@@ -285,6 +296,8 @@ pub mod module {
 		/// - `balance_ratio`: New value of balance ratio.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT liquidation_pools")]
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_balance_ratio())]
 		#[transactional]
 		pub fn set_balance_ratio(
@@ -320,6 +333,8 @@ pub mod module {
 		/// - `max_ideal_balance`: New value of maximum ideal balance.
 		///
 		/// The dispatch origin of this call must be 'UpdateOrigin'.
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT liquidation_pools")]
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::set_max_ideal_balance())]
 		#[transactional]
 		pub fn set_max_ideal_balance(
@@ -352,6 +367,8 @@ pub mod module {
 		/// - `max_supply_amount`: the maximum number of tokens for sale from the `supply_pool_id`
 		/// pool on DEX to buy `target_amount` of tokens
 		/// - `target_amount`: number of tokens to buy in `target_pool_id` on DEX
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT liquidation_pools")]
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::balance_liquidation_pools())]
 		#[transactional]
 		pub fn balance_liquidation_pools(
@@ -385,6 +402,8 @@ pub mod module {
 		/// Parameters:
 		/// - `pool_id`: currency of transfer
 		/// - `underlying_amount`: amount to transfer to liquidation pool
+		#[doc(alias = "MNT Extrinsic")]
+		#[doc(alias = "MNT liquidation_pools")]
 		#[pallet::weight(T::LiquidationPoolsWeightInfo::transfer_to_liquidation_pool())]
 		#[transactional]
 		pub fn transfer_to_liquidation_pool(
@@ -531,6 +550,7 @@ impl<T: Config> Pallet<T> {
 					|(mut current_vec, mut current_sum_oversupply_usd, mut current_sum_shortfall_usd),
 					 &pool_id|
 					 -> sp_std::result::Result<(Vec<LiquidationInformation>, Balance, Balance), DispatchError> {
+						T::ControllerManager::accrue_interest_rate(pool_id)?;
 						let oracle_price =
 							T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 						let liquidation_pool_supply_underlying = Self::get_pool_available_liquidity(pool_id);
@@ -671,13 +691,14 @@ impl<T: Config> Pallet<T> {
 	/// Calculates ideal balance for pool balancing
 	/// - `pool_id`: PoolID for which the ideal balance is calculated.
 	///
-	/// Returns minimum of (liquidity_pool_balance * balance_ratio * oracle_price) and
+	/// Returns minimum of (liquidity_pool_borrow_underlying * balance_ratio * oracle_price) and
 	/// max_ideal_balance_usd
 	fn calculate_pool_ideal_balance_usd(pool_id: OriginalAsset) -> BalanceResult {
 		let oracle_price = T::PriceSource::get_underlying_price(pool_id).ok_or(Error::<T>::InvalidFeedPrice)?;
 		let balance_ratio = Self::liquidation_pool_data_storage(pool_id).balance_ratio;
-		// Liquidation pool ideal balance in USD: liquidity_pool_balance * balance_ratio * oracle_price
-		let ideal_balance_usd = Rate::from_inner(T::LiquidityPoolsManager::get_pool_available_liquidity(pool_id))
+		// Liquidation pool ideal balance in USD: liquidity_pool_total_borrow * balance_ratio *
+		// oracle_price
+		let ideal_balance_usd = Rate::from_inner(T::LiquidityPoolsManager::get_pool_borrow_underlying(pool_id))
 			.checked_mul(&balance_ratio)
 			.and_then(|v| v.checked_mul(&oracle_price))
 			.map(|x| x.into_inner())

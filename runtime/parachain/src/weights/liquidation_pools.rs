@@ -14,7 +14,7 @@
 // --extrinsic=*
 // --execution=wasm
 // --wasm-execution=compiled
-// --output=./runtime/src/weights/liquidation_pools.rs
+// --output=./runtime/standalone/src/weights/liquidation_pools.rs
 
 #![allow(unused_parens)]
 #![allow(unused_imports)]

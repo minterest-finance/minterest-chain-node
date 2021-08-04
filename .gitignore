@@ -34,3 +34,6 @@ venv.bak/
 
 # Merge artifacts
 *.orig
+
+# Gradle
+.gradle

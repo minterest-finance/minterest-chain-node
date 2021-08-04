@@ -104,11 +104,15 @@ pub enum DataProviderId {
 pub enum OffchainErr {
 	OffchainLock,
 	NotValidator,
-	CheckFail,
+	GetUsersWithInsolventLoanFailed,
+	BuildUserLoanStateFailed,
+	NotAllLoansLiquidated,
+	LiquidateTransactionFailed,
 	PoolsBalancingError,
 	PoolsBalancingIsOff,
 	FailReceivingOraclePrice,
 	ChainlinkFeedNotExists,
+	NumOverflow,
 }
 
 impl sp_std::fmt::Debug for OffchainErr {
@@ -116,11 +120,17 @@ impl sp_std::fmt::Debug for OffchainErr {
 		match *self {
 			OffchainErr::OffchainLock => write!(fmt, "Failed to get or extend lock"),
 			OffchainErr::NotValidator => write!(fmt, "Not validator"),
-			OffchainErr::CheckFail => write!(fmt, "Check fail"),
+			OffchainErr::GetUsersWithInsolventLoanFailed => write!(fmt, "Failed to get all users with insolvent loan"),
+			OffchainErr::BuildUserLoanStateFailed => {
+				write!(fmt, "Failed to calculate and build the user's loan state.")
+			}
+			OffchainErr::NotAllLoansLiquidated => write!(fmt, "Not all insolvent loans have been liquidated"),
+			OffchainErr::LiquidateTransactionFailed => write!(fmt, "Error executing liquidation extrinsic"),
 			OffchainErr::PoolsBalancingError => write!(fmt, "Pools balancing error"),
 			OffchainErr::PoolsBalancingIsOff => write!(fmt, "Pools balancing switched off"),
 			OffchainErr::FailReceivingOraclePrice => write!(fmt, "Receiving oracle price is failed"),
 			OffchainErr::ChainlinkFeedNotExists => write!(fmt, "Can't retrieve feed for enabled currency"),
+			OffchainErr::NumOverflow => write!(fmt, "Number overflow"),
 		}
 	}
 }

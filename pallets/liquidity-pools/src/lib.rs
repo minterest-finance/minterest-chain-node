@@ -130,6 +130,11 @@ pub mod module {
 	/// the pool.
 	/// Used to accrue interest when user repays a loan.
 	/// - `protocol_interest`: amount of protocol_interest of the underlying held in this pool.
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=liquidity_pools::module::Pallet::pools)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT liquidity_pools")]
 	#[pallet::storage]
 	#[pallet::getter(fn pool_data_storage)]
 	pub(crate) type PoolDataStorage<T: Config> = StorageMap<_, Twox64Concat, OriginalAsset, PoolData, ValueQuery>;
@@ -142,6 +147,11 @@ pub mod module {
 	/// recent balance-changing action.
 	/// - `interest_index`: global borrow_index at the time of the last balance changing action.
 	/// - `is_collateral`: whether or not the pool can be used as a collateral by this user.
+	///
+	/// Storage location:
+	/// [`MNT Storage`](?search=liquidity_pools::module::Pallet::pool_user_data)
+	#[doc(alias = "MNT Storage")]
+	#[doc(alias = "MNT liquidity_pools")]
 	#[pallet::storage]
 	#[pallet::getter(fn pool_user_data_storage)]
 	pub(crate) type PoolUserDataStorage<T: Config> =

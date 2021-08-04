@@ -37,9 +37,17 @@ frame_support::construct_runtime!(
 		// Minterest pallets
 		TestLiquidationPools: liquidation_pools::{Pallet, Storage, Call, Event<T>, ValidateUnsigned},
 		TestLiquidityPools: liquidity_pools::{Pallet, Storage, Call, Config<T>},
-		TestDex: dex::{Pallet, Storage, Call, Event<T>}
+		TestDex: dex::{Pallet, Storage, Call, Event<T>},
+		Controller: controller::{Pallet, Storage, Call, Event, Config<T>},
+		MntToken: mnt_token::{Pallet, Storage, Call, Event<T>, Config<T>},
+		MinterestModel: minterest_model::{Pallet, Storage, Call, Event, Config<T>},
 	}
 );
+
+parameter_types! {
+	pub const MntTokenPalletId: PalletId = PalletId(*b"min/mntt");
+	pub MntTokenAccountId: AccountId = MntTokenPalletId::get().into_account();
+}
 
 mock_impl_system_config!(Test);
 mock_impl_liquidity_pools_config!(Test);
@@ -47,6 +55,9 @@ mock_impl_orml_tokens_config!(Test);
 mock_impl_orml_currencies_config!(Test);
 mock_impl_dex_config!(Test);
 mock_impl_balances_config!(Test);
+mock_impl_controller_config!(Test, ZeroAdmin);
+mock_impl_mnt_token_config!(Test, ZeroAdmin);
+mock_impl_minterest_model_config!(Test, ZeroAdmin);
 
 parameter_types! {
 	pub const LiquidityPoolsPalletId: PalletId = PalletId(*b"lqdy/min");
@@ -105,6 +116,7 @@ impl Config for Test {
 	type LiquidityPoolsManager = liquidity_pools::Pallet<Test>;
 	type Dex = dex::Pallet<Test>;
 	type LiquidationPoolsWeightInfo = ();
+	type ControllerManager = Controller;
 }
 
 /// An extrinsic type used for tests.
@@ -202,11 +214,11 @@ impl ExternalityBuilder {
 		self
 	}
 
-	pub fn pool_initial(mut self, pool_id: OriginalAsset) -> Self {
+	pub fn set_pool_borrow_underlying(mut self, pool_id: OriginalAsset, balance: Balance) -> Self {
 		self.liquidity_pools.push((
 			pool_id,
 			PoolData {
-				borrowed: Balance::zero(),
+				borrowed: balance,
 				borrow_index: Rate::one(),
 				protocol_interest: Balance::zero(),
 			},
@@ -217,12 +229,6 @@ impl ExternalityBuilder {
 	pub fn liquidation_pool_balance(mut self, pool_id: OriginalAsset, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((TestLiquidationPools::pools_account_id(), pool_id.into(), balance));
-		self
-	}
-
-	pub fn liquidity_pool_balance(mut self, pool_id: OriginalAsset, balance: Balance) -> Self {
-		self.endowed_accounts
-			.push((TestLiquidityPools::pools_account_id(), pool_id.into(), balance));
 		self
 	}
 
