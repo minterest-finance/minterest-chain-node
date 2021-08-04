@@ -246,8 +246,7 @@ pub mod module {
 		/// equal to the underlying tokens supplied, divided by the current Exchange Rate.
 		///
 		/// Parameters:
-		/// - `pool_id`: CurrencyId of underlying assets to be transferred into the
-		///   protocol.
+		/// - `pool_id`: Asset to be transferred into the protocol.
 		/// - `underlying_amount`: The amount of the asset to be supplied, in units of the
 		///   underlying asset;
 		#[doc(alias = "MNT Extrinsic")]
