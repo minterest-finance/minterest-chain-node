@@ -747,7 +747,7 @@ impl<T: Config> Pallet<T> {
 			}
 		};
 
-		ensure!(
+        ensure!(
 			underlying_amount <= T::ManagerLiquidityPools::get_pool_available_liquidity(underlying_asset),
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
@@ -756,7 +756,7 @@ impl<T: Config> Pallet<T> {
 			wrapped_amount <= T::MultiCurrency::free_balance(wrapped_id, &who),
 			Error::<T>::NotEnoughWrappedTokens
 		);
-
+	 
 		// Fail if redeem not allowed
 		ensure!(
 			T::ControllerManager::is_operation_allowed(underlying_asset, Operation::Redeem),

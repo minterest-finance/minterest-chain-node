@@ -101,15 +101,17 @@ impl Default for ExtBuilder {
 				// seed: initial DOTs
 				(ALICE, DOT, ONE_HUNDRED),
 				(ALICE, ETH, ONE_HUNDRED),
-				(ALICE, KSM, ONE_HUNDRED),
+				(ALICE, KSM, ONE_HUNDRED),	
 				(BOB, DOT, ONE_HUNDRED),
+				(BOB, MNT, ONE_HUNDRED),
 				// seed: initial interest, equal 10_000$
 				(TestPools::pools_account_id(), ETH, TEN_THOUSAND),
 				(TestPools::pools_account_id(), DOT, TEN_THOUSAND),
 				// seed: initial interest = 10_000$, initial pool balance = 1_000_000$
 				(TestPools::pools_account_id(), KSM, ONE_MILL),
 				// seed: initial MNT treasury = 1_000_000$
-				(TestMntToken::get_account_id(), MNT, ONE_MILL),
+			    (TestMntToken::get_account_id(), MNT, ONE_MILL),
+				//(TestMntToken::get_account_id(), MNT, TEN_THOUSAND),
 			],
 			pools: vec![],
 			controller_data: vec![
@@ -148,6 +150,17 @@ impl Default for ExtBuilder {
 				),
 				(
 					BTC,
+					ControllerData {
+						last_interest_accrued_block: 0,
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),        // 0.5%
+						collateral_factor: Rate::saturating_from_rational(9, 10),        // 90%
+						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+					},
+				),
+				(
+					MNT,
 					ControllerData {
 						last_interest_accrued_block: 0,
 						protocol_interest_factor: Rate::saturating_from_rational(1, 10), // 10%
@@ -261,6 +274,15 @@ impl ExtBuilder {
 					},
 				),
 				(
+					MNT,
+					ALICE,
+					PoolUserData {
+						borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						is_collateral: true,
+					},
+				),
+				(
 					DOT,
 					BOB,
 					PoolUserData {
@@ -271,6 +293,15 @@ impl ExtBuilder {
 				),
 				(
 					BTC,
+					BOB,
+					PoolUserData {
+						borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						is_collateral: true,
+					},
+				),
+				(
+					MNT,
 					BOB,
 					PoolUserData {
 						borrowed: 0,
@@ -290,6 +321,7 @@ impl ExtBuilder {
 				(DOT, PauseKeeper::all_unpaused()),
 				(KSM, PauseKeeper::all_paused()),
 				(BTC, PauseKeeper::all_unpaused()),
+				(MNT, PauseKeeper::all_unpaused()),
 			],
 		}
 		.assimilate_storage(&mut t)

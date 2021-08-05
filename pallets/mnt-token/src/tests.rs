@@ -574,6 +574,12 @@ fn test_minting_enable_disable() {
 		.mnt_account_balance(100 * DOLLARS)
 		.build()
 		.execute_with(|| {
+			// Try to disable minting for invalid underlying asset id
+			assert_noop!(
+				MntToken::set_speed(admin_origin(), MDOT, Balance::zero()),
+				Error::<Runtime>::NotValidUnderlyingAssetId
+			);
+
 			// The dispatch origin of this call must be Root or 2/3 MinterestCouncil.
 			assert_noop!(MntToken::set_speed(alice_origin(), DOT, 1 * DOLLARS), BadOrigin);
 

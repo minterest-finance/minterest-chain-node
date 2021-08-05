@@ -333,6 +333,14 @@ fn transfer_to_liquidation_pool_should_work() {
 				Error::<Test>::ZeroBalanceTransaction
 			);
 
+			// Check thet transaction with unsuppurted asset returns error.
+			// Asset: MNT - native asset, underline assets are only allowed
+			// Expected error: NotValidUnderlyingAssetId
+			assert_noop!(
+				TestLiquidationPools::transfer_to_liquidation_pool(admin(), MDOT, 20_000),
+				Error::<Test>::NotValidUnderlyingAssetId
+			);
+
 			// Check that attempt to transfer amount bigger that user balance returns error
 			// Transfer amount: 40_0000
 			// Balance: 0
