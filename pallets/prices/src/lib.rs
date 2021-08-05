@@ -48,12 +48,6 @@ pub mod module {
 		type WeightInfo: WeightInfo;
 	}
 
-	#[pallet::error]
-	pub enum Error<T> {
-		/// The currency is not enabled in protocol.
-		NotValidUnderlyingAssetId,
-	}
-
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {

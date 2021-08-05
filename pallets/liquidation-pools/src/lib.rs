@@ -114,8 +114,6 @@ pub mod module {
 		NumOverflow,
 		/// Balance exceeds maximum value.
 		BalanceOverflow,
-		/// The currency is not enabled in protocol.
-		NotValidUnderlyingAssetId,
 		/// Value must be in range [0..1]
 		NotValidDeviationThresholdValue,
 		/// Value must be in range [0..1]

@@ -45,6 +45,7 @@ fn hypothetical_liquidity_setup(borrower: &AccountId, lender: &AccountId) -> Res
 	// enable pools as collateral
 	OriginalAsset::get_original_assets()
 		.into_iter()
+		.filter(|&&pool_id| pool_id != MNT)
 		.try_for_each(|&asset| -> Result<(), &'static str> {
 			enable_is_collateral_mock::<Runtime>(Origin::signed(borrower.clone()), asset)?;
 			// set borrow params
@@ -292,6 +293,7 @@ runtime_benchmarks! {
 
 		OriginalAsset::get_original_assets()
 			.into_iter()
+			.filter(|&&pool_id| pool_id != MNT)
 			.try_for_each(|&pool_id| -> Result<(), &'static str> {
 				LiquidityPools::set_pool_data(pool_id, PoolData {
 					borrowed: Balance::zero(),
@@ -309,6 +311,7 @@ runtime_benchmarks! {
 
 		OriginalAsset::get_original_assets()
 			.into_iter()
+			.filter(|&&pool_id| pool_id != MNT)
 			.try_for_each(|&pool_id| -> Result<(), &'static str> {
 				set_balance(pool_id.into(), &borrower, 100_000 * DOLLARS)?;
 				MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), pool_id, 100_000 * DOLLARS)?;

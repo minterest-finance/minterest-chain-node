@@ -134,8 +134,6 @@ pub mod module {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// The currency is not enabled in protocol.
-		NotValidUnderlyingAssetId,
 		/// Liquidation fee can't be greater than 0.5.
 		InvalidLiquidationFeeValue,
 		/// Risk manager storage (liquidation_fee, liquidation_threshold) is already created.

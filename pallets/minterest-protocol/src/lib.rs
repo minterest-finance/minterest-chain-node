@@ -531,7 +531,7 @@ pub mod module {
 		/// Sender has denies use the assets in pool as collateral.
 		///
 		/// Parameters:
-		/// `pool_id`: CurrencyId of a pool that the user wants to disable as collateral.
+		/// `pool_id`: Asset that the user wants to disable as collateral.
 		#[doc(alias = "MNT Extrinsic")]
 		#[doc(alias = "MNT minterest_protocol")]
 		#[pallet::weight(T::ProtocolWeightInfo::disable_is_collateral())]

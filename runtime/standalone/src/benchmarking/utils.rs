@@ -47,8 +47,8 @@ pub fn enable_whitelist_mode_and_add_member(who: &AccountId) -> DispatchResultWi
 	Ok(().into())
 }
 
-pub(crate) fn create_pools() {
-	OriginalAsset::get_original_assets().into_iter().for_each(|&pool_id| {
+pub(crate) fn create_pools(pools: &[OriginalAsset]) {
+	for &pool_id in pools {
 		LiquidityPools::set_pool_data(
 			pool_id,
 			PoolData {
@@ -57,7 +57,7 @@ pub(crate) fn create_pools() {
 				protocol_interest: Balance::zero(),
 			},
 		);
-	});
+	}
 }
 
 pub(crate) fn prepare_for_mnt_distribution(pools: &[OriginalAsset]) -> Result<(), &'static str> {

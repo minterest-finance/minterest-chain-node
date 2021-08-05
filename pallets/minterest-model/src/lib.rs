@@ -94,8 +94,6 @@ pub mod module {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// The currency is not enabled in protocol.
-		NotValidUnderlyingAssetId,
 		/// Number overflow in calculation.
 		NumOverflow,
 		/// Base rate per block cannot be set to 0 at the same time as Multiplier per block.
