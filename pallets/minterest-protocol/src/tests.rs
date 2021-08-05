@@ -407,6 +407,7 @@ fn deposit_underlying_should_work() {
 fn deposit_underlying_mnt_should_work() {
 	ExtBuilder::default()
 	    .user_balance(ALICE, MNT, ONE_HUNDRED)
+		.user_balance(BOB, MNT, ONE_HUNDRED)
 	    .pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.pool_with_params(ETH, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.pool_with_params(KSM, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
@@ -524,7 +525,7 @@ fn redeem_mnt_should_work() {
 			let expected_event = Event::TestMinterestProtocol(crate::Event::Redeemed(
 				ALICE,
 				MNT,
-				dollars(990060_u128),
+				dollars(60_u128),
 				MMNT,
 				dollars(60_u128),
 			));
@@ -710,7 +711,7 @@ fn redeem_underlying_should_work() {
 #[test]
 fn redeem_underlying_mnt_should_work() {
 	ExtBuilder::default()
-	    .user_balance(ALICE, MNT, 1000 * DOLLARS)
+	    .user_balance(ALICE, MNT, TEN_THOUSAND)
 		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.pool_with_params(MNT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
@@ -719,13 +720,13 @@ fn redeem_underlying_mnt_should_work() {
 			assert_ok!(TestMinterestProtocol::deposit_underlying(
 				alice_origin(),
 				MNT,
-				dollars(1000_u128)
+				dollars(60_u128)
 			));
  
-			// Alice can't redeem 992000 MNT, because 992000 MNT more than 1000 * 991.0 = 9910000 MMNT
-			// And she has 9910000 MMNT on her balance.
+			// Alice can't redeem 100 MNT, because 100 MNT equal 100 * 1.0 = 100 MMNT
+			// And she has 60 MMNT on her balance.
 			assert_noop!(
-				TestMinterestProtocol::redeem_underlying(alice_origin(), MNT, dollars(992000_u128)),
+				TestMinterestProtocol::redeem_underlying(alice_origin(), MNT, dollars(100_u128)),
 				Error::<Test>::NotEnoughWrappedTokens
 			);
 
@@ -754,14 +755,14 @@ fn redeem_underlying_mnt_should_work() {
 			assert_ok!(TestMinterestProtocol::redeem_underlying(
 				alice_origin(),
 				MNT,
-				dollars(991000_u128)
+				dollars(30_u128)
 			));
 			let expected_event = Event::TestMinterestProtocol(crate::Event::Redeemed(
 				ALICE,
 				MNT,
-				dollars(991000_u128),
+				dollars(30_u128),
 				MMNT,
-				dollars(1000_u128),
+				dollars(30_u128),
 			));
 
 			assert!(System::events().iter().any(|record| record.event == expected_event));
@@ -864,7 +865,7 @@ fn redeem_wrapped_should_work() {
 #[test]
 fn redeem_wrapped_mnt_should_work() {
 	ExtBuilder::default()
-	    .user_balance(ALICE, MNT, ONE_HUNDRED_THOUSAND)
+	    .user_balance(ALICE, MNT, ONE_HUNDRED)
 		.pool_with_params(MNT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
@@ -873,44 +874,24 @@ fn redeem_wrapped_mnt_should_work() {
 			assert_ok!(TestMinterestProtocol::deposit_underlying(
 				alice_origin(),
 				MNT,
-				dollars(1000_u128)
+				dollars(60_u128)
 			));
 			 
-			// Alice has 60 MDOT. She can't redeem 100 MDOT.
+			// Alice has 60 MMNT. She can't redeem 100 MMNT.
 			assert_noop!(
 				TestMinterestProtocol::redeem_wrapped(alice_origin(), MMNT, dollars(100_u128)),
 				Error::<Test>::NotEnoughWrappedTokens
 			);
-			
-			//------------------------------------------
-			/*assert_ok!(TestMinterestProtocol::deposit_underlying(
-				alice_origin(),
-				DOT,
-				dollars(60_u128)
-			));
 
-			// Alice has 60 MDOT. She can't redeem 100 MDOT.
+			// MMNT is wrong CurrencyId for underlying assets.
 			assert_noop!(
-				TestMinterestProtocol::redeem_wrapped(alice_origin(), MDOT, dollars(88_u128)),
-				Error::<Test>::NotEnoughWrappedTokens
-			);*/
-
-
-
-
-
-//------------------------------------------
-
-/*
-			// MDOT is wrong CurrencyId for underlying assets.
-			assert_noop!(
-				TestMinterestProtocol::redeem_wrapped(alice_origin(), DOT, dollars(20_u128)),
+				TestMinterestProtocol::redeem_wrapped(alice_origin(), MNT, dollars(20_u128)),
 				Error::<Test>::NotValidWrappedTokenId
 			);
 
 			// Transaction with zero balance is not allowed.
 			assert_noop!(
-				TestMinterestProtocol::redeem_wrapped(alice_origin(), MDOT, Balance::zero()),
+				TestMinterestProtocol::redeem_wrapped(alice_origin(), MMNT, Balance::zero()),
 				Error::<Test>::ZeroBalanceTransaction
 			);
 
@@ -918,7 +899,7 @@ fn redeem_wrapped_mnt_should_work() {
 			// from whitelist can work with protocol.
 			assert_ok!(TestWhitelist::switch_whitelist_mode(alice_origin(), true));
 			assert_noop!(
-				TestMinterestProtocol::redeem_wrapped(alice_origin(), MDOT, dollars(35_u128)),
+				TestMinterestProtocol::redeem_wrapped(alice_origin(), MMNT, dollars(35_u128)),
 				BadOrigin
 			);
 
@@ -926,17 +907,17 @@ fn redeem_wrapped_mnt_should_work() {
 
 			assert_ok!(TestMinterestProtocol::redeem_wrapped(
 				alice_origin(),
-				MDOT,
+				MMNT,
 				dollars(35_u128)
 			));
 			let expected_event = Event::TestMinterestProtocol(crate::Event::Redeemed(
 				ALICE,
-				DOT,
+				MNT,
 				dollars(35_u128),
-				MDOT,
+				MMNT,
 				dollars(35_u128),
 			));
-			assert!(System::events().iter().any(|record| record.event == expected_event));*/
+			assert!(System::events().iter().any(|record| record.event == expected_event));
 		});
 }
 
@@ -1022,6 +1003,57 @@ fn borrow_should_work() {
 			// Alice borrowed 30 DOT
 			assert_ok!(TestMinterestProtocol::borrow(alice_origin(), DOT, dollars(30_u128)));
 			let expected_event = Event::TestMinterestProtocol(crate::Event::Borrowed(ALICE, DOT, dollars(30_u128)));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+		});
+}
+
+#[test]
+fn borrow_mnt_should_work() {
+	ExtBuilder::default()
+	    .user_balance(ALICE, MNT, ONE_HUNDRED)
+		.pool_with_params(MNT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.build()
+		.execute_with(|| {
+			// Alice deposited 60 MNT to the pool.
+			assert_ok!(TestMinterestProtocol::deposit_underlying(
+				alice_origin(),
+				MNT,
+				dollars(60_u128)
+			));
+			// total_pool_liquidity = 10_000 (interest) + 60 = 10_060
+			assert_eq!(TestPools::get_pool_available_liquidity(MNT), dollars(10_060_u128));
+
+			// Alice cannot borrow 100 MNT because she deposited 60 MNT.
+			assert_noop!(
+				TestMinterestProtocol::borrow(alice_origin(), MNT, dollars(100_u128)),
+				controller::Error::<Test>::InsufficientLiquidity
+			);
+
+			// MMNT is wrong CurrencyId for underlying assets.
+			assert_noop!(
+				TestMinterestProtocol::borrow(alice_origin(), MMNT, dollars(60_u128)),
+				Error::<Test>::NotValidUnderlyingAssetId
+			);
+
+			// Transaction with zero balance is not allowed.
+			assert_noop!(
+				TestMinterestProtocol::borrow(alice_origin(), MNT, Balance::zero()),
+				Error::<Test>::ZeroBalanceTransaction
+			);
+ 
+			// Whitelist Mode is enabled. In whitelist mode, only members
+			// from whitelist can work with protocol.
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice_origin(), true));
+			assert_noop!(
+				TestMinterestProtocol::borrow(alice_origin(), MNT, dollars(30_u128)),
+				BadOrigin
+			);
+
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice_origin(), false));
+
+			// Alice borrowed 30 MNT
+			assert_ok!(TestMinterestProtocol::borrow(alice_origin(), MNT, dollars(30_u128)));
+			let expected_event = Event::TestMinterestProtocol(crate::Event::Borrowed(ALICE, MNT, dollars(30_u128)));
 			assert!(System::events().iter().any(|record| record.event == expected_event));
 		});
 }

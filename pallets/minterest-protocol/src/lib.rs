@@ -746,12 +746,28 @@ impl<T: Config> Pallet<T> {
 				wrapped_amount
 			}
 		};
-
+/*		
+println!("wrapped_amount={} \nunderlying_amount={} \nget_pool_available_liquidity={} \n<={} \nexchange_rate={}\n",
+wrapped_amount,
+underlying_amount,
+T::ManagerLiquidityPools::get_pool_available_liquidity(underlying_asset),
+underlying_amount <= T::ManagerLiquidityPools::get_pool_available_liquidity(underlying_asset),
+exchange_rate
+);
+		
+println!("get_user_collateral_pools={:?}",T::ManagerLiquidityPools::get_user_collateral_pools(&who));
+println!(">>>free_balance={:?}<<<",T::MultiCurrency::free_balance(wrapped_id, &who)/1_000_000_000_000_000_000_u128);
+*/
         ensure!(
 			underlying_amount <= T::ManagerLiquidityPools::get_pool_available_liquidity(underlying_asset),
 			Error::<T>::NotEnoughLiquidityAvailable
 		);
-
+/*
+println!("wrapped_amount={} free_balance={} <={}\n",
+wrapped_amount,
+T::MultiCurrency::free_balance(wrapped_id, &who),
+wrapped_amount <= T::MultiCurrency::free_balance(wrapped_id, &who));
+*/
 		ensure!(
 			wrapped_amount <= T::MultiCurrency::free_balance(wrapped_id, &who),
 			Error::<T>::NotEnoughWrappedTokens
@@ -796,6 +812,9 @@ impl<T: Config> Pallet<T> {
 
 		let pool_available_liquidity = T::ManagerLiquidityPools::get_pool_available_liquidity(underlying_asset);
 
+println!("pool_available_liquidity={} \nborrow_amount={} \nunderlying_asset={:?}",
+pool_available_liquidity,borrow_amount,underlying_asset);
+
 		// Raise an error if pool has insufficient supply underlying balance.
 		ensure!(
 			borrow_amount <= pool_available_liquidity,
@@ -805,14 +824,15 @@ impl<T: Config> Pallet<T> {
 		ensure!(borrow_amount > Balance::zero(), Error::<T>::ZeroBalanceTransaction);
 
 		T::ControllerManager::accrue_interest_rate(underlying_asset).map_err(|_| Error::<T>::AccrueInterestFailed)?;
-
+ 
 		// Fail if borrow not allowed.
 		ensure!(
 			T::ControllerManager::is_operation_allowed(underlying_asset, Operation::Borrow),
 			Error::<T>::OperationPaused
 		);
+ println!("!!!!!!!!!!!!!!!!");
 		T::ControllerManager::borrow_allowed(underlying_asset, &who, borrow_amount)?;
-
+	
 		T::MntManager::update_pool_mnt_borrow_index(underlying_asset)?;
 		T::MntManager::distribute_borrower_mnt(underlying_asset, who, false)?;
 
