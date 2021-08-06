@@ -90,6 +90,7 @@ impl PricesManager<CurrencyId> for MockPriceSource {
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	pools: Vec<(CurrencyId, PoolData)>,
+	pool_user_data: Vec<(CurrencyId, AccountId, PoolUserData)>,
 	controller_data: Vec<(CurrencyId, ControllerData<BlockNumber>)>,
 	minterest_model_params: Vec<(CurrencyId, MinterestModelData)>,
 }
@@ -112,6 +113,80 @@ impl Default for ExtBuilder {
 				(TestMntToken::get_account_id(), MNT, TEN_THOUSAND),
 			],
 			pools: vec![],
+			pool_user_data: vec![
+				(
+					DOT,
+					ALICE,
+					PoolUserData {
+						borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						is_collateral: true,
+					},
+				),
+				(
+					ETH,
+					ALICE,
+					PoolUserData {
+						borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						is_collateral: true,
+					},
+				),
+				(
+					KSM,
+					ALICE,
+					PoolUserData {
+						borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						is_collateral: true,
+					},
+				),
+				(
+					BTC,
+					ALICE,
+					PoolUserData {
+						borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						is_collateral: true,
+					},
+				),
+				(
+					MNT,
+					ALICE,
+					PoolUserData {
+						borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						is_collateral: true,
+					},
+				),
+				(
+					DOT,
+					BOB,
+					PoolUserData {
+						borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						is_collateral: true,
+					},
+				),
+				(
+					BTC,
+					BOB,
+					PoolUserData {
+						borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						is_collateral: true,
+					},
+				),
+				(
+					MNT,
+					BOB,
+					PoolUserData {
+						borrowed: 0,
+						interest_index: Rate::from_inner(0),
+						is_collateral: true,
+					},
+				),
+			],
 			controller_data: vec![
 				(
 					ETH,
@@ -207,6 +282,26 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn set_pool_user_data(
+		mut self,
+		pool_id: CurrencyId,
+		user: AccountId,
+		borrowed: Balance,
+		interest_index: Rate,
+		is_collateral: bool,
+	) -> Self {
+		self.pool_user_data.push((
+			pool_id,
+			user,
+			PoolUserData {
+				borrowed,
+				interest_index,
+				is_collateral,
+			},
+		));
+		self
+	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
@@ -234,80 +329,7 @@ impl ExtBuilder {
 
 		liquidity_pools::GenesisConfig::<Test> {
 			pools: self.pools,
-			pool_user_data: vec![
-				(
-					DOT,
-					ALICE,
-					PoolUserData {
-						borrowed: 0,
-						interest_index: Rate::from_inner(0),
-						is_collateral: true,
-					},
-				),
-				(
-					ETH,
-					ALICE,
-					PoolUserData {
-						borrowed: 0,
-						interest_index: Rate::from_inner(0),
-						is_collateral: false,
-					},
-				),
-				(
-					KSM,
-					ALICE,
-					PoolUserData {
-						borrowed: 0,
-						interest_index: Rate::from_inner(0),
-						is_collateral: true,
-					},
-				),
-				(
-					BTC,
-					ALICE,
-					PoolUserData {
-						borrowed: 0,
-						interest_index: Rate::from_inner(0),
-						is_collateral: true,
-					},
-				),
-				(
-					MNT,
-					ALICE,
-					PoolUserData {
-						borrowed: 0,
-						interest_index: Rate::from_inner(0),
-						is_collateral: true,
-					},
-				),
-				(
-					DOT,
-					BOB,
-					PoolUserData {
-						borrowed: 0,
-						interest_index: Rate::from_inner(0),
-						is_collateral: true,
-					},
-				),
-				(
-					BTC,
-					BOB,
-					PoolUserData {
-						borrowed: 0,
-						interest_index: Rate::from_inner(0),
-						is_collateral: true,
-					},
-				),
-				(
-					MNT,
-					BOB,
-					PoolUserData {
-						borrowed: 0,
-						interest_index: Rate::from_inner(0),
-						is_collateral: true,
-					},
-				),
-			],
+			pool_user_data: self.pool_user_data,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

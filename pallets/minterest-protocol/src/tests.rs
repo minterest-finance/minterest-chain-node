@@ -1395,8 +1395,75 @@ fn repay_on_behalf_should_work() {
 }
 
 #[test]
+fn repay_on_behalf_mnt_should_work() {
+	ExtBuilder::default()
+		.user_balance(ALICE, MNT, ONE_HUNDRED)
+		.user_balance(BOB, MNT, ONE_HUNDRED)
+		.pool_with_params(MNT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(KSM, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.build()
+		.execute_with(|| {
+			// Alice deposited 60 MNT to the pool.
+			assert_ok!(TestMinterestProtocol::deposit_underlying(
+				alice_origin(),
+				MNT,
+				dollars(60_u128)
+			));
+
+			// Alice borrowed 30 MNT from the pool.
+			assert_ok!(TestMinterestProtocol::borrow(alice_origin(), MNT, dollars(30_u128)));
+
+			// MMNT is wrong CurrencyId for underlying assets.
+			assert_noop!(
+				TestMinterestProtocol::repay_on_behalf(bob_origin(), MMNT, ALICE, dollars(10_u128)),
+				Error::<Test>::NotValidUnderlyingAssetId
+			);
+
+			// Bob can't pay off the 120 MNT debt for Alice, because he has 100 MNT in his account.
+			assert_noop!(
+				TestMinterestProtocol::repay_on_behalf(bob_origin(), MNT, ALICE, dollars(120_u128)),
+				Error::<Test>::NotEnoughUnderlyingAsset
+			);
+
+			// Bob cannot repay 100 MNT, because Alice only borrowed 60 MNT.
+			assert_noop!(
+				TestMinterestProtocol::repay_on_behalf(bob_origin(), MNT, ALICE, dollars(100_u128)),
+				liquidity_pools::Error::<Test>::RepayAmountTooBig
+			);
+
+			// Transaction with zero balance is not allowed.
+			assert_noop!(
+				TestMinterestProtocol::repay_on_behalf(bob_origin(), MNT, ALICE, Balance::zero()),
+				Error::<Test>::ZeroBalanceTransaction
+			);
+
+			// All operations in the KSM pool are paused.
+			assert_noop!(
+				TestMinterestProtocol::repay_on_behalf(bob_origin(), KSM, ALICE, dollars(10_u128)),
+				Error::<Test>::OperationPaused
+			);
+
+			// Whitelist Mode is enabled. In whitelist mode, only members
+			// from whitelist can work with protocol.
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice_origin(), true));
+			assert_ok!(TestWhitelist::add_member(alice_origin(), BOB));
+
+			// Bob repaid 20 MNT for Alice.
+			assert_ok!(TestMinterestProtocol::repay_on_behalf(
+				bob_origin(),
+				MNT,
+				ALICE,
+				dollars(20_u128)
+			));
+			let expected_event = Event::TestMinterestProtocol(crate::Event::Repaid(BOB, MNT, dollars(20_u128)));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+		});
+}
+
+#[test]
 fn enable_is_collateral_should_work() {
 	ExtBuilder::default()
+		.set_pool_user_data(ETH, ALICE, 0, Rate::from_inner(0), false)
 		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.pool_with_params(ETH, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
@@ -1444,8 +1511,63 @@ fn enable_is_collateral_should_work() {
 }
 
 #[test]
+fn enable_is_collateral_mnt_should_work() {
+	ExtBuilder::default()
+		.user_balance(ALICE, MNT, ONE_HUNDRED)
+		.set_pool_user_data(MNT, ALICE, 0, Rate::from_inner(0), false)
+		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(MNT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(ETH, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(KSM, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(BTC, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.build()
+		.execute_with(|| {
+			// Alice cannot enable as collateral MNT pool, because she has not deposited funds into the pool.
+			assert_noop!(
+				TestMinterestProtocol::enable_is_collateral(alice_origin(), MNT),
+				Error::<Test>::IsCollateralCannotBeEnabled
+			);
+
+			// Alice deposit 60 MNT
+			assert_ok!(TestMinterestProtocol::deposit_underlying(
+				alice_origin(),
+				MNT,
+				dollars(60_u128)
+			));
+
+			// Whitelist Mode is enabled. In whitelist mode, only members
+			// from whitelist can work with protocol.
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice_origin(), true));
+			assert_noop!(
+				TestMinterestProtocol::enable_is_collateral(alice_origin(), MNT),
+				BadOrigin
+			);
+
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice_origin(), false));
+
+			// Alice enable as collateral her MNT pool.
+			assert_ok!(TestMinterestProtocol::enable_is_collateral(alice_origin(), MNT));
+			let expected_event = Event::TestMinterestProtocol(crate::Event::PoolEnabledIsCollateral(ALICE, MNT));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+			assert!(TestPools::is_pool_collateral(&ALICE, MNT));
+
+			// MNT pool is already collateral.
+			assert_noop!(
+				TestMinterestProtocol::enable_is_collateral(alice_origin(), MNT),
+				Error::<Test>::AlreadyIsCollateral
+			);
+
+			assert_noop!(
+				TestMinterestProtocol::enable_is_collateral(alice_origin(), MDOT),
+				Error::<Test>::NotValidUnderlyingAssetId
+			);
+		});
+}
+
+#[test]
 fn disable_is_collateral_should_work() {
 	ExtBuilder::default()
+		.set_pool_user_data(ETH, ALICE, 0, Rate::from_inner(0), false)
 		.pool_with_params(DOT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.pool_with_params(ETH, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
 		.build()
