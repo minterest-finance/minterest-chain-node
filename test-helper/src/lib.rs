@@ -177,6 +177,7 @@ macro_rules! mock_impl_liquidation_pools_config {
 			type LiquidationPoolAccountId = LiquidationPoolAccountId;
 			type Dex = dex::Pallet<$target>;
 			type LiquidationPoolsWeightInfo = ();
+			type ControllerManager = controller::Pallet<$target>;
 		}
 
 		/// An extrinsic type used for tests.
@@ -273,6 +274,7 @@ macro_rules! mock_impl_risk_manager_config {
 			pub const RiskManagerPriority: TransactionPriority = TransactionPriority::max_value();
 			pub const PartialLiquidationMaxAttempts: u8 = 3_u8;
 			pub const MaxLiquidationFee: Rate = Rate::from_inner(500_000_000_000_000_000);
+			pub const RiskManagerWorkerMaxDurationMs: u64 = 2000_u64;
 		}
 
 		impl risk_manager::Config for $target {
@@ -288,6 +290,8 @@ macro_rules! mock_impl_risk_manager_config {
 			type LiquidityPoolsManager = liquidity_pools::Pallet<$target>;
 			type LiquidationPoolsManager = liquidation_pools::Pallet<$target>;
 			type MinterestProtocolManager = minterest_protocol::Pallet<$target>;
+			type OffchainWorkerMaxDurationMs = RiskManagerWorkerMaxDurationMs;
+			type MultiCurrency = orml_currencies::Pallet<$target>;
 		}
 	};
 
@@ -297,6 +301,7 @@ macro_rules! mock_impl_risk_manager_config {
 			pub const PartialLiquidationMinSum: Balance = 10_000 * DOLLARS;
 			pub const PartialLiquidationMaxAttempts: u8 = 3_u8;
 			pub const MaxLiquidationFee: Rate = Rate::from_inner(500_000_000_000_000_000);
+			pub const RiskManagerWorkerMaxDurationMs: u64 = 2000_u64;
 		}
 
 		impl risk_manager::Config for $target {
@@ -312,6 +317,8 @@ macro_rules! mock_impl_risk_manager_config {
 			type LiquidityPoolsManager = liquidity_pools::Pallet<$target>;
 			type LiquidationPoolsManager = liquidation_pools::Pallet<$target>;
 			type MinterestProtocolManager = minterest_protocol::Pallet<$target>;
+			type OffchainWorkerMaxDurationMs = RiskManagerWorkerMaxDurationMs;
+			type MultiCurrency = orml_currencies::Pallet<$target>;
 		}
 	};
 }

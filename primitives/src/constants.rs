@@ -41,6 +41,9 @@ pub mod liquidation {
 
 	/// Maximum liquidation fee = 0.5 (50%)
 	pub const MAX_LIQUIDATION_FEE: Rate = Rate::from_inner(500_000_000_000_000_000);
+
+	/// Max duration time for offchain worker for liquidate insolvent loans.
+	pub const RISK_MANAGER_WORKER_MAX_DURATION_MS: u64 = 2000;
 }
 
 pub mod fee {
