@@ -41,6 +41,9 @@ macro_rules! create_currency_id {
 		impl CurrencyId {
 			pub fn get_enabled_tokens_in_protocol(token_type: CurrencyType) -> Vec<CurrencyId> {
 				let mut enabled_tokens = vec![];
+				if token_type == UnderlyingAsset {
+					enabled_tokens.push( CurrencyId::Native(TokenSymbol::MNT) );
+				}
 				$(
 					if token_type == $ctype {
 						enabled_tokens.push(

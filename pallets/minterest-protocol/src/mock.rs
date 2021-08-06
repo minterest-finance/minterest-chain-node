@@ -101,7 +101,7 @@ impl Default for ExtBuilder {
 				// seed: initial DOTs
 				(ALICE, DOT, ONE_HUNDRED),
 				(ALICE, ETH, ONE_HUNDRED),
-				(ALICE, KSM, ONE_HUNDRED),	
+				(ALICE, KSM, ONE_HUNDRED),
 				(BOB, DOT, ONE_HUNDRED),
 				// seed: initial interest, equal 10_000$
 				(TestPools::pools_account_id(), ETH, TEN_THOUSAND),
@@ -109,7 +109,7 @@ impl Default for ExtBuilder {
 				// seed: initial interest = 10_000$, initial pool balance = 1_000_000$
 				(TestPools::pools_account_id(), KSM, ONE_MILL),
 				// seed: initial MNT treasury = 10_000$
-			    (TestMntToken::get_account_id(), MNT, TEN_THOUSAND),
+				(TestMntToken::get_account_id(), MNT, TEN_THOUSAND),
 			],
 			pools: vec![],
 			controller_data: vec![
