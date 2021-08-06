@@ -1677,6 +1677,67 @@ fn transfer_wrapped_should_work() {
 }
 
 #[test]
+fn transfer_wrapped_mnt_should_work() {
+	ExtBuilder::default()
+		.pool_with_params(MNT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(BTC, Balance::zero(), Rate::one(), Balance::zero())
+		.user_balance(ALICE, MMNT, ONE_HUNDRED)
+		.user_balance(BOB, MBTC, ONE_HUNDRED)
+		.build()
+		.execute_with(|| {
+			// Alice can transfer all tokens to Bob
+			assert_ok!(TestMinterestProtocol::transfer_wrapped(
+				alice_origin(),
+				BOB,
+				MMNT,
+				ONE_HUNDRED
+			));
+			let expected_event = Event::TestMinterestProtocol(crate::Event::Transferred(ALICE, BOB, MMNT, ONE_HUNDRED));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+			assert_eq!(Currencies::free_balance(MMNT, &ALICE), 0);
+			assert_eq!(Currencies::free_balance(MMNT, &BOB), ONE_HUNDRED);
+
+			// Bob can transfer all tokens to Alice
+			assert_ok!(TestMinterestProtocol::transfer_wrapped(
+				bob_origin(),
+				ALICE,
+				MBTC,
+				ONE_HUNDRED,
+			));
+			let expected_event = Event::TestMinterestProtocol(crate::Event::Transferred(BOB, ALICE, MBTC, ONE_HUNDRED));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+			assert_eq!(Currencies::free_balance(MBTC, &ALICE), ONE_HUNDRED);
+			assert_eq!(Currencies::free_balance(MBTC, &BOB), 0);
+
+			// Alice can transfer part of all tokens to Bob
+			assert_ok!(TestMinterestProtocol::transfer_wrapped(
+				alice_origin(),
+				BOB,
+				MBTC,
+				dollars(40_u128),
+			));
+			let expected_event =
+				Event::TestMinterestProtocol(crate::Event::Transferred(ALICE, BOB, MBTC, dollars(40_u128)));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+			assert_eq!(Currencies::free_balance(MBTC, &ALICE), dollars(60_u128));
+			assert_eq!(Currencies::free_balance(MBTC, &BOB), dollars(40_u128));
+
+			// Bob can transfer part of all tokens to Alice
+			assert_ok!(TestMinterestProtocol::transfer_wrapped(
+				bob_origin(),
+				ALICE,
+				MMNT,
+				dollars(40_u128),
+			));
+			let expected_event =
+				Event::TestMinterestProtocol(crate::Event::Transferred(BOB, ALICE, MMNT, dollars(40_u128)));
+			assert!(System::events().iter().any(|record| record.event == expected_event));
+			assert_eq!(Currencies::free_balance(MMNT, &ALICE), dollars(40_u128));
+			assert_eq!(Currencies::free_balance(MMNT, &BOB), dollars(60_u128));
+		});
+}
+
+#[test]
 fn transfer_wrapped_should_not_work() {
 	ExtBuilder::default()
 		.user_balance(ALICE, MDOT, ONE_HUNDRED)
@@ -1716,6 +1777,63 @@ fn transfer_wrapped_should_not_work() {
 			// Bob is unable to transfer tokens with zero balance
 			assert_noop!(
 				TestMinterestProtocol::transfer_wrapped(bob_origin(), ALICE, MDOT, 1_u128),
+				Error::<Test>::NotEnoughWrappedTokens
+			);
+
+			// Bob is unable to send zero tokens
+			assert_noop!(
+				TestMinterestProtocol::transfer_wrapped(bob_origin(), ALICE, MBTC, Balance::zero()),
+				Error::<Test>::ZeroBalanceTransaction
+			);
+
+			// All operations in the KSM pool are paused.
+			assert_noop!(
+				TestMinterestProtocol::transfer_wrapped(alice_origin(), BOB, MKSM, ONE_HUNDRED),
+				Error::<Test>::OperationPaused
+			);
+		});
+}
+
+#[test]
+fn transfer_wrapped_mnt_should_not_work() {
+	ExtBuilder::default()
+		.user_balance(ALICE, MMNT, ONE_HUNDRED)
+		.user_balance(ALICE, MKSM, ONE_HUNDRED)
+		.pool_with_params(MNT, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.pool_with_params(KSM, Balance::zero(), Rate::saturating_from_rational(1, 1), TEN_THOUSAND)
+		.build()
+		.execute_with(|| {
+			// Alice is unable to transfer more tokens tan she has
+			assert_noop!(
+				TestMinterestProtocol::transfer_wrapped(alice_origin(), BOB, DOT, ONE_HUNDRED),
+				Error::<Test>::NotValidWrappedTokenId
+			);
+
+			// Alice is unable to transfer tokens to self
+			assert_noop!(
+				TestMinterestProtocol::transfer_wrapped(alice_origin(), ALICE, MMNT, ONE_HUNDRED),
+				Error::<Test>::CannotTransferToSelf
+			);
+
+			// Whitelist Mode is enabled. In whitelist mode, only members
+			// from whitelist can work with protocol.
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice_origin(), true));
+			assert_noop!(
+				TestMinterestProtocol::transfer_wrapped(alice_origin(), BOB, MMNT, ONE_HUNDRED),
+				BadOrigin
+			);
+
+			assert_ok!(TestWhitelist::switch_whitelist_mode(alice_origin(), false));
+
+			// Alice is unable to transfer more tokens than she has
+			assert_noop!(
+				TestMinterestProtocol::transfer_wrapped(alice_origin(), BOB, MMNT, dollars(101_u128)),
+				Error::<Test>::NotEnoughWrappedTokens
+			);
+
+			// Bob is unable to transfer tokens with zero balance
+			assert_noop!(
+				TestMinterestProtocol::transfer_wrapped(bob_origin(), ALICE, MMNT, 1_u128),
 				Error::<Test>::NotEnoughWrappedTokens
 			);
 
