@@ -220,7 +220,7 @@ mod tests {
 		assert_eq!(CurrencyId::get_enabled_tokens_in_protocol(Native), vec![MNT]);
 		assert_eq!(
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset),
-			vec![DOT, KSM, BTC, ETH]
+			vec![MNT, DOT, KSM, BTC, ETH]
 		);
 		assert_eq!(
 			CurrencyId::get_enabled_tokens_in_protocol(WrappedToken),
