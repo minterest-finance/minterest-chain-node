@@ -584,7 +584,6 @@ fn standalone_dev_genesis(
 						(x.clone(), ETH, INITIAL_BALANCE),
 						(x.clone(), KSM, INITIAL_BALANCE),
 						(x.clone(), BTC, INITIAL_BALANCE),
-						(x.clone(), MNT, INITIAL_BALANCE),
 					]
 				})
 				.collect(),

@@ -109,6 +109,7 @@ impl Default for ExtBuilder {
 				(TestPools::pools_account_id(), DOT, TEN_THOUSAND),
 				// seed: initial protocol interest = 10_000$, initial pool balance = 1_000_000$
 				(TestPools::pools_account_id(), KSM, ONE_MILL),
+				(TestPools::pools_account_id(), MNT, TEN_THOUSAND),
 				// seed: initial MNT treasury = 10_000$
 				(TestMntToken::get_account_id(), MNT, TEN_THOUSAND),
 			],
