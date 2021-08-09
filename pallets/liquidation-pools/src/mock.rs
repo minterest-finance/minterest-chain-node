@@ -74,6 +74,7 @@ thread_local! {
 			(ETH, Price::one()),
 			(BTC, Price::one()),
 			(KSM, Price::one()),
+			(MNT, Price::one()),
 		]
 		.iter()
 		.cloned()
