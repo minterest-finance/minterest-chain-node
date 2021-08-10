@@ -271,7 +271,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				pool_id.is_supported_underlying_asset(),
+				pool_id.is_supported_underlying_native_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 			ensure!(
@@ -312,7 +312,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				pool_id.is_supported_underlying_asset(),
+				pool_id.is_supported_underlying_native_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 			ensure!(
@@ -353,7 +353,7 @@ pub mod module {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				pool_id.is_supported_underlying_asset(),
+				pool_id.is_supported_underlying_native_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 			ensure!(
@@ -426,7 +426,7 @@ pub mod module {
 			let who = ensure_signed(origin)?;
 
 			ensure!(
-				underlying_asset_id.is_supported_underlying_asset(),
+				underlying_asset_id.is_supported_underlying_native_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 			ensure!(

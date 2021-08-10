@@ -206,7 +206,7 @@ pub mod module {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				pool_id.is_supported_underlying_asset(),
+				pool_id.is_supported_underlying_native_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -246,7 +246,7 @@ pub mod module {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				pool_id.is_supported_underlying_asset(),
+				pool_id.is_supported_underlying_native_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -293,7 +293,7 @@ pub mod module {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				pool_id.is_supported_underlying_asset(),
+				pool_id.is_supported_underlying_native_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 
@@ -331,7 +331,7 @@ pub mod module {
 			T::ModelUpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				pool_id.is_supported_underlying_asset(),
+				pool_id.is_supported_underlying_native_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 

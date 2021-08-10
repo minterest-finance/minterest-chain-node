@@ -32,7 +32,7 @@ pub use minterest_primitives::{
 	},
 	currency::{
 		CurrencyType::{UnderlyingAsset, WrappedToken},
-		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MNT,
+		BTC, DOT, ETH, KSM, MBTC, MDOT, METH, MKSM, MMNT, MNT,
 	},
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, ChainlinkFeedId, ChainlinkPriceValue, CurrencyId,
 	DataProviderId, DigestItem, Hash, Index, Interest, Moment, Operation, Price, Rate, Signature, VestingBucket,

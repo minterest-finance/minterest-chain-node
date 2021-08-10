@@ -14,6 +14,7 @@ pub mod currency_mock {
 	use minterest_primitives::{currency::TokenSymbol, Balance, CurrencyId, Price};
 
 	pub const MNT: CurrencyId = CurrencyId::Native(TokenSymbol::MNT);
+	pub const MMNT: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MMNT);
 	pub const DOT: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::DOT);
 	pub const MDOT: CurrencyId = CurrencyId::WrappedToken(TokenSymbol::MDOT);
 	pub const KSM: CurrencyId = CurrencyId::UnderlyingAsset(TokenSymbol::KSM);

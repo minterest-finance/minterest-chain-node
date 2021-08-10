@@ -312,6 +312,14 @@ fn minterest_genesis(
 						protocol_interest: Balance::zero(),
 					},
 				),
+				(
+					MNT,
+					PoolData {
+						borrowed: Balance::zero(),
+						borrow_index: FixedU128::one(),
+						protocol_interest: Balance::zero(),
+					},
+				),
 			],
 			pool_user_data: vec![],
 		},
@@ -361,12 +369,24 @@ fn minterest_genesis(
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
+				(
+					MNT,
+					ControllerData {
+						last_interest_accrued_block: 0,
+						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
+						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+					},
+				),
 			],
 			pause_keepers: vec![
 				(ETH, PauseKeeper::all_unpaused()),
 				(DOT, PauseKeeper::all_unpaused()),
 				(KSM, PauseKeeper::all_unpaused()),
 				(BTC, PauseKeeper::all_unpaused()),
+				(MNT, PauseKeeper::all_unpaused()),
 			],
 		},
 		minterest_model: parachain_runtime::MinterestModelConfig {
@@ -407,6 +427,15 @@ fn minterest_genesis(
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
 					},
 				),
+				(
+					MNT,
+					MinterestModelData {
+						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
+						base_rate_per_block: FixedU128::zero(),
+						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
 			],
 			_phantom: Default::default(),
 		},
@@ -416,6 +445,7 @@ fn minterest_genesis(
 				(ETH, FixedU128::saturating_from_rational(5, 100)),
 				(BTC, FixedU128::saturating_from_rational(5, 100)),
 				(KSM, FixedU128::saturating_from_rational(5, 100)),
+				(MNT, FixedU128::saturating_from_rational(5, 100)),
 			],
 			liquidation_threshold: FixedU128::saturating_from_rational(103, 100),
 			_phantom: Default::default(),
@@ -455,6 +485,14 @@ fn minterest_genesis(
 						max_ideal_balance_usd: None,
 					},
 				),
+				(
+					MNT,
+					LiquidationPoolData {
+						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
+						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						max_ideal_balance_usd: None,
+					},
+				),
 			],
 		},
 		prices: parachain_runtime::PricesConfig {
@@ -483,6 +521,7 @@ fn minterest_genesis(
 				(ETH, (237977549 * DOLLARS) / 1_000_000_000),
 				(KSM, (237977549 * DOLLARS) / 1_000_000_000),
 				(BTC, (237977549 * DOLLARS) / 1_000_000_000),
+				(MNT, (237977549 * DOLLARS) / 1_000_000_000),
 			],
 			_phantom: Default::default(),
 		},
@@ -583,6 +622,14 @@ fn standalone_dev_genesis(
 						protocol_interest: Balance::zero(),
 					},
 				),
+				(
+					MNT,
+					PoolData {
+						borrowed: Balance::zero(),
+						borrow_index: FixedU128::one(),
+						protocol_interest: Balance::zero(),
+					},
+				),
 			],
 			pool_user_data: vec![],
 		},
@@ -632,12 +679,24 @@ fn standalone_dev_genesis(
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
+				(
+					MNT,
+					ControllerData {
+						last_interest_accrued_block: 0,
+						protocol_interest_factor: FixedU128::saturating_from_rational(1, 10),
+						max_borrow_rate: FixedU128::saturating_from_rational(5, 1000),
+						collateral_factor: FixedU128::saturating_from_rational(9, 10), // 90%
+						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+					},
+				),
 			],
 			pause_keepers: vec![
 				(ETH, PauseKeeper::all_unpaused()),
 				(DOT, PauseKeeper::all_unpaused()),
 				(KSM, PauseKeeper::all_unpaused()),
 				(BTC, PauseKeeper::all_unpaused()),
+				(MNT, PauseKeeper::all_unpaused()),
 			],
 		},
 		minterest_model: standalone_runtime::MinterestModelConfig {
@@ -678,6 +737,15 @@ fn standalone_dev_genesis(
 						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
 					},
 				),
+				(
+					MNT,
+					MinterestModelData {
+						kink: FixedU128::saturating_from_rational(8, 10), // 0.8 = 80 %
+						base_rate_per_block: FixedU128::zero(),
+						multiplier_per_block: FixedU128::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: FixedU128::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
 			],
 			_phantom: Default::default(),
 		},
@@ -687,6 +755,7 @@ fn standalone_dev_genesis(
 				(ETH, FixedU128::saturating_from_rational(5, 100)), // 5%
 				(BTC, FixedU128::saturating_from_rational(5, 100)), // 5%
 				(KSM, FixedU128::saturating_from_rational(5, 100)), // 5%
+				(MNT, FixedU128::saturating_from_rational(5, 100)), // 5%
 			],
 			liquidation_threshold: FixedU128::saturating_from_rational(3, 100), // 3%
 			_phantom: Default::default(),
@@ -726,6 +795,14 @@ fn standalone_dev_genesis(
 						max_ideal_balance_usd: None,
 					},
 				),
+				(
+					MNT,
+					LiquidationPoolData {
+						deviation_threshold: FixedU128::saturating_from_rational(1, 10),
+						balance_ratio: FixedU128::saturating_from_rational(2, 10),
+						max_ideal_balance_usd: None,
+					},
+				),
 			],
 		},
 		prices: standalone_runtime::PricesConfig {
@@ -754,6 +831,7 @@ fn standalone_dev_genesis(
 				(ETH, 2 * DOLLARS),
 				(KSM, 2 * DOLLARS),
 				(BTC, 2 * DOLLARS),
+				(MNT, 2 * DOLLARS),
 			],
 			_phantom: Default::default(),
 		},

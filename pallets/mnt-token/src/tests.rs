@@ -576,7 +576,7 @@ fn test_minting_enable_disable() {
 		.execute_with(|| {
 			// Try to disable minting for invalid underlying asset id
 			assert_noop!(
-				MntToken::set_speed(admin_origin(), MNT, Balance::zero()),
+				MntToken::set_speed(admin_origin(), MDOT, Balance::zero()),
 				Error::<Runtime>::NotValidUnderlyingAssetId
 			);
 

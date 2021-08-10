@@ -291,6 +291,7 @@ runtime_benchmarks! {
 
 		EnabledUnderlyingAssetsIds::get()
 			.into_iter()
+			.filter(|pool_id|{*pool_id!=MNT})
 			.try_for_each(|pool_id| -> Result<(), &'static str> {
 				LiquidityPools::set_pool_data(pool_id, PoolData {
 					borrowed: Balance::zero(),
@@ -308,6 +309,7 @@ runtime_benchmarks! {
 
 		EnabledUnderlyingAssetsIds::get()
 			.into_iter()
+			.filter(|pool_id|{*pool_id!=MNT})
 			.try_for_each(|pool_id| -> Result<(), &'static str> {
 				set_balance(pool_id, &borrower, 100_000 * DOLLARS)?;
 				MinterestProtocol::deposit_underlying(RawOrigin::Signed(borrower.clone()).into(), pool_id, 100_000 * DOLLARS)?;

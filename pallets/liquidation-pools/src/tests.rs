@@ -337,7 +337,7 @@ fn transfer_to_liquidation_pool_should_work() {
 			// Asset: MNT - native asset, underline assets are only allowed
 			// Expected error: NotValidUnderlyingAssetId
 			assert_noop!(
-				TestLiquidationPools::transfer_to_liquidation_pool(admin(), MNT, 20_000),
+				TestLiquidationPools::transfer_to_liquidation_pool(admin(), MDOT, 20_000),
 				Error::<Test>::NotValidUnderlyingAssetId
 			);
 

@@ -41,6 +41,9 @@ macro_rules! create_currency_id {
 		impl CurrencyId {
 			pub fn get_enabled_tokens_in_protocol(token_type: CurrencyType) -> Vec<CurrencyId> {
 				let mut enabled_tokens = vec![];
+				if token_type == UnderlyingAsset {
+					enabled_tokens.push( CurrencyId::Native(TokenSymbol::MNT) );
+				}
 				$(
 					if token_type == $ctype {
 						enabled_tokens.push(
@@ -73,14 +76,15 @@ create_currency_id! {
 	# [repr(u8)]
 	pub enum TokenSymbol {
 		MNT("Minterest", 18, Native) = 0,
-		DOT("Polkadot", 10, UnderlyingAsset) = 1,
-		MDOT("Polkadot", 10, WrappedToken) = 2,
-		KSM("Kusama", 12, UnderlyingAsset) = 3,
-		MKSM("Kusama", 12, WrappedToken) = 4,
-		BTC("Bitcoin", 8, UnderlyingAsset) = 5,
-		MBTC("Bitcoin", 8, WrappedToken) = 6,
-		ETH("Ethereum", 18, UnderlyingAsset) = 7,
-		METH("Ethereum", 18, WrappedToken) = 8,
+		MMNT("Minterest", 18, WrappedToken) = 1,
+		DOT("Polkadot", 10, UnderlyingAsset) = 2,
+		MDOT("Polkadot", 10, WrappedToken) = 3,
+		KSM("Kusama", 12, UnderlyingAsset) = 4,
+		MKSM("Kusama", 12, WrappedToken) = 5,
+		BTC("Bitcoin", 8, UnderlyingAsset) = 6,
+		MBTC("Bitcoin", 8, WrappedToken) = 7,
+		ETH("Ethereum", 18, UnderlyingAsset) = 8,
+		METH("Ethereum", 18, WrappedToken) = 9,
 	}
 }
 
@@ -102,22 +106,47 @@ impl CurrencyId {
 		matches!(self, CurrencyId::UnderlyingAsset(_))
 	}
 
+	pub fn is_supported_underlying_native_asset(&self) -> bool {
+		matches!(self, CurrencyId::UnderlyingAsset(_) | CurrencyId::Native(_))
+	}
+
 	pub fn is_supported_wrapped_asset(&self) -> bool {
 		matches!(self, CurrencyId::WrappedToken(_))
 	}
 
 	pub fn underlying_asset(&self) -> Option<CurrencyId> {
 		match (self.is_supported_wrapped_asset(), self) {
-			(true, CurrencyId::WrappedToken(currency_id)) => Some(CurrencyId::UnderlyingAsset(
-				TokenSymbol::try_from(*currency_id as u8 - 1_u8).ok()?,
-			)),
+			(true, CurrencyId::WrappedToken(currency_id)) => TokenSymbol::try_from(*currency_id as u8 - 1_u8)
+				.ok()
+				.and_then(|token| match token {
+					TokenSymbol::MNT => Some(CurrencyId::Native(token)),
+					_ => Some(CurrencyId::UnderlyingAsset(token)),
+				}),
+			_ => None,
+		}
+	}
+
+	pub fn native_asset(&self) -> Option<CurrencyId> {
+		match (self.is_supported_wrapped_asset(), self) {
+			(true, CurrencyId::WrappedToken(currency_id)) => TokenSymbol::try_from(*currency_id as u8 - 1_u8)
+				.ok()
+				.and_then(|token| match token {
+					TokenSymbol::MNT => Some(CurrencyId::Native(token)),
+					_ => None,
+				}),
 			_ => None,
 		}
 	}
 
 	pub fn wrapped_asset(&self) -> Option<CurrencyId> {
-		match (self.is_supported_underlying_asset(), self) {
+		match (
+			self.is_supported_underlying_asset() || self.is_native_currency_id(),
+			self,
+		) {
 			(true, CurrencyId::UnderlyingAsset(currency_id)) => Some(CurrencyId::WrappedToken(
+				TokenSymbol::try_from(*currency_id as u8 + 1_u8).ok()?,
+			)),
+			(true, CurrencyId::Native(currency_id)) => Some(CurrencyId::WrappedToken(
 				TokenSymbol::try_from(*currency_id as u8 + 1_u8).ok()?,
 			)),
 			_ => None,
@@ -149,6 +178,12 @@ mod tests {
 		assert!(!MDOT.is_supported_underlying_asset());
 		assert!(!ETH.is_supported_wrapped_asset());
 		assert!(METH.is_supported_wrapped_asset());
+		assert!(!MMNT.is_native_currency_id());
+		assert!(!MMNT.is_supported_underlying_asset());
+		assert!(MMNT.is_supported_wrapped_asset());
+		assert!(MNT.is_supported_underlying_native_asset());
+		assert!(DOT.is_supported_underlying_native_asset());
+		assert!(!MMNT.is_supported_underlying_native_asset());
 	}
 
 	#[test]
@@ -159,7 +194,7 @@ mod tests {
 
 	#[test]
 	fn wrapped_asset_should_work() {
-		assert_eq!(MNT.wrapped_asset(), None);
+		assert_eq!(MNT.wrapped_asset(), Some(MMNT));
 		assert_eq!(DOT.wrapped_asset(), Some(MDOT));
 		assert_eq!(METH.wrapped_asset(), None);
 	}
@@ -169,6 +204,15 @@ mod tests {
 		assert_eq!(MNT.underlying_asset(), None);
 		assert_eq!(MDOT.underlying_asset(), Some(DOT));
 		assert_eq!(ETH.underlying_asset(), None);
+		assert_eq!(MMNT.underlying_asset(), Some(MNT));
+	}
+
+	#[test]
+	fn native_asset_should_work() {
+		assert_eq!(MNT.native_asset(), None);
+		assert_eq!(MDOT.native_asset(), None);
+		assert_eq!(ETH.native_asset(), None);
+		assert_eq!(MMNT.native_asset(), Some(MNT));
 	}
 
 	#[test]
@@ -176,11 +220,11 @@ mod tests {
 		assert_eq!(CurrencyId::get_enabled_tokens_in_protocol(Native), vec![MNT]);
 		assert_eq!(
 			CurrencyId::get_enabled_tokens_in_protocol(UnderlyingAsset),
-			vec![DOT, KSM, BTC, ETH]
+			vec![MNT, DOT, KSM, BTC, ETH]
 		);
 		assert_eq!(
 			CurrencyId::get_enabled_tokens_in_protocol(WrappedToken),
-			vec![MDOT, MKSM, MBTC, METH]
+			vec![MMNT, MDOT, MKSM, MBTC, METH]
 		);
 	}
 }

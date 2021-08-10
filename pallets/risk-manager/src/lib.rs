@@ -278,7 +278,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			T::RiskManagerUpdateOrigin::ensure_origin(origin)?;
 			ensure!(
-				pool_id.is_supported_underlying_asset(),
+				pool_id.is_supported_underlying_native_asset(),
 				Error::<T>::NotValidUnderlyingAssetId
 			);
 			ensure!(
