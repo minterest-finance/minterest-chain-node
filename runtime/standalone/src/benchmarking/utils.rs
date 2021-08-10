@@ -119,6 +119,14 @@ pub mod tests {
 						protocol_interest: Balance::zero(),
 					},
 				),
+				(
+					MNT,
+					PoolData {
+						borrowed: Balance::zero(),
+						borrow_index: Rate::one(),
+						protocol_interest: Balance::zero(),
+					},
+				),
 			],
 			pool_user_data: vec![],
 		}
@@ -171,12 +179,24 @@ pub mod tests {
 						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
 					},
 				),
+				(
+					MNT,
+					ControllerData {
+						last_interest_accrued_block: 0,
+						protocol_interest_factor: Rate::saturating_from_rational(1, 10),
+						max_borrow_rate: Rate::saturating_from_rational(5, 1000),
+						collateral_factor: Rate::saturating_from_rational(9, 10), // 90%
+						borrow_cap: None,
+						protocol_interest_threshold: PROTOCOL_INTEREST_TRANSFER_THRESHOLD,
+					},
+				),
 			],
 			pause_keepers: vec![
 				(ETH, PauseKeeper::all_unpaused()),
 				(DOT, PauseKeeper::all_unpaused()),
 				(KSM, PauseKeeper::all_unpaused()),
 				(BTC, PauseKeeper::all_unpaused()),
+				(MNT, PauseKeeper::all_unpaused()),
 			],
 		}
 		.assimilate_storage(&mut storage)
@@ -220,6 +240,15 @@ pub mod tests {
 						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
 					},
 				),
+				(
+					MNT,
+					MinterestModelData {
+						kink: Rate::saturating_from_rational(8, 10), // 0.8 = 80 %
+						base_rate_per_block: Rate::zero(),
+						multiplier_per_block: Rate::saturating_from_rational(9, 1_000_000_000), // 0.047304 PerYear
+						jump_multiplier_per_block: Rate::saturating_from_rational(207, 1_000_000_000), // 1.09 PerYear
+					},
+				),
 			],
 			_phantom: Default::default(),
 		}
@@ -232,6 +261,7 @@ pub mod tests {
 				(ETH, FixedU128::saturating_from_rational(5, 100)), // 5%
 				(BTC, FixedU128::saturating_from_rational(5, 100)), // 5%
 				(KSM, FixedU128::saturating_from_rational(5, 100)), // 5%
+				(MNT, FixedU128::saturating_from_rational(5, 100)), // 5%
 			],
 			liquidation_threshold: FixedU128::saturating_from_rational(3, 100), // 3%
 			_phantom: Default::default(),
@@ -245,6 +275,7 @@ pub mod tests {
 				(KSM, FixedU128::saturating_from_integer(2)),
 				(ETH, FixedU128::saturating_from_integer(2)),
 				(BTC, FixedU128::saturating_from_integer(2)),
+				(MNT, FixedU128::saturating_from_integer(2)),
 			],
 			_phantom: Default::default(),
 		}
@@ -258,6 +289,7 @@ pub mod tests {
 				(ETH, 2 * DOLLARS),
 				(KSM, 2 * DOLLARS),
 				(BTC, 2 * DOLLARS),
+				(MNT, 2 * DOLLARS),
 			],
 			_phantom: Default::default(),
 		}
