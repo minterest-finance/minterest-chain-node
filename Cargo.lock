@@ -2067,11 +2067,14 @@ dependencies = [
 name = "dex"
 version = "0.6.2"
 dependencies = [
+ "controller",
  "frame-support 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
  "frame-system 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
  "liquidation-pools",
  "liquidity-pools",
+ "minterest-model",
  "minterest-primitives",
+ "mnt-token",
  "orml-currencies",
  "orml-tokens",
  "orml-traits 0.4.1-dev",
@@ -4593,11 +4596,14 @@ dependencies = [
 name = "liquidation-pools"
 version = "0.6.2"
 dependencies = [
+ "controller",
  "dex",
  "frame-support 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
  "frame-system 3.0.0 (git+https://github.com/paritytech//substrate?rev=1b758b2a8d151d97d2242260c465b6df9cb8a7a4)",
  "liquidity-pools",
+ "minterest-model",
  "minterest-primitives",
+ "mnt-token",
  "orml-currencies",
  "orml-tokens",
  "orml-traits 0.4.1-dev",
