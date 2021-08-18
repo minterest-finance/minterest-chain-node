@@ -333,7 +333,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 					.ok_or(Error::<T>::NumOverflow)?;
 				Ok(())
 			})?;
-	    /*	
+	    	
 	    let x_coef = Rate::one()
 			.checked_div(&save_supply_ratio)
 			.ok_or(Error::<T>::NumOverflow)?
@@ -377,12 +377,11 @@ impl<T: Config + Debug> UserLoanState<T> {
 
 		// Calculate how much to repay for each pool
 		let size = pools_to_remove_borrowed_from.len();
-		//TODO: need to change library:
-		// the package `risk-manager` depends on `scirust`, with features: `std` but `scirust`
-		// does not have these features.
-		// the library `nalgebra' supports `std`, need to find a way to solve the system of equations.
-		let mut matrix = MatrixF64::zeros(size, size);
-		let mut vector = MatrixF64::zeros(size, 1);
+		
+		//let mut matrix = MatrixF64::zeros(size, size);
+		//let mut vector = MatrixF64::zeros(size, 1);
+		let mut matrix = DMatrix::zeros(size,size);
+		let mut vector = DVector::zeros(size);
 		pools_to_remove_borrowed_from
 			.iter()
 			.enumerate()
@@ -398,7 +397,8 @@ impl<T: Config + Debug> UserLoanState<T> {
 							.ok_or(Error::<T>::NumOverflow)?,
 					)
 					.ok_or(Error::<T>::NumOverflow)?;
-				vector.set(i, 0, vec_value.to_float());
+				//vector.set(i, 0, vec_value.to_float());
+				vector[(i, 0)] =  vec_value.to_float();
 
 				pools_to_remove_borrowed_from.iter().enumerate().try_for_each(
 					|(j, &pool_id_inner)| -> Result<(), DispatchError> {
@@ -406,15 +406,19 @@ impl<T: Config + Debug> UserLoanState<T> {
 						let matrix_value = -(1f64 + liquidation_fee.to_float())
 							* liquidation_values.borrowed_to_total_supply_ratio_new.to_float()
 							+ (if i == j { 1f64 } else { 0f64 });
-						matrix.set(i, j, matrix_value);
+						//matrix.set(i, j, matrix_value);
+						matrix[(i, j)] = matrix_value;
 						Ok(())
 					},
 				)?;
 				Ok(())
 			})?;
-		let x = GaussElimination::new(&matrix, &vector)
+		/*let x = GaussElimination::new(&matrix, &vector)
 			.solve()
-			.map_err(|_| Error::<T>::LiquidationMathFailed)?;
+			.map_err(|_| Error::<T>::LiquidationMathFailed)?;*/
+		let x = matrix.lu()
+			.solve(&vector)
+			.ok_or(Error::<T>::LiquidationMathFailed)?;	
 		let mut borrower_loans_to_repay = Vec::new();
 		pools_to_remove_borrowed_from
 			.iter()
@@ -422,17 +426,17 @@ impl<T: Config + Debug> UserLoanState<T> {
 			.try_for_each(|(i, pool_id)| -> Result<(), DispatchError> {
 				borrower_loans_to_repay.push((
 					*pool_id,
-					Rate::from_float(x.get(i, 0).ok_or(Error::<T>::LiquidationMathFailed)?).into_inner(),
+					Rate::from_float(*x.get(i).ok_or(Error::<T>::LiquidationMathFailed)?).into_inner(),
 				));
 				Ok(())
 			})?;
 		Ok(borrower_loans_to_repay)
-		*/
+		/*
 		let size:usize = 3;
 		let arr = vec![1.0, -1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
 
 		let mut a = DMatrix::from_iterator(size,size,vec![]);
-		
+
 		a[(0, 0)] = 1.0;
 		a[(0, 1)] = -1.0;
 		a[(0, 2)] = 1.0;
@@ -451,6 +455,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 		let x = decomp.solve(&b).expect("Linear resolution failed.");
 
 		Err(()).map_err(|_| Error::<T>::LiquidationMathFailed)?
+		*/
 	}
 
 	/// For each pool calculates the amount to reduce user`s supply for

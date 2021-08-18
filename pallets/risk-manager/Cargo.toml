@@ -55,7 +55,7 @@ std = [
     "sp-runtime/std",
     "sp-io/std",
     "sp-core/std",
-
+    "nalgebra/default",
     "orml-traits/std",
 
     "minterest-primitives/std",
