@@ -1,7 +1,7 @@
 #![allow(clippy::comparison_chain)]
 
 use super::*;
-use scirust::api::*;
+use nalgebra::{DVector, DMatrix};
 use sp_runtime::traits::{CheckedDiv, CheckedSub};
 use sp_std::{collections::btree_map::BTreeMap, fmt::Debug};
 
@@ -333,7 +333,8 @@ impl<T: Config + Debug> UserLoanState<T> {
 					.ok_or(Error::<T>::NumOverflow)?;
 				Ok(())
 			})?;
-		let x_coef = Rate::one()
+	    /*	
+	    let x_coef = Rate::one()
 			.checked_div(&save_supply_ratio)
 			.ok_or(Error::<T>::NumOverflow)?
 			.to_float() - Rate::one()
@@ -426,6 +427,30 @@ impl<T: Config + Debug> UserLoanState<T> {
 				Ok(())
 			})?;
 		Ok(borrower_loans_to_repay)
+		*/
+		let size:usize = 3;
+		let arr = vec![1.0, -1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
+
+		let mut a = DMatrix::from_iterator(size,size,vec![]);
+		
+		a[(0, 0)] = 1.0;
+		a[(0, 1)] = -1.0;
+		a[(0, 2)] = 1.0;
+
+		a[(1, 0)] = 0.0;
+		a[(1, 1)] = 1.0;
+		a[(1, 2)] = 1.0;
+
+		a[(2, 0)] = 0.0;
+		a[(2, 1)] = 0.0;
+		a[(2, 2)] = 1.0;
+		let decomp = a.lu();
+
+		let mut b = DVector::from_vec([1.1, 1.1, 1.1].to_vec());
+
+		let x = decomp.solve(&b).expect("Linear resolution failed.");
+
+		Err(()).map_err(|_| Error::<T>::LiquidationMathFailed)?
 	}
 
 	/// For each pool calculates the amount to reduce user`s supply for
