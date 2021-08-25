@@ -1,7 +1,7 @@
 #![allow(clippy::comparison_chain)]
 
 use super::*;
-use scirust::api::*;
+use nalgebra::{DMatrix, DVector};
 use sp_runtime::traits::{CheckedDiv, CheckedSub};
 use sp_std::{collections::btree_map::BTreeMap, fmt::Debug};
 
@@ -333,34 +333,33 @@ impl<T: Config + Debug> UserLoanState<T> {
 					.ok_or(Error::<T>::NumOverflow)?;
 				Ok(())
 			})?;
-		let x_coef = Rate::one()
-			.checked_div(&save_supply_ratio)
-			.ok_or(Error::<T>::NumOverflow)?
-			.to_float() - Rate::one()
-			.checked_div(&current_supply_ratio)
-			.ok_or(Error::<T>::NumOverflow)?
-			.to_float();
 
-		// Sum of collateral of pools where user has positive supply
-		let mut sum_used_collateral = Rate::zero();
+		/// TODO: 	type `Rate` is not supported for `no_std` by `to_float()`, `from_float()` methods
+		let x_coef = rate_to_float(
+			Rate::one()
+				.checked_div(&save_supply_ratio)
+				.ok_or(Error::<T>::NumOverflow)?,
+		) - rate_to_float(
+			Rate::one()
+				.checked_div(&current_supply_ratio)
+				.ok_or(Error::<T>::NumOverflow)?,
+		);
+
 		pool_to_liquidation_values
 			.iter_mut()
 			.filter(|(_, liquidation_values)| liquidation_values.borrowed_to_total_supply_ratio.is_positive())
-			.try_for_each(|(pool_id, liquidation_values)| -> Result<(), DispatchError> {
+			.try_for_each(|(_pool_id, liquidation_values)| -> Result<(), DispatchError> {
 				let borrowed_to_total_supply_ratio_percentage = liquidation_values
 					.borrowed_to_total_supply_ratio
 					.checked_div(&sum_borrowed_to_total_supply_ratio)
 					.ok_or(Error::<T>::NumOverflow)?;
-				let borrowed_to_total_supply_ratio_new = Rate::from_float(
-					x_coef * borrowed_to_total_supply_ratio_percentage.to_float()
-						+ liquidation_values.borrowed_to_total_supply_ratio.to_float(),
+
+				let borrowed_to_total_supply_ratio_new = rate_from_float(
+					x_coef * rate_to_float(borrowed_to_total_supply_ratio_percentage)
+						+ rate_to_float(liquidation_values.borrowed_to_total_supply_ratio),
 				);
+
 				liquidation_values.borrowed_to_total_supply_ratio_new = borrowed_to_total_supply_ratio_new;
-				if !liquidation_values.supply_usd.is_zero() {
-					sum_used_collateral = sum_used_collateral
-						.checked_add(&T::ControllerManager::get_pool_collateral_factor(*pool_id))
-						.ok_or(Error::<T>::NumOverflow)?;
-				}
 				Ok(())
 			})?;
 		// Pools with positive borrow
@@ -376,12 +375,9 @@ impl<T: Config + Debug> UserLoanState<T> {
 
 		// Calculate how much to repay for each pool
 		let size = pools_to_remove_borrowed_from.len();
-		//TODO: need to change library:
-		// the package `risk-manager` depends on `scirust`, with features: `std` but `scirust`
-		// does not have these features.
-		// the library `nalgebra' supports `std`, need to find a way to solve the system of equations.
-		let mut matrix = MatrixF64::zeros(size, size);
-		let mut vector = MatrixF64::zeros(size, 1);
+
+		let mut matrix = DMatrix::zeros(size, size);
+		let mut vector = DVector::zeros(size);
 		pools_to_remove_borrowed_from
 			.iter()
 			.enumerate()
@@ -397,23 +393,23 @@ impl<T: Config + Debug> UserLoanState<T> {
 							.ok_or(Error::<T>::NumOverflow)?,
 					)
 					.ok_or(Error::<T>::NumOverflow)?;
-				vector.set(i, 0, vec_value.to_float());
+
+				vector[(i, 0)] = rate_to_float(vec_value);
 
 				pools_to_remove_borrowed_from.iter().enumerate().try_for_each(
 					|(j, &pool_id_inner)| -> Result<(), DispatchError> {
 						let liquidation_fee = Pallet::<T>::liquidation_fee_storage(pool_id_inner);
-						let matrix_value = -(1f64 + liquidation_fee.to_float())
-							* liquidation_values.borrowed_to_total_supply_ratio_new.to_float()
+						let matrix_value = -(1f64 + rate_to_float(liquidation_fee))
+							* rate_to_float(liquidation_values.borrowed_to_total_supply_ratio_new)
 							+ (if i == j { 1f64 } else { 0f64 });
-						matrix.set(i, j, matrix_value);
+						matrix[(i, j)] = matrix_value;
 						Ok(())
 					},
 				)?;
 				Ok(())
 			})?;
-		let x = GaussElimination::new(&matrix, &vector)
-			.solve()
-			.map_err(|_| Error::<T>::LiquidationMathFailed)?;
+		let x = matrix.lu().solve(&vector).ok_or(Error::<T>::LiquidationMathFailed)?;
+
 		let mut borrower_loans_to_repay = Vec::new();
 		pools_to_remove_borrowed_from
 			.iter()
@@ -421,7 +417,7 @@ impl<T: Config + Debug> UserLoanState<T> {
 			.try_for_each(|(i, pool_id)| -> Result<(), DispatchError> {
 				borrower_loans_to_repay.push((
 					*pool_id,
-					Rate::from_float(x.get(i, 0).ok_or(Error::<T>::LiquidationMathFailed)?).into_inner(),
+					rate_from_float(*x.get(i).ok_or(Error::<T>::LiquidationMathFailed)?).into_inner(),
 				));
 				Ok(())
 			})?;
@@ -662,4 +658,15 @@ impl<T: Config + Debug> UserLoanState<T> {
 			borrower_supplies_to_pay_underlying,
 		))
 	}
+}
+
+/// TODO: replacing the implementation of the to_float() method for a macro
+/// `Implement_fixed!`
+pub(crate) fn rate_to_float(rate: Rate) -> f64 {
+	rate.into_inner() as f64 / 1_000_000_000_000_000_000_u128 as f64
+}
+/// TODO: replacing the implementation of the from_float() method for a macro
+/// `Implement_fixed!`
+pub fn rate_from_float(x: f64) -> Rate {
+	Rate::from_inner((x * (1_000_000_000_000_000_000_u128 as f64)) as u128)
 }

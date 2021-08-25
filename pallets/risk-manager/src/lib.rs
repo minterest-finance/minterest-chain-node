@@ -33,7 +33,8 @@
 //!TODO: At the moment, this pallet is not fully implemented. See documentation:
 //! https://minterestfinance.atlassian.net/wiki/spaces/MINTEREST/pages/9928965/Liquidation+Flow
 //! Steps to complete the design of automatic liquidation:
-//! 1. PR: VP/MIN-518. Liquidation math - change crate scirust in risk-manager pallet. Merge this PR;
+//! 1. PR: VP/MIN-518. Liquidation math - change crate scirust in risk-manager pallet. Merge this
+//! PR;
 //! 2. Implement integration-tests for liquidation;
 //! 3. Cover a case where there is not enough liquidity in the liquidation pools. Cover this case
 //! with tests;
