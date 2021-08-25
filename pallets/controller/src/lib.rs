@@ -953,6 +953,11 @@ impl<T: Config> ControllerManager<T::AccountId> for Pallet<T> {
 		Self::controller_data_storage(pool_id).protocol_interest_threshold
 	}
 
+	/// Returns collateral factor for a pool
+	fn get_pool_collateral_factor(pool_id: CurrencyId) -> Rate {
+		Self::controller_data_storage(pool_id).collateral_factor
+	}
+
 	/// Calculates the amount of collateral based on the parameters pool_id and the supply amount.
 	/// Reads the collateral factor value from storage.
 	///

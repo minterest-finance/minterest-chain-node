@@ -29,12 +29,22 @@
 //! origin of this call must be 'RiskManagerUpdateOrigin'.
 //! - `liquidate` - Liquidate insolvent loan.  The dispatch origin of this call must be
 //! _None_. Called from the OCW.
+//!
+//!TODO: At the moment, this pallet is not fully implemented. See documentation:
+//! https://minterestfinance.atlassian.net/wiki/spaces/MINTEREST/pages/9928965/Liquidation+Flow
+//! Steps to complete the design of automatic liquidation:
+//! 1. PR: VP/MIN-518. Liquidation math - change crate scirust in risk-manager pallet. Merge this
+//! PR;
+//! 2. Implement integration-tests for liquidation;
+//! 3. Cover a case where there is not enough liquidity in the liquidation pools. Cover this case
+//! with tests;
+//! 4. Implement benchmarking tests and weights for extrinsics in risk-manager pallet.
+//! 5. Manual testing.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 #![allow(clippy::upper_case_acronyms)]
 #![allow(clippy::redundant_clone)]
-#![allow(clippy::unnecessary_wraps)] // TODO: remove after implementation math functions
 
 use frame_support::{
 	sp_runtime::offchain::{
@@ -76,7 +86,6 @@ mod tests;
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
-	use orml_traits::MultiCurrency;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> + Debug {
@@ -152,6 +161,8 @@ pub mod module {
 		ErrorChangingLiquidationAttempts,
 		/// Error in choosing the liquidation mode.
 		ErrorLiquidationMode,
+		/// Error during Gaussian elimination or math logic error
+		LiquidationMathFailed,
 	}
 
 	#[pallet::event]
@@ -307,7 +318,6 @@ pub mod module {
 			Ok(().into())
 		}
 
-		// TODO: cover with tests
 		/// Liquidate insolvent loan. Calls internal functions from minterest-protocol pallet
 		/// `do_repay` and `do_seize`, these functions within themselves call
 		/// `accrue_interest_rate`. Before calling the extrinsic, it is necessary to perform all
@@ -367,7 +377,6 @@ pub mod module {
 
 // Private functions
 impl<T: Config> Pallet<T> {
-	// TODO: cover with tests
 	/// Checks if the node is a validator. The worker is launched every block. The worker's working
 	/// time is limited in time. Each next worker starts checking user loans from the beginning.
 	/// Calls a processing insolvent loan function.
@@ -424,10 +433,9 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	// TODO: cover with tests
 	/// Handles the user's loan. Selects one of the required types of liquidation (Partial,
-	/// Complete or Forgivable Complete) and calls extrinsic `liquidate()`. This function within
-	/// itself call `accrue_interest_rate`.
+	/// Complete) and calls extrinsic `liquidate()`. This function within itself call
+	/// `accrue_interest_rate`.
 	///
 	/// -`borrower`: AccountId of the borrower whose loan is being processed.
 	fn process_insolvent_loan(borrower: &T::AccountId) -> Result<(), OffchainErr> {
@@ -493,19 +501,18 @@ impl<T: Config> Pallet<T> {
 				Ok(())
 			})?;
 
-		// perform pay in case of the forgivable liquidation
-		if let Some(supplies_to_pay_underlying) = user_loan_state.get_user_supplies_to_pay_underlying() {
-			supplies_to_pay_underlying
-				.into_iter()
-				.try_for_each(|(pool_id, pay_underlying)| -> DispatchResult {
-					T::MultiCurrency::transfer(
-						pool_id,
-						&liquidation_pool_account_id,
-						&T::LiquidityPoolsManager::pools_account_id(),
-						pay_underlying,
-					)
-				})?;
-		}
+		// pay from liquidation pools
+		user_loan_state
+			.get_user_supplies_to_pay_underlying()
+			.into_iter()
+			.try_for_each(|(pool_id, pay_underlying)| -> DispatchResult {
+				T::MultiCurrency::transfer(
+					pool_id,
+					&liquidation_pool_account_id,
+					&T::LiquidityPoolsManager::pools_account_id(),
+					pay_underlying,
+				)
+			})?;
 
 		<Self as UserLiquidationAttemptsManager<T::AccountId>>::try_mutate_attempts(
 			&borrower,
@@ -600,7 +607,6 @@ impl<T: Config> UserLiquidationAttemptsManager<T::AccountId> for Pallet<T> {
 					match mode {
 						LiquidationMode::Partial => Self::user_liquidation_attempts_increase_by_one(&who),
 						LiquidationMode::Complete => Self::user_liquidation_attempts_reset_to_zero(&who),
-						LiquidationMode::ForgivableComplete => Self::user_liquidation_attempts_reset_to_zero(&who),
 					}
 					Ok(())
 				}

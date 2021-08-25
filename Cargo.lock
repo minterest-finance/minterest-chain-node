@@ -4588,7 +4588,7 @@ version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e6e407dadb4ca4b31bc69c27aff00e7ca4534fdcee855159b039a7cebb5f395"
 dependencies = [
- "nalgebra",
+ "nalgebra 0.27.1",
  "statrs",
 ]
 
@@ -5481,7 +5481,21 @@ dependencies = [
  "num-traits",
  "rand 0.8.4",
  "rand_distr",
- "simba",
+ "simba 0.5.1",
+ "typenum",
+]
+
+[[package]]
+name = "nalgebra"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d506eb7e08d6329505faa8a3a00a5dcc6de9f76e0c77e4b75763ae3c770831ff"
+dependencies = [
+ "approx",
+ "num-complex",
+ "num-rational 0.4.0",
+ "num-traits",
+ "simba 0.6.0",
  "typenum",
 ]
 
@@ -8471,6 +8485,7 @@ dependencies = [
  "minterest-primitives",
  "minterest-protocol",
  "mnt-token",
+ "nalgebra 0.29.0",
  "orml-currencies",
  "orml-tokens",
  "orml-traits 0.4.1-dev",
@@ -10150,6 +10165,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "simba"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0b7840f121a46d63066ee7a99fc81dcabbc6105e437cae43528cea199b5a05f"
+dependencies = [
+ "approx",
+ "num-complex",
+ "num-traits",
+ "paste",
+]
+
+[[package]]
 name = "slab"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11359,7 +11386,7 @@ checksum = "05bdbb8e4e78216a85785a85d3ec3183144f98d0097b9281802c019bb07a6f05"
 dependencies = [
  "approx",
  "lazy_static",
- "nalgebra",
+ "nalgebra 0.27.1",
  "num-traits",
  "rand 0.8.4",
 ]

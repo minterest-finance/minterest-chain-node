@@ -18,6 +18,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
+nalgebra = { version = "0.29", default-features = false, features =["alloc","libm"] }
 
 minterest-primitives = { path = "../../primitives", default-features = false }
 liquidity-pools = { path = "../liquidity-pools", default-features = false }

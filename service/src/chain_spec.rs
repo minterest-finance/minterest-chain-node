@@ -271,7 +271,7 @@ fn minterest_genesis(
 		},
 		parachain_info: parachain_runtime::ParachainInfoConfig { parachain_id: para_id },
 		aura: parachain_runtime::AuraConfig {
-			authorities: initial_authorities.iter().map(|x| (x.clone())).collect(),
+			authorities: initial_authorities.to_vec(),
 		},
 		sudo: parachain_runtime::SudoConfig {
 			// Assign network admin rights.

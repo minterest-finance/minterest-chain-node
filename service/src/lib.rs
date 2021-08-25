@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
+#![allow(clippy::type_complexity)]
+
 use cumulus_client_consensus_aura::{build_aura_consensus, BuildAuraConsensusParams, SlotProportion};
 use cumulus_client_consensus_common::ParachainConsensus;
 use cumulus_client_network::build_block_announce_validator;
@@ -376,7 +378,7 @@ pub fn parachain_build_import_queue(
 
 				Ok((time, slot))
 			},
-			registry: config.prometheus_registry().clone(),
+			registry: config.prometheus_registry(),
 			can_author_with: sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone()),
 			spawner: &task_manager.spawn_essential_handle(),
 			telemetry,
@@ -415,7 +417,7 @@ pub async fn start_parachain_node(
 				task_manager.spawn_handle(),
 				client.clone(),
 				transaction_pool,
-				prometheus_registry.clone(),
+				prometheus_registry,
 				telemetry.clone(),
 			);
 
@@ -460,7 +462,7 @@ pub async fn start_parachain_node(
 				block_import: client.clone(),
 				relay_chain_client: relay_chain_node.client.clone(),
 				relay_chain_backend: relay_chain_node.backend.clone(),
-				para_client: client.clone(),
+				para_client: client,
 				backoff_authoring_blocks: Option::<()>::None,
 				sync_oracle,
 				keystore,
@@ -513,7 +515,7 @@ pub fn standalone_build_import_queue(
 			Ok((timestamp, slot))
 		},
 		spawner: &task_manager.spawn_essential_handle(),
-		registry: config.prometheus_registry().clone(),
+		registry: config.prometheus_registry(),
 		can_author_with: sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone()),
 		check_for_equivocation: Default::default(),
 		telemetry,
@@ -628,9 +630,9 @@ pub fn start_standalone_node(mut config: Configuration) -> Result<TaskManager, S
 
 		let aura = sc_consensus_aura::start_aura::<AuraPair, _, _, _, _, _, _, _, _, _, _, _>(StartAuraParams {
 			slot_duration,
-			client: client.clone(),
+			client,
 			select_chain,
-			block_import: block_import,
+			block_import,
 			proposer_factory,
 			create_inherent_data_providers: move |_, ()| async move {
 				let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
