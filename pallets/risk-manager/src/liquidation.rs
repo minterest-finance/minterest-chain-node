@@ -382,7 +382,8 @@ impl<T: Config + Debug> UserLoanState<T> {
 
 		// Calculate how much to repay for each pool
 		let size = pools_to_remove_borrowed_from.len();
-
+		if size == 0 {return Ok(Vec::new());}
+		
 		let mut matrix = DMatrix::zeros(size, size);
 		let mut vector = DVector::zeros(size);
 		pools_to_remove_borrowed_from
